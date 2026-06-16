@@ -51,6 +51,9 @@ $gsSections = [
         [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
         [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
     ],
+    'Quests' => [
+        [ 'name' => 'CHIM_AI_QUEST_PROGRESSION', 'type' => 'boolean' ],
+    ],
     'Memory' => [
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],

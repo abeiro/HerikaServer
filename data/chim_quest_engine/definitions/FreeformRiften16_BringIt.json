@@ -1,0 +1,198 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000557F3",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformRiften16",
+  "title": "Bring It!",
+  "description": "Harrald, son of Jarl Laila Law-Giver in Riften, needs someone to fetch his sword from Balimund at The Scorched Hammer after it was damaged during sparring practice.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "HEAR_ABOUT_SWORD",
+      "FETCH_SWORD"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Harrald": {
+      "base_facts": [
+        "I am the son of Jarl Laila Law-Giver.",
+        "I live in Mistveil Keep in Riften.",
+        "My sword is being repaired by Balimund at The Scorched Hammer after I damaged it sparring."
+      ],
+      "beat_facts": {
+        "HEAR_ABOUT_SWORD": [
+          "I asked someone to fetch my sword from Balimund."
+        ],
+        "DELIVER_SWORD": [
+          "My sword has been returned to me."
+        ]
+      }
+    },
+    "Balimund": {
+      "base_facts": [
+        "I run The Scorched Hammer in Riften.",
+        "Harrald's sword is here for repairs."
+      ],
+      "beat_facts": {
+        "GOT_SWORD": [
+          "I gave Harrald's repaired sword to someone to deliver."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "HEAR_ABOUT_SWORD",
+      "focus_npc": "Harrald",
+      "comment": "Player learns Harrald's sword is with Balimund for repairs.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "sword",
+            "dagger",
+            "blade",
+            "weapon",
+            "sparring"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "FETCH_SWORD",
+      "focus_npc": "Harrald",
+      "comment": "Player agrees to fetch Harrald's sword from Balimund. Sets quest stage 20.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000557F3",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000557F3",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "fetch",
+            "retrieve",
+            "get it",
+            "help",
+            "I'll go"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEAR_ABOUT_SWORD"
+      ],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "GOT_SWORD",
+      "focus_npc": "Balimund",
+      "comment": "Player retrieves the sword from Balimund. Sets quest stage 30.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000557F3",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000557F3",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000557F3",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "sword",
+            "Harrald",
+            "blade",
+            "pick up"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformRiften16",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FETCH_SWORD"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "DELIVER_SWORD",
+      "focus_npc": "Harrald",
+      "comment": "Player delivers the sword back to Harrald and completes the quest.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000557F3",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "sword",
+            "here",
+            "back",
+            "your blade"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformRiften16",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "GOT_SWORD"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformriften16_bringit"
+}

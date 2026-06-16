@@ -1,0 +1,249 @@
+{
+    "quest_key":  "da09_breakofdawn",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0004E4E1",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DA09",
+    "title":  "The Break of Dawn",
+    "description":  "Meridia requests that the Dragonborn find her beacon, restore it to her statue, and then cleanse her temple of the necromancer Malkoran.",
+    "npc_facts":  {
+                      "Meridia":  {
+                                      "base_facts":  [
+                                                         "I am Meridia, the Daedric Prince of Infinite Energies.",
+                                                         "I despise the undead and all forms of profane darkness.",
+                                                         "My temple at Mount Kilkreath has been defiled by the necromancer Malkoran."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "FIND_BEACON":  [
+                                                                             "A mortal has heard my call and seeks my beacon."
+                                                                         ],
+                                                         "REPLACE_BEACON":  [
+                                                                                "My beacon has been returned, and I have found a new champion."
+                                                                            ],
+                                                         "GUIDE_LIGHT":  [
+                                                                             "My champion is guiding my light through the temple to reach Malkoran."
+                                                                         ],
+                                                         "DESTROY_MALKORAN":  [
+                                                                                  "The defiler Malkoran has been destroyed."
+                                                                              ],
+                                                         "RETRIEVE_DAWNBREAKER":  [
+                                                                                      "My champion has reclaimed the Dawnbreaker."
+                                                                                  ]
+                                                     }
+                                  }
+                  },
+    "beats":  [
+                  {
+                      "id":  "FIND_BEACON",
+                      "focus_npc":  "Meridia",
+                      "comment":  "Player finds or hears about Meridia\u0027s beacon.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA09",
+                                           "min_stage":  50
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "beacon",
+                                                            "Meridia\u0027s beacon"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "BRING_BEACON",
+                      "focus_npc":  "Meridia",
+                      "comment":  "Player brings the beacon to Mount Kilkreath.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA09",
+                                           "min_stage":  100
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "bring the beacon",
+                                                            "Mount Kilkreath"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FIND_BEACON"
+                                        ]
+                  },
+                  {
+                      "id":  "REPLACE_BEACON",
+                      "focus_npc":  "Meridia",
+                      "comment":  "Player replaces the beacon at the statue.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA09",
+                                           "min_stage":  150
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "replace the beacon",
+                                                            "pedestal"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BRING_BEACON"
+                                        ]
+                  },
+                  {
+                      "id":  "GUIDE_LIGHT",
+                      "focus_npc":  "Meridia",
+                      "comment":  "Player guides Meridia\u0027s light through the temple.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA09",
+                                           "min_stage":  300
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "guide the light",
+                                                            "temple"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REPLACE_BEACON"
+                                        ]
+                  },
+                  {
+                      "id":  "DESTROY_MALKORAN",
+                      "focus_npc":  "Meridia",
+                      "comment":  "Player destroys Malkoran.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA09",
+                                           "min_stage":  350
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "destroy Malkoran",
+                                                            "Malkoran"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "GUIDE_LIGHT"
+                                        ]
+                  },
+                  {
+                      "id":  "RETRIEVE_DAWNBREAKER",
+                      "focus_npc":  "Meridia",
+                      "comment":  "Player retrieves Dawnbreaker.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA09",
+                                           "min_stage":  410
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "retrieve Dawnbreaker",
+                                                            "Dawnbreaker"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "DESTROY_MALKORAN"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Meridia",
+                      "comment":  "Quest is complete.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA09",
+                                           "min_stage":  500
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RETRIEVE_DAWNBREAKER"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "FIND_BEACON"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

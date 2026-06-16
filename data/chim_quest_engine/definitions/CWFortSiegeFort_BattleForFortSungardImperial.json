@@ -1,0 +1,126 @@
+{
+    "quest_key":  "cwfortsiegefort_battleforfortsungardimperial",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00083042",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "CWFortSiegeFort",
+    "title":  "The Battle for Fort Sungard (Imperial)",
+    "description":  "Legate Rikke orders the player to assist Imperial soldiers in assaulting and capturing Fort Sungard from Stormcloak rebels in the Reach.",
+    "npc_facts":  {
+                      "Legate Rikke":  {
+                                           "base_facts":  [
+                                                              "I command the Imperial forces at the Reach Imperial Camp.",
+                                                              "Fort Sungard must be taken from the Stormcloaks to reclaim the Reach."
+                                                          ],
+                                           "beat_facts":  {
+                                                              "QUEST_RECEIVED":  [
+                                                                                     "I have sent the soldier to join the assault on Fort Sungard."
+                                                                                 ],
+                                                              "FORT_TAKEN":  [
+                                                                                 "Fort Sungard has fallen to Imperial forces. The Reach is ours again."
+                                                                             ]
+                                                          }
+                                       },
+                      "General Tullius":  {
+                                              "base_facts":  [
+                                                                 "I lead the Imperial war effort in Skyrim.",
+                                                                 "The Reach was lost to the Stormcloaks and must be retaken."
+                                                             ],
+                                              "beat_facts":  {
+                                                                 "FORT_TAKEN":  [
+                                                                                    "Fort Sungard is back in Imperial hands. The soldier performed well."
+                                                                                ]
+                                                             }
+                                          }
+                  },
+    "beats":  [
+                  {
+                      "id":  "QUEST_RECEIVED",
+                      "focus_npc":  "Legate Rikke",
+                      "comment":  "Player receives orders from Legate Rikke at the Reach Imperial Camp to assist in taking Fort Sungard.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWFortSiegeFort",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "report for duty",
+                                                            "fort sungard",
+                                                            "orders"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "JOIN_ASSAULT",
+                      "focus_npc":  "",
+                      "comment":  "Player joins the Imperial soldiers preparing the assault on Fort Sungard.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWFortSiegeFort",
+                                           "min_stage":  50
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_RECEIVED"
+                                        ]
+                  },
+                  {
+                      "id":  "FORT_TAKEN",
+                      "focus_npc":  "Legate Rikke",
+                      "comment":  "Fort Sungard is captured from the Stormcloaks. Quest completes. Reunification of Skyrim updates.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00083042",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  9000
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWFortSiegeFort",
+                                           "min_stage":  9000
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "JOIN_ASSAULT"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "QUEST_RECEIVED"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

@@ -1,0 +1,167 @@
+{
+    "quest_key":  "dunhighgateruinsqst_scrollforanska",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x000443F4",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "dunHighGateRuinsQST",
+    "title":  "A Scroll For Anska",
+    "description":  "A Nord wizard named Anska seeks help retrieving a scroll from High Gate Ruins that could link her bloodline back to Ysgramor. Escort her through the dungeon, defeat the dragon priest Vokun, and return the scroll for a reward.",
+    "npc_facts":  {
+                      "Anska":  {
+                                    "base_facts":  [
+                                                       "I am a Nord wizard exploring High Gate Ruins.",
+                                                       "I seek a special scroll that could link my family blood all the way back to Ysgramor.",
+                                                       "I have finally located Vokun\u0027s Crypt deep within these ruins.",
+                                                       "I fear the old priest Vokun could awaken and prove too powerful for me alone."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "MEET_ANSKA":  [
+                                                                          "A fellow adventurer has agreed to help me retrieve the scroll from Vokun\u0027s Crypt."
+                                                                      ],
+                                                       "SCROLL_RETRIEVED":  [
+                                                                                "The scroll has been found! I must have it returned to me at once."
+                                                                            ],
+                                                       "QUEST_COMPLETED":  [
+                                                                               "I have my scroll at last! I gave the spell tome for Conjure Flaming Familiar as a reward."
+                                                                           ],
+                                                       "QUEST_FAILED":  [
+                                                                            "I am dead, and my scroll will never be deciphered."
+                                                                        ]
+                                                   }
+                                }
+                  },
+    "beats":  [
+                  {
+                      "id":  "MEET_ANSKA",
+                      "focus_npc":  "Anska",
+                      "comment":  "Player meets Anska in High Gate Ruins and agrees to help her retrieve the scroll.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x000443F4",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_stage",
+                                             "quest_form_id":  "0x000443F4",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "stage":  20
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "help you",
+                                                            "find the scroll",
+                                                            "go with you",
+                                                            "lead the way",
+                                                            "i\u0027ll help",
+                                                            "escort you"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "SCROLL_RETRIEVED",
+                      "focus_npc":  "Anska",
+                      "comment":  "Player has defeated Vokun and retrieved the sealed scroll from the throne room.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x000443F4",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  90
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunHighGateRuinsQST",
+                                           "min_stage":  90
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_ANSKA"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETED",
+                      "focus_npc":  "Anska",
+                      "comment":  "Player returns the scroll to Anska and receives the Conjure Flaming Familiar spell tome as a reward.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x000443F4",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  100
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunHighGateRuinsQST",
+                                           "min_stage":  100
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "here is the scroll",
+                                                            "take the scroll",
+                                                            "your scroll",
+                                                            "hand over the scroll"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SCROLL_RETRIEVED"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_FAILED",
+                      "focus_npc":  "Anska",
+                      "comment":  "Anska has been killed; the quest ends in failure.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x000443F4",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  150
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunHighGateRuinsQST",
+                                           "min_stage":  150
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_ANSKA"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "MEET_ANSKA"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

@@ -1,0 +1,324 @@
+{
+    "quest_key":  "dlc2sv01_lostlegacy",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00019B4A",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2SV01",
+    "title":  "Lost Legacy",
+    "description":  "Tharstan, an elderly historian living in Skaal Village, discovered the entrance to Vahlok\u0027s Tomb after an earthquake. He hires the player as protection while exploring the ancient crypt, which turns out to be the resting place of the Dragon Priest Vahlok the Jailor.",
+    "npc_facts":  {
+                      "Tharstan":  {
+                                       "base_facts":  [
+                                                          "I am an elderly historian and author living in Skaal Village.",
+                                                          "I married Fanari Strong-Voice, the leader of the Skaal.",
+                                                          "I wrote Children of the All-Maker about Skaal traditions.",
+                                                          "I discovered the entrance to Vahlok\u0027s Tomb after an earthquake caused by the eruption of Red Mountain.",
+                                                          "I need someone to accompany me as protection while I explore the tomb."
+                                                      ],
+                                       "beat_facts":  {
+                                                          "QUEST_ACCEPTED":  [
+                                                                                 "The player agreed to accompany me to Vahlok\u0027s Tomb. I asked them to meet me there."
+                                                                             ],
+                                                          "TALK_TO_THARSTAN_TOMB":  [
+                                                                                        "The player arrived at the tomb. I showed them the inscription about a sacrifice and asked them to open the sealed doors."
+                                                                                    ],
+                                                          "EXPLORE_TOMB":  [
+                                                                               "We are exploring the tomb together. The player solved the sacrifice riddle and opened the passages."
+                                                                           ],
+                                                          "FIND_BURIAL_CHAMBER":  [
+                                                                                      "We found the puzzle door and I deciphered the combination from the wall etchings: wind, moon, fire with scales."
+                                                                                  ],
+                                                          "DEFEAT_VAHLOK":  [
+                                                                                "The player defeated Vahlok the Jailor, a Dragon Priest who guarded this tomb."
+                                                                            ],
+                                                          "TALK_TO_THARSTAN_REWARD":  [
+                                                                                          "I rewarded the player with 1000 gold for their help. I will stay in the tomb to study the word wall further."
+                                                                                      ]
+                                                      }
+                                   }
+                  },
+    "beats":  [
+                  {
+                      "id":  "QUEST_ACCEPTED",
+                      "focus_npc":  "Tharstan",
+                      "comment":  "Player agrees to help Tharstan explore Vahlok\u0027s Tomb and is told to travel there.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00019B4A",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00019B4A",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "help you explore",
+                                                            "go with you",
+                                                            "accompany you",
+                                                            "protect you",
+                                                            "I\u0027ll help",
+                                                            "I\u0027ll go"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "TALK_TO_THARSTAN_TOMB",
+                      "focus_npc":  "Tharstan",
+                      "comment":  "Player meets Tharstan at Vahlok\u0027s Tomb and he asks them to open the sealed doors.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00019B4A",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  20
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00019B4A",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  20
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x00019B4A",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2SV01",
+                                           "min_stage":  10,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "sealed doors",
+                                                            "how to open",
+                                                            "figure out"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_ACCEPTED"
+                                        ]
+                  },
+                  {
+                      "id":  "EXPLORE_TOMB",
+                      "focus_npc":  "Tharstan",
+                      "comment":  "Player explores the tomb, solves the sacrifice riddle, and finds the Amethyst Claw halves.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00019B4A",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  30
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00019B4A",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  30
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x00019B4A",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  20
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2SV01",
+                                           "min_stage":  20,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "TALK_TO_THARSTAN_TOMB"
+                                        ]
+                  },
+                  {
+                      "id":  "FIND_BURIAL_CHAMBER",
+                      "focus_npc":  "Tharstan",
+                      "comment":  "Player navigates magical bridges, solves the puzzle door with the Amethyst Claw, and finds the burial chamber.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00019B4A",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  40
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00019B4A",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  40
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x00019B4A",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  30
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2SV01",
+                                           "min_stage":  30,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "EXPLORE_TOMB"
+                                        ]
+                  },
+                  {
+                      "id":  "DEFEAT_VAHLOK",
+                      "focus_npc":  "",
+                      "comment":  "Player defeats Vahlok the Jailor in the burial chamber.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00019B4A",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  45
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00019B4A",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  45
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x00019B4A",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  40
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2SV01",
+                                           "min_stage":  40,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FIND_BURIAL_CHAMBER"
+                                        ]
+                  },
+                  {
+                      "id":  "TALK_TO_THARSTAN_REWARD",
+                      "focus_npc":  "Tharstan",
+                      "comment":  "Player talks to Tharstan after defeating Vahlok; he rewards 1000 gold and comments on the discovery.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00019B4A",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  50
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00019B4A",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  50
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x00019B4A",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  45
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2SV01",
+                                           "min_stage":  45,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Vahlok",
+                                                            "dragon priest",
+                                                            "amazing",
+                                                            "reward"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "DEFEAT_VAHLOK"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest completes after Tharstan gives the reward and decides to stay in the tomb.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00019B4A",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  200
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x00019B4A",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  50
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2SV01",
+                                           "min_stage":  50,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "TALK_TO_THARSTAN_REWARD"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "QUEST_ACCEPTED"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

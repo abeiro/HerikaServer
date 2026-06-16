@@ -1,0 +1,166 @@
+{
+  "quest_key": "dlc2mq05_gardenerofmen",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000179DE",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2MQ05",
+  "title": "The Gardener of Men",
+  "description": "After reading the Black Book Epistolary Acumen, the Dragonborn enters Apocrypha and bargains with Hermaeus Mora, who teaches the second word of Bend Will but demands the secrets of the Skaal in exchange for the third. Storn Crag-Strider sacrifices himself to fulfill Mora's price.",
+  "npc_facts": {
+    "Hermaeus Mora": {
+      "base_facts": [
+        "I am Hermaeus Mora, Daedric Prince of Knowledge and Fate.",
+        "My realm is Apocrypha, where all forbidden knowledge resides.",
+        "I seek the secrets the Skaal have withheld from me for many long years."
+      ],
+      "beat_facts": {
+        "HERMAEUS_MORA_BARGAIN": [
+          "I have taught the second Word of Bend Will to the Dragonborn.",
+          "I demand the Skaal's secrets in return for the third Word of Power.",
+          "The Skaal shaman Storn holds the knowledge I require."
+        ]
+      }
+    },
+    "Storn": {
+      "base_facts": [
+        "I am Storn Crag-Strider, shaman of the Skaal.",
+        "The Skaal have kept their secrets from Hermaeus Mora for generations."
+      ],
+      "beat_facts": {
+        "STORN_READS_BOOK": [
+          "I have agreed to give Hermaeus Mora the Skaal's secrets to save Solstheim.",
+          "I am reading the book to surrender our knowledge to Hermaeus Mora."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ENTER_APOCRYPHA",
+      "focus_npc": "",
+      "comment": "Player reads the Black Book Epistolary Acumen and is transported to Apocrypha.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ05",
+          "min_stage": 10,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "LEARN_HIDDEN_KNOWLEDGE",
+      "focus_npc": "",
+      "comment": "Player navigates Apocrypha and reaches the hidden knowledge of Epistolary Acumen.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ05",
+          "min_stage": 100,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENTER_APOCRYPHA"
+      ]
+    },
+    {
+      "id": "HERMAEUS_MORA_BARGAIN",
+      "focus_npc": "Hermaeus Mora",
+      "comment": "Hermaeus Mora appears, teaches the second word of Bend Will, and demands the Skaal's secrets for the third word.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ05",
+          "min_stage": 340,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Skaal secrets",
+            "Bend Will",
+            "Word of Power",
+            "Storn"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEARN_HIDDEN_KNOWLEDGE"
+      ]
+    },
+    {
+      "id": "STORN_READS_BOOK",
+      "focus_npc": "Storn",
+      "comment": "Storn agrees to surrender the Skaal's secrets and reads Hermaeus Mora's book.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ05",
+          "min_stage": 500,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HERMAEUS_MORA_BARGAIN"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Storn",
+      "comment": "Hermaeus Mora kills Storn and teaches the final word of Bend Will. Quest finishes.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ05",
+          "min_stage": 1000,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "STORN_READS_BOOK"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "ENTER_APOCRYPHA"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc2mq04_pathofknowledge",
+        "beat_id": "STAGE_550_COMPLETE"
+      }
+    ]
+  }
+}

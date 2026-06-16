@@ -4230,9 +4230,21 @@ if ($checkTableExists("skyrim_quest_definitions") != -1) {
     require_once(__DIR__ . "/../lib/chim_quest_engine.php");
     try {
         $questDefinitionCount = $db->fetchOne("SELECT COUNT(*) AS n FROM public.skyrim_quest_definitions");
-        if (intval($questDefinitionCount["n"] ?? 0) === 0) {
+        $questDefinitionSeedVersion = 20260615002;
+        if (intval($questDefinitionCount["n"] ?? 0) === 0 || $checkVersion("skyrim_quest_definitions") < $questDefinitionSeedVersion) {
             $questImportResults = chimQuestEngineImportBundledDefinitions();
-            Logger::info(__FILE__ . " imported bundled skyrim quest definitions: " . count($questImportResults));
+            $questImportSuccessCount = 0;
+            foreach ($questImportResults as $questImportResult) {
+                if (is_array($questImportResult) && !empty($questImportResult["success"])) {
+                    $questImportSuccessCount++;
+                }
+            }
+            Logger::info(__FILE__ . " imported bundled skyrim quest definitions: {$questImportSuccessCount}/" . count($questImportResults));
+            if ($questImportSuccessCount === count($questImportResults) && $questImportSuccessCount > 0) {
+                $updateVersion("skyrim_quest_definitions", $questDefinitionSeedVersion);
+            } else {
+                Logger::warn(__FILE__ . " bundled skyrim quest definitions import incomplete; version not advanced");
+            }
         }
     } catch (Exception $e) {
         Logger::warn(__FILE__ . " could not import bundled skyrim quest definitions: " . $e->getMessage());
@@ -6401,6 +6413,39 @@ if ($checkVersion("general_settings") < 20260511001) {
     if ($b_ok) {
         $updateVersion("general_settings", 20260511001);
         Logger::info("Applied patch general_settings 20260511001");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("general_settings") < 20260615003) {
+    Logger::debug("Applying general_settings 20260615003 - add CHIM AI quest progression toggle");
+    $b_ok = true;
+
+    try {
+        $settingId = 'CHIM_AI_QUEST_PROGRESSION';
+        $existingRow = chimGetGeneralSettingRow($settingId);
+
+        if (!$existingRow) {
+            $definition = chimGetSchemaDefinition($settingId);
+            $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+            $currentValue = ($hasLegacyValue === "__CHIM_SETTING_MISSING__")
+                ? ($definition['default'] ?? false)
+                : $hasLegacyValue;
+            $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing general setting '{$settingId}'");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error adding CHIM AI quest progression setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260615003);
+        Logger::info("Applied patch general_settings 20260615003");
     }
 }
 

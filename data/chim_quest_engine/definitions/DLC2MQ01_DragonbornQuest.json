@@ -1,0 +1,224 @@
+{
+  "quest_key": "dlc2mq01_dragonbornquest",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00017F8E",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2MQ01",
+  "title": "Dragonborn (quest)",
+  "description": "After being attacked by cultists claiming to serve someone named Miraak, the Dragonborn travels to Solstheim aboard the Northern Maiden, questions the people of Raven Rock, and seeks out the Temple of Miraak to uncover the truth behind the assassination attempt.",
+  "npc_facts": {
+    "Gjalund Salt-Sage": {
+      "base_facts": [
+        "I am the captain of the Northern Maiden, a ship that sails between Windhelm and Solstheim.",
+        "I brought those masked cultists to Skyrim from Solstheim, though I barely remember the voyage.",
+        "Something strange is happening on Solstheim, and I am reluctant to return there."
+      ],
+      "beat_facts": {
+        "CULTIST_ATTACK": [
+          "Cultists attacked the Dragonborn, just as they attacked others who crossed my ship."
+        ],
+        "READ_ORDERS": [
+          "The Dragonborn found orders on the cultists linking them to someone named Miraak."
+        ],
+        "SEEK_PASSAGE": [
+          "The Dragonborn wants passage to Solstheim to investigate the cultist attack. I agreed to take them."
+        ]
+      }
+    },
+    "Adril Arano": {
+      "base_facts": [
+        "I am the Second Councilor of Raven Rock, serving House Redoran.",
+        "Raven Rock is sovereign territory of House Redoran, part of Morrowind, not Skyrim."
+      ],
+      "beat_facts": {
+        "ARRIVE_SOLSTHEIM": [
+          "The Dragonborn asked me about someone named Miraak. The name is familiar but I cannot place it. It has something to do with the Earth Stone, I think."
+        ],
+        "LEARN_TEMPLE": [
+          "The Dragonborn is seeking the Temple of Miraak toward the center of the island."
+        ]
+      }
+    },
+    "Neloth": {
+      "base_facts": [
+        "I am a Telvanni wizard observing the strange behavior at the Earth Stone.",
+        "The workers at the Earth Stone are building something but cannot explain what, and I find it fascinating."
+      ],
+      "beat_facts": {
+        "LEARN_TEMPLE": [
+          "The Dragonborn asked about Miraak. I recalled that Miraak has been dead for thousands of years. I directed them to the ruins of an ancient temple of Miraak toward the center of the island."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "CULTIST_ATTACK",
+      "focus_npc": "",
+      "comment": "Player is attacked by cultists who ask if they are the Dragonborn and mention Lord Miraak.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ01",
+          "min_stage": 5,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "READ_ORDERS",
+      "focus_npc": "Gjalund Salt-Sage",
+      "comment": "Player finds the Cultists' Orders note on one of the bodies, learning the name Miraak.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ01",
+          "min_stage": 7,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "read the note",
+            "cultists orders",
+            "who sent them"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CULTIST_ATTACK"
+      ]
+    },
+    {
+      "id": "SEEK_PASSAGE",
+      "focus_npc": "Gjalund Salt-Sage",
+      "comment": "Player seeks passage to Solstheim at the Windhelm docks and speaks with Gjalund Salt-Sage.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ01",
+          "min_stage": 10,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "passage to solstheim",
+            "boat to solstheim",
+            "northern maiden"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "READ_ORDERS"
+      ]
+    },
+    {
+      "id": "ARRIVE_SOLSTHEIM",
+      "focus_npc": "Adril Arano",
+      "comment": "Player arrives on Solstheim, is greeted by Adril Arano, and asks the people of Raven Rock about Miraak.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ01",
+          "min_stage": 20,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "know about miraak",
+            "who is miraak",
+            "heard of miraak"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SEEK_PASSAGE"
+      ]
+    },
+    {
+      "id": "LEARN_TEMPLE",
+      "focus_npc": "Neloth",
+      "comment": "Player learns of the Temple of Miraak from Raven Rock citizens or Neloth at the Earth Stone.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ01",
+          "min_stage": 30,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "temple of miraak",
+            "earth stone",
+            "where is miraak"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ARRIVE_SOLSTHEIM"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Player reaches the Temple of Miraak and the quest concludes.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ01",
+          "min_stage": 200,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEARN_TEMPLE"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "CULTIST_ATTACK"
+    ],
+    "requires": []
+  }
+}

@@ -1,0 +1,156 @@
+{
+    "quest_key":  "dbsidecontract01_killnarfi",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001EA5B",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DBSideContract01",
+    "title":  "Kill Narfi",
+    "description":  "A Dark Brotherhood side contract given by Nazir. The player must travel to Ivarstead and assassinate the beggar Narfi, then return to Nazir at the Sanctuary for a leveled gold reward.",
+    "npc_facts":  {
+                      "Nazir":  {
+                                    "base_facts":  [
+                                                       "I am a Redguard assassin and the Dark Brotherhood\u0027s primary contract giver for small side jobs.",
+                                                       "I offer three contracts at once: Narfi, Beitild, and Ennodius Papius. The order does not matter.",
+                                                       "I pay leveled gold upon completion of each contract."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "CONTRACT_ACCEPTED":  [
+                                                                                 "I have given the player the contract to kill the beggar Narfi in Ivarstead."
+                                                                             ],
+                                                       "NARFI_KILLED":  [
+                                                                            "The player has killed Narfi and should report back to me for payment."
+                                                                        ],
+                                                       "QUEST_COMPLETED":  [
+                                                                               "I have paid the player for killing Narfi. Another contract fulfilled."
+                                                                           ]
+                                                   }
+                                },
+                      "Narfi":  {
+                                    "base_facts":  [
+                                                       "I am a hapless beggar living in ruined house by the creek outside Ivarstead.",
+                                                       "I am broken and confused. My sister Reyda is gone and I miss her."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "CONTRACT_ACCEPTED":  [
+                                                                                 "Someone in the Dark Brotherhood wants me dead."
+                                                                             ],
+                                                       "NARFI_KILLED":  [
+                                                                            "I have been killed by the Dark Brotherhood\u0027s assassin."
+                                                                        ]
+                                                   }
+                                }
+                  },
+    "beats":  [
+                  {
+                      "id":  "CONTRACT_ACCEPTED",
+                      "focus_npc":  "Nazir",
+                      "comment":  "Player accepts the side contract from Nazir to kill Narfi. Quest stage 10 fires.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x0001EA5B",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "kill narfi",
+                                                            "narfi contract",
+                                                            "side contract",
+                                                            "dark brotherhood contract"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "NARFI_KILLED",
+                      "focus_npc":  "Narfi",
+                      "comment":  "Narfi has been killed. Quest advances to stage 20; player must report back to Nazir.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x0001EA5B",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "min_stage":  20
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "narfi is dead",
+                                                            "killed narfi",
+                                                            "narfi killed"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "CONTRACT_ACCEPTED"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETED",
+                      "focus_npc":  "Nazir",
+                      "comment":  "Player reports back to Nazir and collects the leveled gold reward. Quest finishes at stage 200.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x0001EA5B",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "min_stage":  200
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "collected reward",
+                                                            "nazir paid",
+                                                            "contract complete"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "NARFI_KILLED"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "CONTRACT_ACCEPTED"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "db02a_sanctuary",
+                                               "beat_id":  "CONTRACTS_RECEIVED"
+                                           }
+                                       ]
+                      }
+}

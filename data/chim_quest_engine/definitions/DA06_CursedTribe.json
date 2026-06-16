@@ -1,0 +1,243 @@
+{
+  "quest_key": "da06_cursedtribe",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0003B681",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DA06",
+  "title": "The Cursed Tribe",
+  "description": "Help the cursed Orcs of Largashbur by aiding wise woman Atub in contacting Malacath, then assist Chief Yamarz in reclaiming the desecrated shrine from giants.",
+  "npc_facts": {
+    "Atub": {
+      "base_facts": [
+        "I am the wise woman of the Orc stronghold Largashbur.",
+        "Our tribe has been cursed and giants attack us openly.",
+        "I need a Daedra Heart and Troll Fat to perform a ritual to contact Malacath."
+      ],
+      "beat_facts": {
+        "GATHER_INGREDIENTS": [
+          "The player has brought me the ingredients for the ritual."
+        ],
+        "MALACATHS_JUDGMENT": [
+          "Malacath has spoken through the ritual and demands Yamarz reclaim the shrine."
+        ]
+      }
+    },
+    "Chief Yamarz": {
+      "base_facts": [
+        "I am the chief of Largashbur, though Malacath considers me weak.",
+        "Giants have desecrated Malacath's shrine and I must reclaim it."
+      ],
+      "beat_facts": {
+        "ESCORT_YAMARZ": [
+          "I am traveling to Fallowstone Cave to deal with the giant."
+        ],
+        "DEFEAT_GIANT": [
+          "The giant at the shrine has been defeated."
+        ]
+      }
+    },
+    "Gularzob": {
+      "base_facts": [
+        "I am an Orc of Largashbur."
+      ],
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "Malacath has named me the new chief of Largashbur."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "LARGASHBUR_RUMORS",
+      "focus_npc": "Atub",
+      "comment": "Player hears about trouble at Largashbur. Note: stage 10 is never set in the final game.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA06",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "GATHER_INGREDIENTS",
+      "focus_npc": "Atub",
+      "comment": "Player helps fight the giant and brings Troll Fat and Daedra Heart to Atub.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA06",
+          "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help the Orcs",
+            "Troll Fat",
+            "Daedra Heart"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LARGASHBUR_RUMORS"
+      ]
+    },
+    {
+      "id": "MALACATHS_JUDGMENT",
+      "focus_npc": "Atub",
+      "comment": "Atub performs the ritual and Malacath commands Yamarz to reclaim the shrine.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA06",
+          "min_stage": 70
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Malacath",
+            "ritual",
+            "Yamarz"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "GATHER_INGREDIENTS"
+      ]
+    },
+    {
+      "id": "ESCORT_YAMARZ",
+      "focus_npc": "Chief Yamarz",
+      "comment": "Player escorts Yamarz to Fallowstone Cave and protects him through the cave.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA06",
+          "min_stage": 90
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Fallowstone Cave",
+            "protect Yamarz",
+            "escort"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MALACATHS_JUDGMENT"
+      ]
+    },
+    {
+      "id": "DEFEAT_GIANT",
+      "focus_npc": "Chief Yamarz",
+      "comment": "Player defeats the giant at Giant's Grove. Yamarz may die here.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA06",
+          "min_stage": 100
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "giant",
+            "defeat the giant",
+            "fight the giant"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ESCORT_YAMARZ"
+      ]
+    },
+    {
+      "id": "RETURN_HAMMER",
+      "focus_npc": "",
+      "comment": "Player returns Shagrol's Hammer to Largashbur and places it on the shrine.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA06",
+          "min_stage": 120
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Shagrol's Hammer",
+            "shrine",
+            "Largashbur"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEFEAT_GIANT"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest complete. Malacath names Gularzob the new chief. The hammer transforms into Volendrung.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA06",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETURN_HAMMER"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "LARGASHBUR_RUMORS"
+    ],
+    "requires": []
+  }
+}

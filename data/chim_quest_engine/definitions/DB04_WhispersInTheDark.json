@@ -1,0 +1,289 @@
+{
+    "quest_key":  "db04_whispersinthedark",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001EA53",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DB04",
+    "title":  "Whispers in the Dark",
+    "description":  "Astrid suspects Cicero is conspiring with someone in the Sanctuary and asks the player to hide in the Night Mother\u0027s coffin to eavesdrop. Inside, the Night Mother speaks and names the player Listener, directing them to Volunruud to speak with Amaund Motierre. Astrid is unsettled by the revelation and sends the player to Nazir for side contracts while she processes the news.",
+    "npc_facts":  {
+                      "Astrid":  {
+                                     "base_facts":  [
+                                                        "I am the leader of the Dark Brotherhood Sanctuary.",
+                                                        "I trust my own judgment over the Old Ways.",
+                                                        "I am married to Arnbjorn."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "ASTRID_REQUEST":  [
+                                                                               "I suspect Cicero is conspiring with someone against the Sanctuary.",
+                                                                               "I asked the new recruit to hide in the Night Mother\u0027s coffin and eavesdrop on Cicero."
+                                                                           ],
+                                                        "REPORT_TO_ASTRID":  [
+                                                                                 "The Night Mother supposedly named the recruit as Listener. I am unsure what to believe.",
+                                                                                 "I am still the leader of this family, regardless of the Night Mother\u0027s choice."
+                                                                             ],
+                                                        "NAZIR_SIDE_CONTRACT":  [
+                                                                                    "I need time to process the Listener revelation. I sent the recruit to Nazir for side contracts."
+                                                                                ]
+                                                    }
+                                 },
+                      "Cicero":  {
+                                     "base_facts":  [
+                                                        "I am the Keeper of the Night Mother.",
+                                                        "I am devoted to the Night Mother and the Old Ways.",
+                                                        "I have been trying to hear the Night Mother speak for so long."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "NIGHT_MOTHER_REVELATION":  [
+                                                                                        "The Night Mother has finally spoken! She named the recruit as the Listener!",
+                                                                                        "Darkness rises when silence dies!"
+                                                                                    ]
+                                                    }
+                                 },
+                      "Nazir":  {
+                                    "base_facts":  [
+                                                       "I am a Redguard assassin of the Dark Brotherhood.",
+                                                       "I provide side contracts to Sanctuary members."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "NAZIR_SIDE_CONTRACT":  [
+                                                                                   "I have given the recruit side contracts to complete while Astrid sorts things out."
+                                                                               ]
+                                                   }
+                                },
+                      "Night Mother":  {
+                                           "base_facts":  [
+                                                              "I am the Night Mother, the spiritual leader of the Dark Brotherhood.",
+                                                              "I communicate only with the Listener."
+                                                          ],
+                                           "beat_facts":  {
+                                                              "NIGHT_MOTHER_REVELATION":  [
+                                                                                              "I have named the recruit as the Listener.",
+                                                                                              "I have tasked the Listener to go to Volunruud and speak with Amaund Motierre."
+                                                                                          ]
+                                                          }
+                                       }
+                  },
+    "beats":  [
+                  {
+                      "id":  "ASTRID_REQUEST",
+                      "focus_npc":  "Astrid",
+                      "comment":  "Astrid asks the player to spy on Cicero by hiding in the Night Mother\u0027s coffin.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001EA53",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB04",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Cicero",
+                                                            "spy",
+                                                            "conspiracy",
+                                                            "eavesdrop",
+                                                            "Night Mother\u0027s coffin"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "HIDE_IN_COFFIN",
+                      "focus_npc":  "",
+                      "comment":  "Player hides in the Night Mother\u0027s coffin and begins eavesdropping on Cicero.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001EA53",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  10
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001EA53",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  20
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB04",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ASTRID_REQUEST"
+                                        ]
+                  },
+                  {
+                      "id":  "NIGHT_MOTHER_REVELATION",
+                      "focus_npc":  "Night Mother",
+                      "comment":  "The Night Mother speaks to the player in the coffin, naming them Listener and directing them to Volunruud.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001EA53",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  20
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001EA53",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  30
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB04",
+                                           "min_stage":  30
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Listener",
+                                                            "Night Mother spoke",
+                                                            "Darkness rises when silence dies"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "HIDE_IN_COFFIN"
+                                        ]
+                  },
+                  {
+                      "id":  "REPORT_TO_ASTRID",
+                      "focus_npc":  "Astrid",
+                      "comment":  "Player tells Cicero the passphrase and reports to Astrid about becoming the Listener.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001EA53",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  30
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001EA53",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  40
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB04",
+                                           "min_stage":  40
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "NIGHT_MOTHER_REVELATION"
+                                        ]
+                  },
+                  {
+                      "id":  "NAZIR_SIDE_CONTRACT",
+                      "focus_npc":  "Nazir",
+                      "comment":  "Astrid sends the player to Nazir for side contracts while she processes the Listener revelation.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001EA53",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  40
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001EA53",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  50
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB04",
+                                           "min_stage":  50
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REPORT_TO_ASTRID"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest completes after speaking with Nazir and receiving a side contract.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001EA53",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  50
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB04",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "NAZIR_SIDE_CONTRACT"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "ASTRID_REQUEST"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "db03_mourningnevercomes",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

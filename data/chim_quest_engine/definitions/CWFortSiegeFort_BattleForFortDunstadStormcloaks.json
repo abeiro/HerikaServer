@@ -1,0 +1,103 @@
+{
+  "quest_key": "cwfortsiegefort_battleforfortdunstadstormcloaks",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00083042",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "CWFortSiegeFort",
+  "title": "The Battle for Fort Dunstad (Stormcloaks)",
+  "description": "Galmar Stone-Fist sends the player to assist Stormcloak forces in taking Fort Dunstad from the Imperial Legion. After defeating the enemy garrison, Ulfric Stormcloak rewards the player with the title of Bone-Breaker and a leveled weapon.",
+  "npc_facts": {
+    "Galmar Stone-Fist": {
+      "base_facts": [
+        "I command the Stormcloak forces from the Pale Stormcloak Camp.",
+        "Fort Dunstad must be taken from the Imperial Legion."
+      ],
+      "beat_facts": {
+        "ORDERS_FROM_GALMAR": [
+          "I have sent the warrior to join the attack on Fort Dunstad."
+        ],
+        "FORT_CONQUERED": [
+          "Fort Dunstad has fallen to our forces."
+        ]
+      }
+    },
+    "Ulfric Stormcloak": {
+      "base_facts": [
+        "I lead the Stormcloak rebellion from Windhelm."
+      ],
+      "beat_facts": {
+        "FORT_CONQUERED": [
+          "I have named the warrior Bone-Breaker for taking Fort Dunstad and granted them a weapon as reward."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ORDERS_FROM_GALMAR",
+      "focus_npc": "Galmar Stone-Fist",
+      "comment": "Player receives orders from Galmar at the Pale Stormcloak Camp to take Fort Dunstad.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWFortSiegeFort",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "ASSAULT_FORT",
+      "focus_npc": "",
+      "comment": "Player joins the Stormcloak attackers and assaults Fort Dunstad, defeating the Imperial garrison.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWFortSiegeFort",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ORDERS_FROM_GALMAR"
+      ]
+    },
+    {
+      "id": "FORT_CONQUERED",
+      "focus_npc": "Ulfric Stormcloak",
+      "comment": "Fort Dunstad is taken. Player returns to Ulfric in Windhelm and receives the title Bone-Breaker and a leveled weapon.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWFortSiegeFort",
+          "stage": 9000
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ASSAULT_FORT"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "ORDERS_FROM_GALMAR"
+    ],
+    "requires": []
+  }
+}

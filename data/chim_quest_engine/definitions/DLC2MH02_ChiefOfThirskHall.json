@@ -1,0 +1,222 @@
+{
+    "quest_key":  "dlc2mh02_chiefofthirskhall",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001A50C",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2MH02",
+    "title":  "The Chief of Thirsk Hall",
+    "description":  "A Riekling Chief at Thirsk Mead Hall requests help with several tasks: luring back the prize beast Bilgemuck, gathering scathecraw for the godspeak dance, and killing the Nords who formerly lived in the hall. After completing these tasks, the Chief turns hostile and must be defeated, making the player the new chief of the tribe.",
+    "npc_facts":  {
+                      "Riekling Chief":  {
+                                             "base_facts":  [
+                                                                "I am chief of the Riekling tribe-kin at Thirsk Mead Hall.",
+                                                                "We took Thirsk from the bad Nords. Hot fire, cold dizzydrink, happy tribe.",
+                                                                "Bilgemuck is our prize beast. He ran away and fears tribe-kin now.",
+                                                                "We need redgrassâ€”scathecrawâ€”for the godspeak dance.",
+                                                                "Bad Nords live by the water and bother tribe-kin. We must fight them."
+                                                            ],
+                                             "beat_facts":  {
+                                                                "AGREE_TO_HELP_CHIEF":  [
+                                                                                            "An outsider agreed to help the tribe-kin."
+                                                                                        ],
+                                                                "BILGEMUCK_RETURNED":  [
+                                                                                           "Bilgemuck came back. The outsider brought him. Tribe-kin stronger now."
+                                                                                       ],
+                                                                "SCATHECRAW_DELIVERED":  [
+                                                                                             "The outsider brought good redgrass. Later we burn, then final task."
+                                                                                         ],
+                                                                "AGREE_TO_KILL_NORDS":  [
+                                                                                            "The outsider will help fight the bad Nords. Stab and run, the tribe-kin way."
+                                                                                        ],
+                                                                "CHIEF_TURNS_HOSTILE":  [
+                                                                                            "The outsider is too strong. Maybe they want to be chief. I must fight them."
+                                                                                        ],
+                                                                "QUEST_COMPLETE":  [
+                                                                                       "The old chief is dead. The outsider is the new chief of tribe-kin."
+                                                                                   ]
+                                                            }
+                                         }
+                  },
+    "beats":  [
+                  {
+                      "id":  "AGREE_TO_HELP_CHIEF",
+                      "focus_npc":  "Riekling Chief",
+                      "comment":  "Player agrees to help the Riekling Chief, starting the Bilgemuck retrieval task.",
+                      "action":  {
+                                     "type":  "set_stage_cascade",
+                                     "quest_form_id":  "0x0001A50C",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "help tribe",
+                                                            "help you",
+                                                            "what is going on",
+                                                            "yes"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2MH02",
+                                           "quest_form_id":  "0x0001A50C",
+                                           "quest_plugin":  "Dragonborn.esm",
+                                           "min_stage":  10
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "BILGEMUCK_RETURNED",
+                      "focus_npc":  "Riekling Chief",
+                      "comment":  "Bilgemuck has been returned to Thirsk. Chief assigns the scathecraw task.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2MH02",
+                                           "quest_form_id":  "0x0001A50C",
+                                           "quest_plugin":  "Dragonborn.esm",
+                                           "min_stage":  17
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "AGREE_TO_HELP_CHIEF"
+                                        ]
+                  },
+                  {
+                      "id":  "SCATHECRAW_DELIVERED",
+                      "focus_npc":  "Riekling Chief",
+                      "comment":  "Player delivered 10 scathecraw. Chief now wants the Nords killed.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2MH02",
+                                           "quest_form_id":  "0x0001A50C",
+                                           "quest_plugin":  "Dragonborn.esm",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BILGEMUCK_RETURNED"
+                                        ]
+                  },
+                  {
+                      "id":  "AGREE_TO_KILL_NORDS",
+                      "focus_npc":  "Riekling Chief",
+                      "comment":  "Player agrees to help kill the Nords at Bujold\u0027s Retreat.",
+                      "action":  {
+                                     "type":  "set_stage_cascade",
+                                     "quest_form_id":  "0x0001A50C",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  30
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "kill nords",
+                                                            "let\u0027s go",
+                                                            "fight them",
+                                                            "help fight"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2MH02",
+                                           "quest_form_id":  "0x0001A50C",
+                                           "quest_plugin":  "Dragonborn.esm",
+                                           "min_stage":  30
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SCATHECRAW_DELIVERED"
+                                        ]
+                  },
+                  {
+                      "id":  "CHIEF_TURNS_HOSTILE",
+                      "focus_npc":  "Riekling Chief",
+                      "comment":  "After Nords are killed, the Chief turns on the player, fearing usurpation.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2MH02",
+                                           "quest_form_id":  "0x0001A50C",
+                                           "quest_plugin":  "Dragonborn.esm",
+                                           "min_stage":  37
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "AGREE_TO_KILL_NORDS"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Chief defeated. Player becomes the new chief of the Riekling tribe.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2MH02",
+                                           "quest_form_id":  "0x0001A50C",
+                                           "quest_plugin":  "Dragonborn.esm",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "CHIEF_TURNS_HOSTILE"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "AGREE_TO_HELP_CHIEF"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

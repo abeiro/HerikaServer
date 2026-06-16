@@ -170,6 +170,7 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'HIDE_AMBIENT_COMBAT',
             'DISABLE_REANIMATION_TRACKING',
             'TRANSFORMATION_DETECTION',
+            'CHIM_AI_QUEST_PROGRESSION',
             'PROMPT_TIMESTAMP',
             'PROMPT_CONTEXT_OPTIONS',
             'RECHAT_MODE',
@@ -271,6 +272,7 @@ if (!function_exists('chimPrettySettingLabel')) {
             'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
             'GLOBAL_STT_CONNECTOR_ID' => 'Speech To Text Connector',
             'GLOBAL_ITT_CONNECTOR_ID' => 'Image To Text Connector',
+            'CHIM_AI_QUEST_PROGRESSION' => 'AI Quest Progression',
         ];
         if (isset($customLabels[$flatName])) {
             return $customLabels[$flatName];
@@ -299,6 +301,10 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
             return 'Rechat';
         }
 
+        if ($flatId === 'CHIM_AI_QUEST_PROGRESSION') {
+            return 'Quests';
+        }
+
         if (strpos($flatId, 'FEATURES@MEMORY_EMBEDDING@') === 0) {
             return 'Memory';
         }
@@ -317,6 +323,7 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
                 'HIDE_AMBIENT_COMBAT',
                 'DISABLE_REANIMATION_TRACKING',
                 'TRANSFORMATION_DETECTION',
+                'CHIM_AI_QUEST_PROGRESSION',
                 'POWER_AWARENESS_ENABLED',
                 'SCENE_CLASSIFIER_ENABLED',
                 'RELATIONSHIP_SYSTEM_ENABLED',

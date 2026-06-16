@@ -1,0 +1,121 @@
+{
+    "quest_key":  "cwfortsiegefort_battleforforthraggstad",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00083042",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "CWFortSiegeFort",
+    "title":  "The Battle for Fort Hraggstad",
+    "description":  "Galmar Stone-Fist orders the player to join the Stormcloak assault on Fort Hraggstad, the Imperial Legion\u0027s last stronghold in Haafingar before the final push on Solitude.",
+    "npc_facts":  {
+                      "Galmar Stone-Fist":  {
+                                                "base_facts":  [
+                                                                   "I am Galmar Stone-Fist, second-in-command of the Stormcloak rebellion under Ulfric Stormcloak.",
+                                                                   "I direct military operations for the Stormcloaks across Skyrim."
+                                                               ],
+                                                "beat_facts":  {
+                                                                   "ORDERS_FROM_GALMAR":  [
+                                                                                              "I have sent the player to assist in taking Fort Hraggstad from the Imperials."
+                                                                                          ],
+                                                                   "FORT_CAPTURED":  [
+                                                                                         "Fort Hraggstad has fallen to the Stormcloaks. The path to Solitude is open for the final assault."
+                                                                                     ]
+                                                               }
+                                            }
+                  },
+    "beats":  [
+                  {
+                      "id":  "ORDERS_FROM_GALMAR",
+                      "focus_npc":  "Galmar Stone-Fist",
+                      "comment":  "Galmar gives orders to join the assault on Fort Hraggstad.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWFortSiegeFort",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "fort hraggstad",
+                                                            "join the attack",
+                                                            "take the fort"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "JOIN_THE_SIEGE",
+                      "focus_npc":  "",
+                      "comment":  "Player joins the Stormcloaks at the staging area and begins the assault on the fort.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWFortSiegeFort",
+                                           "min_stage":  50
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "storm the fort",
+                                                            "attack the fort",
+                                                            "defeat the imperials"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ORDERS_FROM_GALMAR"
+                                        ]
+                  },
+                  {
+                      "id":  "FORT_CAPTURED",
+                      "focus_npc":  "Galmar Stone-Fist",
+                      "comment":  "Fort Hraggstad is taken; the way to Solitude is clear for the final battle.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWFortSiegeFort",
+                                           "stage":  9000
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "JOIN_THE_SIEGE"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "ORDERS_FROM_GALMAR"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

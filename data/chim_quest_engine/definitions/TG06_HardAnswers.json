@@ -1,0 +1,227 @@
+{
+    "quest_key":  "tg06_hardanswers",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00021552",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "TG06",
+    "title":  "Hard Answers",
+    "description":  "Karliah needs Gallus\u0027s encoded journal translated to expose Mercer Frey\u0027s treachery. Enthir identifies the language as Falmer and directs the player to Calcelmo in Markarth, who refuses to help. The player must infiltrate Calcelmo\u0027s Dwemer Museum, reach the stone Falmer Translation Guide in his tower, and create a rubbing to bring back to Enthir for translation.",
+    "npc_facts":  {
+                      "Karliah":  {
+                                      "base_facts":  [
+                                                         "Gallus\u0027s journal is written in a code that must be deciphered to prove Mercer\u0027s betrayal.",
+                                                         "She recovered the journal from Snow Veil Sanctum."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "SPEAK_ENTHIR":  [
+                                                                              "Enthir may be able to help translate Gallus\u0027s journal."
+                                                                          ],
+                                                         "QUEST_COMPLETE":  [
+                                                                                "The journal confirms Mercer desecrated the Twilight Sepulcher and stole from Nocturnal.",
+                                                                                "Karliah gave the Nightingale Blade as thanks and wants to confront Brynjolf at the Ragged Flagon."
+                                                                            ]
+                                                     }
+                                  },
+                      "Enthir":  {
+                                     "base_facts":  [
+                                                        "Enthir is a wizard at the College of Winterhold and was an old acquaintance of Gallus."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "SPEAK_ENTHIR":  [
+                                                                             "Gallus\u0027s journal is written in the Falmer language.",
+                                                                             "Calcelmo in Markarth is the foremost authority on the Falmer."
+                                                                         ],
+                                                        "RETURN_TO_ENTHIR":  [
+                                                                                 "The rubbing of Calcelmo\u0027s stone provides enough to translate the journal.",
+                                                                                 "Mercer defiled the Twilight Sepulcher, Nocturnal\u0027s temple the Nightingales are sworn to protect."
+                                                                             ]
+                                                    }
+                                 },
+                      "Calcelmo":  {
+                                       "base_facts":  [
+                                                          "Calcelmo is the Court Wizard of Markarth and the foremost expert on the Falmer.",
+                                                          "He is stubborn and protective of his research."
+                                                      ],
+                                       "beat_facts":  {
+                                                          "SPEAK_CALCELMO":  [
+                                                                                 "Calcelmo refuses to help translate the journal or share his Falmer research.",
+                                                                                 "His Dwemer Museum may contain the translation materials needed."
+                                                                             ]
+                                                      }
+                                   }
+                  },
+    "beats":  [
+                  {
+                      "id":  "SPEAK_ENTHIR",
+                      "focus_npc":  "Enthir",
+                      "comment":  "Player speaks with Enthir about translating Gallus\u0027s journal. He identifies it as Falmer and points to Calcelmo.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TG06",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "translate journal",
+                                                            "Gallus\u0027s journal",
+                                                            "Enthir"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "SPEAK_CALCELMO",
+                      "focus_npc":  "Calcelmo",
+                      "comment":  "Player speaks with Calcelmo in Understone Keep. He refuses to help directly.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TG06",
+                                           "min_stage":  20
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Calcelmo",
+                                                            "Falmer translation"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SPEAK_ENTHIR"
+                                        ]
+                  },
+                  {
+                      "id":  "ENTER_MUSEUM",
+                      "focus_npc":  "",
+                      "comment":  "Player gains entry to Calcelmo\u0027s Dwemer Museum by key, lockpicking, or persuasion.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TG06",
+                                           "min_stage":  25
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SPEAK_CALCELMO"
+                                        ]
+                  },
+                  {
+                      "id":  "DUPLICATE_STONE",
+                      "focus_npc":  "",
+                      "comment":  "Player reaches the Falmer Translation Guide stone tablet in Calcelmo\u0027s Tower and creates a rubbing.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TG06",
+                                           "min_stage":  40
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ENTER_MUSEUM"
+                                        ]
+                  },
+                  {
+                      "id":  "RETURN_TO_ENTHIR",
+                      "focus_npc":  "Enthir",
+                      "comment":  "Player returns to Enthir at the Frozen Hearth cellar with the rubbing. Enthir translates the journal.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TG06",
+                                           "min_stage":  50
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "rubbing",
+                                                            "Calcelmo\u0027s stone",
+                                                            "translation"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "DUPLICATE_STONE"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Karliah",
+                      "comment":  "Player speaks to Karliah after the translation. She reveals Mercer defiled the Twilight Sepulcher and gives the Nightingale Blade. Quest ends, The Pursuit begins.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TG06",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RETURN_TO_ENTHIR"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "SPEAK_ENTHIR"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "tg05_speakingwithsilence",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

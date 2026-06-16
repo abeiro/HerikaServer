@@ -1,0 +1,218 @@
+{
+  "quest_key": "dlc2mh01_retakingthirsk",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001A50B",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2MH01",
+  "title": "Retaking Thirsk",
+  "description": "Help Bujold the Unworthy and her exiled warriors retake Thirsk Mead Hall from the rieklings, then accompany her to Hrothmund's Barrow where she seeks the founder's blessing to continue her leadership.",
+  "npc_facts": {
+    "Bujold the Unworthy": {
+      "base_facts": [
+        "I lead the exiled Nords of Thirsk Mead Hall, driven out by rieklings.",
+        "We lost our home because we grew soft on mead and comfort.",
+        "I need someone to help rouse my warriors and retake Thirsk."
+      ],
+      "beat_facts": {
+        "RETAKE_THIRSK": [
+          "We have retaken Thirsk from the rieklings."
+        ],
+        "COMMUNE_WITH_SPIRIT": [
+          "Hrothmund's spirit denied me his blessing, saying my softness led to our exile and no one among us is fit to lead."
+        ],
+        "BUJOLD_CONFRONTATION": [
+          "I will lead Thirsk regardless of Hrothmund's judgment. I asked the outsider to keep my secret and not tell the others what happened here."
+        ]
+      }
+    },
+    "Kuvar": {
+      "base_facts": [
+        "I am a warrior of Thirsk, exiled by the rieklings who overran our hall.",
+        "I am frustrated with Bujold's hesitation and want to retake our home."
+      ],
+      "beat_facts": {
+        "RETAKE_THIRSK": [
+          "We have retaken Thirsk. The rieklings are dead."
+        ],
+        "QUEST_COMPLETE": [
+          "I learned the truth about Bujold's denial from Hrothmund."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "MEET_EXILED_NORDS",
+      "focus_npc": "Bujold the Unworthy",
+      "comment": "Player discovers the exiled Nords at Bujold's Retreat and learns about their situation.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MH01",
+          "min_stage": 10,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "JOIN_ASSAULT",
+      "focus_npc": "Bujold the Unworthy",
+      "comment": "Player agrees to help retake Thirsk, triggering the assault on the mead hall.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001A50B",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help you",
+            "retake Thirsk",
+            "fight the rieklings",
+            "join the assault"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MEET_EXILED_NORDS"
+      ]
+    },
+    {
+      "id": "RETAKE_THIRSK",
+      "focus_npc": "Bujold the Unworthy",
+      "comment": "Rieklings are defeated and Thirsk is retaken. Bujold asks the player to be her second at Hrothmund's Barrow.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MH01",
+          "min_stage": 25,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "JOIN_ASSAULT"
+      ]
+    },
+    {
+      "id": "MEET_AT_BARROW",
+      "focus_npc": "Bujold the Unworthy",
+      "comment": "Player agrees to accompany Bujold to Hrothmund's Barrow for the blessing ritual.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001A50B",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 27
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "go with you",
+            "accompany you",
+            "be your second",
+            "ready"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETAKE_THIRSK"
+      ]
+    },
+    {
+      "id": "COMMUNE_WITH_SPIRIT",
+      "focus_npc": "Bujold the Unworthy",
+      "comment": "Player witnesses Hrothmund's spirit deny Bujold's blessing, declaring no one among them fit to lead.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MH01",
+          "min_stage": 30,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MEET_AT_BARROW"
+      ]
+    },
+    {
+      "id": "BUJOLD_CONFRONTATION",
+      "focus_npc": "Bujold the Unworthy",
+      "comment": "Bujold reveals she will lead anyway and asks player to keep her secret. If opposed, she attacks.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MH01",
+          "min_stage": 40,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "COMMUNE_WITH_SPIRIT"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest ends either by keeping Bujold's secret, killing her, or betraying her to Kuvar.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MH01",
+          "min_stage": 100,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MH01",
+          "min_stage": 200,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BUJOLD_CONFRONTATION"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "MEET_EXILED_NORDS"
+    ],
+    "requires": []
+  }
+}

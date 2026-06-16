@@ -1,0 +1,135 @@
+{
+  "quest_key": "mg01pointer_collegeobjectivequest",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00054D0A",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MG01Pointer",
+  "title": "College Objective Quest",
+  "description": "A miscellaneous pointer quest directing you to visit the College of Winterhold after hearing about magic training from innkeepers or spell merchants. The quest completes once you reach the college bridge and speak with Faralda.",
+  "npc_facts": {
+    "Faralda": {
+      "base_facts": [
+        "I guard the bridge to the College of Winterhold and test those who wish to enter.",
+        "No one enters the College without passing my test."
+      ],
+      "beat_facts": {
+        "QUEST_STARTED": [
+          "Someone has been directed to the College and may approach soon."
+        ],
+        "MEET_FARALDA": [
+          "I have met a prospective student at the bridge and will test them before granting entry."
+        ]
+      }
+    },
+    "Innkeepers": {
+      "base_facts": [
+        "If someone asks about magic training, I direct them to the College of Winterhold."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_STARTED",
+      "focus_npc": "",
+      "comment": "Quest begins at stage 10 when the player is directed to visit the College.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MG01Pointer",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "HEAR_ABOUT_COLLEGE",
+      "focus_npc": "Innkeepers",
+      "comment": "Player hears about the College from innkeepers or spell merchants before the quest formally starts.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "magic training",
+            "college",
+            "winterhold",
+            "learn magic",
+            "study magic"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": []
+    },
+    {
+      "id": "MEET_FARALDA",
+      "focus_npc": "Faralda",
+      "comment": "Player approaches the College bridge and is stopped by Faralda, who initiates First Lessons.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "enter the college",
+            "cross the bridge",
+            "let me in",
+            "want to join",
+            "pass your test"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_STARTED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest finishes at stage 200 once the player has reached the College and spoken with Faralda.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MG01Pointer",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_STARTED"
+      ]
+    }
+  ],
+  "external_ids": {
+    "quest_form_id": "0x00054D0A",
+    "quest_plugin": "Skyrim.esm",
+    "source": "local-esm:Skyrim.esm QUST",
+    "matched_by": "quest_editor_id"
+  },
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "QUEST_STARTED"
+    ],
+    "requires": []
+  }
+}

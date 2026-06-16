@@ -1,0 +1,244 @@
+{
+    "quest_key":  "dunhunterqst_kynessacredtrials",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00018601",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "dunHunterQST",
+    "title":  "Kyne\u0027s Sacred Trials",
+    "description":  "Froki Whetted-Blade, an old Nord hunter at Froki\u0027s Shack, guides the player through the Sacred Trials of Kyne by hunting guardian beast spirits across Skyrim in three escalating rounds: lesser beasts, greater beasts, and finally a troll champion. Completing all trials earns Kyne\u0027s Token.",
+    "npc_facts":  {
+                      "Froki Whetted-Blade":  {
+                                                  "base_facts":  [
+                                                                     "I am Froki Whetted-Blade, a hunter who follows the old Nordic traditions.",
+                                                                     "I honor Kyne, the mother of men and gods, not the Divines.",
+                                                                     "I despise the worship of the Divines and pine for the old ways.",
+                                                                     "I live at Froki\u0027s Shack near The Guardian Stones.",
+                                                                     "I lost my bow inside Graywinter Watch."
+                                                                 ],
+                                                  "beat_facts":  {
+                                                                     "MEET_FROKI":  [
+                                                                                        "A traveler has come to my shack. Perhaps they will listen to the old ways of Kyne."
+                                                                                    ],
+                                                                     "FIRST_TRIALS_ASSIGNED":  [
+                                                                                                   "I have marked this hunter for the lesser guardian trials: the mudcrab, skeever, and wolf spirits."
+                                                                                               ],
+                                                                     "FIRST_TRIALS_COMPLETE":  [
+                                                                                                   "The hunter has proven themselves against the lesser guardians and returned to me."
+                                                                                               ],
+                                                                     "SECOND_TRIALS_ASSIGNED":  [
+                                                                                                    "This hunter is ready for the greater guardian trials: the bear, mammoth, and sabre cat spirits."
+                                                                                                ],
+                                                                     "SECOND_TRIALS_COMPLETE":  [
+                                                                                                    "The hunter has bested the greater guardians. They are truly skilled."
+                                                                                                ],
+                                                                     "FINAL_TRIAL_ASSIGNED":  [
+                                                                                                  "Only the troll guardian remains. The final and most dangerous trial of Kyne awaits inside Graywinter Watch."
+                                                                                              ],
+                                                                     "TROLL_DEFEATED":  [
+                                                                                            "The hunter has slain the troll guardian spirit. The Sacred Trials are nearly complete."
+                                                                                        ],
+                                                                     "QUEST_COMPLETE":  [
+                                                                                            "The hunter has completed all of Kyne\u0027s Sacred Trials. They have earned Kyne\u0027s Token and my respect."
+                                                                                        ]
+                                                                 }
+                                              }
+                  },
+    "beats":  [
+                  {
+                      "id":  "MEET_FROKI",
+                      "focus_npc":  "Froki Whetted-Blade",
+                      "comment":  "Player meets Froki and learns about Kyne\u0027s Sacred Trials.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunHunterQST",
+                                           "min_stage":  20
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Kyne",
+                                                            "sacred trials",
+                                                            "old ways",
+                                                            "guardian beasts"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "FIRST_TRIALS_ASSIGNED",
+                      "focus_npc":  "Froki Whetted-Blade",
+                      "comment":  "Froki marks the player and assigns the lesser guardian beasts.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunHunterQST",
+                                           "min_stage":  21
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_FROKI"
+                                        ]
+                  },
+                  {
+                      "id":  "FIRST_TRIALS_COMPLETE",
+                      "focus_npc":  "Froki Whetted-Blade",
+                      "comment":  "Player defeated the lesser guardian beasts and returns to Froki.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunHunterQST",
+                                           "min_stage":  50
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FIRST_TRIALS_ASSIGNED"
+                                        ]
+                  },
+                  {
+                      "id":  "SECOND_TRIALS_ASSIGNED",
+                      "focus_npc":  "Froki Whetted-Blade",
+                      "comment":  "Froki assigns the greater guardian beasts: bear, mammoth, sabre cat.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunHunterQST",
+                                           "min_stage":  51
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FIRST_TRIALS_COMPLETE"
+                                        ]
+                  },
+                  {
+                      "id":  "SECOND_TRIALS_COMPLETE",
+                      "focus_npc":  "Froki Whetted-Blade",
+                      "comment":  "Player defeated the greater guardian beasts and returns to Froki.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunHunterQST",
+                                           "min_stage":  70
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SECOND_TRIALS_ASSIGNED"
+                                        ]
+                  },
+                  {
+                      "id":  "FINAL_TRIAL_ASSIGNED",
+                      "focus_npc":  "Froki Whetted-Blade",
+                      "comment":  "Froki assigns the final trial: the troll guardian in Graywinter Watch.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunHunterQST",
+                                           "min_stage":  71
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SECOND_TRIALS_COMPLETE"
+                                        ]
+                  },
+                  {
+                      "id":  "TROLL_DEFEATED",
+                      "focus_npc":  "Froki Whetted-Blade",
+                      "comment":  "Player defeated the troll guardian spirit and must return to Froki.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunHunterQST",
+                                           "min_stage":  80
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FINAL_TRIAL_ASSIGNED"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Froki Whetted-Blade",
+                      "comment":  "Player completed all Sacred Trials and received Kyne\u0027s Token.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunHunterQST",
+                                           "min_stage":  100
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "TROLL_DEFEATED"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "MEET_FROKI"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

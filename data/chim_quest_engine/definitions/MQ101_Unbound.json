@@ -1,0 +1,145 @@
+{
+  "quest_key": "mq101_unbound",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0003372B",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MQ101",
+  "title": "Unbound",
+  "description": "The opening quest of Skyrim. The player is captured by the Empire and brought to Helgen for execution alongside Stormcloak rebels. Before the execution can be carried out, the dragon Alduin attacks the town. The player must escape through Helgen Keep, choosing to follow either Ralof or Hadvar, and flee to safety.",
+  "npc_facts": {
+    "Ralof": {
+      "base_facts": [
+        "I am a Stormcloak soldier captured near Darkwater Crossing.",
+        "I was on the cart with the player and Ulfric Stormcloak.",
+        "I guide the player through the tower during the dragon attack."
+      ],
+      "beat_facts": {
+        "DRAGON_ATTACKS": [
+          "I helped the player to their feet after Alduin's shout staggered them."
+        ],
+        "HEAD_TO_KEEP": [
+          "I urged the player into the tower and then to jump through the hole Alduin blasted."
+        ],
+        "ESCAPE_THROUGH_KEEP": [
+          "I led the player through Helgen Keep to escape the dragon."
+        ]
+      }
+    },
+    "Hadvar": {
+      "base_facts": [
+        "I am an Imperial soldier stationed at Helgen.",
+        "I was reading the execution list and could not find the player's name.",
+        "I try to help citizens during the dragon attack."
+      ],
+      "beat_facts": {
+        "DRAGON_ATTACKS": [
+          "I tried to save the boy Haming from the dragon's attack."
+        ],
+        "HEAD_TO_KEEP": [
+          "I told the player to follow me if they wanted to stay alive."
+        ],
+        "ESCAPE_THROUGH_KEEP": [
+          "I led the player through Helgen Keep to escape the dragon."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "DRAGON_ATTACKS",
+      "focus_npc": "Ralof",
+      "comment": "Player is captured, brought to Helgen for execution, and Alduin attacks before the player can be executed.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ101",
+          "min_stage": 150
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "HEAD_TO_KEEP",
+      "focus_npc": "",
+      "comment": "Alduin's attack creates chaos. Player must make their way to Helgen Keep and choose to enter with either Ralof or Hadvar.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ101",
+          "min_stage": 160
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "follow Ralof",
+            "follow Hadvar",
+            "into the keep",
+            "this way"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DRAGON_ATTACKS"
+      ]
+    },
+    {
+      "id": "ESCAPE_THROUGH_KEEP",
+      "focus_npc": "",
+      "comment": "Player navigates Helgen Keep with their chosen companion, fights through spiders and a bear, and escapes the keep.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ101",
+          "min_stage": 250
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEAD_TO_KEEP"
+      ]
+    },
+    {
+      "id": "FREEDOM",
+      "focus_npc": "",
+      "comment": "Player has escaped Helgen and the dragon attack. The quest is complete and the player is free to explore Skyrim.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ101",
+          "min_stage": 900
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ESCAPE_THROUGH_KEEP"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "DRAGON_ATTACKS"
+    ],
+    "requires": []
+  }
+}

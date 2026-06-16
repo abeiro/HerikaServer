@@ -1,0 +1,266 @@
+{
+    "quest_key":  "tg04_scoundrelsfolly",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00021550",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "TG04",
+    "title":  "Scoundrel\u0027s Folly",
+    "description":  "After discovering connections between Goldenglow Estate and Honningbrew Meadery, Mercer Frey sends you to Solitude to interrogate Gulum-Ei, an Argonian dockworker and former Guild contact, about the Thieves Guild\u0027s anonymous adversary.",
+    "npc_facts":  {
+                      "Brynjolf":  {
+                                       "base_facts":  [
+                                                          "A senior member of the Thieves Guild who can provide advice on Guild operations.",
+                                                          "Aware of the Guild\u0027s recent troubles and the investigation into their anonymous adversary."
+                                                      ],
+                                       "beat_facts":  {
+                                                          "SPEAK_TO_MERCER_FREY":  [
+                                                                                       "Brynjolf can offer optional advice before you head to Solitude to find Gulum-Ei."
+                                                                                   ]
+                                                      }
+                                   },
+                      "Mercer Frey":  {
+                                          "base_facts":  [
+                                                             "Guild Master of the Thieves Guild.",
+                                                             "Discovered the connection between the Goldenglow Bill of Sale and the Promissory Note from Honningbrew Meadery."
+                                                         ],
+                                          "beat_facts":  {
+                                                             "SPEAK_TO_MERCER_FREY":  [
+                                                                                          "Mercer identified Gulum-Ei as a former Guild contact who may know who is targeting the Guild.",
+                                                                                          "Mercer believes the Guild is being deliberately undermined, not cursed."
+                                                                                      ],
+                                                             "RETURN_TO_MERCER":  [
+                                                                                      "Mercer is upset to learn Karliah is behind the attacks on the Guild.",
+                                                                                      "Mercer deduces Karliah will be at Snow Veil Sanctum and insists on coming along on the next job."
+                                                                                  ],
+                                                             "QUEST_COMPLETE":  [
+                                                                                    "Mercer plans to confront Karliah at Snow Veil Sanctum and insists on accompanying you personally."
+                                                                                ]
+                                                         }
+                                      },
+                      "Gulum-Ei":  {
+                                       "base_facts":  [
+                                                          "An Argonian dockworker for the East Empire Company in Solitude.",
+                                                          "A former contact of the Thieves Guild who used to steal goods for them.",
+                                                          "Frequents the Winking Skeever tavern."
+                                                      ],
+                                       "beat_facts":  {
+                                                          "CONFRONT_GULUM_EI":  [
+                                                                                    "Gulum-Ei is stubborn and refuses to reveal information easily out of fear for his own safety.",
+                                                                                    "Gulum-Ei can be persuaded with high Speech skill, bribed with Firebrand Wine from the Blue Palace, or shadowed."
+                                                                                ],
+                                                          "OBTAIN_INFORMATION":  [
+                                                                                     "Gulum-Ei was approached by a mysterious angry woman who gave him gold to buy Goldenglow Estate.",
+                                                                                     "The woman\u0027s anger was directed specifically at Mercer Frey.",
+                                                                                     "Gulum-Ei gave you Soul Gems as compensation for your effort."
+                                                                                 ],
+                                                          "SHADOW_AND_CONFRONT":  [
+                                                                                      "Gulum-Ei was not fully forthcoming about what he knows.",
+                                                                                      "Gulum-Ei leads through the East Empire Company Warehouse to Brinewater Grotto."
+                                                                                  ],
+                                                          "CONFRONT_IN_GROTTO":  [
+                                                                                     "Gulum-Ei reveals the mysterious woman is Karliah, who murdered the previous Guildmaster Gallus.",
+                                                                                     "If spared, Gulum-Ei offers to act as a fence for stolen goods as repayment."
+                                                                                 ]
+                                                      }
+                                   }
+                  },
+    "beats":  [
+                  {
+                      "id":  "SPEAK_TO_MERCER_FREY",
+                      "focus_npc":  "Mercer Frey",
+                      "comment":  "Player speaks to Mercer Frey and learns about Gulum-Ei and the connection between the two documents.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TG04",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Mercer",
+                                                            "Gulum-Ei",
+                                                            "adversary",
+                                                            "investigation"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "CONFRONT_GULUM_EI",
+                      "focus_npc":  "Gulum-Ei",
+                      "comment":  "Player travels to the Winking Skeever and confronts Gulum-Ei, who may require persuasion, bribery via Firebrand Wine, or shadowing.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TG04",
+                                           "min_stage":  20
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Gulum-Ei",
+                                                            "wine",
+                                                            "Firebrand",
+                                                            "information"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SPEAK_TO_MERCER_FREY"
+                                        ]
+                  },
+                  {
+                      "id":  "OBTAIN_INFORMATION",
+                      "focus_npc":  "Gulum-Ei",
+                      "comment":  "Player obtains partial information from Gulum-Ei after persuading, bribing with wine, or threatening. Gulum-Ei mentions a mysterious angry woman targeting Mercer.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TG04",
+                                           "min_stage":  37
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "mysterious woman",
+                                                            "angry",
+                                                            "Goldenglow",
+                                                            "sack of gold"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "CONFRONT_GULUM_EI"
+                                        ]
+                  },
+                  {
+                      "id":  "SHADOW_AND_CONFRONT",
+                      "focus_npc":  "Gulum-Ei",
+                      "comment":  "Player shadows Gulum-Ei through the East Empire Company Warehouse to Brinewater Grotto and confronts him there.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TG04",
+                                           "min_stage":  50
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "shadow",
+                                                            "follow",
+                                                            "warehouse",
+                                                            "grotto",
+                                                            "Karliah"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "OBTAIN_INFORMATION"
+                                        ]
+                  },
+                  {
+                      "id":  "RETURN_TO_MERCER",
+                      "focus_npc":  "Mercer Frey",
+                      "comment":  "Player returns to Mercer Frey with the confession and learns Karliah is the adversary. Mercer deduces she is at Snow Veil Sanctum.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TG04",
+                                           "min_stage":  60
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Karliah",
+                                                            "Snow Veil",
+                                                            "confession",
+                                                            "Gallus"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SHADOW_AND_CONFRONT"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest completes. Karliah identified as the adversary who murdered Gallus and is targeting Mercer. One piece of Thieves Guild armor is upgraded.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TG04",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RETURN_TO_MERCER"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "SPEAK_TO_MERCER_FREY"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "tg03_dampenedspirits",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

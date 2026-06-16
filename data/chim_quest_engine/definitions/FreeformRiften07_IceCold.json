@@ -1,0 +1,135 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0005331A",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformRiften07",
+  "title": "Ice Cold",
+  "description": "Marise Aravel, a food merchant in Riften, uses ground ice wraith teeth as a preservative. She asks the player to bring her five ice wraith teeth to replenish her supply.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "LEARN_ABOUT_MARISE_PRESERVATIVE",
+      "ACCEPT_QUEST"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Marise Aravel": {
+      "base_facts": [
+        "I sell food at the Riften market and pride myself on its freshness.",
+        "I learned a preservation trick from a butcher in Elinhir: grinding ice wraith teeth keeps food fresh.",
+        "I need five ice wraith teeth to replenish my supply."
+      ],
+      "beat_facts": {
+        "ACCEPT_QUEST": [
+          "Someone has agreed to find ice wraith teeth for me."
+        ],
+        "RETURN_WITH_TEETH": [
+          "My preservative supply has been replenished. I rewarded my helper with a spell tome and pheasant breasts."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "LEARN_ABOUT_MARISE_PRESERVATIVE",
+      "focus_npc": "Marise Aravel",
+      "comment": "Player learns about Marise's food preservation method using ice wraith teeth.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "fresh food",
+            "preservative",
+            "keep fresh",
+            "ice wraith teeth"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACCEPT_QUEST",
+      "focus_npc": "Marise Aravel",
+      "comment": "Player accepts the quest to find 5 ice wraith teeth for Marise.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0005331A",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0005331A",
+          "quest_plugin": "Skyrim.esm",
+          "index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I'll help",
+            "find teeth",
+            "get the teeth",
+            "bring you teeth"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEARN_ABOUT_MARISE_PRESERVATIVE"
+      ],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "RETURN_WITH_TEETH",
+      "focus_npc": "Marise Aravel",
+      "comment": "Player returns to Marise with 5 ice wraith teeth to complete the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0005331A",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0005331A",
+          "quest_plugin": "Skyrim.esm",
+          "index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "have the teeth",
+            "found the teeth",
+            "here are the teeth",
+            "brought the teeth"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_QUEST"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformriften07_icecold"
+}

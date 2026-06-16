@@ -1,0 +1,285 @@
+{
+    "quest_key":  "mq201_diplomaticimmunity",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00035D5F",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MQ201",
+    "title":  "Diplomatic Immunity",
+    "description":  "Delphine suspects the Thalmor are behind the dragon resurrection and arranges for the player to infiltrate the Thalmor Embassy during Elenwen\u0027s reception, with help from her inside contact Malborn.",
+    "npc_facts":  {
+                      "Delphine":  {
+                                       "base_facts":  [
+                                                          "I am Delphine, one of the last surviving Blades.",
+                                                          "I suspect the Thalmor are responsible for the dragons returning.",
+                                                          "I have a plan to infiltrate the Thalmor Embassy during Elenwen\u0027s party."
+                                                      ],
+                                       "beat_facts":  {
+                                                          "MEET_DELPHINE_RIVERWOOD":  [
+                                                                                          "I explained my plan to infiltrate the Thalmor Embassy to the Dragonborn."
+                                                                                      ],
+                                                          "PREPARE_FOR_PARTY":  [
+                                                                                    "I gave the Dragonborn an invitation and party clothes, and took their remaining equipment before they boarded the carriage."
+                                                                                ],
+                                                          "DEBRIEF_AND_COMPLETE":  [
+                                                                                       "The Dragonborn reported that the Thalmor are searching Riften for a Blade named Esbern."
+                                                                                   ]
+                                                      }
+                                   },
+                      "Malborn":  {
+                                      "base_facts":  [
+                                                         "I am Malborn, a Wood Elf who works inside the Thalmor Embassy.",
+                                                         "The Thalmor killed my family in Valenwood, which is why I help Delphine.",
+                                                         "I can smuggle equipment into the embassy for you."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "MEET_MALBORN":  [
+                                                                              "I took the Dragonborn\u0027s equipment to smuggle into the embassy."
+                                                                          ],
+                                                         "EMBASSY_PARTY":  [
+                                                                               "I unlocked the back door to the kitchen so the Dragonborn could slip away from the party."
+                                                                           ]
+                                                     }
+                                  },
+                      "Elenwen":  {
+                                      "base_facts":  [
+                                                         "I am Elenwen, the Thalmor Ambassador to Skyrim.",
+                                                         "I host parties for Skyrim\u0027s elite at the Thalmor Embassy."
+                                                     ],
+                                      "beat_facts":  {
+
+                                                     }
+                                  }
+                  },
+    "beats":  [
+                  {
+                      "id":  "MEET_DELPHINE_RIVERWOOD",
+                      "focus_npc":  "Delphine",
+                      "comment":  "Delphine reveals her plan to infiltrate the Thalmor Embassy.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ201",
+                                           "min_stage":  30
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "infiltrate the embassy",
+                                                            "Thalmor Embassy",
+                                                            "Delphine\u0027s plan"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "MEET_MALBORN",
+                      "focus_npc":  "Malborn",
+                      "comment":  "Meet Malborn at the Winking Skeever and give him equipment to smuggle in.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ201",
+                                           "min_stage":  40
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Malborn",
+                                                            "Winking Skeever",
+                                                            "smuggle equipment"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_DELPHINE_RIVERWOOD"
+                                        ]
+                  },
+                  {
+                      "id":  "PREPARE_FOR_PARTY",
+                      "focus_npc":  "Delphine",
+                      "comment":  "Meet Delphine at Solitude Stables, receive invitation and party clothes, board carriage.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ201",
+                                           "min_stage":  70
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "party clothes",
+                                                            "Solitude Stables",
+                                                            "carriage to the embassy"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_MALBORN"
+                                        ]
+                  },
+                  {
+                      "id":  "EMBASSY_PARTY",
+                      "focus_npc":  "Malborn",
+                      "comment":  "Enter the embassy party, talk to Malborn, create a distraction and slip away.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ201",
+                                           "min_stage":  110
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "create a distraction",
+                                                            "slip away from the party",
+                                                            "distraction at the party"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "PREPARE_FOR_PARTY"
+                                        ]
+                  },
+                  {
+                      "id":  "SEARCH_EMBASSY",
+                      "focus_npc":  "",
+                      "comment":  "Search the ambassador\u0027s office and dungeon for intelligence on the dragons.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ201",
+                                           "min_stage":  140
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Thalmor intelligence",
+                                                            "dossier",
+                                                            "dragons returning"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "EMBASSY_PARTY"
+                                        ]
+                  },
+                  {
+                      "id":  "ESCAPE_EMBASSY",
+                      "focus_npc":  "",
+                      "comment":  "Escape the Thalmor Embassy after obtaining the intelligence.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ201",
+                                           "min_stage":  210
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "escape the embassy",
+                                                            "get out of the embassy"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SEARCH_EMBASSY"
+                                        ]
+                  },
+                  {
+                      "id":  "DEBRIEF_AND_COMPLETE",
+                      "focus_npc":  "Delphine",
+                      "comment":  "Report findings to Delphine; the Thalmor are searching for Esbern in Riften.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ201",
+                                           "min_stage":  250
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Esbern",
+                                                            "Riften",
+                                                            "Thalmor are searching"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ESCAPE_EMBASSY"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "MEET_DELPHINE_RIVERWOOD"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "mq106_bladeinthedark",
+                                               "beat_id":  "BLADES_REVEALED"
+                                           }
+                                       ]
+                      }
+}

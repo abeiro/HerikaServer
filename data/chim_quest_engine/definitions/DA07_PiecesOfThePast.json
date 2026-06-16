@@ -1,0 +1,223 @@
+{
+    "quest_key":  "da07_piecesofthepast",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x000240B8",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DA07",
+    "title":  "Pieces of the Past",
+    "description":  "Silus Vesuius, curator of the Mythic Dawn museum in Dawnstar, tasks the player with retrieving three scattered pieces of Mehrunes\u0027 Razor. Once reunited, Silus seeks to reforge the dagger at the Shrine of Mehrunes Dagon, where the Daedric Prince demands Silus be killed in exchange for the restored weapon.",
+    "npc_facts":  {
+                      "Silus Vesuius":  {
+                                            "base_facts":  [
+                                                               "I run the Museum of the Mythic Dawn in my home in Dawnstar.",
+                                                               "My ancestors were members of the Mythic Dawn cult that opened the Oblivion gates.",
+                                                               "I have spent my life collecting artifacts tied to the Mythic Dawn.",
+                                                               "I seek the three pieces of Mehrunes\u0027 Razor: the pommel, the blade shards, and the hilt."
+                                                           ],
+                                            "beat_facts":  {
+                                                               "MEET_SILUS":  [
+                                                                                  "A visitor has come to my museum. Perhaps they can help me retrieve the Razor pieces."
+                                                                              ],
+                                                               "ACCEPT_QUEST":  [
+                                                                                    "This adventurer has agreed to retrieve the three pieces of Mehrunes\u0027 Razor for me."
+                                                                                ],
+                                                               "ALL_PIECES_RETURNED":  [
+                                                                                           "All three pieces of the Razor have been returned. We must reforge it at the Shrine of Mehrunes Dagon."
+                                                                                       ],
+                                                               "SPEAK_TO_DAGON":  [
+                                                                                      "Mehrunes Dagon has spoken and demands a sacrifice before reforging the Razor."
+                                                                                  ]
+                                                           }
+                                        },
+                      "Mehrunes Dagon":  {
+                                             "base_facts":  [
+                                                                "I am Mehrunes Dagon, Daedric Prince of Destruction, Change, Revolution, Energy, and Ambition.",
+                                                                "My Razor was broken into three pieces and scattered across Skyrim long ago."
+                                                            ],
+                                             "beat_facts":  {
+                                                                "SPEAK_TO_DAGON":  [
+                                                                                       "A mortal seeks to reforge my Razor. Kill the one who brought the pieces, and the weapon shall be yours."
+                                                                                   ],
+                                                                "KILL_SILUS":  [
+                                                                                   "The mortal has proven worthy. I shall reforge my Razor and grant it to my new champion."
+                                                                               ]
+                                                            }
+                                         }
+                  },
+    "beats":  [
+                  {
+                      "id":  "MEET_SILUS",
+                      "focus_npc":  "Silus Vesuius",
+                      "comment":  "Player speaks to Silus about the museum and the Razor, starting the quest.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x000240B8",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "museum",
+                                                            "mythic dawn",
+                                                            "silus",
+                                                            "razor"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA07",
+                                           "min_stage":  10
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "ACCEPT_QUEST",
+                      "focus_npc":  "Silus Vesuius",
+                      "comment":  "Player agrees to retrieve the three Razor pieces from their keepers.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x000240B8",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  13
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "retrieve the pieces",
+                                                            "find the pieces",
+                                                            "i\u0027ll help",
+                                                            "i will help",
+                                                            "accept the job"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA07",
+                                           "min_stage":  13
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_SILUS"
+                                        ]
+                  },
+                  {
+                      "id":  "ALL_PIECES_RETURNED",
+                      "focus_npc":  "Silus Vesuius",
+                      "comment":  "All three Razor pieces have been returned and Silus wants to meet at the shrine.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA07",
+                                           "min_stage":  50
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ACCEPT_QUEST"
+                                        ]
+                  },
+                  {
+                      "id":  "SPEAK_TO_DAGON",
+                      "focus_npc":  "Mehrunes Dagon",
+                      "comment":  "Player invokes Mehrunes Dagon at the shrine and he demands Silus be killed.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA07",
+                                           "min_stage":  60
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ALL_PIECES_RETURNED"
+                                        ]
+                  },
+                  {
+                      "id":  "KILL_SILUS",
+                      "focus_npc":  "Mehrunes Dagon",
+                      "comment":  "Player kills Silus as demanded by Mehrunes Dagon to claim the Razor.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA07",
+                                           "min_stage":  70
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SPEAK_TO_DAGON"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest ends: either the Razor is claimed after killing Silus, or Silus is spared and the Razor is lost.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA07",
+                                           "min_stage":  100
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA07",
+                                           "min_stage":  150
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SPEAK_TO_DAGON"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "MEET_SILUS"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

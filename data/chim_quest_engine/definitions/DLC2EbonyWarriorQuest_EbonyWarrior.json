@@ -1,0 +1,111 @@
+{
+  "quest_key": "dlc2ebonywarriorquest_ebonywarrior",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0002C49E",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2EbonyWarriorQuest",
+  "title": "The Ebony Warrior",
+  "description": "A legendary Redguard warrior in full enchanted ebony armor seeks an honorable death in combat. Upon reaching level 80, he approaches the Dragonborn in a major city and challenges them to a duel at his Last Vigil.",
+  "npc_facts": {
+    "Ebony Warrior": {
+      "base_facts": [
+        "I have accomplished everything in life and now seek an honorable death in combat.",
+        "I wish to earn my place in Sovngarde by falling to a truly worthy opponent.",
+        "I wear full enchanted ebony armor and wield powerful combat skills including dragon shouts."
+      ],
+      "beat_facts": {
+        "ENCOUNTER_EBONY_WARRIOR": [
+          "I have found the Dragonborn and approached them in the city."
+        ],
+        "ACCEPT_CHALLENGE": [
+          "The Dragonborn has accepted my challenge to fight at Last Vigil."
+        ],
+        "DEFEAT_EBONY_WARRIOR": [
+          "I have been defeated by the Dragonborn. May my soul find rest in Sovngarde."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ENCOUNTER_EBONY_WARRIOR",
+      "focus_npc": "Ebony Warrior",
+      "comment": "The Ebony Warrior approaches the player in a major city upon reaching level 80.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2EbonyWarriorQuest",
+          "min_stage": 10,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "ACCEPT_CHALLENGE",
+      "focus_npc": "Ebony Warrior",
+      "comment": "The player talks to the Ebony Warrior and accepts his challenge to fight at Last Vigil.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2EbonyWarriorQuest",
+          "min_stage": 100,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "challenge",
+            "fight you",
+            "duel",
+            "last vigil",
+            "accept"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENCOUNTER_EBONY_WARRIOR"
+      ]
+    },
+    {
+      "id": "DEFEAT_EBONY_WARRIOR",
+      "focus_npc": "Ebony Warrior",
+      "comment": "The player defeats the Ebony Warrior in combat at Last Vigil, completing the quest.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2EbonyWarriorQuest",
+          "min_stage": 200,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_CHALLENGE"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "ENCOUNTER_EBONY_WARRIOR"
+    ],
+    "requires": []
+  }
+}

@@ -1,0 +1,198 @@
+{
+  "quest_key": "cwsiegeobj_battleforwindhelm",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00096E71",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "CWSiegeObj",
+  "title": "Battle for Windhelm",
+  "description": "The Imperial Legion's final assault on Windhelm. Join General Tullius, fight through the city to the Palace of the Kings, confront Ulfric Stormcloak and Galmar Stone-Fist, and end the Stormcloak rebellion.",
+  "npc_facts": {
+    "Legate Rikke": {
+      "base_facts": [
+        "I am a Legate in the Imperial Legion serving under General Tullius.",
+        "I coordinate the Imperial war effort across Skyrim."
+      ],
+      "beat_facts": {
+        "QUEST_RECEIVED": [
+          "I have ordered the Dragonborn to join General Tullius for the final assault on Windhelm."
+        ]
+      }
+    },
+    "General Tullius": {
+      "base_facts": [
+        "I am the General commanding all Imperial forces in Skyrim.",
+        "I am determined to crush the Stormcloak rebellion once and for all."
+      ],
+      "beat_facts": {
+        "PALACE_CONFRONTATION": [
+          "I demanded Ulfric Stormcloak's surrender in the Palace of the Kings.",
+          "I stated that Ulfric's death is the only path to peace."
+        ],
+        "QUEST_COMPLETE": [
+          "I gave the Dragonborn a leveled enchanted sword after Ulfric's death.",
+          "I delivered a victory speech to the assembled Imperial soldiers in Windhelm."
+        ]
+      }
+    },
+    "Ulfric Stormcloak": {
+      "base_facts": [
+        "I am the Jarl of Windhelm and leader of the Stormcloak rebellion.",
+        "I believe Skyrim must be free from the Empire and the Thalmor."
+      ],
+      "beat_facts": {
+        "PALACE_CONFRONTATION": [
+          "I refused to surrender to General Tullius and fought to the bitter end.",
+          "I requested that the Dragonborn be the one to strike me down."
+        ]
+      }
+    },
+    "Galmar Stone-Fist": {
+      "base_facts": [
+        "I am Ulfric Stormcloak's right hand and general of the Stormcloak army.",
+        "I would rather die fighting than surrender to the Empire."
+      ],
+      "beat_facts": {
+        "PALACE_CONFRONTATION": [
+          "I stood by Ulfric's side in the Palace of the Kings and fought the Imperial forces."
+        ]
+      }
+    },
+    "Brunwulf Free-Winter": {
+      "base_facts": [
+        "I am a citizen of Windhelm who sympathizes with the Empire's cause."
+      ],
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "I have been installed as the new Jarl of Windhelm after the Imperial victory.",
+          "I can grant the privilege of buying property in Windhelm and the title of Thane of Eastmarch."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_RECEIVED",
+      "focus_npc": "Legate Rikke",
+      "comment": "Player receives orders to join the final assault on Windhelm. Stage 1 fires.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWSiegeObj",
+          "min_stage": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "BATTLE_WINDHELM",
+      "focus_npc": "General Tullius",
+      "comment": "Player fights through Windhelm's streets alongside Imperial soldiers toward the Palace of the Kings.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "stormcloaks",
+            "fight through the city",
+            "reach the palace",
+            "push forward",
+            "for the empire"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_RECEIVED"
+      ]
+    },
+    {
+      "id": "PALACE_CONFRONTATION",
+      "focus_npc": "Ulfric Stormcloak",
+      "comment": "Player enters the Palace of the Kings and confronts Ulfric and Galmar. Tullius demands surrender; they attack.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "ulfric",
+            "surrender",
+            "palace of the kings",
+            "galmar",
+            "confront"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BATTLE_WINDHELM"
+      ]
+    },
+    {
+      "id": "ULFRIC_DEFEATED",
+      "focus_npc": "General Tullius",
+      "comment": "Galmar is killed and Ulfric is forced to his knees. Player chooses who delivers the killing blow. Tullius gives a leveled enchanted sword.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "kill ulfric",
+            "execute ulfric",
+            "finish him",
+            "his death",
+            "the sword"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PALACE_CONFRONTATION"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "General Tullius",
+      "comment": "Windhelm is captured, Ulfric is dead, the rebellion is destroyed. Tullius gives a victory speech. Brunwulf Free-Winter becomes Jarl. Stage 9000 finishes the quest.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWSiegeObj",
+          "min_stage": 9000
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ULFRIC_DEFEATED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "QUEST_RECEIVED"
+    ],
+    "requires": []
+  }
+}

@@ -1,0 +1,224 @@
+{
+    "quest_key":  "da04_discerningthetransmundane",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0002D512",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DA04",
+    "title":  "Discerning the Transmundane",
+    "description":  "A Daedric quest in which the player aids the mad scholar Septimus Signus in opening a Dwemer lockbox by transcribing an Elder Scroll\u0027s knowledge into a lexicon and harvesting blood from the mer races, ultimately receiving the Oghma Infinium from Hermaeus Mora.",
+    "npc_facts":  {
+                      "Septimus Signus":  {
+                                              "base_facts":  [
+                                                                 "I am a preeminent scholar of the Elder Scrolls, living in the northern ice fields.",
+                                                                 "I have studied a Dwemer lockbox for years, believing it contains the heart of a god.",
+                                                                 "I need an Elder Scroll\u0027s knowledge inscribed into a Dwemer lexicon to decipher the lockbox."
+                                                             ],
+                                              "beat_facts":  {
+                                                                 "MET_SEPTIMUS":  [
+                                                                                      "I have given the player an Attunement Sphere and a Blank Lexicon to transcribe at the Tower of Mzark in Blackreach."
+                                                                                  ],
+                                                                 "LEXICON_RETURNED":  [
+                                                                                          "The lexicon has been transcribed with the Scroll\u0027s knowledge. I now know I need blood from the mer races to open the lockbox."
+                                                                                      ],
+                                                                 "BLOOD_HARVEST":  [
+                                                                                       "I need blood from Altmer, Bosmer, Dunmer, Falmer, and Orsimer to create a dwarven blood mixture and open the lockbox."
+                                                                                   ],
+                                                                 "BLOOD_RETURNED":  [
+                                                                                        "The blood has been collected. I can finally open the lockbox and reveal the heart of a god!"
+                                                                                    ],
+                                                                 "QUEST_COMPLETE":  [
+                                                                                        "The lockbox contained only a book, not the Heart of a God. I was wrong."
+                                                                                    ]
+                                                             }
+                                          },
+                      "Hermaeus Mora":  {
+                                            "base_facts":  [
+                                                               "I am the Daedric Prince of Knowledge and Memory, also called Herma-Mora.",
+                                                               "I have been guiding Septimus Signus in his research through the Wretched Abyss."
+                                                           ],
+                                            "beat_facts":  {
+                                                               "LEXICON_RETURNED":  [
+                                                                                        "I have revealed myself to the player. Septimus is a useful follower but will outlive his usefulness once the lockbox is opened."
+                                                                                    ],
+                                                               "QUEST_COMPLETE":  [
+                                                                                      "The player has taken the Oghma Infinium and is now my champion. Its dangerous knowledge is unleashed once more."
+                                                                                  ]
+                                                           }
+                                        }
+                  },
+    "beats":  [
+                  {
+                      "id":  "QUEST_STARTED",
+                      "focus_npc":  "Septimus Signus",
+                      "comment":  "Player received the book or learned about Septimus Signus and must ask Urag about it.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA04",
+                                           "min_stage":  5
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "septimus signus",
+                                                            "ruminations",
+                                                            "elder scrolls book"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "MET_SEPTIMUS",
+                      "focus_npc":  "Septimus Signus",
+                      "comment":  "Player met Septimus and received the Attunement Sphere and Blank Lexicon to transcribe at the Tower of Mzark.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA04",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_STARTED"
+                                        ]
+                  },
+                  {
+                      "id":  "LEXICON_RETURNED",
+                      "focus_npc":  "Septimus Signus",
+                      "comment":  "Player gave the transcribed Runed Lexicon to Septimus. Hermaeus Mora reveals himself at the outpost.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA04",
+                                           "min_stage":  30
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MET_SEPTIMUS"
+                                        ]
+                  },
+                  {
+                      "id":  "BLOOD_HARVEST",
+                      "focus_npc":  "Septimus Signus",
+                      "comment":  "Septimus needs blood from five mer races. Player must harvest Altmer, Bosmer, Dunmer, Falmer, and Orsimer blood.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA04",
+                                           "min_stage":  40
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "LEXICON_RETURNED"
+                                        ]
+                  },
+                  {
+                      "id":  "BLOOD_RETURNED",
+                      "focus_npc":  "Septimus Signus",
+                      "comment":  "Player brought the collected blood to Septimus. He opens the lockbox and enters it.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA04",
+                                           "min_stage":  50
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BLOOD_HARVEST"
+                                        ]
+                  },
+                  {
+                      "id":  "OGHMA_INFINIUM",
+                      "focus_npc":  "Hermaeus Mora",
+                      "comment":  "Septimus is disposed of by Hermaeus Mora. The Oghma Infinium is revealed inside the lockbox.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA04",
+                                           "min_stage":  55
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BLOOD_RETURNED"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Hermaeus Mora",
+                      "comment":  "Quest complete. The player has taken the Oghma Infinium and been named Hermaeus Mora\u0027s champion.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA04",
+                                           "min_stage":  100
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "OGHMA_INFINIUM"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "QUEST_STARTED"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

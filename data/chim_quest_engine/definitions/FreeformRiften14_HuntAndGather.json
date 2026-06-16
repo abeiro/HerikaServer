@@ -1,0 +1,234 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00043E25",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformRiften14",
+  "title": "Hunt and Gather",
+  "description": "Wylandriah asks the player to retrieve three items she left behind while traveling: her spoon from Fellstar Farm in Ivarstead, her soul gem from The White Phial in Windhelm, and an orichalcum ingot from The Frozen Hearth in Winterhold. Return all three for a reward of random scrolls.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "WYLANDRIAH_REQUEST"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Wylandriah": {
+      "base_facts": [
+        "I am the court wizard at Mistveil Keep in Riften.",
+        "I am conducting an oddly-inspired experiment and need certain implements I left behind on my travels."
+      ],
+      "beat_facts": {
+        "WYLANDRIAH_REQUEST": [
+          "I have asked someone to retrieve my spoon, soul gem, and orichalcum ingot from my travels."
+        ],
+        "ALL_ITEMS_RETURNED": [
+          "I have no recollection of asking anyone to fetch my items, but I appreciate them nonetheless."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "WYLANDRIAH_REQUEST",
+      "focus_npc": "Wylandriah",
+      "comment": "Player learns Wylandriah needs help retrieving items she left behind.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "need help",
+            "lost items",
+            "left behind",
+            "retrieve",
+            "fetch",
+            "experiments"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACCEPT_QUEST",
+      "focus_npc": "Wylandriah",
+      "comment": "Player accepts the task; quest starts at stage 20 with all three retrieval objectives.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00043E25",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00043E25",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00043E25",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00043E25",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 30
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I'll help",
+            "I can get them",
+            "where are they",
+            "I'll retrieve",
+            "sure"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "WYLANDRIAH_REQUEST"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "SPOON_ACQUIRED",
+      "focus_npc": "",
+      "comment": "Observational gate: Wylandriah's spoon has been retrieved from Fellstar Farm.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformRiften14",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_QUEST"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "INGOT_ACQUIRED",
+      "focus_npc": "",
+      "comment": "Observational gate: Orichalcum ingot has been retrieved from The Frozen Hearth.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformRiften14",
+          "min_stage": 40
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_QUEST"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "SOUL_GEM_ACQUIRED",
+      "focus_npc": "",
+      "comment": "Observational gate: Wylandriah's soul gem has been retrieved from The White Phial.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformRiften14",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_QUEST"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "ALL_ITEMS_RETURNED",
+      "focus_npc": "Wylandriah",
+      "comment": "All three items collected; player returns to Wylandriah. Sets stage 60 and completes objectives.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00043E25",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 60
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00043E25",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00043E25",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        },
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00043E25",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 30
+        },
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00043E25",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 40
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "here are your items",
+            "got your things",
+            "I have everything",
+            "brought them back"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPOON_ACQUIRED",
+        "INGOT_ACQUIRED",
+        "SOUL_GEM_ACQUIRED"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformriften14_huntandgather"
+}

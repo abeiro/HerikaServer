@@ -1,0 +1,153 @@
+{
+    "quest_key":  "duntrevaswatchqst_infiltration",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0004B2A1",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "dunTrevasWatchQST",
+    "title":  "Infiltration",
+    "description":  "Stalleo, a wizard camped outside Treva\u0027s Watch, asks the player to infiltrate the fort through a secret tunnel and open the front gate from inside so he can reclaim his home from the bandits who seized it and kidnapped his family.",
+    "npc_facts":  {
+                      "Stalleo":  {
+                                      "base_facts":  [
+                                                         "I am a wizard camped outside Treva\u0027s Watch with my bodyguards.",
+                                                         "Invaders took my fort and kidnapped my family while we were away fighting in the war.",
+                                                         "There is a secret escape tunnel that leads into Treva\u0027s Watch from the outside.",
+                                                         "I need someone to enter through the tunnel and open the front gate from inside so my bodyguards and I can retake the fort."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "BEAT_ACCEPT_QUEST":  [
+                                                                                   "A mercenary has agreed to help me infiltrate Treva\u0027s Watch and open the gate."
+                                                                               ],
+                                                         "BEAT_ENTER_TUNNEL":  [
+                                                                                   "The mercenary has entered the secret tunnel and is fighting through the bandits inside the fort."
+                                                                               ],
+                                                         "BEAT_OPEN_GATE":  [
+                                                                                "The front gate has been opened from inside. I can now enter the fort with my bodyguards."
+                                                                            ],
+                                                         "BEAT_COMPLETE":  [
+                                                                               "The fort has been reclaimed from the bandits, though my family was not found inside. I hope they escaped. I gave the mercenary a Spell Tome: Detect Life as a reward."
+                                                                           ]
+                                                     }
+                                  }
+                  },
+    "beats":  [
+                  {
+                      "id":  "BEAT_ACCEPT_QUEST",
+                      "focus_npc":  "Stalleo",
+                      "comment":  "Player talks to Stalleo and agrees to infiltrate Treva\u0027s Watch through the secret tunnel.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0004B2A1",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0004B2A1",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "help",
+                                                            "family",
+                                                            "fort",
+                                                            "gate",
+                                                            "invaders",
+                                                            "tunnel"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunTrevasWatchQST",
+                                           "min_stage":  10
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "BEAT_ENTER_TUNNEL",
+                      "focus_npc":  "",
+                      "comment":  "Player has entered the secret tunnel and is working through Treva\u0027s Watch interior.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunTrevasWatchQST",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BEAT_ACCEPT_QUEST"
+                                        ]
+                  },
+                  {
+                      "id":  "BEAT_OPEN_GATE",
+                      "focus_npc":  "",
+                      "comment":  "Player has pulled the lever and opened the front gate from inside Treva\u0027s Watch.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunTrevasWatchQST",
+                                           "min_stage":  60
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BEAT_ENTER_TUNNEL"
+                                        ]
+                  },
+                  {
+                      "id":  "BEAT_COMPLETE",
+                      "focus_npc":  "Stalleo",
+                      "comment":  "Player reports to Stalleo after opening the gate. Quest completes; reward is Spell Tome: Detect Life.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunTrevasWatchQST",
+                                           "min_stage":  100
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BEAT_OPEN_GATE"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "BEAT_ACCEPT_QUEST"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

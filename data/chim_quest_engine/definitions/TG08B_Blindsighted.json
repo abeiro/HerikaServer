@@ -1,0 +1,223 @@
+{
+  "quest_key": "tg08b_blindsighted",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00021554",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "TG08B",
+  "title": "Blindsighted",
+  "description": "The Nightingales pursue Mercer Frey to Irkngthand to stop him from stealing the Eyes of the Falmer and escaping Skyrim with the Skeleton Key of Nocturnal.",
+  "npc_facts": {
+    "Brynjolf": {
+      "base_facts": [
+        "I told the new Nightingale to meet Karliah and me at Irkngthand.",
+        "Mercer Frey betrayed the Thieves Guild and murdered Gallus.",
+        "We must stop Mercer before he escapes with the Skeleton Key."
+      ],
+      "beat_facts": {
+        "JOIN_WITH_NIGHTINGALES": [
+          "Karliah and I have joined the new Nightingale inside Irkngthand."
+        ],
+        "CONFRONT_MERCER": [
+          "Mercer knew we were coming. He led us into a trap."
+        ],
+        "QUEST_COMPLETE": [
+          "Mercer Frey is dead. The Nightingales have survived."
+        ]
+      }
+    },
+    "Karliah": {
+      "base_facts": [
+        "Mercer Frey murdered Gallus and framed me for his crimes.",
+        "We must recover the Skeleton Key and return it to Nocturnal.",
+        "Mercer is heading to Irkngthand to steal the Eyes of the Falmer."
+      ],
+      "beat_facts": {
+        "JOIN_WITH_NIGHTINGALES": [
+          "I believe Mercer knows we are following. He may be planning an ambush."
+        ],
+        "RECOVER_KEY": [
+          "The Skeleton Key must be returned to the Twilight Sepulcher."
+        ],
+        "ESCAPE_AND_REPORT": [
+          "We survived. The Skeleton Key must be returned to the Twilight Sepulcher."
+        ],
+        "QUEST_COMPLETE": [
+          "I gave my Nightingale Bow to our newest Nightingale. The journey to return the Key must be undertaken alone."
+        ]
+      }
+    },
+    "Mercer Frey": {
+      "base_facts": [
+        "I possess the Skeleton Key of Nocturnal.",
+        "I murdered Gallus and used the Guild for my own gain.",
+        "The Eyes of the Falmer will make me wealthy enough to disappear forever."
+      ],
+      "beat_facts": {
+        "CONFRONT_MERCER": [
+          "I knew you would come. Now the Nightingales will die."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ARRIVE_IRKNGTHAND",
+      "focus_npc": "Brynjolf",
+      "comment": "Player travels to Irkngthand to confront Mercer Frey.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG08B",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "JOIN_WITH_NIGHTINGALES",
+      "focus_npc": "Karliah",
+      "comment": "Karliah and Brynjolf join the player inside Irkngthand to pursue Mercer.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG08B",
+          "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Karliah",
+            "follow",
+            "together"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ARRIVE_IRKNGTHAND"
+      ]
+    },
+    {
+      "id": "CONFRONT_MERCER",
+      "focus_npc": "Mercer Frey",
+      "comment": "Player locates and fights Mercer Frey in the Irkngthand Sanctuary.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG08B",
+          "min_stage": 40
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Mercer",
+            "fight",
+            "kill him"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "JOIN_WITH_NIGHTINGALES"
+      ]
+    },
+    {
+      "id": "RECOVER_KEY",
+      "focus_npc": "",
+      "comment": "Mercer is slain; player retrieves the Skeleton Key as the chamber floods.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG08B",
+          "min_stage": 45
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONFRONT_MERCER"
+      ]
+    },
+    {
+      "id": "ESCAPE_AND_REPORT",
+      "focus_npc": "Karliah",
+      "comment": "Player escapes the flooding Irkngthand and speaks with Karliah at Bronze Water Cave.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG08B",
+          "min_stage": 60
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "escaped",
+            "survived",
+            "Skeleton Key"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RECOVER_KEY"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Karliah",
+      "comment": "Quest completes; Karliah gives the Nightingale Bow and instructs the player to return the Skeleton Key to the Twilight Sepulcher.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG08B",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ESCAPE_AND_REPORT"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "ARRIVE_IRKNGTHAND"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "tg08a_trinityrestored",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

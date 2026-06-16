@@ -1,0 +1,204 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00064EA8",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformWinterholdC",
+  "title": "Drowned Sorrows",
+  "description": "After helping Ranmir pay his debts, Dagur asks you to find out what happened to Isabelle Rolaine, whose disappearance turned Ranmir into the town drunk. Follow the trail from Haran to Vex in the Thieves Guild, then to Hob's Fall Cave where Isabelle met her end, and return her letter to Ranmir.",
+  "natural_start": {
+    "enabled": false,
+    "beats": [],
+    "requires": []
+  },
+  "npc_facts": {
+    "Dagur": {
+      "base_facts": [
+        "Runs the Frozen Hearth inn in Winterhold with his wife Haran.",
+        "Concerned about Ranmir's constant drinking and what it has done to him.",
+        "Knows Ranmir was once happy and in love with Isabelle Rolaine before she disappeared."
+      ],
+      "beat_facts": {
+        "DAGUR_TELLS_ABOUT_ISABELLE": [
+          "Told the player about Ranmir's past with Isabelle and how her disappearance broke him."
+        ]
+      }
+    },
+    "Haran": {
+      "base_facts": [
+        "Works at the Frozen Hearth inn in Winterhold.",
+        "Frustrated by Ranmir's drinking and the toll it takes on Birna.",
+        "Overheard Ranmir mention that Isabelle ran off with a thief named Vex."
+      ],
+      "beat_facts": {
+        "HARAN_REVEALS_VEX": [
+          "Revealed that Isabelle left with someone named Vex, connected to a dangerous crowd in Riften."
+        ]
+      }
+    },
+    "Ranmir": {
+      "base_facts": [
+        "The town drunk of Winterhold, drowning his sorrows at the Frozen Hearth.",
+        "Still heartbroken over Isabelle Rolaine's disappearance.",
+        "Gets angry if Isabelle's name is mentioned."
+      ],
+      "beat_facts": {
+        "RETURN_TO_RANMIR_WITH_LETTER": [
+          "Read Isabelle's letter and learned she went to Hob's Fall Cave to find treasure for him.",
+          "Left the Frozen Hearth to think about everything."
+        ]
+      }
+    },
+    "Vex": {
+      "base_facts": [
+        "A master infiltrator of the Thieves Guild, found in the Ragged Flagon in Riften.",
+        "Knew Isabelle Rolaine when she came looking for opportunities.",
+        "Warned Isabelle against seeking treasure but pointed her toward Hob's Fall Cave."
+      ],
+      "beat_facts": {
+        "VEX_REVEALS_LOCATION": [
+          "Told the player that Isabelle went to Hob's Fall Cave seeking valuables and never came back."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "DAGUR_TELLS_ABOUT_ISABELLE",
+      "focus_npc": "Dagur",
+      "comment": "Dagur tells the player about Ranmir's past with Isabelle Rolaine after Ranmir's debts are settled.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00064EA8",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Ranmir",
+            "drinking",
+            "Isabelle",
+            "help around the inn"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformWinterholdC",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "HARAN_REVEALS_VEX",
+      "focus_npc": "Haran",
+      "comment": "Haran reveals that Isabelle ran off with a thief named Vex after Ranmir refuses to discuss her.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00064EA8",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Isabelle",
+            "Vex",
+            "where did she go",
+            "thief"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformWinterholdC",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DAGUR_TELLS_ABOUT_ISABELLE"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "VEX_REVEALS_LOCATION",
+      "focus_npc": "Vex",
+      "comment": "Vex in the Ragged Flagon reveals Isabelle went to Hob's Fall Cave and never returned.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00064EA8",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Isabelle",
+            "Ranmir",
+            "Hob's Fall Cave"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformWinterholdC",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HARAN_REVEALS_VEX"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "RETURN_TO_RANMIR_WITH_LETTER",
+      "focus_npc": "Ranmir",
+      "comment": "Player finds Isabelle's body and letter in Hob's Fall Cave, then returns to Ranmir with the letter.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00064EA8",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Isabelle's letter",
+            "found her",
+            "she's dead",
+            "Hob's Fall Cave"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformWinterholdC",
+          "min_stage": 40
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "VEX_REVEALS_LOCATION"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformwinterholdc_drownedsorrows"
+}

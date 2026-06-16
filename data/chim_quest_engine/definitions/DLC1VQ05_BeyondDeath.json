@@ -1,0 +1,203 @@
+{
+  "quest_key": "dlc1vq05_beyonddeath",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00002850",
+  "quest_plugin": "Dawnguard.esm",
+  "quest_editor_id": "DLC1VQ05",
+  "title": "Beyond Death",
+  "description": "Serana and the player enter the Soul Cairn to find her mother Valerica and retrieve the Blood Elder Scroll. They must free Valerica by killing three Boneyard Keepers, defeat the dragon Durnehviir, and escape with the scroll.",
+  "npc_facts": {
+    "Valerica": {
+      "base_facts": [
+        "I am Serana's mother, trapped in the Boneyard by an invisible barrier created by the Ideal Masters.",
+        "I possess the Blood Elder Scroll, hidden within the Boneyard.",
+        "Three Boneyard Keepers maintain the barrier that imprisons me. Slaying them will free me."
+      ],
+      "beat_facts": {
+        "SPEAK_TO_VALERICA": [
+          "I have reconciled with Serana and agreed to lead the way to the Elder Scroll once the barrier is lifted."
+        ],
+        "KILL_KEEPERS": [
+          "The barrier around my prison has faded. I will lead you to the Elder Scroll."
+        ],
+        "RETRIEVE_SCROLL": [
+          "I will not return to Tamriel until Harkon and the Tyranny of the Sun are dealt with."
+        ]
+      }
+    },
+    "Serana": {
+      "base_facts": [
+        "I accompanied the player into the Soul Cairn to find my estranged mother Valerica.",
+        "My blood is integral to the Tyranny of the Sun prophecy, which is why my father Harkon seeks it."
+      ],
+      "beat_facts": {
+        "SPEAK_TO_VALERICA": [
+          "I have reconciled with my mother after centuries apart."
+        ],
+        "QUEST_COMPLETE": [
+          "We have the Elder Scroll and have left the Soul Cairn, but my mother refuses to return until Harkon is dealt with."
+        ]
+      }
+    },
+    "Durnehviir": {
+      "base_facts": [
+        "I am an ancient dragon bound to the Soul Cairn by the Ideal Masters.",
+        "I guard the Boneyard and attack any who enter."
+      ],
+      "beat_facts": {
+        "DEFEAT_DURNEHVIIR": [
+          "I have been defeated in battle and wish to speak with the Dovahkiin."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ARRIVE_SOUL_CAIRN",
+      "focus_npc": "Serana",
+      "comment": "Player enters the Soul Cairn and the quest begins automatically.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ05",
+          "min_stage": 10,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "SPEAK_TO_VALERICA",
+      "focus_npc": "Valerica",
+      "comment": "Player finds and speaks to Valerica, learns about the Keepers and the barrier.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ05",
+          "min_stage": 25,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Valerica",
+            "barrier",
+            "keepers"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ARRIVE_SOUL_CAIRN"
+      ]
+    },
+    {
+      "id": "KILL_KEEPERS",
+      "focus_npc": "Valerica",
+      "comment": "Player kills the three Boneyard Keepers to free Valerica from the barrier.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ05",
+          "min_stage": 40,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_TO_VALERICA"
+      ]
+    },
+    {
+      "id": "DEFEAT_DURNEHVIIR",
+      "focus_npc": "Durnehviir",
+      "comment": "Player follows Valerica into the Boneyard and defeats the dragon Durnehviir.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ05",
+          "min_stage": 80,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "KILL_KEEPERS"
+      ]
+    },
+    {
+      "id": "RETRIEVE_SCROLL",
+      "focus_npc": "Valerica",
+      "comment": "Player retrieves the Blood Elder Scroll from the Boneyard alcove.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ05",
+          "min_stage": 120,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEFEAT_DURNEHVIIR"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Serana",
+      "comment": "Player exits the Soul Cairn with the Elder Scroll. Valerica stays behind until Harkon is dealt with.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ05",
+          "min_stage": 200,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETRIEVE_SCROLL"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "ARRIVE_SOUL_CAIRN"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc1vq04_chasingechoes",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

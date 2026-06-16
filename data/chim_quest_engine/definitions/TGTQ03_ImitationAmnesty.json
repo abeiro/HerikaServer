@@ -1,0 +1,202 @@
+{
+    "quest_key":  "tgtq03_imitationamnesty",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x000799E1",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "TGTQ03",
+    "title":  "Imitation Amnesty",
+    "description":  "Delvin Mallory sends the player to Whiterun to help Olfrid Battle-Born free his friend Arn from execution by stealing an incriminating letter from the Jarl\u0027s quarters and forging the prison registry in Dragonsreach.",
+    "npc_facts":  {
+                      "Delvin Mallory":  {
+                                             "base_facts":  [
+                                                                "I handle special jobs for the Thieves Guild from the Ragged Flagon in Riften.",
+                                                                "Olfrid Battle-Born, a wealthy Nord in Whiterun, has requested the Guild\u0027s help with a delicate matter."
+                                                            ],
+                                             "beat_facts":  {
+                                                                "RECEIVE_QUEST":  [
+                                                                                      "I have given the player a special job to assist Olfrid Battle-Born in Whiterun."
+                                                                                  ],
+                                                                "QUEST_COMPLETE":  [
+                                                                                       "Olfrid Battle-Born has pledged the full support of the Battle-Born clan to the Thieves Guild. A new merchant has set up shop in the Flagon."
+                                                                                   ]
+                                                            }
+                                         },
+                      "Olfrid Battle-Born":  {
+                                                 "base_facts":  [
+                                                                    "I am a wealthy Nord living in Whiterun, head of the Battle-Born clan.",
+                                                                    "My old war buddy Arn has been arrested for drunkenness in Whiterun, but he is really wanted for murder in Solitude."
+                                                                ],
+                                                 "beat_facts":  {
+                                                                    "SPEAK_OLFRID":  [
+                                                                                         "I have asked the Thieves Guild to steal the letter warning of Arn\u0027s true crime from the Jarl\u0027s quarters and forge the prison registry on the steward\u0027s desk in Dragonsreach."
+                                                                                     ],
+                                                                    "QUEST_COMPLETE":  [
+                                                                                           "My friend Arn will only serve a few days for drunkenness instead of facing the executioner\u0027s axe. The Battle-Born clan stands with the Thieves Guild."
+                                                                                       ]
+                                                                }
+                                             }
+                  },
+    "beats":  [
+                  {
+                      "id":  "RECEIVE_QUEST",
+                      "focus_npc":  "Delvin Mallory",
+                      "comment":  "Player receives the special job from Delvin to help Olfrid Battle-Born in Whiterun.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x000799E1",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x000799E1",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "special job",
+                                                            "Whiterun job",
+                                                            "Olfrid"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "SPEAK_OLFRID",
+                      "focus_npc":  "Olfrid Battle-Born",
+                      "comment":  "Player speaks to Olfrid and learns about Arn and the two tasks needed to save him.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x000799E1",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  20
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x000799E1",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  10
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x000799E1",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  20
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x000799E1",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  30
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Arn",
+                                                            "letter",
+                                                            "registry",
+                                                            "friend in jail"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RECEIVE_QUEST"
+                                        ]
+                  },
+                  {
+                      "id":  "COMPLETE_TASKS",
+                      "focus_npc":  "",
+                      "comment":  "Player has stolen the incriminating letter and forged the prison registry. Return objective appears.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x000799E1",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  20
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x000799E1",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  30
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x000799E1",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  40
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TGTQ03",
+                                           "min_stage":  50
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SPEAK_OLFRID"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest complete. Arn is free and the Thieves Guild gains the Battle-Born clan as an ally in Whiterun.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x000799E1",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  40
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TGTQ03",
+                                           "stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "COMPLETE_TASKS"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "RECEIVE_QUEST"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "tg02_loudandclear",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

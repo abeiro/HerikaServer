@@ -1,0 +1,165 @@
+{
+    "quest_key":  "dunforelhostqst_siegeonthedragoncult",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00035354",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "dunForelhostQST",
+    "title":  "Siege on the Dragon Cult",
+    "description":  "Captain Valmir requests help retrieving the mask of the Dragon Priest Rahgot from the ruins of Forelhost, the last stronghold of the Dragon Cult. After the mask is recovered, Valmir is revealed as an impostor tricking soldiers into the ruins for his own purposes.",
+    "npc_facts":  {
+                      "Captain Valmir":  {
+                                             "base_facts":  [
+                                                                "I am a military officer sent to recover a powerful artifact from Forelhost.",
+                                                                "The Dragon Cult made their last stand at Forelhost in the First Era.",
+                                                                "The commander\u0027s mask is an extremely powerful artifact.",
+                                                                "A general who stormed the fortress left a journal that might help navigate the collapsed areas."
+                                                            ],
+                                             "beat_facts":  {
+                                                                "VALMIR_BETRAYAL":  [
+                                                                                        "I am an impostor who has been tricking soldiers into the ruins to retrieve the mask for my true masters.",
+                                                                                        "My orders direct me to return the mask to Labyrinthian."
+                                                                                    ]
+                                                            }
+                                         },
+                      "Rahgot":  {
+                                     "base_facts":  [
+                                                        "I am the Dragon Priest who commanded the last stronghold of the Dragon Cult at Forelhost.",
+                                                        "My followers chose death over surrender when the fortress was stormed in the First Era."
+                                                    ],
+                                     "beat_facts":  {
+
+                                                    }
+                                 }
+                  },
+    "beats":  [
+                  {
+                      "id":  "QUEST_ACCEPTED",
+                      "focus_npc":  "Captain Valmir",
+                      "comment":  "Player accepts Valmir\u0027s request to enter Forelhost and retrieve Rahgot\u0027s mask.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00035354",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "help with the mask",
+                                                            "retrieve the mask",
+                                                            "enter Forelhost",
+                                                            "Dragon Priest",
+                                                            "I\u0027ll help"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "JOURNAL_FOUND",
+                      "focus_npc":  "",
+                      "comment":  "Player finds Skorm Snow-Strider\u0027s journal revealing how the cultists sealed themselves in and the well was poisoned.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunForelhostQST",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_ACCEPTED"
+                                        ]
+                  },
+                  {
+                      "id":  "RAHGOT_DEFEATED",
+                      "focus_npc":  "Rahgot",
+                      "comment":  "Player defeats the Dragon Priest Rahgot and claims his mask.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunForelhostQST",
+                                           "min_stage":  60
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_ACCEPTED"
+                                        ]
+                  },
+                  {
+                      "id":  "VALMIR_BETRAYAL",
+                      "focus_npc":  "Captain Valmir",
+                      "comment":  "Valmir is exposed as an impostor caught recruiting another soldier while wearing opposing faction armor.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunForelhostQST",
+                                           "min_stage":  70
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RAHGOT_DEFEATED"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest concludes after the impostor Valmir is defeated.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunForelhostQST",
+                                           "min_stage":  100
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "VALMIR_BETRAYAL"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "QUEST_ACCEPTED"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

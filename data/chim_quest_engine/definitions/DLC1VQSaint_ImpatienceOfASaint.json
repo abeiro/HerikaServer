@@ -1,0 +1,160 @@
+{
+    "quest_key":  "dlc1vqsaint_impatienceofasaint",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001400B",
+    "quest_plugin":  "Dawnguard.esm",
+    "quest_editor_id":  "DLC1VQSaint",
+    "title":  "Impatience of a Saint",
+    "description":  "The soul of Saint Jiub has lost the ten pages of his Opus across the Soul Cairn. Help him recover them so he can finish his life\u0027s story.",
+    "npc_facts":  {
+                      "Jiub":  {
+                                   "base_facts":  [
+                                                      "I am the soul of a Dunmer trapped in the Soul Cairn.",
+                                                      "I am known as Saint Jiub, the Erinator who drove the Cliff Racers from Morrowind.",
+                                                      "I am writing the second volume of my life\u0027s story but lost the notes from my first volume when I arrived here.",
+                                                      "The ten pages of my Opus are scattered across the entire Soul Cairn."
+                                                  ],
+                                   "beat_facts":  {
+                                                      "ACCEPT_QUEST":  [
+                                                                           "A kind traveler has agreed to help me find my lost pages."
+                                                                       ],
+                                                      "PAGES_FOUND":  [
+                                                                          "The traveler has found all ten of my lost pages!"
+                                                                      ],
+                                                      "RETURN_TO_JIUB":  [
+                                                                             "I gave the traveler my Locket and a copy of my Opus in gratitude for their help."
+                                                                         ]
+                                                  }
+                               }
+                  },
+    "beats":  [
+                  {
+                      "id":  "ACCEPT_QUEST",
+                      "focus_npc":  "Jiub",
+                      "comment":  "Player meets Jiub and agrees to help find the lost pages of his Opus.",
+                      "action":  {
+                                     "type":  "set_stage_cascade",
+                                     "quest_form_id":  "0x0001400B",
+                                     "quest_plugin":  "Dawnguard.esm",
+                                     "stage":  20
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001400B",
+                                             "quest_plugin":  "Dawnguard.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "help you",
+                                                            "find your pages",
+                                                            "lost pages",
+                                                            "your opus",
+                                                            "help you find"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC1VQSaint",
+                                           "min_stage":  20,
+                                           "quest_plugin":  "Dawnguard.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "PAGES_FOUND",
+                      "focus_npc":  "Jiub",
+                      "comment":  "All ten pages collected; objective updates to return pages to Jiub.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001400B",
+                                             "quest_plugin":  "Dawnguard.esm",
+                                             "objective_index":  10
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001400B",
+                                             "quest_plugin":  "Dawnguard.esm",
+                                             "objective_index":  20
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC1VQSaint",
+                                           "min_stage":  30,
+                                           "quest_plugin":  "Dawnguard.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ACCEPT_QUEST"
+                                        ]
+                  },
+                  {
+                      "id":  "RETURN_TO_JIUB",
+                      "focus_npc":  "Jiub",
+                      "comment":  "Player returns all pages to Jiub and receives the Locket and completed Opus.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0001400B",
+                                     "quest_plugin":  "Dawnguard.esm",
+                                     "stage":  200
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001400B",
+                                             "quest_plugin":  "Dawnguard.esm",
+                                             "objective_index":  20
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "return the pages",
+                                                            "here are the pages",
+                                                            "found all the pages",
+                                                            "got your pages",
+                                                            "finished collecting"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC1VQSaint",
+                                           "min_stage":  200,
+                                           "quest_plugin":  "Dawnguard.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "PAGES_FOUND"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "ACCEPT_QUEST"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

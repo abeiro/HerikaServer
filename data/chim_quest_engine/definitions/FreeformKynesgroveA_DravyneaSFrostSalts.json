@@ -1,0 +1,120 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00069043",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformKynesgroveA",
+  "title": "Dravynea's Frost Salts",
+  "description": "Dravynea the Stoneweaver, a Dark Elf mage in Kynesgrove, needs frost salts to brew a potion that keeps the heat in Steamscorch Mine bearable. Bring her a sample of frost salts and receive free Alteration training as a reward.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "DRAVYNEA_EXPLAINS_NEED",
+      "OFFER_TO_HELP"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Dravynea the Stoneweaver": {
+      "base_facts": [
+        "I am a Dark Elf and an expert in Alteration magic.",
+        "I live in Kynesgrove and work in Steamscorch Mine.",
+        "I use my magic to keep the mine safe from the heat.",
+        "I can train others in Alteration."
+      ],
+      "beat_facts": {
+        "DRAVYNEA_EXPLAINS_NEED": [
+          "I need frost salts to brew a potion that makes the mine's heat bearable.",
+          "I have run out of frost salts."
+        ],
+        "OFFER_TO_HELP": [
+          "Someone has offered to bring me frost salts.",
+          "I promised free Alteration training if they actually bring the salts."
+        ],
+        "DELIVER_FROST_SALTS": [
+          "Someone brought me the frost salts I needed.",
+          "I gave them a free Alteration training session as thanks."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "DRAVYNEA_EXPLAINS_NEED",
+      "focus_npc": "Dravynea the Stoneweaver",
+      "comment": "Player learns Dravynea needs frost salts for her cooling potion in the mine.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "what do you do",
+            "your business",
+            "the mine",
+            "frost salts"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "OFFER_TO_HELP",
+      "focus_npc": "Dravynea the Stoneweaver",
+      "comment": "Player offers to bring frost salts, starting the quest objective.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00069043",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I can help",
+            "I'll get the salts",
+            "I can find frost salts",
+            "bring you frost salts"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DRAVYNEA_EXPLAINS_NEED"
+      ],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "DELIVER_FROST_SALTS",
+      "focus_npc": "Dravynea the Stoneweaver",
+      "comment": "Player delivers frost salts and receives Alteration training. Quest completes.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformKynesgroveA",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "OFFER_TO_HELP"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformkynesgrovea_dravyneasfrostsalts"
+}

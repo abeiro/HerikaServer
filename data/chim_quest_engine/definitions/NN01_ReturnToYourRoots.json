@@ -1,0 +1,127 @@
+{
+  "quest_key": "nn01_returntoyourroots",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000C9BA0",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "NN01",
+  "title": "A Return To Your Roots",
+  "description": "Discover the significance of the Crimson Nirnroot in Blackreach, collect thirty samples, and deliver them to Avrusa Sarethi at Sarethi Farm to continue Sinderion's research.",
+  "npc_facts": {
+    "Avrusa Sarethi": {
+      "base_facts": [
+        "I am a former student of the alchemist Sinderion.",
+        "I tend Sarethi Farm between Riften and Ivarstead.",
+        "Sinderion traveled to Blackreach to study the Crimson Nirnroot and never returned.",
+        "I would be grateful to anyone who completes Sinderion's field work."
+      ],
+      "beat_facts": {
+        "CRIMSON_NIRNROOT_DISCOVERED": [
+          "The player has discovered a Crimson Nirnroot in Blackreach."
+        ],
+        "SINDERION_JOURNAL_READ": [
+          "The player found Sinderion's remains and read his field journal requesting thirty Crimson Nirnroot samples."
+        ],
+        "NIRNROOT_COLLECTED": [
+          "The player has collected thirty Crimson Nirnroot samples from Blackreach."
+        ],
+        "QUEST_COMPLETE": [
+          "The player delivered the Crimson Nirnroot and I pledged to continue Sinderion's research in his memory."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "CRIMSON_NIRNROOT_DISCOVERED",
+      "focus_npc": "",
+      "comment": "Player discovers a Crimson Nirnroot in Blackreach, beginning the quest.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "NN01",
+          "min_stage": 15
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "SINDERION_JOURNAL_READ",
+      "focus_npc": "",
+      "comment": "Player finds Sinderion's remains and reads his field journal in Blackreach.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "NN01",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CRIMSON_NIRNROOT_DISCOVERED"
+      ]
+    },
+    {
+      "id": "NIRNROOT_COLLECTED",
+      "focus_npc": "Avrusa Sarethi",
+      "comment": "Player has collected thirty Crimson Nirnroot samples and is ready to deliver them.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "collected the nirnroot",
+            "have the crimson nirnroot",
+            "thirty nirnroot",
+            "found the roots",
+            "brought the nirnroot"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SINDERION_JOURNAL_READ"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Avrusa Sarethi",
+      "comment": "Player delivers thirty Crimson Nirnroot to Avrusa Sarethi, completing the quest.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "NN01",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "NIRNROOT_COLLECTED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "CRIMSON_NIRNROOT_DISCOVERED"
+    ],
+    "requires": []
+  }
+}

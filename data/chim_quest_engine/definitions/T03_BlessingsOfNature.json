@@ -1,0 +1,202 @@
+{
+  "quest_key": "t03_blessingsofnature",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001C48E",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "T03",
+  "title": "The Blessings of Nature",
+  "description": "Help Danica Pure-Spring restore the Gildergreen tree in Whiterun by retrieving Nettlebane from hagravens at Orphan Rock and obtaining sap from the Eldergleam, or a sapling through Maurice Jondrelle's peaceful intervention.",
+  "npc_facts": {
+    "Danica Pure-Spring": {
+      "base_facts": [
+        "I am the priestess of the Temple of Kynareth in Whiterun.",
+        "The Gildergreen tree outside the temple was struck by lightning and is dying.",
+        "Sap from the parent tree, the Eldergleam, can restore the Gildergreen.",
+        "A special dagger called Nettlebane is needed to cut the Eldergleam, held by hagravens at Orphan Rock."
+      ],
+      "beat_facts": {
+        "GILDERGREEN_PROBLEM": [
+          "Someone has asked about the Gildergreen's condition."
+        ],
+        "AGREE_TO_HELP": [
+          "An adventurer has agreed to help restore the Gildergreen."
+        ],
+        "NETTLEBANE_RETURNED": [
+          "The adventurer returned with Nettlebane from the hagravens."
+        ],
+        "ELDERGLEAM_MISSION": [
+          "The adventurer has gone to the Eldergleam Sanctuary to retrieve sap."
+        ],
+        "SAPLING_CHOICE": [
+          "The adventurer chose Maurice's peaceful path and took a sapling instead of cutting the Eldergleam."
+        ],
+        "QUEST_COMPLETE": [
+          "The Gildergreen has been restored thanks to the adventurer's help."
+        ]
+      }
+    },
+    "Maurice Jondrelle": {
+      "base_facts": [
+        "I am a pilgrim who traveled far to worship beneath the Gildergreen.",
+        "I am distressed that the sacred tree has withered.",
+        "I wish to visit the Eldergleam, the parent tree of the Gildergreen."
+      ],
+      "beat_facts": {
+        "NETTLEBANE_RETURNED": [
+          "I asked to accompany the adventurer to the Eldergleam Sanctuary."
+        ],
+        "ELDERGLEAM_MISSION": [
+          "I am traveling with the adventurer to see the Eldergleam."
+        ],
+        "SAPLING_CHOICE": [
+          "I prayed to the Eldergleam and a sapling appeared, sparing the ancient tree."
+        ],
+        "QUEST_COMPLETE": [
+          "The Gildergreen will be renewed through a new sapling."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "GILDERGREEN_PROBLEM",
+      "focus_npc": "Danica Pure-Spring",
+      "comment": "Player learns about the dying Gildergreen tree and Danica's need for help.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "T03",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "AGREE_TO_HELP",
+      "focus_npc": "Danica Pure-Spring",
+      "comment": "Player agrees to help Danica restore the Gildergreen by retrieving Nettlebane.",
+      "action": {
+        "type": "set_stage_cascade",
+        "quest_form_id": "0x0001C48E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001C48E",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help you",
+            "restore the tree",
+            "get the Nettlebane"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "GILDERGREEN_PROBLEM"
+      ]
+    },
+    {
+      "id": "NETTLEBANE_RETURNED",
+      "focus_npc": "Danica Pure-Spring",
+      "comment": "Player retrieved Nettlebane from the hagravens and brought it to Danica.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "T03",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "AGREE_TO_HELP"
+      ]
+    },
+    {
+      "id": "ELDERGLEAM_MISSION",
+      "focus_npc": "Danica Pure-Spring",
+      "comment": "Danica sends player to the Eldergleam Sanctuary to retrieve sap.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "T03",
+          "min_stage": 40
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "NETTLEBANE_RETURNED"
+      ]
+    },
+    {
+      "id": "SAPLING_CHOICE",
+      "focus_npc": "Maurice Jondrelle",
+      "comment": "Player chose Maurice's peaceful path and took a sapling instead of cutting the Eldergleam.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "T03",
+          "min_stage": 55
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ELDERGLEAM_MISSION"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Danica Pure-Spring",
+      "comment": "Quest complete - player returned with sap or sapling to restore the Gildergreen.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "T03",
+          "min_stage": 100
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ELDERGLEAM_MISSION"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "GILDERGREEN_PROBLEM"
+    ],
+    "requires": []
+  }
+}

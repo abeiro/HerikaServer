@@ -1,0 +1,253 @@
+{
+  "quest_key": "tg01_takingcareofbusiness",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001F326",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "TG01",
+  "title": "Taking Care of Business",
+  "description": "Brynjolf directs the player to the Ragged Flagon beneath Riften, then assigns them to collect overdue debts from three stubborn business owners: Keerava, Bersi Honey-Hand, and Haelga. Success earns membership in the Thieves Guild.",
+  "npc_facts": {
+    "Brynjolf": {
+      "base_facts": [
+        "I am a member of the Thieves Guild operating out of the Ragged Flagon beneath Riften.",
+        "I recruited the player after their performance in A Chance Arrangement.",
+        "Three business owners in Riften owe the Guild serious coin and refuse to pay: Keerava, Bersi Honey-Hand, and Haelga."
+      ],
+      "beat_facts": {
+        "RECEIVE_DEBT_ASSIGNMENT": [
+          "I have given the player the names of the three debtors and hinted at their weaknesses: Keerava cares for family, Bersi prizes his Dwemer urn, and Haelga is devoted to Dibella."
+        ],
+        "RETURN_TO_BRYNJOLF": [
+          "The player has collected all three debts. I am impressed and ready to offer them a permanent place in the Guild."
+        ]
+      }
+    },
+    "Keerava": {
+      "base_facts": [
+        "I run the Bee and Barb inn in Riften with my partner Talen-Jei.",
+        "I owe the Thieves Guild money but I have refused to pay them.",
+        "I have family at a farm just inside Morrowind that I worry about."
+      ],
+      "beat_facts": {
+        "COLLECT_KEERAVA_DEBT": [
+          "I have paid my debt to the Thieves Guild, whether through intimidation, a brawl, or fear for my family in Morrowind."
+        ]
+      }
+    },
+    "Bersi Honey-Hand": {
+      "base_facts": [
+        "I own the Pawned Prawn general store in Riften.",
+        "I owe the Thieves Guild money and I refuse to be extorted.",
+        "I have a priceless Dwemer urn displayed in my shop that I treasure greatly."
+      ],
+      "beat_facts": {
+        "COLLECT_BERSI_DEBT": [
+          "I have paid my debt to the Thieves Guild, either after a brawl or after my precious Dwemer urn was destroyed."
+        ]
+      }
+    },
+    "Haelga": {
+      "base_facts": [
+        "I run Haelga's Bunkhouse in Riften.",
+        "I owe the Thieves Guild money but I will not be bullied.",
+        "I am a devoted follower of Dibella, the goddess of beauty."
+      ],
+      "beat_facts": {
+        "COLLECT_HAELGA_DEBT": [
+          "I have paid my debt to the Thieves Guild, whether through coercion involving my Dibella devotion, a brawl, or after hearing the others caved."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "FIND_BRYNJOLF",
+      "focus_npc": "Brynjolf",
+      "comment": "Player locates Brynjolf at the Ragged Flagon after traversing the Ratway.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG01",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "RECEIVE_DEBT_ASSIGNMENT",
+      "focus_npc": "Brynjolf",
+      "comment": "Brynjolf assigns the player to collect debts from Keerava, Bersi, and Haelga.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG01",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "collect the debts",
+            "who owes money",
+            "the three debtors"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIND_BRYNJOLF"
+      ]
+    },
+    {
+      "id": "COLLECT_KEERAVA_DEBT",
+      "focus_npc": "Keerava",
+      "comment": "Player collects Keerava's debt via brawl, intimidation about her family, or being the last debtor.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Keerava paid",
+            "collected from Keerava",
+            "Bee and Barb debt",
+            "Keerava's debt"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RECEIVE_DEBT_ASSIGNMENT"
+      ]
+    },
+    {
+      "id": "COLLECT_BERSI_DEBT",
+      "focus_npc": "Bersi Honey-Hand",
+      "comment": "Player collects Bersi's debt via brawl or by smashing his Dwemer urn, or being the last debtor.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Bersi paid",
+            "collected from Bersi",
+            "Pawned Prawn debt",
+            "Bersi's debt",
+            "the urn"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RECEIVE_DEBT_ASSIGNMENT"
+      ]
+    },
+    {
+      "id": "COLLECT_HAELGA_DEBT",
+      "focus_npc": "Haelga",
+      "comment": "Player collects Haelga's debt via coercion about Dibella, brawl, or being the last debtor.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Haelga paid",
+            "collected from Haelga",
+            "Bunkhouse debt",
+            "Haelga's debt",
+            "Dibella"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RECEIVE_DEBT_ASSIGNMENT"
+      ]
+    },
+    {
+      "id": "RETURN_TO_BRYNJOLF",
+      "focus_npc": "Brynjolf",
+      "comment": "All three debts collected; player returns to Brynjolf in the Ragged Flagon.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG01",
+          "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "return to Brynjolf",
+            "all debts collected",
+            "job is done"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "COLLECT_KEERAVA_DEBT",
+        "COLLECT_BERSI_DEBT",
+        "COLLECT_HAELGA_DEBT"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Brynjolf",
+      "comment": "Quest finishes; player is welcomed into the Thieves Guild.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG01",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETURN_TO_BRYNJOLF"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "FIND_BRYNJOLF"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "tg00_chancearrangement",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

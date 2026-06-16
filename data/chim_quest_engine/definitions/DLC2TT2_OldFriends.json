@@ -1,0 +1,234 @@
+{
+    "quest_key":  "dlc2tt2_oldfriends",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x000195A1",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2TT2",
+    "title":  "Old Friends",
+    "description":  "Neloth, a Telvanni wizard at Tel Mithryn, is under attack by Ash Spawn sent by an unknown assailant. He gives the player a Ring of Tracking to find the source, which leads to Ildari Sarothrilâ€”his former apprentice who survived a failed heart stone experiment and now seeks revenge from Highpoint Tower.",
+    "npc_facts":  {
+                      "Neloth":  {
+                                     "base_facts":  [
+                                                        "I am a master Telvanni wizard residing in Tel Mithryn.",
+                                                        "Someone has been sending Ash Spawn to attack my tower.",
+                                                        "I suspect the culprit is someone in Solstheim."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "INVESTIGATE_ATTACKS":  [
+                                                                                    "I gave the player my Ring of Tracking enchanted with ash from the last attack to find the source.",
+                                                                                    "The ring only works within about a hundred feet of the source."
+                                                                                ],
+                                                        "REPORT_SOURCE":  [
+                                                                              "The source of the attacks is a heart stone hidden in Ildari Sarothril\u0027s grave.",
+                                                                              "Ildari was my apprentice before Talvas. She volunteered for my heart stone experiment and apparently died."
+                                                                          ],
+                                                        "HUNT_ILDARI":  [
+                                                                            "My divination revealed Ildari Sarothril is still alive and hiding in Highpoint Tower.",
+                                                                            "The heart stone implanted in her chest must have kept her at the edge of life and death.",
+                                                                            "I ordered the player to go to Highpoint Tower and rip the heart stone from her chest."
+                                                                        ],
+                                                        "QUEST_COMPLETE":  [
+                                                                               "Ildari Sarothril is dead. The attacks on Tel Mithryn should cease.",
+                                                                               "I rewarded the player with a staff for dealing with Ildari."
+                                                                           ]
+                                                    }
+                                 },
+                      "Ildari Sarothril":  {
+                                               "base_facts":  [
+                                                                  "I was Neloth\u0027s apprentice before Talvas.",
+                                                                  "I volunteered for Neloth\u0027s heart stone experiment and nearly died."
+                                                              ],
+                                               "beat_facts":  {
+                                                                  "HUNT_ILDARI":  [
+                                                                                      "I am hiding in Highpoint Tower, commanding Ash Spawn to attack Neloth.",
+                                                                                      "The heart stone in my chest keeps me alive and grants me power.",
+                                                                                      "I am responsible for the death of Varona Nelas and the withering of Tel Mithryn tower."
+                                                                                  ],
+                                                                  "ILDARI_DEAD":  [
+                                                                                      "I have been defeated by the agent Neloth sent to kill me."
+                                                                                  ]
+                                                              }
+                                           },
+                      "Niyya":  {
+                                    "base_facts":  [
+                                                       "I was imprisoned by Ildari Sarothril in Highpoint Tower."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "HUNT_ILDARI":  [
+                                                                           "Miners saved Ildari and nursed her back to health, but she turned on us in the night.",
+                                                                           "Ildari used the survivors for her experiments and kept us as prisoners."
+                                                                       ]
+                                                   }
+                                }
+                  },
+    "beats":  [
+                  {
+                      "id":  "INVESTIGATE_ATTACKS",
+                      "focus_npc":  "Neloth",
+                      "comment":  "Quest started. Neloth gives the Ring of Tracking to find the source of Ash Spawn attacks.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TT2",
+                                           "min_stage":  100,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "ash spawn attacks",
+                                                            "ring of tracking",
+                                                            "find the source",
+                                                            "investigate the attacks"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "REPORT_SOURCE",
+                      "focus_npc":  "Neloth",
+                      "comment":  "Player found heart stone in Ildari\u0027s empty grave and must report back to Neloth.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TT2",
+                                           "min_stage":  200,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "heart stone in the grave",
+                                                            "ildari\u0027s grave",
+                                                            "empty sarcophagus",
+                                                            "found the source"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "INVESTIGATE_ATTACKS"
+                                        ]
+                  },
+                  {
+                      "id":  "HUNT_ILDARI",
+                      "focus_npc":  "Neloth",
+                      "comment":  "Neloth divines Ildari is alive at Highpoint Tower and orders the player to kill her.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TT2",
+                                           "min_stage":  300,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "highpoint tower",
+                                                            "kill ildari",
+                                                            "she lives",
+                                                            "seek her"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REPORT_SOURCE"
+                                        ]
+                  },
+                  {
+                      "id":  "ILDARI_DEAD",
+                      "focus_npc":  "Ildari Sarothril",
+                      "comment":  "Player confronted and killed Ildari in Highpoint Tower. Must return to Neloth.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TT2",
+                                           "min_stage":  500,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "killed ildari",
+                                                            "ildari is dead",
+                                                            "defeated ildari"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "HUNT_ILDARI"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Neloth",
+                      "comment":  "Quest complete. Neloth rewards the player with a random leveled staff.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TT2",
+                                           "min_stage":  600,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ILDARI_DEAD"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "INVESTIGATE_ATTACKS"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "dlc2tt1b_newdebt",
+                                               "beat_id":  "DEBT_RESOLVED_PERSUADED"
+                                           }
+                                       ]
+                      }
+}

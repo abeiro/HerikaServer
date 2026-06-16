@@ -1,0 +1,109 @@
+{
+  "quest_key": "mgritual02_illusionritualspell",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000B3233",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MGRitual02",
+  "title": "Illusion Ritual Spell",
+  "description": "Drevis Neloren tasks the player with finding four hidden Master Illusion texts throughout the College of Winterhold using the Vision of the Tenth Eye spell, then returning them for a Master Illusion spell tome.",
+  "npc_facts": {
+    "Drevis Neloren": {
+      "base_facts": [
+        "I am the Master of Illusion at the College of Winterhold.",
+        "I can teach Master-level Illusion spells to those who have proven their mastery.",
+        "There are hidden texts containing powerful Illusion knowledge scattered throughout the College."
+      ],
+      "beat_facts": {
+        "QUEST_STARTED": [
+          "I have given the student Vision of the Tenth Eye to find the hidden Master Illusion texts."
+        ],
+        "QUEST_COMPLETE": [
+          "The student has returned the Master Illusion texts and I have rewarded them with the Hysteria spell tome."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_STARTED",
+      "focus_npc": "Drevis Neloren",
+      "comment": "Player accepts the quest from Drevis Neloren and receives Vision of the Tenth Eye to find the hidden texts.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRitual02",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "RETURN_BOOKS",
+      "focus_npc": "Drevis Neloren",
+      "comment": "Player returns the four Master Illusion texts to Drevis Neloren, completing the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000B3233",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "found the books",
+            "have the texts",
+            "brought the books",
+            "here are the texts",
+            "returned with the books"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_STARTED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Drevis Neloren",
+      "comment": "Quest completes after delivering the texts and receiving the Hysteria spell tome.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRitual02",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_STARTED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "QUEST_STARTED"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mg01_firstlessons",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

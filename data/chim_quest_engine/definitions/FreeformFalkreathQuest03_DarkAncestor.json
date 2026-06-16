@@ -1,0 +1,135 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000B83C3",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformFalkreathQuest03",
+  "title": "Dark Ancestor",
+  "description": "Dengeir of Stuhn asks you to destroy his vampire ancestor Vighar, who escaped his grave and fled to Bloodlet Throne, to protect his family from shame.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "DENGEIR_REVEALS_ANCESTOR"
+    ],
+    "requires": [
+      {
+        "type": "quest_completed",
+        "quest_editor_id": "FreeformFalkreathQuest02"
+      }
+    ]
+  },
+  "npc_facts": {
+    "Dengeir of Stuhn": {
+      "base_facts": [
+        "I am a former Jarl of Falkreath.",
+        "My ancestor Vighar was a vampire, bound in his grave by a wardstone for centuries.",
+        "Someone stole the wardstone and Vighar escaped to Bloodlet Throne.",
+        "I want Vighar destroyed before anyone discovers my family's secret shame."
+      ],
+      "beat_facts": {
+        "DENGEIR_REVEALS_ANCESTOR": [
+          "I have asked someone to destroy my vampire ancestor Vighar at Bloodlet Throne."
+        ],
+        "QUEST_COMPLETE": [
+          "My vampire ancestor Vighar has been destroyed. My family's secret is safe."
+        ]
+      }
+    },
+    "Vighar": {
+      "base_facts": [
+        "I am a powerful vampire and the ancestor of Dengeir of Stuhn.",
+        "I was imprisoned in my grave by a wardstone until someone stole it.",
+        "I now reside at Bloodlet Throne in the mountains southwest of Helgen."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "DENGEIR_REVEALS_ANCESTOR",
+      "focus_npc": "Dengeir of Stuhn",
+      "comment": "Dengeir reveals his family secret about his vampire ancestor Vighar and asks the player to destroy him at Bloodlet Throne.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_stage",
+          "quest_form_id": "0x000B83C3",
+          "quest_plugin": "Skyrim.esm",
+          "stage": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "vighar",
+            "vampire ancestor",
+            "family secret",
+            "bloodlet throne",
+            "help you"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "VIGHAR_DESTROYED",
+      "focus_npc": "Vighar",
+      "comment": "Vighar has been killed at Bloodlet Throne. The game advances to stage 20.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformFalkreathQuest03",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "killed vighar",
+            "vighar is dead",
+            "destroyed vighar"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DENGEIR_REVEALS_ANCESTOR"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Dengeir of Stuhn",
+      "comment": "Player returns to Dengeir and reports Vighar's death. Quest completes at stage 200.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformFalkreathQuest03",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "VIGHAR_DESTROYED"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformfalkreathquest03_darkancestor"
+}

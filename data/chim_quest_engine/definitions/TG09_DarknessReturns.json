@@ -1,0 +1,232 @@
+{
+  "quest_key": "tg09_darknessreturns",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00021555",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "TG09",
+  "title": "Darkness Returns",
+  "description": "Return the Skeleton Key to the Twilight Sepulcher, follow the Pilgrim's Path through its five tests, and restore the Ebonmere to earn Nocturnal's blessing as a true Nightingale Agent.",
+  "npc_facts": {
+    "Karliah": {
+      "base_facts": [
+        "I am a Nightingale bound to serve Nocturnal.",
+        "Mercer Frey betrayed the Nightingales and murdered Gallus.",
+        "I helped the new recruit retrieve the Skeleton Key from Mercer."
+      ],
+      "beat_facts": {
+        "LISTEN_TO_NOCTURNAL": [
+          "Nocturnal has emerged from the Ebonmere and is addressing us."
+        ],
+        "CHOOSE_NIGHTINGALE_ROLE": [
+          "The new recruit must choose which Nightingale ability to receive from Nocturnal."
+        ]
+      }
+    },
+    "Gallus": {
+      "base_facts": [
+        "I am the spirit of Gallus, the last Nightingale Sentinel.",
+        "I have guarded the Sepulcher alone for over twenty-five years.",
+        "Mercer Frey lured me to my death and stole the Skeleton Key.",
+        "Without the Key, the Ebonmere is closed and I am fading away."
+      ],
+      "beat_facts": {
+        "SPEAK_TO_SENTINEL": [
+          "A new Nightingale has come with the Skeleton Key. My death was not in vain."
+        ],
+        "FOLLOW_PILGRIMS_PATH": [
+          "The recruit must follow the Pilgrim's Path alone to restore the Key to the Ebonmere."
+        ]
+      }
+    },
+    "Nocturnal": {
+      "base_facts": [
+        "I am Nocturnal, the Daedric Prince of Darkness and Shadow.",
+        "The Ebonmere is my conduit to Evergloam.",
+        "The Nightingales serve me in exchange for their abilities."
+      ],
+      "beat_facts": {
+        "LISTEN_TO_NOCTURNAL": [
+          "The Key has been returned and the Ebonmere restored. I have emerged to address my agents."
+        ],
+        "CHOOSE_NIGHTINGALE_ROLE": [
+          "I will grant this Nightingale a blessing befitting their chosen role."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ENTER_SEPULCHER",
+      "focus_npc": "Gallus",
+      "comment": "Player enters the Twilight Sepulcher with the Skeleton Key.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG09",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "SPEAK_TO_SENTINEL",
+      "focus_npc": "Gallus",
+      "comment": "Player speaks to Gallus's spirit and learns about the Pilgrim's Path and the Ebonmere.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG09",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "who are you",
+            "gallus",
+            "skeleton key",
+            "pilgrim's path"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENTER_SEPULCHER"
+      ]
+    },
+    {
+      "id": "FOLLOW_PILGRIMS_PATH",
+      "focus_npc": "",
+      "comment": "Player navigates the five tests of the Pilgrim's Path through the Sepulcher.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG09",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_TO_SENTINEL"
+      ]
+    },
+    {
+      "id": "RETURN_SKELETON_KEY",
+      "focus_npc": "Nocturnal",
+      "comment": "Player unlocks the Ebonmere with the Skeleton Key.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG09",
+          "min_stage": 40
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FOLLOW_PILGRIMS_PATH"
+      ]
+    },
+    {
+      "id": "LISTEN_TO_NOCTURNAL",
+      "focus_npc": "Nocturnal",
+      "comment": "Nocturnal emerges from the Ebonmere and addresses the player about their service.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG09",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETURN_SKELETON_KEY"
+      ]
+    },
+    {
+      "id": "CHOOSE_NIGHTINGALE_ROLE",
+      "focus_npc": "Karliah",
+      "comment": "Player speaks to Karliah and chooses a Nightingale blessing: Agent of Shadow, Subterfuge, or Strife.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG09",
+          "min_stage": 70
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "nightingale role",
+            "blessing",
+            "agent of shadow",
+            "agent of subterfuge",
+            "agent of strife"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LISTEN_TO_NOCTURNAL"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest complete. Player has become a true Nightingale Agent with Nocturnal's blessing.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG09",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CHOOSE_NIGHTINGALE_ROLE"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "ENTER_SEPULCHER"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "tg08b_blindsighted",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

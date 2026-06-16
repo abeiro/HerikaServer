@@ -1,0 +1,178 @@
+{
+    "quest_key":  "cr13_purity",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x000E3163",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "CR13",
+    "title":  "Purity",
+    "description":  "Farkas or Vilkas seeks to be cured of lycanthropy and asks the player to help retrieve a Glenmoril witch head and perform the purification ritual at Ysgramor\u0027s Tomb.",
+    "npc_facts":  {
+                      "Farkas":  {
+                                     "base_facts":  [
+                                                        "I am a Companion and a werewolf.",
+                                                        "I want to be cured of lycanthropy like Kodlak was."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "AGREE_TO_HELP":  [
+                                                                              "I have asked someone to help me cure my lycanthropy."
+                                                                          ],
+                                                        "PURITY_COMPLETE":  [
+                                                                                "I am cured of my beast blood."
+                                                                            ]
+                                                    }
+                                 },
+                      "Vilkas":  {
+                                     "base_facts":  [
+                                                        "I am a Companion and a werewolf.",
+                                                        "I want to be cured of lycanthropy like Kodlak was."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "AGREE_TO_HELP":  [
+                                                                              "I have asked someone to help me cure my lycanthropy."
+                                                                          ],
+                                                        "PURITY_COMPLETE":  [
+                                                                                "I am cured of my beast blood."
+                                                                            ]
+                                                    }
+                                 }
+                  },
+    "beats":  [
+                  {
+                      "id":  "AGREE_TO_HELP",
+                      "focus_npc":  "",
+                      "comment":  "Player agrees to help Farkas or Vilkas cure their lycanthropy.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x000E3163",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "help cure",
+                                                            "help purify",
+                                                            "cure your lycanthropy",
+                                                            "cure your beast blood"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CR13",
+                                           "min_stage":  10
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "WITCH_HEAD_COLLECTED",
+                      "focus_npc":  "",
+                      "comment":  "Player has a Glenmoril witch head and the cleansing at Ysgramor\u0027s Tomb begins.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CR13",
+                                           "min_stage":  15
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "AGREE_TO_HELP"
+                                        ]
+                  },
+                  {
+                      "id":  "WOLF_SPIRIT_SLAIN",
+                      "focus_npc":  "",
+                      "comment":  "The wolf spirit of the questgiver has been defeated in Ysgramor\u0027s Tomb.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CR13",
+                                           "min_stage":  17
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "WITCH_HEAD_COLLECTED"
+                                        ]
+                  },
+                  {
+                      "id":  "TALK_TO_QUESTGIVER",
+                      "focus_npc":  "",
+                      "comment":  "Player speaks to the questgiver after the wolf spirit is slain.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CR13",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "WOLF_SPIRIT_SLAIN"
+                                        ]
+                  },
+                  {
+                      "id":  "PURITY_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest complete; the questgiver is cured of lycanthropy.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CR13",
+                                           "min_stage":  100
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "TALK_TO_QUESTGIVER"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "AGREE_TO_HELP"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "c06_gloryofthedead",
+                                               "beat_id":  "HARBINGER"
+                                           }
+                                       ]
+                      }
+}

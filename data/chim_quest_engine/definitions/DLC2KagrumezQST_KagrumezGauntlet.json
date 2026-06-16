@@ -1,0 +1,162 @@
+{
+  "quest_key": "dlc2kagrumezqst_kagrumezgauntlet",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0003166D",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2KagrumezQST",
+  "title": "The Kagrumez Gauntlet",
+  "description": "Complete the ancient Dwarven trials in Kagrumez by finding resonance gems across Solstheim and surviving three waves of automaton combat to earn unique Dwarven followers and the Dwarven Black Bow of Fate.",
+  "npc_facts": {
+    "Revus Sarvani": {
+      "base_facts": [
+        "I sell Kagrumez Resonance Gems to travelers who ask about them.",
+        "I tend the silt strider just west of Tel Mithryn."
+      ],
+      "beat_facts": {}
+    },
+    "Steadfast Dwarven Spider": {
+      "base_facts": [
+        "I am a friendly Dwarven automaton freed from a chamber in Kagrumez.",
+        "I can follow and assist travelers in combat as a pet companion."
+      ],
+      "beat_facts": {
+        "FIRST_PATTERN_COMPLETE": [
+          "I have been freed from my chamber after the first Kagrumez trial was completed."
+        ]
+      }
+    },
+    "Steadfast Dwarven Sphere": {
+      "base_facts": [
+        "I am a friendly Dwarven automaton freed from a chamber in Kagrumez.",
+        "I can follow and assist travelers in combat as a pet companion."
+      ],
+      "beat_facts": {
+        "SECOND_PATTERN_COMPLETE": [
+          "I have been freed from my chamber after the second Kagrumez trial was completed."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "FIND_RESONANCE_GEMS",
+      "focus_npc": "",
+      "comment": "Player begins searching for Kagrumez Resonance Gems across Solstheim.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2KagrumezQST",
+          "min_stage": 10,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "FIRST_PATTERN_COMPLETE",
+      "focus_npc": "Steadfast Dwarven Spider",
+      "comment": "First pattern solved, automatons defeated, Steadfast Dwarven Spider freed.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "first pattern",
+            "first trial",
+            "spider freed"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIND_RESONANCE_GEMS"
+      ]
+    },
+    {
+      "id": "SECOND_PATTERN_COMPLETE",
+      "focus_npc": "Steadfast Dwarven Sphere",
+      "comment": "Second pattern solved, automatons and fire traps defeated, Steadfast Dwarven Sphere freed.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "second pattern",
+            "second trial",
+            "sphere freed"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIRST_PATTERN_COMPLETE"
+      ]
+    },
+    {
+      "id": "THIRD_PATTERN_COMPLETE",
+      "focus_npc": "",
+      "comment": "Third pattern solved, electrified water trial completed, treasure room accessed with Dwarven Black Bow of Fate.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "third pattern",
+            "third trial",
+            "bow of fate"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SECOND_PATTERN_COMPLETE"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "All Kagrumez trials completed, quest finished.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2KagrumezQST",
+          "min_stage": 250,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "THIRD_PATTERN_COMPLETE"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "FIND_RESONANCE_GEMS"
+    ],
+    "requires": []
+  }
+}

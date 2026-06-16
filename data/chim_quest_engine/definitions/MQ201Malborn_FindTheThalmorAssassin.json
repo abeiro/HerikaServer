@@ -1,0 +1,180 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0004CECE",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MQ201Malborn",
+  "title": "Find the Thalmor Assassin",
+  "description": "Malborn is hiding in Windhelm after escaping the Thalmor Embassy during Diplomatic Immunity. He believes a Khajiit assassin waits outside the city to kill him and asks for help eliminating the threat so he can flee to Morrowind.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "MALBORN_SITUATION"
+    ],
+    "requires": [
+      {
+        "type": "quest_completed",
+        "quest_editor_id": "MQ201"
+      }
+    ]
+  },
+  "npc_facts": {
+    "Malborn": {
+      "base_facts": [
+        "Malborn is hiding in the New Gnisis Cornerclub in Windhelm after escaping the Thalmor Embassy.",
+        "He believes a Thalmor assassin, a Khajiit, is waiting outside the city gates to kill him.",
+        "He wants to flee to Morrowind but is too afraid to leave Windhelm while the assassin lurks outside.",
+        "He still blames the player and Delphine for putting him in danger."
+      ],
+      "beat_facts": {
+        "MALBORN_SITUATION": [
+          "Malborn has asked for help dealing with a Thalmor assassin outside Windhelm."
+        ],
+        "ACCEPT_QUEST": [
+          "Malborn's request for help has been accepted. The assassin is believed to be a Khajiit near the city gates."
+        ],
+        "TELL_MALBORN": [
+          "Malborn has been told the assassin is dead. He is grateful and leaving for Morrowind."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "MALBORN_SITUATION",
+      "focus_npc": "Malborn",
+      "comment": "Player learns Malborn is hiding in Windhelm and fears a Thalmor assassin outside the city.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Malborn",
+            "assassin",
+            "Thalmor after you",
+            "hiding",
+            "afraid to leave"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACCEPT_QUEST",
+      "focus_npc": "Malborn",
+      "comment": "Player agrees to help Malborn by finding and dealing with the assassin.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0004CECE",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0004CECE",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I'll help",
+            "find the assassin",
+            "take care of it",
+            "deal with the assassin"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MALBORN_SITUATION"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "ASSASSIN_DEAD",
+      "focus_npc": "",
+      "comment": "Observational gate: the Thalmor assassin J'datharr has been killed and stage 100 reached.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0004CECE",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0004CECE",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ201Malborn",
+          "min_stage": 100
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_QUEST"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "TELL_MALBORN",
+      "focus_npc": "Malborn",
+      "comment": "Player tells Malborn the assassin is dead, completing the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0004CECE",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 150
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0004CECE",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "assassin is dead",
+            "safe now",
+            "taken care of",
+            "he's dead",
+            "no more threat"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ASSASSIN_DEAD"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "mq201malborn_findthethalmorassassin"
+}

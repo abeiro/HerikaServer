@@ -1,0 +1,241 @@
+{
+    "quest_key":  "mq302_seasonunending",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00045923",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MQ302",
+    "title":  "Season Unending",
+    "description":  "The Jarl of Whiterun refuses to help capture a dragon while the civil war rages. Convince the Greybeards to host a peace council at High Hrothgar and negotiate a truce between the Imperial Legion and the Stormcloaks so both sides can unite against Alduin.",
+    "npc_facts":  {
+                      "Arngeir":  {
+                                      "base_facts":  [
+                                                         "I am the Greybeards\u0027 spokesman and reside at High Hrothgar.",
+                                                         "The Greybeards are the only group both sides of the civil war respect enough to broker a truce."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "ARNGEIR_AGREES":  [
+                                                                                "I have agreed to host a peace council at High Hrothgar to help defeat Alduin."
+                                                                            ],
+                                                         "COUNCIL_BEGINS":  [
+                                                                                "The delegations have arrived at High Hrothgar. The council is ready to begin."
+                                                                            ],
+                                                         "TRUCE_SIGNED":  [
+                                                                              "The truce has been signed. \u0027Season unending\u0027 is the ancient Nord term for war."
+                                                                          ]
+                                                     }
+                                  },
+                      "General Tullius":  {
+                                              "base_facts":  [
+                                                                 "I command the Imperial Legion in Skyrim from Castle Dour in Solitude."
+                                                             ],
+                                              "beat_facts":  {
+                                                                 "LEADERS_CONVINCED":  [
+                                                                                           "I have agreed to attend the peace council at High Hrothgar."
+                                                                                       ]
+                                                             }
+                                          },
+                      "Ulfric Stormcloak":  {
+                                                "base_facts":  [
+                                                                   "I lead the Stormcloak rebellion from the Palace of the Kings in Windhelm."
+                                                               ],
+                                                "beat_facts":  {
+                                                                   "LEADERS_CONVINCED":  [
+                                                                                             "I have agreed to attend the peace council at High Hrothgar."
+                                                                                         ]
+                                                               }
+                                            },
+                      "Esbern":  {
+                                     "base_facts":  [
+                                                        "I am one of the last Blades and a scholar of dragon lore."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "NEGOTIATE_TRUCE":  [
+                                                                                "I reminded the council that Alduin threatens all of Skyrim, forcing both sides back to the table."
+                                                                            ]
+                                                    }
+                                 }
+                  },
+    "beats":  [
+                  {
+                      "id":  "ARNGEIR_AGREES",
+                      "focus_npc":  "Arngeir",
+                      "comment":  "Player talks to Arngeir at High Hrothgar about hosting a peace council.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ302",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "peace council",
+                                                            "host a truce",
+                                                            "ask Arngeir"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "LEADERS_CONVINCED",
+                      "focus_npc":  "",
+                      "comment":  "Both General Tullius and Ulfric Stormcloak agree to attend the peace council.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ302",
+                                           "min_stage":  15
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Tullius agreed",
+                                                            "Ulfric agreed",
+                                                            "both leaders agreed"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ARNGEIR_AGREES"
+                                        ]
+                  },
+                  {
+                      "id":  "COUNCIL_BEGINS",
+                      "focus_npc":  "Arngeir",
+                      "comment":  "Player returns to High Hrothgar and talks to Arngeir to begin the council.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ302",
+                                           "min_stage":  40
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "return to High Hrothgar",
+                                                            "council is ready"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "LEADERS_CONVINCED"
+                                        ]
+                  },
+                  {
+                      "id":  "TAKE_SEAT",
+                      "focus_npc":  "",
+                      "comment":  "Player takes their seat at the negotiating table.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ302",
+                                           "min_stage":  55
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "COUNCIL_BEGINS"
+                                        ]
+                  },
+                  {
+                      "id":  "NEGOTIATE_TRUCE",
+                      "focus_npc":  "Esbern",
+                      "comment":  "Player negotiates the truce terms between Imperials and Stormcloaks, deciding which holds are exchanged.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ302",
+                                           "min_stage":  60
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "negotiate the truce",
+                                                            "truce terms",
+                                                            "exchange holds"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "TAKE_SEAT"
+                                        ]
+                  },
+                  {
+                      "id":  "TRUCE_SIGNED",
+                      "focus_npc":  "Arngeir",
+                      "comment":  "The peace treaty is signed and the quest is complete.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ302",
+                                           "min_stage":  300
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "NEGOTIATE_TRUCE"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "ARNGEIR_AGREES"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "mq301_fallen",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

@@ -1,0 +1,173 @@
+{
+  "quest_key": "cwmission04_rescuefromfortkastav",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00035A23",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "CWMission04",
+  "title": "Rescue from Fort Kastav",
+  "description": "Legate Rikke orders the player to infiltrate Stormcloak-held Fort Kastav, free imprisoned Legionnaires, and retake the fort with Hadvar's scout team.",
+  "npc_facts": {
+    "Legate Rikke": {
+      "base_facts": [
+        "I command Imperial operations from the Winterhold Imperial Camp.",
+        "I assign missions to reclaim holds from the Stormcloaks."
+      ],
+      "beat_facts": {
+        "MISSION_BRIEFING": [
+          "I sent the soldier to take Fort Kastav and free our imprisoned Legionnaires."
+        ],
+        "QUEST_COMPLETE": [
+          "Fort Kastav has been retaken and our prisoners rescued."
+        ]
+      }
+    },
+    "Hadvar": {
+      "base_facts": [
+        "I lead a scout team operating near Stormcloak-held forts.",
+        "I prefer to infiltrate forts through side entrances before launching a full assault."
+      ],
+      "beat_facts": {
+        "SCOUTS_AND_INFILTRATE": [
+          "I briefed the soldier on the plan to sneak into Fort Kastav through the grate and free the prisoners."
+        ],
+        "FREE_PRISONERS": [
+          "The prisoners have been freed and are ready to fight."
+        ],
+        "TAKE_FORT": [
+          "The fort is ours. I will remain here to garrison it."
+        ],
+        "REPORT_HADVAR": [
+          "I told the soldier to report our success to General Tullius."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "MISSION_BRIEFING",
+      "focus_npc": "Legate Rikke",
+      "comment": "Player reports to Rikke at Winterhold Imperial Camp and accepts the mission.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWMission04",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "SCOUTS_AND_INFILTRATE",
+      "focus_npc": "Hadvar",
+      "comment": "Player meets Hadvar's scouts near Fort Kastav and begins sneaking in through the grate.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWMission04",
+          "min_stage": 12
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MISSION_BRIEFING"
+      ]
+    },
+    {
+      "id": "FREE_PRISONERS",
+      "focus_npc": "",
+      "comment": "Player frees the Imperial prisoners from their cells inside the fort.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWMission04",
+          "min_stage": 15
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SCOUTS_AND_INFILTRATE"
+      ]
+    },
+    {
+      "id": "TAKE_FORT",
+      "focus_npc": "",
+      "comment": "Player clears Fort Kastav of Stormcloak soldiers with the freed prisoners and scouts.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWMission04",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FREE_PRISONERS"
+      ]
+    },
+    {
+      "id": "REPORT_HADVAR",
+      "focus_npc": "Hadvar",
+      "comment": "Player reports back to Hadvar after the fort is taken; he says he will garrison it.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWMission04",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TAKE_FORT"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest completes; player is directed to report to General Tullius under Reunification of Skyrim.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWMission04",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "REPORT_HADVAR"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "MISSION_BRIEFING"
+    ],
+    "requires": []
+  }
+}

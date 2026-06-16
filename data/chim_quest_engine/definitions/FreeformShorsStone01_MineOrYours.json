@@ -1,0 +1,148 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000E49E7",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformShorsStone01",
+  "title": "Mine or Yours",
+  "description": "Filnjar, the blacksmith of Shor's Stone, reports that Redbelly Mine is overrun with frostbite spiders and asks for help clearing them out to restore the town's ebony mining operation.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "HEAR_ABOUT_MINE",
+      "ACCEPT_QUEST"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Filnjar": {
+      "base_facts": [
+        "I am the blacksmith of Shor's Stone.",
+        "Redbelly Mine is our main source of income, producing ebony ore.",
+        "The mine gets its name from the red sulfurous mist that fills the caverns."
+      ],
+      "beat_facts": {
+        "HEAR_ABOUT_MINE": [
+          "Frostbite spiders have overrun Redbelly Mine and it is no longer producing.",
+          "The town guards will not help with the spider problem; they are too busy watching for enemy soldiers."
+        ],
+        "ACCEPT_QUEST": [
+          "Someone has agreed to clear the spiders from Redbelly Mine for me."
+        ],
+        "SPIDERS_CLEARED": [
+          "The frostbite spiders in Redbelly Mine have been killed."
+        ],
+        "RETURN_TO_FILNJAR": [
+          "The mine is clear and Shor's Stone is back on the map. I rewarded my helper with leveled gold."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "HEAR_ABOUT_MINE",
+      "focus_npc": "Filnjar",
+      "comment": "Player learns about the spider infestation in Redbelly Mine from Filnjar.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "mine",
+            "spiders",
+            "Redbelly Mine",
+            "what's wrong"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACCEPT_QUEST",
+      "focus_npc": "Filnjar",
+      "comment": "Player agrees to clear the mine of spiders, starting the quest at stage 20.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000E49E7",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help",
+            "I'll clear them",
+            "I can help",
+            "I'll do it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEAR_ABOUT_MINE"
+      ],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "SPIDERS_CLEARED",
+      "focus_npc": "",
+      "comment": "Observation that all frostbite spiders in Redbelly Mine have been killed, advancing to stage 30.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformShorsStone01",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "RETURN_TO_FILNJAR",
+      "focus_npc": "Filnjar",
+      "comment": "Player returns to Filnjar and reports the mine is clear, completing the quest at stage 200.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000E49E7",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "spiders are gone",
+            "cleared the mine",
+            "mine is clear",
+            "done"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPIDERS_CLEARED"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformshorsstone01_mineoryours"
+}

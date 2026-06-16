@@ -1,0 +1,105 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0009380B",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformWhiterunQuest02",
+  "title": "Argonian Ale Extraction",
+  "description": "Brenuin, a drunk wandering the streets of Whiterun, asks you to steal a bottle of Argonian Ale from The Bannered Mare for him.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "BRENUIN_REQUEST"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Brenuin": {
+      "base_facts": [
+        "I wander the streets of Whiterun, usually near The Bannered Mare.",
+        "I'm always looking for my next drink."
+      ],
+      "beat_facts": {
+        "BRENUIN_REQUEST": [
+          "There's a special bottle of Argonian Ale in The Bannered Mare's kitchen. I want someone to get it for me."
+        ],
+        "ALE_ACQUIRED": [
+          "The player has the Argonian Ale. I hope they bring it to me soon."
+        ],
+        "QUEST_COMPLETE": [
+          "The player brought me the Argonian Ale. I gave them a Potion of Vigorous Healing I found at the Temple of Kynareth."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "BRENUIN_REQUEST",
+      "focus_npc": "Brenuin",
+      "comment": "Brenuin asks the player to steal Argonian Ale from The Bannered Mare.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0009380B",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "drunk",
+            "ale",
+            "always drunk",
+            "get you a drink"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ALE_ACQUIRED",
+      "focus_npc": "",
+      "comment": "Player has stolen the Argonian Ale from The Bannered Mare kitchen.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformWhiterunQuest02",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Brenuin",
+      "comment": "Player gave the Argonian Ale to Brenuin and received a Potion of Vigorous Healing.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformWhiterunQuest02",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformwhiterunquest02_argonianaleextraction"
+}

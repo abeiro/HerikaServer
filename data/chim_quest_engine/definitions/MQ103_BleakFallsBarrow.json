@@ -1,0 +1,175 @@
+{
+    "quest_key":  "mq103_bleakfallsbarrow",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x000D0800",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MQ103",
+    "title":  "Bleak Falls Barrow",
+    "description":  "Jarl Balgruuf directs the player to his court wizard Farengar Secret-Fire, who requests the retrieval of the Dragonstone from Bleak Falls Barrow to map ancient dragon burial sites and understand why dragons are returning to Tamriel.",
+    "npc_facts":  {
+                      "Jarl Balgruuf the Greater":  {
+                                                        "base_facts":  [
+                                                                           "I am the Jarl of Whiterun, ruling from Dragonsreach.",
+                                                                           "My court wizard Farengar is researching the dragon threat.",
+                                                                           "I sent the player to assist Farengar after they brought news of the dragon attack on Helgen."
+                                                                       ],
+                                                        "beat_facts":  {
+                                                                           "BALGRUUF_DIRECTS":  [
+                                                                                                    "I directed the player to Farengar to help with his dragon research."
+                                                                                                ],
+                                                                           "QUEST_COMPLETE":  [
+                                                                                                  "The player retrieved the Dragonstone for Farengar and has earned my gratitude and a reward."
+                                                                                              ]
+                                                                       }
+                                                    },
+                      "Farengar Secret-Fire":  {
+                                                   "base_facts":  [
+                                                                      "I am the court wizard serving Jarl Balgruuf in Dragonsreach.",
+                                                                      "I am researching dragons and why they are returning to Tamriel.",
+                                                                      "A Dragonstone in Bleak Falls Barrow may contain a map of ancient dragon burial sites."
+                                                                  ],
+                                                   "beat_facts":  {
+                                                                      "FARENGAR_REQUESTS":  [
+                                                                                                "I asked the player to retrieve the Dragonstone from Bleak Falls Barrow."
+                                                                                            ],
+                                                                      "DRAGONSTONE_FOUND":  [
+                                                                                                "The player has found the Dragonstone and should bring it to me at Dragonsreach."
+                                                                                            ],
+                                                                      "QUEST_COMPLETE":  [
+                                                                                             "The player delivered the Dragonstone. This will greatly aid my research into the dragon burial sites."
+                                                                                         ]
+                                                                  }
+                                               }
+                  },
+    "beats":  [
+                  {
+                      "id":  "BALGRUUF_DIRECTS",
+                      "focus_npc":  "Jarl Balgruuf the Greater",
+                      "comment":  "Balgruuf directs the player to Farengar after hearing about the dragon attack.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ103",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "help farengar",
+                                                            "court wizard",
+                                                            "balgruuf sent me"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "FARENGAR_REQUESTS",
+                      "focus_npc":  "Farengar Secret-Fire",
+                      "comment":  "Farengar asks the player to retrieve the Dragonstone from Bleak Falls Barrow.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ103",
+                                           "min_stage":  50
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "dragonstone",
+                                                            "bleak falls barrow",
+                                                            "dragon burial sites"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ]
+                  },
+                  {
+                      "id":  "DRAGONSTONE_FOUND",
+                      "focus_npc":  "Farengar Secret-Fire",
+                      "comment":  "Player retrieved the Dragonstone from Bleak Falls Barrow and must deliver it to Farengar.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ103",
+                                           "min_stage":  180
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "have the dragonstone",
+                                                            "found the dragonstone",
+                                                            "retrieved the stone"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Farengar Secret-Fire",
+                      "comment":  "Player delivered the Dragonstone to Farengar and completed the quest.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ103",
+                                           "min_stage":  190
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "BALGRUUF_DIRECTS"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "mq102_beforethestorm",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

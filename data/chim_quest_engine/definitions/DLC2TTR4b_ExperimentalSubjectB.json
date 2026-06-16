@@ -1,0 +1,164 @@
+{
+    "quest_key":  "dlc2ttr4b_experimentalsubjectb",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001CDE1",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2TTR4b",
+    "title":  "Experimental Subject (B)",
+    "description":  "Neloth requests help testing his new silence spell. The spell fails, rendering the player blind temporarily, after which Neloth provides 250 gold as compensation.",
+    "npc_facts":  {
+                      "Neloth":  {
+                                     "base_facts":  [
+                                                        "I am a Telvanni wizard researching new spells.",
+                                                        "I am working on a spell called the Eighth Silence.",
+                                                        "I need a test subject for my experimental magic."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "ACCEPT_SPELL":  [
+                                                                             "I cast the Eighth Silence on the volunteer, but it failed and only caused temporary blindness."
+                                                                         ],
+                                                        "DEMAND_COMPENSATION":  [
+                                                                                    "I paid the volunteer 250 gold for the failed spell experiment."
+                                                                                ]
+                                                    }
+                                 },
+                      "Talvas Fathryon":  {
+                                              "base_facts":  [
+                                                                 "I am Neloth\u0027s apprentice."
+                                                             ],
+                                              "beat_facts":  {
+                                                                 "ACCEPT_SPELL":  [
+                                                                                      "I panicked when Neloth\u0027s spell went wrong and the subject went blind."
+                                                                                  ]
+                                                             }
+                                          }
+                  },
+    "beats":  [
+                  {
+                      "id":  "OFFER_HELP",
+                      "focus_npc":  "Neloth",
+                      "comment":  "Player offers to help Neloth with his research, starting the quest.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0001CDE1",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  100
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001CDE1",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  150
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "help with research",
+                                                            "help you",
+                                                            "volunteer",
+                                                            "test subject"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "ACCEPT_SPELL",
+                      "focus_npc":  "Neloth",
+                      "comment":  "Player agrees to let Neloth cast the spell. The spell fails and causes temporary blindness.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TTR4b",
+                                           "min_stage":  100,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "OFFER_HELP"
+                                        ]
+                  },
+                  {
+                      "id":  "DEMAND_COMPENSATION",
+                      "focus_npc":  "Neloth",
+                      "comment":  "Player demands repayment for the failed spell, completing the quest.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0001CDE1",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  200
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001CDE1",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  150
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "owe me",
+                                                            "compensation",
+                                                            "repayment",
+                                                            "pay me"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ACCEPT_SPELL"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Observational beat for quest completion.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TTR4b",
+                                           "min_stage":  200,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "OFFER_HELP"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

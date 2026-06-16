@@ -1,0 +1,172 @@
+{
+    "quest_key":  "dlc2skaalvillagefreeform1_skaalvillagedialogue",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0002C8AA",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2SkaalVillageFreeform1",
+    "title":  "Skaal Village Dialogue",
+    "description":  "Morwen of Skaal Village asks you to deliver her mother Bera\u0027s necklace to the priest Runil in Falkreath, so it can be placed upon her tombstone as a symbol of her parents\u0027 love and sacrifice.",
+    "npc_facts":  {
+                      "Morwen":  {
+                                     "base_facts":  [
+                                                        "I am a Skaal blacksmith working at the forge in Skaal Village.",
+                                                        "My mother Bera was Skaal but left the village for Skyrim.",
+                                                        "My mother fell in love with a sailor named Ulfarr and returned with him to Skyrim.",
+                                                        "I was born in Falkreath after my mother left the village."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "MORWEN_REQUEST":  [
+                                                                               "I have asked the outsider to deliver my mother\u0027s necklace to Runil in Falkreath."
+                                                                           ],
+                                                        "RETURN_TO_MORWEN":  [
+                                                                                 "The outsider has brought warmth to my heart by delivering my mother\u0027s necklace.",
+                                                                                 "I have given the outsider a Nordic carved helmet as thanks."
+                                                                             ]
+                                                    }
+                                 },
+                      "Runil":  {
+                                    "base_facts":  [
+                                                       "I am the priest of Arkay tending Falkreath\u0027s Hall of the Dead.",
+                                                       "I knew Bera and Ulfarr, Morwen\u0027s parents, quite well."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "DELIVER_NECKLACE_TO_RUNIL":  [
+                                                                                         "I have received Bera\u0027s silver necklace to place upon her tombstone.",
+                                                                                         "Bera\u0027s necklace was a wedding gift she rarely took off."
+                                                                                     ]
+                                                   }
+                                }
+                  },
+    "beats":  [
+                  {
+                      "id":  "MORWEN_REQUEST",
+                      "focus_npc":  "Morwen",
+                      "comment":  "Player speaks to Morwen and accepts the quest to deliver Bera\u0027s necklace to Runil.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_stage",
+                                             "quest_form_id":  "0x0002C8AA",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "stage":  10
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0002C8AA",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "mother",
+                                                            "necklace",
+                                                            "Bera",
+                                                            "help"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "DELIVER_NECKLACE_TO_RUNIL",
+                      "focus_npc":  "Runil",
+                      "comment":  "Player delivers Bera\u0027s necklace to Runil in Falkreath\u0027s Hall of the Dead.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_stage",
+                                             "quest_form_id":  "0x0002C8AA",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "stage":  20
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0002C8AA",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  20
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0002C8AA",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Morwen",
+                                                            "necklace",
+                                                            "Bera",
+                                                            "tombstone"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MORWEN_REQUEST"
+                                        ]
+                  },
+                  {
+                      "id":  "RETURN_TO_MORWEN",
+                      "focus_npc":  "Morwen",
+                      "comment":  "Player returns to Morwen after delivering the necklace, completing the quest.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_stage",
+                                             "quest_form_id":  "0x0002C8AA",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "stage":  350
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0002C8AA",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  20
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "necklace",
+                                                            "Runil",
+                                                            "done",
+                                                            "delivered"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "DELIVER_NECKLACE_TO_RUNIL"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "MORWEN_REQUEST"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

@@ -1,0 +1,183 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0004EC52",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "RoriksteadFreeform",
+  "title": "Erik the Slayer",
+  "description": "Erik in Rorikstead dreams of becoming an adventurer, but his father Mralki refuses to let him go and cannot afford armor. Convince Mralki to change his mind so Erik can pursue his dream.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "ERIK_REQUEST"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Erik": {
+      "base_facts": [
+        "I want to be an adventurer more than anything.",
+        "My father Mralki won't let me leave the farm.",
+        "We can't afford to buy armor even if he did let me go.",
+        "I work as a farmer for Lemkil in Rorikstead.",
+        "I stay at the Frostfruit Inn in the evening."
+      ],
+      "beat_facts": {
+        "ERIK_REQUEST": [
+          "A stranger has agreed to talk to my father about letting me become an adventurer."
+        ],
+        "QUEST_COMPLETE": [
+          "My father changed his mind! I'm going to be an adventurer. I'll call myself Erik the Slayer."
+        ]
+      }
+    },
+    "Mralki": {
+      "base_facts": [
+        "I am the innkeeper of the Frostfruit Inn in Rorikstead.",
+        "My son Erik is all the family I have left.",
+        "I worry about Erik and don't want him adventuring.",
+        "The farm needs Erik, and we couldn't afford armor anyway."
+      ],
+      "beat_facts": {
+        "CONVINCE_MRALKI": [
+          "I've changed my mind about Erik. He can become an adventurer if he wants."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ERIK_REQUEST",
+      "focus_npc": "Erik",
+      "comment": "Erik tells the player about his dream of becoming an adventurer and asks them to talk to his father Mralki.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0004EC52",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0004EC52",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "adventurer",
+            "dream",
+            "want to be",
+            "father won't let",
+            "help you"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "RoriksteadFreeform",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "CONVINCE_MRALKI",
+      "focus_npc": "Mralki",
+      "comment": "Player convinces Mralki to let Erik become an adventurer through persuasion, intimidation, or bribery.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0004EC52",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0004EC52",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0004EC52",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "let Erik go",
+            "armor",
+            "change your mind",
+            "bribe",
+            "intimidate",
+            "persuade"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "RoriksteadFreeform",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ERIK_REQUEST"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Erik",
+      "comment": "Player returns to Erik with the good news that his father has agreed to let him become an adventurer.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0004EC52",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0004EC52",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "good news",
+            "father agreed",
+            "changed his mind",
+            "adventurer now"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "RoriksteadFreeform",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONVINCE_MRALKI"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "roriksteadfreeform_eriktheslayer"
+}

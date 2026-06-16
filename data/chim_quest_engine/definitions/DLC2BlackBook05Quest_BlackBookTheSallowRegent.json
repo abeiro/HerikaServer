@@ -1,0 +1,112 @@
+{
+  "quest_key": "dlc2blackbook05quest_blackbookthesallowregent",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0003216D",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2BlackBook05Quest",
+  "title": "Black Book: The Sallow Regent",
+  "description": "Read the Black Book The Sallow Regent in White Ridge Barrow and travel through a dark region of Apocrypha. Navigate the health-draining darkness, defeat Seekers and Lurkers, and choose one of three hidden knowledge rewards: Seeker of Might, Seeker of Shadows, or Seeker of Sorcery.",
+  "npc_facts": {},
+  "beats": [
+    {
+      "id": "ENTER_APOCRYPHA",
+      "focus_npc": "",
+      "comment": "Player reads the Black Book and enters the dark region of Apocrypha.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2BlackBook05Quest",
+          "min_stage": 10,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "NAVIGATE_DARKNESS",
+      "focus_npc": "",
+      "comment": "Player navigates the dark, health-draining passages of Apocrypha using light sources.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "darkness",
+            "candlelight",
+            "torch",
+            "health drain",
+            "dark"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENTER_APOCRYPHA"
+      ]
+    },
+    {
+      "id": "DEFEAT_ENEMIES",
+      "focus_npc": "",
+      "comment": "Player fights Seekers and Lurkers while ascending the platforms of Apocrypha.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "seeker",
+            "lurker",
+            "enemy",
+            "fight",
+            "platform"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "NAVIGATE_DARKNESS"
+      ]
+    },
+    {
+      "id": "COMPLETE_QUEST",
+      "focus_npc": "",
+      "comment": "Player reads the book at the end, chooses a reward ability, and returns to White Ridge Barrow.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2BlackBook05Quest",
+          "min_stage": 20,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENTER_APOCRYPHA"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "ENTER_APOCRYPHA"
+    ],
+    "requires": []
+  }
+}

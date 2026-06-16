@@ -1,0 +1,258 @@
+{
+    "quest_key":  "ms10_riseintheeast",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001DBFC",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MS10",
+    "title":  "Rise in the East",
+    "description":  "Help the East Empire Company reopen its Windhelm office by eliminating the Blood Horker pirate base at Japhet\u0027s Folly.",
+    "npc_facts":  {
+                      "Orthus Endario":  {
+                                             "base_facts":  [
+                                                                "I work for the East Empire Company in Windhelm.",
+                                                                "Pirate attacks have shut down our shipping operations.",
+                                                                "I suspect the Shatter-Shield clan is connected to the pirates.",
+                                                                "Suvaris Atheron keeps a logbook that may contain evidence of the connection."
+                                                            ],
+                                             "beat_facts":  {
+                                                                "RETURN_LOGBOOK":  [
+                                                                                       "The logbook proves Suvaris met with Blood Horker pirates in Dawnstar."
+                                                                                   ],
+                                                                "INVESTIGATE_DAWNSTAR":  [
+                                                                                             "Adelaisa Vendicci has arrived from the Company to oversee the operation."
+                                                                                         ]
+                                                            }
+                                         },
+                      "Adelaisa Vendicci":  {
+                                                "base_facts":  [
+                                                                   "I am a superior in the East Empire Company.",
+                                                                   "I have come to Windhelm to deal with the pirate problem personally."
+                                                               ],
+                                                "beat_facts":  {
+                                                                   "ASSAULT_JAPHET":  [
+                                                                                          "We sail to Japhet\u0027s Folly to destroy the Blood Horker base.",
+                                                                                          "Haldyn\u0027s battlemage magic creates the fog around the island."
+                                                                                      ],
+                                                                   "KILL_HALDYN":  [
+                                                                                       "With Haldyn dead the fog has lifted and our ships can attack."
+                                                                                   ]
+                                                               }
+                                            },
+                      "Stig Salt-Plank":  {
+                                              "base_facts":  [
+                                                                 "I captain the Blood Horkers.",
+                                                                 "I drink at the Windpeak Inn in Dawnstar.",
+                                                                 "Haldyn is our secret weapon, a powerful battlemage.",
+                                                                 "Our base is at Japhet\u0027s Folly."
+                                                             ],
+                                              "beat_facts":  {
+
+                                                             }
+                                          }
+                  },
+    "beats":  [
+                  {
+                      "id":  "QUEST_STARTED",
+                      "focus_npc":  "Orthus Endario",
+                      "comment":  "Player talks to Orthus and accepts the quest to help the East Empire Company.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS10",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "East Empire Company",
+                                                            "pirates",
+                                                            "help the company"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "RETURN_LOGBOOK",
+                      "focus_npc":  "Orthus Endario",
+                      "comment":  "Player steals Suvaris Atheron\u0027s logbook and gives it to Orthus.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0001DBFC",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  20
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS10",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "logbook",
+                                                            "evidence"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_STARTED"
+                                        ]
+                  },
+                  {
+                      "id":  "INVESTIGATE_DAWNSTAR",
+                      "focus_npc":  "Stig Salt-Plank",
+                      "comment":  "Player talks to Stig Salt-Plank in Dawnstar and reports back to Orthus.",
+                      "action":  {
+                                     "type":  "set_stage_cascade",
+                                     "quest_form_id":  "0x0001DBFC",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stages":  [
+                                                    30,
+                                                    40
+                                                ]
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS10",
+                                           "min_stage":  20
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Blood Horkers",
+                                                            "Stig",
+                                                            "Haldyn"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RETURN_LOGBOOK"
+                                        ]
+                  },
+                  {
+                      "id":  "ASSAULT_JAPHET",
+                      "focus_npc":  "Adelaisa Vendicci",
+                      "comment":  "Player departs for Japhet\u0027s Folly with Adelaisa.",
+                      "action":  {
+                                     "type":  "set_stage_cascade",
+                                     "quest_form_id":  "0x0001DBFC",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stages":  [
+                                                    41,
+                                                    42
+                                                ]
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS10",
+                                           "min_stage":  40
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Japhet\u0027s Folly",
+                                                            "depart",
+                                                            "sail"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "INVESTIGATE_DAWNSTAR"
+                                        ]
+                  },
+                  {
+                      "id":  "KILL_HALDYN",
+                      "focus_npc":  "",
+                      "comment":  "Player kills Haldyn the battlemage at Japhet\u0027s Folly.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0001DBFC",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  60
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS10",
+                                           "min_stage":  42
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ASSAULT_JAPHET"
+                                        ]
+                  },
+                  {
+                      "id":  "COMPLETE_QUEST",
+                      "focus_npc":  "Orthus Endario",
+                      "comment":  "Player reports to Adelaisa, returns to Windhelm, and speaks to Orthus to complete the quest.",
+                      "action":  {
+                                     "type":  "set_stage_cascade",
+                                     "quest_form_id":  "0x0001DBFC",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stages":  [
+                                                    70,
+                                                    75,
+                                                    80,
+                                                    100
+                                                ]
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS10",
+                                           "min_stage":  60
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "KILL_HALDYN"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "QUEST_STARTED"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

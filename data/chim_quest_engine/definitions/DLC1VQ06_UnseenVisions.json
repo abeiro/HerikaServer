@@ -1,0 +1,182 @@
+{
+  "quest_key": "dlc1vq06_unseenvisions",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00002852",
+  "quest_plugin": "Dawnguard.esm",
+  "quest_editor_id": "DLC1VQ06",
+  "title": "Unseen Visions",
+  "description": "After Dexion Evicus goes blind from reading an Elder Scroll, the player must travel to the Ancestor Glade and perform the Ritual of the Ancestor Mothâ€”gathering a draw knife, canticle bark, and ancestor mothsâ€”to read the Elder Scrolls and discover the location of Auriel's Bow.",
+  "npc_facts": {
+    "Dexion Evicus": {
+      "base_facts": [
+        "I am a Moth Priest who has gone blind from reading an Elder Scroll.",
+        "The Ritual of the Ancestor Moth is the only way left to read the Elder Scrolls.",
+        "The Ancestor Glade is where the ritual must be performed."
+      ],
+      "beat_facts": {}
+    },
+    "Serana": {
+      "base_facts": [
+        "I am traveling with the player to find Auriel's Bow and stop Harkon.",
+        "The Ancestor Glade is more beautiful than I expected."
+      ],
+      "beat_facts": {
+        "READ_ELDER_SCROLL": [
+          "The player had a vision while reading the Elder Scrolls in the column of light."
+        ],
+        "SPEAK_TO_SERANA": [
+          "The player told me Auriel's Bow is near Darkfall Cave."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "FIND_DRAW_KNIFE",
+      "focus_npc": "",
+      "comment": "Player arrives at Ancestor Glade and finds the Moth Priest's draw knife.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ06",
+          "min_stage": 10,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "GATHER_BARK",
+      "focus_npc": "",
+      "comment": "Player uses the draw knife to harvest bark from a Canticle Tree.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ06",
+          "min_stage": 20,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIND_DRAW_KNIFE"
+      ]
+    },
+    {
+      "id": "ATTRACT_MOTHS",
+      "focus_npc": "",
+      "comment": "Player attracts seven Ancestor Moth swarms by standing near them with the bark.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ06",
+          "min_stage": 30,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "GATHER_BARK"
+      ]
+    },
+    {
+      "id": "READ_ELDER_SCROLL",
+      "focus_npc": "",
+      "comment": "Player enters the column of light and reads the Elder Scroll (Blood), receiving a vision of Auriel's Bow location.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ06",
+          "min_stage": 50,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ATTRACT_MOTHS"
+      ]
+    },
+    {
+      "id": "SPEAK_TO_SERANA",
+      "focus_npc": "Serana",
+      "comment": "Player tells Serana about the vision and that Auriel's Bow is near Darkfall Cave.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ06",
+          "min_stage": 70,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "vision",
+            "Darkfall Cave",
+            "Auriel's Bow"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "READ_ELDER_SCROLL"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest completes after the vision reveals the location of Auriel's Bow at Darkfall Cave.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ06",
+          "min_stage": 200,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_TO_SERANA"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "FIND_DRAW_KNIFE"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc1vq05_beyonddeath",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

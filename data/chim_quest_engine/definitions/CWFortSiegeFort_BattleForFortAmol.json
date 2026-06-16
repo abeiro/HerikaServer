@@ -1,0 +1,155 @@
+{
+    "quest_key":  "cwfortsiegefort_battleforfortamol",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00083042",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "CWFortSiegeFort",
+    "title":  "The Battle for Fort Amol",
+    "description":  "Legate Rikke sends the player to assist Imperial soldiers in assaulting and capturing Fort Amol from Stormcloak rebels as part of the Reunification of Skyrim campaign.",
+    "npc_facts":  {
+                      "Legate Rikke":  {
+                                           "base_facts":  [
+                                                              "I am the Legate commanding Imperial forces in Eastmarch.",
+                                                              "Fort Amol must be taken from the Stormcloaks to secure the hold."
+                                                          ],
+                                           "beat_facts":  {
+                                                              "REPORT_FOR_DUTY":  [
+                                                                                      "I have dispatched the player to assist in the assault on Fort Amol."
+                                                                                  ],
+                                                              "FORT_TAKEN":  [
+                                                                                 "Fort Amol has fallen to Imperial forces. The player should return to me for their gold reward."
+                                                                             ]
+                                                          }
+                                       }
+                  },
+    "beats":  [
+                  {
+                      "id":  "REPORT_FOR_DUTY",
+                      "focus_npc":  "Legate Rikke",
+                      "comment":  "Player reports to Legate Rikke at Eastmarch Imperial Camp and receives orders to assault Fort Amol.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00083042",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00083042",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "report for duty",
+                                                            "orders",
+                                                            "fort amol"
+                                                        ]
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "JOIN_THE_MEN",
+                      "focus_npc":  "",
+                      "comment":  "Player reaches the Imperial soldiers staging near Fort Amol and the assault begins.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWFortSiegeFort",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "join the men",
+                                                            "join the soldiers",
+                                                            "ready to attack"
+                                                        ]
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REPORT_FOR_DUTY"
+                                        ]
+                  },
+                  {
+                      "id":  "ENGAGE_ENEMY",
+                      "focus_npc":  "",
+                      "comment":  "Player engages Stormcloak defenders at Fort Amol. Stage 50 sets the combat objective.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00083042",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  50
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00083042",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  100
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "attack the fort",
+                                                            "take the fort",
+                                                            "defeat the stormcloaks"
+                                                        ]
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "JOIN_THE_MEN"
+                                        ]
+                  },
+                  {
+                      "id":  "FORT_TAKEN",
+                      "focus_npc":  "Legate Rikke",
+                      "comment":  "Fort Amol is secured from Stormcloak control. Quest completes and player should report to Rikke for a gold reward.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWFortSiegeFort",
+                                           "min_stage":  9000
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ENGAGE_ENEMY"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "REPORT_FOR_DUTY"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

@@ -1,0 +1,291 @@
+{
+  "quest_key": "dlc1vq03hunter_prophetdawnguard",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000098CB",
+  "quest_plugin": "Dawnguard.esm",
+  "quest_editor_id": "DLC1VQ03Hunter",
+  "title": "Prophet (Dawnguard)",
+  "description": "Isran asks you to follow him to interrogate Serana, who reveals her father Harkon seeks to control the sun via an Elder Scroll prophecy. You must find a Moth Priest to read Serana's Elder Scroll, track him to Dragon Bridge and Forebears' Holdout, rescue him from vampire captors, and return him to Fort Dawnguard.",
+  "npc_facts": {
+    "Isran": {
+      "base_facts": [
+        "I lead the Dawnguard from Fort Dawnguard.",
+        "I do not trust vampires, but I will use them as assets if necessary.",
+        "A Moth Priest was seen on the road near the fort recently."
+      ],
+      "beat_facts": {
+        "FOLLOW_ISRAN": [
+          "I have brought Serana in for questioning about the Elder Scroll she carries."
+        ],
+        "LEARN_OF_PROPHECY": [
+          "I have reluctantly agreed to let Serana help the Dawnguard stop Harkon."
+        ],
+        "REPORT_TO_ISRAN": [
+          "The Moth Priest has been rescued and brought to Fort Dawnguard."
+        ],
+        "ELDER_SCROLL_READING": [
+          "The Moth Priest's reading revealed Auriel's Bow and the need for two more Elder Scrolls."
+        ]
+      }
+    },
+    "Serana": {
+      "base_facts": [
+        "I am a vampire, but I oppose my father Harkon.",
+        "I carry an Elder Scroll that was buried with me.",
+        "My father wants to use a prophecy to control the sun."
+      ],
+      "beat_facts": {
+        "LEARN_OF_PROPHECY": [
+          "Only a Moth Priest can read an Elder Scroll.",
+          "The College of Winterhold may know where to find a Moth Priest."
+        ],
+        "SEARCH_FOR_MOTH_PRIEST": [
+          "I will accompany you to find the Moth Priest."
+        ],
+        "RESCUE_MOTH_PRIEST": [
+          "The vampires have enthralled the Moth Priest; we must break their hold on him."
+        ]
+      }
+    },
+    "Dexion Evicus": {
+      "base_facts": [
+        "I am a Moth Priest of the White Gold Tower.",
+        "I can read Elder Scrolls."
+      ],
+      "beat_facts": {
+        "RESCUE_MOTH_PRIEST": [
+          "I was captured and enthralled by the vampire Malkus, but you broke his hold over me.",
+          "I will assist the Dawnguard by reading the Elder Scroll."
+        ],
+        "ELDER_SCROLL_READING": [
+          "I saw a vision of Auriel's Bow in the Elder Scroll, but two more scrolls are needed to unravel the full prophecy."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "FOLLOW_ISRAN",
+      "focus_npc": "Isran",
+      "comment": "Isran asks you to follow him to interrogate the newly arrived Serana.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ03Hunter",
+          "min_stage": 5,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "LEARN_OF_PROPHECY",
+      "focus_npc": "Serana",
+      "comment": "Serana explains Harkon's prophecy and the need for a Moth Priest. Isran reluctantly agrees to let her help.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ03Hunter",
+          "min_stage": 15,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "moth priest",
+            "elder scroll",
+            "prophecy",
+            "read the scroll"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FOLLOW_ISRAN"
+      ]
+    },
+    {
+      "id": "SEARCH_FOR_MOTH_PRIEST",
+      "focus_npc": "Serana",
+      "comment": "Search for the Moth Priest by asking innkeepers, carriage drivers, or visiting the College of Winterhold. Trail leads to Solitude and Dragon Bridge.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ03Hunter",
+          "min_stage": 45,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "moth priest in solitude",
+            "winking skeever",
+            "dragon bridge",
+            "seen a moth priest"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEARN_OF_PROPHECY"
+      ]
+    },
+    {
+      "id": "DRAGON_BRIDGE_AMBUSH",
+      "focus_npc": "",
+      "comment": "Investigate the ambush south of Dragon Bridge, find the overturned cart and read the vampire's note pointing to Forebears' Holdout.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ03Hunter",
+          "min_stage": 57,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "vampire's note",
+            "forebears' holdout",
+            "overturned cart",
+            "ambush"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SEARCH_FOR_MOTH_PRIEST"
+      ]
+    },
+    {
+      "id": "RESCUE_MOTH_PRIEST",
+      "focus_npc": "Dexion Evicus",
+      "comment": "Enter Forebears' Holdout, defeat Malkus, use the Weystone Focus to free Dexion, then defeat the enthralled Moth Priest to break the vampire's hold.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ03Hunter",
+          "min_stage": 70,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "weystone focus",
+            "malkus",
+            "enthralled priest",
+            "break his hold"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DRAGON_BRIDGE_AMBUSH"
+      ]
+    },
+    {
+      "id": "REPORT_TO_ISRAN",
+      "focus_npc": "Isran",
+      "comment": "Return to Fort Dawnguard and report to Isran that the Moth Priest has been rescued.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000098CB",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 80
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ03Hunter",
+          "min_stage": 80,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "rescued the priest",
+            "dexion is safe",
+            "moth priest is back"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RESCUE_MOTH_PRIEST"
+      ]
+    },
+    {
+      "id": "ELDER_SCROLL_READING",
+      "focus_npc": "Dexion Evicus",
+      "comment": "Dexion reads the Elder Scroll at Fort Dawnguard, revealing Auriel's Bow and the need for two more scrolls. Quest completes.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000098CB",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ03Hunter",
+          "min_stage": 200,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "read the scroll",
+            "auriel's bow",
+            "two more scrolls"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "REPORT_TO_ISRAN"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "FOLLOW_ISRAN"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc1hunterbaseintro_neworder",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

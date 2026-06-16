@@ -1,0 +1,131 @@
+{
+    "quest_key":  "dlc2sv02ancarionmerchant_sellstalhrimarmorandweaponstoancarion",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00027E15",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2SV02AncarionMerchant",
+    "title":  "Sell Stalhrim Armor and Weapons to Ancarion",
+    "description":  "After negotiating with the Thalmor at Northshore Landing during A New Source of Stalhrim, persuade Ancarion to let you supply him with stalhrim equipment in exchange for gold.",
+    "npc_facts":  {
+                      "Ancarion":  {
+                                       "base_facts":  [
+                                                          "I am a Thalmor agent stationed at Northshore Landing on Solstheim.",
+                                                          "I seek stalhrim equipment for the Aldmeri Dominion.",
+                                                          "I am willing to pay a fair price for stalhrim weapons and armor."
+                                                      ],
+                                       "beat_facts":  {
+                                                          "AGREE_TO_SELL_STALHRIM":  [
+                                                                                         "The player has agreed to bring me stalhrim equipment in exchange for gold."
+                                                                                     ],
+                                                          "SELL_STALHRIM_EQUIPMENT":  [
+                                                                                          "The player has delivered stalhrim equipment as promised."
+                                                                                      ]
+                                                      }
+                                   }
+                  },
+    "beats":  [
+                  {
+                      "id":  "ENCOUNTER_ANCARION",
+                      "focus_npc":  "Ancarion",
+                      "comment":  "Player encounters Ancarion at Northshore Landing during A New Source of Stalhrim.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Ancarion",
+                                                            "Thalmor",
+                                                            "stalhrim map",
+                                                            "Northshore Landing"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "AGREE_TO_SELL_STALHRIM",
+                      "focus_npc":  "Ancarion",
+                      "comment":  "Player persuades Ancarion and agrees to sell stalhrim equipment, starting the quest at stage 10.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00027E15",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00027E15",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "sell stalhrim",
+                                                            "bring stalhrim",
+                                                            "help you get stalhrim",
+                                                            "make you an offer"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ENCOUNTER_ANCARION"
+                                        ]
+                  },
+                  {
+                      "id":  "SELL_STALHRIM_EQUIPMENT",
+                      "focus_npc":  "Ancarion",
+                      "comment":  "Player returns with stalhrim equipment and sells it to Ancarion, completing the arrangement.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "sell stalhrim",
+                                                            "stalhrim equipment",
+                                                            "stalhrim armor",
+                                                            "stalhrim weapons"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "AGREE_TO_SELL_STALHRIM"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "ENCOUNTER_ANCARION"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "dlc2sv02_newsourceofstalhrim",
+                                               "beat_id":  "COMPLETE_QUEST"
+                                           }
+                                       ]
+                      }
+}

@@ -1,0 +1,203 @@
+{
+    "quest_key":  "cwmission04_rescuefromfortneugrad",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00035A23",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "CWMission04",
+    "title":  "Rescue from Fort Neugrad",
+    "description":  "Galmar Stone-Fist sends you to Fort Neugrad to rescue captured Stormcloak soldiers. Meet Ralof\u0027s rescue band, sneak through the underwater cave into the prison, free the prisoners, and eliminate the Imperial garrison to claim the fort for the Stormcloaks.",
+    "npc_facts":  {
+                      "Galmar Stone-Fist":  {
+                                                "base_facts":  [
+                                                                   "I am Ulfric Stormcloak\u0027s second-in-command and coordinate military operations.",
+                                                                   "Fort Neugrad holds captured Stormcloak brothers who must be freed.",
+                                                                   "I have scouts already positioned near Fort Neugrad awaiting orders."
+                                                               ],
+                                                "beat_facts":  {
+                                                                   "MEET_STORMCLOAKS":  [
+                                                                                            "I have sent the rescue party to Fort Neugrad. The player must meet Ralof near the fort."
+                                                                                        ]
+                                                               }
+                                            },
+                      "Ralof":  {
+                                    "base_facts":  [
+                                                       "I lead the Stormcloak rescue band scouting Fort Neugrad.",
+                                                       "There is a cave beneath the lake that leads into the fort\u0027s prison.",
+                                                       "Once the prisoners are freed, my men and I will join the fight in the courtyard."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "FREE_PRISONERS":  [
+                                                                              "The prisoners have been freed from their cells and are ready to fight."
+                                                                          ],
+                                                       "TAKE_OVER_FORT":  [
+                                                                              "The fort is ours. I will stay behind and clean up the mess."
+                                                                          ],
+                                                       "REPORT_TO_RALOF":  [
+                                                                               "The mission is complete. Fort Neugrad belongs to the Stormcloaks now."
+                                                                           ]
+                                                   }
+                                }
+                  },
+    "beats":  [
+                  {
+                      "id":  "MEET_STORMCLOAKS",
+                      "focus_npc":  "Galmar Stone-Fist",
+                      "comment":  "Player receives orders from Galmar and goes to meet the rescue party near Fort Neugrad.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWMission04",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "fort neugrad",
+                                                            "rescue mission",
+                                                            "prisoners"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "SNEAK_INTO_FORT",
+                      "focus_npc":  "Ralof",
+                      "comment":  "Player sneaks into the fort through the underwater cave or assaults the front gate.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWMission04",
+                                           "min_stage":  12
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_STORMCLOAKS"
+                                        ]
+                  },
+                  {
+                      "id":  "FREE_PRISONERS",
+                      "focus_npc":  "Ralof",
+                      "comment":  "Player frees the Stormcloak prisoners in the fort prison using the prison key from Imperial soldiers.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWMission04",
+                                           "min_stage":  15
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SNEAK_INTO_FORT"
+                                        ]
+                  },
+                  {
+                      "id":  "TAKE_OVER_FORT",
+                      "focus_npc":  "Ralof",
+                      "comment":  "Player eliminates the Imperial garrison. Ralof\u0027s band joins the fight in the courtyard.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWMission04",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FREE_PRISONERS"
+                                        ]
+                  },
+                  {
+                      "id":  "REPORT_TO_RALOF",
+                      "focus_npc":  "Ralof",
+                      "comment":  "Player reports back to Ralof after the fort is taken. Ralof says he will stay and clean up.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWMission04",
+                                           "min_stage":  50
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "mission complete",
+                                                            "fort is ours",
+                                                            "report"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "TAKE_OVER_FORT"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest completes. Fort Neugrad is taken, prisoners rescued, Siddgeir deposed and Dengeir installed as Jarl of Falkreath.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWMission04",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REPORT_TO_RALOF"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "MEET_STORMCLOAKS"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

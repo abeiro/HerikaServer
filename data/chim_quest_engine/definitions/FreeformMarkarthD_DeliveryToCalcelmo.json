@@ -1,0 +1,147 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00075399",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformMarkarthD",
+  "title": "Delivery to Calcelmo",
+  "description": "Kerah, the jeweler in Markarth's marketplace, asks you to deliver a ring to Calcelmo in Understone Keep.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "HEAR_ABOUT_DELIVERY"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Kerah": {
+      "base_facts": [
+        "I run the jewelry stall in Markarth's marketplace.",
+        "My family has been smithing silver in Markarth for centuries.",
+        "Calcelmo knows the history of Markarth better than anyone."
+      ],
+      "beat_facts": {
+        "HEAR_ABOUT_DELIVERY": [
+          "I need someone to deliver a ring to Calcelmo at Understone Keep."
+        ],
+        "ACCEPT_DELIVERY": [
+          "The traveler agreed to deliver my ring to Calcelmo."
+        ]
+      }
+    },
+    "Calcelmo": {
+      "base_facts": [
+        "I am a scholar of Markarth's history residing in Understone Keep.",
+        "I keep forgetting to pick up the ring from Kerah."
+      ],
+      "beat_facts": {
+        "DELIVER_RING": [
+          "Kerah's ring has finally been delivered to me.",
+          "I rewarded the courier with some gold."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "HEAR_ABOUT_DELIVERY",
+      "focus_npc": "Kerah",
+      "comment": "Player learns about the delivery errand from Kerah.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Calcelmo",
+            "delivery",
+            "ring",
+            "favor",
+            "errand"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACCEPT_DELIVERY",
+      "focus_npc": "Kerah",
+      "comment": "Player accepts the delivery quest from Kerah.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00075399",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00075399",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I'll deliver it",
+            "I can help",
+            "I'll do it",
+            "sure"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEAR_ABOUT_DELIVERY"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "DELIVER_RING",
+      "focus_npc": "Calcelmo",
+      "comment": "Player delivers the ring to Calcelmo in Understone Keep.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00075399",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00075399",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "delivery from Kerah",
+            "Kerah's ring",
+            "here's the ring",
+            "ring from Kerah"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_DELIVERY"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformmarkarthd_deliverytocalcelmo"
+}

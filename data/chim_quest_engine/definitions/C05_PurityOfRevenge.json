@@ -1,0 +1,156 @@
+{
+    "quest_key":  "c05_purityofrevenge",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0006E805",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "C05",
+    "title":  "Purity of Revenge",
+    "description":  "After Kodlak Whitemane\u0027s death, Vilkas seeks revenge against the Silver Hand who attacked Jorrvaskr and stole the fragments of Wuuthrad. Accompany Vilkas to Driftshade Refuge, retrieve the fragments, and avenge Kodlak.",
+    "npc_facts":  {
+                      "Vilkas":  {
+                                     "base_facts":  [
+                                                        "Vilkas is a Companion seeking revenge for Kodlak Whitemane\u0027s death.",
+                                                        "The Silver Hand attacked Jorrvaskr and stole the fragments of Wuuthrad.",
+                                                        "Vilkas will accompany you to Driftshade Refuge as a shield-brother."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "ACCEPT_QUEST":  [
+                                                                             "Vilkas is going with you to Driftshade Refuge to wipe out the Silver Hand."
+                                                                         ],
+                                                        "DRIFTSHADE_COMPLETED":  [
+                                                                                     "The Silver Hand at Driftshade Refuge have been defeated and the Wuuthrad fragments recovered."
+                                                                                 ],
+                                                        "QUEST_COMPLETE":  [
+                                                                               "Vilkas says you should meet at the Skyforge to pay respects to Kodlak."
+                                                                           ]
+                                                    }
+                                 }
+                  },
+    "beats":  [
+                  {
+                      "id":  "VILKAS_REVENGE",
+                      "focus_npc":  "Vilkas",
+                      "comment":  "Player learns Vilkas wants revenge for Kodlak\u0027s death.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "kodlak",
+                                                            "revenge",
+                                                            "silver hand",
+                                                            "avenge"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "ACCEPT_QUEST",
+                      "focus_npc":  "Vilkas",
+                      "comment":  "Player agrees to accompany Vilkas to Driftshade Refuge.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0006E805",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "go",
+                                                            "ready",
+                                                            "with you",
+                                                            "let\u0027s go"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "VILKAS_REVENGE"
+                                        ]
+                  },
+                  {
+                      "id":  "DRIFTSHADE_COMPLETED",
+                      "focus_npc":  "Vilkas",
+                      "comment":  "Player has cleared Driftshade Refuge and retrieved Wuuthrad fragments.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "C05",
+                                           "min_stage":  20
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "fragments",
+                                                            "wuuthrad",
+                                                            "cleared",
+                                                            "done"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ACCEPT_QUEST"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest completes; Vilkas directs player to the Skyforge for Kodlak\u0027s funeral.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "C05",
+                                           "stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "DRIFTSHADE_COMPLETED"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "VILKAS_REVENGE"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "c04_bloodshonor",
+                                               "beat_id":  "KODLAK_SLAIN"
+                                           }
+                                       ]
+                      }
+}

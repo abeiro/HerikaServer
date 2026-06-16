@@ -1,0 +1,114 @@
+{
+  "quest_key": "db02a_sanctuary",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00022F47",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DB02a",
+  "title": "Sanctuary",
+  "description": "After joining the Dark Brotherhood, speak with Nazir in the sanctuary to receive your first set of assassination contracts.",
+  "npc_facts": {
+    "Astrid": {
+      "base_facts": [
+        "I am the leader of this Dark Brotherhood sanctuary.",
+        "New family members should speak with Nazir to receive their first contracts."
+      ],
+      "beat_facts": {}
+    },
+    "Nazir": {
+      "base_facts": [
+        "I am a Redguard assassin of the Dark Brotherhood.",
+        "I handle the Brotherhood's assassination contracts.",
+        "I have a sarcastic sense of humor and mock new recruits."
+      ],
+      "beat_facts": {
+        "SPEAK_WITH_NAZIR": [
+          "I have given the new recruit their first contracts: Narfi, Beitild, and Ennodius Papius."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "DIRECTED_TO_NAZIR",
+      "focus_npc": "Astrid",
+      "comment": "Player is directed to speak with Nazir after joining the Brotherhood.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB02a",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "SPEAK_WITH_NAZIR",
+      "focus_npc": "Nazir",
+      "comment": "Player speaks with Nazir and receives the first set of assassination contracts.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB02a",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "contracts",
+            "assassination",
+            "jobs",
+            "work"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DIRECTED_TO_NAZIR"
+      ]
+    },
+    {
+      "id": "CONTRACTS_RECEIVED",
+      "focus_npc": "Nazir",
+      "comment": "Quest completes after receiving contracts from Nazir.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB02a",
+          "stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_WITH_NAZIR"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "DIRECTED_TO_NAZIR"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "db02_withfriendslikethese",
+        "beat_id": "KILLED_ASTRID"
+      }
+    ]
+  }
+}

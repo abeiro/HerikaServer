@@ -1,0 +1,121 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000D9B66",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformIvarstead04",
+  "title": "Climb the Steps",
+  "description": "Klimmek, an aging man in Ivarstead, can no longer make the arduous climb up the 7,000 Steps to deliver supplies to the Greybeards at High Hrothgar. Offer to carry his supplies and place them in the chest outside the monastery.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "KLIMMEK_PROBLEM"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Klimmek": {
+      "base_facts": [
+        "I make trips up the 7,000 Steps every few weeks to deliver supplies to the Greybeards.",
+        "I have never been allowed inside the High Hrothgar monastery.",
+        "I am getting too old to make the climb safely."
+      ],
+      "beat_facts": {
+        "KLIMMEK_PROBLEM": [
+          "Someone has learned about my difficulty climbing to High Hrothgar."
+        ],
+        "ACCEPT_DELIVERY": [
+          "I have given my supplies to someone willing to deliver them to the Greybeards."
+        ],
+        "QUEST_COMPLETE": [
+          "My supplies were delivered to High Hrothgar. I am grateful for the help."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "KLIMMEK_PROBLEM",
+      "focus_npc": "Klimmek",
+      "comment": "Player learns Klimmek can no longer climb to High Hrothgar to deliver supplies.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "climb",
+            "steps",
+            "High Hrothgar",
+            "supplies",
+            "Greybeards"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACCEPT_DELIVERY",
+      "focus_npc": "Klimmek",
+      "comment": "Player agrees to deliver Klimmek's supplies to High Hrothgar, starting the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D9B66",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000D9B66",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "deliver",
+            "help you",
+            "take the supplies",
+            "I'll do it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "KLIMMEK_PROBLEM"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Klimmek",
+      "comment": "Quest finishes after player returns to Klimmek following delivery.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformIvarstead04",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformivarstead04_climbthesteps"
+}

@@ -1,0 +1,191 @@
+{
+  "quest_key": "db01misc_delayedburial",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001EA4F",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DB01Misc",
+  "title": "Delayed Burial",
+  "description": "A strange jester named Cicero is stranded near Loreius Farm with a broken wagon wheel. The player must choose between helping Cicero convince farmer Vantus Loreius to repair the wheel, or siding with Loreius by reporting Cicero to the guard.",
+  "npc_facts": {
+    "Cicero": {
+      "base_facts": [
+        "I am a jester from Cyrodiil transporting my mother's remains to a new home in Skyrim.",
+        "My wagon wheel has broken and the farmer Loreius refuses to help me fix it.",
+        "I just want to be on my way and leave this place behind."
+      ],
+      "beat_facts": {
+        "CICERO_REQUEST": [
+          "A kind stranger has agreed to speak with Loreius on my behalf."
+        ],
+        "HELPED_CICERO": [
+          "Loreius has agreed to fix my wheel! I am deeply grateful to my new friend."
+        ],
+        "BETRAYED_CICERO": [
+          "The stranger reported me to the guard. Loreius will suffer for this betrayal."
+        ]
+      }
+    },
+    "Vantus Loreius": {
+      "base_facts": [
+        "I own Loreius Farm on the road north of Whiterun.",
+        "That mad jester Cicero won't stop pestering me to fix his broken wagon wheel.",
+        "I suspect his coffin contains skooma or other illegal cargo and I want no part of it."
+      ],
+      "beat_facts": {
+        "CHOICE_MADE": [
+          "Someone has offered to help resolve this situation with the jester."
+        ],
+        "HELPED_CICERO": [
+          "Fine, I will fix the fool's wheel if it means he finally leaves my farm."
+        ],
+        "BETRAYED_CICERO": [
+          "The guard will deal with Cicero. Good riddance to that lunatic."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "DISCOVER_CICERO",
+      "focus_npc": "Cicero",
+      "comment": "Player discovers the stranded jester on the road near Loreius Farm.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB01Misc",
+          "min_stage": 5
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "CICERO_REQUEST",
+      "focus_npc": "Cicero",
+      "comment": "Cicero explains his situation and asks the player to convince Loreius to help.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB01Misc",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "fix the wheel",
+            "help you",
+            "broken wagon"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DISCOVER_CICERO"
+      ]
+    },
+    {
+      "id": "CHOICE_MADE",
+      "focus_npc": "Vantus Loreius",
+      "comment": "Player has spoken to Loreius and must choose to help Cicero or turn him in.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB01Misc",
+          "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "report Cicero",
+            "convince Loreius",
+            "help the jester"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CICERO_REQUEST"
+      ]
+    },
+    {
+      "id": "HELPED_CICERO",
+      "focus_npc": "Cicero",
+      "comment": "Player persuaded Loreius to fix the wheel. Must report back to Cicero.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB01Misc",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CHOICE_MADE"
+      ]
+    },
+    {
+      "id": "BETRAYED_CICERO",
+      "focus_npc": "Vantus Loreius",
+      "comment": "Player reported Cicero to the guard. Must notify Loreius.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB01Misc",
+          "min_stage": 40
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CHOICE_MADE"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "The conflict between Cicero and Loreius has been resolved, one way or another.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB01Misc",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": []
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "DISCOVER_CICERO"
+    ],
+    "requires": []
+  }
+}

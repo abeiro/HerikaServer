@@ -53,6 +53,7 @@
   "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game. Has a 10 minute IRL cooldown so its not annoying.","scope":"global"},
   "HIDE_NARRATOR_DIALOGUE": {"userlvl":"basic","type":"boolean","description":"Hide Narrator-spoken dialogue lines from NPC context.","scope":"global"},
   "QUEST_COMMENT":{"type":"boolean","userlvl":"basic","description":"Will trigger AI (NPCs and Narrator) to talk about new objectives in your current active quest. Will trigger a lot of events on a new character, so leave disabled until you complete the tutorial!"},
+  "CHIM_AI_QUEST_PROGRESSION": {"type":"boolean","userlvl":"basic","scope":"global","default":false,"description":"Enable CHIM AI quest progression. When disabled, quest events and quest actions are paused without clearing tracked quest state."},
   "QUEST_COMMENT_CHANCE":{"type":"select","userlvl":"basic","values":["10%","25%","50%","75%","100%"],"description":"Chance that an AI Quest Comment will happen every time a quest updates."},
   "QUEST_COMMENT_COOLDOWN": {"type":"integer","userlvl":"basic","description":"Minimum time in minutes between quest comments. Default: 3 minutes","scope":"global"},
   "CURRENT_TASK": {"userlvl":"basic","type":"boolean","description":"Include the current Dynamic AI Objective to the AI NPC's prompt. Disable this if the AI NPC becomes fixated on the task."},

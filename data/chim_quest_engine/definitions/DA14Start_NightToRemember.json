@@ -1,0 +1,253 @@
+{
+    "quest_key":  "da14start_nighttoremember",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0003FA17",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DA14Start",
+    "title":  "A Night To Remember",
+    "description":  "After a drinking contest with Sam Guevenne, the Dragonborn blacks out and wakes in the Temple of Dibella in Markarth with no memory of the night. Tracking down Sam and the promised staff leads through Rorikstead, Whiterun, and the fort of Morvunskar, where Sam reveals himself as the Daedric Prince Sanguine and bestows the Sanguine Rose.",
+    "npc_facts":  {
+                      "Sam Guevenne":  {
+                                           "base_facts":  [
+                                                              "I travel from tavern to tavern challenging people to drinking contests.",
+                                                              "I promised a valuable staff to anyone who can outdrink me."
+                                                          ],
+                                           "beat_facts":  {
+                                                              "DRINKING_CONTEST_ACCEPT":  [
+                                                                                              "This traveler accepted my drinking contest. They might be fun."
+                                                                                          ],
+                                                              "MORVUNSKAR_SANGUINE":  [
+                                                                                          "I have revealed my true identity as Sanguine, Daedric Prince of Debauchery, to my drinking buddy."
+                                                                                      ]
+                                                          }
+                                       },
+                      "Senna":  {
+                                    "base_facts":  [
+                                                       "I am a priestess of Dibella at the Temple of Dibella in Markarth."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "TEMPLE_HANGOVER":  [
+                                                                               "This drunkard trashed our temple while raving about a goat and a wedding. They must clean up before I tell them anything."
+                                                                           ]
+                                                   }
+                                },
+                      "Ennis":  {
+                                    "base_facts":  [
+                                                       "I am a farmer in Rorikstead who owns a prized goat named Gleda."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "RORIKSTEAD_GOAT":  [
+                                                                               "This fool stole my goat Gleda and sold her to a giant! I will not help them until Gleda is returned."
+                                                                           ]
+                                                   }
+                                },
+                      "Ysolda":  {
+                                     "base_facts":  [
+                                                        "I am a trader in Whiterun with aspirations to deal with the Khajiit caravans."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "YSOLDA_WEDDING_RING":  [
+                                                                                    "This person bought a wedding ring from me on credit. Since the wedding is off, I want the ring or my money back."
+                                                                                ]
+                                                    }
+                                 },
+                      "Moira":  {
+                                    "base_facts":  [
+                                                       "I am a hagraven who dwells in Witchmist Grove."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "YSOLDA_WEDDING_RING":  [
+                                                                                   "My darling promised to marry me! I will not let them leave without consummating our love!"
+                                                                               ]
+                                                   }
+                                }
+                  },
+    "beats":  [
+                  {
+                      "id":  "DRINKING_CONTEST_ACCEPT",
+                      "focus_npc":  "Sam Guevenne",
+                      "comment":  "Player meets Sam Guevenne in a tavern and accepts his drinking contest.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "drinking contest",
+                                                            "drink with sam",
+                                                            "staff",
+                                                            "drinking bet"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "TEMPLE_HANGOVER",
+                      "focus_npc":  "Senna",
+                      "comment":  "Player wakes up in the Temple of Dibella after the blackout and must clean up the mess.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA14",
+                                           "min_stage":  5
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "temple of dibella",
+                                                            "what happened last night",
+                                                            "senna",
+                                                            "trashed the temple"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "DRINKING_CONTEST_ACCEPT"
+                                        ]
+                  },
+                  {
+                      "id":  "RORIKSTEAD_GOAT",
+                      "focus_npc":  "Ennis",
+                      "comment":  "Player goes to Rorikstead and must retrieve Gleda the Goat from the giant Grok.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA14",
+                                           "min_stage":  40
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "ennis",
+                                                            "gleda",
+                                                            "stole the goat",
+                                                            "rorikstead"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "TEMPLE_HANGOVER"
+                                        ]
+                  },
+                  {
+                      "id":  "YSOLDA_WEDDING_RING",
+                      "focus_npc":  "Ysolda",
+                      "comment":  "Player must get the wedding ring back from Moira the hagraven in Witchmist Grove and return it to Ysolda.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA14",
+                                           "min_stage":  85
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "ysolda",
+                                                            "wedding ring",
+                                                            "moira",
+                                                            "witchmist grove"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RORIKSTEAD_GOAT"
+                                        ]
+                  },
+                  {
+                      "id":  "MORVUNSKAR_SANGUINE",
+                      "focus_npc":  "Sanguine",
+                      "comment":  "Player searches Morvunskar, enters the Misty Grove through a portal, and Sam reveals himself as Sanguine.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA14",
+                                           "min_stage":  135
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "morvunskar",
+                                                            "misty grove",
+                                                            "sanguine"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "YSOLDA_WEDDING_RING"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Sanguine rewards the player with the Sanguine Rose and teleports them back to the tavern where they met.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA14",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MORVUNSKAR_SANGUINE"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "DRINKING_CONTEST_ACCEPT"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

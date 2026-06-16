@@ -1,0 +1,166 @@
+{
+  "quest_key": "dlc1vqelderhandler_scrollscouting",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000181BF",
+  "quest_plugin": "Dawnguard.esm",
+  "quest_editor_id": "DLC1VQElderHandler",
+  "title": "Scroll Scouting",
+  "description": "Dexion Evicus needs all three Elder Scrolls to read the full prophecy of Auriel's Bow. He directs you to the College of Winterhold to find the Elder Scroll that foretells dragon interactions with Nirn's history. You can consult Urag gro-Shub at the Arcanaeum or go directly to Septimus Signus at his outpost.",
+  "npc_facts": {
+    "Dexion Evicus": {
+      "base_facts": [
+        "I am a Moth Priest who can read Elder Scrolls.",
+        "All three Elder Scrolls must be obtained for me to read the whole prophecy.",
+        "The College of Winterhold may have information on the Dragon Elder Scroll."
+      ],
+      "beat_facts": {}
+    },
+    "Urag gro-Shub": {
+      "base_facts": [
+        "I am the librarian of the Arcanaeum at the College of Winterhold.",
+        "I have books on the Elder Scrolls in my collection.",
+        "I may have purchased the Dragon Elder Scroll if someone previously sold it to me."
+      ],
+      "beat_facts": {
+        "SEEK_URAG": [
+          "I have brought out two books on the Elder Scrolls: Effects of the Elder Scrolls and Ruminations on the Elder Scrolls.",
+          "Septimus Signus is an expert on the Elder Scrolls who lives at an outpost to the north."
+        ],
+        "BUY_BACK_ELDER_SCROLL": [
+          "I have agreed to sell back the Elder Scroll (Dragon) to the player."
+        ]
+      }
+    },
+    "Septimus Signus": {
+      "base_facts": [
+        "I am an expert on the Elder Scrolls.",
+        "I live at my outpost in the northern ice fields."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "DEXION_DIRECTS",
+      "focus_npc": "Dexion Evicus",
+      "comment": "Dexion directs the player to the College of Winterhold to find the Dragon Elder Scroll.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQElderHandler",
+          "min_stage": 20,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "SEEK_URAG",
+      "focus_npc": "Urag gro-Shub",
+      "comment": "Player consults Urag at the Arcanaeum about the Elder Scroll and learns about Septimus Signus.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Elder Scroll",
+            "Urag",
+            "Arcanaeum",
+            "College of Winterhold"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEXION_DIRECTS"
+      ]
+    },
+    {
+      "id": "ALTERNATIVE_SEPTIMUS",
+      "focus_npc": "Septimus Signus",
+      "comment": "Player skips the College and goes directly to Septimus Signus at his outpost.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Septimus",
+            "outpost",
+            "Ruminations"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEXION_DIRECTS"
+      ]
+    },
+    {
+      "id": "BUY_BACK_ELDER_SCROLL",
+      "focus_npc": "Urag gro-Shub",
+      "comment": "If the player previously sold the Dragon Elder Scroll after Alduin's Bane, they must buy it back from Urag.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQElderHandler",
+          "min_stage": 30,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEXION_DIRECTS"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest completes after speaking with Urag about Septimus or visiting Septimus directly.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQElderHandler",
+          "min_stage": 200,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": []
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "DEXION_DIRECTS"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc1vq03hunter_prophetdawnguard",
+        "beat_id": "ELDER_SCROLL_READING"
+      }
+    ]
+  }
+}

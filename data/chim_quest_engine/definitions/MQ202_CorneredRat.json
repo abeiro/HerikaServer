@@ -1,0 +1,193 @@
+{
+  "quest_key": "mq202_corneredrat",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00036191",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MQ202",
+  "title": "A Cornered Rat",
+  "description": "After learning from Thalmor records that the Blade Esbern is still alive, Delphine sends the player to Riften to find the archivist before the Thalmor do. Esbern is hiding in the Ratway Warrens and must be convinced to trust the player before he will leave.",
+  "npc_facts": {
+    "Delphine": {
+      "base_facts": [
+        "I am one of the last Blades, posing as the innkeeper at the Sleeping Giant Inn in Riverwood.",
+        "Esbern was my old colleague and fellow Blade, an expert on ancient dragon lore.",
+        "I gave the player a secret phrase to gain Esbern's trust: 'Where were you on the 30th of Frostfall?'"
+      ],
+      "beat_facts": {
+        "QUEST_ACCEPTED": [
+          "I sent the player to Riften to find Esbern before the Thalmor get to him."
+        ],
+        "QUEST_COMPLETE": [
+          "The player found Esbern and is bringing him back to me at the Sleeping Giant Inn."
+        ]
+      }
+    },
+    "Esbern": {
+      "base_facts": [
+        "I am a Blade and archivist, an expert on ancient dragon lore and the Prophecy of the Dragonborn.",
+        "I have been hiding in the Ratway Warrens beneath Riften from the Thalmor.",
+        "I am extremely cautious of anyone approaching my door, fearing Thalmor agents."
+      ],
+      "beat_facts": {
+        "CONVINCE_ESBERN": [
+          "The player convinced me to trust them. I agreed to follow them back to Delphine in Riverwood.",
+          "I warned the player about Alduin the World-Eater's return and its apocalyptic implications."
+        ]
+      }
+    },
+    "Brynjolf": {
+      "base_facts": [
+        "I am a member of the Thieves Guild operating out of the Ragged Flagon in Riften."
+      ],
+      "beat_facts": {
+        "SEARCH_RATWAY": [
+          "I told the player what I know about the old man hiding in the Ratway Warrens."
+        ]
+      }
+    },
+    "Keerava": {
+      "base_facts": [
+        "I am the innkeeper at the Bee and Barb in Riften."
+      ],
+      "beat_facts": {
+        "SEARCH_RATWAY": [
+          "I told the player about the old man hiding down in the Ratway."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_ACCEPTED",
+      "focus_npc": "Delphine",
+      "comment": "Delphine sends the player to Riften to find Esbern after learning from Thalmor records.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ202",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "SEARCH_RATWAY",
+      "focus_npc": "",
+      "comment": "Player asks around Riften and enters the Ratway to search for Esbern's hideout.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ202",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Esbern",
+            "old man",
+            "Ratway",
+            "hiding"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_ACCEPTED"
+      ]
+    },
+    {
+      "id": "FIND_ESBERN",
+      "focus_npc": "Esbern",
+      "comment": "Player locates Esbern's door in the Ratway Warrens but he refuses entry.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ202",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SEARCH_RATWAY"
+      ]
+    },
+    {
+      "id": "CONVINCE_ESBERN",
+      "focus_npc": "Esbern",
+      "comment": "Player convinces Esbern to open his door using the secret phrase, Delphine's name, or Dragonborn identity.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ202",
+          "min_stage": 150
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Delphine sent me",
+            "30th of Frostfall",
+            "Dragonborn",
+            "Where were you"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIND_ESBERN"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Esbern",
+      "comment": "Esbern agrees to follow the player back to Delphine. Quest ends and Alduin's Wall begins.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ202",
+          "min_stage": 180
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONVINCE_ESBERN"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "QUEST_ACCEPTED"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mq201_diplomaticimmunity",
+        "beat_id": "DEBRIEF_AND_COMPLETE"
+      }
+    ]
+  }
+}

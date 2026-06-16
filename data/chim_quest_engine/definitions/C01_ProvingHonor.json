@@ -1,0 +1,223 @@
+{
+    "quest_key":  "c01_provinghonor",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0006E803",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "C01",
+    "title":  "Proving Honor",
+    "description":  "The Companions give the player a final trial before induction: retrieve a fragment of Wuuthrad from Dustman\u0027s Cairn with Farkas as Shield-Brother, where the Silver Hand and a startling werewolf revelation await.",
+    "npc_facts":  {
+                      "Skjor":  {
+                                    "base_facts":  [
+                                                       "I am a senior member of the Companions and one of the Circle.",
+                                                       "A scholar has discovered another fragment of Wuuthrad.",
+                                                       "I assign new recruits their final trial before induction."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "SPEAK_TO_SKJOR":  [
+                                                                              "I have sent the whelp to retrieve a Wuuthrad fragment with Farkas as their Shield-Brother."
+                                                                          ]
+                                                   }
+                                },
+                      "Farkas":  {
+                                     "base_facts":  [
+                                                        "I am a member of the Companions.",
+                                                        "I will serve as Shield-Brother for the trial at Dustman\u0027s Cairn to judge the recruit\u0027s valor."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "SPEAK_TO_FARKAS":  [
+                                                                                "I am accompanying the new recruit to Dustman\u0027s Cairn."
+                                                                            ],
+                                                        "RETRIEVE_FRAGMENT":  [
+                                                                                  "I revealed my werewolf form to fight off the Silver Hand.",
+                                                                                  "The recruit proved honorable in retrieving the Wuuthrad fragment."
+                                                                              ]
+                                                    }
+                                 }
+                  },
+    "beats":  [
+                  {
+                      "id":  "SPEAK_TO_SKJOR",
+                      "focus_npc":  "Skjor",
+                      "comment":  "Player speaks to Skjor about the next steps and is given the trial to retrieve a Wuuthrad fragment.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0006E803",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0006E803",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "next steps",
+                                                            "more work",
+                                                            "trial",
+                                                            "fragment"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "SPEAK_TO_FARKAS",
+                      "focus_npc":  "Farkas",
+                      "comment":  "Player speaks to Farkas who becomes their Shield-Brother for the Dustman\u0027s Cairn expedition.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0006E803",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  20
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0006E803",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  10
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0006E803",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  20
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Shield-Brother",
+                                                            "Wuuthrad",
+                                                            "Dustman\u0027s Cairn",
+                                                            "ready"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SPEAK_TO_SKJOR"
+                                        ]
+                  },
+                  {
+                      "id":  "RETRIEVE_FRAGMENT",
+                      "focus_npc":  "Farkas",
+                      "comment":  "Player fights through Dustman\u0027s Cairn, witnesses Farkas transform, and retrieves the Wuuthrad fragment.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0006E803",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  20
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0006E803",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  30
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "C01",
+                                           "min_stage":  30
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SPEAK_TO_FARKAS"
+                                        ]
+                  },
+                  {
+                      "id":  "RETURN_TO_JORRVASKR",
+                      "focus_npc":  "",
+                      "comment":  "Player returns to Jorrvaskr with the fragment for the initiation ceremony.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0006E803",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  30
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0006E803",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  40
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "C01",
+                                           "min_stage":  40
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RETRIEVE_FRAGMENT"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest complete. Player is inducted into the Companions as an official member by Kodlak.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0006E803",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  40
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "C01",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RETURN_TO_JORRVASKR"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "SPEAK_TO_SKJOR"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "c00_takeuparms",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

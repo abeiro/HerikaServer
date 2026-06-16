@@ -1,0 +1,142 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00021896",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformMorthalB",
+  "title": "For the Good of Morthal",
+  "description": "Gorm, housecarl to Jarl Idgrod Ravencrone, believes her worsening visions have left her unfit to lead Hjaalmarch. He asks you to deliver a private letter to Captain Aldis in Solitude requesting a change in leadership.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "GORM_CONCERN",
+      "ACCEPT_DELIVERY"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Gorm": {
+      "base_facts": [
+        "I am the housecarl to Jarl Idgrod Ravencrone in Morthal.",
+        "The Jarl's visions are getting worse and I worry she can no longer tell what is real.",
+        "I have a letter for Captain Aldis in Solitude that I need delivered privately."
+      ],
+      "beat_facts": {
+        "GORM_CONCERN": [
+          "I have admitted my concerns about Jarl Idgrod's fitness to lead Hjaalmarch."
+        ],
+        "ACCEPT_DELIVERY": [
+          "I have given the player my letter to deliver to Captain Aldis."
+        ]
+      }
+    },
+    "Captain Aldis": {
+      "base_facts": [
+        "I am an Imperial Legion captain stationed at Castle Dour in Solitude.",
+        "I have corresponded with Gorm in Morthal before about the Jarl's condition."
+      ],
+      "beat_facts": {
+        "DELIVER_LETTER": [
+          "Gorm's request to remove Jarl Idgrod is impossible during wartime. I will take the matter under advisement."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "GORM_CONCERN",
+      "focus_npc": "Gorm",
+      "comment": "Player learns Gorm is worried about Jarl Idgrod's visions making her unfit to lead.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "something bothering you",
+            "what's wrong",
+            "are you okay",
+            "worried about the jarl"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACCEPT_DELIVERY",
+      "focus_npc": "Gorm",
+      "comment": "Player agrees to deliver Gorm's letter to Captain Aldis in Solitude.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00021896",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "deliver the letter",
+            "i'll help",
+            "take it to aldis",
+            "see that it reaches"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformMorthalB",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "GORM_CONCERN"
+      ],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "DELIVER_LETTER",
+      "focus_npc": "Captain Aldis",
+      "comment": "Player delivers Gorm's letter to Captain Aldis at Castle Dour, completing the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00021896",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "letter from gorm",
+            "gorm's letter",
+            "letter for you",
+            "from gorm in morthal"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformMorthalB",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_DELIVERY"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformmorthalb_forthegoodofmorthal"
+}

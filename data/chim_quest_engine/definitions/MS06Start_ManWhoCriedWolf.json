@@ -1,0 +1,183 @@
+{
+    "quest_key":  "ms06start_manwhocriedwolf",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00093807",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MS06Start",
+    "title":  "The Man Who Cried Wolf",
+    "description":  "Varnius Junius appeals to the Solitude court about strange occurrences near Wolfskull Cave. Falk Firebeard asks the player to investigate, leading to the discovery of necromancers attempting to summon Potema the Wolf Queen.",
+    "npc_facts":  {
+                      "Falk Firebeard":  {
+                                             "base_facts":  [
+                                                                "I am the steward of Solitude, serving Jarl Elisif the Fair.",
+                                                                "I have my hands full dealing with the murder of High King Torygg, the grieving Elisif, and the ongoing war.",
+                                                                "Varnius Junius came from Dragon Bridge claiming strange occurrences near Wolfskull Cave, but I suspect he is overreacting."
+                                                            ],
+                                             "beat_facts":  {
+                                                                "HEAR_PLEA":  [
+                                                                                  "Varnius Junius has appealed to the court about Wolfskull Cave. I need someone reliable to look into it."
+                                                                              ],
+                                                                "ACCEPT_QUEST":  [
+                                                                                     "I have asked the player to investigate Wolfskull Cave and clear out any threats."
+                                                                                 ],
+                                                                "CLEARED_CAVE":  [
+                                                                                     "Necromancers tried to summon Potema in Wolfskull Cave! I must hear the player\u0027s report immediately."
+                                                                                 ],
+                                                                "QUEST_COMPLETE":  [
+                                                                                       "The player stopped the necromancers from resurrecting Potema. Solitude owes them a great debt."
+                                                                                   ]
+                                                            }
+                                         },
+                      "Varnius Junius":  {
+                                             "base_facts":  [
+                                                                "I am a resident of Dragon Bridge. Unnatural magics are coming from Wolfskull Cave.",
+                                                                "Strange noises, lights, and disappearances plague the area near the cave. We need someone to investigate."
+                                                            ],
+                                             "beat_facts":  {
+                                                                "HEAR_PLEA":  [
+                                                                                  "I have appealed to Jarl Elisif for help. Falk Firebeard said he would send someone to deal with the cave."
+                                                                              ]
+                                                            }
+                                         }
+                  },
+    "beats":  [
+                  {
+                      "id":  "HEAR_PLEA",
+                      "focus_npc":  "Falk Firebeard",
+                      "comment":  "Player witnesses Varnius Junius appealing to the court or hears about Wolfskull Cave, starting the quest at stage 15.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS06Start",
+                                           "min_stage":  15
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Wolfskull Cave",
+                                                            "Dragon Bridge",
+                                                            "strange noises",
+                                                            "Varnius"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "ACCEPT_QUEST",
+                      "focus_npc":  "Falk Firebeard",
+                      "comment":  "Player agrees to investigate Wolfskull Cave for Falk Firebeard, advancing to stage 50.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00093807",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  50
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00093807",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  50
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "I\u0027ll look into it",
+                                                            "I\u0027ll investigate",
+                                                            "I\u0027ll handle it",
+                                                            "I can help",
+                                                            "I\u0027ll check the cave"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "HEAR_PLEA"
+                                        ]
+                  },
+                  {
+                      "id":  "CLEARED_CAVE",
+                      "focus_npc":  "",
+                      "comment":  "Player has cleared Wolfskull Cave and stopped the ritual to summon Potema, reaching stage 100.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x00093807",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  50
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00093807",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  100
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS06Start",
+                                           "min_stage":  100
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ACCEPT_QUEST"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Falk Firebeard",
+                      "comment":  "Player reports back to Falk Firebeard about stopping the necromancers, completing the quest at stage 250.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x00093807",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  100
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS06Start",
+                                           "min_stage":  250
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "CLEARED_CAVE"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "HEAR_PLEA"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

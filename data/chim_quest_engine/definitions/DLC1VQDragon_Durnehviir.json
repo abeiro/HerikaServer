@@ -1,0 +1,191 @@
+{
+  "quest_key": "dlc1vqdragon_durnehviir",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0000C73A",
+  "quest_plugin": "Dawnguard.esm",
+  "quest_editor_id": "DLC1VQDragon",
+  "title": "Durnehviir",
+  "description": "After defeating Durnehviir in the Soul Cairn's Boneyard, he names you Qahnaarin and offers a pact: summon him to Tamriel and in return he will fight by your side and teach you the Soul Tear shout, one word at a time.",
+  "npc_facts": {
+    "Durnehviir": {
+      "base_facts": [
+        "I am a dragon bound to the Soul Cairn by the Ideal Masters.",
+        "I was deceived by the Ideal Masters after seeking their power to dominate my fellow dovah.",
+        "I call the one who defeated me Qahnaarin.",
+        "I will teach the Soul Tear shout to the Qahnaarin if they summon me to Tamriel."
+      ],
+      "beat_facts": {
+        "SPEAK_TO_DURNEHVIIR": [
+          "The Qahnaarin has approached me in the Soul Cairn. I shall offer my pact."
+        ],
+        "MAKE_PACT": [
+          "A pact is struck. I will teach the first word of Soul Tear: Rii â€” the essence of an enemy's life force."
+        ],
+        "LEARN_SECOND_WORD": [
+          "I breathe Nirn's air once more. The second word is Vaaz â€” to tear a soul from its living vessel."
+        ],
+        "LEARN_FINAL_WORD": [
+          "The Qahnaarin has kept the bargain. The final word is Zol â€” the unlife when a soul is imprisoned in dead flesh."
+        ],
+        "SHOUT_MASTERED": [
+          "The Soul Tear shout is fully learned. Our pact is fulfilled, though I am always willing to be summoned again."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "SPEAK_TO_DURNEHVIIR",
+      "focus_npc": "Durnehviir",
+      "comment": "Player speaks to Durnehviir at his lair in the Soul Cairn after defeating him in the Boneyard.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQDragon",
+          "min_stage": 10,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "MAKE_PACT",
+      "focus_npc": "Durnehviir",
+      "comment": "Durnehviir offers the pact and teaches the first word of Soul Tear. Player agrees to summon him to Tamriel.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000C73A",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQDragon",
+          "min_stage": 30,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "summon you",
+            "pact",
+            "agreement",
+            "teach me",
+            "I agree"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_TO_DURNEHVIIR"
+      ]
+    },
+    {
+      "id": "LEARN_SECOND_WORD",
+      "focus_npc": "Durnehviir",
+      "comment": "Player summons Durnehviir a second time in Tamriel and learns the second word of Soul Tear.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000C73A",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 40
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQDragon",
+          "min_stage": 40,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "second word",
+            "summon again",
+            "Vaaz"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MAKE_PACT"
+      ]
+    },
+    {
+      "id": "LEARN_FINAL_WORD",
+      "focus_npc": "Durnehviir",
+      "comment": "Player summons Durnehviir a third time and learns the final word of Soul Tear.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000C73A",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 50
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQDragon",
+          "min_stage": 50,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "final word",
+            "last word",
+            "Zol",
+            "third time"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEARN_SECOND_WORD"
+      ]
+    },
+    {
+      "id": "SHOUT_MASTERED",
+      "focus_npc": "Durnehviir",
+      "comment": "All three words of Soul Tear are learned. The pact is fulfilled.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000C73A",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 60
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQDragon",
+          "min_stage": 60,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEARN_FINAL_WORD"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "SPEAK_TO_DURNEHVIIR"
+    ],
+    "requires": []
+  }
+}

@@ -1,0 +1,254 @@
+{
+    "quest_key":  "db08_recipefordisaster",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001EA57",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DB08",
+    "title":  "Recipe for Disaster",
+    "description":  "The Dark Brotherhood tasks the player with killing the Gourmet, a famous chef whose identity is secret, in order to impersonate him and poison the Emperor\u0027s meal. The player must extract the Gourmet\u0027s identity from Anton Virane, silence him, then assassinate the Gourmet and steal his Writ of Passage.",
+    "npc_facts":  {
+                      "Astrid":  {
+                                     "base_facts":  [
+                                                        "I lead the Dark Brotherhood sanctuary.",
+                                                        "We have a scheme to impersonate the Gourmet and poison the Emperor\u0027s meal.",
+                                                        "Festus Krex is directing this phase of the operation."
+                                                    ],
+                                     "beat_facts":  {
+
+                                                    }
+                                 },
+                      "Festus Krex":  {
+                                          "base_facts":  [
+                                                             "I am a senior member of the Dark Brotherhood.",
+                                                             "The Gourmet\u0027s true identity is known by very few.",
+                                                             "Anton Virane owns an autographed copy of Uncommon Taste and may know who the Gourmet really is."
+                                                         ],
+                                          "beat_facts":  {
+                                                             "REPORT_TO_FESTUS":  [
+                                                                                      "Your target is the Gourmet. Kill him and take his identity so we can poison the Emperor\u0027s meal."
+                                                                                  ],
+                                                             "REPORT_TO_FESTUS_FINAL":  [
+                                                                                            "The Gourmet is dead and we have the Writ of Passage. The plan to move against the Emperor proceeds."
+                                                                                        ]
+                                                         }
+                                      },
+                      "Anton Virane":  {
+                                           "base_facts":  [
+                                                              "I work in the Understone Keep kitchen in Markarth.",
+                                                              "I own an autographed copy of Uncommon Taste.",
+                                                              "I know the Gourmet\u0027s true identity."
+                                                          ],
+                                           "beat_facts":  {
+                                                              "QUESTION_ANTON_VIRANE":  [
+                                                                                            "The Gourmet is an Orc named Balagog gro-Nolob.",
+                                                                                            "Balagog gro-Nolob can be found at the Nightgate Inn."
+                                                                                        ]
+                                                          }
+                                       },
+                      "Balagog gro-Nolob":  {
+                                                "base_facts":  [
+                                                                   "I am the Gourmet, the famous chef whose identity is secret.",
+                                                                   "I am an Orc staying at the Nightgate Inn.",
+                                                                   "I carry a Writ of Passage that proves my identity as the Gourmet."
+                                                               ],
+                                                "beat_facts":  {
+
+                                                               }
+                                            }
+                  },
+    "beats":  [
+                  {
+                      "id":  "REPORT_TO_FESTUS",
+                      "focus_npc":  "Festus Krex",
+                      "comment":  "Player reports to Festus Krex to learn about the Gourmet contract.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB08",
+                                           "min_stage":  2
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Festus",
+                                                            "Gourmet",
+                                                            "chef"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "QUESTION_ANTON_VIRANE",
+                      "focus_npc":  "Anton Virane",
+                      "comment":  "Player questions Anton Virane in Understone Keep to learn the Gourmet\u0027s identity.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB08",
+                                           "min_stage":  4
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Anton Virane",
+                                                            "who is the Gourmet"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REPORT_TO_FESTUS"
+                                        ]
+                  },
+                  {
+                      "id":  "KILL_ANTON_VIRANE",
+                      "focus_npc":  "Anton Virane",
+                      "comment":  "Player must kill Anton Virane to silence him as a potential witness.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB08",
+                                           "min_stage":  6
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUESTION_ANTON_VIRANE"
+                                        ]
+                  },
+                  {
+                      "id":  "KILL_BALAGOG",
+                      "focus_npc":  "Balagog gro-Nolob",
+                      "comment":  "Player kills Balagog gro-Nolob, the Gourmet, at the Nightgate Inn.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB08",
+                                           "min_stage":  10
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "KILL_ANTON_VIRANE"
+                                        ]
+                  },
+                  {
+                      "id":  "TAKE_WRIT_OF_PASSAGE",
+                      "focus_npc":  "Balagog gro-Nolob",
+                      "comment":  "Player takes the Writ of Passage from Balagog\u0027s corpse.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB08",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "KILL_BALAGOG"
+                                        ]
+                  },
+                  {
+                      "id":  "REPORT_TO_FESTUS_FINAL",
+                      "focus_npc":  "Festus Krex",
+                      "comment":  "Player returns to Festus Krex with the Writ of Passage.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB08",
+                                           "min_stage":  30
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Writ of Passage",
+                                                            "Gourmet is dead"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "TAKE_WRIT_OF_PASSAGE"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest completes. The Gourmet is dead and the player holds the Writ of Passage for the next phase.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB08",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REPORT_TO_FESTUS_FINAL"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "REPORT_TO_FESTUS"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "db07_cureformadness",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

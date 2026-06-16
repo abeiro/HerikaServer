@@ -1,0 +1,268 @@
+{
+    "quest_key":  "ms14_laidtorest",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00025F3E",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MS14",
+    "title":  "Laid to Rest",
+    "description":  "Investigate a mysterious house fire in Morthal that killed Hroggar\u0027s wife and child, uncover a vampire plot led by Alva and her master Movarth, and defend the town from the vampire threat.",
+    "npc_facts":  {
+                      "Idgrod Ravencrone":  {
+                                                "base_facts":  [
+                                                                   "I am the Jarl of Morthal.",
+                                                                   "A house fire recently killed Hroggar\u0027s wife and daughter.",
+                                                                   "I need someone trustworthy to investigate the fire."
+                                                               ],
+                                                "beat_facts":  {
+                                                                   "QUEST_STARTED":  [
+                                                                                         "I have asked someone to investigate the burned house."
+                                                                                     ],
+                                                                   "JOURNAL_SHOWN":  [
+                                                                                         "Alva is a vampire who enthralled Hroggar and killed his family.",
+                                                                                         "Movarth plans to enslave the entire town of Morthal.",
+                                                                                         "I have sent a group led by Thonnir to deal with Movarth."
+                                                                                     ],
+                                                                   "QUEST_COMPLETE":  [
+                                                                                          "The vampire threat has been eliminated.",
+                                                                                          "Morthal is safe now."
+                                                                                      ]
+                                                               }
+                                            },
+                      "Thonnir":  {
+                                      "base_facts":  [
+                                                         "My wife Laelette disappeared. She said she was joining the Stormcloaks.",
+                                                         "She was spending a lot of time with Alva before she left."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "HELGI_AND_LAELETTE":  [
+                                                                                    "Laelette was turned into a vampire by Alva.",
+                                                                                    "My wife is dead.",
+                                                                                    "I need proof that Alva is a vampire before I will believe it."
+                                                                                ],
+                                                         "JOURNAL_SHOWN":  [
+                                                                               "Alva was behind everything that happened to Laelette.",
+                                                                               "I will lead the mob against Movarth."
+                                                                           ],
+                                                         "MOVARTH_DEFEATED":  [
+                                                                                  "Movarth is dead. Laelette can rest now."
+                                                                              ]
+                                                     }
+                                  },
+                      "Hroggar":  {
+                                      "base_facts":  [
+                                                         "My wife and daughter died in a house fire.",
+                                                         "Alva and I are together now."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "ALVA_EVIDENCE":  [
+                                                                               "I was enthralled by Alva. She made me turn a blind eye to everything."
+                                                                           ]
+                                                     }
+                                  },
+                      "Alva":  {
+                                   "base_facts":  [
+                                                      "I live in Morthal.",
+                                                      "Hroggar and I are together."
+                                                  ],
+                                   "beat_facts":  {
+                                                      "ALVA_EVIDENCE":  [
+                                                                            "I am a vampire serving Movarth.",
+                                                                            "I enthralled Hroggar and had his family killed.",
+                                                                            "I planned to enslave the town for our blood."
+                                                                        ]
+                                                  }
+                               }
+                  },
+    "beats":  [
+                  {
+                      "id":  "HEAR_ABOUT_FIRE",
+                      "focus_npc":  "",
+                      "comment":  "Player hears about the burned house from townspeople or guards before the quest formally starts.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "fire",
+                                                            "burned house",
+                                                            "Hroggar"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "QUEST_STARTED",
+                      "focus_npc":  "Idgrod Ravencrone",
+                      "comment":  "Jarl asks player to investigate the fire. Stage 20.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS14",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ]
+                  },
+                  {
+                      "id":  "BURNED_HOUSE_INVESTIGATED",
+                      "focus_npc":  "",
+                      "comment":  "Player investigates the burned house and encounters Helgi\u0027s ghost. Stage 30.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS14",
+                                           "min_stage":  30
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_STARTED"
+                                        ]
+                  },
+                  {
+                      "id":  "HELGI_AND_LAELETTE",
+                      "focus_npc":  "Thonnir",
+                      "comment":  "Player finds Helgi after dark, defeats Laelette the vampire, and speaks to Thonnir about Alva. Stage 60.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS14",
+                                           "min_stage":  60
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BURNED_HOUSE_INVESTIGATED"
+                                        ]
+                  },
+                  {
+                      "id":  "ALVA_EVIDENCE",
+                      "focus_npc":  "Alva",
+                      "comment":  "Player investigates Alva\u0027s house and finds her journal revealing the vampire plot against Morthal. Stage 70.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS14",
+                                           "min_stage":  70
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "HELGI_AND_LAELETTE"
+                                        ]
+                  },
+                  {
+                      "id":  "JOURNAL_SHOWN",
+                      "focus_npc":  "Idgrod Ravencrone",
+                      "comment":  "Player shows Alva\u0027s journal to the Jarl, who sends a mob led by Thonnir to Movarth\u0027s Lair. Stage 95.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS14",
+                                           "min_stage":  95
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ALVA_EVIDENCE"
+                                        ]
+                  },
+                  {
+                      "id":  "MOVARTH_DEFEATED",
+                      "focus_npc":  "",
+                      "comment":  "Player kills Movarth the master vampire in his lair. Stage 100.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS14",
+                                           "min_stage":  100
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "JOURNAL_SHOWN"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Idgrod Ravencrone",
+                      "comment":  "Player returns to the Jarl for a gold reward. Quest finishes at stage 200.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS14",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MOVARTH_DEFEATED"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "HEAR_ABOUT_FIRE"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

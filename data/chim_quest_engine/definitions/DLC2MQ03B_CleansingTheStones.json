@@ -1,0 +1,99 @@
+{
+    "quest_key":  "dlc2mq03b_cleansingthestones",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00035440",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2MQ03B",
+    "title":  "Cleansing the Stones",
+    "description":  "Storn Crag-Strider asks the player to cleanse the remaining All-Maker Stones on Solstheimâ€”Beast, Earth, Sun, and Waterâ€”using the Bend Will shout to free the island from Miraak\u0027s influence.",
+    "npc_facts":  {
+                      "Storn Crag-Strider":  {
+                                                 "base_facts":  [
+                                                                    "I am the shaman of the Skaal village.",
+                                                                    "The All-Maker Stones have been corrupted by Miraak\u0027s influence.",
+                                                                    "Cleansing the remaining stones may slow Miraak\u0027s progress even if it does not stop him entirely.",
+                                                                    "The Wind Stone has already been freed from Miraak\u0027s control."
+                                                                ],
+                                                 "beat_facts":  {
+                                                                    "QUEST_STARTED":  [
+                                                                                          "I have asked the traveler to cleanse the Beast, Earth, Sun, and Water Stones using the Bend Will shout."
+                                                                                      ],
+                                                                    "ALL_STONES_CLEANSED":  [
+                                                                                                "The sacred Stones have been cleansed. Solstheim is free of Miraak\u0027s influence, save for the Tree Stone which remains imprisoned inside his temple."
+                                                                                            ]
+                                                                }
+                                             }
+                  },
+    "beats":  [
+                  {
+                      "id":  "QUEST_STARTED",
+                      "focus_npc":  "Storn Crag-Strider",
+                      "comment":  "Storn directs the player to cleanse the remaining four All-Maker Stones. Stage 5 fires with the objective to cleanse the Water Stone.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2MQ03B",
+                                           "min_stage":  5,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "cleanse the stones",
+                                                            "remaining stones",
+                                                            "all-maker stones",
+                                                            "bend will shout"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "ALL_STONES_CLEANSED",
+                      "focus_npc":  "",
+                      "comment":  "All four stones cleansed. Quest completes at stage 200. Solstheim is freed from Miraak\u0027s influence except for the Tree Stone.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2MQ03B",
+                                           "min_stage":  200,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_STARTED"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "QUEST_STARTED"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "dlc2mq03_fateoftheskaal",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

@@ -1,0 +1,202 @@
+{
+    "quest_key":  "tgleadership_undernewmanagement",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x000D7D69",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "TGLeadership",
+    "title":  "Under New Management",
+    "description":  "After restoring the Thieves Guild to its former glory by completing all four reputation jobs and Darkness Returns, the player is invited to become Guild Master. A ceremony is held in the Ragged Flagon cistern where Brynjolf, Delvin, Vex, and Karliah confirm the appointment. The player receives the Guild Master\u0027s Armor, the Amulet of Articulation, and the Tribute Chest Key.",
+    "npc_facts":  {
+                      "Brynjolf":  {
+                                       "base_facts":  [
+                                                          "I am a senior member of the Thieves Guild and help run its day-to-day operations.",
+                                                          "The Guild Master is chosen by consensus among the guild\u0027s leadership.",
+                                                          "The Tribute Chest in the cistern is reserved for the Guild Master\u0027s share of guild earnings."
+                                                      ],
+                                       "beat_facts":  {
+                                                          "SPEAK_BRYNJOLF":  [
+                                                                                 "The player has earned the right to be named Guild Master and I have told them so."
+                                                                             ],
+                                                          "SPEAK_BRYNJOLF_POST_CEREMONY":  [
+                                                                                               "I have given the new Guild Master the Tribute Chest Key and the Amulet of Articulation."
+                                                                                           ]
+                                                      }
+                                   },
+                      "Tonilia":  {
+                                      "base_facts":  [
+                                                         "I am the Thieves Guild\u0027s primary fence operating out of the Ragged Flagon.",
+                                                         "I provide armor and equipment upgrades to guild members."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "RETRIEVE_ARMOR":  [
+                                                                                "I have given the new Guild Master their Guild Master\u0027s Armor set."
+                                                                            ]
+                                                     }
+                                  }
+                  },
+    "beats":  [
+                  {
+                      "id":  "SPEAK_BRYNJOLF",
+                      "focus_npc":  "Brynjolf",
+                      "comment":  "Player speaks to Brynjolf about becoming Guild Master after completing all prerequisites.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TGLeadership",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "guild master",
+                                                            "become guild master",
+                                                            "leadership"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "ATTEND_CEREMONY",
+                      "focus_npc":  "Brynjolf",
+                      "comment":  "Player proceeds to the center of the cistern for the installation ceremony.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TGLeadership",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SPEAK_BRYNJOLF"
+                                        ]
+                  },
+                  {
+                      "id":  "BECOME_GUILD_MASTER",
+                      "focus_npc":  "Brynjolf",
+                      "comment":  "Ceremony concludes with Brynjolf, Delvin, Vex, and Karliah confirming the player as Guild Master.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TGLeadership",
+                                           "min_stage":  30
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ATTEND_CEREMONY"
+                                        ]
+                  },
+                  {
+                      "id":  "SPEAK_BRYNJOLF_POST_CEREMONY",
+                      "focus_npc":  "Brynjolf",
+                      "comment":  "Player speaks to Brynjolf after the ceremony and receives the Tribute Chest Key and Amulet of Articulation.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TGLeadership",
+                                           "min_stage":  40
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BECOME_GUILD_MASTER"
+                                        ]
+                  },
+                  {
+                      "id":  "RETRIEVE_ARMOR",
+                      "focus_npc":  "Tonilia",
+                      "comment":  "Player retrieves the Guild Master\u0027s Armor set from Tonilia.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TGLeadership",
+                                           "min_stage":  60
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "armor",
+                                                            "guild master armor"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SPEAK_BRYNJOLF_POST_CEREMONY"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest complete. Player is now Guild Master with all rewards received.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "TGLeadership",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RETRIEVE_ARMOR"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "SPEAK_BRYNJOLF"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "tg09_darknessreturns",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

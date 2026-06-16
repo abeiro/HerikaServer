@@ -1,0 +1,179 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000E3EA5",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformHeartwoodMill",
+  "title": "Flight or Fight",
+  "description": "Grosta at Heartwood Mill asks the player to find her missing husband Leifnarr, who disappeared while trading near the Morrowind border at Broken Helm Hollow.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "LEARN_ABOUT_HUSBAND",
+      "ACCEPT_QUEST"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Grosta": {
+      "base_facts": [
+        "I run Heartwood Mill with my son Gralnach.",
+        "My husband Leifnarr disappeared while trading wood and grain near the Morrowind border.",
+        "I suspect Leifnarr ran off with another woman.",
+        "I can't run the mill by myself."
+      ],
+      "beat_facts": {
+        "ACCEPT_QUEST": [
+          "I've asked someone to help find Leifnarr at Broken Helm Hollow."
+        ],
+        "TELL_GROSTA": [
+          "Leifnarr is dead. He was murdered by bandits at Broken Helm Hollow, not unfaithful.",
+          "I gave my helper a weapon as thanks for bringing me closure."
+        ]
+      }
+    },
+    "Gralnach": {
+      "base_facts": [
+        "My father Leifnarr disappeared without a trace.",
+        "I live at Heartwood Mill with my mother Grosta."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "LEARN_ABOUT_HUSBAND",
+      "focus_npc": "Grosta",
+      "comment": "Player learns Grosta's husband Leifnarr is missing, possibly ran off.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "husband",
+            "Leifnarr",
+            "missing",
+            "disappeared",
+            "ran off"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACCEPT_QUEST",
+      "focus_npc": "Grosta",
+      "comment": "Player agrees to find Leifnarr. Marks Broken Helm Hollow on map.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000E3EA5",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "find him",
+            "help you",
+            "look for",
+            "I'll find",
+            "I can help"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEARN_ABOUT_HUSBAND"
+      ],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "BODY_FOUND",
+      "focus_npc": "",
+      "comment": "Leifnarr's body found in Broken Helm Hollow. Covers normal path (stage 30) and alternate body-first path (stage 15).",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformHeartwoodMill",
+          "stage": 15
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformHeartwoodMill",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "TELL_GROSTA",
+      "focus_npc": "Grosta",
+      "comment": "Player reports Leifnarr's death to Grosta. Completes the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000E3EA5",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "found him",
+            "dead",
+            "body",
+            "killed",
+            "murdered",
+            "bandits"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BODY_FOUND"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest finished. Grosta rewarded player with leveled enchanted weapon.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformHeartwoodMill",
+          "stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformheartwoodmill_flightorfight"
+}

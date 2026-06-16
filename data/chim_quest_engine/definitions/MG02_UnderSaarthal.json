@@ -1,0 +1,249 @@
+{
+    "quest_key":  "mg02_undersaarthal",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001F252",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MG02",
+    "title":  "Under Saarthal",
+    "description":  "Tolfdir leads the College apprentices to the ruins of Saarthal for an excavation. After assisting Arniel Gane with magical artifacts, the player discovers the Saarthal Amulet and triggers a hidden passage. A Psijic Order vision warns of danger within, and deeper exploration reveals a mysterious orb. The player must report the discovery to Arch-Mage Savos Aren.",
+    "npc_facts":  {
+                      "Tolfdir":  {
+                                      "base_facts":  [
+                                                         "I am an elderly Alteration instructor at the College of Winterhold.",
+                                                         "I believe practical field experience is essential for learning magic.",
+                                                         "I am leading the expedition to Saarthal to study the ancient Nord ruins and their magical seals."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "MEET_AT_SAARTHAL":  [
+                                                                                  "I have arrived at Saarthal with the apprentices and am ready to begin the excavation."
+                                                                              ],
+                                                         "ASSIST_ARNIEL":  [
+                                                                               "I have asked the student to help Arniel Gane find enchanted artifacts in the ruins."
+                                                                           ],
+                                                         "AMULET_TRAP":  [
+                                                                             "The student found an ancient amulet that triggered a trap and revealed a sealed section of the ruins. This is highly unusual and very interesting."
+                                                                         ],
+                                                         "PSIJIC_WARNING":  [
+                                                                                "The student received a vision from the Psijic Order warning of danger, but I wish to press on and investigate further."
+                                                                            ],
+                                                         "DISCOVER_ORB":  [
+                                                                              "We have found a strange orb deep within Saarthal. The student must inform the Arch-Mage of this discovery."
+                                                                          ]
+                                                     }
+                                  },
+                      "Arniel Gane":  {
+                                          "base_facts":  [
+                                                             "I am a scholar at the College of Winterhold cataloging finds at the Saarthal excavation.",
+                                                             "I prefer to work without interruptions and do not appreciate assistants making a mess of my work."
+                                                         ],
+                                          "beat_facts":  {
+                                                             "ASSIST_ARNIEL":  [
+                                                                                   "A student has been sent to help me find additional magical artifacts in the nearby chambers."
+                                                                               ]
+                                                         }
+                                      },
+                      "Savos Aren":  {
+                                         "base_facts":  [
+                                                            "I am the Arch-Mage of the College of Winterhold."
+                                                        ],
+                                         "beat_facts":  {
+                                                            "DISCOVER_ORB":  [
+                                                                                 "A student has reported an important discovery deep within Saarthal."
+                                                                             ]
+                                                        }
+                                     }
+                  },
+    "beats":  [
+                  {
+                      "id":  "MEET_AT_SAARTHAL",
+                      "focus_npc":  "Tolfdir",
+                      "comment":  "Player meets Tolfdir outside Saarthal and enters the ruins with the apprentices.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MG02",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "meet Tolfdir",
+                                                            "go to Saarthal",
+                                                            "ready to go"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "ASSIST_ARNIEL",
+                      "focus_npc":  "Arniel Gane",
+                      "comment":  "Player finds Arniel Gane and searches for magical artifacts in the excavation chambers.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MG02",
+                                           "min_stage":  25
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "find Arniel",
+                                                            "help Arniel",
+                                                            "magical artifacts"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_AT_SAARTHAL"
+                                        ]
+                  },
+                  {
+                      "id":  "AMULET_TRAP",
+                      "focus_npc":  "Tolfdir",
+                      "comment":  "Player picks up the Saarthal Amulet, triggering a trap that reveals a hidden sealed section of the ruins.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MG02",
+                                           "min_stage":  40
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "amulet",
+                                                            "trapped",
+                                                            "wall collapsed"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ASSIST_ARNIEL"
+                                        ]
+                  },
+                  {
+                      "id":  "PSIJIC_WARNING",
+                      "focus_npc":  "Tolfdir",
+                      "comment":  "Player receives a Psijic Order vision warning of danger within Saarthal and follows Tolfdir deeper into the ruins.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MG02",
+                                           "min_stage":  50
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Psijic vision",
+                                                            "danger in Saarthal",
+                                                            "warned about danger"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "AMULET_TRAP"
+                                        ]
+                  },
+                  {
+                      "id":  "DISCOVER_ORB",
+                      "focus_npc":  "Tolfdir",
+                      "comment":  "Player and Tolfdir discover a mysterious orb deep in Saarthal. Player must report to the Arch-Mage.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MG02",
+                                           "min_stage":  70
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "strange orb",
+                                                            "talk to Arch-Mage",
+                                                            "report to Savos"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "PSIJIC_WARNING"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Player has reported the Saarthal discovery to the Arch-Mage and the quest is complete.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MG02",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "DISCOVER_ORB"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "MEET_AT_SAARTHAL"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "mg01_firstlessons",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

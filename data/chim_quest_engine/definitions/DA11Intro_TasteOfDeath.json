@@ -1,0 +1,291 @@
+{
+    "quest_key":  "da11intro_tasteofdeath",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0007D949",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DA11Intro",
+    "title":  "The Taste of Death",
+    "description":  "A Daedric quest in which the player investigates the desecration of Markarth\u0027s Hall of the Dead, encounters the cannibal Eola, clears Reachcliff Cave of draugr, and ultimately lures Brother Verulus to the Shrine of Namira to be killed and consumed, earning the Ring of Namira. Alternatively, the player can simply help Verulus and receive his Amulet of Arkay.",
+    "npc_facts":  {
+                      "Brother Verulus":  {
+                                              "base_facts":  [
+                                                                 "I am the priest of Arkay overseeing Markarth\u0027s Hall of the Dead.",
+                                                                 "I have closed the hall because some of the dead have been eaten.",
+                                                                 "I can be persuaded or bribed to allow investigation of the hall.",
+                                                                 "I gave the player the key to the Hall of the Dead.",
+                                                                 "I can be convinced to follow the player with a bribe or persuasion."
+                                                             ],
+                                              "beat_facts":  {
+                                                                 "INVESTIGATE_HALL":  [
+                                                                                          "I gave the player the key to investigate the Hall of the Dead."
+                                                                                      ],
+                                                                 "FAVOR_COMPLETE":  [
+                                                                                        "The player reported the hall is safe. I rewarded them with my Amulet of Arkay."
+                                                                                    ],
+                                                                 "LURE_VERULUS":  [
+                                                                                      "I agreed to follow the player, thinking they needed help on their travels."
+                                                                                  ],
+                                                                 "FEAST_COMPLETE":  [
+                                                                                        "I was slain at the Shrine of Namira and consumed by the coven."
+                                                                                    ]
+                                                             }
+                                          },
+                      "Eola":  {
+                                   "base_facts":  [
+                                                      "I am a worshipper of Namira, the Lady of Decay.",
+                                                      "I have been feeding on the dead in Markarth\u0027s Hall of the Dead.",
+                                                      "I fled to the hall after draugr overran Reachcliff Cave.",
+                                                      "I want to reclaim the Shrine of Namira at Reachcliff Cave."
+                                                  ],
+                                   "beat_facts":  {
+                                                      "INVESTIGATE_HALL":  [
+                                                                               "I revealed myself to the player in the Hall of the Dead and sensed their hunger."
+                                                                           ],
+                                                      "FAVOR_COMPLETE":  [
+                                                                             "I assured the player the hall will see no further disturbances and left for Reachcliff Cave."
+                                                                         ],
+                                                      "CLEAR_REACHCLIFF":  [
+                                                                               "I thanked the player for clearing Reachcliff Cave and asked them to bring Brother Verulus as a fresh kill."
+                                                                           ],
+                                                      "LURE_VERULUS":  [
+                                                                           "I am waiting at the Shrine of Namira with the coven for the feast."
+                                                                       ],
+                                                      "FEAST_COMPLETE":  [
+                                                                             "I welcomed the player into Namira\u0027s coven after they feasted on Verulus."
+                                                                         ]
+                                                  }
+                               },
+                      "Kleppr":  {
+                                     "base_facts":  [
+                                                        "I am the innkeeper at the Silver-Blood Inn in Markarth.",
+                                                        "I share rumors about the closed Hall of the Dead."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "HEAR_ABOUT_HALL":  [
+                                                                                "I told the player about trouble at the Hall of the Dead and suggested they see Brother Verulus."
+                                                                            ]
+                                                    }
+                                 },
+                      "Frabbi":  {
+                                     "base_facts":  [
+                                                        "I help run the Silver-Blood Inn in Markarth.",
+                                                        "I share rumors about the closed Hall of the Dead if my husband Kleppr is dead."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "HEAR_ABOUT_HALL":  [
+                                                                                "I told the player about trouble at the Hall of the Dead and suggested they see Brother Verulus."
+                                                                            ]
+                                                    }
+                                 }
+                  },
+    "beats":  [
+                  {
+                      "id":  "HEAR_ABOUT_HALL",
+                      "focus_npc":  "Brother Verulus",
+                      "comment":  "Player learns about the closed Hall of the Dead from innkeeper rumors or Verulus himself.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA11Intro",
+                                           "min_stage":  5
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "hall of the dead",
+                                                            "closed hall",
+                                                            "verulus",
+                                                            "dead eaten"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "INVESTIGATE_HALL",
+                      "focus_npc":  "Eola",
+                      "comment":  "Player enters the Hall of the Dead and encounters Eola, who reveals herself and the truth about the desecration.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA11Intro",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "eola",
+                                                            "cannibal",
+                                                            "namira",
+                                                            "hunger",
+                                                            "dead eaten"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "HEAR_ABOUT_HALL"
+                                        ]
+                  },
+                  {
+                      "id":  "FAVOR_COMPLETE",
+                      "focus_npc":  "Brother Verulus",
+                      "comment":  "Player tells Verulus the hall is safe, completing the favor quest and receiving the Amulet of Arkay. Eola leaves for Reachcliff Cave.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA11Intro",
+                                           "min_stage":  15
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "hall is safe",
+                                                            "no more disturbances",
+                                                            "amulet of arkay"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "INVESTIGATE_HALL"
+                                        ]
+                  },
+                  {
+                      "id":  "CLEAR_REACHCLIFF",
+                      "focus_npc":  "Eola",
+                      "comment":  "Player clears Reachcliff Cave of draugr and reclaims the Shrine of Namira. Eola asks the player to bring Verulus.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA11",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "reachcliff cave cleared",
+                                                            "shrine reclaimed",
+                                                            "bring verulus",
+                                                            "fresh kill"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FAVOR_COMPLETE"
+                                        ]
+                  },
+                  {
+                      "id":  "LURE_VERULUS",
+                      "focus_npc":  "Brother Verulus",
+                      "comment":  "Player convinces Verulus to follow them and leads him to the Shrine of Namira at Reachcliff Cave.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA11",
+                                           "min_stage":  30
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "follow me",
+                                                            "need your help",
+                                                            "come with me",
+                                                            "shrine of namira"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "CLEAR_REACHCLIFF"
+                                        ]
+                  },
+                  {
+                      "id":  "FEAST_COMPLETE",
+                      "focus_npc":  "Eola",
+                      "comment":  "Player kills Verulus at the shrine, feasts on his body, and receives the Ring of Namira from the Daedric Prince.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA11",
+                                           "min_stage":  100
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "ring of namira",
+                                                            "feasted on verulus",
+                                                            "lady of decay",
+                                                            "coven"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "LURE_VERULUS"
+                                        ]
+                  }
+              ],
+    "external_ids":  {
+                         "quest_form_id":  "0x0007D949",
+                         "quest_plugin":  "Skyrim.esm",
+                         "source":  "local-esm:Skyrim.esm QUST",
+                         "matched_by":  "quest_editor_id"
+                     },
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "HEAR_ABOUT_HALL"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

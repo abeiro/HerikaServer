@@ -1,0 +1,157 @@
+{
+  "quest_key": "mq304_sovngardequest",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00046EF1",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MQ304",
+  "title": "Sovngarde (quest)",
+  "description": "The Dragonborn enters Sovngarde through Alduin's portal, navigates the soul-snaring mist where Alduin devours trapped souls, proves their worth to the gate guardian Tsun to enter the Hall of Valor, and enlists three ancient Nord heroes to join the final battle against Alduin.",
+  "npc_facts": {
+    "Tsun": {
+      "base_facts": [
+        "I am the gate guardian of Shor's Hall, the Hall of Valor.",
+        "All who wish to enter must prove their worth in a warrior's duel.",
+        "I challenge visitors regardless of the right they claim to enter."
+      ],
+      "beat_facts": {
+        "REACH_HALL_OF_VALOR": [
+          "The Dragonborn has proven their worth in combat and earned the right to enter the Hall of Valor."
+        ]
+      }
+    },
+    "Ysgramor": {
+      "base_facts": [
+        "I am the founder of the Companions and harbinger of men.",
+        "I welcome worthy warriors who have proven themselves to Tsun into the Hall of Valor."
+      ],
+      "beat_facts": {}
+    },
+    "Gormlaith Golden-Hilt": {
+      "base_facts": [
+        "I am one of the three ancient Nord heroes who defeated Alduin long ago using the Dragonrend shout.",
+        "I have waited in Sovngarde for the day Alduin would return."
+      ],
+      "beat_facts": {
+        "TALK_TO_HEROES": [
+          "The Dragonborn has come to Sovngarde to defeat Alduin. We will join our Shouts with theirs to clear the mist and face the World-Eater again."
+        ]
+      }
+    },
+    "Hakon One-Eye": {
+      "base_facts": [
+        "I am one of the three ancient Nord heroes who defeated Alduin long ago.",
+        "I have waited in Sovngarde for the day Alduin would return."
+      ],
+      "beat_facts": {
+        "TALK_TO_HEROES": [
+          "The Dragonborn has come to Sovngarde to defeat Alduin. We will join our Shouts with theirs to clear the mist and face the World-Eater again."
+        ]
+      }
+    },
+    "Felldir the Old": {
+      "base_facts": [
+        "I am one of the three ancient Nord heroes who defeated Alduin long ago.",
+        "I have waited in Sovngarde for the day Alduin would return."
+      ],
+      "beat_facts": {
+        "TALK_TO_HEROES": [
+          "The Dragonborn has come to Sovngarde to defeat Alduin. We will join our Shouts with theirs to clear the mist and face the World-Eater again."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ENTER_SOVNGARDE",
+      "focus_npc": "",
+      "comment": "Player arrives in Sovngarde through Alduin's portal and must find a way to defeat Alduin.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ304",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "REACH_HALL_OF_VALOR",
+      "focus_npc": "Tsun",
+      "comment": "Player navigates the soul-snaring mist and must defeat Tsun in combat to gain entry to the Hall of Valor.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ304",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENTER_SOVNGARDE"
+      ]
+    },
+    {
+      "id": "TALK_TO_HEROES",
+      "focus_npc": "Gormlaith Golden-Hilt",
+      "comment": "Player speaks with the three ancient heroes inside the Hall of Valor who agree to help.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ304",
+          "min_stage": 150
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "REACH_HALL_OF_VALOR"
+      ]
+    },
+    {
+      "id": "HEROES_JOIN_BATTLE",
+      "focus_npc": "",
+      "comment": "The three heroes join the Dragonborn to clear the mist and face Alduin. Quest completes and transitions to Dragonslayer.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ304",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TALK_TO_HEROES"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "ENTER_SOVNGARDE"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mq303_worldeaterseyrie",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

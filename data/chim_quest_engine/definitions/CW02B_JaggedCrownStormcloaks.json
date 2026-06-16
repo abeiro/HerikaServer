@@ -1,0 +1,229 @@
+{
+    "quest_key":  "cw02b_jaggedcrownstormcloaks",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0002610B",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "CW02B",
+    "title":  "The Jagged Crown (Stormcloaks)",
+    "description":  "After joining the Stormcloaks, Galmar Stone-Fist sends the player to retrieve the Jagged Crown from the ruins of Korvanjund. The player fights through Imperial soldiers and draugr, solves a puzzle door, and retrieves the crown from a boss-level draugr before delivering it to Ulfric Stormcloak in Windhelm.",
+    "npc_facts":  {
+                      "Galmar Stone-Fist":  {
+                                                "base_facts":  [
+                                                                   "I am Galmar Stone-Fist, second-in-command of the Stormcloak Rebellion.",
+                                                                   "I know the Jagged Crown lies in the ruins of Korvanjund.",
+                                                                   "I lead Stormcloak forces on expeditions to reclaim important artifacts."
+                                                               ],
+                                                "beat_facts":  {
+                                                                   "TALK_TO_GALMAR":  [
+                                                                                          "I have given the recruit the mission to retrieve the Jagged Crown from Korvanjund."
+                                                                                      ],
+                                                                   "MEET_GALMAR_KORVANJUND":  [
+                                                                                                  "I am leading the assault on Korvanjund to retrieve the Jagged Crown."
+                                                                                              ],
+                                                                   "RETRIEVE_CROWN":  [
+                                                                                          "The Jagged Crown has been found. I told the recruit to take it straight to Ulfric."
+                                                                                      ]
+                                                               }
+                                            },
+                      "Ulfric Stormcloak":  {
+                                                "base_facts":  [
+                                                                   "I am Ulfric Stormcloak, Jarl of Windhelm and leader of the Stormcloak Rebellion.",
+                                                                   "The Jagged Crown is a symbol of legitimacy for the High King of Skyrim."
+                                                               ],
+                                                "beat_facts":  {
+                                                                   "DELIVER_CROWN":  [
+                                                                                         "The Jagged Crown has been delivered to me. This strengthens our claim to rule Skyrim."
+                                                                                     ],
+                                                                   "GET_NEW_ORDERS":  [
+                                                                                          "I have given new orders for the next phase of the campaign."
+                                                                                      ]
+                                                               }
+                                            },
+                      "Ralof":  {
+                                    "base_facts":  [
+                                                       "I am a Stormcloak soldier loyal to Ulfric\u0027s cause.",
+                                                       "I joined the expedition to Korvanjund."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "MEET_GALMAR_KORVANJUND":  [
+                                                                                      "I am at Korvanjund with Galmar and the other Stormcloaks, ready to fight."
+                                                                                  ]
+                                                   }
+                                }
+                  },
+    "beats":  [
+                  {
+                      "id":  "TALK_TO_GALMAR",
+                      "focus_npc":  "Galmar Stone-Fist",
+                      "comment":  "Player talks to Galmar and receives the mission to retrieve the Jagged Crown from Korvanjund.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CW02B",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "first assignment",
+                                                            "ready to fight",
+                                                            "help the Stormcloaks"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "MEET_GALMAR_KORVANJUND",
+                      "focus_npc":  "Galmar Stone-Fist",
+                      "comment":  "Player meets Galmar outside Korvanjund and the assault on the ruins begins.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CW02B",
+                                           "min_stage":  30
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "TALK_TO_GALMAR"
+                                        ]
+                  },
+                  {
+                      "id":  "RETRIEVE_CROWN",
+                      "focus_npc":  "Galmar Stone-Fist",
+                      "comment":  "Player retrieves the Jagged Crown from the boss draugr in Korvanjund Crypt.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CW02B",
+                                           "min_stage":  50
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "found the crown",
+                                                            "I have the crown",
+                                                            "got the crown"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_GALMAR_KORVANJUND"
+                                        ]
+                  },
+                  {
+                      "id":  "DELIVER_CROWN",
+                      "focus_npc":  "Ulfric Stormcloak",
+                      "comment":  "Player delivers the Jagged Crown to Ulfric Stormcloak in the Palace of Kings.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CW02B",
+                                           "min_stage":  180
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "crown for Ulfric",
+                                                            "here is the crown",
+                                                            "brought the crown"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RETRIEVE_CROWN"
+                                        ]
+                  },
+                  {
+                      "id":  "GET_NEW_ORDERS",
+                      "focus_npc":  "Ulfric Stormcloak",
+                      "comment":  "Player receives new orders from Ulfric after delivering the crown.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CW02B",
+                                           "min_stage":  190
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "DELIVER_CROWN"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "The Jagged Crown quest is complete. The next quest Message to Whiterun begins.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CW02B",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "GET_NEW_ORDERS"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "TALK_TO_GALMAR"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "cw01b_joiningthestormcloaks",
+                                               "beat_id":  "OATH_TAKEN"
+                                           }
+                                       ]
+                      }
+}

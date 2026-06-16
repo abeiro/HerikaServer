@@ -1,0 +1,130 @@
+{
+    "quest_key":  "dbsidecontract10_killmaluril",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001EA66",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DBSideContract10",
+    "title":  "Kill Maluril",
+    "description":  "Nazir gives the player a Dark Brotherhood contract to kill Maluril, a rogue Dunmer mage researching Dwarven artifacts in Mzinchaleft. After slaying him, the player returns to Nazir for a leveled gold reward.",
+    "npc_facts":  {
+                      "Nazir":  {
+                                    "base_facts":  [
+                                                       "I am a Redguard assassin and the keeper of minor Dark Brotherhood contracts.",
+                                                       "I assign side contracts from the Sanctuary.",
+                                                       "I pay leveled gold for completed contracts."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "ACCEPT_CONTRACT":  [
+                                                                               "I have contracted the player to kill the rogue Dark Elf mage Maluril in Mzinchaleft.",
+                                                                               "I warned the player that Maluril is very dangerous and should be both respected and feared."
+                                                                           ],
+                                                       "COMPLETE_QUEST":  [
+                                                                              "The player has killed Maluril and I paid them their reward.",
+                                                                              "I once got set on fire by a sorcerer myself."
+                                                                          ]
+                                                   }
+                                },
+                      "Maluril":  {
+                                      "base_facts":  [
+                                                         "I am a Dunmer mage researching Dwarven artifacts in Mzinchaleft.",
+                                                         "I carry a Staff of Firebolts for protection.",
+                                                         "I keep a journal detailing my research and who might want me dead."
+                                                     ],
+                                      "beat_facts":  {
+
+                                                     }
+                                  }
+                  },
+    "beats":  [
+                  {
+                      "id":  "ACCEPT_CONTRACT",
+                      "focus_npc":  "Nazir",
+                      "comment":  "Player accepts the contract from Nazir to kill Maluril at Mzinchaleft.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DBSideContract10",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "kill maluril",
+                                                            "accept contract",
+                                                            "dark elf mage",
+                                                            "mzinchaleft contract"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "KILL_MALURIL",
+                      "focus_npc":  "Maluril",
+                      "comment":  "Maluril is killed in Mzinchaleft. Stage 20 becomes active.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DBSideContract10",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ACCEPT_CONTRACT"
+                                        ]
+                  },
+                  {
+                      "id":  "COMPLETE_QUEST",
+                      "focus_npc":  "Nazir",
+                      "comment":  "Player reports back to Nazir and collects the leveled gold reward. Quest finishes at stage 200.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DBSideContract10",
+                                           "stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "KILL_MALURIL"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "ACCEPT_CONTRACT"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "db02a_sanctuary",
+                                               "beat_id":  "CONTRACTS_RECEIVED"
+                                           }
+                                       ]
+                      }
+}

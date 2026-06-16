@@ -1,0 +1,292 @@
+{
+    "quest_key":  "da03_daedrasbestfriend",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001BFC4",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DA03",
+    "title":  "A Daedra\u0027s Best Friend",
+    "description":  "A talking dog named Barbas seeks help reuniting with his master, the Daedric Prince Clavicus Vile. Retrieve the Rueful Axe from Rimerock Burrow, then choose: kill Barbas and keep the axe, or return the axe and receive the Masque of Clavicus Vile.",
+    "npc_facts":  {
+                      "Barbas":  {
+                                     "base_facts":  [
+                                                        "I am a talking dog and the separated other half of Clavicus Vile.",
+                                                        "I had a falling out with my master and need someone to arbitrate our disagreement.",
+                                                        "My master\u0027s shrine is near Haemar\u0027s Shame, guarded by vampires.",
+                                                        "The Rueful Axe was created by Clavicus for a wizard named Sebastian Lort who wished to end his daughter\u0027s werewolf curse."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "MEET_BARBAS":  [
+                                                                            "I have found someone willing to help settle my dispute with Clavicus Vile."
+                                                                        ],
+                                                        "REACH_SHRINE":  [
+                                                                             "I have led my new friend to Clavicus Vile\u0027s shrine at Haemar\u0027s Shame."
+                                                                         ],
+                                                        "AXE_RETRIEVED":  [
+                                                                              "The Rueful Axe has been retrieved from Sebastian Lort in Rimerock Burrow."
+                                                                          ],
+                                                        "QUEST_COMPLETE":  [
+                                                                               "I have been reunited with Clavicus Vile and the axe was returned."
+                                                                           ]
+                                                    }
+                                 },
+                      "Lod":  {
+                                  "base_facts":  [
+                                                     "I am the blacksmith of Falkreath.",
+                                                     "I have been looking for a fine, strong dog wandering near town and will pay someone to catch it.",
+                                                     "I can provide fresh meat as bait to lure the dog."
+                                                 ],
+                                  "beat_facts":  {
+                                                     "HEAR_ABOUT_DOG":  [
+                                                                            "I have asked someone to find that stray dog for me."
+                                                                        ]
+                                                 }
+                              },
+                      "Clavicus Vile":  {
+                                            "base_facts":  [
+                                                               "I am the Daedric Prince of Bargains and Wishes.",
+                                                               "Barbas holds half of my power; without him I am weakened and confined to my shrine.",
+                                                               "The Rueful Axe is in Rimerock Burrow, guarded by the wizard Sebastian Lort."
+                                                           ],
+                                            "beat_facts":  {
+                                                               "REACH_SHRINE":  [
+                                                                                    "A mortal has reached my shrine and may strike a bargain."
+                                                                                ],
+                                                               "CLAVICUS_BARGAIN":  [
+                                                                                        "I have offered a deal: retrieve the Rueful Axe and I will consider taking Barbas back."
+                                                                                    ],
+                                                               "FINAL_DECISION":  [
+                                                                                      "The axe has been returned. Now the mortal must choose: kill Barbas and keep the axe, or return the axe and reunite us."
+                                                                                  ],
+                                                               "QUEST_COMPLETE":  [
+                                                                                      "Barbas and I are reunited, and the mortal received the Masque of Clavicus Vile."
+                                                                                  ]
+                                                           }
+                                        }
+                  },
+    "beats":  [
+                  {
+                      "id":  "HEAR_ABOUT_DOG",
+                      "focus_npc":  "Lod",
+                      "comment":  "Player hears about Lod looking for a dog from a Falkreath guard and speaks to Lod.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA03",
+                                           "min_stage":  5
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "looking for a dog",
+                                                            "stray dog",
+                                                            "Lod\u0027s dog",
+                                                            "blacksmith needs a dog"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "MEET_BARBAS",
+                      "focus_npc":  "Barbas",
+                      "comment":  "Player finds Barbas outside Falkreath and agrees to help arbitrate his dispute with Clavicus Vile.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA03",
+                                           "min_stage":  20
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "talking dog",
+                                                            "help Barbas",
+                                                            "falling out with master",
+                                                            "settle the disagreement"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "HEAR_ABOUT_DOG"
+                                        ]
+                  },
+                  {
+                      "id":  "REACH_SHRINE",
+                      "focus_npc":  "Barbas",
+                      "comment":  "Player travels with Barbas to Haemar\u0027s Shame and reaches the Shrine of Clavicus Vile.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA03",
+                                           "min_stage":  50
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "shrine of Clavicus",
+                                                            "Haemar\u0027s Shame",
+                                                            "reached the shrine"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_BARBAS"
+                                        ]
+                  },
+                  {
+                      "id":  "CLAVICUS_BARGAIN",
+                      "focus_npc":  "Clavicus Vile",
+                      "comment":  "Clavicus Vile offers a deal: retrieve the Rueful Axe from Rimerock Burrow in exchange for possibly taking Barbas back.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA03",
+                                           "min_stage":  70
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Rueful Axe",
+                                                            "Rimerock Burrow",
+                                                            "retrieve the axe",
+                                                            "deal with Clavicus"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REACH_SHRINE"
+                                        ]
+                  },
+                  {
+                      "id":  "AXE_RETRIEVED",
+                      "focus_npc":  "Barbas",
+                      "comment":  "Player retrieves the Rueful Axe from Sebastian Lort in Rimerock Burrow and must return to the shrine.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA03",
+                                           "min_stage":  100
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "got the axe",
+                                                            "found the axe",
+                                                            "Rueful Axe retrieved",
+                                                            "Sebastian Lort"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "CLAVICUS_BARGAIN"
+                                        ]
+                  },
+                  {
+                      "id":  "FINAL_DECISION",
+                      "focus_npc":  "Clavicus Vile",
+                      "comment":  "Player must choose: give the axe to Clavicus and reunite him with Barbas for the Masque, or kill Barbas with the axe and keep it.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA03",
+                                           "min_stage":  110
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "kill Barbas",
+                                                            "keep the axe",
+                                                            "give the axe to Clavicus",
+                                                            "reunite Barbas",
+                                                            "Masque of Clavicus"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "AXE_RETRIEVED"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Clavicus Vile",
+                      "comment":  "Quest ends. Either Barbas is killed and the player keeps the Rueful Axe, or Barbas is reunited with Clavicus and the player receives the Masque of Clavicus Vile.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA03",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FINAL_DECISION"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "HEAR_ABOUT_DOG"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

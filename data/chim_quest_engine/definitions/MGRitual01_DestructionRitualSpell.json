@@ -1,0 +1,208 @@
+{
+    "quest_key":  "mgritual01_destructionritualspell",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x000A4E82",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MGRitual01",
+    "title":  "Destruction Ritual Spell",
+    "description":  "After reaching mastery in Destruction, Faralda gives the Dragonborn the incomplete book Power of the Elements. Following its poetic clues, the player must activate three pedestals across Skyrim with flame, frost, and shock spells to complete the book and earn the Fire Storm spell.",
+    "npc_facts":  {
+                      "Faralda":  {
+                                      "base_facts":  [
+                                                         "I am the Destruction magic trainer at the College of Winterhold.",
+                                                         "Only those who have truly mastered Destruction magic can learn its deepest secrets."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "FARALDA_OFFERS_BOOK":  [
+                                                                                     "I have given the student the book Power of the Elements to test their mastery of Destruction."
+                                                                                 ],
+                                                         "QUEST_COMPLETE":  [
+                                                                                "The student has completed the Power of the Elements and proven their worth. I can now sell them other Master-level Destruction spell tomes."
+                                                                            ]
+                                                     }
+                                  }
+                  },
+    "beats":  [
+                  {
+                      "id":  "FARALDA_OFFERS_BOOK",
+                      "focus_npc":  "Faralda",
+                      "comment":  "Player asks Faralda about further Destruction training; she offers the book Power of the Elements.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "destruction training",
+                                                            "learn destruction",
+                                                            "more destruction magic",
+                                                            "what else is there"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "RECEIVE_BOOK",
+                      "focus_npc":  "Faralda",
+                      "comment":  "Faralda gives the book Power of the Elements; quest stage 10 starts.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x000A4E82",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "power of the elements",
+                                                            "take the book",
+                                                            "examine the book"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FARALDA_OFFERS_BOOK"
+                                        ]
+                  },
+                  {
+                      "id":  "WINDWARD_RUINS_FLAME",
+                      "focus_npc":  "",
+                      "comment":  "Player visits Windward Ruins, places book on pedestal, and casts a flame spell to unlock the next page.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "windward ruins",
+                                                            "cast flame spell",
+                                                            "fire spell pedestal",
+                                                            "haunted northern coastline"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RECEIVE_BOOK"
+                                        ]
+                  },
+                  {
+                      "id":  "NORTH_SKYBOUND_FROST",
+                      "focus_npc":  "",
+                      "comment":  "Player visits North Skybound Watch and casts a frost spell on the pedestal to unlock the final clue.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "north skybound watch",
+                                                            "cast frost spell",
+                                                            "ice spell pedestal",
+                                                            "greybeards morning shadow"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "WINDWARD_RUINS_FLAME"
+                                        ]
+                  },
+                  {
+                      "id":  "FOUR_SKULL_SHOCK",
+                      "focus_npc":  "",
+                      "comment":  "Player visits Four Skull Lookout and casts a shock spell on the pedestal to complete the book.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "four skull lookout",
+                                                            "cast shock spell",
+                                                            "lightning spell pedestal",
+                                                            "western river waters"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "NORTH_SKYBOUND_FROST"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Faralda",
+                      "comment":  "Player reads the completed book, learns Fire Storm, and finishes the quest at stage 200.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x000A4E82",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  200
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "read the book",
+                                                            "fire storm",
+                                                            "completed the book",
+                                                            "finished power of the elements"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FOUR_SKULL_SHOCK"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "FARALDA_OFFERS_BOOK"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "mg01_firstlessons",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

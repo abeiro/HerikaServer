@@ -1,0 +1,138 @@
+{
+  "quest_key": "dlc2blackbook03quest_blackbookuntoldlegends",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0003216C",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2BlackBook03Quest",
+  "title": "Black Book: Untold Legends",
+  "description": "Read the Black Book Untold Legends in Benkongerike Great Hall and navigate through Hermaeus Mora's realm of Apocrypha to learn its hidden knowledge and choose one of three rewards: Bardic Knowledge, Black Market, or Secret Servant.",
+  "npc_facts": {
+    "Black Book": {
+      "base_facts": [
+        "The Black Book Untold Legends is found in Benkongerike Great Hall.",
+        "Reading it transports the reader to Hermaeus Mora's realm of Apocrypha.",
+        "It grants one of three lesser powers: Bardic Knowledge, Black Market, or Secret Servant."
+      ],
+      "beat_facts": {
+        "ENTERED_APOCRYPHA": [
+          "The reader has been transported to Apocrypha and must uncover the hidden knowledge."
+        ],
+        "COMPLETED_QUEST": [
+          "The hidden knowledge has been learned and a reward power chosen."
+        ]
+      }
+    },
+    "Dremora Merchant": {
+      "base_facts": [
+        "A Dremora merchant can be summoned using the Black Market power to trade items for 15 seconds."
+      ]
+    },
+    "Dremora Butler": {
+      "base_facts": [
+        "A Dremora butler can be summoned using the Secret Servant power to carry up to 148 weight in items for 15 seconds."
+      ]
+    }
+  },
+  "beats": [
+    {
+      "id": "ENTERED_APOCRYPHA",
+      "focus_npc": "Black Book",
+      "comment": "Player read the Black Book and entered Apocrypha.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2BlackBook03Quest",
+          "min_stage": 10,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "NAVIGATING_APOCRYPHA",
+      "focus_npc": "",
+      "comment": "Player is exploring through the chapters of Apocrypha, battling lurkers and seekers.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "exploring Apocrypha",
+            "navigating chapters",
+            "lurker",
+            "seeker",
+            "making way through Apocrypha"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENTERED_APOCRYPHA"
+      ]
+    },
+    {
+      "id": "CHOOSING_REWARD",
+      "focus_npc": "",
+      "comment": "Player reached the end and is choosing between the three reward powers.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Bardic Knowledge",
+            "Black Market",
+            "Secret Servant",
+            "choose reward",
+            "which power"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "NAVIGATING_APOCRYPHA"
+      ]
+    },
+    {
+      "id": "COMPLETED_QUEST",
+      "focus_npc": "Black Book",
+      "comment": "Player learned the hidden knowledge and chose a reward. Quest is complete.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2BlackBook03Quest",
+          "min_stage": 20,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENTERED_APOCRYPHA"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "ENTERED_APOCRYPHA"
+    ],
+    "requires": []
+  }
+}

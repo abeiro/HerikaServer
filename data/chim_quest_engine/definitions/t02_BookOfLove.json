@@ -1,0 +1,219 @@
+{
+    "quest_key":  "t02_bookoflove",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x000211D5",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "t02",
+    "title":  "The Book of Love",
+    "description":  "Help the Temple of Mara spread love throughout Skyrim by aiding Fastred in Ivarstead, Calcelmo in Markarth, and reuniting the ghostly lovers Ruki and Fenrig.",
+    "npc_facts":  {
+                      "Dinya Balu":  {
+                                         "base_facts":  [
+                                                            "I am a priestess of Mara at the Temple of Mara in Riften.",
+                                                            "Mara has given me visions of those who need help with love.",
+                                                            "I ask travelers to act in Mara\u0027s name to aid troubled lovers."
+                                                        ],
+                                         "beat_facts":  {
+                                                            "IVARSTEAD_COMPLETE":  [
+                                                                                       "The traveler helped Fastred find love in Ivarstead."
+                                                                                   ],
+                                                            "MARKARTH_COMPLETE":  [
+                                                                                      "The traveler helped Calcelmo and Faleen find each other in Markarth."
+                                                                                  ],
+                                                            "GHOSTS_COMPLETE":  [
+                                                                                    "The traveler reunited the ghostly lovers Ruki and Fenrig beyond death itself."
+                                                                                ],
+                                                            "QUEST_COMPLETE":  [
+                                                                                   "Mara\u0027s blessing has been bestowed upon the traveler for their service to love."
+                                                                               ]
+                                                        }
+                                     },
+                      "Fastred":  {
+                                      "base_facts":  [
+                                                         "I live in Ivarstead with my parents Boti and Jofthor.",
+                                                         "I am in love with Bassianus Axius but my father disapproves."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "IVARSTEAD_COMPLETE":  [
+                                                                                    "I have found love and left Ivarstead with Bassianus."
+                                                                                ]
+                                                     }
+                                  },
+                      "Calcelmo":  {
+                                       "base_facts":  [
+                                                          "I am a scholar and Dwemer researcher in Markarth.",
+                                                          "I am hopelessly undone by Faleen but cannot bring myself to speak to her."
+                                                      ],
+                                       "beat_facts":  {
+                                                          "MARKARTH_COMPLETE":  [
+                                                                                    "Faleen and I have confessed our love for each other."
+                                                                                ]
+                                                      }
+                                   },
+                      "Faleen":  {
+                                     "base_facts":  [
+                                                        "I am a Redguard warrior and housecarl in Markarth.",
+                                                        "Yngvar the Singer is my friend."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "MARKARTH_COMPLETE":  [
+                                                                                  "Calcelmo and I have confessed our love for each other."
+                                                                              ]
+                                                    }
+                                 },
+                      "Ruki":  {
+                                   "base_facts":  [
+                                                      "I am a ghost searching for my love Fenrig at Gjukar\u0027s Monument.",
+                                                      "I believe I am still alive and looking for Fenrig after a battle."
+                                                  ],
+                                   "beat_facts":  {
+                                                      "GHOSTS_COMPLETE":  [
+                                                                              "Fenrig and I have been reunited and ascended into the sky together."
+                                                                          ]
+                                                  }
+                               },
+                      "Fenrig":  {
+                                     "base_facts":  [
+                                                        "I am a ghost near Fort Greymoor, believing I am still alive and camping with Gjukar\u0027s army.",
+                                                        "I was killed in an enemy raid the night before a battle."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "GHOSTS_COMPLETE":  [
+                                                                                "Ruki and I have been reunited and ascended into the sky together."
+                                                                            ]
+                                                    }
+                                 }
+                  },
+    "beats":  [
+                  {
+                      "id":  "QUEST_START",
+                      "focus_npc":  "Dinya Balu",
+                      "comment":  "Player agrees to help Dinya Balu spread Mara\u0027s love across Skyrim.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "t02",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "help the temple",
+                                                            "spread love",
+                                                            "Mara\u0027s blessing",
+                                                            "help the cause of love"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "IVARSTEAD_COMPLETE",
+                      "focus_npc":  "Fastred",
+                      "comment":  "Player resolved Fastred\u0027s love situation in Ivarstead and returned to Dinya.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "t02",
+                                           "min_stage":  30
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_START"
+                                        ]
+                  },
+                  {
+                      "id":  "MARKARTH_COMPLETE",
+                      "focus_npc":  "Calcelmo",
+                      "comment":  "Player helped Calcelmo and Faleen confess their love and returned to Dinya.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "t02",
+                                           "min_stage":  70
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "IVARSTEAD_COMPLETE"
+                                        ]
+                  },
+                  {
+                      "id":  "GHOSTS_COMPLETE",
+                      "focus_npc":  "Ruki",
+                      "comment":  "Player reunited the ghostly lovers Ruki and Fenrig at Gjukar\u0027s Monument and returned to Dinya.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "t02",
+                                           "min_stage":  100
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MARKARTH_COMPLETE"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Dinya Balu",
+                      "comment":  "Quest finished. Dinya bestows Mara\u0027s blessing and the Agent of Mara reward.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "t02",
+                                           "stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "GHOSTS_COMPLETE"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "QUEST_START"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

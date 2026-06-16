@@ -1,0 +1,335 @@
+{
+    "quest_key":  "ms01_forswornconspiracy",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00018B4B",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MS01",
+    "title":  "The Forsworn Conspiracy",
+    "description":  "Investigate the Forsworn conspiracy in Markarth after a woman named Margret is attacked in the marketplace. Eltrys asks you to uncover who is behind the Forsworn attacks and why the guards do nothing.",
+    "npc_facts":  {
+                      "Eltrys":  {
+                                     "base_facts":  [
+                                                        "I am a Breton living in Markarth.",
+                                                        "My father was killed by the Forsworn.",
+                                                        "I have spent my whole life trying to find out why the Forsworn attack and why the guards do nothing.",
+                                                        "I meet contacts at the Shrine of Talos beneath the Temple of Dibella."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "NOTE_AND_MEETING":  [
+                                                                                 "I slipped a note to someone who witnessed the marketplace attack and asked them to meet me at the Shrine of Talos."
+                                                                             ],
+                                                        "INVESTIGATION_BEGINS":  [
+                                                                                     "I have hired someone to investigate the Forsworn conspiracy and will pay for any information they bring."
+                                                                                 ],
+                                                        "RETURN_TO_ELTRYS":  [
+                                                                                 "I am compiling all the evidence my investigator has uncovered about the Forsworn conspiracy."
+                                                                             ]
+                                                    }
+                                 },
+                      "Margret":  {
+                                      "base_facts":  [
+                                                         "I was attacked in the Markarth marketplace by a man named Weylin.",
+                                                         "I rented a room at the Silver-Blood Inn."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "MARGRET_EVIDENCE":  [
+                                                                                  "I revealed that I am an Imperial spy working with General Tullius to investigate the Silver-Blood family and the Treasury House.",
+                                                                                  "Thonar Silver-Blood arranged for my murder."
+                                                                              ]
+                                                     }
+                                  },
+                      "Weylin":  {
+                                     "base_facts":  [
+                                                        "I was a Breton who worked as a smelter at Cidhna Mine.",
+                                                        "I lived in the Warrens in Markarth.",
+                                                        "I shouted \u0027The Reach belongs to the Forsworn\u0027 when I attacked Margret."
+                                                    ],
+                                     "beat_facts":  {
+
+                                                    }
+                                 },
+                      "Thonar Silver-Blood":  {
+                                                  "base_facts":  [
+                                                                     "I am Thonar Silver-Blood, head of the Treasury House.",
+                                                                     "The Silver-Blood family controls Markarth\u0027s wealth and Cidhna Mine."
+                                                                 ],
+                                                  "beat_facts":  {
+                                                                     "THONAR_EVIDENCE":  [
+                                                                                             "I admitted that I have been controlling the Forsworn by imprisoning their king Madanach in Cidhna Mine.",
+                                                                                             "Madanach has become out of control and ordered the attack on my wife Betrid."
+                                                                                         ]
+                                                                 }
+                                              },
+                      "Nepos the Nose":  {
+                                             "base_facts":  [
+                                                                "I am Nepos the Nose, an old man living in Nepos\u0027s House in Markarth.",
+                                                                "I am a Forsworn agent loyal to Madanach, the King in Rags.",
+                                                                "I receive orders from Madanach, who is imprisoned in Cidhna Mine."
+                                                            ],
+                                             "beat_facts":  {
+                                                                "NEPOS_EVIDENCE":  [
+                                                                                       "I confessed that I am the \u0027N\u0027 who directed Weylin to attack Margret on Madanach\u0027s orders.",
+                                                                                       "I ordered Dryston to rough up anyone investigating the conspiracy."
+                                                                                   ]
+                                                            }
+                                         }
+                  },
+    "beats":  [
+                  {
+                      "id":  "NOTE_AND_MEETING",
+                      "focus_npc":  "Eltrys",
+                      "comment":  "Player receives Eltrys\u0027s note and meets him at the Shrine of Talos to begin the investigation.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS01",
+                                           "min_stage":  15
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "note from Eltrys",
+                                                            "meet at shrine",
+                                                            "Shrine of Talos"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "INVESTIGATION_BEGINS",
+                      "focus_npc":  "Eltrys",
+                      "comment":  "Eltrys asks the player to find evidence about Margret and Weylin surrounding the Forsworn attack.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS01",
+                                           "min_stage":  20
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "find evidence",
+                                                            "investigate Margret",
+                                                            "investigate Weylin",
+                                                            "Forsworn attack"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "NOTE_AND_MEETING"
+                                        ]
+                  },
+                  {
+                      "id":  "MARGRET_EVIDENCE",
+                      "focus_npc":  "Margret",
+                      "comment":  "Player discovers Margret was an Imperial spy investigating the Silver-Bloods, either by reading her journal or persuading her.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS01",
+                                           "min_stage":  36
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Margret\u0027s journal",
+                                                            "Imperial spy",
+                                                            "General Tullius",
+                                                            "Margret is a spy"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "INVESTIGATION_BEGINS"
+                                        ]
+                  },
+                  {
+                      "id":  "WEYLIN_EVIDENCE",
+                      "focus_npc":  "",
+                      "comment":  "Player finds Weylin\u0027s note revealing a puppet-master named \u0027N\u0027 and learns Nepos is behind it after Dryston\u0027s brawl.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS01",
+                                           "min_stage":  48
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Weylin\u0027s note",
+                                                            "who is N",
+                                                            "Nepos the Nose",
+                                                            "Dryston told me",
+                                                            "Nepos sent Dryston"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "INVESTIGATION_BEGINS"
+                                        ]
+                  },
+                  {
+                      "id":  "THONAR_EVIDENCE",
+                      "focus_npc":  "Thonar Silver-Blood",
+                      "comment":  "Player confronts Thonar at the Treasury House and learns he has been controlling the Forsworn through Madanach.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS01",
+                                           "min_stage":  55
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Thonar controls the Forsworn",
+                                                            "Madanach imprisoned",
+                                                            "Thonar\u0027s journal",
+                                                            "King in Rags"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "INVESTIGATION_BEGINS"
+                                        ]
+                  },
+                  {
+                      "id":  "NEPOS_EVIDENCE",
+                      "focus_npc":  "Nepos the Nose",
+                      "comment":  "Player confronts Nepos who confesses to being a Forsworn agent taking orders from Madanach and directing Weylin.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS01",
+                                           "min_stage":  80
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Nepos confessed",
+                                                            "Nepos is Forsworn",
+                                                            "Nepos works for Madanach",
+                                                            "Nepos\u0027s journal"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "WEYLIN_EVIDENCE"
+                                        ]
+                  },
+                  {
+                      "id":  "RETURN_TO_ELTRYS",
+                      "focus_npc":  "Eltrys",
+                      "comment":  "Player returns to Eltrys at the Shrine of Talos after both Thonar and Nepos have confessed their roles.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS01",
+                                           "min_stage":  70
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "return to Eltrys",
+                                                            "report to Eltrys",
+                                                            "all the evidence"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "THONAR_EVIDENCE",
+                                            "NEPOS_EVIDENCE"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETION",
+                      "focus_npc":  "",
+                      "comment":  "Eltrys is found dead and the player is framed for his murder, leading to imprisonment in Cidhna Mine.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MS01",
+                                           "min_stage":  95
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RETURN_TO_ELTRYS"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "NOTE_AND_MEETING"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

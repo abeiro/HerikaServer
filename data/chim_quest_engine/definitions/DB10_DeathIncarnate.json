@@ -1,0 +1,174 @@
+{
+  "quest_key": "db10_deathincarnate",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0003CEDA",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DB10",
+  "title": "Death Incarnate",
+  "description": "The Dark Brotherhood Sanctuary is under attack by the Penitus Oculatus. The player must rescue Nazir, survive by entering the Night Mother's coffin, discover that Astrid is the traitor, grant her mercy, and return to the Night Mother to continue the Brotherhood's contract.",
+  "npc_facts": {
+    "Nazir": {
+      "base_facts": [
+        "I am a Redguard assassin of the Dark Brotherhood.",
+        "I train new recruits in combat inside the Sanctuary."
+      ],
+      "beat_facts": {
+        "SAVE_NAZIR": [
+          "The Penitus Oculatus attacked the Sanctuary and I barely survived thanks to the Listener.",
+          "I was fighting Arcturus when the Listener saved me."
+        ],
+        "EMBRACE_NIGHT_MOTHER": [
+          "I dug the Listener out of the Night Mother's coffin after the Sanctuary collapsed.",
+          "Babette and I are the only survivors besides the Listener."
+        ],
+        "CONFRONT_ASTRID": [
+          "Astrid betrayed us all. She deserved what she got.",
+          "The Brotherhood is nearly destroyed, but we still have a contract with the Emperor."
+        ]
+      }
+    },
+    "Astrid": {
+      "base_facts": [
+        "I am the leader of the Dark Brotherhood Sanctuary in Falkreath.",
+        "I was skeptical of Cicero and the Night Mother's return."
+      ],
+      "beat_facts": {
+        "CONFRONT_ASTRID": [
+          "I betrayed the Brotherhood to the Penitus Oculatus because I wanted things to go back to the old ways.",
+          "I performed the Black Sacrament on myself and prayed for a mercy killing.",
+          "I am burned beyond recognition and want to die."
+        ]
+      }
+    },
+    "Night Mother": {
+      "base_facts": [
+        "I am the Night Mother, the spiritual leader of the Dark Brotherhood.",
+        "I speak to the Listener from my coffin."
+      ],
+      "beat_facts": {
+        "EMBRACE_NIGHT_MOTHER": [
+          "I protected the Listener in my coffin while the Sanctuary burned and collapsed.",
+          "Astrid is still alive â€” the Listener must find her."
+        ],
+        "QUEST_COMPLETE": [
+          "The contract with Amaund Motierre must still be fulfilled. The Emperor must die.",
+          "The Listener should speak to Amaund Motierre in Whiterun and inform Nazir of the plan."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "SANCTUARY_ASSAULT",
+      "focus_npc": "",
+      "comment": "Player returns to find the Sanctuary under attack by the Penitus Oculatus. Festus Krex is dead outside; Veezara is dead inside.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB10",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "SAVE_NAZIR",
+      "focus_npc": "Nazir",
+      "comment": "Player kills Nazir's attacker Arcturus and speaks with Nazir, who initially suspected the player might be the traitor.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB10",
+          "min_stage": 35
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SANCTUARY_ASSAULT"
+      ]
+    },
+    {
+      "id": "EMBRACE_NIGHT_MOTHER",
+      "focus_npc": "Night Mother",
+      "comment": "Player enters the Night Mother's coffin to survive the Sanctuary's collapse. Nazir and Babette dig the player out afterward.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB10",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SAVE_NAZIR"
+      ]
+    },
+    {
+      "id": "CONFRONT_ASTRID",
+      "focus_npc": "Astrid",
+      "comment": "Player finds the burned Astrid in her hidden chamber. She reveals she is the traitor and performed the Black Sacrament on herself, requesting a mercy killing. Player kills her and optionally retrieves the Blade of Woe.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB10",
+          "min_stage": 70
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "EMBRACE_NIGHT_MOTHER"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Night Mother",
+      "comment": "Player returns to the Night Mother after killing Astrid. The Night Mother instructs the player to fulfill the Emperor contract via Amaund Motierre, leading into Hail Sithis!",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB10",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONFRONT_ASTRID"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "SANCTUARY_ASSAULT"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "db09_tokillanempire",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

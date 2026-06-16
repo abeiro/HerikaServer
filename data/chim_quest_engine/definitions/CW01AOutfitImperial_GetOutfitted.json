@@ -1,0 +1,126 @@
+{
+  "quest_key": "cw01aoutfitimperial_getoutfitted",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000C349B",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "CW01AOutfitImperial",
+  "title": "Get Outfitted",
+  "description": "After joining the Imperial Legion and clearing Fort Hraggstad, General Tullius directs the new recruit to Beirand, the smith at Castle Dour, to receive a free set of Imperial armor.",
+  "npc_facts": {
+    "General Tullius": {
+      "base_facts": [
+        "I command the Imperial Legion in Skyrim from Castle Dour.",
+        "New recruits must look the part and be properly outfitted."
+      ],
+      "beat_facts": {
+        "TULLIUS_ORDERS": [
+          "I've sent the new recruit to Beirand for Imperial armor."
+        ]
+      }
+    },
+    "Beirand": {
+      "base_facts": [
+        "I am the blacksmith at Castle Dour in Solitude.",
+        "I outfit Imperial soldiers with their armor.",
+        "Each soldier gets one free outfit; after that they must pay."
+      ],
+      "beat_facts": {
+        "GET_IMPERIAL_GEAR": [
+          "I've given the new recruit their Imperial armor set."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "TULLIUS_ORDERS",
+      "focus_npc": "General Tullius",
+      "comment": "Observational gate when Tullius directs the player to Beirand after joining the Legion.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW01AOutfitImperial",
+          "min_stage": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "GET_IMPERIAL_GEAR",
+      "focus_npc": "Beirand",
+      "comment": "Player talks to Beirand and chooses light, medium, or heavy Imperial armor to complete the outfitting.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000C349B",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 255
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000C349B",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 1
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "armor",
+            "gear",
+            "outfitted",
+            "outfit",
+            "heavy",
+            "medium",
+            "light"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TULLIUS_ORDERS"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Observational gate when the quest finishes and the player is fully outfitted.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW01AOutfitImperial",
+          "min_stage": 255
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TULLIUS_ORDERS"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "TULLIUS_ORDERS"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "cw00a_joiningthelegion",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

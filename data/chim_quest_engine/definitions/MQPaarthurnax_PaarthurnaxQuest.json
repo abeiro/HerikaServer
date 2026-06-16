@@ -1,0 +1,177 @@
+{
+  "quest_key": "mqpaarthurnax_paarthurnaxquest",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0003FA16",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MQPaarthurnax",
+  "title": "Paarthurnax (quest)",
+  "description": "The Blades demand the Dragonborn kill Paarthurnax for his crimes during the Dragon War, refusing further aid until the deed is done. The Greybeards oppose this demand, forcing a choice between the two factions.",
+  "npc_facts": {
+    "Delphine": {
+      "base_facts": [
+        "I am the acting Grandmaster of the Blades.",
+        "Paarthurnax was Alduin's chief ally during the Dragon War and committed unforgivable atrocities.",
+        "Our oaths as Blades demand Paarthurnax's death before we can offer the Dragonborn further aid."
+      ],
+      "beat_facts": {
+        "PAARTHURNAX_KILLED": [
+          "The Dragonborn has killed Paarthurnax. I will speak with them again."
+        ],
+        "QUEST_COMPLETE": [
+          "Paarthurnax is dead. The Blades welcome the Dragonborn back fully."
+        ]
+      }
+    },
+    "Esbern": {
+      "base_facts": [
+        "Paarthurnax's war crimes during the Dragon War are still remembered thousands of years later.",
+        "The Blades cannot aid the Dragonborn while Paarthurnax lives.",
+        "Paarthurnax's betrayal of Alduin only proves he cannot be trusted."
+      ],
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "Paarthurnax is dead. The Blades can once again support the Dragonborn against Alduin."
+        ]
+      }
+    },
+    "Arngeir": {
+      "base_facts": [
+        "Paarthurnax is the Master of the Greybeards.",
+        "All dragons served Alduin in the beginning; Paarthurnax could not help his nature.",
+        "Paarthurnax rebelled against Alduin and was instrumental in his first defeat.",
+        "Paarthurnax has overcome his violent nature through the Way of the Voice."
+      ],
+      "beat_facts": {
+        "PAARTHURNAX_KILLED": [
+          "The Dragonborn has murdered Paarthurnax. The Greybeards' hospitality is revoked."
+        ],
+        "QUEST_COMPLETE": [
+          "I will never forgive the Dragonborn for Paarthurnax's murder. We have nothing to say to each other."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "BLADES_DEMAND",
+      "focus_npc": "Delphine",
+      "comment": "Quest starts; Blades demand Paarthurnax's death and refuse further aid.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQPaarthurnax",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "CONSULT_ARNGEIR",
+      "focus_npc": "Arngeir",
+      "comment": "Player consults Arngeir about the Blades' demand to kill Paarthurnax.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Blades want Paarthurnax dead",
+            "kill Paarthurnax",
+            "spare Paarthurnax"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BLADES_DEMAND"
+      ]
+    },
+    {
+      "id": "CONSULT_PAARTHURNAX",
+      "focus_npc": "",
+      "comment": "Player talks to Paarthurnax about his past and the Way of the Voice.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "why should I spare you",
+            "Way of the Voice",
+            "your past",
+            "overcome your nature"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BLADES_DEMAND"
+      ]
+    },
+    {
+      "id": "PAARTHURNAX_KILLED",
+      "focus_npc": "Delphine",
+      "comment": "Paarthurnax has been killed; player must report back to the Blades.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQPaarthurnax",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BLADES_DEMAND"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Delphine",
+      "comment": "Quest complete; Blades welcome Dragonborn back, Greybeards are outraged.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQPaarthurnax",
+          "min_stage": 100
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PAARTHURNAX_KILLED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "BLADES_DEMAND"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mq203_alduinswall",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

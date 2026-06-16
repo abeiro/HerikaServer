@@ -1,0 +1,125 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000D9B65",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformIvarstead03",
+  "title": "Grin and Bear It",
+  "description": "Temba Wide-Arm, a Nord mill owner in Ivarstead, despises bears for ruining her lumber business by scratching up tree trunks. She offers a reward if you bring her ten bear pelts to thin out the bear population.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "LEARN_TEMBAS_BEAR_PROBLEM"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Temba Wide-Arm": {
+      "base_facts": [
+        "I own the lumber mill in Ivarstead and have sunk all my money into it.",
+        "I hate bears—they scratch up the tree trunks and ruin the lumber.",
+        "I complain about bears to anyone who will listen."
+      ],
+      "beat_facts": {
+        "LEARN_TEMBAS_BEAR_PROBLEM": [
+          "This person knows about my bear problem and how the bears are destroying my trees."
+        ],
+        "ACCEPT_BEAR_PELT_QUEST": [
+          "This person agreed to bring me ten bear pelts to help thin out the bears."
+        ],
+        "RETURN_WITH_BEAR_PELTS": [
+          "This person brought me ten bear pelts! I rewarded them with an enchanted war axe."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "LEARN_TEMBAS_BEAR_PROBLEM",
+      "focus_npc": "Temba Wide-Arm",
+      "comment": "Player learns about Temba's bear problem and her need for pelts.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "bears",
+            "lumber",
+            "trees",
+            "mill",
+            "problem"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACCEPT_BEAR_PELT_QUEST",
+      "focus_npc": "Temba Wide-Arm",
+      "comment": "Player accepts the quest to gather 10 bear pelts for Temba.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D9B65",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help",
+            "bring pelts",
+            "gather pelts",
+            "accept",
+            "I'll do it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEARN_TEMBAS_BEAR_PROBLEM"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "RETURN_WITH_BEAR_PELTS",
+      "focus_npc": "Temba Wide-Arm",
+      "comment": "Player returns with 10 bear pelts and completes the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D9B65",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "got the pelts",
+            "here are the pelts",
+            "bear pelts",
+            "brought the pelts"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_BEAR_PELT_QUEST"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformivarstead03_grinandbearit"
+}

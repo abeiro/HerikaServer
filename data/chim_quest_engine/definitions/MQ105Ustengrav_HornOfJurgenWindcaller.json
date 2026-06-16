@@ -1,0 +1,227 @@
+{
+    "quest_key":  "mq105ustengrav_hornofjurgenwindcaller",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x000713DC",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MQ105Ustengrav",
+    "title":  "The Horn of Jurgen Windcaller",
+    "description":  "Arngeir sends the Dragonborn on a final trial to retrieve the Horn of Jurgen Windcaller from Ustengrav. Upon arrival the Horn is missing, replaced by a note from Delphine requesting a meeting at the Sleeping Giant Inn in Riverwood. After meeting Delphine and recovering the Horn, the Dragonborn returns to High Hrothgar, learns the final word of Unrelenting Force from Wulfgar, and receives the Greybeards\u0027 formal recognition as Dragonborn.",
+    "npc_facts":  {
+                      "Arngeir":  {
+                                      "base_facts":  [
+                                                         "I am the eldest of the Greybeards and speak for our order.",
+                                                         "I have sent the Dragonborn to retrieve the Horn of Jurgen Windcaller from Ustengrav as a final trial.",
+                                                         "The Horn is named after Jurgen Windcaller, the founder of the Greybeards."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "RETURN_HORN":  [
+                                                                             "The Dragonborn has returned with the Horn and proven worthy of the trial."
+                                                                         ],
+                                                         "QUEST_COMPLETE":  [
+                                                                                "The Greybeards have formally recognized the Dragonborn. High Hrothgar is now open to them."
+                                                                            ]
+                                                     }
+                                  },
+                      "Wulfgar":  {
+                                      "base_facts":  [
+                                                         "I am one of the Greybeards.",
+                                                         "I will teach the final word of Unrelenting Force once the Dragonborn completes their trial."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "GREYBEARDS_RECOGNITION":  [
+                                                                                        "I have taught the Dragonborn the final word of Unrelenting Force."
+                                                                                    ]
+                                                     }
+                                  },
+                      "Delphine":  {
+                                       "base_facts":  [
+                                                          "I run the Sleeping Giant Inn in Riverwood.",
+                                                          "I took the Horn of Jurgen Windcaller from Ustengrav to get the Dragonborn\u0027s attention."
+                                                      ],
+                                       "beat_facts":  {
+                                                          "MEET_DELPHINE":  [
+                                                                                "I have revealed myself to the Dragonborn and returned the Horn.",
+                                                                                "My organization has been looking for someone like the Dragonborn."
+                                                                            ]
+                                                      }
+                                   }
+                  },
+    "beats":  [
+                  {
+                      "id":  "QUEST_ASSIGNED",
+                      "focus_npc":  "Arngeir",
+                      "comment":  "Arngeir assigns the final trial to retrieve the Horn of Jurgen Windcaller from Ustengrav.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x000713DC",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "quest_editor_id":  "MQ105Ustengrav",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "horn of jurgen windcaller",
+                                                            "final trial",
+                                                            "ustengrav"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "HORN_MISSING",
+                      "focus_npc":  "",
+                      "comment":  "Player discovers the Horn is missing and finds a mysterious note on the pedestal.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x000713DC",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "quest_editor_id":  "MQ105Ustengrav",
+                                           "min_stage":  15
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_ASSIGNED"
+                                        ]
+                  },
+                  {
+                      "id":  "MEET_DELPHINE",
+                      "focus_npc":  "Delphine",
+                      "comment":  "Player meets Delphine at the Sleeping Giant Inn in Riverwood and receives the Horn.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x000713DC",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "quest_editor_id":  "MQ105Ustengrav",
+                                           "min_stage":  20
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "delphine",
+                                                            "sleeping giant inn",
+                                                            "attic room"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "HORN_MISSING"
+                                        ]
+                  },
+                  {
+                      "id":  "RETURN_HORN",
+                      "focus_npc":  "Arngeir",
+                      "comment":  "Player returns the Horn to Arngeir at High Hrothgar, completing the trial.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x000713DC",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "quest_editor_id":  "MQ105Ustengrav",
+                                           "min_stage":  30
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_DELPHINE"
+                                        ]
+                  },
+                  {
+                      "id":  "GREYBEARDS_RECOGNITION",
+                      "focus_npc":  "Wulfgar",
+                      "comment":  "Wulfgar teaches the final word of Unrelenting Force and the Greybeards formally recognize the Dragonborn.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x000713DC",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "quest_editor_id":  "MQ105Ustengrav",
+                                           "min_stage":  50
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RETURN_HORN"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest complete. The Dragonborn is formally recognized and High Hrothgar is fully open.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x000713DC",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "quest_editor_id":  "MQ105Ustengrav",
+                                           "min_stage":  60
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "GREYBEARDS_RECOGNITION"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "QUEST_ASSIGNED"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "mq105_wayofthevoice",
+                                               "beat_id":  "FINAL_TRAINING_TALK"
+                                           }
+                                       ]
+                      }
+}

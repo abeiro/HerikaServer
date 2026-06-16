@@ -1,0 +1,220 @@
+{
+    "quest_key":  "ms11_bloodontheice",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001F7A3",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MS11",
+    "title":  "Blood on the Ice",
+    "description":  "A serial killer known as the Butcher stalks Windhelm. Investigate the graveyard murder, follow the trail of blood to Hjerim, gather evidence, and uncover the true killer\u0027s identity before they strike again.",
+    "npc_facts":  {
+                      "Jorleif":  {
+                                      "base_facts":  [
+                                                         "I am the steward of Windhelm, serving under Ulfric Stormcloak in the Palace of the Kings.",
+                                                         "A serial killer called the Butcher has been murdering citizens of Windhelm."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "CRIME_SCENE":  [
+                                                                             "The Dragonborn has offered to help investigate the latest Butcher murder."
+                                                                         ],
+                                                         "HJERIM_INVESTIGATION":  [
+                                                                                      "The investigation has led to Hjerim, the abandoned house where Friga Shatter-Shield was killed."
+                                                                                  ],
+                                                         "CLUE_FOLLOWUP":  [
+                                                                               "The strange amulet and pamphlets from Hjerim may point toward the killer."
+                                                                           ],
+                                                         "KILLER_CAUGHT":  [
+                                                                               "The Butcher has been caught and brought to justice."
+                                                                           ]
+                                                     }
+                                  },
+                      "Helgird":  {
+                                      "base_facts":  [
+                                                         "I work in Windhelm\u0027s Hall of the Dead preparing bodies for burial.",
+                                                         "I have life-long experience examining dead bodies."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "CRIME_SCENE":  [
+                                                                             "Susanna\u0027s coin purse was intact, so robbery was not the motive.",
+                                                                             "The cuts on Susanna\u0027s body were made with a curved embalming blade."
+                                                                         ]
+                                                     }
+                                  },
+                      "Viola Giordano":  {
+                                             "base_facts":  [
+                                                                "I am an Imperial living in Windhelm.",
+                                                                "I wrote the \u0027Beware the Butcher!\u0027 pamphlets warning people about the killer."
+                                                            ],
+                                             "beat_facts":  {
+                                                                "CLUE_FOLLOWUP":  [
+                                                                                      "The evidence from Hjerim points toward someone experimenting with Necromancy.",
+                                                                                      "Wuunferth the Unliving, the court mage, may be involved."
+                                                                                  ]
+                                                            }
+                                         },
+                      "Calixto Corrium":  {
+                                              "base_facts":  [
+                                                                 "I run the House of Curiosities in Windhelm, a small museum of curios from my travels.",
+                                                                 "My sister and I opened the museum together before she passed away."
+                                                             ],
+                                              "beat_facts":  {
+                                                                 "CLUE_FOLLOWUP":  [
+                                                                                       "I identified the strange amulet as a Wheelstone, traditionally carried by court mages.",
+                                                                                       "I offered to buy the amulet for 500 gold."
+                                                                                   ],
+                                                                 "KILLER_CAUGHT":  [
+                                                                                       "I was the Butcher all along, and have been brought to justice."
+                                                                                   ]
+                                                             }
+                                          },
+                      "Wuunferth the Unliving":  {
+                                                     "base_facts":  [
+                                                                        "I am the court mage of Windhelm, serving in the Palace of the Kings."
+                                                                    ],
+                                                     "beat_facts":  {
+                                                                        "WRONG_ACCUSATION":  [
+                                                                                                 "I have been wrongly accused of being the Butcher and imprisoned."
+                                                                                             ],
+                                                                        "KILLER_CAUGHT":  [
+                                                                                              "I was wrongly accused; the real killer has finally been caught."
+                                                                                          ]
+                                                                    }
+                                                 }
+                  },
+    "beats":  [
+                  {
+                      "id":  "CRIME_SCENE",
+                      "focus_npc":  "Jorleif",
+                      "comment":  "Player discovers the murder scene in the graveyard and begins the investigation.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x0001F7A3",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "murder",
+                                                            "killer",
+                                                            "butcher",
+                                                            "investigate"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "HJERIM_INVESTIGATION",
+                      "focus_npc":  "Jorleif",
+                      "comment":  "Player gains access to Hjerim and searches for clues in the abandoned house, finding pamphlets, journals, a strange amulet, and a hidden chamber.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x0001F7A3",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "min_stage":  50
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "CRIME_SCENE"
+                                        ]
+                  },
+                  {
+                      "id":  "CLUE_FOLLOWUP",
+                      "focus_npc":  "Viola Giordano",
+                      "comment":  "Player follows up on clues from Hjerim by consulting Calixto about the amulet and Viola about the Butcher pamphlets.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x0001F7A3",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "min_stage":  70
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "HJERIM_INVESTIGATION"
+                                        ]
+                  },
+                  {
+                      "id":  "WRONG_ACCUSATION",
+                      "focus_npc":  "Wuunferth the Unliving",
+                      "comment":  "Player accuses Wuunferth of being the Butcher based on the evidence, leading to his wrongful arrest. Premature quest finish; the real killer will strike again.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x0001F7A3",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "min_stage":  100
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "CLUE_FOLLOWUP"
+                                        ]
+                  },
+                  {
+                      "id":  "KILLER_CAUGHT",
+                      "focus_npc":  "Calixto Corrium",
+                      "comment":  "Player catches the real killer, Calixto Corrium, during the nighttime patrol and brings him to justice. True quest completion.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x0001F7A3",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "min_stage":  250
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "CLUE_FOLLOWUP"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "CRIME_SCENE"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

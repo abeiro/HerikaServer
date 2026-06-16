@@ -114,6 +114,31 @@ if (!function_exists('chimQuestEngineFeatureEnabled')) {
         if ($cached !== null) {
             return $cached;
         }
+
+        if (!function_exists('chimGetGeneralSettingBool')) {
+            $settingsPath = __DIR__ . DIRECTORY_SEPARATOR . 'settings.php';
+            if (file_exists($settingsPath)) {
+                require_once($settingsPath);
+            }
+        }
+
+        if (function_exists('chimGetGeneralSettingRow') && function_exists('chimGetGeneralSettingBool')) {
+            try {
+                if (chimGetGeneralSettingRow('CHIM_AI_QUEST_PROGRESSION')) {
+                    $cached = chimGetGeneralSettingBool('CHIM_AI_QUEST_PROGRESSION', false);
+                    return $cached;
+                }
+            } catch (Throwable $e) {
+                chimQuestEngineLog('warn', 'Could not read CHIM_AI_QUEST_PROGRESSION general setting: ' . $e->getMessage());
+            }
+        }
+
+        if (array_key_exists('CHIM_AI_QUEST_PROGRESSION', $GLOBALS)) {
+            $valueCn = strtolower(trim((string)$GLOBALS['CHIM_AI_QUEST_PROGRESSION']));
+            $cached = in_array($valueCn, array('1', 'true', 'on', 'yes', 'enabled'), true);
+            return $cached;
+        }
+
         if (!chimQuestEngineHasDb() || !chimQuestEngineTableExists('conf_opts')) {
             $cached = false;
             return false;
@@ -502,6 +527,59 @@ if (!function_exists('chimQuestEngineFetchDefinitions')) {
     }
 }
 
+if (!function_exists('chimQuestEngineDefinitionReferencesDialogueNpc')) {
+    function chimQuestEngineDefinitionReferencesDialogueNpc(array $definition, $npcName)
+    {
+        $npcNameCn = trim((string)$npcName);
+        if ($npcNameCn === '') {
+            return false;
+        }
+
+        $npcFactsMap = $definition['npc_facts'] ?? array();
+        if (is_array($npcFactsMap) && chimQuestEngineFindCaseInsensitiveKey($npcFactsMap, $npcNameCn) !== null) {
+            return true;
+        }
+
+        foreach ($definition['beats'] ?? array() as $beat) {
+            if (!is_array($beat)) {
+                continue;
+            }
+            $focusNpc = trim((string)($beat['focus_npc'] ?? ''));
+            if ($focusNpc !== '' && strcasecmp($focusNpc, $npcNameCn) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('chimQuestEngineFilterDefinitionsForEvent')) {
+    function chimQuestEngineFilterDefinitionsForEvent(array $definitions, $eventType, array $payload)
+    {
+        if (strtolower(trim((string)$eventType)) !== 'dialogue_turn') {
+            return $definitions;
+        }
+
+        $npcName = trim((string)($payload['npc_name'] ?? ''));
+        if ($npcName === '') {
+            return array();
+        }
+
+        $filtered = array();
+        foreach ($definitions as $definition) {
+            if (!is_array($definition)) {
+                continue;
+            }
+            if (chimQuestEngineDefinitionReferencesDialogueNpc($definition, $npcName)) {
+                $filtered[] = $definition;
+            }
+        }
+
+        return $filtered;
+    }
+}
+
 if (!function_exists('chimQuestEngineGetInstance')) {
     function chimQuestEngineGetInstance($questKey)
     {
@@ -870,8 +948,45 @@ if (!function_exists('chimQuestEngineConditionSatisfied')) {
         }
 
         if ($type === 'quest_stage') {
+            if (!empty($condition['quest_key']) || !empty($condition['quest_editor_id'])) {
+                $otherInstance = chimQuestEngineGetReferencedInstance($condition);
+                $stage = intval($condition['min_stage'] ?? $condition['stage'] ?? -1);
+                return ($stage >= 0 && $otherInstance && $otherInstance['current_stage'] !== null && intval($otherInstance['current_stage']) >= $stage);
+            }
+
             $stage = intval($condition['min_stage'] ?? $condition['stage'] ?? -1);
             return ($stage >= 0 && $state['current_stage'] !== null && intval($state['current_stage']) >= $stage);
+        }
+
+        if ($type === 'quest_started') {
+            $otherInstance = chimQuestEngineGetReferencedInstance($condition);
+            return ($otherInstance && (strtolower((string)$otherInstance['run_state']) !== 'inactive' || $otherInstance['current_stage'] !== null));
+        }
+
+        if ($type === 'quest_not_started') {
+            $otherInstance = chimQuestEngineGetReferencedInstance($condition);
+            return (!$otherInstance || (strtolower((string)$otherInstance['run_state']) === 'inactive' && $otherInstance['current_stage'] === null));
+        }
+
+        if ($type === 'quest_completed') {
+            $otherInstance = chimQuestEngineGetReferencedInstance($condition);
+            if (!$otherInstance) {
+                return false;
+            }
+            if (strtolower((string)$otherInstance['run_state']) === 'completed') {
+                return true;
+            }
+
+            $stage = intval($condition['min_stage'] ?? $condition['stage'] ?? -1);
+            return ($stage >= 0 && $otherInstance['current_stage'] !== null && intval($otherInstance['current_stage']) >= $stage);
+        }
+
+        if ($type === 'quest_beat_fired') {
+            return chimQuestEngineReferencedBeatFired($condition);
+        }
+
+        if ($type === 'quest_beat_not_fired') {
+            return !chimQuestEngineReferencedBeatFired($condition);
         }
 
         return true;
@@ -929,6 +1044,161 @@ if (!function_exists('chimQuestEngineBeatHasDialogueTrigger')) {
         }
 
         return false;
+    }
+}
+
+if (!function_exists('chimQuestEngineGetReferencedInstance')) {
+    function chimQuestEngineGetReferencedInstance(array $reference)
+    {
+        if (!chimQuestEngineReady()) {
+            return null;
+        }
+
+        $questKey = chimQuestEngineNormalizeQuestKey($reference['quest_key'] ?? '');
+        if ($questKey !== '') {
+            return chimQuestEngineGetInstance($questKey);
+        }
+
+        $questEditorId = trim((string)($reference['quest_editor_id'] ?? ''));
+        if ($questEditorId === '') {
+            return null;
+        }
+
+        $questEditorIdEscaped = $GLOBALS["db"]->escape($questEditorId);
+        $row = $GLOBALS["db"]->fetchOne("
+            SELECT quest_key, quest_editor_id, run_state, current_stage, last_gamets, state_json
+            FROM public.skyrim_quest_instances
+            WHERE lower(quest_editor_id) = lower('{$questEditorIdEscaped}')
+            ORDER BY updated_at DESC
+            LIMIT 1
+        ");
+        if (!$row) {
+            return null;
+        }
+
+        $row['state_json'] = chimQuestEngineNormalizeState(chimQuestEngineJsonDecode($row['state_json'] ?? '{}', array()));
+        $row['current_stage'] = ($row['current_stage'] === null || $row['current_stage'] === '') ? null : intval($row['current_stage']);
+        $row['last_gamets'] = ($row['last_gamets'] === null || $row['last_gamets'] === '') ? null : intval($row['last_gamets']);
+        return $row;
+    }
+}
+
+if (!function_exists('chimQuestEngineReferencedBeatFired')) {
+    function chimQuestEngineReferencedBeatFired(array $reference)
+    {
+        if (!chimQuestEngineReady() || !chimQuestEngineTableExists('skyrim_quest_beat_states')) {
+            return false;
+        }
+
+        $questKey = chimQuestEngineNormalizeQuestKey($reference['quest_key'] ?? '');
+        $beatId = trim((string)($reference['beat_id'] ?? $reference['id'] ?? ''));
+        if ($questKey === '' || $beatId === '') {
+            return false;
+        }
+
+        $questKeyEscaped = $GLOBALS["db"]->escape($questKey);
+        $beatIdEscaped = $GLOBALS["db"]->escape($beatId);
+        $row = $GLOBALS["db"]->fetchOne("
+            SELECT fired
+            FROM public.skyrim_quest_beat_states
+            WHERE quest_key = '{$questKeyEscaped}'
+              AND beat_id = '{$beatIdEscaped}'
+            LIMIT 1
+        ");
+
+        return ($row && !empty($row['fired']));
+    }
+}
+
+if (!function_exists('chimQuestEngineFirstBeatId')) {
+    function chimQuestEngineFirstBeatId(array $definition)
+    {
+        foreach ($definition['beats'] ?? array() as $beat) {
+            if (!is_array($beat)) {
+                continue;
+            }
+            $beatId = trim((string)($beat['id'] ?? ''));
+            if ($beatId !== '') {
+                return $beatId;
+            }
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('chimQuestEngineBeatIsNaturalStartCandidate')) {
+    function chimQuestEngineBeatIsNaturalStartCandidate(array $definition, array $beat)
+    {
+        if (!chimQuestEngineBeatHasDialogueTrigger($beat)) {
+            return false;
+        }
+
+        if (!empty($beat['allow_natural_start']) || !empty($beat['natural_start']) || !empty($beat['activation'])) {
+            return true;
+        }
+
+        $beatId = trim((string)($beat['id'] ?? ''));
+        $naturalStart = $definition['natural_start'] ?? null;
+        if (is_array($naturalStart)) {
+            if (array_key_exists('enabled', $naturalStart) && empty($naturalStart['enabled'])) {
+                return false;
+            }
+
+            $allowedBeats = $naturalStart['beats'] ?? array();
+            if (is_array($allowedBeats) && !empty($allowedBeats)) {
+                return in_array($beatId, array_map('strval', $allowedBeats), true);
+            }
+
+            if (!empty($naturalStart['enabled'])) {
+                return ($beatId !== '' && $beatId === chimQuestEngineFirstBeatId($definition));
+            }
+        }
+
+        $prerequisites = $beat['prerequisites'] ?? array();
+        return ($beatId !== '' && $beatId === chimQuestEngineFirstBeatId($definition) && (empty($prerequisites) || !is_array($prerequisites)));
+    }
+}
+
+if (!function_exists('chimQuestEngineNaturalStartConditionsMet')) {
+    function chimQuestEngineNaturalStartConditionsMet(array $definition, array $beat, array $state)
+    {
+        $conditions = array();
+        $naturalStart = $definition['natural_start'] ?? null;
+        if (is_array($naturalStart) && isset($naturalStart['requires']) && is_array($naturalStart['requires'])) {
+            $conditions = array_merge($conditions, $naturalStart['requires']);
+        }
+        if (isset($beat['start_conditions']) && is_array($beat['start_conditions'])) {
+            $conditions = array_merge($conditions, $beat['start_conditions']);
+        }
+
+        return chimQuestEngineConditionsMet($conditions, $state, $definition);
+    }
+}
+
+if (!function_exists('chimQuestEngineBeatAllowedForRuntime')) {
+    function chimQuestEngineBeatAllowedForRuntime(array $definition, array $beat, $eventType, array $payload, array $instance)
+    {
+        $eventTypeCn = strtolower(trim((string)$eventType));
+        if ($eventTypeCn === 'quest_stage') {
+            return true;
+        }
+
+        $runState = strtolower(trim((string)($instance['run_state'] ?? 'inactive')));
+        $currentStage = $instance['current_stage'] ?? null;
+        if ($runState !== 'inactive' || $currentStage !== null) {
+            return true;
+        }
+
+        if ($eventTypeCn !== 'dialogue_turn' && $eventTypeCn !== 'dialogue_turn_intent') {
+            return false;
+        }
+
+        if (!chimQuestEngineBeatIsNaturalStartCandidate($definition, $beat)) {
+            return false;
+        }
+
+        return chimQuestEngineNaturalStartConditionsMet($definition, $beat, $instance['state_json'] ?? array());
     }
 }
 
@@ -1100,6 +1370,9 @@ if (!function_exists('chimQuestEngineBuildDialogueIntentCandidates')) {
                 continue;
             }
 
+            if (!chimQuestEngineBeatAllowedForRuntime($definition, $beat, 'dialogue_turn', $payload, $instance)) {
+                continue;
+            }
             if (!chimQuestEngineBeatPrerequisitesMet($beat, $beatStateMap)) {
                 continue;
             }
@@ -1352,6 +1625,8 @@ if (!function_exists('chimQuestEngineParseDialogueIntentResponse')) {
 if (!function_exists('chimQuestEngineSelectDialogueBeatByIntent')) {
     function chimQuestEngineSelectDialogueBeatByIntent(array $definition, array $instance, array $beatStateMap, array $payload)
     {
+        static $intentFallbackCounts = array();
+
         $playerTextCn = trim((string)($payload['player_text'] ?? ''));
         if ($playerTextCn === '') {
             return null;
@@ -1361,6 +1636,20 @@ if (!function_exists('chimQuestEngineSelectDialogueBeatByIntent')) {
         if (empty($candidates)) {
             return null;
         }
+
+        $intentBudgetKey = md5(implode('|', array(
+            strtolower(trim((string)($payload['npc_name'] ?? ''))),
+            strtolower($playerTextCn),
+            strval(intval($payload['gamets'] ?? 0)),
+            strval(intval($payload['ts'] ?? 0)),
+        )));
+        $intentFallbackLimit = max(1, intval($GLOBALS['CHIM_QUEST_DIALOGUE_INTENT_MAX_CALLS'] ?? 3));
+        $intentFallbackCounts[$intentBudgetKey] = intval($intentFallbackCounts[$intentBudgetKey] ?? 0);
+        if ($intentFallbackCounts[$intentBudgetKey] >= $intentFallbackLimit) {
+            chimQuestEngineLog('debug', 'Skipping quest intent fallback: per-turn fallback limit reached');
+            return null;
+        }
+        $intentFallbackCounts[$intentBudgetKey]++;
 
         $driverName = trim((string)($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["driver"] ?? ($GLOBALS["CURRENT_CONNECTOR"] ?? '')));
         if ($driverName === '') {
@@ -2133,6 +2422,9 @@ if (!function_exists('chimQuestEngineHandleEventForDefinition')) {
                 if ($beatId === '' || !empty($beatStateMap[$beatId]['fired'])) {
                     continue;
                 }
+                if (!chimQuestEngineBeatAllowedForRuntime($definition, $beat, $eventType, $payload, $instance)) {
+                    continue;
+                }
                 if (!chimQuestEngineBeatPrerequisitesMet($beat, $beatStateMap)) {
                     continue;
                 }
@@ -2208,7 +2500,7 @@ if (!function_exists('chimQuestEngineHandleEvent')) {
 
         chimQuestEngineMaybeBootstrapBundledDefinitions();
         $rollback = chimQuestEngineRollbackRuntimeToGamets($payload['gamets'] ?? null);
-        $definitions = chimQuestEngineFetchDefinitions(true);
+        $definitions = chimQuestEngineFilterDefinitionsForEvent(chimQuestEngineFetchDefinitions(true), $eventType, $payload);
         $results = array();
 
         foreach ($definitions as $definition) {

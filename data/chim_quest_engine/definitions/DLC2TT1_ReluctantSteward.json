@@ -1,0 +1,256 @@
+{
+    "quest_key":  "dlc2tt1_reluctantsteward",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00017E8D",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2TT1",
+    "title":  "Reluctant Steward",
+    "description":  "Neloth\u0027s steward Varona Nelas has gone missing from Tel Mithryn. Find her, and if the worst has happened, recruit a willing replacement from Raven Rock.",
+    "npc_facts":  {
+                      "Neloth":  {
+                                     "base_facts":  [
+                                                        "I am a master wizard of House Telvanni and the founder of Tel Mithryn.",
+                                                        "I expect my servants to attend to my needs, including brewing canis root tea.",
+                                                        "My steward Varona Nelas has gone missing and I need her found immediately."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "NEELOTH_REQUESTS_HELP":  [
+                                                                                      "I have sent someone to find my missing steward Varona. I want my apple cabbage stew and canis root tea."
+                                                                                  ],
+                                                        "REPORT_NELOTH_VARONA_DEAD":  [
+                                                                                          "Varona is dead, killed by ash spawn. I need a new steward from Raven Rock. They are in awe of me there."
+                                                                                      ],
+                                                        "QUEST_COMPLETE":  [
+                                                                               "Drovas Relvi is my new steward. He makes dreadful canis root tea but runs the place well enough.",
+                                                                               "I have granted access to my staff enchanter as reward for finding me a new steward."
+                                                                           ]
+                                                    }
+                                 },
+                      "Varona Nelas":  {
+                                           "base_facts":  [
+                                                              "I am Neloth\u0027s steward at Tel Mithryn.",
+                                                              "Neloth is very demanding and constantly sends me on errands."
+                                                          ],
+                                           "beat_facts":  {
+
+                                                          }
+                                       },
+                      "Drovas Relvi":  {
+                                           "base_facts":  [
+                                                              "I work as a cook at the Retching Netch in Raven Rock.",
+                                                              "Geldis Sadri won\u0027t let me drink on the job.",
+                                                              "I owe money to Mogrul and would like to leave Raven Rock."
+                                                          ],
+                                           "beat_facts":  {
+                                                              "DROVAS_ACCEPTS_POSITION":  [
+                                                                                              "I have accepted the position as Neloth\u0027s new steward at Tel Mithryn.",
+                                                                                              "Leaving Raven Rock also helps me escape my debt to Mogrul."
+                                                                                          ]
+                                                          }
+                                       },
+                      "Elynea Mothren":  {
+                                             "base_facts":  [
+                                                                "I am the apothecary at Tel Mithryn.",
+                                                                "Varona was heading to Raven Rock for supplies the last I saw her."
+                                                            ],
+                                             "beat_facts":  {
+
+                                                            }
+                                         },
+                      "Ulves Romoran":  {
+                                            "base_facts":  [
+                                                               "I work in the Tel Mithryn kitchen.",
+                                                               "Varona left for Raven Rock to gather supplies."
+                                                           ],
+                                            "beat_facts":  {
+
+                                                           }
+                                        }
+                  },
+    "beats":  [
+                  {
+                      "id":  "NEELOTH_REQUESTS_HELP",
+                      "focus_npc":  "Neloth",
+                      "comment":  "Neloth asks the player to find his missing steward Varona. Quest begins at stage 150.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00017E8D",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  150
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00017E8D",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  150
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "find Varona",
+                                                            "missing steward",
+                                                            "where is Varona",
+                                                            "steward"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TT1",
+                                           "min_stage":  150,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "LEARN_VARONA_LOCATION",
+                      "focus_npc":  "",
+                      "comment":  "Player learns from Elynea or Ulves that Varona headed to Raven Rock. Stage 170 update.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TT1",
+                                           "min_stage":  170,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "NEELOTH_REQUESTS_HELP"
+                                        ]
+                  },
+                  {
+                      "id":  "VARONA_FOUND_DEAD",
+                      "focus_npc":  "",
+                      "comment":  "Player finds Varona\u0027s body on the road to Raven Rock, killed by ash spawn. Stage 200.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TT1",
+                                           "min_stage":  200,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "LEARN_VARONA_LOCATION"
+                                        ]
+                  },
+                  {
+                      "id":  "REPORT_NELOTH_VARONA_DEAD",
+                      "focus_npc":  "Neloth",
+                      "comment":  "Player tells Neloth that Varona is dead. Neloth sends player to find a new steward in Raven Rock. Sets stage 300.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00017E8D",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  300
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00017E8D",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  300
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Varona is dead",
+                                                            "Varona killed",
+                                                            "ash spawn killed her",
+                                                            "she\u0027s dead"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TT1",
+                                           "min_stage":  300,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "VARONA_FOUND_DEAD"
+                                        ]
+                  },
+                  {
+                      "id":  "DROVAS_ACCEPTS_POSITION",
+                      "focus_npc":  "Drovas Relvi",
+                      "comment":  "Drovas Relvi eagerly accepts the steward position at Tel Mithryn. Stage 400.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TT1",
+                                           "min_stage":  400,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REPORT_NELOTH_VARONA_DEAD"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Neloth",
+                      "comment":  "Player reports back to Neloth. Receives gold and access to the staff enchanter. Quest finishes at stage 500.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TT1",
+                                           "min_stage":  500,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "DROVAS_ACCEPTS_POSITION"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "NEELOTH_REQUESTS_HELP"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

@@ -1,0 +1,145 @@
+{
+    "quest_key":  "dlc2ttr3b_windandsand",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001D8D1",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2TTR3b",
+    "title":  "Wind and Sand",
+    "description":  "Neloth asks the player to retrieve the book Wind and Sand from a radiant location for his spell research into adapting Redguard magic to Solstheim\u0027s ash. Returning the book earns gold and makes the Whirlwind Cloak spell tome available from Talvas Fathryon.",
+    "npc_facts":  {
+                      "Neloth":  {
+                                     "base_facts":  [
+                                                        "I am a Telvanni wizard residing in Tel Mithryn on Solstheim.",
+                                                        "I conduct spell research and magical experiments.",
+                                                        "I am attempting to adapt Redguard magic to the island\u0027s ash."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "ACCEPT_QUEST":  [
+                                                                             "I have asked someone to retrieve the book Wind and Sand for my spell research."
+                                                                         ],
+                                                        "QUEST_COMPLETE":  [
+                                                                               "The Wind and Sand book proved invaluable. I can now create a wind spell with its contents."
+                                                                           ]
+                                                    }
+                                 },
+                      "Talvas Fathryon":  {
+                                              "base_facts":  [
+                                                                 "I am Neloth\u0027s apprentice.",
+                                                                 "I sell spells at Tel Mithryn."
+                                                             ],
+                                              "beat_facts":  {
+                                                                 "QUEST_COMPLETE":  [
+                                                                                        "I now have the Whirlwind Cloak spell tome available for purchase."
+                                                                                    ]
+                                                             }
+                                          }
+                  },
+    "beats":  [
+                  {
+                      "id":  "ACCEPT_QUEST",
+                      "focus_npc":  "Neloth",
+                      "comment":  "Player accepts Neloth\u0027s request to retrieve the Wind and Sand book.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0001D8D1",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  100
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001D8D1",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  100
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "help with research",
+                                                            "Wind and Sand",
+                                                            "retrieve the book",
+                                                            "assist you"
+                                                        ]
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "BOOK_RETRIEVED",
+                      "focus_npc":  "",
+                      "comment":  "Player finds the Wind and Sand book in the radiant dungeon location.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001D8D1",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  100
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001D8D1",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  200
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x0001D8D1",
+                                           "quest_plugin":  "Dragonborn.esm",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ACCEPT_QUEST"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Neloth",
+                      "comment":  "Player returns the book to Neloth, completing the quest.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001D8D1",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  200
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x0001D8D1",
+                                           "quest_plugin":  "Dragonborn.esm",
+                                           "min_stage":  300
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BOOK_RETRIEVED"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "ACCEPT_QUEST"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

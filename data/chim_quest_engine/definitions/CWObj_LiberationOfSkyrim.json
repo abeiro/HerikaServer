@@ -1,0 +1,95 @@
+{
+  "quest_key": "cwobj_liberationofskyrim",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00029940",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "CWObj",
+  "title": "Liberation of Skyrim",
+  "description": "The overarching Stormcloak Civil War quest. Report to Ulfric Stormcloak in Windhelm for assignments, then speak to Galmar Stone-Fist at the relevant Stormcloak camp to receive specific battle missions. Liberate each Imperial-held hold by conquering its fort, culminating in the Battle for Solitude.",
+  "npc_facts": {
+    "Ulfric Stormcloak": {
+      "base_facts": [
+        "I am the leader of the Stormcloak rebellion and Jarl of Eastmarch.",
+        "I direct the liberation campaign from the Palace of the Kings in Windhelm.",
+        "I promote those who prove themselves in battle and grant titles and rewards."
+      ],
+      "beat_facts": {
+        "LIBERATION_STARTED": [
+          "This soldier has pledged to help liberate Skyrim from Imperial control."
+        ],
+        "LIBERATION_COMPLETED": [
+          "We have won the war. Skyrim is free of Imperial rule."
+        ]
+      }
+    },
+    "Galmar Stone-Fist": {
+      "base_facts": [
+        "I am Ulfric's second-in-command and handle tactical field assignments.",
+        "I can be found in the main tent at Stormcloak camps, reviewing maps of the war.",
+        "Soldiers report to me with 'Reporting in' to receive their specific mission."
+      ],
+      "beat_facts": {
+        "LIBERATION_STARTED": [
+          "A new recruit has joined the liberation effort. I will assign them to the first hold."
+        ],
+        "LIBERATION_COMPLETED": [
+          "The war is over. The Empire is driven from Skyrim."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "LIBERATION_STARTED",
+      "focus_npc": "Ulfric Stormcloak",
+      "comment": "Quest starts automatically after Battle for Whiterun. Player pledges to help liberate Skyrim.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWObj",
+          "min_stage": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "LIBERATION_COMPLETED",
+      "focus_npc": "Ulfric Stormcloak",
+      "comment": "Quest finishes after Battle for Solitude. General Tullius is dead and Skyrim is liberated.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWObj",
+          "min_stage": 255
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LIBERATION_STARTED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "LIBERATION_STARTED"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "cw03_messagetowhiterunstormcloaks",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

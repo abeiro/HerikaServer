@@ -1,0 +1,231 @@
+{
+    "quest_key":  "mq303_worldeaterseyrie",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00046EF0",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MQ303",
+    "title":  "The World-Eater\u0027s Eyrie",
+    "description":  "Odahviing reveals that Alduin has fled to Sovngarde through a portal at Skuldafn. The Dragonborn must free Odahviing, be flown to Skuldafn, fight through the temple, defeat the dragon priest Nahkriin, and enter the portal to Sovngarde.",
+    "npc_facts":  {
+                      "Odahviing":  {
+                                        "base_facts":  [
+                                                           "I am a dragon captured by the Whiterun guards at Dragonsreach.",
+                                                           "Alduin has fled to Sovngarde through a portal at the ancient temple of Skuldafn in the Jerall Mountains.",
+                                                           "I will fly you to Skuldafn if you set me free."
+                                                       ],
+                                        "beat_facts":  {
+                                                           "FREE_ODAHVIING":  [
+                                                                                  "The Dragonborn has set me free. I will honor our bargain and fly them to Skuldafn."
+                                                                              ],
+                                                           "TRAVEL_TO_SKULDAFN":  [
+                                                                                      "I have flown the Dragonborn to Skuldafn as promised. My debt is repaid."
+                                                                                  ]
+                                                       }
+                                    },
+                      "Nahkriin":  {
+                                       "base_facts":  [
+                                                          "I am a dragon priest guarding Alduin\u0027s portal to Sovngarde at the summit of Skuldafn.",
+                                                          "None shall pass through the portal while I live."
+                                                      ],
+                                       "beat_facts":  {
+
+                                                      }
+                                   }
+                  },
+    "beats":  [
+                  {
+                      "id":  "FREE_ODAHVIING",
+                      "focus_npc":  "Odahviing",
+                      "comment":  "Player frees Odahviing from Dragonsreach to gain passage to Skuldafn.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00046EF0",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00046EF0",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "free",
+                                                            "release",
+                                                            "let him go",
+                                                            "set free"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ303",
+                                           "min_stage":  10
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "TRAVEL_TO_SKULDAFN",
+                      "focus_npc":  "Odahviing",
+                      "comment":  "Player tells Odahviing they are ready to travel and he flies them to Skuldafn.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00046EF0",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  40
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x00046EF0",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  10
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00046EF0",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  20
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "ready",
+                                                            "travel",
+                                                            "fly",
+                                                            "take me",
+                                                            "let\u0027s go"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ303",
+                                           "min_stage":  40
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FREE_ODAHVIING"
+                                        ]
+                  },
+                  {
+                      "id":  "REACH_PORTAL",
+                      "focus_npc":  "",
+                      "comment":  "Player arrives at Skuldafn and must fight through the temple to reach Alduin\u0027s portal.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x00046EF0",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  20
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00046EF0",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  30
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ303",
+                                           "min_stage":  50
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "TRAVEL_TO_SKULDAFN"
+                                        ]
+                  },
+                  {
+                      "id":  "ENTER_SOVNGARDE",
+                      "focus_npc":  "",
+                      "comment":  "Player defeats Nahkriin and enters Alduin\u0027s portal to Sovngarde.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x00046EF0",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  30
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00046EF0",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  40
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ303",
+                                           "min_stage":  180
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REACH_PORTAL"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest completes after the Dragonborn enters Sovngarde.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x00046EF0",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  40
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MQ303",
+                                           "stage":  300
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ENTER_SOVNGARDE"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "FREE_ODAHVIING"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "mq301_fallen",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

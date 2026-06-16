@@ -1,0 +1,158 @@
+{
+    "quest_key":  "dlc2rrfavor05_paininthenecklace",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00024FA8",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2RRFavor05",
+    "title":  "Pain in the Necklace",
+    "description":  "Fethis Alor in Raven Rock will pay 500 gold for each East Empire pendant found in East Empire Company strongboxes scattered across Solstheim.",
+    "npc_facts":  {
+                      "Fethis Alor":  {
+                                          "base_facts":  [
+                                                             "I run a general goods shop from my house in Raven Rock.",
+                                                             "I am bitter about living and working in Solstheim.",
+                                                             "East Empire pendants were once employee incentives and are now valuable collector\u0027s items.",
+                                                             "I will pay 500 gold for each East Empire pendant brought to me.",
+                                                             "The pendants are found in East Empire Company strongboxes, which have expert locks."
+                                                         ],
+                                          "beat_facts":  {
+                                                             "LEARN_ABOUT_PENDANTS":  [
+                                                                                          "I have told the traveler about the East Empire pendants and my interest in buying them."
+                                                                                      ],
+                                                             "QUEST_ACCEPTED":  [
+                                                                                    "The traveler has agreed to look for East Empire pendants for me."
+                                                                                ],
+                                                             "PENDANT_RETURNED":  [
+                                                                                      "The traveler has brought me an East Empire pendant and I paid them 500 gold."
+                                                                                  ]
+                                                         }
+                                      }
+                  },
+    "beats":  [
+                  {
+                      "id":  "LEARN_ABOUT_PENDANTS",
+                      "focus_npc":  "Fethis Alor",
+                      "comment":  "Player learns about East Empire pendants from Fethis.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "pendant",
+                                                            "East Empire",
+                                                            "collecting",
+                                                            "strongbox"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "QUEST_ACCEPTED",
+                      "focus_npc":  "Fethis Alor",
+                      "comment":  "Player agrees to find pendants; sets stage 20 and displays objective 10.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00024FA8",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  20
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x00024FA8",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "I\u0027ll look",
+                                                            "find them",
+                                                            "help you",
+                                                            "bring them"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "LEARN_ABOUT_PENDANTS"
+                                        ]
+                  },
+                  {
+                      "id":  "PENDANT_RETURNED",
+                      "focus_npc":  "Fethis Alor",
+                      "comment":  "Player returns an East Empire pendant to Fethis for 500 gold.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "here\u0027s the pendant",
+                                                            "found a pendant",
+                                                            "sell you this pendant",
+                                                            "East Empire pendant"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_ACCEPTED"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest removed from journal at stage 250.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "all pendants",
+                                                            "finished collecting",
+                                                            "no more pendants"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_ACCEPTED"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "LEARN_ABOUT_PENDANTS"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

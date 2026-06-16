@@ -1,0 +1,90 @@
+{
+    "quest_key":  "dlc2blackbook06quest_blackbookfilamentandfiligree",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0003216F",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2BlackBook06Quest",
+    "title":  "Black Book: Filament and Filigree",
+    "description":  "Read the Black Book Filament and Filigree found in Kolbjorn Barrow after defeating Ahzidal, navigate the dark and damaging paths of Apocrypha, and claim one of three greater powers as a reward.",
+    "npc_facts":  {
+
+                  },
+    "beats":  [
+                  {
+                      "id":  "ENTER_APOCRYPHA",
+                      "focus_npc":  "",
+                      "comment":  "Player reads the Black Book and is transported to Hermaeus Mora\u0027s realm of Apocrypha.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2BlackBook06Quest",
+                                           "min_stage":  10,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "read the black book",
+                                                            "entered apocrypha",
+                                                            "filament and filigree"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "LEARN_KNOWLEDGE",
+                      "focus_npc":  "",
+                      "comment":  "Player reaches the end of Apocrypha, reads the book again, and chooses a reward power.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2BlackBook06Quest",
+                                           "min_stage":  20,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "learned the hidden knowledge",
+                                                            "chose my reward",
+                                                            "secret of arcana",
+                                                            "secret of protection",
+                                                            "secret of strength"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ENTER_APOCRYPHA"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "ENTER_APOCRYPHA"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

@@ -1,0 +1,209 @@
+{
+    "quest_key":  "dlc2rr01_marchofthedead",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00018B13",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2RR01",
+    "title":  "March of the Dead",
+    "description":  "Ash spawn have been attacking Raven Rock. Captain Veleth enlists help to find their source, leading to the reanimated General Falx Carius at Fort Frostmoth who must be stopped.",
+    "npc_facts":  {
+                      "Captain Veleth":  {
+                                             "base_facts":  [
+                                                                "I am the captain of the Redoran Guard in Raven Rock, serving under Councilor Morvayn.",
+                                                                "Ash spawn have been attacking Raven Rock and I am trying to locate their source.",
+                                                                "I lack the manpower to investigate without leaving the town undefended."
+                                                            ],
+                                             "beat_facts":  {
+                                                                "ASH_SPAWN_ENCOUNTER":  [
+                                                                                            "A stranger helped me fight off ash spawn at Old Attius Farm. I have asked them to search for clues."
+                                                                                        ],
+                                                                "SEARCH_FARM":  [
+                                                                                    "The stranger found a Declaration of War note written by General Falx Carius. I sent them to Fort Frostmoth to deal with him."
+                                                                                ],
+                                                                "FORT_FROSTMOTH":  [
+                                                                                       "I am awaiting word from the stranger about General Carius at Fort Frostmoth."
+                                                                                   ],
+                                                                "RETURN_AND_REPORT":  [
+                                                                                          "The stranger has slain General Falx Carius and ended the ash spawn threat. Councilor Morvayn authorized a reward."
+                                                                                      ],
+                                                                "QUEST_COMPLETE":  [
+                                                                                       "The ash spawn threat to Raven Rock has been eliminated. The stranger has been rewarded for their service."
+                                                                                   ]
+                                                            }
+                                         },
+                      "General Falx Carius":  {
+                                                  "base_facts":  [
+                                                                     "I was the Imperial garrison commander at Fort Frostmoth over 200 years ago.",
+                                                                     "I died when Red Mountain erupted but was reanimated by a conjurer using heartstones.",
+                                                                     "I believe I am still defending the Empire and sending my men against the enemies at Raven Rock."
+                                                                 ],
+                                                  "beat_facts":  {
+
+                                                                 }
+                                              }
+                  },
+    "beats":  [
+                  {
+                      "id":  "ASH_SPAWN_ENCOUNTER",
+                      "focus_npc":  "Captain Veleth",
+                      "comment":  "Player encounters Veleth fighting ash spawn at Old Attius Farm and helps him defeat them.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2RR01",
+                                           "min_stage":  30,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "help veleth",
+                                                            "ash spawn",
+                                                            "attius farm"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "SEARCH_FARM",
+                      "focus_npc":  "Captain Veleth",
+                      "comment":  "Player searches the farm for clues, finds the Declaration of War note, and gives it to Veleth who sends them to Fort Frostmoth.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2RR01",
+                                           "min_stage":  50,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "search farm",
+                                                            "find clues",
+                                                            "declaration of war",
+                                                            "strange note"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ASH_SPAWN_ENCOUNTER"
+                                        ]
+                  },
+                  {
+                      "id":  "FORT_FROSTMOTH",
+                      "focus_npc":  "General Falx Carius",
+                      "comment":  "Player travels to Fort Frostmoth and kills the reanimated General Falx Carius.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2RR01",
+                                           "min_stage":  80,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "fort frostmoth",
+                                                            "kill carius",
+                                                            "general falx carius"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SEARCH_FARM"
+                                        ]
+                  },
+                  {
+                      "id":  "RETURN_AND_REPORT",
+                      "focus_npc":  "Captain Veleth",
+                      "comment":  "Player returns to Raven Rock, searches Carius\u0027s remains, reads the note, reports to a guard, and gives the note to Veleth.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2RR01",
+                                           "min_stage":  90,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "return to veleth",
+                                                            "carius is dead",
+                                                            "killed general carius"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FORT_FROSTMOTH"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Captain Veleth",
+                      "comment":  "Quest complete. Veleth rewards the player with leveled gold and Champion\u0027s Cudgel.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2RR01",
+                                           "min_stage":  200,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RETURN_AND_REPORT"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "ASH_SPAWN_ENCOUNTER"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

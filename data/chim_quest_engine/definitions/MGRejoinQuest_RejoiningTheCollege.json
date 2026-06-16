@@ -1,0 +1,108 @@
+{
+  "quest_key": "mgrejoinquest_rejoiningthecollege",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000C9A0E",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MGRejoinQuest",
+  "title": "Rejoining the College",
+  "description": "After committing a serious crime against a College of Winterhold member, the player is automatically suspended and must speak with Tolfdir to pay a fine and have their suspension lifted.",
+  "npc_facts": {
+    "Tolfdir": {
+      "base_facts": [
+        "I am a senior member of the College of Winterhold.",
+        "I handle disciplinary matters when members break the College's rules.",
+        "Murder is the only crime serious enough to warrant suspension from the College."
+      ],
+      "beat_facts": {
+        "SUSPENSION_STARTED": [
+          "A member of the College has been suspended for their actions and must speak with me."
+        ],
+        "FINE_ANNOUNCED": [
+          "I have informed the suspended member of the fine they must pay to be reinstated. The amount depends on how many past incidents there have been."
+        ],
+        "QUEST_COMPLETE": [
+          "The suspension has been lifted after the fine was paid."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "SUSPENSION_STARTED",
+      "focus_npc": "Tolfdir",
+      "comment": "Player has been suspended from the College and must speak with Tolfdir about having it lifted.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRejoinQuest",
+          "min_stage": 5
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "FINE_ANNOUNCED",
+      "focus_npc": "Tolfdir",
+      "comment": "Tolfdir has determined the fine amount based on the number of past incidents. Stage 10=250 gold, 20=500 gold, 30=1000 gold.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRejoinQuest",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "fine",
+            "suspension",
+            "pay",
+            "rejoin",
+            "lift my suspension"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SUSPENSION_STARTED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Tolfdir",
+      "comment": "Player has paid the fine and their suspension from the College has been lifted.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRejoinQuest",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FINE_ANNOUNCED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "SUSPENSION_STARTED"
+    ],
+    "requires": []
+  }
+}

@@ -1,0 +1,166 @@
+{
+    "quest_key":  "dlc2ttf1_fromtheashes",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001AAB0",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2TTF1",
+    "title":  "From the Ashes",
+    "description":  "Talvas Fathryon has accidentally summoned a hostile ash guardian at Tel Mithryn. Destroy the creature and return to Talvas for a reward.",
+    "npc_facts":  {
+                      "Talvas Fathryon":  {
+                                              "base_facts":  [
+                                                                 "I am an apprentice wizard serving Master Neloth at Tel Mithryn.",
+                                                                 "I have been practicing summoning spells, though my mastery is lacking."
+                                                             ],
+                                              "beat_facts":  {
+                                                                 "ASH_GUARDIAN_SUMMONED":  [
+                                                                                               "My ash guardian summoning worked, but the creature is hostile and out of control!"
+                                                                                           ],
+                                                                 "ASH_GUARDIAN_DESTROYED":  [
+                                                                                                "The ash guardian has been destroyed. I need to speak with whoever dealt with it."
+                                                                                            ],
+                                                                 "QUEST_COMPLETE":  [
+                                                                                        "I am grateful my ash guardian problem is solved. I offered a staff or the Conjure Ash Guardian spell tome as thanks.",
+                                                                                        "I am now willing to travel as a follower.",
+                                                                                        "I can now sell additional spell tomes including Ash Shell, Ash Rune, Bound Dagger, and Conjure Ash Guardian."
+                                                                                    ]
+                                                             }
+                                          }
+                  },
+    "beats":  [
+                  {
+                      "id":  "ASH_GUARDIAN_SUMMONED",
+                      "focus_npc":  "Talvas Fathryon",
+                      "comment":  "Talvas\u0027s ash guardian summoning has gone wrong; the quest begins and the guardian must be destroyed.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TTF1",
+                                           "min_stage":  100,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "ash guardian",
+                                                            "summoning went wrong",
+                                                            "talvas needs help",
+                                                            "hostile creature"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "ASH_GUARDIAN_DESTROYED",
+                      "focus_npc":  "Talvas Fathryon",
+                      "comment":  "The ash guardian has been defeated; player must now speak with Talvas.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0001AAB0",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  200
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001AAB0",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  200
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TTF1",
+                                           "min_stage":  200,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "killed the guardian",
+                                                            "destroyed the ash guardian",
+                                                            "guardian is dead",
+                                                            "it\u0027s done"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ASH_GUARDIAN_SUMMONED"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Talvas Fathryon",
+                      "comment":  "Player reports back to Talvas; quest finishes and reward is given.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0001AAB0",
+                                     "quest_plugin":  "Dragonborn.esm",
+                                     "stage":  300
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001AAB0",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  100
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001AAB0",
+                                             "quest_plugin":  "Dragonborn.esm",
+                                             "objective_index":  200
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2TTF1",
+                                           "min_stage":  300,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "here\u0027s your reward",
+                                                            "problem is solved",
+                                                            "thank you for the help"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ASH_GUARDIAN_DESTROYED"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "ASH_GUARDIAN_SUMMONED"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "dlc2tt2_oldfriends",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

@@ -1,0 +1,325 @@
+{
+    "quest_key":  "c03_silverhand",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001CEF4",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "C03",
+    "title":  "The Silver Hand",
+    "description":  "After proving themselves to the Companions, the player is summoned by Skjor for a secret blood ritual in the Underforge, granting lycanthropy and membership in the Circle. Aela then leads an assault on the Silver Hand stronghold at Gallows Rock, where Skjor is found dead.",
+    "npc_facts":  {
+                      "Skjor":  {
+                                    "base_facts":  [
+                                                       "I am a senior member of the Companions and part of the Circle.",
+                                                       "I am a werewolf, sharing the blood of the beast with the Circle.",
+                                                       "I have a special assignment for the newest member of the Companions."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "TALK_TO_SKJOR":  [
+                                                                             "I have summoned the new member for a special mission.",
+                                                                             "They must meet me at the Underforge tonight."
+                                                                         ],
+                                                       "MEET_SKJOR_AT_NIGHT":  [
+                                                                                   "The Underforge is a secret crypt beneath Eorlund Gray-Mane\u0027s smithy.",
+                                                                                   "The Harbinger Kodlak Whitemane must not know about this.",
+                                                                                   "I will grant the new member the power of the beast through a blood ritual."
+                                                                               ],
+                                                       "UNDERFORGE_RITUAL":  [
+                                                                                 "The blood ritual is complete. The new member is now a werewolf and one of the Circle."
+                                                                             ]
+                                                   }
+                                },
+                      "Aela the Huntress":  {
+                                                "base_facts":  [
+                                                                   "I am a member of the Companions and part of the Circle.",
+                                                                   "I am a werewolf.",
+                                                                   "Skjor and I have planned something special for the newest member."
+                                                               ],
+                                                "beat_facts":  {
+                                                                   "UNDERFORGE_RITUAL":  [
+                                                                                             "I served as the forebear for the blood ritual, offering my blood to grant lycanthropy."
+                                                                                         ],
+                                                                   "TALK_TO_AELA":  [
+                                                                                        "The new member has survived the initiation and is now one of the Circle.",
+                                                                                        "The Silver Hand at Gallows Rock must be slaughtered.",
+                                                                                        "Skjor went ahead into the fort."
+                                                                                    ],
+                                                                   "GALLOWS_ROCK_CLEARED":  [
+                                                                                                "The Silver Hand at Gallows Rock have been killed."
+                                                                                            ],
+                                                                   "QUEST_COMPLETE":  [
+                                                                                          "Skjor is dead, killed by the Silver Hand.",
+                                                                                          "I will have my revenge on the Silver Hand.",
+                                                                                          "The new member has proven themselves in battle alongside me."
+                                                                                      ]
+                                                               }
+                                            },
+                      "Kodlak Whitemane":  {
+                                               "base_facts":  [
+                                                                  "I am the Harbinger of the Companions.",
+                                                                  "I disapprove of the Circle\u0027s lycanthropy and wish to find a cure for our blood."
+                                                              ],
+                                               "beat_facts":  {
+
+                                                              }
+                                           }
+                  },
+    "beats":  [
+                  {
+                      "id":  "TALK_TO_SKJOR",
+                      "focus_npc":  "Skjor",
+                      "comment":  "Player is directed to Skjor for a special mission after completing radiant quests.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0001CEF4",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  5
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001CEF4",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "index":  5
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "talk to Skjor",
+                                                            "special mission",
+                                                            "Skjor looking for me",
+                                                            "something special planned"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "MEET_SKJOR_AT_NIGHT",
+                      "focus_npc":  "Skjor",
+                      "comment":  "Player meets Skjor at night near the secret entrance to the Underforge.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0001CEF4",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001CEF4",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "meet at night",
+                                                            "Underforge",
+                                                            "tonight",
+                                                            "meet Skjor"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "C03",
+                                           "min_stage":  5
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "TALK_TO_SKJOR"
+                                        ]
+                  },
+                  {
+                      "id":  "UNDERFORGE_RITUAL",
+                      "focus_npc":  "Skjor",
+                      "comment":  "Player enters the Underforge and participates in the blood ritual, becoming a werewolf.",
+                      "action":  {
+                                     "type":  "set_stage_cascade",
+                                     "quest_form_id":  "0x0001CEF4",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stages":  [
+                                                    15,
+                                                    20
+                                                ]
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001CEF4",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "index":  15
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001CEF4",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "index":  20
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "enter the Underforge",
+                                                            "participate",
+                                                            "ready",
+                                                            "blood ritual",
+                                                            "I am prepared"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "C03",
+                                           "min_stage":  10
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_SKJOR_AT_NIGHT"
+                                        ]
+                  },
+                  {
+                      "id":  "TALK_TO_AELA",
+                      "focus_npc":  "Aela the Huntress",
+                      "comment":  "After the rampage as a werewolf, player wakes and talks to Aela, who directs them to Gallows Rock.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0001CEF4",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  25
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0001CEF4",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "index":  25
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "talk to Aela",
+                                                            "survived the initiation",
+                                                            "Silver Hand",
+                                                            "Gallows Rock"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "C03",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "UNDERFORGE_RITUAL"
+                                        ]
+                  },
+                  {
+                      "id":  "GALLOWS_ROCK_CLEARED",
+                      "focus_npc":  "Aela the Huntress",
+                      "comment":  "Player clears Gallows Rock of Silver Hand members. Game sets stage 30 when enemies are killed.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001CEF4",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "index":  30
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "C03",
+                                           "min_stage":  30
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "TALK_TO_AELA"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Aela the Huntress",
+                      "comment":  "Aela discovers Skjor\u0027s body at Gallows Rock. Quest finishes at stage 200.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001CEF4",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "index":  5
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001CEF4",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "index":  10
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001CEF4",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "index":  15
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001CEF4",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "index":  20
+                                         },
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0001CEF4",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "index":  25
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "C03",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "GALLOWS_ROCK_CLEARED"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "TALK_TO_SKJOR"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "c01_provinghonor",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

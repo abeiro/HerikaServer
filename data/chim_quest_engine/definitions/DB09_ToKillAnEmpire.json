@@ -1,0 +1,245 @@
+{
+    "quest_key":  "db09_tokillanempire",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001EA58",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DB09",
+    "title":  "To Kill an Empire",
+    "description":  "The Dark Brotherhood\u0027s final contract: assassinate the Emperor. Using the Gourmet\u0027s Writ of Passage, infiltrate Castle Dour, poison the Emperor\u0027s meal, and escape. But the mission ends in betrayal â€” the Emperor was a decoy, and Commander Maro has sent forces to destroy the Sanctuary.",
+    "npc_facts":  {
+                      "Astrid":  {
+                                     "base_facts":  [
+                                                        "I am the leader of the Dark Brotherhood Sanctuary.",
+                                                        "I have assigned the player to assassinate the Emperor.",
+                                                        "I provided the Jarrin Root poison for the assassination."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "REPORT_TO_ASTRID":  [
+                                                                                 "I have given the player final instructions for the Emperor\u0027s assassination.",
+                                                                                 "The player must use the Gourmet\u0027s Writ of Passage to infiltrate Castle Dour."
+                                                                             ]
+                                                    }
+                                 },
+                      "Commander Maro":  {
+                                             "base_facts":  [
+                                                                "I am the commander of the Penitus Oculatus, the Emperor\u0027s security force.",
+                                                                "My son Gaius Maro was killed by the Dark Brotherhood."
+                                                            ],
+                                             "beat_facts":  {
+                                                                "INFILTRATE_CASTLE":  [
+                                                                                          "I allowed the Gourmet into Castle Dour after verifying the writ of passage."
+                                                                                      ],
+                                                                "ESCAPE_AND_BETRAYAL":  [
+                                                                                            "I revealed the Emperor was a decoy and that someone in the Dark Brotherhood betrayed the player.",
+                                                                                            "I broke my deal and sent agents to destroy the Dark Brotherhood Sanctuary."
+                                                                                        ]
+                                                            }
+                                         },
+                      "Gianna":  {
+                                     "base_facts":  [
+                                                        "I am the head chef at Castle Dour.",
+                                                        "I am honored to work alongside the famous Gourmet."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "COOK_THE_MEAL":  [
+                                                                              "The Gourmet and I prepared the Potage le Magnifique for the Emperor.",
+                                                                              "The Gourmet added a secret ingredient to the stew."
+                                                                          ]
+                                                    }
+                                 }
+                  },
+    "beats":  [
+                  {
+                      "id":  "REPORT_TO_ASTRID",
+                      "focus_npc":  "Astrid",
+                      "comment":  "Astrid briefs the player on the Emperor assassination plan and provides the Jarrin Root.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB09",
+                                           "min_stage":  5
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "ready for the Emperor",
+                                                            "what\u0027s the plan",
+                                                            "final contract"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "INFILTRATE_CASTLE",
+                      "focus_npc":  "Commander Maro",
+                      "comment":  "Player reports to Commander Maro and enters Castle Dour with the Writ of Passage.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB09",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "here\u0027s the writ",
+                                                            "I\u0027m the Gourmet",
+                                                            "writ of passage"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REPORT_TO_ASTRID"
+                                        ]
+                  },
+                  {
+                      "id":  "COOK_THE_MEAL",
+                      "focus_npc":  "Gianna",
+                      "comment":  "Player meets Gianna, dons chef\u0027s hat, and prepares the Potage le Magnifique with the Jarrin Root poison.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB09",
+                                           "min_stage":  25
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "let\u0027s cook",
+                                                            "add the ingredient",
+                                                            "secret ingredient",
+                                                            "Potage"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "INFILTRATE_CASTLE"
+                                        ]
+                  },
+                  {
+                      "id":  "SERVE_AND_KILL",
+                      "focus_npc":  "",
+                      "comment":  "Player follows Gianna to the dining room and kills the Emperor\u0027s decoy.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB09",
+                                           "min_stage":  40
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "serve the food",
+                                                            "poison the Emperor",
+                                                            "kill the Emperor"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "COOK_THE_MEAL"
+                                        ]
+                  },
+                  {
+                      "id":  "ESCAPE_AND_BETRAYAL",
+                      "focus_npc":  "Commander Maro",
+                      "comment":  "Player escapes the tower, is ambushed by Maro who reveals the decoy and the Dark Brotherhood betrayal, then must return to the Sanctuary.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB09",
+                                           "min_stage":  60
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "escape the tower",
+                                                            "betrayed",
+                                                            "return to Sanctuary"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SERVE_AND_KILL"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Player returns to the Sanctuary as the Dark Brotherhood is under attack. Quest ends.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB09",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ESCAPE_AND_BETRAYAL"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "REPORT_TO_ASTRID"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "db08_recipefordisaster",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

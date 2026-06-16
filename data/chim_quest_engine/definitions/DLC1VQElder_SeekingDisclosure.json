@@ -1,0 +1,139 @@
+{
+    "quest_key":  "dlc1vqelder_seekingdisclosure",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00005DA9",
+    "quest_plugin":  "Dawnguard.esm",
+    "quest_editor_id":  "DLC1VQElder",
+    "title":  "Seeking Disclosure",
+    "description":  "A tracking quest reminding the player to locate the Dragon and Blood Elder Scrolls needed to decipher the Tyranny of the Sun and find Auriel\u0027s Bow, then deliver them to Dexion Evicus at Fort Dawnguard.",
+    "npc_facts":  {
+                      "Dexion Evicus":  {
+                                            "base_facts":  [
+                                                               "I am a Moth Priest serving the Dawnguard.",
+                                                               "Two Elder Scrolls are required to fully decipher the Tyranny of the Sun and pinpoint Auriel\u0027s Bow.",
+                                                               "The Dragon Elder Scroll foretells the interactions of dragons with the history of Nirn.",
+                                                               "The Blood Elder Scroll foreshadows the defiance of the gods with the blood of mortals."
+                                                           ],
+                                            "beat_facts":  {
+                                                               "SEEKING_DISCLOSURE_INITIATED":  [
+                                                                                                    "The Dragon Elder Scroll can be found in the Tower of Mzark within Blackreach.",
+                                                                                                    "The Blood Elder Scroll lies within the Soul Cairn, accessible through Chasing Echoes."
+                                                                                                ],
+                                                               "BOTH_SCROLLS_OBTAINED":  [
+                                                                                             "Both Elder Scrolls have been secured. I must return to Fort Dawnguard to begin the reading."
+                                                                                         ],
+                                                               "DEXION_BLIND":  [
+                                                                                    "I failed to adequately prepare myself before reading Serana\u0027s scroll during the Prophet quest and have gone blind.",
+                                                                                    "I can no longer read the Elder Scrolls myself.",
+                                                                                    "The Ancestor Glade holds an ancient method for reading Elder Scrolls without a Moth Priest."
+                                                                                ]
+                                                           }
+                                        }
+                  },
+    "beats":  [
+                  {
+                      "id":  "SEEKING_DISCLOSURE_INITIATED",
+                      "focus_npc":  "Dexion Evicus",
+                      "comment":  "Quest begins; player learns two Elder Scrolls are needed.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC1VQElder",
+                                           "min_stage":  10,
+                                           "quest_plugin":  "Dawnguard.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "elder scrolls",
+                                                            "find the scrolls",
+                                                            "dragon scroll",
+                                                            "blood scroll",
+                                                            "auriel\u0027s bow"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "BOTH_SCROLLS_OBTAINED",
+                      "focus_npc":  "Dexion Evicus",
+                      "comment":  "Player has both scrolls and must bring them to Dexion.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC1VQElder",
+                                           "min_stage":  40,
+                                           "quest_plugin":  "Dawnguard.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "have both scrolls",
+                                                            "got the scrolls",
+                                                            "bring scrolls to dexion",
+                                                            "return to fort dawnguard"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SEEKING_DISCLOSURE_INITIATED"
+                                        ]
+                  },
+                  {
+                      "id":  "DEXION_BLIND",
+                      "focus_npc":  "Dexion Evicus",
+                      "comment":  "Dexion goes blind after reading; quest finishes and next quest begins.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC1VQElder",
+                                           "min_stage":  200,
+                                           "quest_plugin":  "Dawnguard.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BOTH_SCROLLS_OBTAINED"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "SEEKING_DISCLOSURE_INITIATED"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "dlc1vq03hunter_prophetdawnguard",
+                                               "beat_id":  "ELDER_SCROLL_READING"
+                                           }
+                                       ]
+                      }
+}

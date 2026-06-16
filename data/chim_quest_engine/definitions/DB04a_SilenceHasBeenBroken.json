@@ -1,0 +1,209 @@
+{
+    "quest_key":  "db04a_silencehasbeenbroken",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0002AD16",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DB04a",
+    "title":  "The Silence Has Been Broken",
+    "description":  "Astrid sends the player to Volunruud to meet Amaund Motierre, who commissions the Dark Brotherhood to assassinate the Emperor. The player delivers Motierre\u0027s sealed letter and jeweled amulet to Astrid, has Delvin Mallory appraise and buy the amulet, then returns to Astrid with a letter of credit.",
+    "npc_facts":  {
+                      "Astrid":  {
+                                     "base_facts":  [
+                                                        "I am the leader of the Dark Brotherhood sanctuary.",
+                                                        "I was uncertain about the Night Mother\u0027s demands but have chosen to follow them.",
+                                                        "I have a standard arrangement with Delvin Mallory for fencing goods."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "SPEAK_WITH_ASTRID":  [
+                                                                                  "I have agreed to let the Listener meet Amaund Motierre at Volunruud as the Night Mother commanded."
+                                                                              ],
+                                                        "DELIVER_TO_ASTRID":  [
+                                                                                  "Motierre wants us to kill several people leading up to the Emperor himself. This could bring the Brotherhood great glory."
+                                                                              ],
+                                                        "REPORT_TO_ASTRID":  [
+                                                                                 "The amulet proves Motierre is on the Elder Council. He likely wants the Emperor dead to advance his own position. The first contract is to assassinate a bride at a wedding."
+                                                                             ]
+                                                    }
+                                 },
+                      "Amaund Motierre":  {
+                                              "base_facts":  [
+                                                                 "I am a member of the Elder Council.",
+                                                                 "I have commissioned the Dark Brotherhood for a grand assassination plot.",
+                                                                 "Rexus is my bodyguard."
+                                                             ],
+                                              "beat_facts":  {
+                                                                 "MEET_MOTIERRE":  [
+                                                                                       "I have given the Dark Brotherhood a sealed letter with instructions and a jeweled amulet to cover expenses. The ultimate target is the Emperor."
+                                                                                   ]
+                                                             }
+                                          },
+                      "Delvin Mallory":  {
+                                             "base_facts":  [
+                                                                "I am a fence for the Thieves Guild operating out of the Ragged Flagon.",
+                                                                "I have a standing arrangement with the Dark Brotherhood."
+                                                            ],
+                                             "beat_facts":  {
+                                                                "SHOW_AMULET_TO_DELVIN":  [
+                                                                                              "That amulet is only given to members of the Elder Council. I purchased it and provided a letter of credit as per my arrangement with the Brotherhood."
+                                                                                          ]
+                                                            }
+                                         }
+                  },
+    "beats":  [
+                  {
+                      "id":  "SPEAK_WITH_ASTRID",
+                      "focus_npc":  "Astrid",
+                      "comment":  "Astrid agrees to let the player meet Motierre at Volunruud.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB04a",
+                                           "min_stage":  5
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "amaund motierre",
+                                                            "volunruud",
+                                                            "night mother"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "MEET_MOTIERRE",
+                      "focus_npc":  "Amaund Motierre",
+                      "comment":  "Player meets Motierre at Volunruud and learns of the Emperor assassination plot.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB04a",
+                                           "min_stage":  10
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SPEAK_WITH_ASTRID"
+                                        ]
+                  },
+                  {
+                      "id":  "DELIVER_TO_ASTRID",
+                      "focus_npc":  "Astrid",
+                      "comment":  "Player delivers the sealed letter and amulet from Motierre to Astrid.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB04a",
+                                           "min_stage":  20
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_MOTIERRE"
+                                        ]
+                  },
+                  {
+                      "id":  "SHOW_AMULET_TO_DELVIN",
+                      "focus_npc":  "Delvin Mallory",
+                      "comment":  "Player takes the amulet to Delvin Mallory at the Ragged Flagon for appraisal.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB04a",
+                                           "min_stage":  30
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "DELIVER_TO_ASTRID"
+                                        ]
+                  },
+                  {
+                      "id":  "REPORT_TO_ASTRID",
+                      "focus_npc":  "Astrid",
+                      "comment":  "Player returns to Astrid with Delvin\u0027s letter of credit and learns the first contract.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB04a",
+                                           "min_stage":  40
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SHOW_AMULET_TO_DELVIN"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest finishes. Motierre\u0027s Elder Council status and the Emperor assassination plot are confirmed.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DB04a",
+                                           "min_stage":  200
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REPORT_TO_ASTRID"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "SPEAK_WITH_ASTRID"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "db04_whispersinthedark",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

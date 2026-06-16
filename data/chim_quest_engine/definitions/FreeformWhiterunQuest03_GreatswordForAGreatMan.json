@@ -1,0 +1,151 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000946FD",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformWhiterunQuest03",
+  "title": "Greatsword for a Great Man",
+  "description": "Adrianne Avenicci forged a greatsword for Jarl Balgruuf and asks you to deliver it to her father Proventus Avenicci at Dragonsreach.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "HEAR_ABOUT_SWORD",
+      "ACCEPT_QUEST"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Adrianne Avenicci": {
+      "base_facts": [
+        "I own Warmaiden's smithy in Whiterun.",
+        "I work my forge all day."
+      ],
+      "beat_facts": {
+        "HEAR_ABOUT_SWORD": [
+          "I forged a greatsword for Jarl Balgruuf to impress him.",
+          "I haven't had a chance to deliver it.",
+          "I'd like someone to deliver it to my father Proventus at Dragonsreach."
+        ],
+        "ACCEPT_QUEST": [
+          "Someone agreed to deliver the greatsword to Father."
+        ]
+      }
+    },
+    "Proventus Avenicci": {
+      "base_facts": [
+        "I am the steward of Dragonsreach in Whiterun.",
+        "Adrianne is my daughter."
+      ],
+      "beat_facts": {
+        "DELIVER_SWORD": [
+          "Adrianne's greatsword for the Jarl has been delivered.",
+          "I'll present it to Balgruuf when his mood is agreeable."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "HEAR_ABOUT_SWORD",
+      "focus_npc": "Adrianne Avenicci",
+      "comment": "Player learns about the greatsword Adrianne forged for Balgruuf and her desire to have it delivered.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "sword",
+            "greatsword",
+            "Balgruuf",
+            "forge",
+            "deliver"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACCEPT_QUEST",
+      "focus_npc": "Adrianne Avenicci",
+      "comment": "Player agrees to deliver the greatsword to Proventus.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000946FD",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000946FD",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "deliver it",
+            "help you",
+            "take it",
+            "bring it",
+            "I can help"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEAR_ABOUT_SWORD"
+      ],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "DELIVER_SWORD",
+      "focus_npc": "Proventus Avenicci",
+      "comment": "Player delivers the greatsword to Proventus Avenicci at Dragonsreach.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000946FD",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000946FD",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "sword",
+            "greatsword",
+            "Adrianne",
+            "from your daughter",
+            "deliver"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_QUEST"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformwhiterunquest03_greatswordforagreatman"
+}

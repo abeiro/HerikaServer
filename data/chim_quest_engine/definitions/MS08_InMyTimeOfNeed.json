@@ -1,0 +1,217 @@
+{
+  "quest_key": "ms08_inmytimeofneed",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001CF25",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MS08",
+  "title": "In My Time Of Need",
+  "description": "Alik'r Warriors search Whiterun for a Redguard woman. The player must choose between helping Saadia, who claims to be a fugitive noble hunted by Dominion assassins, or helping Kematu, who claims Saadia is a traitor who sold out Taneth to the Aldmeri Dominion.",
+  "npc_facts": {
+    "Saadia": {
+      "base_facts": [
+        "I work at The Bannered Mare in Whiterun under the name Saadia.",
+        "My real name is Iman, a noble of House Suda in Hammerfell.",
+        "I spoke out against the Aldmeri Dominion and now they have sent assassins after me.",
+        "The Alik'r warriors are those assassins, sent to deport me for execution."
+      ],
+      "beat_facts": {
+        "MEET_SAADIA": [
+          "The player knows I am being hunted by the Alik'r and I have asked for their help."
+        ],
+        "KILL_KEMATU": [
+          "The player killed Kematu and I am safe for now. I rewarded them with gold."
+        ],
+        "DELIVER_SAADIA": [
+          "The player betrayed me and led me into Kematu's trap at the stables."
+        ]
+      }
+    },
+    "Kematu": {
+      "base_facts": [
+        "I lead the Alik'r warriors searching for the Redguard woman in Whiterun.",
+        "We are not assassins. We serve the noble houses of Hammerfell.",
+        "Saadia is a traitor who sold the city of Taneth to the Aldmeri Dominion during the Great War.",
+        "We intend to bring her back to Hammerfell alive to face justice."
+      ],
+      "beat_facts": {
+        "CONFRONT_KEMATU": [
+          "The player found me in Swindler's Den and I explained the truth about Saadia."
+        ],
+        "DELIVER_SAADIA": [
+          "The player delivered Saadia to me. I will take her back to Hammerfell alive."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ALIKR_SEARCH",
+      "focus_npc": "Alik'r Warriors",
+      "comment": "Player learns Alik'r warriors are searching Whiterun for a Redguard woman.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS08",
+          "quest_form_id": "0x0001CF25",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "MEET_SAADIA",
+      "focus_npc": "Saadia",
+      "comment": "Player finds Saadia at The Bannered Mare and hears her claim of being hunted by Dominion assassins.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS08",
+          "quest_form_id": "0x0001CF25",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 25
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Saadia",
+            "Redguard woman",
+            "Bannered Mare"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ALIKR_SEARCH"
+      ]
+    },
+    {
+      "id": "FIND_HIDEOUT",
+      "focus_npc": "",
+      "comment": "Player learns the Alik'r hideout is at Swindler's Den, either from the prisoner or prior knowledge.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS08",
+          "quest_form_id": "0x0001CF25",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MEET_SAADIA"
+      ]
+    },
+    {
+      "id": "CONFRONT_KEMATU",
+      "focus_npc": "Kematu",
+      "comment": "Player enters Swindler's Den and confronts Kematu, who reveals Saadia is a traitor to Hammerfell.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS08",
+          "quest_form_id": "0x0001CF25",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 101
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIND_HIDEOUT"
+      ]
+    },
+    {
+      "id": "KILL_KEMATU",
+      "focus_npc": "Saadia",
+      "comment": "Player kills Kematu and must return to Saadia for a reward.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS08",
+          "quest_form_id": "0x0001CF25",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 160
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONFRONT_KEMATU"
+      ]
+    },
+    {
+      "id": "DELIVER_SAADIA",
+      "focus_npc": "Kematu",
+      "comment": "Player lures Saadia to the Whiterun Stables where Kematu captures her with a paralysis spell.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS08",
+          "quest_form_id": "0x0001CF25",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 175
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONFRONT_KEMATU"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest ends either by helping Saadia kill Kematu or delivering her to Kematu for justice.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS08",
+          "quest_form_id": "0x0001CF25",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONFRONT_KEMATU"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "ALIKR_SEARCH"
+    ],
+    "requires": []
+  }
+}

@@ -1,0 +1,204 @@
+{
+    "quest_key":  "mgrapponmund01_onmundsrequest",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0006BC33",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "MGRAppOnmund01",
+    "title":  "Onmund\u0027s Request",
+    "description":  "Onmund regrets trading his family amulet to Enthir and asks for help getting it back. Enthir refuses to return it unless the Grand Staff of Charming is retrieved from a dangerous location. Returning the staff earns the amulet, and returning the amulet earns Onmund\u0027s friendship.",
+    "npc_facts":  {
+                      "Onmund":  {
+                                     "base_facts":  [
+                                                        "I am a Nord student at the College of Winterhold.",
+                                                        "I traded my family amulet to Enthir and deeply regret it.",
+                                                        "I want my amulet back but Enthir will not budge."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "ONMUND_ASKS_FOR_HELP":  [
+                                                                                     "I have asked someone to help me get my amulet back from Enthir."
+                                                                                 ],
+                                                        "AMULET_RETURNED_TO_ONMUND":  [
+                                                                                          "My amulet has been returned. I am grateful and willing to follow or marry my benefactor."
+                                                                                      ]
+                                                    }
+                                 },
+                      "Enthir":  {
+                                     "base_facts":  [
+                                                        "I am a dealer at the College of Winterhold.",
+                                                        "I do not go back on trades once they are made.",
+                                                        "I might consider an exception for the right price."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "ENTHIR_DEMANDS_STAFF":  [
+                                                                                     "I have offered to trade Onmund\u0027s amulet for the Grand Staff of Charming."
+                                                                                 ],
+                                                        "STAFF_DELIVERED_TO_ENTHIR":  [
+                                                                                          "I have traded Onmund\u0027s amulet for the Grand Staff of Charming."
+                                                                                      ]
+                                                    }
+                                 }
+                  },
+    "beats":  [
+                  {
+                      "id":  "ONMUND_ASKS_FOR_HELP",
+                      "focus_npc":  "Onmund",
+                      "comment":  "Onmund asks the player to help recover his family amulet from Enthir.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0006BC33",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "amulet",
+                                                            "help",
+                                                            "Enthir",
+                                                            "trade",
+                                                            "family"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "ENTHIR_DEMANDS_STAFF",
+                      "focus_npc":  "Enthir",
+                      "comment":  "Enthir refuses to return the amulet unless the Grand Staff of Charming is retrieved.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0006BC33",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  20
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "amulet",
+                                                            "trade",
+                                                            "staff",
+                                                            "deal",
+                                                            "return"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ONMUND_ASKS_FOR_HELP"
+                                        ]
+                  },
+                  {
+                      "id":  "STAFF_RETRIEVED",
+                      "focus_npc":  "",
+                      "comment":  "The player finds the Grand Staff of Charming at the radiant dungeon location.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0006BC33",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  30
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "MGRAppOnmund01",
+                                           "min_stage":  30
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ENTHIR_DEMANDS_STAFF"
+                                        ]
+                  },
+                  {
+                      "id":  "STAFF_DELIVERED_TO_ENTHIR",
+                      "focus_npc":  "Enthir",
+                      "comment":  "Player delivers the Grand Staff of Charming to Enthir and receives Onmund\u0027s amulet.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0006BC33",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  40
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "staff",
+                                                            "deliver",
+                                                            "trade",
+                                                            "here"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "STAFF_RETRIEVED"
+                                        ]
+                  },
+                  {
+                      "id":  "AMULET_RETURNED_TO_ONMUND",
+                      "focus_npc":  "Onmund",
+                      "comment":  "Player returns the amulet to Onmund, completing the quest and earning his friendship.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x0006BC33",
+                                     "quest_plugin":  "Skyrim.esm",
+                                     "stage":  200
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "amulet",
+                                                            "here",
+                                                            "returned",
+                                                            "yours"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "STAFF_DELIVERED_TO_ENTHIR"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "ONMUND_ASKS_FOR_HELP"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "mg01_firstlessons",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

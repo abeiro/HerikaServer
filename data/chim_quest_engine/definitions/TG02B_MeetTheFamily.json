@@ -1,0 +1,178 @@
+{
+  "quest_key": "tg02b_meetthefamily",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00084ABD",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "TG02B",
+  "title": "Meet the Family",
+  "description": "After being accepted into the Thieves Guild, Brynjolf instructs you to speak with Vex and Delvin Mallory to learn about the Guild and to Tonilia to receive your Guild Armor.",
+  "npc_facts": {
+    "Brynjolf": {
+      "base_facts": [
+        "Brynjolf is your sponsor in the Thieves Guild.",
+        "He told you to speak with Vex, Delvin Mallory, and Tonilia to get acquainted with the Guild."
+      ],
+      "beat_facts": {}
+    },
+    "Vex": {
+      "base_facts": [
+        "Vex is a senior member of the Thieves Guild who handles heist jobs.",
+        "She is not friendly and expects obedience from new recruits."
+      ],
+      "beat_facts": {
+        "VEX_CONVERSATION": [
+          "Vex believes the Guild's decline is due to simple bad luck and mocks Delvin's curse theory."
+        ]
+      }
+    },
+    "Delvin Mallory": {
+      "base_facts": [
+        "Delvin Mallory is a senior member of the Thieves Guild who handles numbers jobs.",
+        "He admits the Guild isn't what it used to be."
+      ],
+      "beat_facts": {
+        "DELVIN_CONVERSATION": [
+          "Delvin believes someone has cursed the Guild with misfortune and is determined to turn things around."
+        ]
+      }
+    },
+    "Tonilia": {
+      "base_facts": [
+        "Tonilia is Delvin Mallory's personal lookout in the Thieves Guild.",
+        "She provides new members with Thieves Guild Armor."
+      ],
+      "beat_facts": {
+        "TONILIA_ARMOR": [
+          "Tonilia gave you a full set of Thieves Guild Armor to get you equipped."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_BEGINS",
+      "focus_npc": "Brynjolf",
+      "comment": "Quest starts at stage 10. Brynjolf directs the player to meet the Guild members.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG02B",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "VEX_CONVERSATION",
+      "focus_npc": "Vex",
+      "comment": "Player speaks with Vex and learns about the Guild's decline from her perspective.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "tell me about the guild",
+            "what do you do",
+            "who are you",
+            "about the thieves guild"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_BEGINS"
+      ]
+    },
+    {
+      "id": "DELVIN_CONVERSATION",
+      "focus_npc": "Delvin Mallory",
+      "comment": "Player speaks with Delvin and learns about the Guild's decline and his curse theory.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "tell me about the guild",
+            "what do you do",
+            "who are you",
+            "about the thieves guild"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_BEGINS"
+      ]
+    },
+    {
+      "id": "TONILIA_ARMOR",
+      "focus_npc": "Tonilia",
+      "comment": "Player receives Thieves Guild Armor from Tonilia.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "armor",
+            "equipment",
+            "gear",
+            "guild armor"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_BEGINS"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest finishes at stage 200 after speaking with Vex, Delvin, and receiving armor.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG02B",
+          "stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": []
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "QUEST_BEGINS"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "tg01_takingcareofbusiness",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
+}

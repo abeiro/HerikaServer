@@ -1,0 +1,192 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000555DD",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformDragonBridge01",
+  "title": "Dragon's Breath Mead",
+  "description": "Olda in Dragon Bridge wants someone to steal her husband Horgeir's hidden stash of Dragon's Breath Mead from a nearby cave. The mead can be returned to Olda for gold or to Horgeir for Block training.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "HEAR_OLDAS_COMPLAINT",
+      "AGREE_TO_HELP_OLDA"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Olda": {
+      "base_facts": [
+        "Olda lives in Dragon Bridge with her husband Horgeir.",
+        "Olda is fed up with Horgeir's drinking."
+      ],
+      "beat_facts": {
+        "HEAR_OLDAS_COMPLAINT": [
+          "Olda wants someone to steal Horgeir's hidden mead stash from a cave nearby guarded by wolves."
+        ],
+        "GIVE_MEAD_TO_OLDA": [
+          "Olda received the Dragon's Breath Mead and rewarded the helper with gold."
+        ]
+      }
+    },
+    "Horgeir": {
+      "base_facts": [
+        "Horgeir owns the lumber mill in Dragon Bridge.",
+        "Horgeir promised his wife he would give up mead but secretly kept a stash."
+      ],
+      "beat_facts": {
+        "HEAR_OLDAS_COMPLAINT": [
+          "Horgeir has a secret stash of Dragon's Breath Mead hidden in a cave guarded by wolves."
+        ],
+        "GIVE_MEAD_TO_HORGEIR": [
+          "Horgeir got his mead back and showed his friend how to block a punch from an angry spouse."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "HEAR_OLDAS_COMPLAINT",
+      "focus_npc": "Olda",
+      "comment": "Player learns about Horgeir's secret mead stash from Olda.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "husband",
+            "mead",
+            "drinking"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "AGREE_TO_HELP_OLDA",
+      "focus_npc": "Olda",
+      "comment": "Player agrees to steal the mead for Olda, starting the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000555DD",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000555DD",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help",
+            "steal",
+            "bring it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEAR_OLDAS_COMPLAINT"
+      ],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACQUIRE_MEAD",
+      "focus_npc": "",
+      "comment": "Player finds and takes the Dragon's Breath Mead from the cave.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000555DD",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000555DD",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformDragonBridge01",
+          "min_stage": 15
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "GIVE_MEAD_TO_OLDA",
+      "focus_npc": "Olda",
+      "comment": "Player returns the mead to Olda for a gold reward.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "here's the mead",
+            "brought the mead"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACQUIRE_MEAD"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "GIVE_MEAD_TO_HORGEIR",
+      "focus_npc": "Horgeir",
+      "comment": "Player gives the mead to Horgeir instead for Block training, failing the original quest.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "your mead",
+            "found your stash"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACQUIRE_MEAD"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformdragonbridge01_dragonsbreathmead"
+}

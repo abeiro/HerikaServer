@@ -1,0 +1,126 @@
+{
+    "quest_key":  "cwfortsiegefort_battleforfortsnowhawkimperial",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00083042",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "CWFortSiegeFort",
+    "title":  "The Battle for Fort Snowhawk (Imperial)",
+    "description":  "Legate Rikke orders the player to join Imperial soldiers in an assault on Fort Snowhawk, a Stormcloak-held fort in Hjaalmarch. The player must rendezvous with the assault force and help clear the fort of rebels to secure it for the Empire.",
+    "npc_facts":  {
+                      "Legate Rikke":  {
+                                           "base_facts":  [
+                                                              "I am Legate Rikke, commanding Imperial forces in Hjaalmarch from the Imperial Camp.",
+                                                              "I report to General Tullius on the progress of the war in Skyrim."
+                                                          ],
+                                           "beat_facts":  {
+                                                              "REPORT_FOR_DUTY":  [
+                                                                                      "I gave orders to assist in taking Fort Snowhawk from the Stormcloaks."
+                                                                                  ],
+                                                              "FORT_SNOWHAWK_TAKEN":  [
+                                                                                          "Fort Snowhawk has fallen to Imperial forces. Hjaalmarch is secured for the Empire."
+                                                                                      ]
+                                                          }
+                                       },
+                      "General Tullius":  {
+                                              "base_facts":  [
+                                                                 "I am General Tullius, commander of the Imperial Legion in Skyrim."
+                                                             ],
+                                              "beat_facts":  {
+                                                                 "REPORT_FOR_DUTY":  [
+                                                                                         "I directed the soldier to Legate Rikke for the assault on Fort Snowhawk."
+                                                                                     ],
+                                                                 "FORT_SNOWHAWK_TAKEN":  [
+                                                                                             "The capture of Fort Snowhawk brings us closer to reuniting Skyrim under Imperial rule."
+                                                                                         ]
+                                                             }
+                                          }
+                  },
+    "beats":  [
+                  {
+                      "id":  "REPORT_FOR_DUTY",
+                      "focus_npc":  "Legate Rikke",
+                      "comment":  "Player reports to Legate Rikke at Hjaalmarch Imperial Camp and receives orders to assault Fort Snowhawk.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWFortSiegeFort",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "fort snowhawk",
+                                                            "assault the fort",
+                                                            "report for duty",
+                                                            "take the fort"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "JOIN_THE_ASSAULT",
+                      "focus_npc":  "",
+                      "comment":  "Player reaches Fort Snowhawk and joins the Imperial soldiers preparing the attack.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWFortSiegeFort",
+                                           "min_stage":  50
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "REPORT_FOR_DUTY"
+                                        ]
+                  },
+                  {
+                      "id":  "FORT_SNOWHAWK_TAKEN",
+                      "focus_npc":  "",
+                      "comment":  "Fort Snowhawk is cleared of Stormcloak rebels and secured for the Empire. Idgrod Ravencrone is re-instated as Jarl.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CWFortSiegeFort",
+                                           "min_stage":  9000
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "JOIN_THE_ASSAULT"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "REPORT_FOR_DUTY"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

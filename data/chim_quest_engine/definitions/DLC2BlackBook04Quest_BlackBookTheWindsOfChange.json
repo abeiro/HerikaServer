@@ -1,0 +1,86 @@
+{
+  "quest_key": "dlc2blackbook04quest_blackbookthewindsofchange",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0003216E",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2BlackBook04Quest",
+  "title": "Black Book: The Winds of Change",
+  "description": "Read the Black Book in Raven Rock Mine, navigate through Apocrypha defeating Seekers and a Lurker, then choose one of three insight abilities as a reward.",
+  "npc_facts": {},
+  "beats": [
+    {
+      "id": "ENTER_APOCRYPHA",
+      "focus_npc": "",
+      "comment": "Player reads the Black Book and is transported to Apocrypha.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2BlackBook04Quest",
+          "min_stage": 10,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "NAVIGATE_APOCRYPHA",
+      "focus_npc": "",
+      "comment": "Player navigates Apocrypha, fights Seekers and a Lurker, and activates Scryes to progress.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "apocrypha",
+            "seeker",
+            "lurker",
+            "scrye",
+            "tentacles"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENTER_APOCRYPHA"
+      ]
+    },
+    {
+      "id": "REWARD_CHOSEN",
+      "focus_npc": "",
+      "comment": "Player reaches the Black Book at the end and chooses one of three insight abilities, completing the quest.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2BlackBook04Quest",
+          "min_stage": 20,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "NAVIGATE_APOCRYPHA"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "ENTER_APOCRYPHA"
+    ],
+    "requires": []
+  }
+}

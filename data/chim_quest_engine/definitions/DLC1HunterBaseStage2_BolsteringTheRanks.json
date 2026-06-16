@@ -1,0 +1,152 @@
+{
+    "quest_key":  "dlc1hunterbasestage2_bolsteringtheranks",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00013F1F",
+    "quest_plugin":  "Dawnguard.esm",
+    "quest_editor_id":  "DLC1HunterBaseStage2",
+    "title":  "Bolstering the Ranks",
+    "description":  "Sorine Jurard asks the player to find Florentius Baenius, a former Priest of Arkay who could aid the Dawnguard. Isran reveals Florentius was last seen at Ruunvald with the Vigilants of Stendarr. The player travels to Ruunvald Excavation, fights through charmed Vigilants under the control of the Altmer warlock Minorne, and rescues Florentius from his cage.",
+    "npc_facts":  {
+                      "Sorine Jurard":  {
+                                            "base_facts":  [
+                                                               "Member of the Dawnguard stationed at Fort Dawnguard.",
+                                                               "Worried about the vampire threat and the Dawnguard\u0027s limited numbers.",
+                                                               "Knows of Florentius Baenius, a former Priest of Arkay who could help the cause."
+                                                           ],
+                                            "beat_facts":  {
+                                                               "SORINE_REQUEST":  [
+                                                                                      "Asked the player to find Florentius and speak with Isran to learn his location, keeping her involvement secret."
+                                                                                  ]
+                                                           }
+                                        },
+                      "Isran":  {
+                                    "base_facts":  [
+                                                       "Leader of the Dawnguard at Fort Dawnguard.",
+                                                       "Distrusts Florentius Baenius due to their shared past.",
+                                                       "The only one who knows where Florentius was last seen."
+                                                   ],
+                                    "beat_facts":  {
+                                                       "ISRAN_REVEALS_LOCATION":  [
+                                                                                      "Revealed Florentius is at Ruunvald and reluctantly agreed to let him stay if he can maintain some appearance of normalcy."
+                                                                                  ]
+                                                   }
+                                },
+                      "Florentius Baenius":  {
+                                                 "base_facts":  [
+                                                                    "Former Priest of Arkay, known for being quite eccentric.",
+                                                                    "Was helping the Vigilants of Stendarr at Ruunvald before being captured.",
+                                                                    "Imprisoned in a cage by Minorne for refusing to submit to her influence."
+                                                                ],
+                                                 "beat_facts":  {
+                                                                    "FLORENTIUS_RESCUED":  [
+                                                                                               "Rescued from Ruunvald and agreed to return to Fort Dawnguard to aid the Dawnguard."
+                                                                                           ]
+                                                                }
+                                             }
+                  },
+    "beats":  [
+                  {
+                      "id":  "SORINE_REQUEST",
+                      "focus_npc":  "Sorine Jurard",
+                      "comment":  "Sorine asks the player to find Florentius and talk to Isran about his location.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00013F1F",
+                                     "quest_plugin":  "Dawnguard.esm",
+                                     "stage":  10
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Florentius",
+                                                            "help the Dawnguard",
+                                                            "find Florentius"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC1HunterBaseStage2",
+                                           "min_stage":  10,
+                                           "quest_plugin":  "Dawnguard.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "ISRAN_REVEALS_LOCATION",
+                      "focus_npc":  "Isran",
+                      "comment":  "Isran reveals Florentius is at Ruunvald and reluctantly allows him to join.",
+                      "action":  {
+                                     "type":  "set_stage",
+                                     "quest_form_id":  "0x00013F1F",
+                                     "quest_plugin":  "Dawnguard.esm",
+                                     "stage":  20
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Florentius",
+                                                            "Ruunvald",
+                                                            "where is Florentius"
+                                                        ],
+                                           "min_matches":  1
+                                       },
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC1HunterBaseStage2",
+                                           "min_stage":  20,
+                                           "quest_plugin":  "Dawnguard.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SORINE_REQUEST"
+                                        ]
+                  },
+                  {
+                      "id":  "FLORENTIUS_RESCUED",
+                      "focus_npc":  "Florentius Baenius",
+                      "comment":  "Player rescues Florentius from Ruunvald and he agrees to join the Dawnguard. Quest completes.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC1HunterBaseStage2",
+                                           "min_stage":  200,
+                                           "quest_plugin":  "Dawnguard.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ISRAN_REVEALS_LOCATION"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "SORINE_REQUEST"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

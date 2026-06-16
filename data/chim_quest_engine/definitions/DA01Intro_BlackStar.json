@@ -1,0 +1,272 @@
+{
+    "quest_key":  "da01intro_blackstar",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00092E25",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "DA01Intro",
+    "title":  "The Black Star",
+    "description":  "Aranea Ienith, a priestess of Azura, directs the player to find an elven mage who can turn the brightest star as black as night. The trail leads to Nelacar in Winterhold, who reveals the story of Malyn Varen and his corrupted experiments on Azura\u0027s Star at Ilinalta\u0027s Deep. After recovering the broken Star, the player must choose whether to return it to Aranea for Azura\u0027s purification or to Nelacar to forge a Black Soul Gem, then enter the Star itself to destroy Malyn Varen\u0027s soul.",
+    "npc_facts":  {
+                      "Aranea Ienith":  {
+                                            "base_facts":  [
+                                                               "I am a priestess of Azura and the last worshipper at her shrine in Skyrim.",
+                                                               "Azura foresaw your arrival and shared a vision with me.",
+                                                               "The vision speaks of an elven mage who can turn the brightest star as black as night.",
+                                                               "I believe the elven mage can be found in Winterhold."
+                                                           ],
+                                            "beat_facts":  {
+                                                               "VISIT_SHRINE":  [
+                                                                                    "The player has come to the Shrine as Azura foretold and accepted the quest."
+                                                                                ],
+                                                               "CHOOSE_PATH":  [
+                                                                                   "The player has chosen to return the Star to Azura for purification."
+                                                                               ],
+                                                               "QUEST_COMPLETE":  [
+                                                                                      "Azura has purified the Star. I am free to follow my own path and may offer to travel with the player."
+                                                                                  ]
+                                                           }
+                                        },
+                      "Nelacar":  {
+                                      "base_facts":  [
+                                                         "I am a former colleague of Malyn Varen at the College of Winterhold.",
+                                                         "Malyn Varen was experimenting on Azura\u0027s Star to save himself from a terminal illness.",
+                                                         "Malyn killed a student and was banished from the College. He fled to Ilinalta\u0027s Deep.",
+                                                         "I do not want the Star returned to Azura. It should be kept out of her reach."
+                                                     ],
+                                      "beat_facts":  {
+                                                         "SPEAK_TO_NELACAR":  [
+                                                                                  "The player knows about Azura\u0027s Star and Malyn Varen\u0027s experiments at Ilinalta\u0027s Deep."
+                                                                              ],
+                                                         "CHOOSE_PATH":  [
+                                                                             "The player has chosen to bring the Star to me instead of Azura."
+                                                                         ],
+                                                         "QUEST_COMPLETE":  [
+                                                                                "The Black Star is complete. An infinite Black Soul Gem capable of trapping any soul."
+                                                                            ]
+                                                     }
+                                  }
+                  },
+    "beats":  [
+                  {
+                      "id":  "VISIT_SHRINE",
+                      "focus_npc":  "Aranea Ienith",
+                      "comment":  "Player visits the Shrine of Azura and speaks to Aranea, learning of the prophecy.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA01Intro",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Azura\u0027s vision",
+                                                            "elven mage",
+                                                            "brightest star",
+                                                            "shrine of Azura"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "SPEAK_TO_NELACAR",
+                      "focus_npc":  "Nelacar",
+                      "comment":  "Player finds Nelacar in Winterhold and learns about Malyn Varen and the Star.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA01Intro",
+                                           "min_stage":  20
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Malyn Varen",
+                                                            "soul gems",
+                                                            "Ilinalta\u0027s Deep",
+                                                            "Nelacar"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "VISIT_SHRINE"
+                                        ]
+                  },
+                  {
+                      "id":  "RECOVER_BROKEN_STAR",
+                      "focus_npc":  "",
+                      "comment":  "Player retrieves the broken Azura\u0027s Star from Ilinalta\u0027s Deep after defeating Malyn\u0027s necromancers.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA01Intro",
+                                           "min_stage":  30
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "broken star",
+                                                            "found the star",
+                                                            "Ilinalta"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SPEAK_TO_NELACAR"
+                                        ]
+                  },
+                  {
+                      "id":  "CHOOSE_PATH",
+                      "focus_npc":  "",
+                      "comment":  "Player decides whether to bring the corrupted Star to Aranea for Azura or to Nelacar for the Black Star.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA01Intro",
+                                           "min_stage":  50
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "bring the star to Aranea",
+                                                            "bring the star to Nelacar",
+                                                            "return to Aranea",
+                                                            "return to Nelacar"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RECOVER_BROKEN_STAR"
+                                        ]
+                  },
+                  {
+                      "id":  "ENTER_THE_STAR",
+                      "focus_npc":  "",
+                      "comment":  "Player enters Azura\u0027s Star interior to confront Malyn Varen\u0027s soul.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA01Intro",
+                                           "min_stage":  61
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "enter the star",
+                                                            "ready to enter",
+                                                            "inside the star"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "CHOOSE_PATH"
+                                        ]
+                  },
+                  {
+                      "id":  "DEFEAT_MALYN",
+                      "focus_npc":  "",
+                      "comment":  "Player destroys Malyn Varen\u0027s soul inside the Star.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA01Intro",
+                                           "min_stage":  85
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "destroyed Malyn",
+                                                            "Malyn is dead",
+                                                            "defeated Malyn"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "ENTER_THE_STAR"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "",
+                      "comment":  "Quest ends. Player receives either Azura\u0027s Star (white souls) or The Black Star (black souls).",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DA01Intro",
+                                           "min_stage":  100
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "DEFEAT_MALYN"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "VISIT_SHRINE"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

@@ -1,0 +1,199 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00094E3C",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformWhiterunQuest04",
+  "title": "Andurs' Arkay Amulet",
+  "description": "Andurs, priest of Arkay in Whiterun's Hall of the Dead, lost his Amulet of Arkay in the catacombs and asks you to retrieve it from the restless dead.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "ANDURS_MENTIONS_AMULET"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Andurs": {
+      "base_facts": [
+        "I am a priest of Arkay overseeing Whiterun's Hall of the Dead.",
+        "I lost my Amulet of Arkay somewhere in the catacombs beneath the Hall.",
+        "Strange noises come from the catacombs and I fear the restless dead.",
+        "I would retrieve my amulet myself but I am afraid of the skeletons down there."
+      ],
+      "beat_facts": {
+        "ANDURS_MENTIONS_AMULET": [
+          "I have asked the player to retrieve my Amulet of Arkay from the catacombs."
+        ],
+        "ACCEPT_QUEST": [
+          "The player has agreed to help me retrieve my amulet from the catacombs."
+        ],
+        "QUEST_COMPLETE": [
+          "The player returned my Amulet of Arkay. I rewarded them with 15 gold and I am very grateful."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ANDURS_MENTIONS_AMULET",
+      "focus_npc": "Andurs",
+      "comment": "Andurs tells the player about his lost Amulet of Arkay in the catacombs.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "amulet",
+            "Arkay",
+            "catacombs",
+            "lost"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformWhiterunQuest04",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACCEPT_QUEST",
+      "focus_npc": "Andurs",
+      "comment": "Player agrees to help Andurs retrieve his amulet from the catacombs.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00094E3C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00094E3C",
+          "quest_plugin": "Skyrim.esm",
+          "objective": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help",
+            "retrieve",
+            "find it",
+            "get it"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformWhiterunQuest04",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ANDURS_MENTIONS_AMULET"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "AMULET_FOUND",
+      "focus_npc": "Andurs",
+      "comment": "Player has found Andurs' Amulet of Arkay in the catacombs.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00094E3C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00094E3C",
+          "quest_plugin": "Skyrim.esm",
+          "objective": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00094E3C",
+          "quest_plugin": "Skyrim.esm",
+          "objective": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformWhiterunQuest04",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "found the amulet",
+            "have the amulet",
+            "got the amulet"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_QUEST"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Andurs",
+      "comment": "Player returns the amulet to Andurs, completing the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00094E3C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00094E3C",
+          "quest_plugin": "Skyrim.esm",
+          "objective": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformWhiterunQuest04",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "return the amulet",
+            "here is the amulet",
+            "give it back"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "AMULET_FOUND"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformwhiterunquest04_andursarkayamulet"
+}

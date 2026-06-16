@@ -1,0 +1,194 @@
+{
+    "quest_key":  "dunvolunruudqst_silencedtongues",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0008ADFA",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "dunVolunruudQST",
+    "title":  "Silenced Tongues",
+    "description":  "Discover the ceremonial weapons within Volunruud to open the Elder\u0027s Cairn and defeat the ancient draugr chieftain Kvenel the Tongue.",
+    "npc_facts":  {
+                      "Kvenel":  {
+                                     "base_facts":  [
+                                                        "I am Kvenel the Tongue, an ancient chieftain entombed within Volunruud\u0027s Elder\u0027s Cairn.",
+                                                        "I wield two ice-enchanted weapons: the sword Eduj and the axe Okin.",
+                                                        "My conjurer minion serves me from beyond the grave, summoning atronachs and casting frost spells."
+                                                    ],
+                                     "beat_facts":  {
+                                                        "CAIRN_OPENED":  [
+                                                                             "An intruder has breached the Elder\u0027s Cairn and approaches my throne."
+                                                                         ],
+                                                        "KVENEL_DEFEATED":  [
+                                                                                "Kvenel\u0027s ghostly form has been laid to rest; his weapons Eduj and Okin can be claimed."
+                                                                            ]
+                                                    }
+                                 }
+                  },
+    "beats":  [
+                  {
+                      "id":  "QUEST_INITIATED",
+                      "focus_npc":  "",
+                      "comment":  "Quest starts by reading Heddic\u0027s Volunruud Notes or attempting the puzzle door in Volunruud.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0008ADFA",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  10
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunVolunruudQST",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Heddic\u0027s notes",
+                                                            "Volunruud",
+                                                            "ceremonial weapons"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "WEAPONS_LOCATED",
+                      "focus_npc":  "",
+                      "comment":  "Both ceremonial weapons (the axe and the sword) have been found in Volunruud.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0008ADFA",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  10
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0008ADFA",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  20
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunVolunruudQST",
+                                           "min_stage":  20
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "ceremonial axe",
+                                                            "ceremonial sword",
+                                                            "both weapons found"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "QUEST_INITIATED"
+                                        ]
+                  },
+                  {
+                      "id":  "CAIRN_OPENED",
+                      "focus_npc":  "Kvenel",
+                      "comment":  "Elder\u0027s Cairn door opened by placing both ceremonial weapons; Kvenel awaits inside.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0008ADFA",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  20
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x0008ADFA",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  30
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunVolunruudQST",
+                                           "min_stage":  30
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "Elder\u0027s Cairn",
+                                                            "opened the door",
+                                                            "Kvenel"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "WEAPONS_LOCATED"
+                                        ]
+                  },
+                  {
+                      "id":  "KVENEL_DEFEATED",
+                      "focus_npc":  "Kvenel",
+                      "comment":  "Kvenel the Tongue defeated; quest complete. Rewards include Eduj, Okin, and a Word of Power for Aura Whisper.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x0008ADFA",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  30
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "dunVolunruudQST",
+                                           "min_stage":  100
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "defeated Kvenel",
+                                                            "Kvenel is dead",
+                                                            "ghostly chieftain slain"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "CAIRN_OPENED"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "QUEST_INITIATED"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

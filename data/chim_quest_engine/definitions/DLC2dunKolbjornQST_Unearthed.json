@@ -1,0 +1,207 @@
+{
+    "quest_key":  "dlc2dunkolbjornqst_unearthed",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x0001810B",
+    "quest_plugin":  "Dragonborn.esm",
+    "quest_editor_id":  "DLC2dunKolbjornQST",
+    "title":  "Unearthed",
+    "description":  "Fund Ralis Sedarys\u0027 excavation of Kolbjorn Barrow on Solstheim, clearing draugr across multiple visits before discovering Ralis has been sacrificing miners to release the Dragon Priest Ahzidal.",
+    "npc_facts":  {
+                      "Ralis Sedarys":  {
+                                            "base_facts":  [
+                                                               "I am a Dunmer treasure hunter who came to Solstheim seeking the Relics of Ahzidal.",
+                                                               "I found Kolbjorn Barrow buried in ash and need funding to excavate it.",
+                                                               "I offer a share of any treasure discovered in exchange for gold."
+                                                           ],
+                                            "beat_facts":  {
+                                                               "MEET_RALIS":  [
+                                                                                  "A partner has agreed to fund the excavation of Kolbjorn Barrow with one thousand gold."
+                                                                              ],
+                                                               "FIRST_EXCAVATION":  [
+                                                                                        "The draugr awoke and killed my miners. My partner cleared them out and found a way deeper into the barrow."
+                                                                                    ],
+                                                               "SECOND_EXCAVATION":  [
+                                                                                         "More draugr attacked and miners went missing. My partner found their bodies but the work must continue."
+                                                                                     ],
+                                                               "THIRD_EXCAVATION":  [
+                                                                                        "Yet more draugr killed the mercenaries I hired. I need more gold for increasingly reluctant workers."
+                                                                                    ],
+                                                               "BETRAYAL_REVEALED":  [
+                                                                                         "I was under Ahzidal\u0027s spell, compelled to use the miners as blood sacrifices for the ritual to release him."
+                                                                                     ],
+                                                               "RALIS_FATE":  [
+                                                                                  "I have been confronted about my actions. I claim I had no control over what I did under Ahzidal\u0027s influence."
+                                                                              ]
+                                                           }
+                                        }
+                  },
+    "beats":  [
+                  {
+                      "id":  "MEET_RALIS",
+                      "focus_npc":  "Ralis Sedarys",
+                      "comment":  "Player meets Ralis at Kolbjorn Barrow and agrees to fund the excavation.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2dunKolbjornQST",
+                                           "min_stage":  10,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "excavation",
+                                                            "Kolbjorn",
+                                                            "fund",
+                                                            "treasure"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "FIRST_EXCAVATION",
+                      "focus_npc":  "Ralis Sedarys",
+                      "comment":  "Player returns to find draugr have attacked, clears them and finds a way deeper into the barrow.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2dunKolbjornQST",
+                                           "min_stage":  100,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "MEET_RALIS"
+                                        ]
+                  },
+                  {
+                      "id":  "SECOND_EXCAVATION",
+                      "focus_npc":  "Ralis Sedarys",
+                      "comment":  "Player returns again, clears draugr and finds the missing miners dead.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2dunKolbjornQST",
+                                           "min_stage":  200,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "FIRST_EXCAVATION"
+                                        ]
+                  },
+                  {
+                      "id":  "THIRD_EXCAVATION",
+                      "focus_npc":  "Ralis Sedarys",
+                      "comment":  "Player returns a third time, clears more draugr after mercenaries are killed.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2dunKolbjornQST",
+                                           "min_stage":  300,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "SECOND_EXCAVATION"
+                                        ]
+                  },
+                  {
+                      "id":  "BETRAYAL_REVEALED",
+                      "focus_npc":  "Ralis Sedarys",
+                      "comment":  "Player finds the camp massacred and Ralis performing a ritual to release Ahzidal.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2dunKolbjornQST",
+                                           "min_stage":  410,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "THIRD_EXCAVATION"
+                                        ]
+                  },
+                  {
+                      "id":  "RALIS_FATE",
+                      "focus_npc":  "Ralis Sedarys",
+                      "comment":  "After defeating Ahzidal, player confronts Ralis and decides whether to kill or spare him.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "DLC2dunKolbjornQST",
+                                           "min_stage":  475,
+                                           "quest_plugin":  "Dragonborn.esm"
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "kill you",
+                                                            "spare you",
+                                                            "let you live"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BETRAYAL_REVEALED"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "MEET_RALIS"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

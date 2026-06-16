@@ -1,0 +1,128 @@
+{
+    "quest_key":  "cwfortsiegefort_battleforfortdunstadimperial",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x00083042",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "CWFortSiegeFort",
+    "title":  "The Battle for Fort Dunstad (Imperial)",
+    "description":  "Legate Rikke sends you to help take Fort Dunstad from the Stormcloaks while it is vulnerable. Rendezvous with Imperial soldiers near the fort, clear it of rebels, and report the victory to General Tullius for promotion to Praefect.",
+    "npc_facts":  {
+                      "Legate Rikke":  {
+                                           "base_facts":  [
+                                                              "I command the Imperial forces in the Pale.",
+                                                              "Fort Dunstad is held by Stormcloaks and needs to be taken while it is vulnerable.",
+                                                              "I send soldiers to rendezvous with the task force staging southeast of the fort."
+                                                          ],
+                                           "beat_facts":  {
+                                                              "RECEIVE_ORDERS":  [
+                                                                                     "I have sent the soldier to assist in taking Fort Dunstad."
+                                                                                 ],
+                                                              "FORT_TAKEN":  [
+                                                                                 "Fort Dunstad has fallen to Imperial forces."
+                                                                             ]
+                                                          }
+                                       },
+                      "General Tullius":  {
+                                              "base_facts":  [
+                                                                 "I lead the Imperial Legion in Skyrim.",
+                                                                 "Soldiers report to me after successful campaigns."
+                                                             ],
+                                              "beat_facts":  {
+                                                                 "FORT_TAKEN":  [
+                                                                                    "The soldier who took Fort Dunstad has earned promotion to Praefect."
+                                                                                ]
+                                                             }
+                                          }
+                  },
+    "beats":  [
+                  {
+                      "id":  "RECEIVE_ORDERS",
+                      "focus_npc":  "Legate Rikke",
+                      "comment":  "Player receives orders from Legate Rikke at Pale Imperial Camp to take Fort Dunstad.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x00083042",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "orders",
+                                                            "fort dunstad",
+                                                            "duty",
+                                                            "reporting for duty"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "JOIN_ATTACKING_FORCE",
+                      "focus_npc":  "",
+                      "comment":  "Player joins the Imperial soldiers near Fort Dunstad and the battle begins.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x00083042",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "min_stage":  50
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RECEIVE_ORDERS"
+                                        ]
+                  },
+                  {
+                      "id":  "FORT_TAKEN",
+                      "focus_npc":  "General Tullius",
+                      "comment":  "Fort Dunstad is captured. Quest completes. Player should report to General Tullius for promotion.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_form_id":  "0x00083042",
+                                           "quest_plugin":  "Skyrim.esm",
+                                           "stage":  9000
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "JOIN_ATTACKING_FORCE"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "RECEIVE_ORDERS"
+                                    ],
+                          "requires":  [
+
+                                       ]
+                      }
+}

@@ -1,0 +1,122 @@
+{
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00065C30",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformRiften19",
+  "title": "Bloody Nose",
+  "description": "Bet 100 gold that you can defeat Hofgrir Horse-Crusher in an unarmed brawl at Riften Stables, then claim your winnings.",
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "HEAR_ABOUT_HOFGRIR"
+    ],
+    "requires": []
+  },
+  "npc_facts": {
+    "Hofgrir Horse-Crusher": {
+      "base_facts": [
+        "I work at the Riften Stables just north of the city.",
+        "I am the strongest brawler in all of Skyrim.",
+        "I will bet 100 gold against anyone who thinks they can beat me in a fistfight."
+      ],
+      "beat_facts": {
+        "ACCEPT_BRAWL_BET": [
+          "This fool actually bet 100 gold they could beat me in a brawl."
+        ],
+        "BRAWL_COMPLETE": [
+          "I lost the brawl fair and square. I paid what I owed."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "HEAR_ABOUT_HOFGRIR",
+      "focus_npc": "Hofgrir Horse-Crusher",
+      "comment": "Player learns about Hofgrir's brawling reputation and the bet opportunity.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "strongest brawler",
+            "brawl",
+            "bet",
+            "fight you",
+            "tough guy",
+            "fistfight"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true,
+      "start_conditions": []
+    },
+    {
+      "id": "ACCEPT_BRAWL_BET",
+      "focus_npc": "Hofgrir Horse-Crusher",
+      "comment": "Player makes the 100 gold bet and the brawl begins.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00065C30",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00065C30",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I'll take that bet",
+            "100 gold",
+            "challenge accepted",
+            "let's brawl",
+            "I can beat you"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEAR_ABOUT_HOFGRIR"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "BRAWL_COMPLETE",
+      "focus_npc": "Hofgrir Horse-Crusher",
+      "comment": "Player defeats Hofgrir and claims the reward of 200 gold total.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformRiften19",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_BRAWL_BET"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    }
+  ],
+  "quest_key": "freeformriften19_bloodynose"
+}

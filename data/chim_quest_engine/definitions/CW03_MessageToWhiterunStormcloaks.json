@@ -1,0 +1,246 @@
+{
+    "quest_key":  "cw03_messagetowhiterunstormcloaks",
+    "skeleton_type":  "quest",
+    "quest_form_id":  "0x000D661C",
+    "quest_plugin":  "Skyrim.esm",
+    "quest_editor_id":  "CW03",
+    "title":  "Message to Whiterun (Stormcloaks)",
+    "description":  "Ulfric Stormcloak sends his war axe to Jarl Balgruuf of Whiterun as a traditional warrior\u0027s challenge to pick a side in the civil war. Balgruuf decides to side with the Empire and returns the axe, prompting Ulfric to prepare an assault on Whiterun.",
+    "npc_facts":  {
+                      "Ulfric Stormcloak":  {
+                                                "base_facts":  [
+                                                                   "I am the Jarl of Windhelm and leader of the Stormcloak rebellion.",
+                                                                   "I want Whiterun to declare for the Stormcloaks.",
+                                                                   "I sent my war axe to Jarl Balgruuf as a traditional warrior\u0027s challenge between two men who understand each other."
+                                                               ],
+                                                "beat_facts":  {
+                                                                   "RECEIVE_ORDERS":  [
+                                                                                          "I have sent my war axe to Balgruuf. His response will determine Whiterun\u0027s fate."
+                                                                                      ],
+                                                                   "QUEST_COMPLETE":  [
+                                                                                          "Balgruuf has chosen the Empire. We will take Whiterun by force."
+                                                                                      ]
+                                                               }
+                                            },
+                      "Balgruuf the Greater":  {
+                                                   "base_facts":  [
+                                                                      "I am the Jarl of Whiterun.",
+                                                                      "I am caught between the Empire and the Stormcloaks and must choose a side.",
+                                                                      "I must consider what is best for my people."
+                                                                  ],
+                                                   "beat_facts":  {
+                                                                      "DELIVER_AXE_TO_BALGRUUF":  [
+                                                                                                      "Ulfric has sent his war axe. I must decide which side Whiterun will take."
+                                                                                                  ],
+                                                                      "BALGRUUF_SIDES_WITH_EMPIRE":  [
+                                                                                                         "I have decided to side with the Empire. Whiterun will stand with the Imperial Legion."
+                                                                                                     ]
+                                                                  }
+                                               }
+                  },
+    "beats":  [
+                  {
+                      "id":  "RECEIVE_ORDERS",
+                      "focus_npc":  "Ulfric Stormcloak",
+                      "comment":  "Ulfric gives the player his war axe to deliver to Balgruuf as a challenge.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x000D661C",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  11
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CW03",
+                                           "min_stage":  10
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "deliver axe to whiterun",
+                                                            "message for balgruuf",
+                                                            "ulfric\u0027s war axe"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+
+                                        ],
+                      "allow_natural_start":  true
+                  },
+                  {
+                      "id":  "DELIVER_AXE_TO_BALGRUUF",
+                      "focus_npc":  "Balgruuf the Greater",
+                      "comment":  "Player delivers Ulfric\u0027s war axe to Jarl Balgruuf in Dragonsreach.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x000D661C",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  11
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x000D661C",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  20
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CW03",
+                                           "min_stage":  20
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "delivered the axe",
+                                                            "balgruuf has the axe",
+                                                            "message from ulfric"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RECEIVE_ORDERS"
+                                        ]
+                  },
+                  {
+                      "id":  "BALGRUUF_SIDES_WITH_EMPIRE",
+                      "focus_npc":  "Balgruuf the Greater",
+                      "comment":  "Balgruuf decides to side with the Empire and returns the axe to the player.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x000D661C",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  20
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x000D661C",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  50
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CW03",
+                                           "min_stage":  50
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "balgruuf chose the empire",
+                                                            "whiterun sides with empire",
+                                                            "return the axe to ulfric"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "DELIVER_AXE_TO_BALGRUUF"
+                                        ]
+                  },
+                  {
+                      "id":  "RETURN_AXE_TO_ULFRIC",
+                      "focus_npc":  "Ulfric Stormcloak",
+                      "comment":  "Player returns the axe to Ulfric in Windhelm. Galmar welcomes the decision, ready for battle.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x000D661C",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  50
+                                         },
+                                         {
+                                             "type":  "set_objective_displayed",
+                                             "quest_form_id":  "0x000D661C",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  225
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CW03",
+                                           "min_stage":  225
+                                       },
+                                       {
+                                           "type":  "dialogue",
+                                           "keywords":  [
+                                                            "returned the axe",
+                                                            "balgruuf refused",
+                                                            "ulfric\u0027s response"
+                                                        ],
+                                           "min_matches":  1
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "BALGRUUF_SIDES_WITH_EMPIRE"
+                                        ]
+                  },
+                  {
+                      "id":  "QUEST_COMPLETE",
+                      "focus_npc":  "Ulfric Stormcloak",
+                      "comment":  "Ulfric issues orders to attack Whiterun, initiating Battle for Whiterun.",
+                      "action":  {
+                                     "type":  "gate"
+                                 },
+                      "downstream":  [
+                                         {
+                                             "type":  "set_objective_completed",
+                                             "quest_form_id":  "0x000D661C",
+                                             "quest_plugin":  "Skyrim.esm",
+                                             "objective_index":  225
+                                         }
+                                     ],
+                      "triggers":  [
+                                       {
+                                           "type":  "quest_stage",
+                                           "quest_editor_id":  "CW03",
+                                           "min_stage":  240
+                                       }
+                                   ],
+                      "trigger_mode":  "any",
+                      "prerequisites":  [
+                                            "RETURN_AXE_TO_ULFRIC"
+                                        ]
+                  }
+              ],
+    "natural_start":  {
+                          "enabled":  true,
+                          "beats":  [
+                                        "RECEIVE_ORDERS"
+                                    ],
+                          "requires":  [
+                                           {
+                                               "type":  "quest_beat_fired",
+                                               "quest_key":  "cw02b_jaggedcrownstormcloaks",
+                                               "beat_id":  "QUEST_COMPLETE"
+                                           }
+                                       ]
+                      }
+}

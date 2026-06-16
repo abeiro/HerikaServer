@@ -1,0 +1,110 @@
+{
+  "quest_key": "dlc2thirskffhilund_hilundfavorquest",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00038FBB",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2ThirskFFHilund",
+  "title": "Hilund Favor Quest",
+  "description": "Hilund wants to decorate Thirsk Mead Hall with 50 Riekling spears as a reminder of past attacks and a warning to future Rieklings.",
+  "npc_facts": {
+    "Hilund": {
+      "base_facts": [
+        "Hilund is a Nord living in Thirsk Mead Hall on Solstheim.",
+        "She wants to ring the hall with Riekling spears to keep the Nords vigilant.",
+        "She needs 50 Riekling spears to complete her decoration plan."
+      ],
+      "beat_facts": {
+        "QUEST_STARTED": [
+          "Hilund has asked me to collect 50 Riekling spears from across Solstheim."
+        ],
+        "QUEST_COMPLETE": [
+          "Hilund has received the spears and is decorating Thirsk Mead Hall with them."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_STARTED",
+      "focus_npc": "Hilund",
+      "comment": "Player talks to Hilund after Retaking Thirsk and learns about her spear decoration idea.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2ThirskFFHilund",
+          "min_stage": 10,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false
+    },
+    {
+      "id": "RETURN_SPEARS",
+      "focus_npc": "Hilund",
+      "comment": "Player returns to Hilund with 50 Riekling spears to complete the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00038FBB",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00038FBB",
+          "quest_plugin": "Dragonborn.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "here are the spears",
+            "brought the spears",
+            "got your spears",
+            "50 spears"
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_STARTED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Hilund",
+      "comment": "Quest finishes - Hilund decorates the hall with the spears as a warning to Rieklings.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2ThirskFFHilund",
+          "min_stage": 200,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_STARTED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": false,
+    "beats": [
+      "QUEST_STARTED"
+    ],
+    "requires": []
+  }
+}
