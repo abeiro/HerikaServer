@@ -38,12 +38,11 @@
       "comment": "The player clearly agrees to recover Amren's family sword.",
       "intent_summary": "Player commits to recovering Amren's father's sword.",
       "action": {
-        "type": "console_command_sequence",
-        "commands": [
-          "startquest Favor204",
-          "setstage Favor204 10",
-          "setobjectivedisplayed Favor204 10 1"
-        ]
+        "type": "start_quest_stage_objective",
+        "quest_plugin": "Skyrim.esm",
+        "quest_form_id": "0x0007105B",
+        "stage": 10,
+        "objective_index": 10
       },
       "downstream": [],
       "triggers": [
