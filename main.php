@@ -890,7 +890,7 @@ if ($gameRequest[0] == "npcspellcast") {
 // Optional events
 
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","infoitems","chatme","chat","infoaction","death","itemfound",
-    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction","reanimate","itempickup","npc_reanimated"])) {
+    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction","reanimate","itempickup","npc_reanimated","region"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     if (in_array($gameRequest[0],['infonpc','infoloc','infonpc_close','infoitems'])) {
