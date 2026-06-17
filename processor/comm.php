@@ -1400,6 +1400,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     logEvent($gameRequest);
     
     $splitNameBase=explode("@",$gameRequest[3]);
+    $incomingDisplayName = trim($splitNameBase[0] ?? "");
+    $incomingBase = trim($splitNameBase[1] ?? "");
+    $incomingRefId = trim($splitNameBase[4] ?? "");
     if (sizeof($splitNameBase)>1) {
         $localName=$splitNameBase[0];
         $baseProfile=$splitNameBase[1];
@@ -1411,8 +1414,47 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if ($localName==$baseProfile)
         $baseProfile="";
 
+    $npcMaster=new NpcMaster();
+    $currentNpcData = null;
+    $retVal = 2;
+    $resolvedByRefId = false;
 
-    $retVal=createProfile($localName,[],false,$baseProfile); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
+    if ($incomingRefId !== "") {
+        $refIdCandidates = array_unique(array_filter([
+            $incomingRefId,
+            preg_replace('/^0x/i', '', $incomingRefId),
+            (stripos($incomingRefId, '0x') === 0 ? strtoupper(substr($incomingRefId, 2)) : strtoupper($incomingRefId)),
+            (stripos($incomingRefId, '0x') === 0 ? strtolower(substr($incomingRefId, 2)) : strtolower($incomingRefId)),
+        ], static function ($value) {
+            return $value !== null && $value !== "";
+        }));
+
+        foreach ($refIdCandidates as $refIdCandidate) {
+            $refNpcData = $npcMaster->getByRefId($refIdCandidate);
+            if (!$refNpcData) {
+                continue;
+            }
+
+            $existingBase = trim((string)($refNpcData["base"] ?? ""));
+            $sameBase = ($incomingBase === "" || $existingBase === "" || strcasecmp($incomingBase, $existingBase) === 0);
+            $looksLikeDistributedName = preg_match('/\[[^\]]+\]\s*$/', $incomingDisplayName) === 1;
+
+            if ($sameBase && ($looksLikeDistributedName || strcasecmp((string)$refNpcData["npc_name"], $incomingDisplayName) === 0)) {
+                $currentNpcData = $refNpcData;
+                $resolvedByRefId = true;
+                if (strcasecmp((string)$currentNpcData["npc_name"], $incomingDisplayName) !== 0) {
+                    error_log("[ADDNPC] resolved display name '{$incomingDisplayName}' to existing NPC '{$currentNpcData["npc_name"]}' by refid {$incomingRefId}");
+                }
+                $localName = $currentNpcData["npc_name"];
+                break;
+            }
+        }
+    }
+
+    if (!$currentNpcData) {
+        $retVal=createProfile($localName,[],false,$baseProfile); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
+        $currentNpcData=$npcMaster->getByName($localName);
+    }
     audit_log("comm.php addnpc $localName");
 
      if ($retVal==1)
@@ -1420,10 +1462,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
 
     // Update new data
-    $npcMaster=new NpcMaster();
-    $currentNpcData=$npcMaster->getByName($localName);
     
-    if (isset($splitNameBase[4]) && $retVal==1) {
+    if (!$resolvedByRefId && isset($splitNameBase[4]) && $retVal==1) {
         $currentNpcDataAlt=$npcMaster->getByRefId($splitNameBase[4]);
         if ($currentNpcDataAlt && $currentNpcDataAlt["npc_name"]!=$currentNpcData["npc_name"] ) {
             // Seems an NPC has changed name.
@@ -1450,6 +1490,16 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             
 
             $meta=$npcMaster->getMetadata($currentNpcData);
+            if ($incomingDisplayName !== "" && strcasecmp((string)$currentNpcData["npc_name"], $incomingDisplayName) !== 0) {
+                $meta["current_display_name"] = $incomingDisplayName;
+                if (!isset($meta["display_name_aliases"]) || !is_array($meta["display_name_aliases"])) {
+                    $meta["display_name_aliases"] = [];
+                }
+                if (!in_array($incomingDisplayName, $meta["display_name_aliases"], true)) {
+                    $meta["display_name_aliases"][] = $incomingDisplayName;
+                    $meta["display_name_aliases"] = array_slice($meta["display_name_aliases"], -10);
+                }
+            }
             // NPC skills
             $skillFields = [
                 5 => "archery",

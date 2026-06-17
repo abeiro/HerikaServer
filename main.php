@@ -1661,11 +1661,14 @@ if (($gameRequest[0] ?? "") === "infoloc") {
 }
 
 error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
-// Scope all incoming events through spatial awareness when possible.
+// Scope all incoming dialogue-producing requests before returnLines() logs
+// generated prechat/chat rows.
 $playerInputEventTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
+$directiveDialogueEventTypes = ["instruction", "suggestion"];
+$turnPeopleSnapshotEventTypes = array_merge($playerInputEventTypes, $directiveDialogueEventTypes);
 $requestAudienceSnapshot = chimDecodeAudienceSnapshotField($gameRequest[4] ?? "");
 $hasAuthoritativeRequestAudience = (
-    in_array($gameRequest[0] ?? "", $playerInputEventTypes, true) &&
+    in_array($gameRequest[0] ?? "", $turnPeopleSnapshotEventTypes, true) &&
     $requestAudienceSnapshot !== ""
 );
 $resolvedRechatPeople = "";
@@ -1673,10 +1676,17 @@ if (($gameRequest[0] ?? "") === "rechat" && isset($GLOBALS["RECHAT_RESOLVED_TARG
     $resolvedRechatPeople = (string)($GLOBALS["RECHAT_RESOLVED_TARGET"]["people_pipe"] ?? "");
 }
 $authoritativePeople = $hasAuthoritativeRequestAudience ? $requestAudienceSnapshot : $resolvedRechatPeople;
+$directiveFallbackPeople = "";
+if ($authoritativePeople === "" && in_array($gameRequest[0] ?? "", $directiveDialogueEventTypes, true)) {
+    $directiveFallbackPeople = DataBeingsInCloseRange(true);
+}
 
 if ($authoritativePeople !== "") {
     $GLOBALS["CACHE_PEOPLE"] = $authoritativePeople;
     Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]}: " . $GLOBALS["CACHE_PEOPLE"]);
+} elseif ($directiveFallbackPeople !== "") {
+    $GLOBALS["CACHE_PEOPLE"] = $directiveFallbackPeople;
+    Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]} from close range: " . $GLOBALS["CACHE_PEOPLE"]);
 } else {
     $scopedPeople = buildScopedPeopleForEvent(
         $gameRequest[0] ?? "",
@@ -1740,6 +1750,9 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
         if ($authoritativePeople !== "") {
             $eventPeople = $authoritativePeople;
             $GLOBALS["CACHE_PEOPLE"] = $authoritativePeople;
+        } elseif ($directiveFallbackPeople !== "") {
+            $eventPeople = $directiveFallbackPeople;
+            $GLOBALS["CACHE_PEOPLE"] = $directiveFallbackPeople;
         } else {
             $eventPeople = buildScopedPeopleForEvent(
                 $gameRequest[0] ?? "",
@@ -1752,7 +1765,7 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
             }
         }
 
-        if (in_array($gameRequest[0], $playerInputEventTypes, true)) {
+        if (in_array($gameRequest[0], $turnPeopleSnapshotEventTypes, true)) {
             chimSetCurrentTurnPeopleSnapshot($eventPeople);
         }
 

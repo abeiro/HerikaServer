@@ -1054,14 +1054,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     // This is intended to give info about nearby actors, ALL actors (dead ones included).
 
     $nearbyActors=DataBeingsOrDeathsInRangeExcluding("",true);
-    $nearbyActorsList="";
+    $nearbyActorsList=[];
     if ($nearbyActors) {
         foreach (explode("|",$nearbyActors) as $k=>$v) {
             $nearbyActor=trim($v);
             if (!empty($nearbyActor))
-                $nearbyActorsList.=",$nearbyActor";
+                $nearbyActorsList[]=$nearbyActor;
         }
-        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<actors_nearby>\n$nearbyActorsList</actors_nearby>";
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<actors_nearby>\n" . implode(", ", $nearbyActorsList) . "\n</actors_nearby>";
     }
     
 

@@ -222,12 +222,29 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
 // Function to process AUTO_DIARY for nearby NPCs with auto_diary_enabled
 function buildPlayerDiaryPrompt(string $playerName): string
 {
-    $template = trim((string)($GLOBALS["PLAYER_DIARY_PROMPT"] ?? ''));
+    $template = '';
+    try {
+        if (isset($GLOBALS["db"]) && is_object($GLOBALS["db"])) {
+            $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'player_diary_prompt'");
+            if (is_array($promptData)) {
+                $template = trim((string)(!empty($promptData['custom_prompt']) ? $promptData['custom_prompt'] : ($promptData['default_prompt'] ?? '')));
+            }
+        }
+    } catch (Throwable $e) {
+        Logger::warn("PLAYER_DIARY: Failed to load player_diary_prompt from Prompt Manager: " . $e->getMessage());
+    }
+
+    if ($template === '') {
+        $template = trim((string)($GLOBALS["PLAYER_DIARY_PROMPT"] ?? ''));
+    }
     if ($template === '') {
         $template = "Please write a short summary of #PLAYER_NAME#'s recent dialogues and events written above into #PLAYER_NAME#'s diary. WRITE AS IF YOU WERE #PLAYER_NAME#. Use first person and start the diary entry with the current date and time.";
     }
 
-    return strtr($template, ['#PLAYER_NAME#' => $playerName]);
+    return strtr($template, [
+        '#PLAYER_NAME#' => $playerName,
+        '{PLAYER_NAME}' => $playerName
+    ]);
 }
 
 function getConfiguredPlayerDiaryName(Player $player): string
@@ -264,6 +281,9 @@ function generatePlayerDiary($gameRequest, $eventType)
     }
     if (!class_exists('LLMConnector')) {
         require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
+    }
+    if (!function_exists('chimResolvePlayerDiaryConnectorFromDefaultProfile')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "player_diary_connector.php");
     }
 
     $player = new Player();
@@ -358,24 +378,13 @@ function generatePlayerDiary($gameRequest, $eventType)
 
     try {
         $connector = new LLMConnector();
-        $coreConnectorId = trim((string)$player->get('diary_connector_id'));
-        if ($coreConnectorId === '') {
-            foreach (['CORE_CONNECTOR_SUMMARY', 'CORE_CONNECTOR_PLAYER', 'CORE_CONNECTOR_PROFILES'] as $globalConnectorKey) {
-                $candidateConnectorId = trim((string)($GLOBALS[$globalConnectorKey] ?? ''));
-                if ($candidateConnectorId !== '') {
-                    $coreConnectorId = $candidateConnectorId;
-                    break;
-                }
-            }
-        }
-
-        $currentConnectorData = null;
-        if ($coreConnectorId !== '') {
-            $currentConnectorData = $connector->getById($coreConnectorId);
-        }
+        $defaultDiaryConnector = chimResolvePlayerDiaryConnectorFromDefaultProfile();
+        $coreConnectorId = intval($defaultDiaryConnector['connector_id'] ?? 0);
+        $currentConnectorData = $defaultDiaryConnector['connector_data'] ?? null;
 
         if (!empty($currentConnectorData)) {
-            Logger::info("PLAYER_DIARY: Using core connector {$coreConnectorId} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]})");
+            $profileLabel = trim((string)($defaultDiaryConnector['profile_label'] ?? 'Default Profile'));
+            Logger::info("PLAYER_DIARY: Using default profile diary connector {$coreConnectorId} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]}) from {$profileLabel}");
             $connector->setOldGlobals($currentConnectorData);
             $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
             unset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["stop"]);
@@ -394,6 +403,11 @@ function generatePlayerDiary($gameRequest, $eventType)
             $connectionHandler = $connector->getConnector($currentConnectorData);
             $buffer = (string)$connectionHandler->fast_request($contextData, ["MAX_TOKENS" => $maxTokens], "diary");
         } else {
+            $defaultDiaryConnectorError = trim((string)($defaultDiaryConnector['error'] ?? ''));
+            if ($defaultDiaryConnectorError !== '') {
+                Logger::warn("PLAYER_DIARY: Default profile diary connector unavailable: {$defaultDiaryConnectorError}");
+            }
+
             $diaryConnector = function_exists('chimResolveDiaryConnectorName') ? chimResolveDiaryConnectorName() : null;
             if ($diaryConnector === null) {
                 Logger::warn("PLAYER_DIARY: No diary connector configured");

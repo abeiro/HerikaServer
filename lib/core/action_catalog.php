@@ -1033,7 +1033,12 @@ function herikaActionCatalogGetBuiltinCooldownSeconds($codeName)
         'StartRitualCeremony' => 60,
         'Follow' => 60,
         'FollowPlayer' => 60,
+        'ReturnBackHome' => 60,
+        'PickupItem' => 60
     ];
+
+    // Cooldowns are overriden by core_actions metadata (even if cooldown_seconds property is not present)
+    // Check BOTH on the core_actions table (metadata column) - and core_actions_custom table (metadata column) for cooldown_seconds value
 
     return $cooldowns[$codeName] ?? null;
 }
@@ -1891,6 +1896,7 @@ function herikaActionCatalogRowMatchesRequirements($row, $context = null)
         : [];
 
     if (!herikaActionCatalogRequirementsMatch($metadata['requirements'] ?? [], $context)) {
+        // error_log("[FUNCTIONS COOLDOWN] Action '{$row['code_name']}' did not match requirements.");
         return false;
     }
 
@@ -1898,6 +1904,8 @@ function herikaActionCatalogRowMatchesRequirements($row, $context = null)
     if ($cooldownSeconds > 0 && herikaActionCatalogIsActionOnCooldown($row['code_name'] ?? '', $cooldownSeconds)) {
         error_log("[FUNCTIONS COOLDOWN] Action '{$row['code_name']}' is on cooldown for {$cooldownSeconds} seconds.");
         return false;
+    } else {
+        // error_log("[FUNCTIONS COOLDOWN] Action '{$row['code_name']}' is not on cooldown. ($cooldownSeconds)");
     }
 
     return true;

@@ -192,6 +192,9 @@ try {
     $phpCode = preg_replace('/\$quest_id\s*=\s*["\'].*?["\'];/', "\$quest_id = \"{$questId}\";", $phpCode);
     $questdata["briefing"] = $formInput["briefing"] ?? "";  
     SNQEQuestManager::createNewQuest($questId, $phpCode, $questdata, "not_running", $formInput["questTitle"], $formInput["lastJournalEntry"]);
+    // Store a copy of the generated PHP code in the snqe_editor/quests directory for reference/customizing.
+    @file_put_contents("{$enginePath}/snqe_editor/quests/{$questId}.php", $phpCode);
+
     $result['success'] = true;
     $result['message'] = "Quest created successfully with ID: " . $questId;
 } catch (\Exception $e) {
