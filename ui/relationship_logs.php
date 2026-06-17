@@ -5,7 +5,13 @@
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 
 // Determine web root
@@ -16,8 +22,7 @@ if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
 // DB connection
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
-$db = new sql();
+$db = $GLOBALS["db"];
 
 $TITLE = "CHIM - Relationship LLM Logs";
 $isEmbedded = (isset($_GET['embed']) && $_GET['embed']);

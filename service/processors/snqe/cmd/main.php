@@ -23,10 +23,10 @@ $lastEvent = $GLOBALS["db"]->fetchAll("select max(localts) as n from eventlog ")
 if (($lastEvent[0]["n"] - $lastChat[0]["m"]) > 20) { // 20 seconds of silence
     if (($GLOBALS["last_localts"] - $GLOBALS["last_instruction_sent"]) > 30) {
         $GLOBALS["NPCS_ARE_NOT_TALKING"] = 1;
-        error_log("[MAIN] NPCS_ARE_NOT_TALKING");
+        error_log("[SNQE MAIN] NPCS_ARE_NOT_TALKING");
     } else {
         $GLOBALS["NPCS_ARE_NOT_TALKING"] = 0;
-        error_log("[MAIN] NPCS_ARE_NOT_TALKING, but instruction was sent " . ($GLOBALS["last_localts"] - $GLOBALS["last_instruction_sent"]) . " secs ago");
+        error_log("[SNQE MAIN] NPCS_ARE_NOT_TALKING, but instruction was sent " . ($GLOBALS["last_localts"] - $GLOBALS["last_instruction_sent"]) . " secs ago");
     }
 
 } else {
@@ -62,7 +62,7 @@ foreach ($quests as $questRow) {
         $quest = SNQEQuestManager::getQuest($quest_id);
     } else {
         if ($quest["quest_run_state"] == "finished") {
-            error_log("Quest ended" . PHP_EOL);
+            error_log("[SNQE MAIN] Quest ended" . PHP_EOL);
             return;
         }
 
@@ -70,6 +70,7 @@ foreach ($quests as $questRow) {
 
     if (isset($quest["quest_data"]["lastgamets"]) && $quest["quest_data"]["lastgamets"] >= $GLOBALS["last_gamets"]) {
         error_log("[GAME PAUSED?] last: {$GLOBALS["last_gamets"]} quest last:{$quest["quest_data"]["lastgamets"]}");
+        // Do not run quest code if the last gamets we have processed is greater or equal to the last gamets processed by this quest, to avoid running quest code when game is not running.
         return;
     } else {
         if (isset($quest["quest_data"]["lastgamets"])) {

@@ -1,5 +1,155 @@
 <?php
 
+if (!function_exists('chimParseStableFormReference')) {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "game_plugins.php");
+}
+
+if (!function_exists('herikaRolemasterStateToBool')) {
+    function herikaRolemasterStateToBool($value)
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return $value != 0;
+        }
+
+        $text = strtolower(trim(strval($value)));
+        if ($text === '' || $text === '0' || $text === 'false' || $text === 'f' || $text === 'no' || $text === 'off' || $text === 'null') {
+            return false;
+        }
+
+        return in_array($text, ['1', 'true', 't', 'yes', 'on'], true);
+    }
+}
+
+if (!function_exists('herikaRolemasterStateResetCache')) {
+    function herikaRolemasterStateResetCache()
+    {
+        unset($GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE']);
+        unset($GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE']);
+    }
+}
+
+if (!function_exists('herikaRolemasterStateGetLegacyFlag')) {
+    function herikaRolemasterStateGetLegacyFlag($npcName = '')
+    {
+        $npcName = trim(strval($npcName));
+        if ($npcName === '') {
+            return false;
+        }
+
+        if (!isset($GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE']) || !is_array($GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE'])) {
+            $GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE'] = [];
+        }
+
+        if (array_key_exists($npcName, $GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE'])) {
+            return $GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE'][$npcName];
+        }
+
+        if (
+            !isset($GLOBALS['db']) ||
+            !is_object($GLOBALS['db']) ||
+            !method_exists($GLOBALS['db'], 'escape') ||
+            !method_exists($GLOBALS['db'], 'fetchOne')
+        ) {
+            $GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE'][$npcName] = false;
+            return false;
+        }
+
+        $namedKey = $GLOBALS['db']->escape($npcName . '_is_rolemastered');
+        $row = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='{$namedKey}' LIMIT 1");
+
+        if (is_array($row)) {
+            $rawValue = $row['value'] ?? null;
+        } else {
+            $rawValue = $row;
+        }
+
+        $resolved = herikaRolemasterStateToBool($rawValue);
+        $GLOBALS['HERIKA_ROLEMASTER_LEGACY_CACHE'][$npcName] = $resolved;
+
+        return $resolved;
+    }
+}
+
+if (!function_exists('herikaResolveNpcRolemasterState')) {
+    function herikaResolveNpcRolemasterState($npcName = '', array $options = [])
+    {
+        $npcName = trim(strval($npcName));
+        if ($npcName === '') {
+            $npcName = trim(strval($GLOBALS['HERIKA_NAME'] ?? ''));
+        }
+
+        $useGlobal = !array_key_exists('use_global', $options) || !empty($options['use_global']);
+        if ($useGlobal && !empty($GLOBALS['is_rolemastered'])) {
+            return true;
+        }
+
+        $npcData = is_array($options['npc_data'] ?? null) ? $options['npc_data'] : null;
+        if (is_array($npcData) && !empty($npcData['is_rolemastered'])) {
+            return true;
+        }
+
+        $metadata = is_array($options['metadata'] ?? null) ? $options['metadata'] : null;
+        $extended = is_array($options['extended'] ?? null) ? $options['extended'] : null;
+        $loadLookup = !array_key_exists('load_lookup', $options) || !empty($options['load_lookup']);
+
+        if (($metadata === null || $extended === null) && $loadLookup && $npcName !== '' && class_exists('NpcMaster')) {
+            if (!isset($GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE']) || !is_array($GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE'])) {
+                $GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE'] = [];
+            }
+
+            if (!array_key_exists($npcName, $GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE'])) {
+                $lookup = [
+                    'npc_data' => [],
+                    'metadata' => [],
+                    'extended' => [],
+                ];
+
+                $npcMaster = new NpcMaster();
+                $lookupNpcData = $npcMaster->getByName($npcName);
+                if (is_array($lookupNpcData) && count($lookupNpcData) > 0) {
+                    $lookup['npc_data'] = $lookupNpcData;
+                    $lookup['metadata'] = $npcMaster->getMetadata($lookupNpcData);
+                    $lookup['extended'] = $npcMaster->getExtendedData($lookupNpcData);
+                }
+
+                $GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE'][$npcName] = $lookup;
+            }
+
+            $lookup = $GLOBALS['HERIKA_ROLEMASTER_LOOKUP_CACHE'][$npcName];
+            if ($npcData === null && is_array($lookup['npc_data'])) {
+                $npcData = $lookup['npc_data'];
+            }
+            if ($metadata === null && is_array($lookup['metadata'])) {
+                $metadata = $lookup['metadata'];
+            }
+            if ($extended === null && is_array($lookup['extended'])) {
+                $extended = $lookup['extended'];
+            }
+        }
+
+        if (is_array($npcData) && !empty($npcData['is_rolemastered'])) {
+            return true;
+        }
+        if (is_array($metadata) && !empty($metadata['is_rolemastered'])) {
+            return true;
+        }
+        if (is_array($extended) && !empty($extended['is_rolemastered'])) {
+            return true;
+        }
+
+        $useLegacy = !array_key_exists('use_legacy', $options) || !empty($options['use_legacy']);
+        if ($useLegacy) {
+            return herikaRolemasterStateGetLegacyFlag($npcName);
+        }
+
+        return false;
+    }
+}
+
 class NpcMaster
 {
     private $table = "core_npc_master";
@@ -35,6 +185,8 @@ class NpcMaster
         if (isset($data["npc_name"]) && $data["npc_name"] === "The Narrator") {
             throw new \Exception("The Narrator cannot be created via NpcMaster. Use the Narrator class and Narrator Management UI instead.");
         }
+
+        $data = $this->normalizeNpcDataForPersistence($data);
         
         $fields = [
             "npc_name",
@@ -45,7 +197,6 @@ class NpcMaster
             "oghma_knowledge_tags",
             "emote_moods",
             "personality",
-            "relationships",
             "occupation",
             "appearance",
             "skills",
@@ -130,6 +281,8 @@ class NpcMaster
     // Update NPC by ID
     public function update($id, $data)
     {
+        $data = $this->normalizeNpcDataForPersistence($data);
+
         $fields = [
             "npc_name",
             "npc_favorite",
@@ -139,7 +292,6 @@ class NpcMaster
             "oghma_knowledge_tags",
             "emote_moods",
             "personality",
-            "relationships",
             "occupation",
             "appearance",
             "skills",
@@ -241,6 +393,108 @@ class NpcMaster
         return $codename;
     }
 
+    public function normalizeNpcDataForPersistence($data)
+    {
+        if (!is_array($data)) {
+            return $data;
+        }
+
+        $aliasMap = [
+            'npc_misc' => 'oghma_knowledge_tags',
+            'npc_background' => 'npc_static_bio',
+            'npc_personality' => 'personality',
+            'npc_appearance' => 'appearance',
+            'npc_occupation' => 'occupation',
+            'npc_skills' => 'skills',
+            'npc_speechstyle' => 'speechstyle',
+            'npc_goals' => 'goals',
+        ];
+
+        foreach ($aliasMap as $legacyKey => $canonicalKey) {
+            if (
+                array_key_exists($legacyKey, $data)
+                && (
+                    !array_key_exists($canonicalKey, $data)
+                    || $data[$canonicalKey] === null
+                    || $data[$canonicalKey] === ''
+                )
+            ) {
+                $data[$canonicalKey] = $data[$legacyKey];
+            }
+            unset($data[$legacyKey]);
+        }
+
+        $relationshipSeed = null;
+        foreach (['relationships', 'npc_relationships'] as $relationshipKey) {
+            if (!array_key_exists($relationshipKey, $data)) {
+                continue;
+            }
+
+            $relationshipSeed = $this->decodeRelationshipSeed($data[$relationshipKey]);
+            unset($data[$relationshipKey]);
+
+            if (is_array($relationshipSeed)) {
+                break;
+            }
+        }
+
+        if (is_array($relationshipSeed)) {
+            $extendedData = $this->decodeJsonObject($data['extended_data'] ?? null);
+            $extendedData['relationships'] = $relationshipSeed;
+            $data['extended_data'] = json_encode($extendedData, JSON_UNESCAPED_UNICODE);
+        } elseif (isset($data['extended_data']) && is_array($data['extended_data'])) {
+            $data['extended_data'] = json_encode($data['extended_data'], JSON_UNESCAPED_UNICODE);
+        }
+
+        if (isset($data['metadata']) && is_array($data['metadata'])) {
+            $data['metadata'] = json_encode($data['metadata'], JSON_UNESCAPED_UNICODE);
+        }
+
+        return $data;
+    }
+
+    private function decodeJsonObject($value)
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (!is_string($value)) {
+            return [];
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return [];
+        }
+
+        $decoded = json_decode($trimmed, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function decodeRelationshipSeed($value)
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if ($trimmed[0] !== '{') {
+            return null;
+        }
+
+        $decoded = json_decode($trimmed, true);
+        return is_array($decoded) ? $decoded : null;
+    }
+
     public function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $baseprofile = '')
     {
         if ($npcname === "The Narrator") {
@@ -288,7 +542,7 @@ class NpcMaster
         }
 
         // Compose knowledge string (OGHMA_KNOWLEDGE)
-        $templateRow['npc_misc'] = $this->composeKnowledgeString($templateRow['npc_misc'], $codename);
+        $templateRow['oghma_knowledge_tags'] = $this->composeKnowledgeString($templateRow['oghma_knowledge_tags'] ?? '', $codename);
 
         // Fetch voice IDs
         $voiceData = $this->fetchVoiceData($codename);
@@ -322,21 +576,21 @@ class NpcMaster
 
         if (! $templateRow) {
             $templateRow = $this->db->fetchOne(
-                "SELECT core, oghma_knowledge_tags as npc_misc, npc_static_bio as npc_background, personality as npc_personality, appearance as npc_appearance, relationships as npc_relationships, occupation as npc_occupation, skills as npc_skills, speechstyle as npc_speechstyle, goals as npc_goals FROM combined_bio_templates WHERE lower(npc_name) = lower('{$escCode}')"
+                "SELECT core, oghma_knowledge_tags, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals FROM combined_bio_templates WHERE lower(npc_name) = lower('{$escCode}')"
             );
         }
 
         return $templateRow ?: [
-            'core'              => 'Roleplay as ' . $codename,
-            'npc_misc'          => $codename,
-            'npc_background'    => '',
-            'npc_personality'   => '',
-            'npc_appearance'    => '',
-            'npc_relationships' => '',
-            'npc_occupation'    => '',
-            'npc_skills'        => '',
-            'npc_speechstyle'   => '',
-            'npc_goals'         => '',
+            'core' => 'Roleplay as ' . $codename,
+            'oghma_knowledge_tags' => $codename,
+            'npc_static_bio' => '',
+            'personality' => '',
+            'appearance' => '',
+            'relationships' => '',
+            'occupation' => '',
+            'skills' => '',
+            'speechstyle' => '',
+            'goals' => '',
         ];
     }
 
@@ -389,10 +643,6 @@ class NpcMaster
 
         if (isset($OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'])) {
             $currentNpcData['personality'] = $OLD_GLOBALS_ARRAY['HERIKA_PERSONALITY'];
-        }
-
-        if (isset($OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'])) {
-            $currentNpcData['relationships'] = $OLD_GLOBALS_ARRAY['HERIKA_RELATIONSHIPS'];
         }
 
         if (isset($OLD_GLOBALS_ARRAY['HERIKA_OCCUPATION'])) {
@@ -496,9 +746,7 @@ class NpcMaster
             $GLOBALS['HERIKA_PERSONALITY'] = $currentNpcData['personality'];
         }
 
-        if (isset($currentNpcData['relationships'])) {
-            $GLOBALS['HERIKA_RELATIONSHIPS'] = $currentNpcData['relationships'];
-        }
+        unset($GLOBALS['HERIKA_RELATIONSHIPS']);
 
         if (isset($currentNpcData['occupation'])) {
             $GLOBALS['HERIKA_OCCUPATION'] = $currentNpcData['occupation'];
@@ -579,13 +827,7 @@ class NpcMaster
                 }
                 // Handle boolean false and numeric 0 properly - empty() would skip these
                 if (! empty($value) || is_numeric($value) || is_bool($value)) {
-                    // Convert string "true"/"false" to actual booleans for proper PHP evaluation
-                    if ($value === 'true') {
-                        $value = true;
-                    } elseif ($value === 'false') {
-                        $value = false;
-                    }
-                    $GLOBALS[$key] = $value;
+                    chimApplyOverrideValueToGlobals(strval($key), $value);
                     //error_log("[CORE] NPC  GLOBALS[$key] = ".print_r($value,true));
                 }
 
@@ -605,41 +847,13 @@ class NpcMaster
                 if (in_array(strtoupper((string)$key), $narratorManagedKeys, true)) {
                     continue;
                 }
-                // Apply override to GLOBALS
-                // Handle nested keys (space-separated): "TTS MELOTTS voiceid" -> $GLOBALS['TTS']['MELOTTS']['voiceid']
                 if (! empty($value) || is_numeric($value) || is_bool($value)) {
-                    $parts = explode(' ', $key);
-                    if (count($parts) === 1) {
-                        // Simple key
-                        $GLOBALS[$key] = $value;
-                        // error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[$key] = " . print_r($value, true));
-                    } else if (count($parts) === 2) {
-                        // Nested 2 levels: TTS MELOTTS
-                        if (! isset($GLOBALS[$parts[0]])) {
-                            $GLOBALS[$parts[0]] = [];
-                        }
-
-                        $GLOBALS[$parts[0]][$parts[1]] = $value;
-                        // error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[{$parts[0]}][{$parts[1]}] = " . print_r($value, true));
-                    } else if (count($parts) === 3) {
-                        // Nested 3 levels: TTS MELOTTS voiceid
-                        if (! isset($GLOBALS[$parts[0]])) {
-                            $GLOBALS[$parts[0]] = [];
-                        }
-
-                        if (! isset($GLOBALS[$parts[0]][$parts[1]])) {
-                            $GLOBALS[$parts[0]][$parts[1]] = [];
-                        }
-
-                        $GLOBALS[$parts[0]][$parts[1]][$parts[2]] = $value;
-                        // error_log("[CORE] NPC EXTENDED_DATA OVERRIDE  GLOBALS[{$parts[0]}][{$parts[1]}][{$parts[2]}] = " . print_r($value, true));
-                    }
+                    chimApplyOverrideValueToGlobals(strval($key), $value);
                 }
             }
         }
 
-        // This behavior is now always enabled.
-        $GLOBALS['ENFORCE_ACTIONS_PROMPT'] = true;
+        $GLOBALS['ENFORCE_ACTIONS_PROMPT'] = false;
 
     }
 
@@ -681,6 +895,69 @@ class NpcMaster
 
         $currentNpcData['metadata'] = json_encode($data);
         return $currentNpcData;
+    }
+
+    public function updateMetadataKeysByName(string $npcName, array $setValues = [], array $unsetKeys = []): bool
+    {
+        $npcName = trim($npcName);
+        if ($npcName === '') {
+            return false;
+        }
+
+        $normalizedSetValues = [];
+        foreach ($setValues as $key => $value) {
+            $metadataKey = trim((string) $key);
+            if ($metadataKey === '') {
+                continue;
+            }
+
+            if ($value === null) {
+                $unsetKeys[] = $metadataKey;
+                continue;
+            }
+
+            $normalizedSetValues[$metadataKey] = $value;
+        }
+
+        $normalizedUnsetKeys = [];
+        foreach ($unsetKeys as $key) {
+            $metadataKey = trim((string) $key);
+            if ($metadataKey === '') {
+                continue;
+            }
+            $normalizedUnsetKeys[$metadataKey] = true;
+        }
+
+        if (count($normalizedSetValues) === 0 && count($normalizedUnsetKeys) === 0) {
+            return false;
+        }
+
+        $metadataExpr = "COALESCE(metadata, '{}'::jsonb)";
+
+        foreach (array_keys($normalizedUnsetKeys) as $metadataKey) {
+            $escapedKey = $this->db->escape($metadataKey);
+            $metadataExpr = "({$metadataExpr} - '{$escapedKey}')";
+        }
+
+        foreach ($normalizedSetValues as $metadataKey => $value) {
+            $escapedKey = $this->db->escape($metadataKey);
+            $encodedValue = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($encodedValue === false) {
+                continue;
+            }
+
+            $escapedValue = $this->db->escape($encodedValue);
+            $metadataExpr = "jsonb_set({$metadataExpr}, '{\"{$escapedKey}\"}', '{$escapedValue}'::jsonb, true)";
+        }
+
+        $escapedNpcName = $this->db->escape($npcName);
+        $query = "
+            UPDATE {$this->table}
+            SET metadata = {$metadataExpr}
+            WHERE npc_name = '{$escapedNpcName}'
+        ";
+
+        return $this->db->execQuery($query) !== false;
     }
 
     public function backupNpcById($id)
@@ -963,6 +1240,23 @@ FROM restore
         
         if (!is_array($extendedData) || !isset($extendedData['factions']) || !is_array($extendedData['factions'])) {
             return false;
+        }
+
+        $stableReference = chimParseStableFormReference($factionFormId);
+        if ($stableReference) {
+            foreach ($extendedData['factions'] as $faction) {
+                if (
+                    isset($faction['rank']) && $faction['rank'] > -1 &&
+                    chimFactionEntryMatchesStableFormReference($faction, $stableReference['stable_key'])
+                ) {
+                    return true;
+                }
+            }
+
+            $resolvedRuntimeFormId = chimResolveStableFormReferenceToRuntimeFormId($stableReference['stable_key']);
+            if ($resolvedRuntimeFormId !== null) {
+                $factionFormId = $resolvedRuntimeFormId;
+            }
         }
 
         // Normalize formid for comparison (handle case-insensitive comparison)

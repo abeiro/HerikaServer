@@ -5,9 +5,13 @@
 
 
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
-require_once($path . "conf".DIRECTORY_SEPARATOR."conf.php"); // API KEY must be there
+require_once($path . "lib" .DIRECTORY_SEPARATOR."runtime_bootstrap.php");
+chimRuntimeBootstrap($path, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => true,
+]);
 require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-require_once($path . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
@@ -26,14 +30,8 @@ if (!$_FILES["file"]["tmp_name"]) {
 @copy($_FILES["file"]["tmp_name"] ,$finalName);
 
 
-if (isset($_GET["profile"])) {
-    if (file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php")) {
-       // error_log("PROFILE: {$_GET["profile"]}");
-        require_once($path . "conf".DIRECTORY_SEPARATOR."conf_{$_GET["profile"]}.php");
-
-    }
-    $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
-
+if (chimRuntimeBindActiveProfileFromRequest() !== null) {
+    $GLOBALS["CURRENT_CONNECTOR"] = DMgetCurrentModel();
 }
 
 function convertImage($originalImage, $outputImage, $quality)
@@ -74,8 +72,8 @@ convertImage($finalName,$finalNameJpeg,9);
 @unlink($finalName);
 
 
- 
-$db=new sql();
+$db=$GLOBALS["db"] ?? new sql();
+$GLOBALS["db"] = $db;
 $location=DataLastKnownLocation();
 $hints="";
 //$charactersArray=implode(",",DataPosibleInspectTargets(true));

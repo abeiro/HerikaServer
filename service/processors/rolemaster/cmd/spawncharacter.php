@@ -13,12 +13,10 @@ $GLOBALS["active_profile"]=md5("The Narrator");
 $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
 
-$CONF_SAMPLE_VARS=extract_assignments("{$GLOBALS["ENGINE_ROOT"]}/conf/conf.php");
-
 $connector=new LLMConnector();
 $npcMaster=new NpcMaster();
 
-$currentConnectorData = $connector->getById($CONF_SAMPLE_VARS["CORE_CONNECTOR_DIRECTOR"]);
+$currentConnectorData = $connector->getById(intval($GLOBALS["CORE_CONNECTOR_DIRECTOR"] ?? 0));
 $connectionHandler = $connector->getConnector($currentConnectorData);
 
 $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]=$currentConnectorData;
@@ -187,6 +185,9 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
             $currentData["appearance"]=$response["appearance"];
             $currentData["core"]="{$response["name"]} ({$response["race"]} {$response["gender"]}";
             $currentData["speechstyle"]=$response["speechStyle"];
+            $currentMetadata = $npcMaster->getMetadata($currentData);
+            $currentMetadata["is_rolemastered"] = true;
+            $currentData = $npcMaster->setMetadata($currentData, $currentMetadata);
         
             $npcMaster->updateByArray($currentData);
 

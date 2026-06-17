@@ -38,54 +38,7 @@ function aiProfileIsNpcSpokenContent(string $content, string $npcName): bool
 
 function aiProfileFilterHistoricContext(array $contextDataHistoric, string $npcName): array
 {
-    if (empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) || $npcName === "The Narrator") {
-        return $contextDataHistoric;
-    }
-
-    $isContextNarratorLine = function (string $content): bool {
-        if (strpos($content, 'The Narrator:') !== 0) {
-            return false;
-        }
-
-        if (preg_match('/^The Narrator:\s*\(/', $content)) {
-            return true;
-        }
-
-        if (strpos($content, 'The Narrator: background dialogue:') === 0) {
-            return true;
-        }
-
-        if (strpos($content, 'The Narrator: action moved to new location:') === 0) {
-            return true;
-        }
-
-        if (strpos($content, 'The Narrator: SCENARIO CHANGE') === 0) {
-            return true;
-        }
-
-        if (preg_match('/^The Narrator:\s*about\s+\d+\s+hours\s+later/i', $content)) {
-            return true;
-        }
-
-        return false;
-    };
-
-    return array_values(array_filter($contextDataHistoric, function ($entry) use ($isContextNarratorLine) {
-        if (!is_array($entry)) {
-            return true;
-        }
-
-        $content = isset($entry['content']) ? (string)$entry['content'] : '';
-        if (strpos($content, '(Talking to The Narrator)') !== false) {
-            return false;
-        }
-
-        if (strpos($content, 'The Narrator:') === 0) {
-            return $isContextNarratorLine($content);
-        }
-
-        return true;
-    }));
+    return filterHistoricContextForNarratorVisibility($contextDataHistoric, $npcName);
 }
 
 function aiProfileBuildPreviewEvents(string $npcName, array $currentNpcData, $db, int $eventLimit = 100): array

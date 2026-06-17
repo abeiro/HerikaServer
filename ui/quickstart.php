@@ -16,9 +16,6 @@ $configFilepath = $rootPath . "conf" . DIRECTORY_SEPARATOR;
 require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
 // Load configuration files in the correct order
 require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");  // Should contain defaults
-if (file_exists($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php")) {
-    require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php");  // Should contain current ones
-}
 
 function herikaQuickstartMiniMeDefaultUrl(): string {
     return 'http://127.0.0.1:8082/';
@@ -109,6 +106,163 @@ function herikaQuickstartProbeUrl(string $rawUrl): array {
 
     $result['error'] = 'No HTTP response from endpoint.';
     return $result;
+}
+
+function herikaQuickstartEnsureActiveSttConnectorId(STTConnector $connector): int {
+    $activeId = chimGetGeneralSettingInt('GLOBAL_STT_CONNECTOR_ID', 0);
+    if ($activeId > 0) {
+        $row = $connector->getById($activeId);
+        if ($row) {
+            return $activeId;
+        }
+    }
+
+    $migrated = $connector->ensureLegacySelectionFromGlobals();
+    if ($migrated && !empty($migrated['id'])) {
+        $activeId = intval($migrated['id']);
+        chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $activeId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
+        return $activeId;
+    }
+
+    $rows = $connector->readAll();
+    if (!empty($rows)) {
+        $activeId = intval($rows[0]['id'] ?? 0);
+        if ($activeId > 0) {
+            chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $activeId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
+        }
+        return $activeId;
+    }
+
+    $driverOptions = $connector->getDriverOptions();
+    $defaultDriver = 'deepgram';
+    foreach ($driverOptions as $driverOption) {
+        $candidate = $connector->normalizeDriverValue($driverOption);
+        if ($candidate !== '' && $candidate !== 'none') {
+            $defaultDriver = $candidate;
+            break;
+        }
+    }
+
+    $createdId = $connector->create([
+        'driver' => $defaultDriver,
+        'label' => ($defaultDriver === 'none') ? 'Disabled STT' : ('Global ' . $connector->getDisplayName($defaultDriver)),
+        'metadata' => json_encode([], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        'api_badge_id' => $connector->getDefaultApiBadgeIdForDriver($defaultDriver),
+        'url' => $connector->getDefaultUrlForDriver($defaultDriver),
+    ]);
+    if ($createdId > 0) {
+        chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $createdId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
+    }
+    return $createdId;
+}
+
+function herikaQuickstartNormalizeTtsDriver(TTSConnector $connector, $driver): string {
+    $normalizedDriver = $connector->normalizeDriverValue($driver);
+    if ($normalizedDriver === '') {
+        $normalizedDriver = 'none';
+    }
+    return $normalizedDriver;
+}
+
+function herikaQuickstartEnsureTtsConnectorForDriver(TTSConnector $connector, string $selectedDriver): ?array {
+    $selectedDriver = herikaQuickstartNormalizeTtsDriver($connector, $selectedDriver);
+
+    $existingRow = chimResolvePreferredTtsConnectorRow($selectedDriver);
+    if ($existingRow) {
+        return $existingRow;
+    }
+
+    $metadata = $connector->applyForcedMetadataDefaults($selectedDriver, []);
+    $payload = [
+        'driver' => $selectedDriver,
+        'label' => ($selectedDriver === 'none') ? 'Disabled TTS' : ('Default ' . $connector->getDisplayName($selectedDriver)),
+        'metadata' => json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        'api_badge_id' => $connector->driverUsesApiBadge($selectedDriver)
+            ? $connector->getDefaultApiBadgeIdForDriver($selectedDriver)
+            : null,
+        'url' => $connector->driverSupportsEditableUrl($selectedDriver)
+            ? $connector->getDefaultUrlForDriver($selectedDriver)
+            : null,
+        'voice_field' => ($selectedDriver === 'none') ? null : $connector->getVoiceFieldForDriver($selectedDriver),
+    ];
+
+    $createdId = $connector->create($payload);
+    if ($createdId <= 0) {
+        return null;
+    }
+
+    return $connector->getById($createdId) ?: null;
+}
+
+function herikaQuickstartApplyTtsSelection(TTSConnector $connector, $selectedDriver): int {
+    $selectedDriver = herikaQuickstartNormalizeTtsDriver($connector, $selectedDriver);
+    $previousPreferredRow = chimResolvePreferredTtsConnectorRow();
+    $previousPreferredId = intval($previousPreferredRow['id'] ?? 0);
+
+    $selectedRow = herikaQuickstartEnsureTtsConnectorForDriver($connector, $selectedDriver);
+    $selectedId = intval($selectedRow['id'] ?? 0);
+    if ($selectedId <= 0) {
+        return 0;
+    }
+
+    if ($previousPreferredId > 0 && $previousPreferredId !== $selectedId) {
+        $GLOBALS['db']->query("UPDATE core_profiles SET tts_connector_id = {$selectedId} WHERE tts_connector_id = {$previousPreferredId}");
+    }
+    $GLOBALS['db']->query("UPDATE core_profiles SET tts_connector_id = {$selectedId} WHERE tts_connector_id IS NULL OR default_narrator = '1' OR default_npc = '1'");
+
+    if (!class_exists('Player')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    }
+
+    try {
+        $player = new Player();
+        $currentPlayerConnectorId = intval($player->get('tts_connector_id') ?? 0);
+        if ($currentPlayerConnectorId <= 0 || $currentPlayerConnectorId === $previousPreferredId || $currentPlayerConnectorId === $selectedId) {
+            $player->set('tts_connector_id', strval($selectedId));
+        }
+    } catch (Throwable $_e) {
+    }
+
+    return $selectedId;
+}
+
+function herikaQuickstartGetLlmConnectorLabelById($db, int $id): string {
+    if ($id <= 0 || !$db) {
+        return '';
+    }
+    try {
+        $row = $db->fetchOne("SELECT label FROM core_llm_connector WHERE id=" . intval($id) . " LIMIT 1");
+    } catch (Throwable $_e) {
+        $row = [];
+    }
+    return trim(strval($row['label'] ?? ''));
+}
+
+function herikaQuickstartGetGeneralLlmConnectorSummary($db): array {
+    $items = [
+        'CORE_CONNECTOR_SUMMARY' => 'Summaries',
+        'CORE_CONNECTOR_MEDIUMTERM' => 'Background Life',
+        'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
+        'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
+        'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
+        'RELLLM_CONNECTOR' => 'Relationship Management',
+        'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
+    ];
+
+    $summary = [];
+    foreach ($items as $settingId => $displayName) {
+        $connectorId = chimGetGeneralSettingInt($settingId, 0);
+        $label = herikaQuickstartGetLlmConnectorLabelById($db, $connectorId);
+        if ($label === '') {
+            continue;
+        }
+        $summary[] = [
+            'name' => $displayName,
+            'label' => $label,
+        ];
+    }
+
+    return $summary;
 }
 
 if (isset($_GET['minime_probe']) && strval($_GET['minime_probe']) === '1') {
@@ -211,81 +365,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         exit;
     }
 
-    if ($action === 'save_conf') {
-        require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
-        $confSchemaFlat = conf_loader_load_schema();
-        $currentConf = conf_loader_load();
-        $allPairs = [];
-        foreach ($currentConf as $pname => $parms) {
-            $fieldName = strtr($pname, [" " => "@"]); // flatten
-            $type = $parms['type'] ?? ($confSchemaFlat[$pname]['type'] ?? 'string');
-            $val = $parms['currentValue'] ?? '';
-            if ($type === 'boolean') $allPairs[$fieldName] = $val ? 'true' : 'false';
-            else if ($type === 'selectmultiple') $allPairs[$fieldName] = is_array($val) ? $val : [];
-            else $allPairs[$fieldName] = (string)$val;
-        }
-        // Override with posted values from Quickstart form
-        foreach ($_POST as $k => $v) {
-            if ($k === 'qs_action' || $k === 'profile') continue;
-            $plain = strtr($k, ["@" => " "]);
-            $type = $confSchemaFlat[$plain]['type'] ?? 'string';
-            if (is_array($v)) {
-                $allPairs[$k] = $v;
-            } else if ($type === 'number') {
-                if ($v === '') continue; else $allPairs[$k] = (string)$v;
-            } else if ($type === 'boolean') {
-                $allPairs[$k] = ($v === 'true') ? 'true' : 'false';
-            } else {
-                $allPairs[$k] = (string)$v;
-            }
-        }
-        
-        // Save PLAYER_NAME to core_player table
-        if (isset($_POST['PLAYER_NAME']) && $_POST['PLAYER_NAME'] !== '') {
-            try {
-                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    if ($action === 'save_quickstart') {
+        $result = false;
+        try {
+            require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "settings.php");
+            require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+            require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "stt_connector.class.php");
+            require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+
+            if (isset($_POST['PLAYER_NAME']) && trim(strval($_POST['PLAYER_NAME'])) !== '') {
                 $player = new Player();
-                $player->set('player_name', $_POST['PLAYER_NAME']);
-            } catch (Exception $e) {
-                // Silently fail, will still save to conf.php
+                $player->set('player_name', trim(strval($_POST['PLAYER_NAME'])));
             }
-        }
-        
-        // Build and write conf.php
-        $buffer = "<?php" . PHP_EOL;
-        $oldGroup = '';
-        $oldSubGroup = '';
-        $process_slashes = function(string $s_input): string { $sx = str_replace("\\'", "'", $s_input); return addcslashes($sx, "'"); };
-        foreach ($allPairs as $k => $v) {
-            $full = explode('@', $k);
-            $plain = strtr($k, ['@' => ' ']);
-            $type = $confSchemaFlat[$plain]['type'] ?? 'string';
-            if (is_array($v)) $value = json_encode($v, true);
-            else if ($type === 'number') { if ($v === '') continue; else $value = "" . addcslashes($v, "'") . ""; }
-            else if ($type === 'boolean') $value = ($v === 'true') ? 'true' : 'false';
-            else $value = "'" . $process_slashes((string)$v) . "'";
-            if ($oldGroup !== $full[0]) { $buffer .= PHP_EOL . PHP_EOL; $oldGroup = $full[0]; }
-            if (isset($full[1]) && $oldSubGroup !== $full[1]) { $buffer .= PHP_EOL; $oldSubGroup = $full[1]; }
-            if (count($full) === 1) { if (isset($confSchemaFlat[$plain]['description'])) $buffer .= "//" . $confSchemaFlat[$plain]['description'] . PHP_EOL; $buffer .= '$' . $full[0] . '=' . $value . ';' . PHP_EOL; }
-            else if (count($full) === 2) { $inline = isset($confSchemaFlat[$plain]['description']) ? ("//" . $confSchemaFlat[$plain]['description']) : ''; $buffer .= '$' . $full[0] . '["' . $full[1] . '"]=' . $value . ';' . "\t" . $inline . PHP_EOL; }
-            else if (count($full) === 3) { $inline = isset($confSchemaFlat[$plain]['description']) ? ("//" . $confSchemaFlat[$plain]['description']) : ''; $buffer .= '$' . $full[0] . '["' . $full[1] . '"]["' . $full[2] . '"]=' . $value . ';' . "\t" . $inline . PHP_EOL; }
-        }
-        $buffer .= "?>" . PHP_EOL;
-        $target = $rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-        $result = @file_put_contents($target, $buffer);
-        if ($result !== false) {
-            try {
-                include($target);
-                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
-                require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
-                $ttsConnector = new TTSConnector();
-                $ttsConnector->ensureLegacyConnectorMigration(true);
-                $ttsConnector->importLegacyPlayerSettings();
-            } catch (Throwable $_e) {
-                // Keep quickstart save successful even if connector sync is unavailable.
+
+            $ttsConnector = new TTSConnector();
+            $selectedTtsDriver = herikaQuickstartNormalizeTtsDriver($ttsConnector, $_POST['TTSFUNCTION'] ?? ($GLOBALS["TTSFUNCTION"] ?? 'none'));
+            $savedTtsId = herikaQuickstartApplyTtsSelection($ttsConnector, $selectedTtsDriver);
+
+            $sttConnector = new STTConnector();
+            $activeSttId = herikaQuickstartEnsureActiveSttConnectorId($sttConnector);
+            $selectedSttDriver = $sttConnector->normalizeDriverValue($_POST['STTFUNCTION'] ?? ($GLOBALS["STTFUNCTION"] ?? 'none'));
+            if ($selectedSttDriver === '') {
+                $selectedSttDriver = 'none';
             }
+            $existingStt = $activeSttId > 0 ? $sttConnector->getById($activeSttId) : null;
+            $existingSttDriver = $sttConnector->normalizeDriverValue($existingStt['driver'] ?? '');
+            $metadata = ($existingStt && $existingSttDriver === $selectedSttDriver)
+                ? $sttConnector->decodeMetadata($existingStt['metadata'] ?? '{}')
+                : [];
+            $url = null;
+            if ($sttConnector->driverSupportsEditableUrl($selectedSttDriver)) {
+                if ($existingStt && $existingSttDriver === $selectedSttDriver) {
+                    $url = trim(strval($existingStt['url'] ?? ''));
+                }
+                if ($url === '') {
+                    $url = $sttConnector->getDefaultUrlForDriver($selectedSttDriver);
+                }
+            }
+            $sttPayload = [
+                'driver' => $selectedSttDriver,
+                'label' => ($selectedSttDriver === 'none') ? 'Disabled STT' : ('Global ' . $sttConnector->getDisplayName($selectedSttDriver)),
+                'metadata' => json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                'api_badge_id' => $sttConnector->driverUsesApiBadge($selectedSttDriver)
+                    ? $sttConnector->getDefaultApiBadgeIdForDriver($selectedSttDriver)
+                    : null,
+                'url' => $url,
+            ];
+            if ($activeSttId > 0 && $existingStt) {
+                $sttConnector->update($activeSttId, $sttPayload);
+                chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $activeSttId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
+                $savedSttId = $activeSttId;
+            } else {
+                $savedSttId = $sttConnector->create($sttPayload);
+                if ($savedSttId > 0) {
+                    chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $savedSttId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
+                }
+            }
+
+            $result = ($savedTtsId > 0) && (intval($savedSttId ?? 0) > 0);
+        } catch (Throwable $_e) {
+            $result = false;
         }
-        echo json_encode([ 'ok' => $result !== false ]);
+        echo json_encode([ 'ok' => $result ]);
         exit;
     }
 
@@ -301,42 +442,15 @@ $webRoot = rtrim($webRoot, '/');
 
 $TITLE = "CHIM - Quickstart";
 
-require($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
-
-$configFilepath = realpath($configFilepath) . DIRECTORY_SEPARATOR;
-
-// Function to compare modification dates
-function compareFileModificationDate($a, $b) {
-    return filemtime($b) - filemtime($a);
-}
-
-// Profile selection
-foreach (glob($configFilepath . 'conf_????????????????????????????????.php') as $mconf) {
-    if (file_exists($mconf)) {
-        $filename = basename($mconf);
-        $pattern = '/conf_([a-f0-9]+)\.php/';
-        preg_match($pattern, $filename, $matches);
-        $hash = $matches[1];
-        $GLOBALS["PROFILES"]["$hash"] = $mconf;
-    }
-}
-
-// Sort the profiles by modification date descending
-if (is_array($GLOBALS["PROFILES"])) {
-    usort($GLOBALS["PROFILES"], 'compareFileModificationDate');
-} else {
-    $GLOBALS["PROFILES"] = [];
-}
-
-$GLOBALS["PROFILES"] = array_merge(["default" => "$configFilepath/conf.php"], $GLOBALS["PROFILES"]);
-
-if (isset($_SESSION["PROFILE"]) && in_array($_SESSION["PROFILE"], $GLOBALS["PROFILES"])) {
-    require_once($_SESSION["PROFILE"]);
-} else {
-    $_SESSION["PROFILE"] = "$configFilepath/conf.php";
-    require_once($_SESSION["PROFILE"]);
-}
-// End of profile selection
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrapIfNeeded($rootPath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => true,
+    'load_itt_connector' => false,
+    'load_tts_connector' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
@@ -345,29 +459,32 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
 $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 $configFilepath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."conf".DIRECTORY_SEPARATOR;
-$rootEnginePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-
 $configFilepath = realpath($configFilepath) . DIRECTORY_SEPARATOR;
 
-// Include necessary files
-require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php");
-require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php"); // Defaults
-if (file_exists($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php")) {
-    require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . "conf.php"); // Current configs
-}
 require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "llm_randomizer.php");
 require_once($rootPath . "conf" . DIRECTORY_SEPARATOR . 'conf_loader.php');
-
-/* DB update logic */
-require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-$db = new sql();
-/* Check for database updates */
-require_once(__DIR__."/../debug/db_updates.php");
-/* END of check database for updates */
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "stt_connector.class.php");
+$db = $GLOBALS['db'];
 
 // Load current configurations
 $currentConf = conf_loader_load();
 $currentConfTitles = conf_loader_load_titles();
+
+$quickstartSttConnector = new STTConnector();
+$quickstartActiveSttId = herikaQuickstartEnsureActiveSttConnectorId($quickstartSttConnector);
+$quickstartActiveSttRow = $quickstartActiveSttId > 0 ? $quickstartSttConnector->getById($quickstartActiveSttId) : [];
+$quickstartActiveSttDriver = $quickstartSttConnector->normalizeDriverValue($quickstartActiveSttRow['driver'] ?? ($GLOBALS["STTFUNCTION"] ?? ''));
+$quickstartTtsConnector = new TTSConnector();
+$quickstartActiveTtsRow = chimResolvePreferredTtsConnectorRow();
+$quickstartActiveTtsDriver = herikaQuickstartNormalizeTtsDriver($quickstartTtsConnector, $quickstartActiveTtsRow['driver'] ?? ($GLOBALS["TTSFUNCTION"] ?? ''));
+
+if (isset($currentConf['TTSFUNCTION']) && in_array($quickstartActiveTtsDriver, $quickstartTtsConnector->getDriverOptions(), true)) {
+    $currentConf['TTSFUNCTION']['currentValue'] = $quickstartActiveTtsDriver;
+}
+if (isset($currentConf['STTFUNCTION']) && in_array($quickstartActiveSttDriver, $quickstartSttConnector->getDriverOptions(), true)) {
+    $currentConf['STTFUNCTION']['currentValue'] = $quickstartActiveSttDriver;
+}
 
 // Filter the configurations you want to display in the Quickstart Menu
 $quickstartKeys = [
@@ -383,9 +500,7 @@ $quickstartConf = array_filter($currentConf, function($key) use ($quickstartKeys
 echo '<link rel="stylesheet" href="'.$webRoot.'/ui/css/main.css">';
 echo '<main class="qs-page">';
 echo '<div class="qs-shell">
-        <form action="" method="post" name="mainC" class="confwizard" id="top">
-            <input type="hidden" name="profile" value="' . htmlspecialchars($_SESSION["PROFILE"]) . '" />
-      ';
+        <form action="" method="post" name="mainC" class="confwizard" id="top">';
 
 // Main Heading
 echo '<section class="qs-section qs-header-card">
@@ -425,9 +540,18 @@ try { $player2ForceAllLlm = LLMRandomizer::isPlayer2ForceEnabled(); } catch (Thr
 $player2ForceChecked = $player2ForceAllLlm ? " checked" : "";
 $llmNoteDefaultStyle = $player2ForceAllLlm ? ' style="display:none;"' : '';
 $llmNotePlayer2Style = $player2ForceAllLlm ? '' : ' style="display:none;"';
-$llmCardsBaseStyle = 'display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-top:8px;';
+$llmCardsBaseStyle = 'display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:8px;';
 $llmCardsDefaultStyle = $llmCardsBaseStyle . ($player2ForceAllLlm ? ' display:none;' : '');
 $llmCardsPlayer2Style = $llmCardsBaseStyle . ($player2ForceAllLlm ? '' : ' display:none;');
+$generalLlmConnectorSummary = herikaQuickstartGetGeneralLlmConnectorSummary($db);
+$generalLlmConnectorListHtml = '';
+if (!empty($generalLlmConnectorSummary)) {
+    $generalLlmConnectorListHtml .= '<ul class="qs-general-connector-list">';
+    foreach ($generalLlmConnectorSummary as $item) {
+        $generalLlmConnectorListHtml .= '<li><span class="qs-general-connector-name">' . htmlspecialchars($item['name']) . ':</span> ' . htmlspecialchars($item['label']) . '</li>';
+    }
+    $generalLlmConnectorListHtml .= '</ul>';
+}
 
 echo '<section class="qs-section" id="qs_openrouter_section"' . ($player2ForceAllLlm ? ' style="display:none;"' : '') . '>
         <h2 class="qs-section-title">OpenRouter</h2>
@@ -452,12 +576,6 @@ echo '<section class="qs-section" id="qs_minime_section">
         </div>
       </section>';
 
-if ($_SESSION["PROFILE"] == "$configFilepath/conf.php") {
-    $DEFAULT_PROFILE = true;
-} else {
-    $DEFAULT_PROFILE = false;
-}
-
 $access = ["basic" => 0, "pro" => 1, "wip" => 2];
 
 foreach ($quickstartConf as $pname => $parms) {
@@ -481,14 +599,6 @@ foreach ($quickstartConf as $pname => $parms) {
     }
 
     $FORCE_DISABLED = "";
-
-    // Handle scope and constant parameters
-    if ($DEFAULT_PROFILE && $fieldName == "HERIKA_NAME") {
-        $fieldValue = "The Narrator";
-        $FORCE_DISABLED = " readonly='true' ";
-    } else {
-        $FORCE_DISABLED = "";
-    }
 
     if (isset($parms["scope"]) && $parms["scope"] == "global") {
         $FORCE_DISABLED = "";
@@ -536,20 +646,30 @@ foreach ($quickstartConf as $pname => $parms) {
             'pockettts'    => 'PocketTTS',
             'chatterbox'   => 'Chatterbox',
             'xtts-fastapi' => 'XTTS',
-            'melotts'      => 'MeloTTS',
             'parakeet'     => 'Parakeet',
             'deepgram'     => 'Deepgram',
             'localwhisper' => 'Local Whisper',
+            'whisper'      => 'Whisper',
+            'gemini'       => 'Gemini',
+            'azure'        => 'Azure',
+            'inworld'      => 'Inworld',
+            'none'         => 'Disabled',
         ];
         $recommendedValues = [];
         if ($pname == "TTSFUNCTION") {
-            $parms["values"] = ["pockettts","chatterbox","xtts-fastapi","melotts"];
+            $parms["values"] = ["pockettts","chatterbox","xtts-fastapi","inworld"];
+            if (in_array($quickstartActiveTtsDriver, $parms["values"], true)) {
+                $parms["currentValue"] = $quickstartActiveTtsDriver;
+            }
             $recommendedValues = ["pockettts", "chatterbox"];
-            $parms["description"] = "Select the TTS service you wish to use. Recommended: PocketTTS or Chatterbox. <br>You can install PocketTTS, Chatterbox, XTTS and MeloTTS in the CHIM Launcher under <b>Install Components.</b>";
+            $parms["description"] = "Select the TTS service you wish to use. Recommended: PocketTTS or Chatterbox. <br>You can install PocketTTS, Chatterbox, XTTS and configure Inworld in CHIM. For provider-specific settings and advanced endpoint editing, use the <a href='" . $webRoot . "/ui/core/tts_connectors.php' target='_blank'>TTS Connectors</a> page.";
         } else if ($pname == "STTFUNCTION") {
-            $parms["values"] = ["parakeet","deepgram","localwhisper"];
+            $parms["values"] = ["parakeet", "deepgram"];
+            if (in_array($quickstartActiveSttDriver, $parms["values"], true)) {
+                $parms["currentValue"] = $quickstartActiveSttDriver;
+            }
             $recommendedValues = ["parakeet", "deepgram"];
-            $parms["description"] = "Select the STT service you wish to use. Recommended: Parakeet or Deepgram.";
+            $parms["description"] = "Select the STT service you wish to use. Recommended: Parakeet or Deepgram. For provider-specific settings and endpoint editing, use the <a href='" . $webRoot . "/ui/stt_connectors.php' target='_blank'>STT Connectors</a> page.";
         }
         $recommendedValues = array_values(array_filter(
             $recommendedValues,
@@ -679,30 +799,28 @@ echo '<section class="qs-section">
 
 echo '<section class="qs-section">
                 <h2 class="qs-section-title">LLM Connectors Note</h2>
-                <p class="form-text" id="qs_llm_connectors_note_default"' . $llmNoteDefaultStyle . '>The default CHIM installation comes with 4 predefined LLMs that you can hotswap ingame. Diary, summary, and middle-term memory defaults use OpenRouter DeepSeek Chat V3.2. Scene Classifier uses a dedicated Gemma 3N E4B connector.</p>
-                <p class="form-text" id="qs_llm_connectors_note_player2"' . $llmNotePlayer2Style . '>Player2 mode is active. Standard, Fast, Powerful, and Experimental all use the local Player2 connector, and Diary, Formatter, plus Fallback also route through Player2. The actual model stays controlled in the Player2 app.</p>
+                <p class="form-text" id="qs_llm_connectors_note_default"' . $llmNoteDefaultStyle . '>Quickstart gives you four hot-swappable LLMs for in-game use.</p>
+                <p class="form-text" id="qs_llm_connectors_note_player2"' . $llmNotePlayer2Style . '>Player2 mode is active. Standard, Fast, Powerful, and Experimental all use the local Player2 connector.</p>
                 <div id="qs_llm_connectors_cards_default" style="' . $llmCardsDefaultStyle . '">
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F579;&#xFE0F; <b>Standard</b></div>
                         <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: GLM 4.7 (z-ai/glm-4.7)</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Released Dec 22, 2025 | 202,752 context</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.39/M input | $1.75/M output</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.38/M input | $1.74/M output</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F3C3;&#x200D;&#x2642;&#xFE0F; <b>Fast</b></div>
                         <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: Gemini 2.5 Flash Lite (google/gemini-2.5-flash-lite)</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Check OpenRouter for current pricing and context details.</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.10/M input | $0.40/M output</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F4AA; <b>Powerful</b></div>
                         <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: GLM 5 (z-ai/glm-5)</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Check OpenRouter for current pricing and context details.</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Reasoning Model Fix is enabled by default.</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.60/M input | $2.08/M output</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F9EA; <b>Experimental</b></div>
                         <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: DeepSeek Chat V3.2 (deepseek/deepseek-v3.2)</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">Check OpenRouter for current pricing and context details.</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.252/M input | $0.378/M output</div>
                     </div>
                 </div>
                 <div id="qs_llm_connectors_cards_player2" style="' . $llmCardsPlayer2Style . '">
@@ -727,8 +845,12 @@ echo '<section class="qs-section">
                         <div style="margin-top:4px; color:#bbb; font-size:12px;">Same local Player2 connector as Standard</div>
                     </div>
                 </div>
+                <div class="qs-general-connector-wrap">
+                    <div class="qs-general-connector-title">Other Connectors Used:</div>
+                    ' . ($generalLlmConnectorListHtml !== '' ? $generalLlmConnectorListHtml : '<div class="qs-general-connector-empty">No additional general-settings connectors are configured.</div>') . '
+                </div>
                 <p class="qs-note warning-text3">
-                    Once done click Save and startup Skyrim with the AIAgent mod installed. Please read the <a href="https://dwemerdynamics.hostwiki.io/" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
+                    Once done click Save and startup Skyrim with the AIAgent mod installed. Please read the <a href="https://dwemerdynamics.com/chim/index.html" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
                 </p>
                 <div class="qs-actions">
                     <button
@@ -839,6 +961,41 @@ echo '<style>
 
     .qs-field {
         margin-bottom: 0;
+    }
+
+    .qs-general-connector-wrap {
+        margin-top: 14px;
+        padding: 12px;
+        border: 1px solid #3b3b3b;
+        border-radius: 8px;
+        background: rgba(20, 20, 20, 0.65);
+    }
+
+    .qs-general-connector-title {
+        color: #cfd9ea;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .qs-general-connector-list {
+        margin: 0;
+        padding-left: 18px;
+        color: #b9c4d6;
+        font-size: 13px;
+    }
+
+    .qs-general-connector-list li {
+        margin-bottom: 4px;
+    }
+
+    .qs-general-connector-name {
+        color: #e5e7eb;
+        font-weight: 600;
+    }
+
+    .qs-general-connector-empty {
+        color: #9ca3af;
+        font-size: 13px;
     }
 
     .qs-actions {
@@ -1037,6 +1194,11 @@ echo '<style>
         .qs-toggle-control {
             min-width: 0;
         }
+
+        #qs_llm_connectors_cards_default,
+        #qs_llm_connectors_cards_player2 {
+            grid-template-columns: 1fr !important;
+        }
     }
 
     /* Warning Text Styling */
@@ -1090,10 +1252,10 @@ async function saveQuickstartAndDB(){
     fdm.append("qs_action", "profile_quicksave_metadata");
     await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
 
-    // 3) Save conf.php with all form values
+    // 3) Save quickstart selections to the database
     const form = document.getElementById("top");
     const fdw = new FormData(form);
-    fdw.append("qs_action", "save_conf");
+    fdw.append("qs_action", "save_quickstart");
     await fetch("quickstart.php", { method: "POST", body: fdw, cache: "no-store", credentials: "same-origin" });
 
     // Notify user, then redirect

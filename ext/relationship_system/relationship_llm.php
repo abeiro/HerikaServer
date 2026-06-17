@@ -273,14 +273,8 @@ class RelationshipLLM {
         $npcName = $npc['npc_name'];
         $relationshipsText = $npc['relationships'];
 
-        // Get player name
+        // Get player name from config/bootstrap.
         $playerName = $GLOBALS['PLAYER_NAME'] ?? 'the Player';
-        if ($playerName === 'the Player') {
-            $playerRow = $this->db->fetchOne("SELECT player_name FROM eventlog WHERE player_name IS NOT NULL AND player_name != '' ORDER BY id DESC LIMIT 1");
-            if ($playerRow && !empty($playerRow['player_name'])) {
-                $playerName = $playerRow['player_name'];
-            }
-        }
 
         // Replace player placeholder
         $relationshipsText = str_replace('#PLAYER_NAME#', $playerName, $relationshipsText);
@@ -1374,14 +1368,7 @@ PROMPT;
      * Get the player name
      */
     public function getPlayerName() {
-        $playerName = $GLOBALS['PLAYER_NAME'] ?? 'the Player';
-        if ($playerName === 'the Player') {
-            $playerRow = $this->db->fetchOne("SELECT player_name FROM eventlog WHERE player_name IS NOT NULL AND player_name != '' ORDER BY id DESC LIMIT 1");
-            if ($playerRow && !empty($playerRow['player_name'])) {
-                $playerName = $playerRow['player_name'];
-            }
-        }
-        return $playerName;
+        return $GLOBALS['PLAYER_NAME'] ?? 'the Player';
     }
 
     /**

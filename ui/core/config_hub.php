@@ -2,7 +2,13 @@
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -48,8 +54,10 @@ main { padding: 80px 10px 10px; height: 100vh; }
             <button class="tab-button active" data-tab="npc">🌟 CHIM NPCs</button>
             <button class="tab-button" data-tab="globals">🌐 Global Settings</button>
             <button class="tab-button" data-tab="profiles">🗃️ Profiles</button>
-            <button class="tab-button" data-tab="llm">🧠 LLM Connectors</button>
-            <button class="tab-button" data-tab="ttscfg">🔊 TTS Connectors</button>
+            <button class="tab-button" data-tab="llm">🧠 LLM</button>
+            <button class="tab-button" data-tab="ttscfg">🔊 TTS</button>
+            <button class="tab-button" data-tab="sttcfg">🎤 STT</button>
+            <button class="tab-button" data-tab="ittcfg">🖼️ ITT</button>
             <button class="tab-button" data-tab="keys">🔑 API Keys</button>
             <button class="tab-button" data-tab="player">👤 Player</button>
             <button class="tab-button" data-tab="narrator">🗣️ Narration</button>

@@ -264,6 +264,10 @@ class player2json
         }
 
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+
+        if (function_exists('chimEnsureNarratorJsonResponseState')) {
+            chimEnsureNarratorJsonResponseState('PLAYER2JSON');
+        }
         
         
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
@@ -350,18 +354,20 @@ class player2json
                         $lastActionName=$element["tool_calls"][0]["function"]["name"];
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
+                        if (!is_array($localArguments)) {
+                            $localArguments = [];
+                        }
+                        $actionTargetValue = herikaExtractActionArgumentTargetValue($localArguments);
                         if (isset($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName])) {
-                            $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
-                                            "#TARGET#"=>current($localArguments),
-                                            ]);
+                            $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, $localArguments);
                         }
                         $contextDataCopy[]=[
                                 "role"=>"assistant",
-                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".current($localArguments)."\", \"message\": \"\"}"
+                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".$actionTargetValue."\", \"message\": \"\"}"
                             ];
                             
                         $gameRequestCopy=$GLOBALS["gameRequest"];    
-                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".current($localArguments)."\", \"message\": \"\"}";
+                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".$actionTargetValue."\", \"message\": \"\"}";
                         $gameRequestCopy[0]="logaction";
                         logEvent($gameRequestCopy);   
                         
@@ -400,6 +406,7 @@ class player2json
                             $pb["system"].=$element["content"]."\n";
                             
                            
+                            $GLOBALS["PATCH_STORE_FUNC_RES_ACTION"] = $localFuncCodeName;
                             if (stripos($element["content"],"error")===0) {
                                 $GLOBALS["PATCH_STORE_FUNC_RES"]="{$GLOBALS["HERIKA_NAME"]} issued ACTION, but {$element["content"]}";
                                 $contextDataCopy[]=[
@@ -628,6 +635,7 @@ class player2json
                         }
                         
                         if (isset($finalData["mood"])) {
+                            $finalData["mood"] = extractFirstEmoteMood($finalData["mood"]);
                             $GLOBALS["SCRIPTLINE_ANIMATION"]=GetAnimationHex($finalData["mood"]);
                             $GLOBALS["SCRIPTLINE_EXPRESSION"]=GetExpression($finalData["mood"]);
                         }
@@ -677,16 +685,18 @@ class player2json
         if ($this->_functionName) {
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
-                $parameter = current($parameterArr); // Only support for one parameter
+                $parameter = $parameterArr;
+                $functionCodeName = getFunctionCodeName($this->_functionName);
+                $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
+                $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
 
-                if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")])) {
-                    $functionCodeName=getFunctionCodeName($this->_functionName);
-                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
+                if (!isset($alreadysent[md5($commandStr)])) {
+                    $this->_commandBuffer[] = $commandStr;
                     //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
                 }
 
-                $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n";
+                $alreadysent[md5($commandStr)] = $commandStr;
                 if (ob_get_level()) @ob_flush();
             } else 
                 return null;
@@ -697,74 +707,9 @@ class player2json
                 if (!empty($parsedResponse["action"])) {
                     if (!isset($parsedResponse["target"]))    
                         $parsedResponse["target"] = "";
-                        
-                    // Build parameter string - use JSON for functions with multiple parameters
-                    $functionDef=findFunctionByName($parsedResponse["action"]);
-                    $paramString = "";
-                    $functionCodeName = "";
-                    if (isset($functionDef)) {
-                        $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                        $paramCount = count($functionDef["parameters"]["properties"] ?? []);
-                        
-                        // For functions with multiple parameters, send as JSON
-                        if ($paramCount > 1) {
-                            $params = [];
-                            foreach (array_keys($functionDef["parameters"]["properties"] ?? []) as $paramName) {
-                                if (isset($parsedResponse[$paramName])) {
-                                    $paramValue = $parsedResponse[$paramName];
-                                    // Convert to appropriate type based on function definition
-                                    $paramType = $functionDef["parameters"]["properties"][$paramName]["type"] ?? "string";
-                                    if ($paramType === "integer" && is_numeric($paramValue)) {
-                                        $paramValue = intval($paramValue);
-                                    }
-                                    $params[$paramName] = $paramValue;
-                                }
-                            }
-                            
-                            // Check if required parameters are missing (validate against original $parsedResponse)
-                            $requiredParams = $functionDef["parameters"]["required"] ?? [];
-                            foreach ($requiredParams as $reqParam) {
-                                // Check $parsedResponse for original params, not $params (which may be converted)
-                                if (!isset($parsedResponse[$reqParam]) || $parsedResponse[$reqParam] === "") {
-                                    Logger::warn("player2json: Missing required parameter '{$reqParam}' for function {$parsedResponse["action"]}");
-                                }
-                            }
-                            
-                            $paramString = json_encode($params);
-                        } else {
-                            // Legacy: single parameter as plain string
-                            $paramString = $parsedResponse["target"] ?? "";
-                        }
-                    } else {
-                        $paramString = $parsedResponse["target"] ?? "";
-                        $functionCodeName = $parsedResponse["action"] ?? "";
-                    }
-                    
-                    $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$paramString}\r\n";
-                    if (!isset($alreadysent[md5($commandStr)])) {
-                        
-                        if (isset($functionDef)) {
-                            if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
-                                if (!empty($paramString)) {
-                                    $this->_commandBuffer[]=$commandStr;
-                                }
-                                else {
-                                    Logger::warn("player2json: Missing required parameter: target");
-                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@\r\n";
-                                    // Change. we allow this. Post filter maybe can fix.
 
-                                }
-                                    
-                            } else {
-                                $this->_commandBuffer[]=$commandStr;
-                            }
-                        } elseif ($parsedResponse["action"] != "Talk") {
-                            Logger::warn("player2json: Function not found for {$parsedResponse["action"]}");
-                        }
-                        
-                        $alreadysent[md5($commandStr)]=end($this->_commandBuffer);
-                    
-                    } 
+                    $executionContext = buildFunctionExecutionContextFromResponse($parsedResponse);
+                    queueFunctionExecutionCommand($this->_commandBuffer, $alreadysent, $executionContext, "player2json");
                         
                 }
                 
@@ -786,6 +731,11 @@ class player2json
     public function fast_request($contextData, $customParms,$callName='')
     {
         $this->init_connector();
+
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+        if (function_exists('chimEnsureNarratorJsonResponseState')) {
+            chimEnsureNarratorJsonResponseState('PLAYER2JSON_FAST');
+        }
 
         if (empty($callName))
             $callName=$this->name;

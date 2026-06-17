@@ -445,7 +445,7 @@ function _relProcessInitQueue($limit = 5) {
             }
 
             try {
-                // Parse TEXT relationships to JSONB
+                // Analyze available relationship source data into JSONB.
                 $initResult = $relLLM->analyzeNpc($data['npc_id'], false);
                 if (!empty($initResult['ok']) && empty($initResult['skipped'])) {
                     Logger::info("[REL-ASYNC] Initialized relationships for {$data['npc_name']}");

@@ -1,6 +1,4 @@
 <?php
-$enginePath = __DIR__ . "/../../../";
-require_once($enginePath . "conf/conf.php");
 
 header('Content-Type: text/html; charset=utf-8');
 

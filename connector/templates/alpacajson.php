@@ -73,9 +73,10 @@ foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
                     
                     $localFuncCodeName=getFunctionCodeName($s_msg["tool_calls"][0]["function"]["name"]);
                     $localArguments=json_decode($s_msg["tool_calls"][0]["function"]["arguments"],true);
-                    $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
-                                    "#TARGET#"=>current($localArguments),
-                                    ]);
+                    if (!is_array($localArguments)) {
+                        $localArguments = [];
+                    }
+                    $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, $localArguments);
                     
                     
                 } else {

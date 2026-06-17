@@ -161,6 +161,23 @@ if (sizeof($_GET)==0) {
         deferredAutomaticBackupInit();
     }
     
+    // Empty legacy conf.php file. Configuration is now stored in the database.
+    // Check if conf.php file exists and has more than 16 Bytes, if so, copy to conf.php.backup with timestamp, then empty the file.
+    if (file_exists($configFilepath."conf.php")) {
+       // Check if file exists and has more than 16 Bytes, if so, copy to conf.php.backup with timestamp, then empty the file.
+        $fileSize = filesize($configFilepath."conf.php");
+        if ($fileSize > 16) {
+            $timestamp = date("Ymd_His");
+            if (copy($configFilepath."conf.php", $configFilepath."conf.php.backup.$timestamp")) {
+                Logger::info("Backed up existing conf.php to conf.php.backup.$timestamp");
+                file_put_contents($configFilepath."conf.php", "");
+            } else {
+                Logger::error("Failed to back up conf.php to conf.php.backup.$timestamp");
+            }
+            
+        }
+    }
+    
 }
 /* END of check database for updates */
 
@@ -1418,7 +1435,7 @@ if (isset($_POST["animation"])) {
         echo '</tr></table>';
         echo '<br>';
         echo '<p>You can make your own plugin quite easily!</p>';
-        echo '<p><a href="https://dwemerdynamics.hostwiki.io/en/CHIM-Plugins" target="_blank">Check out our guide in the manual to learn how to make your own plugin.</a></p>';
+        echo '<p><a href="https://dwemerdynamics.com/chim/plugins.html" target="_blank">Check out our guide in the manual to learn how to make your own plugin.</a></p>';
         echo '</body>';
     }
 

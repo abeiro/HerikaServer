@@ -10,9 +10,14 @@ $webRoot = rtrim($webRoot, '/');
 
 $enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
 
-require_once($enginePath."conf".DIRECTORY_SEPARATOR."conf.php");
+require_once($enginePath."lib".DIRECTORY_SEPARATOR."runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once($enginePath."lib".DIRECTORY_SEPARATOR."logger.php");
-require_once($enginePath."lib".DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
@@ -50,7 +55,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
 $debugPaneLink = false;
 
-$db=new sql();
+$db = $GLOBALS["db"];
 // loads the last ts and game_ts from database so chat-testing is continuing the conversation from skyrim
 $lastEventLogRowId=$db->fetchAll("select *  from eventlog order by rowid desc LIMIT 1 OFFSET 0")[0]["rowid"];
 $maxTimestamps=$db->fetchAll("select max(gamets)+1 as gamets,max(ts)+1 as ts  from eventlog where rowid={$lastEventLogRowId}");

@@ -1,26 +1,34 @@
+<?php
+
+error_reporting(E_ALL);
+$enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
+
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_embeddings.php");
+require_once(__DIR__ .DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."profile_loader.php");
+
+?>
 <!DOCTYPE html>
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
 </head>
 <body>
-
 <?php
-
-error_reporting(E_ALL);
-$enginePath =__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR;
-
-require_once($enginePath . "conf".DIRECTORY_SEPARATOR."conf.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_vectordb.php");
-require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."memory_helper_embeddings.php");
 
 echo file_get_contents('template.html');
 
-$db = new sql();
+$db = $GLOBALS["db"];
 
 if ($_POST["doit"]) {
 

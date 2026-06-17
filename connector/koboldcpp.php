@@ -471,7 +471,7 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
                     else if ($intent=="WriteIntoQuestJournal"||$intent=="UpdateQuestJournal") {
                         // bypass reponse.
                         if (isset($jsonData["topic"])) {
-                            $this->_functionRawName="SetCurrentTask@{$jsonData["topic"]}";
+                            $this->_functionRawName="";
                             $GLOBALS["db"]->insert(
                                 'currentmission',
                                 array(
@@ -524,7 +524,7 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
                     
                 else if ($kobParsed[0]=="SetCurrentPlan") {
                     // bypass reponse.
-                    $this->_functionRawName="SetCurrentTask@{$kobParsed[1]}";
+                    $this->_functionRawName="";
                     $GLOBALS["db"]->insert(
                         'currentmission',
                         array(
@@ -535,7 +535,6 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
                             'localts' => time()
                         )
                     );
-                    $alreadysent[md5("Herika|command|{$this->_functionRawName}\r\n")] = "Herika|command|{$this->_functionRawName}\r\n";
                 }    
                 else if ($kobParsed[0]=="ExchangeItems") {
                     // bypass reponse.

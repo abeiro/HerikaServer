@@ -23,67 +23,7 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	So here we will override the result (which probably will be nothing)
 	*/
 	
-	if ($functionCodeName == "ReadQuestJournal") {
-		$returnFunction[3] = DataQuestJournal($returnFunction[2]); // Overwrite funrect content with info from database
-		$gameRequest[3] .= $returnFunction[3];						// Add also to $gameRequest 
-	
-		if (!isset($GLOBALS["CACHE_PEOPLE"])) {
-			$GLOBALS["CACHE_PEOPLE"]=DataBeingsInRange();
-		} 
-    
-		if (!isset($GLOBALS["CACHE_LOCATION"])) {
-			$GLOBALS["CACHE_LOCATION"]=DataLastKnownLocation();
-		}  
-		
-		if (!isset($GLOBALS["CACHE_PARTY"])) {
-			$GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
-		} 
-
-		// Store info.
-		$db->insert(
-			'eventlog',
-			array(
-				'ts' => $gameRequest[1],
-				'gamets' => $gameRequest[2],
-				'type' => 'chat',
-				'data' => "The Narrator. {$GLOBALS["HERIKA_NAME"]} reads in quest journal:".prettyPrintJson($returnFunction[3]),
-				'sess' => 'pending',
-				'localts' => time(),
-				'people'=> $GLOBALS["CACHE_PEOPLE"],
-				'location'=>$GLOBALS["CACHE_LOCATION"],
-				'party'=>$GLOBALS["CACHE_PARTY"]
-			)
-		);
-		
-		
-	} else if ($functionCodeName == "SearchDiary") {
-		
-		$returnFunction[3] = DataDiaryLogIndex($returnFunction[2]);	// Overwrite funrect content with info from database
-		$gameRequest[3] .= $returnFunction[3];							// Add also to $gameRequest 
-		
-		
-	}  else if ($functionCodeName == "ReadDiaryPage") {
-		
-		$returnFunction[3] = DataDiaryLog($returnFunction[2]); // Overwrite funrect content with info from database
-		$gameRequest[3] .= $returnFunction[3];					// Add also to $gameRequest 
-		
-	} else if ($functionCodeName == "SetCurrentTask") {
-		// "Task" here is the last motto. "Let's take the hobbits to Isengard"->Current task should be "Travel to Isengard"
-		$returnFunction[3] .= "ok"; // This is always ok
-		$gameRequest[3].="done";
-		// This table is a stack whithout pop.
-		$db->insert(
-			'currentmission',
-			array(
-				'ts' => $gameRequest[1],
-				'gamets' => $gameRequest[2],
-				'description' => $db->escape($returnFunction[2]),
-				'sess' => 'pending',
-				'localts' => time()
-			)
-		);
-		die();
-	} else if ($functionCodeName == "Attack") {
+	if ($functionCodeName == "Attack") {
 		if (strpos($returnFunction[3],"Error")!==false) {
 			$GLOBALS["FUNCTIONS_ARE_ENABLED"]=false;	// RE-Enable functions	// Endless loop if enabled
 			$request="Specify a valid target:(available targets: ".implode(",",$GLOBALS["FUNCTION_PARM_INSPECT"]).")";	
@@ -215,7 +155,13 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	
 	if (isset($PROMPTS[$gameRequest[0]]["player_request"])) {
 		$request = selectRandomInArray($PROMPTS[$gameRequest[0]]["cue"]); // Add support for arrays here	
-		$gameRequest[3]=selectRandomInArray($PROMPTS[$gameRequest[0]]["player_request"]);	// Overwrite
+		$playerRequestOptions = $PROMPTS[$gameRequest[0]]["player_request"];
+		if (is_array($playerRequestOptions)) {
+			$playerRequestOptions = array_values(array_filter($playerRequestOptions, static fn($item) => trim((string)$item) !== ""));
+			if (count($playerRequestOptions) > 0) {
+				$gameRequest[3]=selectRandomInArray($playerRequestOptions);	// Overwrite
+			}
+		}
 		// error_log(__FILE__." ".__LINE__." $request {$gameRequest[3]}");
 	}
 	else {

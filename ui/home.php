@@ -41,124 +41,9 @@ if (!$conn) {
     exit;
 }
 
-// Create database wrapper class for db_updates.php
-//TODO why is this here, whats wrong with importing the postgresql.class.php [needs review]
-// while it is here its imperative the function interface is synchronised with the postgresql.class.php
-class sql {
-    private $conn;
-
-    public function __construct() {
-        global $conn;
-        $this->conn = $conn;
-    }
-
-    public function fetchAll($query) {
-        $result = pg_query($this->conn, $query);
-        if (!$result) {
-            return [];
-        }
-        $rows = [];
-        while ($row = pg_fetch_assoc($result)) {
-            $rows[] = $row;
-        }
-        return $rows;
-    }
-
-    public function fetchOne($query)
-    {
-        $result = pg_query($this->conn, $query);
-        if (!$result) {
-            return [];
-        }
-
-        $finalData = array();
-        while ($row = pg_fetch_assoc($result)) {
-            $finalData = $row;
-            break;
-        }
-
-        return $finalData;
-    }
-
-    public function execQuery($query) {
-        return pg_query($this->conn, $query);
-    }
-
-    public function escape($str) {
-        return pg_escape_string($this->conn, $str);
-    }
-
-    public function escapeLiteral($str) {
-        return pg_escape_literal($this->conn, $str);
-    }
-
-    public function upsertRowOnConflict($tableName, $data, $conflictTarget) {
-        // Prepare the column names for the INSERT statement.
-        $columns = implode(', ', array_keys($data));
-
-        // Take care of escaping here instead of requiring it before every upsert call
-        $values = array_map(function($value) {
-            return pg_escape_literal($this->conn, $value);
-        }, array_values($data));
-        $valuesString = implode(', ', $values);
-
-        // EXCLUDED refers to the row that was attempted to be inserted.
-        // This loop constructs "column = EXCLUDED.column" for each column in the data.
-        $updateStatements = [];
-        foreach ($data as $column => $value) {
-            $updateStatements[] = "$column = EXCLUDED.$column";
-        }
-        $updateString = implode(', ', $updateStatements);
-
-        // ON CONFLICT ... DO UPDATE is effectively an upsert
-        // If the constraint in $conflictTarget is violated during the insert, an update will be done instead
-        $sqlquery = "INSERT INTO $tableName ($columns) VALUES ($valuesString) " .
-            "ON CONFLICT ($conflictTarget) DO UPDATE SET $updateString;";
-
-        $result = pg_query($this->conn, $sqlquery);
-
-        if (!$result) {
-            error_log("Database error: " . pg_last_error($this->conn));
-            return false; // Indicate failure
-        }
-
-        return true; // Indicate success
-    }
-
-    public function insert($table, $data) {
-        // Build parameterized INSERT using positional placeholders
-        $columns = implode(', ', array_keys($data));
-        $placeholders = [];
-        $i = 0;
-        foreach ($data as $_ => $__ ) {
-            $placeholders[] = '$' . (++$i);
-        }
-        $placeholderList = implode(', ', $placeholders);
-
-        $query = "INSERT INTO $table ($columns) VALUES ($placeholderList)";
-        $params = array_values($data);
-
-        $result = pg_query_params($this->conn, $query, $params);
-        if (!$result) {
-            error_log("Database error: " . pg_last_error($this->conn));
-            return false;
-        }
-        return true;
-    }
-
-    public function update($table, $set, $where = "FALSE") {
-        // Execute a simple UPDATE with provided SET and WHERE clauses
-        $query = "UPDATE $table SET $set WHERE $where";
-        $result = pg_query($this->conn, $query);
-        if (!$result) {
-            error_log("Database error: " . pg_last_error($this->conn));
-            return false;
-        }
-        return true;
-    }
-}
-
-$db = new sql();
+// Use the bootstrapped runtime DB driver for dashboard helpers and DB migrations.
+$db = (isset($GLOBALS["db"]) && ($GLOBALS["db"] instanceof sql)) ? $GLOBALS["db"] : new sql();
+$GLOBALS["db"] = $db;
 
 // Load PLAYER_NAME from core_player table 
 $PLAYER_NAME_DB = isset($GLOBALS['PLAYER_NAME']) ? (string)$GLOBALS['PLAYER_NAME'] : 'Player';
@@ -805,7 +690,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         <h1>Dwemer Dashboard</h1>
 
         <div class="dashboard-buttons">
-            <button onclick="window.open('https://dwemerdynamics.hostwiki.io/', '_blank')" class="dashboard-btn">
+            <button onclick="window.open('https://dwemerdynamics.com/chim/index.html', '_blank')" class="dashboard-btn">
                 <span class="btn-icon">📚</span> CHIM Wiki
             </button>
             <button onclick="window.open('https://docs.google.com/spreadsheets/d/1UtAR_r18wskmTMMsg8IlhVvr1Fn9tHvRJT8drH6RuzY/edit?gid=1257158105#gid=1257158105', '_blank')" class="dashboard-btn">
@@ -1215,6 +1100,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                                         <div class='modal-content'>
                                                             <span class='close-btn' onclick=\"closeModal('locationsModal')\">&times;</span>
                                                             <h3>Available Locations</h3>
+                                                            <p style='color: #aaa; margin-top: -6px;'>Sync locations in-game from CHIM MCM &gt; Tools.</p>
                                                             <table class='modal-table'>
                                                                 <tr><th>Name</th><th>FormID</th></tr>";
                                 foreach ($locationsData as $location) {
@@ -1236,6 +1122,69 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                 </div>";
                         }
                         // END Travel To Locations Data Fetching
+
+                        // Detected Mods Data Fetching
+                        $pluginsCheck = fetch_widget_stats($conn, "
+                            SELECT EXISTS (
+                                SELECT 1
+                                FROM information_schema.tables
+                                WHERE table_schema = '{$schema}'
+                                AND table_name = 'game_plugins'
+                            ) as table_exists"
+                        );
+
+                        $pluginsWidgetContent = '';
+                        $pluginsModal = '';
+
+                        if (!isset($pluginsCheck['error']) && !empty($pluginsCheck) && isset($pluginsCheck[0]['table_exists']) && $pluginsCheck[0]['table_exists'] === 't') {
+                            $pluginsData = fetch_widget_stats($conn, "
+                                SELECT plugin_name, is_light, compile_index, small_file_compile_index, formid_prefix
+                                FROM {$schema}.game_plugins
+                                ORDER BY
+                                    CASE WHEN is_light THEN 1 ELSE 0 END,
+                                    compile_index,
+                                    small_file_compile_index,
+                                    plugin_name
+                            ");
+
+                            if (!isset($pluginsData['error']) && !empty($pluginsData)) {
+                                $pluginCount = count($pluginsData);
+                                $pluginsWidgetContent = "
+                                    <div class='stat-card double-width' style='cursor: pointer;' onclick=\"openModal('pluginsModal')\">
+                                        <div class='stat-value'>{$pluginCount}</div>
+                                        <div class='stat-label'>Detected Mods</div>
+                                    </div>";
+
+                                $pluginsModal = "<div id='pluginsModal' class='modal'>
+                                                    <div class='modal-content'>
+                                                        <span class='close-btn' onclick=\"closeModal('pluginsModal')\">&times;</span>
+                                                        <h3>Detected Mods</h3>
+                                                        <table class='modal-table'>
+                                                            <tr><th>Load Order</th><th>Plugin</th><th>FormID Prefix</th><th>Type</th></tr>";
+                                foreach ($pluginsData as $pluginRow) {
+                                    $isLight = isset($pluginRow['is_light']) && ($pluginRow['is_light'] === true || $pluginRow['is_light'] === 't' || $pluginRow['is_light'] === '1' || $pluginRow['is_light'] === 1);
+                                    $loadOrder = '';
+                                    if ($isLight) {
+                                        $smallIndex = isset($pluginRow['small_file_compile_index']) ? (int)$pluginRow['small_file_compile_index'] : 0;
+                                        $loadOrder = 'FE:' . strtoupper(str_pad(dechex($smallIndex), 3, '0', STR_PAD_LEFT));
+                                    } else {
+                                        $compileIndex = isset($pluginRow['compile_index']) ? (int)$pluginRow['compile_index'] : 0;
+                                        $loadOrder = strtoupper(str_pad(dechex($compileIndex), 2, '0', STR_PAD_LEFT));
+                                    }
+
+                                    $pluginsModal .= "<tr><td>" . htmlspecialchars($loadOrder) . "</td><td>" . htmlspecialchars($pluginRow['plugin_name']) . "</td><td>" . htmlspecialchars($pluginRow['formid_prefix']) . "</td><td>" . ($isLight ? 'Light' : 'Full') . "</td></tr>";
+                                }
+                                $pluginsModal .= "</table>
+                                                    </div>
+                                                </div>";
+                            } else {
+                                $pluginsWidgetContent = "
+                                    <div class='stat-card double-width'>
+                                        <div class='stat-label' style='white-space: normal; text-align: center;'>Load into the game once to sync detected mods from CHIM.</div>
+                                    </div>";
+                            }
+                        }
+                        // END Detected Mods Data Fetching
 
                         // Append $locationsWidgetContent to the CHIM Stats content string
                         $chimStatsHtml = "
@@ -1298,10 +1247,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                     </div>
                                 </div>
                                 {$locationsWidgetContent}
+                                {$pluginsWidgetContent}
                             </div>";
 
                         echo render_widget('CHIM Stats', $chimStatsHtml);
                         echo $locationsModal; // Output modal HTML globally
+                        echo $pluginsModal; // Output detected mods modal HTML globally
                         echo $eventTypesModal; // Output event types modal HTML globally
 
                         // Latest Diary Entry Widget

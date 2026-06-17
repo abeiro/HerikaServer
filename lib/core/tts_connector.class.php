@@ -113,6 +113,12 @@ class TTSConnector
             'language' => 'en',
             'voicelogic' => 'voicetype',
         ],
+        'inworld' => [
+            'language' => 'en-US',
+            'model_id' => 'inworld-tts-1',
+            'temperature' => 1.0,
+            'speed' => 1.0,
+        ],
         'mimic3' => [
             'rate' => 1,
             'volume' => 60,
@@ -490,6 +496,21 @@ class TTSConnector
         return self::$localUrlDefaultMap[$driver] ?? '';
     }
 
+    public function resolveConnectorUrl($connectorData): string
+    {
+        if (!is_array($connectorData)) {
+            return '';
+        }
+
+        $driver = $connectorData['driver'] ?? '';
+        $metadata = $this->decodeMetadata($connectorData['metadata'] ?? '{}');
+        if ($this->isLegacySeedRow($connectorData)) {
+            $metadata = [];
+        }
+
+        return trim(strval($this->normalizeUrlForDriver($driver, $connectorData['url'] ?? null, $metadata) ?? ''));
+    }
+
     public function decodeMetadata($raw): array
     {
         if (is_array($raw)) {
@@ -657,6 +678,8 @@ class TTSConnector
             return;
         }
 
+        $GLOBALS["CHIM_CORE_CURRENT_TTS_CONNECTOR_ID"] = intval($currentTTSData['id'] ?? 0);
+
         $driver = $this->normalizeDriver($currentTTSData["driver"] ?? '');
         if ($driver === '') {
             $GLOBALS["TTSFUNCTION"] = 'none';
@@ -799,10 +822,39 @@ class TTSConnector
     private function resolveUrlFromMetadata(array $metadata): string
     {
         foreach (['endpoint', 'url', 'URL'] as $key) {
-            if (isset($metadata[$key]) && trim(strval($metadata[$key])) !== '') {
-                return trim(strval($metadata[$key]));
+            if (!array_key_exists($key, $metadata)) {
+                continue;
+            }
+
+            $candidate = $this->resolveUrlCandidateValue($metadata[$key]);
+            if ($candidate !== '') {
+                return $candidate;
             }
         }
+        return '';
+    }
+
+    private function resolveUrlCandidateValue($value): string
+    {
+        if (is_scalar($value)) {
+            return trim(strval($value));
+        }
+
+        if (!is_array($value)) {
+            return '';
+        }
+
+        foreach (['endpoint', 'url', 'URL', 'value', 'default'] as $key) {
+            if (!array_key_exists($key, $value)) {
+                continue;
+            }
+
+            $candidate = $this->resolveUrlCandidateValue($value[$key]);
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
         return '';
     }
 

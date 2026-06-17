@@ -2,14 +2,30 @@
 //$TEMPLATE_DIALOG="genera las siguientes lineas de dialogo para {$GLOBALS["HERIKA_NAME"]}. Evita narraciones y repeticiones.";
 error_log("[LANGUAGE] Using ".__FILE__." prompts");
 
-$TEMPLATE_DIALOG="Instrucción: Escribe la siguiente línea de diálogo de {$GLOBALS["HERIKA_NAME"]}." . 
-"Evita narraciones, sé original, creativo, informado, usa tus propios pensamientos. " . 
-"Consulta seccion <nearby_actors> para saber a que personaje interpelar." . 
-"Revisa el historial de diálogo para centrarte en el tema de la conversación (o los ultimos sucesos) y evitar repetir frases y expresiones de líneas de diálogo anteriores." . 
-"";
+$TEMPLATE_DIALOG = " Escribe la siguiente línea de diálogo de {$GLOBALS["HERIKA_NAME"]}."
+    . " Sé original, creativo y bien informado, y usa tus propios pensamientos."
+    . " Revisa el historial de contexto para centrarte en el tema de la conversación y evitar repetir frases y expresiones de líneas anteriores.";
+
+$esDirectNarratorDialogue = !empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])
+    || (($GLOBALS["gameRequest"][0] ?? '') === 'narrator_inputtext')
+    || (($gameRequest[0] ?? '') === 'narrator_inputtext');
+if ($esDirectNarratorDialogue) {
+    $TEMPLATE_DIALOG .= " Responde directamente a {$GLOBALS["PLAYER_NAME"]} solo con diálogo hablado."
+        . " No incluyas narración en tercera persona, descripción de escena, acotaciones ni texto entre asteriscos.";
+}
+
+if ($esDirectNarratorDialogue) {
+    $TEMPLATE_DIALOG .= " If an enabled narrator action matches the request, use it and keep the spoken line consistent with that action.";
+}
+
+if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) && sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"]) > 0) {
+    if ($GLOBALS["TTSFUNCTION"] == "azure") {
+        $TEMPLATE_DIALOG .= "(forma opcional de hablar de esta lista [" . implode(",", $GLOBALS["TTS"]["AZURE"]["validMoods"]) . "])";
+    }
+}
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-    $TEMPLATE_ACTION="(Revisa <available_actions_list> para elegir una accion necesaria si es adecuado)";    // WIP
+    $TEMPLATE_ACTION="(Check #ACTIONS section to choose an appropiate action for this character if needed)";
 } else {
     $TEMPLATE_ACTION="";
 }
@@ -101,14 +117,33 @@ $PROMPTS=array(
     ],
 
     "inputtext"=>[
-        "cue"=>[
-            "$TEMPLATE_ACTION. {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
-        ]
+        "cue"=>(function () use ($TEMPLATE_ACTION) {
+            if (function_exists('chimIsStrictDirectedPlayerResponseContext') && chimIsStrictDirectedPlayerResponseContext()) {
+                return chimLoadManagedRechatCuePrompts();
+            }
+
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })()
+    ],
+    "narrator_inputtext"=>[
+        "cue"=>(function () use ($TEMPLATE_ACTION) {
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })()
     ],
     "inputtext_s"=>[
-        "cue"=>[
-            "$TEMPLATE_ACTION. {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
-        ],
+        "cue"=>(function () use ($TEMPLATE_ACTION) {
+            if (function_exists('chimIsStrictDirectedPlayerResponseContext') && chimIsStrictDirectedPlayerResponseContext()) {
+                return chimLoadManagedRechatCuePrompts();
+            }
+
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })(),
         "extra"=>["mood"=>"susurrando"]
     ],
     "memory"=>[
@@ -209,11 +244,15 @@ $PROMPTS=array(
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("learn_word", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
     "instruction"=>[ 
-        "cue"=>["(Instruccion: {$gameRequest[3]}) {$GLOBALS["TEMPLATE_DIALOG"]}. EL PERSONAJE DEBE DE SEGUIR LA INSTRUCCION DE EL NARRADOR"],
+        "cue"=>["{$gameRequest[3]} {$GLOBALS["TEMPLATE_DIALOG"]} EL PERSONAJE DEBE SEGUIR LA INSTRUCCIÓN DEL NARRADOR"],
+        "player_request"=>["El Narrador: {$gameRequest[3]}"],
+    ],
+    "suggestion"=>[
+        "cue"=>["{$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["El Narrador: {$gameRequest[3]}"],
     ],
      "cheatmode"=>[ 
-        "cue"=>["INSTRUCCION PRIORITARIA -  {$currentNpcData["npc_name"]} debe de hacer esto, incluso aunque rompa el roleplay: $gameRequest[3]}"],
+        "cue"=>["INSTRUCCION PRIORITARIA -  {$currentNpcData["npc_name"]} debe de hacer esto, incluso aunque rompa el roleplay: $gameRequest[3]"],
         "player_request"=>[""],
     ],
 );

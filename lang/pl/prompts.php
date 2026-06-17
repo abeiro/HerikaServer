@@ -1,10 +1,30 @@
 <?php 
 
 // Patrones comunes para usar en la mayoría de las funciones
-$TEMPLATE_DIALOG = "interpretuj {$GLOBALS["HERIKA_NAME"]} uzupełniając dialog {$GLOBALS["HERIKA_NAME"]} używając tego formatu '{$GLOBALS["HERIKA_NAME"]}: (opcjonalny stan ducha z tej listy [" . implode(",", (@is_array($GLOBALS["AZURETTS_CONF"]["validMoods"])) ? $GLOBALS["AZURETTS_CONF"]["validMoods"] : array()) . "]) ...'";
+$TEMPLATE_DIALOG = " Napisz następną kwestię dialogową {$GLOBALS["HERIKA_NAME"]}."
+    . " Bądź oryginalny, kreatywny i rzeczowy, korzystaj z własnych przemyśleń."
+    . " Przejrzyj historię kontekstu, aby trzymać się tematu rozmowy i nie powtarzać wcześniejszych zdań ani sformułowań.";
+
+$plDirectNarratorDialogue = !empty($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])
+    || (($GLOBALS["gameRequest"][0] ?? '') === 'narrator_inputtext')
+    || (($gameRequest[0] ?? '') === 'narrator_inputtext');
+if ($plDirectNarratorDialogue) {
+    $TEMPLATE_DIALOG .= " Odpowiadaj bezpośrednio do {$GLOBALS["PLAYER_NAME"]} wyłącznie mówionym dialogiem."
+        . " Nie dodawaj narracji w trzeciej osobie, opisów sceny, didaskaliów ani tekstu w gwiazdkach.";
+}
+
+if ($plDirectNarratorDialogue) {
+    $TEMPLATE_DIALOG .= " If an enabled narrator action matches the request, use it and keep the spoken line consistent with that action.";
+}
+
+if (@is_array($GLOBALS["TTS"]["AZURE"]["validMoods"]) && sizeof($GLOBALS["TTS"]["AZURE"]["validMoods"]) > 0) {
+    if ($GLOBALS["TTSFUNCTION"] == "azure") {
+        $TEMPLATE_DIALOG .= "(opcjonalny sposób mówienia z tej listy [" . implode(",", $GLOBALS["TTS"]["AZURE"]["validMoods"]) . "])";
+    }
+}
 
 if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-    $TEMPLATE_ACTION = "wywołaj funkcję aby sterować {$GLOBALS["HERIKA_NAME"]} lub";
+    $TEMPLATE_ACTION = "(Check #ACTIONS section to choose an appropiate action for this character if needed)";
 } else {
     $TEMPLATE_ACTION = "";
 }
@@ -64,11 +84,34 @@ $PROMPTS = array(
     ],
 
     "inputtext" => [
-        "cue" => ["$TEMPLATE_ACTION $TEMPLATE_DIALOG "] // Sugestia jest implikowana
+        "cue" => (function () use ($TEMPLATE_ACTION) {
+            if (function_exists('chimIsStrictDirectedPlayerResponseContext') && chimIsStrictDirectedPlayerResponseContext()) {
+                return chimLoadManagedRechatCuePrompts();
+            }
+
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })() // Sugestia jest implikowana
 
     ],
+    "narrator_inputtext" => [
+        "cue" => (function () use ($TEMPLATE_ACTION) {
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })()
+    ],
     "inputtext_s" => [
-        "cue" => ["$TEMPLATE_ACTION $TEMPLATE_DIALOG"], // Sugestia jest implikowana
+        "cue" => (function () use ($TEMPLATE_ACTION) {
+            if (function_exists('chimIsStrictDirectedPlayerResponseContext') && chimIsStrictDirectedPlayerResponseContext()) {
+                return chimLoadManagedRechatCuePrompts();
+            }
+
+            return [
+                "$TEMPLATE_ACTION . {$GLOBALS["TEMPLATE_DIALOG"]} {$GLOBALS["MAXIMUM_WORDS"]}"
+            ];
+        })(), // Sugestia jest implikowana
         "extra" => ["mood" => "whispering"]
     ],
     "afterfunc" => [
@@ -91,6 +134,14 @@ $PROMPTS = array(
 // Jak inputtext, ale bez części wywoływania funkcji. Prawdopodobnie używane w skryptach papyrus
     "chatnf" => [
         "cue" => ["$TEMPLATE_DIALOG"] // Sugestia jest implikowana
+    ],
+    "instruction" => [
+        "cue" => ["{$gameRequest[3]} {$GLOBALS["TEMPLATE_DIALOG"]} POSTAĆ MUSI WYKONAĆ INSTRUKCJĘ NARRATORA"],
+        "player_request" => ["Narrator: {$gameRequest[3]}"]
+    ],
+    "suggestion" => [
+        "cue" => ["{$GLOBALS["TEMPLATE_DIALOG"]}"],
+        "player_request" => ["Narrator: {$gameRequest[3]}"]
     ],
     "diary" => [
         "cue" => ["Proszę, zapisz w swoim osobistym dzienniku krótkie podsumowanie ostatniego dialogu i wydarzeń {$GLOBALS["PLAYER_NAME"]} i {$GLOBALS["HERIKA_NAME"]} opisanych powyżej. Pisz tylko jako {$GLOBALS["HERIKA_NAME"]}."],

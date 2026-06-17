@@ -7,7 +7,7 @@
  *
  * Features:
  * - Visual table editor for relationships
- * - "Build with AI" button to intelligently parse TEXT relationships
+ * - "Build with AI" button to infer relationships from recent event history
  * - Manual add/edit/delete
  *
  * INSTALLATION:
@@ -29,7 +29,7 @@ require_once $GLOBALS["ENGINE_PATH"] . "lib/relationship_manager.php";
 $extendedData = json_decode($editItem['extended_data'] ?? '{}', true) ?: [];
 $jsonbRelationships = $extendedData['relationships'] ?? [];
 
-// Get TEXT relationships field and NPC name for AI analysis
+// Keep legacy text available as fallback input for AI analysis.
 $textRelationships = $editItem['relationships'] ?? '';
 $npcName = $editItem['npc_name'] ?? 'Unknown';
 
@@ -115,7 +115,7 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
         <small class="hint" style="display:block; margin:8px 0; color:#888;">
             Tracked relationships with affinity scores (-100 to +100) and types.
             <?php if ($hasTextNoJsonb): ?>
-                <br><strong style="color:#fde68a;">Tip:</strong> Click "Build with AI" to convert the text relationships above into scored affinities.
+                <br><strong style="color:#fde68a;">Tip:</strong> Click "Build with AI" to analyze recent event history into scored affinities.
             <?php endif; ?>
             <?php if (!empty($autoInitMessage)): ?>
                 <br><strong style="color:#4ade80;">✓ <?= htmlspecialchars($autoInitMessage) ?></strong>
@@ -233,9 +233,11 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
                 <div style="background:#1a1a1a; border:1px solid #4a4a4a; border-radius:8px; padding:20px; max-width:500px; width:90%;">
                     <h3 style="margin:0 0 12px 0; color:rgb(242, 124, 17);">🤖 Build Relationships with AI</h3>
                     <p style="color:#888; font-size:0.9em; margin-bottom:12px;">
-                        The AI will analyze the TEXT relationships field and generate affinity scores.
-                        Optionally provide direction for how the AI should interpret the relationships.
+                        Uses recent event history involving this NPC to infer affinity scores, relationship types, and optional notes.
                     </p>
+                    <div style="background:#3a2a0a; border:1px solid #b8860b; border-radius:6px; color:#fde68a; padding:10px 12px; margin-bottom:12px; font-size:0.88em; line-height:1.35;">
+                        <strong>Merge warning:</strong> AI results are merged into the current table. Existing entries with the same target name may be overwritten.
+                    </div>
                     <label style="color:#ccc; font-size:0.85em;">Direction (optional):</label>
                     <textarea id="build-ai-direction" placeholder="e.g., 'Focus on military hierarchy', 'Assume hostility toward Stormcloaks', 'This NPC is suspicious of strangers'"
                               style="width:100%; height:80px; margin-top:4px; background:#262626; border:1px solid #4a4a4a; border-radius:4px; color:#e9efff; padding:8px; resize:vertical;"></textarea>
@@ -298,15 +300,14 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
                 <div style="background:#1a1a1a; border:1px solid #4a4a4a; border-radius:8px; padding:20px; max-width:500px; width:90%;">
                     <h3 style="margin:0 0 8px 0; color:rgb(242, 124, 17);">✏️ Details: <span id="details-target-name"></span></h3>
                     <p style="color:#888; font-size:0.8em; margin-bottom:12px;">
-                        ⚠️ Keep brief - injected into AI context. Relation: 1-2 words. Events: short phrases.
+                        ⚠️ These details are injected into AI context. Keep them useful and relevant.
                     </p>
 
                     <!-- Relationship Detail (specific role) -->
                     <div style="margin-bottom:10px;">
-                        <label style="color:#ccc; font-size:0.85em;">Relationship Detail <small style="color:#666;">(1-2 words)</small></label>
+                        <label style="color:#ccc; font-size:0.85em;">Relationship Detail</label>
                         <div style="display:flex; gap:6px; margin-top:4px;">
                             <input type="text" id="details-relation" placeholder="son, ex-wife, employer"
-                                   maxlength="20"
                                    style="flex:1; background:#262626; border:1px solid #4a4a4a; border-radius:4px; color:#e9efff; padding:8px;">
                             <button type="button" onclick="showRelationSuggestions()" title="Common suggestions"
                                     style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:4px; color:#888; padding:4px 8px; cursor:pointer; font-size:0.9em;">
@@ -320,25 +321,22 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
 
                     <!-- Recent Note -->
                     <div style="margin-bottom:10px;">
-                        <label style="color:#ccc; font-size:0.85em;">Recent Interaction <small style="color:#666;">(short phrase)</small></label>
+                        <label style="color:#ccc; font-size:0.85em;">Recent Interaction</label>
                         <input type="text" id="details-note" placeholder="shared a drink, had argument"
-                               maxlength="40"
                                style="width:100%; margin-top:4px; background:#262626; border:1px solid #4a4a4a; border-radius:4px; color:#e9efff; padding:8px;">
                     </div>
 
                     <!-- Best Event -->
                     <div style="margin-bottom:10px;">
-                        <label style="color:#86efac; font-size:0.85em;">Best Memory <small style="color:#666;">(short phrase)</small></label>
+                        <label style="color:#86efac; font-size:0.85em;">Best Memory</label>
                         <input type="text" id="details-best" placeholder="opened gate for Ulfric, saved life"
-                               maxlength="50"
                                style="width:100%; margin-top:4px; background:#262626; border:1px solid #4a4a4a; border-radius:4px; color:#e9efff; padding:8px;">
                     </div>
 
                     <!-- Worst Event -->
                     <div style="margin-bottom:10px;">
-                        <label style="color:#ef4444; font-size:0.85em;">Worst Memory <small style="color:#666;">(short phrase)</small></label>
+                        <label style="color:#ef4444; font-size:0.85em;">Worst Memory</label>
                         <input type="text" id="details-worst" placeholder="killed his brother, betrayed trust"
-                               maxlength="50"
                                style="width:100%; margin-top:4px; background:#262626; border:1px solid #4a4a4a; border-radius:4px; color:#e9efff; padding:8px;">
                     </div>
 
@@ -347,7 +345,7 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
 
                     <div style="margin-top:14px; display:flex; gap:8px; justify-content:flex-end;">
                         <button type="button" onclick="closeDetailsModal()"
-                                style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:4px; color:#888; padding:8px 16px; cursor:pointer;">
+                                style="background:#2a2a2a; border:1px solid #4a4a4a; border-radius:4px; color:#ef4444; padding:8px 16px; cursor:pointer;">
                             Cancel
                         </button>
                         <button type="button" onclick="saveDetails()"
@@ -596,6 +594,21 @@ function syncRelationshipsToHidden() {
     document.getElementById('relationships_jsonb').value = JSON.stringify(relationships);
 }
 
+function getCurrentRelationshipsFromHidden() {
+    const hidden = document.getElementById('relationships_jsonb');
+    if (!hidden || !hidden.value.trim()) {
+        return {};
+    }
+
+    try {
+        const parsed = JSON.parse(hidden.value);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (e) {
+        console.warn('Failed to parse current relationships JSON before AI merge:', e);
+        return {};
+    }
+}
+
 // Details Modal Functions
 const relationSuggestions = [
     // Family
@@ -695,11 +708,6 @@ function saveDetailsToRow(row) {
 
 // Modal functions
 function openBuildModal() {
-    const textArea = document.getElementById('relationships');
-    if (!textArea || !textArea.value.trim()) {
-        alert('No text in the relationships field to analyze. Add some relationship descriptions first.');
-        return;
-    }
     document.getElementById('build-ai-modal').style.display = 'flex';
 }
 
@@ -765,10 +773,7 @@ function addCustomType() {
 }
 
 async function buildWithAI() {
-    const textArea = document.getElementById('relationships');
-    const text = textArea.value.trim();
     const direction = document.getElementById('build-ai-direction').value.trim();
-
     const npcName = document.getElementById('rel-npc-name').value;
     const npcId = document.getElementById('rel-npc-id').value;
     const btn = document.getElementById('btn-build-confirm');
@@ -779,12 +784,13 @@ async function buildWithAI() {
     try {
         document.getElementById('btn-build-ai').disabled = true;
         document.getElementById('btn-build-ai').textContent = '⏳ Building...';
-        showStatus('Sending to AI for analysis (using profile LLM)...', '#86efac');
+        showStatus('Analyzing recent event history...', '#86efac');
 
         const formData = new FormData();
         formData.append('npc_id', npcId);
         formData.append('npc_name', npcName);
-        formData.append('relationships_text', text);
+        formData.append('source', 'events');
+        formData.append('event_limit', '200');
         if (direction) {
             formData.append('direction', direction);
         }
@@ -802,21 +808,26 @@ async function buildWithAI() {
         const result = await response.json();
 
         if (result.ok && result.relationships) {
+            const mergedRelationships = {
+                ...getCurrentRelationshipsFromHidden(),
+                ...result.relationships
+            };
+
             // Update the hidden field
-            document.getElementById('relationships_jsonb').value = JSON.stringify(result.relationships);
+            document.getElementById('relationships_jsonb').value = JSON.stringify(mergedRelationships);
 
             // Rebuild the table
-            rebuildRelTable(result.relationships);
+            rebuildRelTable(mergedRelationships);
 
             // Show success with model info
-            let statusMsg = `✅ AI built ${result.count} relationship(s)`;
+            let statusMsg = `✅ AI built ${result.count} relationship(s) from ${result.event_count || 0} event(s)`;
             if (result.model) {
                 statusMsg += ` using ${result.model}`;
             }
             if (result.player_name && result.player_name !== 'the Player') {
                 statusMsg += ` (Player: ${result.player_name})`;
             }
-            statusMsg += `. Click "Save NPC" to store.`;
+            statusMsg += `. Matching existing targets may have been overwritten. Click "Save NPC" to store.`;
             showStatus(statusMsg, '#86efac');
         } else {
             showStatus(`❌ Error: ${result.error || 'Unknown error'}`, '#ef4444');

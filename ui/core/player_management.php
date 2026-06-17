@@ -2,12 +2,19 @@
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . ".class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "player_diary_connector.php");
 
 // Determine web root
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -20,8 +27,8 @@ if ($uiPos !== false) {
 if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
-$GLOBALS["db"] = new sql();
 $ttsConnector = new TTSConnector();
+$llmConnector = new LLMConnector();
 $player = new Player();
 
 $saveSuccess = false;
@@ -45,6 +52,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_player'])) {
         $player->set('bio_known_by_all', $bioKnownByAll);
         if (isset($_POST['speech_style'])) {
             $player->set('speech_style', $_POST['speech_style']);
+        }
+        if (isset($_POST['core_connector_player'])) {
+            chimSetGeneralSetting(
+                'CORE_CONNECTOR_PLAYER',
+                trim(strval($_POST['core_connector_player'])),
+                chimGetSchemaDescription('CORE_CONNECTOR_PLAYER')
+            );
         }
         $player->set('diary_enabled', isset($_POST['diary_enabled']) && $_POST['diary_enabled'] === '1' ? '1' : '0');
         $player->set('tts_connector_id', trim(strval($_POST['tts_connector_id'] ?? '')));
@@ -96,7 +110,13 @@ $playerTtsElevenSimilarityBoost = strval($allPlayerData['tts_elevenlabs_similari
 $playerTtsElevenStyle = strval($allPlayerData['tts_elevenlabs_style'] ?? '');
 $playerTtsElevenUseSpeakerBoost = strval($allPlayerData['tts_elevenlabs_use_speaker_boost'] ?? '');
 $playerTtsElevenV3AudioTags = strval($allPlayerData['tts_elevenlabs_v3_audio_tags'] ?? '');
+$playerRespeechConnectorId = trim(strval(chimGetGeneralSetting('CORE_CONNECTOR_PLAYER', strval($GLOBALS['CORE_CONNECTOR_PLAYER'] ?? ''))));
 $ttsConnectorRows = $ttsConnector->readAll();
+$llmConnectorRows = $llmConnector->readAll();
+$playerDiaryConnectorInfo = chimResolvePlayerDiaryConnectorFromDefaultProfile();
+$playerDiaryConnectorLabel = trim(strval($playerDiaryConnectorInfo['connector_label'] ?? 'Not configured'));
+$playerDiaryProfileLabel = trim(strval($playerDiaryConnectorInfo['profile_label'] ?? 'Default Profile'));
+$playerDiaryConnectorError = trim(strval($playerDiaryConnectorInfo['error'] ?? ''));
 $ttsConnectorMeta = [];
 foreach ($ttsConnectorRows as $row) {
     $ttsConnectorMeta[strval($row['id'] ?? '')] = [
@@ -307,6 +327,66 @@ if (!$isEmbed) {
         border-bottom: 1px solid rgba(242, 124, 17, 0.2);
     }
 
+    .content-section h2.section-title-with-status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .section-title-text {
+        font-family: 'MagicCards', serif !important;
+        color: inherit;
+        text-shadow: inherit;
+        word-spacing: inherit;
+    }
+
+    .section-status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: 'MagicCards', serif;
+        font-size: 0.62em;
+        font-weight: 400;
+        letter-spacing: 0;
+        text-transform: none;
+        word-spacing: 4px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.35);
+        color: #d9d9d9;
+        white-space: nowrap;
+    }
+
+    #player_tts_status_text {
+        font-family: 'MagicCards', serif !important;
+    }
+
+    .section-status-indicator .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #c84b4b;
+        box-shadow: 0 0 0 2px rgba(200, 75, 75, 0.2);
+        flex: 0 0 auto;
+    }
+
+    .section-status-indicator.status-enabled {
+        color: #8fd0a6;
+    }
+
+    .section-status-indicator.status-enabled .status-dot {
+        background: #2d8a57;
+        box-shadow: 0 0 0 2px rgba(45, 138, 87, 0.22);
+    }
+
+    .section-status-indicator.status-disabled {
+        color: #d98d8d;
+    }
+
+    .section-status-indicator.status-disabled .status-dot {
+        background: #c84b4b;
+        box-shadow: 0 0 0 2px rgba(200, 75, 75, 0.2);
+    }
+
     .full-width-section {
         grid-column: 1 / -1;
     }
@@ -381,6 +461,37 @@ if (!$isEmbed) {
         display: block;
         padding-left: 2px;
         line-height: 1.4;
+    }
+
+    .status-field {
+        margin-top: 14px;
+        margin-bottom: 14px;
+    }
+
+    .status-field-label {
+        display: block;
+        font-size: 13px;
+        color: rgb(242, 124, 17);
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .status-field-value {
+        color: #e9efff;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.35;
+    }
+
+    .status-field-value.warning {
+        color: #f1c27d;
+    }
+
+    .status-field-source {
+        color: #999;
+        font-size: 12px;
+        line-height: 1.4;
+        margin-top: 2px;
     }
 
     .toggle-row {
@@ -567,6 +678,10 @@ if (!$isEmbed) {
 
     .speech-style-tools label {
         margin-top: 4px;
+        font-family: 'MagicCards', serif;
+        color: rgb(242, 124, 17);
+        font-size: 1.1em;
+        word-spacing: 4px;
     }
 
     /* Toast Notification */
@@ -980,12 +1095,22 @@ if (!$isEmbed) {
         function syncPlayerProviderPanels() {
             const connectorSelect = document.getElementById('tts_connector_id');
             const elevenPanel = document.getElementById('player_tts_elevenlabs_panel');
+            const statusIndicator = document.getElementById('player_tts_status_indicator');
+            const statusText = document.getElementById('player_tts_status_text');
             if (!connectorSelect || !elevenPanel) return;
 
             const selectedId = connectorSelect.value || '';
             const selectedMeta = PLAYER_TTS_CONNECTOR_META[selectedId] || null;
             const selectedDriver = selectedMeta && selectedMeta.driver ? String(selectedMeta.driver).toLowerCase() : '';
             elevenPanel.style.display = selectedDriver === '11labs' ? 'block' : 'none';
+
+            if (statusIndicator && statusText) {
+                const isEnabled = selectedId !== '';
+                statusIndicator.classList.toggle('status-enabled', isEnabled);
+                statusIndicator.classList.toggle('status-disabled', !isEnabled);
+                statusText.textContent = isEnabled ? 'Enabled' : 'Disabled';
+                statusIndicator.setAttribute('title', isEnabled ? 'Player TTS is enabled' : 'Player TTS is disabled');
+            }
         }
         </script>
 
@@ -1050,7 +1175,17 @@ if (!$isEmbed) {
             </div>
 
             <div class="content-section player-tts-section">
-                <h2>Player TTS</h2>
+                <h2 class="section-title-with-status">
+                    <span class="section-title-text">Player Autochat and TTS</span>
+                    <span
+                        id="player_tts_status_indicator"
+                        class="section-status-indicator <?php echo $playerTtsConnectorId !== '' ? 'status-enabled' : 'status-disabled'; ?>"
+                        title="<?php echo $playerTtsConnectorId !== '' ? 'Player TTS is enabled' : 'Player TTS is disabled'; ?>"
+                    >
+                        <span class="status-dot" aria-hidden="true"></span>
+                        <span id="player_tts_status_text"><?php echo $playerTtsConnectorId !== '' ? 'Enabled' : 'Disabled'; ?></span>
+                    </span>
+                </h2>
                 <label for="tts_connector_id">TTS Connector</label>
                 <select id="tts_connector_id" name="tts_connector_id">
                     <option value="">Disabled</option>
@@ -1110,6 +1245,26 @@ if (!$isEmbed) {
                     </div>
                 </div>
 
+                <label for="core_connector_player">Player Respeech Connector</label>
+                <select id="core_connector_player" name="core_connector_player">
+                    <option value="">Disabled</option>
+                    <?php foreach ($llmConnectorRows as $row): ?>
+                        <?php
+                            $rowId = strval($row['id'] ?? '');
+                            $label = trim(strval($row['label'] ?? ''));
+                            if ($label === '') {
+                                $model = trim(strval($row['model'] ?? ''));
+                                $driver = trim(strval($row['driver'] ?? ''));
+                                $label = $model !== '' ? $model : ($driver !== '' ? $driver : ('Connector #' . $rowId));
+                            }
+                        ?>
+                        <option value="<?php echo htmlspecialchars($rowId); ?>" <?php echo ($playerRespeechConnectorId === $rowId) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($label); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <span class="hint">LLM connector used to rewrite player autochat prompts.</span>
+
                 <label for="speech_style">Player Speech Style</label>
                 <textarea id="speech_style" name="speech_style" placeholder="Describe how your character speaks and communicates..."><?php echo htmlspecialchars($speechStyle); ?></textarea>
                 <span class="hint">Used for Auto Chat mode and player-style generation prompts.</span>
@@ -1125,6 +1280,18 @@ if (!$isEmbed) {
             <div class="content-section">
                 <h2>📙 Player Diary</h2>
                 <input type="hidden" name="diary_enabled" value="0">
+                <div class="status-field">
+                    <span class="status-field-label">Player Diary Connector</span>
+                    <div class="status-field-value <?php echo $playerDiaryConnectorError !== '' ? 'warning' : ''; ?>">
+                        <?php echo htmlspecialchars($playerDiaryConnectorLabel); ?>
+                    </div>
+                    <div class="status-field-source">
+                        Pulled from the Diary connector on the default profile: <?php echo htmlspecialchars($playerDiaryProfileLabel); ?>.
+                        <?php if ($playerDiaryConnectorError !== ''): ?>
+                            <?php echo htmlspecialchars($playerDiaryConnectorError); ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
                 <label class="toggle-row">
                     <div class="toggle-switch">
                         <input
@@ -1139,6 +1306,7 @@ if (!$isEmbed) {
                     <span class="toggle-label">Enable <?php echo htmlspecialchars($playerName); ?>'s Diary</span>
                 </label>
                 <span class="hint">Allows <?php echo htmlspecialchars($playerName); ?> to write diary entries. This can be triggered by the Prisma Actions menu or Auto Diary.</span>
+
             </div>
         </div>
     </form>

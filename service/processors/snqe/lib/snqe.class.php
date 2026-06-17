@@ -138,17 +138,19 @@ class SNQEQuestManager
 
     public static function save_quests(int $gamets)
     {
-        $state = $GLOBALS["db"]->escape(file_get_contents($GLOBALS["ENGINE_PATH"] . "/log/snqe_state.json"));
-        $GLOBALS["db"]->query(
-            "INSERT INTO sneq_quests_saved (quest_id, code, created_at,updated_at,quest_run_state, quest_data, title, stage, gamets,\"state\")
-             SELECT t.quest_id, t.code, t.created_at, t.updated_at, t.quest_run_state, t.quest_data, t.title, t.stage, $gamets,'$state'
-             FROM (
-                 SELECT DISTINCT ON (quest_id) quest_id, code, created_at, updated_at, quest_run_state, quest_data, title, stage
-                 FROM sneq_quests
-                 ORDER BY quest_id, updated_at DESC
-             ) t
-             "
-        );
+        if (file_exists($GLOBALS["ENGINE_PATH"] . "/log/snqe_state.json")) {
+            $state = $GLOBALS["db"]->escape(file_get_contents($GLOBALS["ENGINE_PATH"] . "/log/snqe_state.json"));
+            $GLOBALS["db"]->query(
+                "INSERT INTO sneq_quests_saved (quest_id, code, created_at,updated_at,quest_run_state, quest_data, title, stage, gamets,\"state\")
+                 SELECT t.quest_id, t.code, t.created_at, t.updated_at, t.quest_run_state, t.quest_data, t.title, t.stage, $gamets,'$state'
+                 FROM (
+                     SELECT DISTINCT ON (quest_id) quest_id, code, created_at, updated_at, quest_run_state, quest_data, title, stage
+                     FROM sneq_quests
+                     ORDER BY quest_id, updated_at DESC
+                 ) t
+                 "
+            );
+        }
     }
 
     public static function load_quests(int $gamets)
@@ -173,8 +175,12 @@ class SNQEQuestManager
                     'updated_at' => $runningQuest["updated_at"],
                 ]
             );
-        } else 
-            unlink($GLOBALS["ENGINE_PATH"] . "/log/snqe_state.json");
+        } else {
+            $stateFile = $GLOBALS["ENGINE_PATH"] . "/log/snqe_state.json";
+            if (file_exists($stateFile)) {
+                unlink($stateFile);
+            }
+        }
 
     }
 }

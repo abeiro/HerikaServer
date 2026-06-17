@@ -1,9 +1,14 @@
 <?php
 
 $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php";
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
@@ -11,7 +16,7 @@ require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "lazy_xml.php";
 
 $GLOBALS["ENGINE_PATH"] = $enginePath;
 
-$db = new sql();
+$db = $GLOBALS["db"];
 
 require_once $enginePath . "lib/core/npc_master.class.php";
 require_once $enginePath . "lib/core/api_badge.class.php";
@@ -24,7 +29,7 @@ $connector->setOldGlobals($currentConnectorData);
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-$MODEL_1 = "x-ai/grok-4.1-fast"; // Initial quest generator
+$MODEL_1 = "google/gemma-4-26b-a4b-it"; // Initial quest generator
 $MODEL_2 = "google/gemini-3-flash-preview";   // Quest steps generator
 
 
@@ -271,6 +276,8 @@ $nearByLoc
 
 Current Location: $lastLocation
 
+Latest events:
+$history
 
 Ideas for initial NPC name: a character, which name must start with $randomLettersA, and surname/nick by $randomLettersB. Never use \" or ' in the name.
 ";
@@ -394,7 +401,7 @@ $suggested",
             if (strpos(DataBeingsOrDeathsInRangeExcluding(), $npc) == false) {
                 $outofscene = "(out of scene)";
             } else {
-                $outofscene = "";
+                $outofscene = "(present)";
             }
 
             $lac = explode("|", $lastAction["original"]);
@@ -521,7 +528,7 @@ If no nearby entrances, this means current location has no passages/doors/chambe
         'role' => 'user',
         'content' => "You may:
 - Spawn **small portable items** (amulets, rings, books, notes, keys).
-- Spawn **new NPC actors**.
+- Spawn **new NPC actors**. (avoid reusing Skyrim vanilla NPCs, create new ones fitting the world and scenario).
 - Spawn **new enemies**.
 - Instruct NPCs or enemies to **speak, fight, move, or travel**.
 

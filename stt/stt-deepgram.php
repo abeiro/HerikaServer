@@ -3,8 +3,12 @@
 // API-DOC https://developers.deepgram.com/docs/getting-started-with-pre-recorded-audio
 
 $localPath = dirname(__FILE__) . '/../';
-require_once($localPath . "conf/conf.php"); // API KEY must be there
-require_once($localPath . "lib/{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($localPath . "lib/runtime_bootstrap.php");
+chimRuntimeBootstrapIfNeeded($localPath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => true,
+    'load_itt_connector' => false,
+]);
 require_once($localPath . "lib/chat_helper_functions.php");
 
 

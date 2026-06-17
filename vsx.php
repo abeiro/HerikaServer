@@ -5,14 +5,21 @@
 $path = dirname((__FILE__)) . DIRECTORY_SEPARATOR;
 $GLOBALS["ENGINE_PATH"]=$path;
 
+require_once $path . "lib/runtime_bootstrap.php";
+chimRuntimeBootstrap($path, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+    'load_tts_connector' => 'pockettts',
+    'load_player_name' => true,
+]);
 require_once $path . "lib/utils.php";
-require_once $path . "conf/conf.php"; // API KEY must be there
-require_once $path . "lib/{$GLOBALS["DBDRIVER"]}.class.php";
 require_once $path . "lib/fuz_convert.php"; // API KEY must be there
 require_once $path . "lib/auditing.php";
 require_once $path . "lib/logger.php";
 
-$db = new sql();
+$db = $GLOBALS["db"] ?? new sql();
+$GLOBALS["db"] = $db;
 
 require_once $path . "lib/core/npc_master.class.php";
 require_once $path . "lib/core/api_badge.class.php";
@@ -28,10 +35,92 @@ function normalize_endpoint_url($url)
     return $url;
 }
 
+function chimVsxResolveCloneTtsRuntime(string $actorName): array
+{
+    $ttsConnector = new TTSConnector();
+    $supportedCloneDrivers = ['xtts-fastapi', 'chatterbox', 'pockettts'];
+
+    $fallbackDriver = $ttsConnector->normalizeDriverValue($GLOBALS["TTSFUNCTION"] ?? 'pockettts');
+    if ($fallbackDriver === '') {
+        $fallbackDriver = 'pockettts';
+    }
+
+    $selectedDriver = $fallbackDriver;
+    $profileData = null;
+
+    if ($actorName !== '') {
+        $profile = new CoreProfile();
+
+        if (strcasecmp($actorName, 'The Narrator') === 0) {
+            require_once $GLOBALS["ENGINE_PATH"] . "lib/core/narrator.class.php";
+            $narrator = new Narrator();
+            $profileId = intval($narrator->getProfileId() ?? 0);
+            if ($profileId > 0) {
+                $profileData = $profile->getById($profileId);
+            }
+        } else {
+            $npcMaster = new NpcMaster();
+            $currentNpcData = $npcMaster->getByName($actorName);
+            if ($currentNpcData) {
+                $profileId = intval($currentNpcData['profile_id'] ?? 0);
+                if ($profileId > 0) {
+                    $profileData = $profile->getById($profileId);
+                } else {
+                    $profileData = $profile->getDefaultNpc();
+                }
+            }
+        }
+
+        if ($profileData) {
+            $profileConnectorRow = $ttsConnector->ensureConnectorForProfile($profileData);
+            $profileDriver = $ttsConnector->normalizeDriverValue($profileConnectorRow['driver'] ?? '');
+            if ($profileConnectorRow && in_array($profileDriver, $supportedCloneDrivers, true)) {
+                $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] = $profileData;
+                $profile->setOldGlobals($profileData);
+                $selectedDriver = $profileDriver;
+            } elseif ($profileConnectorRow) {
+                Logger::info("[vsx] Actor '{$actorName}' uses non-clone TTS driver '{$profileDriver}', falling back to {$fallbackDriver}");
+            }
+        }
+    }
+
+    $providerKey = $ttsConnector->getProviderKeyFromDriver($selectedDriver);
+    $providerConfig = ($providerKey !== '' && isset($GLOBALS["TTS"][$providerKey]) && is_array($GLOBALS["TTS"][$providerKey]))
+        ? $GLOBALS["TTS"][$providerKey]
+        : [];
+
+    $endpoint = trim(strval($providerConfig['endpoint'] ?? $providerConfig['url'] ?? $providerConfig['URL'] ?? ''));
+    if ($endpoint === '' && $selectedDriver !== $fallbackDriver) {
+        $fallbackProviderKey = $ttsConnector->getProviderKeyFromDriver($fallbackDriver);
+        $fallbackConfig = ($fallbackProviderKey !== '' && isset($GLOBALS["TTS"][$fallbackProviderKey]) && is_array($GLOBALS["TTS"][$fallbackProviderKey]))
+            ? $GLOBALS["TTS"][$fallbackProviderKey]
+            : [];
+        $endpoint = trim(strval($fallbackConfig['endpoint'] ?? $fallbackConfig['url'] ?? $fallbackConfig['URL'] ?? ''));
+        $providerKey = $fallbackProviderKey;
+        $providerConfig = $fallbackConfig;
+        $selectedDriver = $fallbackDriver;
+    }
+
+    $voicelogic = trim(strval($providerConfig['voicelogic'] ?? ''));
+    if ($voicelogic === '') {
+        $voicelogic = 'voicetype';
+    }
+
+    return [
+        'driver' => $selectedDriver,
+        'provider_key' => $providerKey,
+        'endpoint' => ($endpoint !== '') ? normalize_endpoint_url($endpoint) : '',
+        'voicelogic' => $voicelogic,
+    ];
+}
+
 $GLOBALS["AUDIT_RUNID_REQUEST"] = "vsx";
 
 // Put info into DB asap
-$voicelogic = $GLOBALS["TTS"]["XTTSFASTAPI"]["voicelogic"];
+$vsxTtsRuntime = chimVsxResolveCloneTtsRuntime(trim(strval($_GET["codename"] ?? '')));
+$voicelogic = $vsxTtsRuntime['voicelogic'];
+$ttsEndpoint = $vsxTtsRuntime['endpoint'];
+Logger::info("[vsx] Using clone driver '{$vsxTtsRuntime['driver']}' for actor '{$_GET["codename"]}' with endpoint '{$ttsEndpoint}'");
 
 // Lock
 $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
@@ -115,7 +204,7 @@ if (strpos($_GET["oname"], ".fuz")) {
     $ext = "wav";
 }
 
-$already   = file_exists(normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . "/sample/$codename.wav");
+$already   = ($ttsEndpoint !== '') ? file_exists($ttsEndpoint . "/sample/$codename.wav") : false;
 $finalName = __DIR__ . DIRECTORY_SEPARATOR . "soundcache/_vsx_" . md5($_FILES["file"]["tmp_name"]) . ".$ext";
 @copy($_FILES["file"]["tmp_name"], $finalName);
 
@@ -150,12 +239,12 @@ if (! $already) {
             $finalFile = wavToWav($finalName);
         }
     }
-    if (! isset($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) || ! ($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"])) {
+    if ($ttsEndpoint === '') {
         die("Error");
     }
 
 } else {
-    Logger::info("Empty file {$_FILES["file"]["tmp_name"]} already exists at " . normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . "/sample/$codename.wav");
+    Logger::info("Empty file {$_FILES["file"]["tmp_name"]} already exists at {$ttsEndpoint}/sample/$codename.wav");
 
 }
 
@@ -166,7 +255,7 @@ if ($already) {
 // Lets store voice files
 @copy($finalFile, $path . "data/voices/$codename.wav");
 
-$url  = normalize_endpoint_url($GLOBALS["TTS"]["XTTSFASTAPI"]["endpoint"]) . '/upload_sample';
+$url  = $ttsEndpoint . '/upload_sample';
 $curl = curl_init();
 
 // Set cURL options

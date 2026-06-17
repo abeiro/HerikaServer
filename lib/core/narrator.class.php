@@ -301,6 +301,8 @@ class Narrator
             'random_enabled' => ['RANDOM_NARATION', 'bool', false],
             'random_chance' => ['RANDOM_NARATION_CHANCE', 'int', 15],
             'random_cooldown' => ['RANDOM_NARRATION_COOLDOWN', 'int', 2],
+            'bored_enabled' => ['ALLOW_NARRATOR_BORED_EVENTS', 'bool', false],
+            'bored_chance' => ['ALLOW_NARRATOR_BORED_EVENTS_CHANCE', 'int', 25],
             'quest_comment_cooldown' => ['QUEST_COMMENT_COOLDOWN', 'int', 3],
             'books_only_narrator' => ['BOOK_EVENT_ALWAYS_NARRATOR', 'bool', false],
             'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', false],
@@ -323,6 +325,7 @@ class Narrator
                 isset($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] : (isset($GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT']) ? (bool)$GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] : true),
             ],
             'diary_enabled' => ['NARRATOR_DIARY_ENABLED', 'bool', false],
+            'auto_diary_enabled' => ['NARRATOR_AUTO_DIARY_ENABLED', 'bool', false],
             'connector_id' => ['NARRATOR_CONNECTOR_ID', 'int', null],
             'diary_connector_id' => ['NARRATOR_DIARY_CONNECTOR_ID', 'int', null],
         ];

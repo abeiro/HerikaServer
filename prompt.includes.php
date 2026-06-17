@@ -14,7 +14,11 @@ if (in_array($gameRequest[0],["ginputtext_s"])) {
     $GLOBALS["OVERRIDE_DIALOGUE_TARGET"]=true;
 }
 
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+
 require(__DIR__ . DIRECTORY_SEPARATOR . "prompts/prompts.php");
+
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 $PROMPT_HEAD = ($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "Let\'s roleplay in the Universe of Skyrim. I\'m {$GLOBALS["PLAYER_NAME"]} ";
 
@@ -22,7 +26,8 @@ $PROMPT_HEAD = ($GLOBALS["PROMPT_HEAD"]) ? $GLOBALS["PROMPT_HEAD"] : "Let\'s rol
  * Info gathering to mangle function definitions. This will enforce some parameters to be fixed-
  */
 
-$FUNCTION_PARM_MOVETO=DataPosibleLocationsToGo();		// To avoid moving to non existant target, lets limit available targets to the real ones in function definition
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
+$FUNCTION_PARM_MOVETO=DataPosibleMoveToTargets();		// Move_To is actor-only; locations should use TravelTo.
 if (!isset($FUNCTION_PARM_MOVETO))
 	$FUNCTION_PARM_MOVETO=[];
 $FUNCTION_PARM_MOVETO[]=$GLOBALS["PLAYER_NAME"];
@@ -33,19 +38,22 @@ if (!isset($FUNCTION_PARM_INSPECT))
 	$FUNCTION_PARM_INSPECT=[];
 $FUNCTION_PARM_INSPECT[]=$GLOBALS["PLAYER_NAME"];
 
-
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 require(__DIR__.DIRECTORY_SEPARATOR."prompts".DIRECTORY_SEPARATOR."command_prompt.php");
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 if ($GLOBALS["OVERRIDE_DIALOGUE_TARGET"]) {
-    $isWhisperMode = isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_EXECUTION_MODE"]) === "WHISPER";
-    $dialogueTargetVerb = $isWhisperMode ? "Whispering to" : "Talking to";
+    $dialogueTargetVerb = function_exists('chimGetDialogueTargetVerb')
+        ? chimGetDialogueTargetVerb()
+        : "Talking to";
     if (isset($GLOBALS["USING_DEFAULT_PROFILE"])&&($GLOBALS["USING_DEFAULT_PROFILE"]))
         $DIALOGUE_TARGET="({$dialogueTargetVerb} Narrator)";
     else
         $DIALOGUE_TARGET="({$dialogueTargetVerb} everyone)";
 }
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 require_once(__DIR__.DIRECTORY_SEPARATOR . "functions" . DIRECTORY_SEPARATOR . "functions.php");
-
+error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 /* This will use the extra key from PROMPTS array to do some things 
  (enable/disable, force mod, change token limit oe define a transformer (non IA related) function.
@@ -64,16 +72,5 @@ if (isset($PROMPTS[$gameRequest[0]]["extra"])) {
 
 
 }
-
-if (file_exists(__DIR__."/functions/user_pref.json")) {
-    $currentOnes=json_decode(file_get_contents(__DIR__."/functions/user_pref.json"),true);
-	if (isset($currentOnes) && is_array($currentOnes) && (count($currentOnes) > 0)) {
-		
-		$GLOBALS["ENABLED_FUNCTIONS"]=$currentOnes; // add functions from plugins to existing selection
-		
-		error_log("JSON: " . implode('|', $GLOBALS["ENABLED_FUNCTIONS"]) ); //debug		
-	}
-} 
-
 
 ?>

@@ -9,11 +9,12 @@ ini_set('display_errors', '1');
 $rootEnginePath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR; // Three levels up from the current directory
 $configFilepath = $rootEnginePath . "conf" . DIRECTORY_SEPARATOR;
 
-// Include configuration and required libraries
-require_once($configFilepath . "conf.php");
-
-// Include database class based on the DBDRIVER global variable
-require_once($rootEnginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS['DBDRIVER']}.class.php");
+require_once($rootEnginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($rootEnginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 
 // Include miscellaneous UI functions
 require_once($rootEnginePath . "lib" . DIRECTORY_SEPARATOR . "misc_ui_functions.php");
@@ -28,7 +29,7 @@ require_once($rootEnginePath . "lib" . DIRECTORY_SEPARATOR . "rolemaster_helpers
 require_once($rootEnginePath . "connector" . DIRECTORY_SEPARATOR . "__jpd.php");
 
 // Create a new database connection
-$db = new sql();
+$db = $GLOBALS["db"];
 
 // Get the 'action' parameter from the URL
 $action = $_GET['action'] ?? '';

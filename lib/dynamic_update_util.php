@@ -43,7 +43,6 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
                     'HERIKA_BACKGROUND' => isset($GLOBALS["HERIKA_BACKGROUND"]) ? $GLOBALS["HERIKA_BACKGROUND"] : '',
                     'HERIKA_PERSONALITY' => isset($GLOBALS["HERIKA_PERSONALITY"]) ? $GLOBALS["HERIKA_PERSONALITY"] : '',
                     'HERIKA_APPEARANCE' => isset($GLOBALS["HERIKA_APPEARANCE"]) ? $GLOBALS["HERIKA_APPEARANCE"] : '',
-                    'HERIKA_RELATIONSHIPS' => isset($GLOBALS["HERIKA_RELATIONSHIPS"]) ? $GLOBALS["HERIKA_RELATIONSHIPS"] : '',
                     'HERIKA_OCCUPATION' => isset($GLOBALS["HERIKA_OCCUPATION"]) ? $GLOBALS["HERIKA_OCCUPATION"] : '',
                     'HERIKA_SKILLS' => isset($GLOBALS["HERIKA_SKILLS"]) ? $GLOBALS["HERIKA_SKILLS"] : '',
                     'HERIKA_SPEECHSTYLE' => isset($GLOBALS["HERIKA_SPEECHSTYLE"]) ? $GLOBALS["HERIKA_SPEECHSTYLE"] : '',
@@ -209,7 +208,6 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
             $GLOBALS["HERIKA_BACKGROUND"] = $originalHerikaData['HERIKA_BACKGROUND'];
             $GLOBALS["HERIKA_PERSONALITY"] = $originalHerikaData['HERIKA_PERSONALITY'];
             $GLOBALS["HERIKA_APPEARANCE"] = $originalHerikaData['HERIKA_APPEARANCE'];
-            $GLOBALS["HERIKA_RELATIONSHIPS"] = $originalHerikaData['HERIKA_RELATIONSHIPS'];
             $GLOBALS["HERIKA_OCCUPATION"] = $originalHerikaData['HERIKA_OCCUPATION'];
             $GLOBALS["HERIKA_SKILLS"] = $originalHerikaData['HERIKA_SKILLS'];
             $GLOBALS["HERIKA_SPEECHSTYLE"] = $originalHerikaData['HERIKA_SPEECHSTYLE'];
@@ -224,12 +222,29 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
 // Function to process AUTO_DIARY for nearby NPCs with auto_diary_enabled
 function buildPlayerDiaryPrompt(string $playerName): string
 {
-    $template = trim((string)($GLOBALS["PLAYER_DIARY_PROMPT"] ?? ''));
+    $template = '';
+    try {
+        if (isset($GLOBALS["db"]) && is_object($GLOBALS["db"])) {
+            $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'player_diary_prompt'");
+            if (is_array($promptData)) {
+                $template = trim((string)(!empty($promptData['custom_prompt']) ? $promptData['custom_prompt'] : ($promptData['default_prompt'] ?? '')));
+            }
+        }
+    } catch (Throwable $e) {
+        Logger::warn("PLAYER_DIARY: Failed to load player_diary_prompt from Prompt Manager: " . $e->getMessage());
+    }
+
+    if ($template === '') {
+        $template = trim((string)($GLOBALS["PLAYER_DIARY_PROMPT"] ?? ''));
+    }
     if ($template === '') {
         $template = "Please write a short summary of #PLAYER_NAME#'s recent dialogues and events written above into #PLAYER_NAME#'s diary. WRITE AS IF YOU WERE #PLAYER_NAME#. Use first person and start the diary entry with the current date and time.";
     }
 
-    return strtr($template, ['#PLAYER_NAME#' => $playerName]);
+    return strtr($template, [
+        '#PLAYER_NAME#' => $playerName,
+        '{PLAYER_NAME}' => $playerName
+    ]);
 }
 
 function getConfiguredPlayerDiaryName(Player $player): string
@@ -266,6 +281,9 @@ function generatePlayerDiary($gameRequest, $eventType)
     }
     if (!class_exists('LLMConnector')) {
         require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
+    }
+    if (!function_exists('chimResolvePlayerDiaryConnectorFromDefaultProfile')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "player_diary_connector.php");
     }
 
     $player = new Player();
@@ -360,24 +378,13 @@ function generatePlayerDiary($gameRequest, $eventType)
 
     try {
         $connector = new LLMConnector();
-        $coreConnectorId = trim((string)$player->get('diary_connector_id'));
-        if ($coreConnectorId === '') {
-            foreach (['CORE_CONNECTOR_SUMMARY', 'CORE_CONNECTOR_PLAYER', 'CORE_CONNECTOR_PROFILES'] as $globalConnectorKey) {
-                $candidateConnectorId = trim((string)($GLOBALS[$globalConnectorKey] ?? ''));
-                if ($candidateConnectorId !== '') {
-                    $coreConnectorId = $candidateConnectorId;
-                    break;
-                }
-            }
-        }
-
-        $currentConnectorData = null;
-        if ($coreConnectorId !== '') {
-            $currentConnectorData = $connector->getById($coreConnectorId);
-        }
+        $defaultDiaryConnector = chimResolvePlayerDiaryConnectorFromDefaultProfile();
+        $coreConnectorId = intval($defaultDiaryConnector['connector_id'] ?? 0);
+        $currentConnectorData = $defaultDiaryConnector['connector_data'] ?? null;
 
         if (!empty($currentConnectorData)) {
-            Logger::info("PLAYER_DIARY: Using core connector {$coreConnectorId} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]})");
+            $profileLabel = trim((string)($defaultDiaryConnector['profile_label'] ?? 'Default Profile'));
+            Logger::info("PLAYER_DIARY: Using default profile diary connector {$coreConnectorId} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]}) from {$profileLabel}");
             $connector->setOldGlobals($currentConnectorData);
             $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
             unset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["stop"]);
@@ -396,6 +403,11 @@ function generatePlayerDiary($gameRequest, $eventType)
             $connectionHandler = $connector->getConnector($currentConnectorData);
             $buffer = (string)$connectionHandler->fast_request($contextData, ["MAX_TOKENS" => $maxTokens], "diary");
         } else {
+            $defaultDiaryConnectorError = trim((string)($defaultDiaryConnector['error'] ?? ''));
+            if ($defaultDiaryConnectorError !== '') {
+                Logger::warn("PLAYER_DIARY: Default profile diary connector unavailable: {$defaultDiaryConnectorError}");
+            }
+
             $diaryConnector = function_exists('chimResolveDiaryConnectorName') ? chimResolveDiaryConnectorName() : null;
             if ($diaryConnector === null) {
                 Logger::warn("PLAYER_DIARY: No diary connector configured");
@@ -507,11 +519,11 @@ function processAutoDiary($gameRequest, $eventType) {
         }
     }
     
-    // Add The Narrator if diary is enabled for narrator
+    // Add The Narrator if auto diary is enabled for narrator
     // The Narrator is always "nearby" (conceptually omnipresent)
-    if (isset($GLOBALS["NARRATOR_DIARY_ENABLED"]) && $GLOBALS["NARRATOR_DIARY_ENABLED"]) {
+    if (!empty($GLOBALS["NARRATOR_AUTO_DIARY_ENABLED"])) {
         $nearbyNpcs[] = "The Narrator";
-        Logger::info("AUTO_DIARY: Added The Narrator to auto diary processing (toggle enabled)");
+        Logger::info("AUTO_DIARY: Added The Narrator to auto diary processing (auto toggle enabled)");
     }
     
     if (empty($nearbyNpcs) && !$playerDiaryEnabled) {
@@ -583,9 +595,9 @@ function processAutoDiary($gameRequest, $eventType) {
         
         // Special handling for The Narrator
         if ($npcName === "The Narrator") {
-            // Check if narrator diary is enabled
-            if (!isset($GLOBALS["NARRATOR_DIARY_ENABLED"]) || !$GLOBALS["NARRATOR_DIARY_ENABLED"]) {
-                Logger::debug("AUTO_DIARY: The Narrator diary is disabled, skipping");
+            // Check if narrator auto diary is enabled
+            if (empty($GLOBALS["NARRATOR_AUTO_DIARY_ENABLED"])) {
+                Logger::debug("AUTO_DIARY: The Narrator auto diary is disabled, skipping");
                 continue;
             }
             
@@ -1083,26 +1095,10 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
 
     $sqlfilter=" and type<>'prechat' and type<>'itemfound' and type<>'infoaction' and type<>'npcspellcast' ";
     $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", $lastNDataForContext * -1,$sqlfilter);
-    if (!empty($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
-        $isContextNarratorLine = function(string $content): bool {
-            if (strpos($content, 'The Narrator:') !== 0) return false;
-            if (preg_match('/^The Narrator:\s*\(/', $content)) return true; // parenthetical
-            if (strpos($content, 'The Narrator: background dialogue:') === 0) return true;
-            if (strpos($content, 'The Narrator: action moved to new location:') === 0) return true;
-            if (strpos($content, 'The Narrator: SCENARIO CHANGE') === 0) return true;
-            if (preg_match('/^The Narrator:\s*about\s+\d+\s+hours\s+later/i', $content)) return true;
-            return false;
-        };
-        $contextDataHistoric = array_values(array_filter($contextDataHistoric, function($entry) use ($isContextNarratorLine){
-            if (!is_array($entry)) return true;
-            $content = isset($entry['content']) ? (string)$entry['content'] : '';
-            if (strpos($content, '(Talking to The Narrator)') !== false) return false;
-            if (strpos($content, 'The Narrator:') === 0) {
-                return $isContextNarratorLine($content);
-            }
-            return true;
-        }));
-    }
+    $contextDataHistoric = filterHistoricContextForNarratorVisibility(
+        $contextDataHistoric,
+        $GLOBALS["HERIKA_NAME"] ?? ""
+    );
     $historyData="";
     foreach ($contextDataHistoric as $element) {
     
@@ -1255,7 +1251,6 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     // Map field names to their corresponding HERIKA prompts
     $fieldMapping = [
         'personality' => 'DYNAMIC_PROMPT_PERSONALITY',
-        'relationships' => 'DYNAMIC_PROMPT_RELATIONSHIPS',
         'occupation' => 'DYNAMIC_PROMPT_OCCUPATION',
         'skills' => 'DYNAMIC_PROMPT_SKILLS',
         'speechstyle' =>'DYNAMIC_PROMPT_SPEECHSTYLE',
@@ -1263,7 +1258,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     ];
     
     if (!isset($fieldMapping[$field])) {
-        Logger::warning("updateDynamicProfileField: Unknown field '$field' for $npcName");
+        Logger::warn("updateDynamicProfileField: Unknown field '$field' for $npcName");
         return false;
     }
 
@@ -1292,7 +1287,6 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     // Map to database prompt keys (lowercase with underscores)
     $dbPromptKeyMapping = [
         'DYNAMIC_PROMPT_PERSONALITY' => 'dynamic_prompt_personality',
-        'DYNAMIC_PROMPT_RELATIONSHIPS' => 'dynamic_prompt_relationships',
         'DYNAMIC_PROMPT_OCCUPATION' => 'dynamic_prompt_occupation',
         'DYNAMIC_PROMPT_SKILLS' => 'dynamic_prompt_skills',
         'DYNAMIC_PROMPT_SPEECHSTYLE' => 'dynamic_prompt_speechstyle',
@@ -1318,7 +1312,7 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     }
     
     if (empty($updatePrompt)) {
-        Logger::warning("updateDynamicProfileField: No prompt configured for field '$field' ($promptName)");
+        Logger::warn("updateDynamicProfileField: No prompt configured for field '$field' ($promptName)");
         return false;
     }
     
@@ -1343,7 +1337,6 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
                 'npc_static_bio' => 'Basic Summary',
                 'personality' => 'Personality Traits',
                 'appearance' => 'Physical Appearance',
-                'relationships' => 'Relationships',
                 'occupation' => 'Occupation & Role',
                 'skills' => 'Skills & Abilities',
                 'speechstyle' => 'Speech Style',
@@ -1361,46 +1354,6 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         }
 
         $profileContextString = !empty($profileContext) ? "\n\n* Current Character Profile:\n" . implode("\n\n", $profileContext) : '';
-
-        // ============================================
-        // BRIDGE: Inject CHIM Relationship System Data
-        // When updating 'relationships' field, feed in the quantified scores
-        // from extended_data.relationships (tracked in real-time by RelationshipLLM)
-        // ============================================
-        if ($field === 'relationships') {
-            $extended = json_decode($npcData['extended_data'] ?? '{}', true) ?: [];
-            $jsonbRels = $extended['relationships'] ?? [];
-
-            if (!empty($jsonbRels)) {
-                $profileContextString .= "\n\n**REAL-TIME RELATIONSHIP TRACKING DATA:**\n";
-                $profileContextString .= "(These scores are updated every conversation turn by the relationship system)\n\n";
-
-                foreach ($jsonbRels as $target => $data) {
-                    $aff = $data['aff'] ?? $data['affinity'] ?? 0;
-                    $type = $data['type'] ?? 'neutral';
-                    $lastChange = isset($data['last_change']) ? " (last change: {$data['last_change']})" : '';
-
-                    // Describe affinity in human terms
-                    $affDesc = '';
-                    if ($aff >= 80) $affDesc = 'deeply devoted';
-                    elseif ($aff >= 60) $affDesc = 'very fond';
-                    elseif ($aff >= 40) $affDesc = 'friendly';
-                    elseif ($aff >= 20) $affDesc = 'warm';
-                    elseif ($aff >= 6) $affDesc = 'slightly positive';
-                    elseif ($aff >= -5) $affDesc = 'neutral';
-                    elseif ($aff >= -20) $affDesc = 'slightly negative';
-                    elseif ($aff >= -40) $affDesc = 'unfriendly';
-                    elseif ($aff >= -60) $affDesc = 'hostile';
-                    else $affDesc = 'deeply hostile';
-
-                    $profileContextString .= "- **{$target}**: affinity={$aff} ({$affDesc}), type={$type}{$lastChange}\n";
-                }
-
-                $profileContextString .= "\n**IMPORTANT:** Use these quantified scores to inform your relationship prose. ";
-                $profileContextString .= "The affinity scores reflect actual tracked interactions. ";
-                $profileContextString .= "Higher affinity = stronger positive feelings. Type indicates relationship nature.\n";
-            }
-        }
 
         // Build prompt for this specific field
         $head = [

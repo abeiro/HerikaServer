@@ -8,14 +8,19 @@ if ($method === "POST") {
     error_reporting(0);
     ini_set("display_errors", 0);
     $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . "../../" . DIRECTORY_SEPARATOR;
-    require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+    require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php";
+    chimRuntimeBootstrap($enginePath, [
+        'load_general_settings' => true,
+        'load_stt_connector' => false,
+        'load_itt_connector' => false,
+        'load_tts_connector' => false,
+        'load_player_name' => true,
+        'load_narrator' => true,
+    ]);
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
-    require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php";
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
-
-    $FEATURES["MEMORY_EMBEDDING"]["ENABLED"] = false;
 
     if (isset($profile)) {
         $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"] = $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"];
@@ -28,6 +33,14 @@ if ($method === "POST") {
         } else {
             Logger::info(__FILE__ . ". Using default profile because GET PROFILE NOT EXISTS");
         }
+        chimRuntimeApplyBootstrapOptions($enginePath, [
+            'load_general_settings' => true,
+            'load_stt_connector' => false,
+            'load_itt_connector' => false,
+            'load_tts_connector' => false,
+            'load_player_name' => true,
+            'load_narrator' => true,
+        ]);
         $GLOBALS["CURRENT_CONNECTOR"] = DMgetCurrentModel();
         $GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"] = $OVERRIDES["BOOK_EVENT_ALWAYS_NARRATOR"];
         
@@ -37,6 +50,7 @@ if ($method === "POST") {
         Logger::info(__FILE__ . ". Using default profile because NO GET PROFILE SPECIFIED");
         $GLOBALS["USING_DEFAULT_PROFILE"] = true;
     }
+    $FEATURES["MEMORY_EMBEDDING"]["ENABLED"] = false;
     $db = new sql();
 
     if (!$db) {
@@ -133,7 +147,6 @@ if ($method === "POST") {
             'HERIKA_BACKGROUND' => 'Basic Summary',
             'HERIKA_PERSONALITY' => 'Personality Traits',
             'HERIKA_APPEARANCE' => 'Physical Appearance',
-            'HERIKA_RELATIONSHIPS' => 'Relationships',
             'HERIKA_OCCUPATION' => 'Occupation & Role',
             'HERIKA_SKILLS' => 'Skills & Abilities',
             'HERIKA_GOALS' => 'Goals & Aspirations'

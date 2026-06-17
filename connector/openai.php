@@ -236,9 +236,10 @@ class openai
                         
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
-                        $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
-                                        "#TARGET#"=>current($localArguments),
-                                        ]);
+                        if (!is_array($localArguments)) {
+                            $localArguments = [];
+                        }
+                        $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, $localArguments);
                         
                         unset($contextData[$n]);
                     } else
@@ -255,11 +256,12 @@ class openai
                                         
                                     ];
                                     
+                                $GLOBALS["PATCH_STORE_FUNC_RES_ACTION"] = $localFuncCodeName;
                                 $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
                             } else {
                                 $contextData[$n]=[
                                         "role"=>"user",
-                                        "content"=>"The Narrator: NOTE, cannot go to that place:".current($localArguments),
+                                        "content"=>"The Narrator: NOTE, cannot go to that place:".herikaExtractActionArgumentTargetValue($localArguments),
                                         
                                 ];
                             }
@@ -544,17 +546,20 @@ class openai
             file_put_contents(__DIR__."/../log/debugStreamParsed.log",print_r($this->_parameterBuff,true));
 
             if (is_array($parameterArr)) {
-                $parameter = current($parameterArr); // Only support for one parameter
+                $parameter = $parameterArr;
 
-                if (!isset($alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")])) {
-                    $functionCodeName=getFunctionCodeName($this->_functionName);
-                    $this->_commandBuffer[]="Herika|command|$functionCodeName@$parameter\r\n";
+                $functionCodeName = getFunctionCodeName($this->_functionName);
+                $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
+                $commandStr = "Herika|command|$functionCodeName@$parameter\r\n";
+
+                if (!isset($alreadysent[md5($commandStr)])) {
+                    $this->_commandBuffer[] = $commandStr;
                     file_put_contents(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR.".last_tool_call_openai.id.txt",$this->_fid);
                     //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
                 }
 
-                $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
+                $alreadysent[md5($commandStr)] = $commandStr;
                 if (ob_get_level()) @ob_flush();
             }
 
@@ -602,16 +607,19 @@ class openai
         if ($this->_functionName) {
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
-                $parameter = current($parameterArr); // Only support for one parameter
+                $parameter = $parameterArr;
 
-                if (!isset($alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")])) {
-                    $functionCodeName=getFunctionCodeName($this->_functionName);
-                    $this->_commandBuffer[]="Herika|command|$functionCodeName@$parameter\r\n";
+                $functionCodeName = getFunctionCodeName($this->_functionName);
+                $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
+                $commandStr = "Herika|command|$functionCodeName@$parameter\r\n";
+
+                if (!isset($alreadysent[md5($commandStr)])) {
+                    $this->_commandBuffer[] = $commandStr;
                     //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
                 }
 
-                $alreadysent[md5("Herika|command|{$this->_functionName}@$parameter\r\n")] = "Herika|command|{$this->_functionName}@$parameter\r\n";
+                $alreadysent[md5($commandStr)] = $commandStr;
                 if (ob_get_level()) @ob_flush();
             } else 
                 return null;

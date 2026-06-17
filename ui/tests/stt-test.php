@@ -16,8 +16,54 @@ $debugPaneLink = false;
 // include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/navbar.php");
 
 $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "$DBDRIVER.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => true,
+    'load_itt_connector' => false,
+]);
+
+function sttTestJsonEncode($value): string
+{
+    $encoded = json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if ($encoded === false) {
+        return print_r($value, true);
+    }
+
+    return $encoded;
+}
+
+function sttTestCollectDebugInfo(string $testFile): array
+{
+    $driver = strval($GLOBALS['STTFUNCTION'] ?? 'none');
+    $info = [
+        'service' => $driver,
+        'active_connector_id' => function_exists('chimGetGeneralSettingInt')
+            ? chimGetGeneralSettingInt('GLOBAL_STT_CONNECTOR_ID', 0)
+            : 0,
+        'test_file' => $testFile,
+        'test_file_exists' => is_file($testFile),
+        'test_file_readable' => is_readable($testFile),
+        'test_file_size' => is_file($testFile) ? intval(filesize($testFile)) : 0,
+    ];
+
+    if ($driver === 'localwhisper') {
+        $info['localwhisper'] = [
+            'url' => trim(strval($GLOBALS['STT']['LOCALWHISPER']['URL'] ?? '')),
+            'form_field' => trim(strval($GLOBALS['STT']['LOCALWHISPER']['FORMFIELD'] ?? 'file')),
+            'timeout_seconds' => intval($GLOBALS['STT']['LOCALWHISPER']['TIMEOUT'] ?? 60),
+        ];
+    }
+
+    $diagnostic = $GLOBALS['STT_LAST_DIAGNOSTIC'] ?? [];
+    if (is_array($diagnostic) && !empty($diagnostic)) {
+        $info['runtime_diagnostic'] = $diagnostic;
+    }
+
+    return $info;
+}
+
+$defaultTestFile = $enginePath . "debug" . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . "test.wav";
 
 // Include the appropriate STT function based on configuration
 if ($STTFUNCTION == "azure") {
@@ -173,8 +219,9 @@ if (php_sapi_name() != "cli") {
         <?php
         echo '<div class="status"><span class="label">Sending test audio file...</span></div>';
 
-        $testFile = $enginePath . "debug" . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . "test.wav";
+        $testFile = $defaultTestFile;
         echo '<div class="message">Sending <code>' . htmlspecialchars($testFile) . '</code></div>';
+        echo '<pre>' . htmlspecialchars(sttTestJsonEncode(sttTestCollectDebugInfo($testFile))) . '</pre>';
 
         // Define the expected transcription
         $expected_transcription = "The Great War is long past. It's time the Empire and the Aldmeri Dominion put aside their differences. Prosperity is good for everyone.";
@@ -190,7 +237,13 @@ if (php_sapi_name() != "cli") {
 
         echo '<div class="status"><span class="label">Obtaining transcription from STT service...</span></div>';
 
-        $transcription = stt($testFile);
+        if (!is_file($testFile) || !is_readable($testFile)) {
+            $transcription = '';
+            echo '<div class="status"><span class="label error">Test audio file is missing</span></div>';
+            echo '<div class="error-message">The STT test audio fixture could not be read.</div>';
+        } else {
+            $transcription = stt($testFile);
+        }
 
         if (!empty($transcription)) {
             echo '<div class="status"><span class="label ok">Transcription Successful!</span></div>';
@@ -220,6 +273,7 @@ if (php_sapi_name() != "cli") {
             } else {
                 echo '<div class="status"><span class="label error">Transcription Failed</span></div>';
                 echo '<div class="error-message">Transcription failed or returned an empty result.</div>';
+                echo '<pre>' . htmlspecialchars(sttTestJsonEncode(sttTestCollectDebugInfo($testFile))) . '</pre>';
             }
         }
 
@@ -256,15 +310,19 @@ if (php_sapi_name() != "cli") {
 } else {
     // Running from CLI
     if (!isset($argv[1])) {
-        echo "Sending " . __DIR__ . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . "test.wav" . PHP_EOL;
+        echo "Sending " . $defaultTestFile . PHP_EOL;
         $expected_transcription = "The Great War is long past. It's time the Empire and the Aldmeri Dominion put aside their differences. Prosperity is good for everyone.";
         echo "Expected result: '" . $expected_transcription . "'" . PHP_EOL;
+        echo sttTestJsonEncode(sttTestCollectDebugInfo($defaultTestFile)) . PHP_EOL;
         echo "Obtaining transcription from STT service.... ";
 
-        $transcription = stt(__DIR__ . DIRECTORY_SEPARATOR . "data" . DIRECTORY_SEPARATOR . "test.wav");
+        $transcription = stt($defaultTestFile);
         echo $transcription . PHP_EOL;
         echo "Service used: ";
         print_r($GLOBALS["STTFUNCTION"] . PHP_EOL);
+        if (empty($transcription)) {
+            echo sttTestJsonEncode(sttTestCollectDebugInfo($defaultTestFile)) . PHP_EOL;
+        }
 
         // Calculate similarity percentage using levenshtein
         $lev_distance = levenshtein(strtolower($expected_transcription), strtolower($transcription));

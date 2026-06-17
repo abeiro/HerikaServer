@@ -14,7 +14,6 @@ $ENABLED_FUNCTIONS=[
     'CheckInventory',
     'SheatheWeapon',
     'Relax',
-    'LeadTheWayTo',
     'TakeASeat',
     'ReadQuestJournal',
     'IncreaseWalkSpeed',
@@ -25,7 +24,6 @@ $ENABLED_FUNCTIONS=[
     'StopWalk',
     'TravelTo',
     'SearchMemory',
-    'GiveItemToPlayer',
     'TakeGoldFromPlayer',
     'FollowPlayer',
     'CastSpell'
@@ -44,7 +42,6 @@ $F_TRANSLATIONS["Follow"]="Se déplace et suit un PNJ, acteur ou être";
 $F_TRANSLATIONS["CheckInventory"]="Cherche dans l'inventaire, le sac ou la poche de {$GLOBALS["HERIKA_NAME"]}. Affiche l'inventaire";
 $F_TRANSLATIONS["SheatheWeapon"]="Rengaine l'arme actuelle";
 $F_TRANSLATIONS["Relax"]="Arrête de chercher des missions. Détends-toi et repose-toi";
-$F_TRANSLATIONS["LeadTheWayTo"]="À utiliser seulement si {$GLOBALS["PLAYER_NAME"]} le demande explicitement. Guide {$GLOBALS["PLAYER_NAME"]} vers un village ou une ville";
 $F_TRANSLATIONS["TakeASeat"]="{$GLOBALS["HERIKA_NAME"]} s'assoit sur une chaise ou un meuble proche";
 $F_TRANSLATIONS["ReadQuestJournal"]="À utiliser seulement si {$GLOBALS["PLAYER_NAME"]} demande explicitement une mission. Récupère les informations sur les missions en cours";
 $F_TRANSLATIONS["IncreaseWalkSpeed"]="Augmente la vitesse de déplacement de {$GLOBALS["HERIKA_NAME"]}";
@@ -56,8 +53,9 @@ $F_TRANSLATIONS["StopWalk"]="Interrompt immédiatement toutes les actions de {$G
 $F_TRANSLATIONS["TravelTo"]="À utiliser seulement si {$GLOBALS["PLAYER_NAME"]} le demande explicitement. Guide {$GLOBALS["PLAYER_NAME"]} vers un village ou une ville";
 $F_TRANSLATIONS["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tente de se souvenir de quelque chose. RÉPOND SIMPLEMENT par exemple « Laisse-moi réfléchir » et attends";
 $F_TRANSLATIONS["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} attend et reste à l'endroit actuel";
-$F_TRANSLATIONS["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} donne l'objet (propriété target) à {$GLOBALS["PLAYER_NAME"]} (propriété listener)";
 $F_TRANSLATIONS["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} prend la somme (propriété target) d'or de {$GLOBALS["PLAYER_NAME"]} (propriété listener)";
+$F_TRANSLATIONS["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} donne de l'or à un autre acteur, PNJ ou à {$GLOBALS["PLAYER_NAME"]}. Le destinataire et le montant doivent être précisés.";
+$F_TRANSLATIONS["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} donne un objet précis de son inventaire à un autre acteur, PNJ ou à {$GLOBALS["PLAYER_NAME"]}. Le destinataire et le nom exact de l'objet doivent être précisés.";
 $F_TRANSLATIONS["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} suit {$GLOBALS["PLAYER_NAME"]}";
 $F_TRANSLATIONS["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} lance un sort sur un acteur cible. Doit spécifier le nom du sort depuis <spells> et le nom de l'acteur cible. Utiliser 'self' comme cible pour les sorts auto-dirigés.";
 
@@ -73,7 +71,6 @@ $F_RETURNMESSAGES["Follow"]="Se déplace et suit un PNJ, acteur ou être";
 $F_RETURNMESSAGES["CheckInventory"]="INVENTAIRE de {$GLOBALS["HERIKA_NAME"]} :#RESULT#";
 $F_RETURNMESSAGES["SheatheWeapon"]="Rengaine l'arme actuelle";
 $F_RETURNMESSAGES["Relax"]="{$GLOBALS["HERIKA_NAME"]} est détendue. Temps de profiter de la vie";
-$F_RETURNMESSAGES["LeadTheWayTo"]="À utiliser seulement si {$GLOBALS["PLAYER_NAME"]} le demande explicitement. Guide {$GLOBALS["PLAYER_NAME"]} vers un village ou une ville";
 $F_RETURNMESSAGES["TakeASeat"]="{$GLOBALS["HERIKA_NAME"]} s'assoit sur une chaise ou un meuble proche";
 $F_RETURNMESSAGES["ReadQuestJournal"]="";
 $F_RETURNMESSAGES["IncreaseWalkSpeed"]="Augmente la vitesse/le pas de {$GLOBALS["HERIKA_NAME"]}";
@@ -86,8 +83,7 @@ $F_RETURNMESSAGES["StopWalk"]="Interrompt immédiatement toutes les actions de {
 $F_RETURNMESSAGES["TravelTo"]="{$GLOBALS["HERIKA_NAME"]} commence à voyager vers #TARGET#";
 $F_RETURNMESSAGES["SearchMemory"]="{$GLOBALS["HERIKA_NAME"]} tente de se souvenir de quelque chose. RÉPOND simplement quelque chose comme « Laisse-moi réfléchir » et attends";
 $F_RETURNMESSAGES["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} attend et reste sur place";
-$F_RETURNMESSAGES["GiveItemToPlayer"]="{$GLOBALS["HERIKA_NAME"]} a donné #TARGET# à {$GLOBALS["PLAYER_NAME"]}. Si c’est une transaction, il faudra peut-être utiliser TakeGoldFromPlayer";
-$F_RETURNMESSAGES["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} a donné #TARGET# pièces à {$GLOBALS["HERIKA_NAME"]}. Si c’est une transaction, il faudra peut-être utiliser GiveItemToPlayer";
+$F_RETURNMESSAGES["TakeGoldFromPlayer"]="{$GLOBALS["PLAYER_NAME"]} a donné #TARGET# pièces à {$GLOBALS["HERIKA_NAME"]}. Si c’est une transaction, il faudra peut-être utiliser GiveItemTo";
 $F_RETURNMESSAGES["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} suit {$GLOBALS["PLAYER_NAME"]}";
 $F_RETURNMESSAGES["CastSpell"]="{$GLOBALS["HERIKA_NAME"]} lance #ITEM# sur #TARGET#";
 
@@ -119,7 +115,6 @@ $F_NAMES["StopWalk"]="ArreterMarcer";
 $F_NAMES["TravelTo"]="VoyagerA";
 $F_NAMES["SearchMemory"]="SeSouvenir";
 $F_NAMES["WaitHere"]="AtteindreIci";
-$F_NAMES["GiveItemToPlayer"]="DonnerObjetJoueur";
 $F_NAMES["TakeGoldFromPlayer"]="PrendreObjetduJoueur";
-$F_NAMES["FollowPlayer"]="SuivreJoueur";
+$F_NAMES["FollowPlayer"]="Suivre{$GLOBALS["PLAYER_NAME"]}";
 

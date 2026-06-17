@@ -40,6 +40,39 @@ if (!$conn) {
     exit;
 }
 
+if (!function_exists('chimNormalizeBiographyRelationshipSeed')) {
+    function chimNormalizeBiographyRelationshipSeed($value, &$errorMessage = '')
+    {
+        $errorMessage = '';
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        $trimmed = trim((string)$value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if ($trimmed[0] !== '{') {
+            $errorMessage = 'expected a JSON object with per-target relationship seeds';
+            return false;
+        }
+
+        $decoded = json_decode($trimmed, true);
+        if (!is_array($decoded)) {
+            $errorMessage = 'invalid JSON object';
+            return false;
+        }
+
+        return json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+}
+
 //
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //   INDIVIDUAL UPLOAD
@@ -58,13 +91,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
     $npc_static_bio   = (!empty($_POST['npc_background']))    ? trim($_POST['npc_background'])    : null;
     $personality      = (!empty($_POST['npc_personality']))   ? trim($_POST['npc_personality'])   : null;
     $appearance       = (!empty($_POST['npc_appearance']))    ? trim($_POST['npc_appearance'])    : null;
-    $relationships    = (!empty($_POST['npc_relationships'])) ? trim($_POST['npc_relationships']) : null;
+    $relationshipError = '';
+    $relationships    = chimNormalizeBiographyRelationshipSeed($_POST['npc_relationships'] ?? null, $relationshipError);
     $occupation       = (!empty($_POST['npc_occupation']))    ? trim($_POST['npc_occupation'])    : null;
     $skills           = (!empty($_POST['npc_skills']))        ? trim($_POST['npc_skills'])        : null;
     $speechstyle      = (!empty($_POST['npc_speechstyle']))   ? trim($_POST['npc_speechstyle'])   : null;
     $goals            = (!empty($_POST['npc_goals']))         ? trim($_POST['npc_goals'])         : null;
 
-    if (!empty($npc_name) && !empty($core)) {
+    if ($relationships === false) {
+        $message .= "<p style='color:#ff6464;'>Relationships must be a valid JSON object seed. "
+            . htmlspecialchars($relationshipError, ENT_QUOTES, 'UTF-8')
+            . ".</p>";
+    } elseif (!empty($npc_name) && !empty($core)) {
         $query = "
             INSERT INTO {$schema}.bio_templates_custom
                 (npc_name, core, oghma_knowledge_tags, npc_static_bio, personality, appearance, relationships, occupation, skills, speechstyle, goals, voiceid, gender, race, refid)
@@ -260,6 +298,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $gender = $getValue(12);
                             $race = $getValue(13);
                             $refid = $getValue(14);
+
+                            $relationshipError = '';
+                            $relationships = chimNormalizeBiographyRelationshipSeed($relationships, $relationshipError);
+                            if ($relationships === false) {
+                                $errors[] = "NPC '$npc_name': relationships must be a valid JSON object seed ($relationshipError)";
+                                $errorCount++;
+                                continue;
+                            }
                                     
                             // Insert into database
                         $query = "
@@ -956,6 +1002,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                     <a href="?action=download_example" class="action-button download-csv">Download Example CSV</a>
                     <a href="?action=export_custom_npcs" class="action-button" style="background: rgba(242, 124, 17, 0.8);">Export Custom NPCs</a>
                 </div>
+                <p><strong>Relationships column:</strong> Use a JSON object seed such as <code>{"Player":{"aff":25,"type":"professional"}}</code>. Legacy prose no longer seeds the relationship affinity system.</p>
                 <p>You can verify that NPC data has been uploaded successfully by going to 
                 <b>Server Actions -> Database Manager -> dwemer -> public -> bio_templates_custom</b>.</p>
                 <p>All uploaded biographies will be saved into the <code>bio_templates_custom</code> table. This overwrites any entries in the regular table.</p>
@@ -1195,7 +1242,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <input type="text" name="npc_name" id="edit_npc_name" readonly style="background-color: #2a2a2a; cursor: not-allowed;" required>
 
                 <label for="edit_npc_misc">Oghma Tags:</label>
-                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://dwemerdynamics.hostwiki.io/en/Oghma-Infinium-(RAG)" target="_blank" rel="noopener">Read more here!</a></small>
+                <small>Optional: Oghma Knowledge Tags. Make sure to seperate with commas. <a href="https://dwemerdynamics.com/chim/roleplay-settings.html#OghmaInfinium" target="_blank" rel="noopener">Read more here!</a></small>
                 <input type="text" name="npc_misc" id="edit_npc_misc">
 
                 <label for="edit_npc_pers">Core:</label>
@@ -1218,7 +1265,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <textarea name="npc_personality" id="edit_npc_personality" rows="4"></textarea>
 
                 <label for="edit_npc_relationships">Relationships:</label>
-                <small>Important relationships with other characters, family, friends, enemies, and social connections.</small>
+                <small>Must be a JSON object seed. New NPC imports copy this into <code>extended_data.relationships</code> for the relationship affinity system.</small>
                 <textarea name="npc_relationships" id="edit_npc_relationships" rows="4"></textarea>
 
                 <label for="edit_npc_occupation">Occupation:</label>
@@ -1306,7 +1353,7 @@ $formAction = $currentLetter ? "?letter={$currentLetter}#table" : "?#table";
                 <textarea name="npc_personality" id="new_npc_personality" rows="4"></textarea>
 
                 <label for="new_npc_relationships">Relationships:</label>
-                <small>Important relationships with other characters, family, friends, enemies, and social connections.</small>
+                <small>Must be a JSON object seed. New NPC imports copy this into <code>extended_data.relationships</code> for the relationship affinity system.</small>
                 <textarea name="npc_relationships" id="new_npc_relationships" rows="4"></textarea>
     
                 <label for="new_npc_occupation">Occupation & Role:</label>

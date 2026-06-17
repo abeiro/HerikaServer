@@ -4,15 +4,44 @@ $GLOBALS["ENGINE_ROOT"] = __DIR__ . DIRECTORY_SEPARATOR;
 $GLOBALS["ENGINE_PATH"] = $GLOBALS["ENGINE_ROOT"];
 $enginePath             = $GLOBALS["ENGINE_ROOT"];
 
-require_once $enginePath . "conf/conf.php";
+require_once $enginePath . "lib/runtime_bootstrap.php";
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 require_once $enginePath . "lib/logger.php";
 require_once $enginePath . "lib/model_dynmodel.php";
-require_once $enginePath . "lib/{$GLOBALS["DBDRIVER"]}.class.php";
-$GLOBALS["db"] = new sql();
 require_once $enginePath . "prompts/command_prompt.php";
 require_once $enginePath . "lib/chat_helper_functions.php";
 require_once $enginePath . "lib/data_functions.php";
 require_once $enginePath . "lib/rolemaster_helpers.php";
+
+$GLOBALS["db"] = $GLOBALS["db"] ?? new sql();
+
+function chimPlayerRewritePromptFromManager(string $promptKey, string $fallback, array $replacements): string
+{
+    try {
+        $db = $GLOBALS["db"] ?? null;
+        if (!$db) {
+            return strtr($fallback, $replacements);
+        }
+
+        $escapedPromptKey = $db->escape($promptKey);
+        $row = $db->fetchOne("SELECT COALESCE(custom_prompt, default_prompt) AS prompt FROM prompts WHERE prompt_key='{$escapedPromptKey}' LIMIT 1");
+        $prompt = trim((string)($row['prompt'] ?? ''));
+        if ($prompt === '') {
+            $prompt = $fallback;
+        }
+
+        return strtr($prompt, $replacements);
+    } catch (Throwable $e) {
+        Logger::warn("Player rewrite prompt lookup failed for {$promptKey}: " . $e->getMessage());
+        return strtr($fallback, $replacements);
+    }
+}
 
 // New profile system
 require_once $enginePath . "lib/core/api_badge.class.php";
@@ -51,12 +80,12 @@ $GLOBALS["gameRequest"][2] = $res[0]["gamets"] + 1;
 
 $GLOBALS["CHIM_NO_EXAMPLES"] = true; // When no assistant entry in history, will try ti provide a bogus example.
 
-if (! $_GET["speech"]) {
-    if ($argv[1]) {
+if (empty($_GET["speech"])) {
+    if (!empty($argv[1])) {
         $_GET["speech"] = $argv[1];
     }
 }
-$targetNpc = isset($argv[2]) && $argv[2] !== '' ? trim($argv[2]) : '';
+$targetNpc = !empty($argv[2]) ? trim($argv[2]) : '';
 
 if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
     error_log("Choose a LLM model and connector. Used connector: '{$GLOBALS["CORE_CONNECTOR_DIRECTOR"]}'", S_LOG_CRITICAL);
@@ -131,12 +160,38 @@ if (! isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"])) {
         $instruction = "Write dialogue for {$GLOBALS["PLAYER_NAME"]}.";
         $outputInstruction = "Output only the final spoken dialogue line. No narration. No stage directions. No speaker names. No bracketed comments.";
     } else {
+        $sourceSpeech = $_GET["speech"];
         if ($removePlayerAutochatAsterisks) {
-            $instruction = "Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\". Use comments between brackets only as guidance for tone, target, length, and verbosity. Do not repeat bracketed comments, stage directions, narration, asterisked narration, or speaker names in the output.";
-            $outputInstruction = "Output only the final spoken dialogue line. No narration. No stage directions. No asterisked narration. No speaker names. No bracketed comments.";
+            $sourceSpeech = sanitizePlayerRespeechText($sourceSpeech, $GLOBALS["PLAYER_NAME"] ?? null);
+        }
+
+        $promptReplacements = [
+            '{PLAYER_NAME}' => $GLOBALS["PLAYER_NAME"],
+            '{SPEECH}' => $sourceSpeech,
+        ];
+
+        if ($removePlayerAutochatAsterisks) {
+            $instruction = chimPlayerRewritePromptFromManager(
+                'player_respeech_rewrite_strip_prompt',
+                "Rewrite dialogue for {PLAYER_NAME}, using this text as source \"{PLAYER_NAME}:{SPEECH}\". Use comments between brackets only as guidance for tone, target, length, and verbosity. Do not repeat bracketed comments, stage directions, narration, asterisked narration, or speaker names in the output.",
+                $promptReplacements
+            );
+            $outputInstruction = chimPlayerRewritePromptFromManager(
+                'player_respeech_output_strip_prompt',
+                "Output only the final spoken dialogue line. No narration. No stage directions. No asterisked narration. No speaker names. No bracketed comments.",
+                $promptReplacements
+            );
         } else {
-            $instruction = "Rewrite dialogue for {$GLOBALS["PLAYER_NAME"]}, using this text as source \"{$GLOBALS["PLAYER_NAME"]}:{$_GET["speech"]}\". Use comments between brackets only as guidance for tone, target, length, and verbosity. If the source includes brief narration or stage business before the spoken line, preserve it as one short third-person narration block in single asterisks before the dialogue. Do not repeat bracketed comments or speaker names in the output.";
-            $outputInstruction = "Output only the rewritten line. If the source includes brief leading narration, keep at most one short leading narration block in single asterisks before the spoken dialogue. Keep spoken dialogue outside the asterisks. No speaker names. No bracketed comments.";
+            $instruction = chimPlayerRewritePromptFromManager(
+                'player_respeech_rewrite_prompt',
+                "Rewrite dialogue for {PLAYER_NAME}, using this text as source \"{PLAYER_NAME}:{SPEECH}\". Use comments between brackets only as guidance for tone, target, length, and verbosity. If the source includes brief narration or stage business before the spoken line, preserve it as one short third-person narration block in single asterisks before the dialogue. Do not repeat bracketed comments or speaker names in the output.",
+                $promptReplacements
+            );
+            $outputInstruction = chimPlayerRewritePromptFromManager(
+                'player_respeech_output_prompt',
+                "Output only the rewritten line. If the source includes brief leading narration, keep at most one short leading narration block in single asterisks before the spoken dialogue. Keep spoken dialogue outside the asterisks. No speaker names. No bracketed comments.",
+                $promptReplacements
+            );
         }
     }
 

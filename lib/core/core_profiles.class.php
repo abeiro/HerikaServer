@@ -296,19 +296,12 @@ class CoreProfile
                 // Use isset-style check instead of empty() to properly handle boolean false values
                 // empty(false) returns true, which would skip applying false values from profile
                 if ($value !== null && $value !== '') {
-                    // Convert string "true"/"false" to actual booleans for proper PHP evaluation
-                    if ($value === 'true') {
-                        $value = true;
-                    } elseif ($value === 'false') {
-                        $value = false;
-                    }
-                    $GLOBALS[$key] = $value;
+                    chimApplyOverrideValueToGlobals(strval($key), $value);
                     error_log("[CORE] PROFILE  GLOBALS[$key] = " . print_r($value, true));
                 }
             }
         }
-        // This behavior is now always enabled.
-        $GLOBALS["ENFORCE_ACTIONS_PROMPT"] = true;
+        $GLOBALS["ENFORCE_ACTIONS_PROMPT"] = false;
         if (isset($currentProfileData["prompt"])) {
             $GLOBALS["PROFILE_PROMPT"] = $currentProfileData["prompt"];
         }

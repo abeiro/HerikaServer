@@ -10,19 +10,19 @@
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "PLAYER_SPEECH_STYLE":{"type":"longstring","description":"Instructions for how the player character speaks and communicates. This will be used as context when rewriting player dialogue.","scope":"global"},
   "PROMPT_TIMESTAMP": {"userlvl":"basic","type":"boolean","description":"Add rough timestamp subdividers to event context (e.g., 'Moments Ago', 'A while ago') to help the AI NPCs understand when events happend.","scope":"global"},
+  "PROMPT_CONTEXT_OPTIONS": {"userlvl":"basic","type":"longstring","description":"Controls which XML-like prompt context sections are included in the final system prompt sent to the LLM. Managed from Global Settings.","scope":"global"},
   "use_emotions_expression": {"userlvl":"basic","type":"boolean","description":"Emotions expression support.","scope":"global"},
-  "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Basic Summary of the NPC.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
-  "HERIKA_BACKGROUND": {"userlvl":"basic","type":"longstring","description":"NPC Background. <br> Detailed history, origins, and past experiences that shaped this character.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
-  "HERIKA_PERSONALITY": {"userlvl":"basic","type":"longstring","description":"NPC Personality Traits. <br> Detailed character traits, behavioral patterns, and psychological characteristics.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
-  "HERIKA_APPEARANCE": {"userlvl":"basic","type":"longstring","description":"NPC Physical Appearance. <br> Detailed description of physical features. Do not include clothing or equipment.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
-  "HERIKA_RELATIONSHIPS": {"userlvl":"basic","type":"longstring","description":"NPC Relationships. <br> Important relationships with other characters, family, friends, enemies, and social connections.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
-  "HERIKA_OCCUPATION": {"userlvl":"basic","type":"longstring","description":"NPC Occupation & Role. <br> Current job, profession, duties, and position in society or organizations.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
-  "HERIKA_SKILLS": {"userlvl":"basic","type":"longstring","description":"NPC Skills & Abilities. <br> Special talents, combat abilities, magical knowledge, and areas of expertise.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
-  "HERIKA_SPEECHSTYLE": {"userlvl":"basic","type":"longstring","description":"NPC Speech Style. <br> How this character speaks, including vocabulary, accent, mannerisms, and communication patterns.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
-  "HERIKA_GOALS": {"userlvl":"basic","type":"longstring","description":"NPC Goals & Aspirations. <br> Long-term objectives, personal ambitions, and life goals that drive this character.<br>","helpurl":"https://dwemerdynamics.hostwiki.io/en/Profiles"},
+   "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Basic Summary of the NPC.","helpurl":"https://dwemerdynamics.com/chim/roleplay-settings.html#ChimNpcsMenu"},
+   "HERIKA_BACKGROUND": {"userlvl":"basic","type":"longstring","description":"NPC Background. <br> Detailed history, origins, and past experiences that shaped this character.<br>","helpurl":"https://dwemerdynamics.com/chim/roleplay-settings.html#ChimNpcsMenu"},
+   "HERIKA_PERSONALITY": {"userlvl":"basic","type":"longstring","description":"NPC Personality Traits. <br> Detailed character traits, behavioral patterns, and psychological characteristics.<br>","helpurl":"https://dwemerdynamics.com/chim/roleplay-settings.html#ChimNpcsMenu"},
+   "HERIKA_APPEARANCE": {"userlvl":"basic","type":"longstring","description":"NPC Physical Appearance. <br> Detailed description of physical features. Do not include clothing or equipment.<br>","helpurl":"https://dwemerdynamics.com/chim/roleplay-settings.html#ChimNpcsMenu"},
+   "HERIKA_OCCUPATION": {"userlvl":"basic","type":"longstring","description":"NPC Occupation & Role. <br> Current job, profession, duties, and position in society or organizations.<br>","helpurl":"https://dwemerdynamics.com/chim/roleplay-settings.html#ChimNpcsMenu"},
+   "HERIKA_SKILLS": {"userlvl":"basic","type":"longstring","description":"NPC Skills & Abilities. <br> Special talents, combat abilities, magical knowledge, and areas of expertise.<br>","helpurl":"https://dwemerdynamics.com/chim/roleplay-settings.html#ChimNpcsMenu"},
+   "HERIKA_SPEECHSTYLE": {"userlvl":"basic","type":"longstring","description":"NPC Speech Style. <br> How this character speaks, including vocabulary, accent, mannerisms, and communication patterns.<br>","helpurl":"https://dwemerdynamics.com/chim/roleplay-settings.html#ChimNpcsMenu"},
+   "HERIKA_GOALS": {"userlvl":"basic","type":"longstring","description":"NPC Goals & Aspirations. <br> Long-term objectives, personal ambitions, and life goals that drive this character.<br>","helpurl":"https://dwemerdynamics.com/chim/roleplay-settings.html#ChimNpcsMenu"},
   "dynamic_profile_b1": {"userlvl":"wip","type":"util","description":"Deprecated.","action":"action_dynamic_profile_b1.php","name":"Update All Dynamic Fields"},
   "DYNAMIC_PROFILE":{"userlvl":"basic","type":"boolean","description":"Will automatically update selected profile fields from the timer set in the MCM menu. Can adjust the prompts used by editing individual DYNAMIC_PROMPT fields. Requires CONNECTOR_DIARY to be configured."},
-  "DYNAMIC_PROFILE_FIELDS":{"userlvl":"basic","type":"selectmultiple","values":["personality","relationships","occupation","skills","speechstyle","goals"],"description":"Only recommend selecting 1-3 fields! Select which extended profile fields should be dynamically updated from ingame Dynamic Profile Timer."},
+  "DYNAMIC_PROFILE_FIELDS":{"userlvl":"basic","type":"selectmultiple","values":["personality","occupation","skills","speechstyle","goals"],"description":"Only recommend selecting 1-3 fields! Select which extended profile fields should be dynamically updated from ingame Dynamic Profile Timer."},
   "DIARY_COOLDOWN": {"userlvl":"basic","type":"integer","description":"Cooldown period in seconds between diary entries to prevent spam. Each NPC has their own independent cooldown timer.","scope":"global"},
   "AUTO_DIARY_ENABLED": {"userlvl":"basic","type":"boolean","description":"Automatically generate diary entries when NPCs are nearby during sleep events. NPCs using this profile will have auto diary enabled by default.","scope":"profile"},
   "AUTO_DIARY_WAIT_ENABLED": {"userlvl":"basic","type":"boolean","description":"When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.","scope":"profile"},
@@ -33,6 +33,9 @@
   "RECHAT_H": {"userlvl":"basic","type":"integer","description":"Rechat Rounds. Higher values will increase the amount of times AI NPC's will go back-and-forth during a conversation.<br>1 = 1 Round | 2 = 2 Rounds | 3 = 3 Rounds etc","_title":"Roleplay Management"},
   "RECHAT_P": {"userlvl":"basic","type":"integer","description":"Rechat Probability. Chance that an AI NPC will continue an ongoing conversation.<br>0 = Never | 50 = 50% | 100 = Always"},
   "RECHAT_ALLOW_ACTIONS": {"userlvl":"basic","type":"boolean","description":"Allow AI NPCs to trigger actions between eachother during Rechat. This can cause some chaos..."},
+  "RECHAT_MODE": {"userlvl":"basic","type":"select","values":["tight","conversational","group","random"],"default":"random","scope":"global","description":"Controls how server-side rechat picks the next responder. Tight = listener-only, Conversational = prefers the current partner, Group = lets nearby NPCs rotate into the exchange, Random = picks one of the other modes at the start of each rechat chain."},
+  "ENFORCE_STRICT_RECHAT_RESPONSE": {"userlvl":"basic","type":"boolean","scope":"global","description":"If enabled, the NPC chosen for a rechat turn must respond directly to the previous speaker and set the listener to that speaker."},
+  "OPEN_RECHAT": {"userlvl":"basic","type":"boolean","scope":"global","description":"When enabled, rechat picks the next responder from nearby scene participants instead of relying only on the selected listener. Direct dialogue still stays addressed to the original listener."},
   "END_CONVERSATION_COOLDOWN": {"userlvl":"basic","type":"integer","scope":"global","description":"Seconds an NPC is ineligible for AI dialogue if they wish to stop talking. Default: 60"},
   "RANDOM_NARATION": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable random Narrator interjections. The Narrator will occasionally add visual scene descriptions during conversations."},
   "RANDOM_NARATION_CHANCE": {"userlvl":"basic","type":"integer","scope":"global","description":"Probability (1-100) that the Narrator will interject with a scene description. Default: 15%"},
@@ -58,28 +61,27 @@
   "MAGIC_EVENT_BLACKLIST": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of magic event names to exclude from logging (e.g. 'Administer Mixture, [BFCO-AttackSwingFX] 0.5/1.5, Healing')."},
   "LOCATION_BLACKLIST": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of location names to exclude from Points of Interest context (e.g. 'Dark Brotherhood Sanctuary, Twilight Sepulcher')."},
   "ITEM_BLACKLIST": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of item/armor names to exclude from dynamic context (e.g. 'Iron Sword, Leather Armor, Health Potion')."},
-  "CARRIAGE_DRIVERS": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated NPC names that can offer carriage fast travel (e.g. 'Bjorlam, Alfarinn, Kibell')."},
-  "FERRY_DRIVERS": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated NPC names that can offer ferry fast travel (e.g. 'Gort, Harlaug, Jolf')."},
+  "SHORTER_NEARBY_ITEM_LIST": {"userlvl":"basic","type":"boolean","scope":"global","description":"Group duplicate nearby ground items into one counted entry. When enabled, context shows one line per unique nearby item plus a single representative RefID in the item descriptions block."},
   "EVENT_TYPE_FILTER": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of event types to exclude from context generation (e.g. 'death, itemfound, spellcast')."},
   "GROUND_ITEMS_DESCRIPTIONS_ONLY": {"userlvl":"basic","type":"boolean","scope":"global","description":"Only show nearby ground items in context that have descriptions in the description manager."},
   "INVENTORY_ITEMS_DESCRIPTIONS_ONLY": {"userlvl":"basic","type":"boolean","scope":"global","description":"Only show inventory items in context that have descriptions in the description manager."},
   "HIDE_AMBIENT_COMBAT": {"userlvl":"basic","type":"boolean","scope":"global","description":"Hide ambient NPC-to-NPC combat deaths from context during requests. Only player and companion kills will be shown. This is useful for hiding the violent nature of Skyrim's nature from being detected."},
   "DISABLE_REANIMATION_TRACKING": {"userlvl":"basic","type":"boolean","scope":"global","description":"Disable reanimation tracking. When enabled, NPCs marked as reanimated will not have zombie status text injected into their prompts."},
-  "HERIKA_ANIMATIONS": {"userlvl":"basic","type":"boolean","description":"Will issue animations for the NPC to play", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features","_title":"Advanced Configuration"},
+  "TRANSFORMATION_DETECTION": {"userlvl":"basic","type":"boolean","scope":"global","description":"Include werewolf and vampire lord transformation state in prompt context when detected."},
+   "HERIKA_ANIMATIONS": {"userlvl":"basic","type":"boolean","description":"Will issue animations for the NPC to play", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#GeneralSettings","_title":"Advanced Configuration"},
   "CORE_LANG": {"userlvl":"pro","type":"select","description":"Custom Language. The lang folder is in the CHIM Server. Leave it blank for English."},
   "LANG_LLM_XTTS": {"userlvl":"pro","type":"boolean","description":"XTTS Only! Will offer a language field to LLM, and will try match to XTTSv2 language."},
   "HTTP_TIMEOUT": {"userlvl":"pro","type":"integer","description":"Timeout for AI requests. "},
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Attempt to enforce a word limit for AI's responses. Leave as 0 to have no limit."},
   "JSON_DIALOGUE_FORMAT_REORDER": {"type":"boolean","userlvl":"pro","description":"Reorders properties in the output JSON schema. AI generates an action first, then a dialogue comment. Some users report this improves actions performance."},
-  "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"Default list of moods passed to LLM (comma separated). Can be overridden per-NPC in CHIM NPCs. Some moods will trigger animations if enabled.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
-  "INLINE_NARRATION_MODE": {"userlvl":"basic","type":"select","values":["disabled","narrator","npc"],"description":"Controls who voices inline *narration* blocks. disabled = no special routing, narrator = The Narrator voices the asterisked section, npc = the NPC keeps the whole line.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
-  "REMOVE_ASTERISKS_FROM_PLAYER_INPUT": {"userlvl":"basic","type":"boolean","description":"Filter *asterisked* player input from player TTS only. The in-game player subtitle echo keeps the visible *text*.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
-  "REMOVE_ASTERISKS_FROM_NPC_OUTPUT": {"userlvl":"basic","type":"boolean","description":"Filter *asterisked* NPC narration/emotes from NPC speech and subtitles.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/Advanced-Features"},
+   "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"Default list of moods passed to LLM (comma separated). Can be overridden per-NPC in CHIM NPCs. Some moods will trigger animations if enabled.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#GeneralSettings"},
+   "INLINE_NARRATION_MODE": {"userlvl":"basic","type":"select","values":["disabled","narrator","npc"],"description":"Controls who voices inline *narration* blocks. disabled = no special routing, narrator = The Narrator voices the asterisked section, npc = the NPC keeps the whole line.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
+   "REMOVE_ASTERISKS_FROM_PLAYER_INPUT": {"userlvl":"basic","type":"boolean","description":"Filter *asterisked* player input from player TTS only. The in-game player subtitle echo keeps the visible *text*.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
+   "REMOVE_ASTERISKS_FROM_NPC_OUTPUT": {"userlvl":"basic","type":"boolean","description":"Filter *asterisked* NPC narration/emotes from NPC speech and subtitles.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
   "ENFORCE_ACTIONS_PROMPT": {"userlvl":"basic","type":"boolean","description":"Adds a prompt to enforce use of actions", "helpurl":""},
   "SUMMARY_PROMPT": {"userlvl":"pro","type":"longstring","description":"Custom instructions added when generating summaries for memories. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
   "DYNAMIC_PROMPT": {"userlvl":"basic","type":"longstring","description":"Legacy instructions for updating HERIKA_DYNAMIC. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
   "DYNAMIC_PROMPT_PERSONALITY": {"userlvl":"basic","type":"longstring","description":"Instructions for updating NPC personality traits based on recent events and interactions.","scope":"global"},
-  "DYNAMIC_PROMPT_RELATIONSHIPS": {"userlvl":"basic","type":"longstring","description":"Instructions for updating NPC relationships based on recent interactions with other characters.","scope":"global"},
   "DYNAMIC_PROMPT_OCCUPATION": {"userlvl":"basic","type":"longstring","description":"Instructions for updating NPC occupation and role based on story progression and events.","scope":"global"},
   "DYNAMIC_PROMPT_SKILLS": {"userlvl":"basic","type":"longstring","description":"Instructions for updating NPC skills and abilities based on experiences and training.","scope":"global"},
   "DYNAMIC_PROMPT_SPEECHSTYLE": {"userlvl":"basic","type":"longstring","description":"Instructions for updating NPC speech patterns and communication style based on interactions.","scope":"global"},
@@ -207,7 +209,7 @@
     },
     "koboldcppjson": {
       "_title":"KoboldCPP API (JSON)",
-      "url": {"type":"url","description":"Kobold should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008","helpurl":"https://dwemerdynamics.hostwiki.io/en/Offline-LLMs"},
+       "url": {"type":"url","description":"Kobold should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008","helpurl":"https://dwemerdynamics.com/chim/llm.html"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate"},
       "temperature": {"type":"number","description":"Temperature [0-2]"},
       "rep_pen": {"type":"number","description":"Repetition Penalty [0-2]"},
@@ -224,7 +226,7 @@
     },
     "koboldcpp": {
       "_title":"KoboldCPP API (SUMMARY)",
-      "url": {"type":"url","description":"Kobold should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008","helpurl":"https://dwemerdynamics.hostwiki.io/en/Offline-LLMs"},
+       "url": {"type":"url","description":"Kobold should be running on the same machine as DwemerDistro!<br>Must use your computers, not the DwemerDistro, IP Address.<br>Can be found by running the command 'ipconfig' in your CMD prompt.<br>Example: http://your-local-ip:8008","helpurl":"https://dwemerdynamics.com/chim/llm.html"},
       "max_tokens": {"type":"integer","description":"Maximum tokens to generate for regular responses, NOT SUMMARIES."},
       "temperature": {"type":"number","description":"Temperature [0-2]"},
       "rep_pen": {"userlvl":"pro","type":"number","description":"Repetition Penalty [0-2]"},
@@ -239,7 +241,7 @@
     },
     "player2json": {
       "_title":"Player2 API (JSON)",
-      "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the URL. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.hostwiki.io/en/Online-LLMs#player2"}
+       "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the URL. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.com/chim/llm.html#Player2Service"}
     }
   },
   "TTSFUNCTION": {"type":"select","values":["pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","deepgram"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
@@ -251,11 +253,11 @@
       "endpoint":{"type":"url","description":"Endpoint URL. Leave as is.","helpurl":"https://github.com/myshell-ai/MeloTTS"},
       "language":{"type":"select","values":["EN","ES","FR","ZH","JP","KR"],"description":"Language Model. Should be EN if using default installation"},
       "speed":{"type":"number","description":"Speech Speed"},
-      "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.<b> Click the help/doc link for full list of voiceids!</b>", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#melotts-voice-ids"}
+       "voiceid":{"type":"string","description":"Voice ID. Should be set automatically for most Vanilla Skyrim NPCs. Uses Skyrim VoiceType ID, e.g. femaleeventoned.<b> Click the help/doc link for full list of voiceids!</b>", "helpurl":"https://dwemerdynamics.com/chim/tts.html#MeloTts"}
     },
     "XTTSFASTAPI": {
       "_title":"CHIM XTTS",
-      "endpoint":{"type":"url","description":"Leave as is if using CHIM XTTS. If you want to use Mantella XTTS then click[HOST PC IP]. [WSL IP] will set it back to point to CHIM XTTS.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chim-xtts"},
+       "endpoint":{"type":"url","description":"Leave as is if using CHIM XTTS. If you want to use Mantella XTTS then click[HOST PC IP]. [WSL IP] will set it back to point to CHIM XTTS.", "helpurl":"https://dwemerdynamics.com/chim/tts.html#Xtts"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS XTTSFASTAPI voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"},
@@ -265,7 +267,7 @@
     },
     "CHATTERBOX": {
       "_title":"Chatterbox",
-      "endpoint":{"type":"url","description":"Chatterbox endpoint. Uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#chatterbox"},
+       "endpoint":{"type":"url","description":"Chatterbox endpoint. Uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.com/chim/tts.html#Chatterbox"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS CHATTERBOX voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"},
@@ -275,7 +277,7 @@
     },
     "POCKETTTS": {
       "_title":"PocketTTS",
-      "endpoint":{"type":"url","description":"PocketTTS endpoint. CPU-only TTS, uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#pockettts"},
+       "endpoint":{"type":"url","description":"PocketTTS endpoint. CPU-only TTS, uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.com/chim/tts.html#PocketTts"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS POCKETTTS voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
@@ -289,7 +291,7 @@
     },
     "XVASYNTH": {
       "_title":"xVASynth",
-      "url":{"type":"url","description":"Click [Host PC IP] to set the URL to point to xVASynth. Should be running on the same machine as DwemerDistro!","helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options"},
+       "url":{"type":"url","description":"Click [Host PC IP] to set the URL to point to xVASynth. Should be running on the same machine as DwemerDistro!","helpurl":"https://dwemerdynamics.com/chim/tts.html#XvaSynth"},
       "base_lang":{"type":"string","description":"Base language"},
       "modelType":{"type":"string","description":"Model Type"},
       "version":{"type":"string","description":"xVASynth version (e.g. 3.0 is default. Older models are 1.0 or 2.0)"},
@@ -303,7 +305,7 @@
     "PIPERTTS": {
       "_title":"Piper-TTS",
       "endpoint": {"type":"url","description":"Piper-TTS endpoint URL. The IP address of the machine where Piper-TTS is installed."},
-      "voiceid": {"type":"string","description":"MUST DOWNLOAD VOICES MANUALLY! CLICK HELP LINK FOR INSTRUCTIONS! Voice ID code. Model voices are stored in 'models' folder in .onnx files. Voice ID is the file name without extension.","helpurl":"https://dwemerdynamics.hostwiki.io/en/TTS-Options#pipertts"},
+       "voiceid": {"type":"string","description":"MUST DOWNLOAD VOICES MANUALLY! CLICK HELP LINK FOR INSTRUCTIONS! Voice ID code. Model voices are stored in 'models' folder in .onnx files. Voice ID is the file name without extension.","helpurl":"https://dwemerdynamics.com/chim/tts.html#PiperTts"},
       "length_scale": {"userlvl":"pro","type":"number","description":"speaking time scale. Use a value over 1.0 to play slower, a value under 1.0 is faster."},
       "noise_scale": {"userlvl":"pro","type":"number","description":"speaking variability. Leave 0 to use voice model internal value. Experiment with values around 0.667"},
       "noise_w_scale": {"userlvl":"pro","type":"number","description":"phoneme width variability. Leave 0 to use voice model internal value. Experiment with values around 0.8"},
@@ -312,7 +314,7 @@
     },
     "ZONOS_GRADIO": {
       "_title": "Zonos TTS",
-      "endpoint":{"userlvl":"basic", "type":"url","description":"Manual for Zonos <a href='https://dwemerdynamics.hostwiki.io/en/TTS-Options' target='_blank'>can be found here.</a> Endpoint URL. Can be ran on : <a href='https://cloud.vast.ai/?ref_id=177752&creator_id=177752&name=CHIM-Zonos%20(WORKING)' target='_blank'>Vast.ai</a>"},
+       "endpoint":{"userlvl":"basic", "type":"url","description":"Manual for Zonos <a href='https://dwemerdynamics.com/chim/tts.html#Zonos' target='_blank'>can be found here.</a> Endpoint URL. Can be ran on : <a href='https://cloud.vast.ai/?ref_id=177752&creator_id=177752&name=CHIM-Zonos%20(WORKING)' target='_blank'>Vast.ai</a>"},
       "language":{"userlvl":"basic", "type":"select","values":["af", "am", "an", "ar", "as", "az", "ba", "bg", "bn", "bpy", "bs", "ca", "cmn", "cs", "cy", "da", "de", "el", "en-029", "en-gb", "en-gb-scotland", "en-gb-x-gbclan", "en-gb-x-gbcwmd", "en-gb-x-rp", "en-us", "eo", "es", "es-419", "et", "eu", "fa", "fa-latn", "fi", "fr-be", "fr-ch", "fr-fr", "ga", "gd", "gn", "grc", "gu", "hak", "hi", "hr", "ht", "hu", "hy", "hyw", "ia", "id", "is", "it", "ja", "jbo", "ka", "kk", "kl", "kn", "ko", "kok", "ku", "ky", "la", "lfn", "lt", "lv", "mi", "mk", "ml", "mr", "ms", "mt", "my", "nb", "nci", "ne", "nl", "om", "or", "pa", "pap", "pl", "pt", "pt-br", "py", "quc", "ro", "ru", "ru-lv", "sd", "shn", "si", "sk", "sl", "sq", "sr", "sv", "sw", "ta", "te", "tn", "tr", "tt", "ur", "uz", "vi", "vi-vn-x-central", "vi-vn-x-south", "yue"],"description":"Language","helpurl":"https://github.com/Zyphra/Zonos/blob/a09ff4fa50cfa66bf79986e19c191f85f5cb53e8/zonos/conditioning.py#L316"},
       "model": {"userlvl":"basic", "type":"select","values":["Zyphra/Zonos-v0.1-transformer", "Zyphra/Zonos-v0.1-hybrid"],"description":"Default profile only. Model to use.", "scope":"global"},
       "dynamic_tones": {"userlvl":"basic", "type":"boolean","description":"Default profile only. Enhance emotional quality by requesting values from the LLM. If false, emotions will be determined by the LLM-selected mood.", "scope":"global"},
@@ -401,9 +403,9 @@
       "_title": "Inworld TTS",
       "workspace": {"type":"string","description":"Inworld workspace ID (required for voice cloning). Format: workspaces/{workspace} or just the workspace ID.","helpurl":"https://docs.inworld.ai/"},
       "voiceid": {"type":"string","description":"Voice file name. Works the same as CHIM-XTTS voiceid. Will only work with voices in your Voice Cache. Voice will be automatically cloned to Inworld when first used.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
-      "language": {"type":"select","values":["EN_US","ZH_CN","KO_KR","JA_JP","RU_RU","IT_IT","ES_ES","PT_BR","DE_DE","FR_FR","AR_SA","PL_PL","NL_NL","HI_IN","HE_IL"],"description":"Language to use for TTS generation. Uses regional language codes."},
+      "language": {"type":"select","values":["en-US","zh-CN","ko-KR","ja-JP","ru-RU","it-IT","es-ES","pt-BR","de-DE","fr-FR","ar-SA","pl-PL","nl-NL","hi-IN","he-IL"],"description":"Language to use for TTS generation. Uses BCP-47 regional language codes."},
       "model_id": {"type":"select","values":["inworld-tts-1","inworld-tts-1-max","inworld-tts-1.5-mini","inworld-tts-1.5-max"],"description":"Inworld model to use. inworld-tts-1 is the standard model, inworld-tts-1.5-max is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
-      "temperature": {"type":"number","description":"Sampling temperature (0-2). Higher values make output more random. Default: 1.1"},
+      "temperature": {"type":"number","description":"Sampling temperature (0-2). Higher values make output more random. Default: 1.0"},
       "speed": {"type":"number","description":"Speaking rate/speed (0.5-1.5). Default: 1.0"}
     }
 },
@@ -434,7 +436,7 @@
   },
   "PLAYER_RESPEECH":{"type":"boolean","description":"Allows the AI to rewrite player speech with Chat Assist & Creation modes.","scope":"global"},
   "STTFUNCTION": {
-    "type":"select","values":["none","whisper","localwhisper","azure","deepgram","gemini","parakeet","inworld"],"description":"Speech-to-Text service options. Translates your voice to text.", 
+    "type":"select","values":["deepgram","parakeet","whisper","localwhisper","gemini","azure","inworld","none"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"
     },
   "STT": {
@@ -476,11 +478,21 @@
     }
   },
   "ITTFUNCTION": {
-    "type":"select","values":["openai","google_openai","openrouter","llamacpp"],"description":"Image recognition aka Soulgaze spell. OpenAI also works as a connector to OpenRouter!<br><br><strong>Must be configured in default profile!</strong>", 
+    "type":"select","values":["openrouter","custom","openai","google_openai","llamacpp"],"description":"Image recognition aka Soulgaze spell. OpenAI also works as a connector to OpenRouter!<br><br><strong>Must be configured in default profile!</strong>", 
     "_title":"Soulgaze (ITT)","scope":"global",
     "quality": {"type":"int","description":"Only when using Soulgaze HD. Compression quality from 0 (lower and unusable) to 100 (near no compression). More quality means higher file size, ergo more tokens.","scope":"global"}
   },
   "ITT": {
+    "custom": {
+      "_title":"Custom OpenAI-Compatible Service",
+      "url": {"type":"url","description":"Endpoint for a custom OpenAI-compatible vision/chat completions service.","scope":"global"},
+      "model": {"type":"string","description":"Model to use for image analysis.","scope":"global"},
+      "max_tokens": {"type":"integer","description":"Maximum tokens to generate","scope":"global"},
+      "detail": {"type":"select","values":["low","high"],"description":"Low or high fidelity image understanding","scope":"global"},
+      "API_KEY": {"type":"apikey","description":"Optional API key for the custom service","code":"OPENAI_API_KEY","scope":"global"},
+      "AI_VISION_PROMPT": {"type":"longstring","description":"Prompt to send to the custom vision model.","scope":"global"},
+      "AI_PROMPT": {"type":"longstring","description":"Prompt for the AI NPC to follow when describing the scene."}
+    },
     "openai": {
       "_title":"OpenAI/OpenRouter",
       "url": {"type":"url","description":"OpenAI API or OpenRouter endpoint. Use this for OpenRouter (https://openrouter.ai/api/v1/chat/completions)","scope":"global"},

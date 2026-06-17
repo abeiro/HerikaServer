@@ -77,6 +77,10 @@ class google_openaijson
         }
 
         require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+
+        if (function_exists('chimEnsureNarratorJsonResponseState')) {
+            chimEnsureNarratorJsonResponseState('GOOGLE_OPENAIJSON');
+        }
         
         if (isset($GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) && $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]) {
             $prefix="{$GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]}";
@@ -152,17 +156,19 @@ class google_openaijson
                         $lastActionName=$element["tool_calls"][0]["function"]["name"];
                         $localFuncCodeName=getFunctionCodeName($element["tool_calls"][0]["function"]["name"]);
                         $localArguments=json_decode($element["tool_calls"][0]["function"]["arguments"],true);
-                        $lastAction=strtr($GLOBALS["F_RETURNMESSAGES"][$localFuncCodeName],[
-                                        "#TARGET#"=>current($localArguments),
-                                        ]);
+                        if (!is_array($localArguments)) {
+                            $localArguments = [];
+                        }
+                        $actionTargetValue = herikaExtractActionArgumentTargetValue($localArguments);
+                        $lastAction=herikaFormatReturnMessageTemplate($localFuncCodeName, $localArguments);
                         
                         $contextDataCopy[]=[
                                 "role"=>"assistant",
-                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".current($localArguments)."\", \"message\": \"\"}"
+                                "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\",\"target\": \"".$actionTargetValue."\", \"message\": \"\"}"
                             ];
                             
                         $gameRequestCopy=$GLOBALS["gameRequest"];    
-                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".current($localArguments)."\", \"message\": \"\"}";
+                        $gameRequestCopy[3]="{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"{$dialogueTarget["target"]}\", \"mood\": \"\",\"action\": \"$lastActionName\", \"target\": \"".$actionTargetValue."\", \"message\": \"\"}";
                         $gameRequestCopy[0]="logaction";
                         logEvent($gameRequestCopy);   
                         
@@ -201,7 +207,8 @@ class google_openaijson
                             $pb["system"].=$element["content"]."\n";
                             
                            
-                            if (strpos($element["content"],"Error")===0) {
+                             $GLOBALS["PATCH_STORE_FUNC_RES_ACTION"] = $localFuncCodeName;
+                             if (strpos($element["content"],"Error")===0) {
                                 $GLOBALS["PATCH_STORE_FUNC_RES"]="{$GLOBALS["HERIKA_NAME"]} issued ACTION, but {$element["content"]}";
                                 $contextDataCopy[]=[
                                     "role"=>"user",
@@ -428,6 +435,7 @@ class google_openaijson
                         }
                         
                         if (isset($finalData["mood"])) {
+                            $finalData["mood"] = extractFirstEmoteMood($finalData["mood"]);
                             $GLOBALS["SCRIPTLINE_ANIMATION"]=GetAnimationHex($finalData["mood"]);
                             $GLOBALS["SCRIPTLINE_EXPRESSION"]=GetExpression($finalData["mood"]);
                         }
@@ -464,16 +472,18 @@ class google_openaijson
         if ($this->_functionName) {
             $parameterArr = json_decode($this->_parameterBuff, true);
             if (is_array($parameterArr)) {
-                $parameter = current($parameterArr); // Only support for one parameter
+                $parameter = $parameterArr;
+                $functionCodeName = getFunctionCodeName($this->_functionName);
+                $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
+                $commandStr = "{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
 
-                if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")])) {
-                    $functionCodeName=getFunctionCodeName($this->_functionName);
-                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@$parameter\r\n";
+                if (!isset($alreadysent[md5($commandStr)])) {
+                    $this->_commandBuffer[] = $commandStr;
                     //echo "Herika|command|$functionCodeName@$parameter\r\n";
 
                 }
 
-                $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n")] = "{$GLOBALS["HERIKA_NAME"]}|command|{$this->_functionName}@$parameter\r\n";
+                $alreadysent[md5($commandStr)] = $commandStr;
                 if (ob_get_level()) @ob_flush();
             } else 
                 return null;
@@ -482,33 +492,8 @@ class google_openaijson
             $parsedResponse=__jpd_decode_lazy($this->_buffer);   // USE JPD_LAZY?
             if (is_array($parsedResponse)) {
                 if (!empty($parsedResponse["action"])) {
-                    if (!isset($alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")])) {
-                        
-                        $functionDef=findFunctionByName($parsedResponse["action"]);
-                        if ($functionDef) {
-                            $functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                            if (strlen($functionDef["parameters"]["required"][0] ?? '')>0) {
-                                if (!empty($parsedResponse["target"])) {
-                                    $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
-                                }
-                                else {
-                                    Logger::warn("Missing required parameter");
-                                }
-                                    
-                            } else {
-                                $this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|$functionCodeName@{$parsedResponse["target"]}\r\n";
-                            }
-                        } elseif ($parsedResponse["action"] != "Talk") {
-                            Logger::warn("Function not found for {$parsedResponse["action"]}");
-                        }
-                        
-                        //$functionCodeName=getFunctionCodeName($parsedResponse["action"]);
-                        //$this->_commandBuffer[]="{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n";
-                        //echo "Herika|command|$functionCodeName@$parameter\r\n";
-                        $alreadysent[md5("{$GLOBALS["HERIKA_NAME"]}|command|{$parsedResponse["action"]}@{$parsedResponse["target"]}\r\n")]=end($this->_commandBuffer);
-                    
-                    } 
-                        
+                    $executionContext = buildFunctionExecutionContextFromResponse($parsedResponse);
+                    queueFunctionExecutionCommand($this->_commandBuffer, $alreadysent, $executionContext, "google_openaijson");
                 }
                 
                 if (ob_get_level()) @ob_flush();
@@ -525,6 +510,11 @@ class google_openaijson
     {
         
         $this->init_connector($customParms);
+
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+        if (function_exists('chimEnsureNarratorJsonResponseState')) {
+            chimEnsureNarratorJsonResponseState('GOOGLE_OPENAIJSON_FAST');
+        }
         
 
         $MAX_TOKENS=((isset($GLOBALS["CONNECTOR"][$this->name]["max_tokens"]) ? $GLOBALS["CONNECTOR"][$this->name]["max_tokens"] : 48)+0);

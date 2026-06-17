@@ -15,9 +15,20 @@ if (!isset($webRoot)) {
     $webRoot = rtrim($webRoot, '/');
 }
 
-// Ensure conf.php is loaded for $GLOBALS["DBDRIVER"] and other settings
-if (defined('BASE_PATH') && !isset($GLOBALS["DBDRIVER"])) {
-    @include_once(BASE_PATH . DIRECTORY_SEPARATOR . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+// Ensure runtime globals are available for UI chrome even when included directly.
+if (defined('BASE_PATH') && (!isset($GLOBALS["DBDRIVER"]) || !isset($GLOBALS["db"]))) {
+    $enginePath = BASE_PATH . DIRECTORY_SEPARATOR;
+    @require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+    if (function_exists('chimRuntimeBootstrapIfNeeded')) {
+        @chimRuntimeBootstrapIfNeeded($enginePath, [
+            'load_general_settings' => true,
+            'load_stt_connector' => false,
+            'load_itt_connector' => false,
+            'load_tts_connector' => false,
+            'load_player_name' => false,
+            'load_narrator' => false,
+        ]);
+    }
 }
 
 // Function to validate plugin version format - just check it's not too long
@@ -249,7 +260,7 @@ $SHOW_STATUS_NAV = in_array($currentPageName, ['conf_wizard.php','configuration_
 // Server version and dev-build detection
 // Read version from .version_number.txt
 $versionFile = dirname(__DIR__, 2) . '/.version_number.txt';
-$serverVersionRaw = '2.7.2'; // fallback
+$serverVersionRaw = '3.0.0'; // fallback
 if (file_exists($versionFile)) {
     $versionContent = trim(file_get_contents($versionFile));
     if ($versionContent !== '') {
@@ -397,7 +408,7 @@ $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
                         </li>
                         <li>
                         <a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/function_editor.php">
-                        AI Action Editor
+                        Action Editor
                         </a>
                         </li>
                         <li>
@@ -657,11 +668,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Add event listener to handle overlay display
+            try {
             document.getElementById('profileSelectorBtn').addEventListener('click', function(e) {
                 e.preventDefault();
                 document.getElementById('overlay').style.display = 'block';
                 document.body.classList.add('overlay-active');
             });
+            } catch (err) {
+                //console.error("Error attaching event listener to profile selector button:", err);
+            }
 
             // Close overlay when clicking outside content
             document.getElementById('overlay').addEventListener('click', function(e) {

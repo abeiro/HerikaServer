@@ -660,7 +660,7 @@ sentence ::= [a-zA-Z0-9.,?!\' ]*
                 
             else if ($kobParsed[0]=="SetCurrentPlan") {
                 // bypass reponse.
-                $this->_functionRawName="SetCurrentTask@{$kobParsed[1]}";
+                $this->_functionRawName="";
                 $GLOBALS["db"]->insert(
                     'currentmission',
                     array(

@@ -2,7 +2,13 @@
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
@@ -141,6 +147,7 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
         <button class="tab-button active" data-tab="srvlogs"><span class="tab-icon" aria-hidden="true">&#x1F332;</span><span class="tab-label">Server Logs</span></button>
         <button class="tab-button" data-tab="cache"><span class="tab-icon" aria-hidden="true">&#x1F3BC;</span><span class="tab-label">Audio &amp; Image Cache</span></button>
         <button class="tab-button" data-tab="requests"><span class="tab-icon" aria-hidden="true">&#x1F50D;</span><span class="tab-label">Request Logs</span></button>
+        <button class="tab-button" data-tab="oghmaaudit"><span class="tab-icon" aria-hidden="true">&#x1F4D6;</span><span class="tab-label">Oghma Audit</span></button>
         <button class="tab-button" data-tab="audit"><span class="tab-icon" aria-hidden="true">&#x1F4CA;</span><span class="tab-label">Cost Breakdown</span></button>
         <button class="tab-button" data-tab="responses"><span class="tab-icon" aria-hidden="true">&#x1F4AC;</span><span class="tab-label">Response Queue</span></button>
         <button class="tab-button" data-tab="rellogs"><span class="tab-icon" aria-hidden="true">&#x1F517;</span><span class="tab-label">Relationship Logs</span></button>
@@ -161,6 +168,11 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
     <div id="requests" class="tab-content">
         <div class="embed-wrap">
             <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/request_logs.php?embed=1"></iframe>
+        </div>
+    </div>
+    <div id="oghmaaudit" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/oghma_audit.php?embed=1"></iframe>
         </div>
     </div>
     <div id="audit" class="tab-content">

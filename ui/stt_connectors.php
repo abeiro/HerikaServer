@@ -2,321 +2,790 @@
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
-require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
-@include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php");
-@include_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php");
-require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "stt_connector.class.php");
 
-// Determine web root (match other pages)
-$scriptPath = $_SERVER['SCRIPT_NAME'];
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_stt_connector' => false,
+    'load_itt_connector' => false,
+]);
+
+try {
+    require_once($enginePath . "debug" . DIRECTORY_SEPARATOR . "db_updates.php");
+} catch (Throwable $_e) {
+}
+
+$connector = new STTConnector();
+$isEmbed = isset($_GET['embed']) && strval($_GET['embed']) === '1';
+
+$scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
 $uiPos = strpos($scriptPath, '/ui/');
-if ($uiPos !== false) { $webRoot = substr($scriptPath, 0, $uiPos); } else { $webRoot = ''; }
-if ($webRoot == '/') $webRoot = '';
+$webRoot = ($uiPos !== false) ? substr($scriptPath, 0, $uiPos) : '';
+if ($webRoot === '/') {
+    $webRoot = '';
+}
 $webRoot = rtrim($webRoot, '/');
 
-// Load raw schema for rendering provider fields
-$schemaPath = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_schema.json";
-$rawSchema = @json_decode(@file_get_contents($schemaPath), true);
-if (!is_array($rawSchema)) $rawSchema = [];
-$providersAll = is_array($rawSchema['STT'] ?? null) ? $rawSchema['STT'] : [];
-$sttOptions = $rawSchema['STTFUNCTION']['values'] ?? [ 'none','whisper','localwhisper','azure','deepgram','gemini','parakeet','inworld' ];
-
-// Current configuration
-$currentConf = conf_loader_load();
-
-// Helpers
-function stt_current_value(string $flatName, array $currentConf) {
-	$plain = strtr($flatName, ["@" => " "]);
-	$parms = $currentConf[$plain] ?? null;
-	if (!$parms) return '';
-	return $parms['currentValue'] ?? '';
+function h($value): string
+{
+    return htmlspecialchars(strval($value), ENT_QUOTES, 'UTF-8');
 }
 
-// Mapping from dropdown value -> provider key in schema
-$sttMap = [
-	'whisper' => 'WHISPER',
-	'localwhisper' => 'LOCALWHISPER',
-	'azure' => 'AZURE',
-	'deepgram' => 'DEEPGRAM',
-	'parakeet' => 'PARAKEET',
-	'gemini' => 'GEMINI',
-	'inworld' => 'INWORLD',
-];
-
-// Selected provider
-$selectedFunction = stt_current_value('STTFUNCTION', $currentConf);
-if (isset($_POST['STTFUNCTION']) && is_string($_POST['STTFUNCTION'])) {
-	$selectedFunction = (string)$_POST['STTFUNCTION'];
-}
-if ($selectedFunction === '' && !empty($sttOptions)) $selectedFunction = $sttOptions[0];
-$providerKey = $sttMap[$selectedFunction] ?? '';
-$providerSchema = ($providerKey && isset($providersAll[$providerKey]) && is_array($providersAll[$providerKey])) ? $providersAll[$providerKey] : [];
-
-// Save: write STTFUNCTION + selected provider fields into conf.php
-$saveSuccess = false;
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
-	$confSchemaFlat = conf_loader_load_schema();
-	// Reload latest configuration to avoid overwriting changes from other pages
-	$confFile = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-	@clearstatcache(true, $confFile);
-	$currentConf = conf_loader_load();
-	$allPairs = [];
-	// Preserve existing pairs from currentConf
-	foreach ($currentConf as $pname => $parms) {
-		$fieldName = strtr($pname, [" " => "@"]);
-		$type = $parms['type'] ?? ($confSchemaFlat[$pname]['type'] ?? 'string');
-		$val = $parms['currentValue'] ?? '';
-		if ($type === 'boolean') $allPairs[$fieldName] = $val ? 'true' : 'false';
-		else if ($type === 'selectmultiple') $allPairs[$fieldName] = is_array($val) ? $val : [];
-		else $allPairs[$fieldName] = (string)$val;
-	}
-	// Overwrite STTFUNCTION
-	$allPairs['STTFUNCTION'] = (string)$selectedFunction;
-	// Overwrite selected provider fields
-	if ($providerKey && is_array($providerSchema)) {
-		foreach ($providerSchema as $fname => $def) {
-			if (!is_array($def)) continue;
-			$type = $def['type'] ?? 'string';
-			$key = 'STT@' . $providerKey . '@' . $fname;
-			if ($type === 'boolean') {
-				$allPairs[$key] = (isset($_POST[$fname]) && $_POST[$fname] === 'true') ? 'true' : 'false';
-			} else if ($type === 'selectmultiple') {
-				$allPairs[$key] = isset($_POST[$fname]) && is_array($_POST[$fname]) ? array_values($_POST[$fname]) : [];
-			} else {
-				if (isset($_POST[$fname])) $allPairs[$key] = (string)$_POST[$fname];
-			}
-		}
-	}
-
-	// Build conf.php content
-	$buffer = "<?php" . PHP_EOL;
-	$oldGroup = '';
-	$oldSubGroup = '';
-	$process_slashes = function(string $s_input): string { $sx = str_replace("\\'", "'", $s_input); return addcslashes($sx, "'"); };
-	foreach ($allPairs as $k => $v) {
-		$full = explode('@', $k);
-		$plain = strtr($k, ['@' => ' ']);
-		$type = $confSchemaFlat[$plain]['type'] ?? 'string';
-		if (is_array($v)) $value = json_encode($v, true);
-		else if ($type === 'number') { if ($v === '') continue; else $value = "" . addcslashes($v, "'") . ""; }
-		else if ($type === 'boolean') $value = ($v === 'true') ? 'true' : 'false';
-		else $value = "'" . $process_slashes((string)$v) . "'";
-		if ($oldGroup !== $full[0]) { $buffer .= PHP_EOL . PHP_EOL; $oldGroup = $full[0]; }
-		if (isset($full[1]) && $oldSubGroup !== $full[1]) { $buffer .= PHP_EOL; $oldSubGroup = $full[1]; }
-		if (count($full) === 1) { if (isset($confSchemaFlat[$plain]['description'])) $buffer .= "//" . $confSchemaFlat[$plain]['description'] . PHP_EOL; $buffer .= '$' . $full[0] . '=' . $value . ';' . PHP_EOL; }
-		else if (count($full) === 2) { $inline = isset($confSchemaFlat[$plain]['description']) ? ("//" . $confSchemaFlat[$plain]['description']) : ''; $buffer .= '$' . $full[0] . '["' . $full[1] . '"]=' . $value . ';' . "\t" . $inline . PHP_EOL; }
-		else if (count($full) === 3) { $inline = isset($confSchemaFlat[$plain]['description']) ? ("//" . $confSchemaFlat[$plain]['description']) : ''; $buffer .= '$' . $full[0] . '["' . $full[1] . '"]["' . $full[2] . '"]=' . $value . ';' . "\t" . $inline . PHP_EOL; }
-	}
-	$buffer .= "?>" . PHP_EOL;
-
-	$target = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
-	$tmpTarget = $target . '.tmp.' . getmypid() . '.' . str_replace('.', '_', (string)microtime(true));
-	$result = @file_put_contents($tmpTarget, $buffer, LOCK_EX);
-	$saveSuccess = $result !== false;
-	if ($saveSuccess) {
-		$moved = @rename($tmpTarget, $target);
-		if (!$moved) { $moved = (@copy($tmpTarget, $target) && @unlink($tmpTarget)); }
-		$saveSuccess = $moved;
-	}
-	if ($saveSuccess) {
-		@clearstatcache(true, $target);
-		if (function_exists('opcache_invalidate')) { @opcache_invalidate($target, true); }
-		Logger::info("STT settings saved to conf.php by UI");
-		while (@ob_end_clean());
-		$redirectUrl = strtok($_SERVER['REQUEST_URI'], '?') . '?_ts=' . time();
-		header("Location: " . $redirectUrl);
-		exit;
-	} else {
-		Logger::error("Failed writing conf.php from STT Connectors UI");
-	}
+function sttPageUrl(array $params = []): string
+{
+    global $isEmbed;
+    $base = 'stt_connectors.php';
+    if ($isEmbed && !isset($params['embed'])) {
+        $params['embed'] = '1';
+    }
+    $query = http_build_query($params);
+    return $query !== '' ? ($base . '?' . $query) : $base;
 }
 
-$TITLE = "🎤 CHIM - STT Connectors";
+function sttVisibleDriverOptions(STTConnector $connector): array
+{
+    $options = $connector->getDriverOptions();
+    if (empty($options)) {
+        return ['deepgram', 'parakeet', 'whisper', 'localwhisper', 'gemini', 'azure', 'inworld', 'none'];
+    }
+    return array_values(array_unique($options));
+}
+
+function sttPreferredDriver(STTConnector $connector, array $options): string
+{
+    foreach ($options as $option) {
+        $candidate = $connector->normalizeDriverValue($option);
+        if ($candidate !== '' && $candidate !== 'none') {
+            return $candidate;
+        }
+    }
+
+    return 'deepgram';
+}
+
+function sttGroupedDriverOptions(STTConnector $connector, array $driverOptions): array
+{
+    $normalized = [];
+    foreach ($driverOptions as $driverOption) {
+        $driverValue = $connector->normalizeDriverValue($driverOption);
+        if ($driverValue !== '') {
+            $normalized[$driverValue] = true;
+        }
+    }
+
+    $groups = [
+        'Recommended' => ['deepgram', 'parakeet'],
+        'Other Services' => ['whisper', 'localwhisper', 'gemini', 'azure', 'inworld'],
+        'System' => ['none'],
+    ];
+
+    $output = [];
+    foreach ($groups as $groupLabel => $groupDrivers) {
+        $output[$groupLabel] = [];
+        foreach ($groupDrivers as $groupDriver) {
+            if (isset($normalized[$groupDriver])) {
+                $output[$groupLabel][] = $groupDriver;
+                unset($normalized[$groupDriver]);
+            }
+        }
+    }
+
+    if (!empty($normalized)) {
+        $output['Other Services'] = array_merge($output['Other Services'], array_keys($normalized));
+    }
+
+    return $output;
+}
+
+function sttCreateDefaultConnector(STTConnector $connector): int
+{
+    $options = sttVisibleDriverOptions($connector);
+    $defaultDriver = sttPreferredDriver($connector, $options);
+
+    return $connector->create([
+        'driver' => $defaultDriver,
+        'label' => 'Global STT Connector',
+        'metadata' => json_encode([], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        'api_badge_id' => $connector->getDefaultApiBadgeIdForDriver($defaultDriver),
+        'url' => $connector->getDefaultUrlForDriver($defaultDriver),
+    ]);
+}
+
+function sttEnsureActiveConnectorId(STTConnector $connector): int
+{
+    $activeId = chimGetGeneralSettingInt('GLOBAL_STT_CONNECTOR_ID', 0);
+    if ($activeId > 0) {
+        $row = $connector->getById($activeId);
+        if ($row) {
+            return $activeId;
+        }
+    }
+
+    $migrated = $connector->ensureLegacySelectionFromGlobals();
+    if ($migrated && !empty($migrated['id'])) {
+        $activeId = intval($migrated['id']);
+        chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $activeId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
+        return $activeId;
+    }
+
+    $rows = $connector->readAll();
+    if (!empty($rows)) {
+        $activeId = intval($rows[0]['id'] ?? 0);
+        if ($activeId > 0) {
+            chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $activeId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
+        }
+        return $activeId;
+    }
+
+    $createdId = sttCreateDefaultConnector($connector);
+    if ($createdId > 0) {
+        chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $createdId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
+    }
+    return $createdId;
+}
+
+function sttFieldLabel(string $fieldName): string
+{
+    $special = [
+        'API_KEY' => 'API Key',
+        'URL' => 'URL',
+        'url' => 'URL',
+        'MODEL_ID' => 'Model ID',
+    ];
+    if (isset($special[$fieldName])) {
+        return $special[$fieldName];
+    }
+
+    return ucwords(str_replace(['_', '-'], ' ', strtolower(trim($fieldName))));
+}
+
+function sttShouldRenderField(string $fieldName, $definition): bool
+{
+    if ($fieldName === '_title' || !is_array($definition)) {
+        return false;
+    }
+    if (in_array($fieldName, ['API_KEY', 'url', 'URL', 'endpoint'], true)) {
+        return false;
+    }
+    return true;
+}
+
+function sttParseMetadataFromPost(array $source, string $driver, array $existingMetadata, STTConnector $connector): array
+{
+    $schema = $connector->getProviderFieldSchema($driver);
+    $metadata = $existingMetadata;
+    foreach ($schema as $fieldName => $definition) {
+        if (!sttShouldRenderField($fieldName, $definition)) {
+            continue;
+        }
+
+        $postKey = 'meta__' . $driver . '__' . $fieldName;
+        $type = $definition['type'] ?? 'string';
+        if ($type !== 'boolean' && !array_key_exists($postKey, $source)) {
+            continue;
+        }
+
+        if ($type === 'boolean') {
+            $metadata[$fieldName] = isset($source[$postKey]) && strval($source[$postKey]) === 'true';
+        } elseif ($type === 'integer' || $type === 'int') {
+            $raw = trim(strval($source[$postKey] ?? ''));
+            $metadata[$fieldName] = ($raw === '') ? 0 : intval($raw);
+        } elseif ($type === 'number') {
+            $raw = trim(strval($source[$postKey] ?? ''));
+            $metadata[$fieldName] = ($raw === '') ? 0 : floatval($raw);
+        } elseif ($type === 'selectmultiple') {
+            $metadata[$fieldName] = isset($source[$postKey]) && is_array($source[$postKey]) ? array_values($source[$postKey]) : [];
+        } else {
+            $metadata[$fieldName] = is_array($source[$postKey] ?? null) ? [] : trim(strval($source[$postKey] ?? ''));
+        }
+    }
+
+    return $metadata;
+}
+
+function sttApiBadgeHasConfiguredKey($value): bool
+{
+    $raw = trim(strval($value));
+    if ($raw === '') {
+        return false;
+    }
+    if (preg_match('/^(?:\*+|null|none|n\/a)$/i', $raw)) {
+        return false;
+    }
+    if (preg_match('/^[^A-Za-z0-9]+$/', $raw)) {
+        return false;
+    }
+    return true;
+}
+
+$activeConnectorId = sttEnsureActiveConnectorId($connector);
+$editingRow = $activeConnectorId > 0 ? $connector->getById($activeConnectorId) : [];
+$notice = trim(strval($_GET['notice'] ?? ''));
+$saved = isset($_GET['saved']) && $_GET['saved'] === '1';
+
+$driverOptions = sttVisibleDriverOptions($connector);
+$groupedDriverOptions = sttGroupedDriverOptions($connector, $driverOptions);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_connector'])) {
+    $editId = intval($_POST['id'] ?? 0);
+    $driver = $connector->normalizeDriverValue($_POST['driver'] ?? sttPreferredDriver($connector, $driverOptions));
+
+    $allowedDrivers = [];
+    foreach ($driverOptions as $driverOption) {
+        $allowedDrivers[$connector->normalizeDriverValue($driverOption)] = true;
+    }
+    if (!isset($allowedDrivers[$driver])) {
+        $driver = sttPreferredDriver($connector, $driverOptions);
+    }
+
+    $existing = $editId > 0 ? $connector->getById($editId) : null;
+    $existingDriver = $connector->normalizeDriverValue($existing['driver'] ?? '');
+    $existingMetadata = ($existing && $existingDriver === $driver)
+        ? $connector->decodeMetadata($existing['metadata'] ?? '{}')
+        : [];
+    $metadata = sttParseMetadataFromPost($_POST, $driver, $existingMetadata, $connector);
+
+    $label = trim(strval($_POST['label'] ?? ''));
+    if ($label === '') {
+        $label = ($driver === 'none') ? 'Disabled STT' : ('Global ' . $connector->getDisplayName($driver));
+    }
+
+    $apiBadgeId = null;
+    if ($connector->driverUsesApiBadge($driver)) {
+        $postedApiBadgeId = intval($_POST['api_badge_id'] ?? 0);
+        $apiBadgeId = $postedApiBadgeId > 0 ? $postedApiBadgeId : $connector->getDefaultApiBadgeIdForDriver($driver);
+        if ($apiBadgeId <= 0) {
+            $apiBadgeId = null;
+        }
+    }
+
+    $url = null;
+    if ($connector->driverSupportsEditableUrl($driver)) {
+        $url = trim(strval($_POST['url'] ?? ''));
+        if ($url === '') {
+            $url = $connector->getDefaultUrlForDriver($driver);
+        }
+    }
+
+    $payload = [
+        'driver' => $driver,
+        'label' => $label,
+        'metadata' => json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        'api_badge_id' => $apiBadgeId,
+        'url' => $url,
+    ];
+
+    if ($editId > 0) {
+        $savedId = $connector->update($editId, $payload);
+    } else {
+        $savedId = $connector->create($payload);
+    }
+
+    chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $savedId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
+    header('Location: ' . sttPageUrl(['saved' => '1']));
+    exit;
+}
+
+$activeConnectorId = sttEnsureActiveConnectorId($connector);
+$editingRow = $activeConnectorId > 0 ? $connector->getById($activeConnectorId) : [];
+if (!$editingRow) {
+    $createdId = sttCreateDefaultConnector($connector);
+    if ($createdId > 0) {
+        chimSetGeneralSetting('GLOBAL_STT_CONNECTOR_ID', $createdId, chimGetSchemaDescription('GLOBAL_STT_CONNECTOR_ID'));
+        $activeConnectorId = $createdId;
+        $editingRow = $connector->getById($createdId);
+    }
+}
+
+$currentDriver = $connector->normalizeDriverValue($editingRow['driver'] ?? sttPreferredDriver($connector, $driverOptions));
+if ($currentDriver === '') {
+    $currentDriver = sttPreferredDriver($connector, $driverOptions);
+}
+$currentMetadata = $connector->decodeMetadata($editingRow['metadata'] ?? '{}');
+$apiRows = $GLOBALS["db"]->fetchAll("SELECT id, label, api_key FROM core_api_badge ORDER BY LOWER(label) ASC");
+
+if (!$isEmbed) {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "profile_loader.php");
+}
+
+$TITLE = "STT Connector";
 ob_start();
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."head.html");
+include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.html");
+if (!$isEmbed) {
+    include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "navbar.php");
+}
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-main { padding-top: 40px; padding-bottom: 40px; padding-left: 10%; padding-right: 10%; width: 100%; margin: 0; }
-footer { position: fixed; bottom: 0; width: 100%; height: 20px; background: #031633; z-index: 100; }
-@font-face { font-family: 'MagicCards'; src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype'); }
-h1.stt-title { margin:0 0 20px 0; font-family:'MagicCards', serif; word-spacing:8px; font-size:2.2em; color:rgb(242,124,17); text-shadow:2px 2px 4px rgba(0,0,0,0.5); text-align:center; }
-.content-section { background:#2a2a2a; padding:25px; border-radius:8px; border:1px solid #4a4a4a; }
-.provider-grid { display:grid; grid-template-columns: 1fr; gap:12px; }
-.provider-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; }
-.provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
-.provider-title { display:flex; align-items:center; gap:10px; color:#e0e0e0; }
-.provider-icon { width:28px; height:28px; border-radius:6px; background:#3a3a3a; display:flex; align-items:center; justify-content:center; font-size:16px; }
-.provider-body { display:grid; grid-template-columns: 220px 1fr; gap:8px 12px; align-items:center; }
-.provider-body input, .provider-body select, .provider-body textarea { background-color:#333; color:#fff; border:1px solid #444; border-radius:4px; padding:8px; }
-.actions { display:flex; justify-content:flex-end; margin-top:10px; }
-.btn-primary { background:#204e7a; color:#fff; border:1px solid rgba(138,155,182,0.4); border-radius:8px; padding:8px 14px; cursor:pointer; }
-.btn-primary:hover { background:#285c8f; }
-.help { margin-top:6px; color:#bbb; font-size:12px; grid-column: 1 / -1; }
-.badge-ok { color:#6dd19c; }
-.badge-missing { color:#ffb862; }
-@media (max-width: 900px) { main { padding-left: 5%; padding-right: 5%; } .provider-body { grid-template-columns: 1fr; } }
+@font-face {
+    font-family: 'MagicCards';
+    src: url('<?php echo $webRoot; ?>/ui/css/font/MagicCardsNormal.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+main { padding: <?php echo $isEmbed ? '20px 5px 5px' : '30px 5px 5px'; ?>; }
+.page-shell { max-width: 1450px; margin: 0 auto; }
+.page-header { background: linear-gradient(180deg, rgba(42,42,42,.95), rgba(34,34,34,.98)); padding: 20px; border-radius: 10px; border: 1px solid #3a3a3a; box-shadow: 0 2px 8px rgba(0,0,0,.15), inset 0 1px rgba(255,255,255,.03); text-align: center; margin-bottom: 30px; }
+.page-header h1.api-title { margin-bottom: 8px; }
+h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacing: 8px; font-size: 2.2em; color: rgb(242,124,17); text-shadow: 2px 2px 4px rgba(0,0,0,.5); text-align: center; }
+.page-subtitle { color: #bbb; font-size: 1.1em; margin: 0; }
+.notice { margin-bottom: 14px; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(242,124,17,.25); background: rgba(42,42,42,.9); color: #e7cfac; }
+.layout { display: grid; grid-template-columns: minmax(280px, 340px) 1fr; gap: 18px; align-items: start; }
+.left-col, .right-col { background: linear-gradient(180deg, rgba(42,42,42,.95), rgba(34,34,34,.98)); border: 1px solid #3a3a3a; border-radius: 10px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.15), inset 0 1px rgba(255,255,255,.03); }
+.left-col { position: sticky; top: 90px; max-height: calc(100vh - 110px); overflow: hidden; }
+.list-wrap { display: flex; flex-direction: column; gap: 10px; overflow: auto; max-height: calc(100vh - 280px); padding-right: 4px; }
+.group-title { color: #f3d6a8; font-family: 'MagicCards', serif; word-spacing: 6px; font-size: 1.05em; margin: 8px 0 0; }
+.conn-card { border: 1px solid #3a3a3a; border-radius: 10px; background: linear-gradient(135deg, rgba(42,42,42,.95), rgba(34,34,34,.98)); padding: 12px; cursor: pointer; transition: all .2s ease; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+.conn-card:hover { background: linear-gradient(135deg, rgba(58,58,58,.95), rgba(48,48,48,.98)); transform: translateY(-2px); border-color: #4a4a4a; box-shadow: 0 3px 8px rgba(0,0,0,.2); }
+.conn-card.active { outline: 2px solid rgb(242,124,17); background: linear-gradient(135deg, rgba(52,42,32,.95), rgba(44,34,24,.98)); box-shadow: 0 4px 12px rgba(242,124,17,.3); }
+.conn-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.conn-name { color: #e9efff; font-family: 'MagicCards', serif; word-spacing: 6px; font-size: 1.05em; }
+.conn-badge { color: #9fb1c9; font-size: 11px; border: 1px solid #4a4a4a; border-radius: 999px; padding: 2px 8px; }
+.conn-sub { color: #9fb1c9; font-size: 12px; margin-top: 4px; overflow-wrap: anywhere; }
+.summary-note { padding: 10px 12px; border: 1px dashed rgba(138,155,182,.25); border-radius: 8px; background: #0c0f14; color: #97a6ba; font-size: 12px; margin-bottom: 12px; line-height: 1.5; }
+.orm-note { padding: 6px 10px; font-size: 12px; color: #97a6ba; border-bottom: 1px dashed rgba(138,155,182,.25); background: #0c0f14; border-radius: 8px; margin-bottom: 12px; }
+.editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field-block { margin-bottom: 12px; }
+.field-block label { display: block; color: #fff; font-weight: 700; margin-bottom: 6px; }
+.field-block input[type=text], .field-block input[type=url], .field-block input[type=number], .field-block select, .field-block textarea { width: 100%; box-sizing: border-box; background: rgba(26,26,26,.82); color: #eef3ff; border: 1px solid #3a3a3a; border-radius: 6px; padding: 10px 12px; }
+.field-block input:focus, .field-block select:focus, .field-block textarea:focus { outline: none; border-color: rgba(242,124,17,.45); box-shadow: 0 0 0 3px rgba(242,124,17,.09); }
+.field-block textarea { min-height: 90px; resize: vertical; }
+.field-help { color: #8fa0bb; font-size: 12px; margin-top: 5px; line-height: 1.45; }
+.api-key-notice { margin-top: 6px; font-size: 12px; }
+.api-key-notice.warn { color: #ffb862; }
+.api-key-notice.ok { color: #6dd19c; }
+.meta-group { display: none; border-top: 1px solid rgba(242,124,17,.12); margin-top: 8px; padding-top: 16px; }
+.meta-group.active { display: block; }
+.meta-group h3 { font-family: 'MagicCards', serif; word-spacing: 6px; font-size: 1.2em; font-weight: normal; color: #f3d6a8; margin: 0 0 14px; }
+.settings-empty-note { padding: 10px 12px; border: 1px dashed rgba(138,155,182,.25); border-radius: 8px; background: #0c0f14; color: #97a6ba; font-size: 12px; }
+.inline-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+#stt_test_modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.66); z-index: 9999; }
+#stt_test_modal .inner { width: min(1100px, 94vw); height: min(820px, 92vh); background: #0f1724; border: 1px solid #3a3a3a; border-radius: 10px; position: relative; overflow: hidden; }
+#stt_test_modal iframe { width: 100%; height: 100%; border: 0; background: #111; }
+#stt_test_close { position: absolute; top: 10px; right: 10px; z-index: 2; }
+@media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+    .left-col { position: relative; top: auto; max-height: none; }
+    .list-wrap { max-height: 420px; }
+    .editor-grid, .inline-two { grid-template-columns: 1fr; }
+}
 </style>
 
 <main>
-	<h1 class="stt-title">STT Connectors</h1>
-	<div id="toast" class="toast-notification" style="display:none;"><span class="message"></span></div>
+    <div class="page-shell">
+        <div class="page-header">
+            <h1 class="api-title">STT Connector</h1>
+            <p class="page-subtitle">Speech-to-Text Setup Options.</p>
+        </div>
 
-	<?php if ($saveSuccess): ?>
-		<script>setTimeout(function(){ try{ const t=document.getElementById('toast'); if(t){ t.style.display='block'; t.textContent='Settings saved to conf.php'; setTimeout(()=>{ t.style.display='none'; }, 2500); } }catch(_e){} }, 50);</script>
-	<?php endif; ?>
+        <?php if ($saved): ?>
+            <div class="notice">STT connector saved.</div>
+        <?php elseif ($notice !== ''): ?>
+            <div class="notice"><?php echo h($notice); ?></div>
+        <?php endif; ?>
 
-	<form method="post" action="">
-		<div class="content-section">
-			<div class="provider-grid">
-				<div class="provider-card">
-					<div class="provider-head">
-						<div class="provider-title">
-							<div class="provider-icon">🎤</div>
-							<div>STT Provider</div>
-						</div>
-					</div>
-					<div class="provider-body">
-						<label for="STTFUNCTION">STT Selection</label>
-						<select name="STTFUNCTION" id="STTFUNCTION" onchange="this.form.submit()">
-							<?php foreach ($sttOptions as $opt): ?>
-								<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$selectedFunction===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-				</div>
+        <div class="layout">
+            <div class="left-col">
+                <div class="summary-note">
+                    This page edits the single global STT connector. Switching services updates the active runtime provider instead of creating extra connector records.
+                </div>
+                <div class="list-wrap" id="stt_driver_list">
+                    <?php foreach ($groupedDriverOptions as $groupLabel => $groupDrivers): ?>
+                        <?php if (empty($groupDrivers)) { continue; } ?>
+                        <div class="group-title"><?php echo h($groupLabel); ?></div>
+                        <?php foreach ($groupDrivers as $driverValue): ?>
+                            <div class="conn-card<?php echo $currentDriver === $driverValue ? ' active' : ''; ?>" data-driver-card="<?php echo h($driverValue); ?>">
+                                <div class="conn-head">
+                                    <div class="conn-name"><?php echo h($connector->getDisplayName($driverValue)); ?></div>
+                                    <div class="conn-badge"><?php echo h($connector->getProviderKeyFromDriver($driverValue) ?: 'SYSTEM'); ?></div>
+                                </div>
+                                <div class="conn-sub"><?php echo h($connector->getProviderTitle($driverValue)); ?></div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
 
-				<?php if (!empty($providerSchema)): ?>
-					<div class="provider-card">
-						<div class="provider-head">
-							<div class="provider-title">
-								<div class="provider-icon">⚙️</div>
-								<div><?php echo htmlspecialchars($providerKey); ?> Settings</div>
-							</div>
-						</div>
-						<div class="provider-body">
-							<?php
-							// Query API badges once for status display
-							$apiBadges = [];
-							try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) $GLOBALS['db'] = new sql(); $apiBadges = $GLOBALS['db']->fetchAll("SELECT id,label,api_key FROM core_api_badge ORDER BY label ASC"); } catch (Throwable $_e) {}
-							foreach ($providerSchema as $fname => $def): if (!is_array($def)) continue; $ftype = $def['type'] ?? 'string'; $plainName = 'STT ' . $providerKey . ' ' . $fname; $current = $currentConf[$plainName]['currentValue'] ?? ''; $help = $def['description'] ?? '';
-								// If API_KEY field, show badge status instead of input
-								$lnameProv = strtolower($providerKey);
-								$providerBadgeMap = [
-									'whisper' => 'OpenAI',
-									'azure' => 'Azure',
-									'deepgram' => 'Deepgram',
-									'gemini' => 'Google',
-									'inworld' => 'Inworld',
-								];
-								if ($fname === 'API_KEY' && isset($providerBadgeMap[$lnameProv])) {
-									$badgeName = $providerBadgeMap[$lnameProv];
-									$hasKey = false;
-									foreach ($apiBadges as $r){ if (strtolower((string)($r['label']??''))===strtolower($badgeName) && trim((string)($r['api_key']??''))!==''){ $hasKey=true; break; } }
-									echo '<div>API Badge ('.htmlspecialchars($badgeName).')</div>';
-									echo '<div>'.($hasKey?'<span class="badge-ok">Configured</span>':'<span class="badge-missing">Missing</span>').' — <a href="#" onclick="try{ if(window.top){ window.top.location.href=\''.htmlspecialchars($webRoot).'/ui/core/config_hub.php?tab=keys\'; } else { window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } }catch(e){ window.location.href=\''.htmlspecialchars($webRoot).'/ui/core/api_badge.php?embed=1\'; } return false;">Manage Keys</a></div>';
-									if (!empty($help)) echo '<div class="help">'.$help.'</div>';
-									continue;
-								}
-							?>
-								<label for="f_<?php echo htmlspecialchars($fname); ?>"><?php echo htmlspecialchars($fname); ?></label>
-								<?php if ($ftype === 'boolean'): ?>
-									<input type="hidden" name="<?php echo htmlspecialchars($fname); ?>" value="false">
-									<input type="checkbox" id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" value="true" <?php echo ($current ? 'checked' : ''); ?> style="width:auto;">
-								<?php elseif ($ftype === 'integer'): ?>
-									<input type="number" step="1" id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
-								<?php elseif ($ftype === 'number'): ?>
-									<input type="number" step="0.01" id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
-								<?php elseif ($ftype === 'longstring'): ?>
-									<textarea id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" rows="3"><?php echo htmlspecialchars((string)$current); ?></textarea>
-								<?php elseif ($ftype === 'url'): ?>
-									<input type="url" id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
-								<?php elseif ($ftype === 'select'): $values = $def['values'] ?? []; ?>
-									<select id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>">
-										<?php foreach ($values as $opt): ?>
-											<option value="<?php echo htmlspecialchars($opt); ?>" <?php echo ((string)$current===(string)$opt?'selected':''); ?>><?php echo htmlspecialchars($opt); ?></option>
-										<?php endforeach; ?>
-									</select>
-								<?php elseif ($ftype === 'apikey'): ?>
-									<input type="password" id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>" placeholder="Paste API key">
-								<?php else: ?>
-									<input type="text" id="f_<?php echo htmlspecialchars($fname); ?>" name="<?php echo htmlspecialchars($fname); ?>" value="<?php echo htmlspecialchars((string)$current); ?>">
-								<?php endif; ?>
-								<?php if (!empty($help)): ?><div class="help"><?php echo $help; ?></div><?php endif; ?>
-							<?php endforeach; ?>
-						</div>
-					</div>
-				<?php else: ?>
-					<div class="provider-card"><div class="provider-body"><div></div><div>No settings available for this provider.</div></div></div>
-				<?php endif; ?>
-			</div>
-			<div class="actions">
-				<button type="button" id="btn_test_stt" class="btn-primary">Test</button>
-				<button type="button" id="btn_google_free_stt" class="btn-primary" style="margin-left:8px;">Google Free STT</button>
-				<button type="submit" class="btn-save" name="save_all" value="1" style="margin-left:8px;">Save</button>
-			</div>
-		</div>
-	</form>
+            <div class="right-col">
+                <?php if (!$editingRow): ?>
+                    <div class="settings-empty-note">No STT connector is configured yet.</div>
+                <?php else: ?>
+                    <form method="post" action="<?php echo h(sttPageUrl()); ?>" id="stt_connector_form">
+                        <input type="hidden" name="id" value="<?php echo h($editingRow['id'] ?? ''); ?>">
+                        <input type="hidden" name="save_connector" value="1">
+
+                        <div class="btn-row">
+                            <button type="submit" class="btn-save">Save</button>
+                            <button type="button" class="btn-primary" id="btn_test_connector_inline">Test</button>
+                            <button type="button" class="btn-secondary" id="btn_google_free_stt_inline">Google Free STT</button>
+                        </div>
+                        <div class="orm-note">Testing saves the current connector first so the modal uses the latest settings.</div>
+
+                        <div class="editor-grid">
+                            <div class="field-block">
+                                <label for="label">Name</label>
+                                <input type="text" id="label" name="label" value="<?php echo h($editingRow['label'] ?? ''); ?>">
+                                <div class="field-help">This label is kept for migration and internal reference, even though only one STT connector is used globally.</div>
+                            </div>
+                            <div class="field-block">
+                                <label for="driver">Service</label>
+                                <select id="driver" name="driver">
+                                    <?php foreach ($groupedDriverOptions as $groupLabel => $groupDrivers): ?>
+                                        <?php if (empty($groupDrivers)) { continue; } ?>
+                                        <optgroup label="<?php echo h($groupLabel); ?>">
+                                            <?php foreach ($groupDrivers as $driverValue): ?>
+                                                <option value="<?php echo h($driverValue); ?>" <?php echo $currentDriver === $driverValue ? 'selected' : ''; ?>>
+                                                    <?php echo h($connector->getDisplayName($driverValue)); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </optgroup>
+                                    <?php endforeach; ?>
+                                </select>
+                                <div class="field-help">Choose the speech-to-text backend HerikaServer should load globally.</div>
+                            </div>
+
+                            <div class="field-block" id="url_block" style="<?php echo $connector->driverSupportsEditableUrl($currentDriver) ? '' : 'display:none;'; ?>">
+                                <label for="url">URL</label>
+                                <input type="url" id="url" name="url" value="<?php echo h($editingRow['url'] ?? $connector->getDefaultUrlForDriver($currentDriver)); ?>">
+                                <div class="field-help">Used for local or remote STT endpoints such as Local Whisper.</div>
+                            </div>
+
+                            <div class="field-block" id="api_badge_block" style="<?php echo $connector->driverUsesApiBadge($currentDriver) ? '' : 'display:none;'; ?>">
+                                <label for="api_badge_id">API Badge</label>
+                                <?php
+                                $selectedApi = $editingRow['api_badge_id'] ?? '';
+                                $withKey = [];
+                                $noKey = [];
+                                foreach ($apiRows as $apiRow) {
+                                    if (sttApiBadgeHasConfiguredKey($apiRow['api_key'] ?? '')) {
+                                        $withKey[] = $apiRow;
+                                    } else {
+                                        $noKey[] = $apiRow;
+                                    }
+                                }
+                                ?>
+                                <select id="api_badge_id" name="api_badge_id">
+                                    <option value="">-- None --</option>
+                                    <?php foreach ($withKey as $apiRow): ?>
+                                        <?php
+                                        $apiRowId = intval($apiRow['id'] ?? 0);
+                                        $selected = strval($selectedApi) === strval($apiRowId) ? 'selected' : '';
+                                        $labelText = '🟢 ' . strval($apiRow['label'] ?? ('Key #' . $apiRowId));
+                                        ?>
+                                        <option value="<?php echo h($apiRowId); ?>" data-empty="0" <?php echo $selected; ?>>
+                                            <?php echo h($labelText); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                    <?php if (!empty($noKey)): ?>
+                                        <option value="" disabled>— Missing Key —</option>
+                                        <?php foreach ($noKey as $apiRow): ?>
+                                            <?php
+                                            $apiRowId = intval($apiRow['id'] ?? 0);
+                                            $selected = strval($selectedApi) === strval($apiRowId) ? 'selected' : '';
+                                            $labelText = '🔴 ' . strval($apiRow['label'] ?? ('Key #' . $apiRowId)) . ' — No key';
+                                            ?>
+                                            <option value="<?php echo h($apiRowId); ?>" data-empty="1" <?php echo $selected; ?>>
+                                                <?php echo h($labelText); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                                <div id="api_key_notice" class="api-key-notice"></div>
+                                <div class="field-help">Cloud STT services require an API key from the API Keys page.</div>
+                            </div>
+                        </div>
+
+                        <?php foreach ($driverOptions as $driverOption): ?>
+                            <?php
+                            $groupDriver = $connector->normalizeDriverValue($driverOption);
+                            $groupSchema = $connector->getProviderFieldSchema($groupDriver);
+                            $visibleFieldNames = [];
+                            foreach ($groupSchema as $fieldName => $definition) {
+                                if (sttShouldRenderField($fieldName, $definition)) {
+                                    $visibleFieldNames[] = $fieldName;
+                                }
+                            }
+                            ?>
+                            <div class="meta-group<?php echo $groupDriver === $currentDriver ? ' active' : ''; ?>" data-driver-fields="<?php echo h($groupDriver); ?>">
+                                <h3><?php echo h($connector->getProviderTitle($groupDriver)); ?> Settings</h3>
+                                <?php if (empty($visibleFieldNames)): ?>
+                                    <div class="settings-empty-note">This STT provider does not have connector-level settings to configure here.</div>
+                                <?php else: ?>
+                                    <div class="inline-two">
+                                        <?php foreach ($groupSchema as $fieldName => $definition): ?>
+                                            <?php if (!sttShouldRenderField($fieldName, $definition)) { continue; } ?>
+                                            <?php
+                                            $fieldType = $definition['type'] ?? 'string';
+                                            $fieldValue = ($groupDriver === $currentDriver)
+                                                ? ($currentMetadata[$fieldName] ?? ($definition['default'] ?? ''))
+                                                : ($definition['default'] ?? '');
+                                            $fieldKey = 'meta__' . $groupDriver . '__' . $fieldName;
+                                            ?>
+                                            <div class="field-block">
+                                                <label for="<?php echo h($fieldKey); ?>"><?php echo h(sttFieldLabel($fieldName)); ?></label>
+                                                <?php if ($fieldType === 'boolean'): ?>
+                                                    <input type="hidden" name="<?php echo h($fieldKey); ?>" value="false">
+                                                    <select id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>">
+                                                        <option value="true" <?php echo $fieldValue ? 'selected' : ''; ?>>Enabled</option>
+                                                        <option value="false" <?php echo !$fieldValue ? 'selected' : ''; ?>>Disabled</option>
+                                                    </select>
+                                                <?php elseif ($fieldType === 'integer' || $fieldType === 'int'): ?>
+                                                    <input type="number" step="1" id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>" value="<?php echo h($fieldValue); ?>">
+                                                <?php elseif ($fieldType === 'number'): ?>
+                                                    <input type="number" step="0.01" id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>" value="<?php echo h($fieldValue); ?>">
+                                                <?php elseif ($fieldType === 'longstring'): ?>
+                                                    <textarea id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>"><?php echo h($fieldValue); ?></textarea>
+                                                <?php elseif ($fieldType === 'select'): ?>
+                                                    <select id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>">
+                                                        <?php foreach (($definition['values'] ?? []) as $valueOption): ?>
+                                                            <option value="<?php echo h($valueOption); ?>" <?php echo strval($fieldValue) === strval($valueOption) ? 'selected' : ''; ?>>
+                                                                <?php echo h($valueOption); ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                <?php elseif ($fieldType === 'selectmultiple'): ?>
+                                                    <select id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>[]" multiple>
+                                                        <?php $selectedValues = is_array($fieldValue) ? $fieldValue : []; ?>
+                                                        <?php foreach (($definition['values'] ?? []) as $valueOption): ?>
+                                                            <option value="<?php echo h($valueOption); ?>" <?php echo in_array($valueOption, $selectedValues, true) ? 'selected' : ''; ?>>
+                                                                <?php echo h($valueOption); ?>
+                                                            </option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                <?php else: ?>
+                                                    <input type="text" id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>" value="<?php echo h($fieldValue); ?>">
+                                                <?php endif; ?>
+                                                <?php if (!empty($definition['description'])): ?>
+                                                    <div class="field-help"><?php echo $definition['description']; ?></div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </form>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <div id="stt_test_modal">
+        <div class="inner">
+            <button type="button" class="btn-secondary" id="stt_test_close">Close</button>
+            <iframe id="stt_test_iframe" src="about:blank"></iframe>
+        </div>
+    </div>
 </main>
-
-<?php
-include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."footer.html");
-$buffer = ob_get_contents();
-ob_end_clean();
-$title = $TITLE;
-$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
-echo $buffer;
-?>
 
 <script>
 (function(){
-    const MODAL_ID = 'stttest_modal';
-    const modal = document.createElement('div');
-    modal.id = MODAL_ID;
-    modal.style.cssText = 'position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); z-index:10000;';
-    modal.innerHTML = `
-        <div style="width:90%; max-width:1100px; height:80vh; background:#111; border:1px solid rgba(138,155,182,0.4); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.6); position:relative; overflow:hidden;">
-            <button id=\"stttest_close\" style=\"position:absolute; top:8px; right:10px; background:#300; color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:4px 10px; cursor:pointer; z-index:3;\">Close</button>
-            <div id=\"stttest_loading\" style=\"position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); z-index:2;\">
-                <div style=\"width:48px; height:48px; border:4px solid rgba(255,255,255,0.25); border-top-color:#ffb862; border-radius:50%; animation: spin 1s linear infinite;\"></div>
-            </div>
-            <iframe id=\"stttest_iframe\" src=\"about:blank\" style=\"width:100%; height:100%; border:0; background:#0e1624; position:relative; z-index:1;\"></iframe>
-        </div>
-        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
-    document.body.appendChild(modal);
-    function openModal(url){ const iframe = document.getElementById('stttest_iframe'); const loader = document.getElementById('stttest_loading'); if (loader) loader.style.display = 'flex'; iframe.onload = function(){ if (loader) loader.style.display = 'none'; }; iframe.src = url; modal.style.display = 'flex'; }
-    function closeModal(){ modal.style.display = 'none'; try { document.getElementById('stttest_iframe').src='about:blank'; } catch(_){} }
-    document.addEventListener('click', function(e){ if (e.target && e.target.id==='stttest_close') closeModal(); });
-    modal.addEventListener('click', function(e){ if (e.target===modal) closeModal(); });
-    document.addEventListener('keydown', function(e){ if (e.key==='Escape') closeModal(); });
+    const form = document.getElementById('stt_connector_form');
+    const driverSelect = document.getElementById('driver');
+    const driverCards = document.querySelectorAll('[data-driver-card]');
+    const apiBadgeBlock = document.getElementById('api_badge_block');
+    const apiBadgeSelect = document.getElementById('api_badge_id');
+    const apiKeyNotice = document.getElementById('api_key_notice');
+    const urlBlock = document.getElementById('url_block');
+    const urlInput = document.getElementById('url');
+    const modal = document.getElementById('stt_test_modal');
+    const iframe = document.getElementById('stt_test_iframe');
+    const closeBtn = document.getElementById('stt_test_close');
+    const testButtons = [document.getElementById('btn_test_connector_inline')].filter(Boolean);
+    const googleButtons = [document.getElementById('btn_google_free_stt_inline')].filter(Boolean);
 
-    const testBtn = document.getElementById('btn_test_stt');
-    if (testBtn){
-        testBtn.addEventListener('click', async function(){
-            // Save current form first to ensure STTFUNCTION and settings are applied
-            try {
-                const form = document.querySelector('form[method="post"]');
-                if (form){
-                    const fd = new FormData(form);
-                    if (!fd.has('save_all')) fd.append('save_all','1');
-                    await fetch('stt_connectors.php', { method:'POST', body: fd });
-                }
-            } catch(_e){}
-            const cb = Date.now();
-            openModal('<?php echo $webRoot; ?>/ui/tests/stt-test.php?cb='+cb);
+    const apiDrivers = <?php echo json_encode(array_values(array_filter($driverOptions, function ($driverOption) use ($connector) { return $connector->driverUsesApiBadge($driverOption); })), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+    const urlDrivers = <?php echo json_encode(array_values(array_filter($driverOptions, function ($driverOption) use ($connector) { return $connector->driverSupportsEditableUrl($driverOption); })), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+    const defaultApiBadgeIds = <?php
+        $defaultApiBadgeIds = [];
+        foreach ($driverOptions as $driverOption) {
+            $normalizedDriver = $connector->normalizeDriverValue($driverOption);
+            $defaultApiBadgeIds[$normalizedDriver] = $connector->getDefaultApiBadgeIdForDriver($normalizedDriver);
+        }
+        echo json_encode($defaultApiBadgeIds, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    ?>;
+    const defaultUrls = <?php
+        $defaultUrls = [];
+        foreach ($driverOptions as $driverOption) {
+            $normalizedDriver = $connector->normalizeDriverValue($driverOption);
+            $defaultUrls[$normalizedDriver] = $connector->getDefaultUrlForDriver($normalizedDriver);
+        }
+        echo json_encode($defaultUrls, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    ?>;
+
+    let previousDriver = driverSelect ? String(driverSelect.value || '') : '';
+
+    function refreshDriverCards(selected) {
+        driverCards.forEach(function(card){
+            card.classList.toggle('active', card.getAttribute('data-driver-card') === selected);
         });
     }
 
-    const googleFreeBtn = document.getElementById('btn_google_free_stt');
-    if (googleFreeBtn){
-        googleFreeBtn.addEventListener('click', function(){
-            const cb = Date.now();
-            openModal('<?php echo $webRoot; ?>/ui/addons/pmstt/index.html?cb='+cb);
+    function updateApiBadgeNotice() {
+        if (!apiBadgeSelect || !apiKeyNotice || !apiBadgeBlock) {
+            return;
+        }
+        if (apiBadgeBlock.style.display === 'none') {
+            apiKeyNotice.textContent = '';
+            apiKeyNotice.className = 'api-key-notice';
+            return;
+        }
+        const selectedOption = apiBadgeSelect.options[apiBadgeSelect.selectedIndex];
+        const isEmpty = selectedOption ? selectedOption.getAttribute('data-empty') === '1' : true;
+        if (!selectedOption || String(apiBadgeSelect.value || '') === '') {
+            apiKeyNotice.className = 'api-key-notice warn';
+            apiKeyNotice.textContent = 'No API key selected. Some STT services require one.';
+            return;
+        }
+        if (isEmpty) {
+            apiKeyNotice.className = 'api-key-notice warn';
+            apiKeyNotice.textContent = 'Selected API badge does not have a configured key yet.';
+            return;
+        }
+        apiKeyNotice.className = 'api-key-notice ok';
+        apiKeyNotice.textContent = 'Selected API badge is configured.';
+    }
+
+    function syncDriverFields() {
+        if (!driverSelect) {
+            return;
+        }
+        const selected = String(driverSelect.value || '');
+        document.querySelectorAll('[data-driver-fields]').forEach(function(group){
+            group.classList.toggle('active', group.getAttribute('data-driver-fields') === selected);
+        });
+
+        if (apiBadgeBlock) {
+            const usesApiBadge = apiDrivers.indexOf(selected) >= 0;
+            apiBadgeBlock.style.display = usesApiBadge ? '' : 'none';
+            if (apiBadgeSelect) {
+                const currentValue = String(apiBadgeSelect.value || '').trim();
+                const previousDefault = String(defaultApiBadgeIds[previousDriver] || '').trim();
+                const nextDefault = String(defaultApiBadgeIds[selected] || '').trim();
+                if (usesApiBadge) {
+                    if (currentValue === '' || currentValue === previousDefault) {
+                        apiBadgeSelect.value = nextDefault;
+                    }
+                } else if (currentValue === previousDefault) {
+                    apiBadgeSelect.value = '';
+                }
+            }
+        }
+
+        if (urlBlock) {
+            const supportsUrl = urlDrivers.indexOf(selected) >= 0;
+            urlBlock.style.display = supportsUrl ? '' : 'none';
+            if (urlInput) {
+                const currentValue = String(urlInput.value || '').trim();
+                const previousDefault = String(defaultUrls[previousDriver] || '').trim();
+                const nextDefault = String(defaultUrls[selected] || '').trim();
+                if (supportsUrl) {
+                    if ((currentValue === '' || currentValue === previousDefault) && nextDefault) {
+                        urlInput.value = nextDefault;
+                    }
+                } else if (currentValue === previousDefault) {
+                    urlInput.value = '';
+                }
+            }
+        }
+
+        previousDriver = selected;
+        refreshDriverCards(selected);
+        updateApiBadgeNotice();
+    }
+
+    async function saveBeforeTest() {
+        if (!form) {
+            return true;
+        }
+        const fd = new FormData(form);
+        fd.set('save_connector', '1');
+        try {
+            await fetch(form.getAttribute('action') || 'stt_connectors.php', { method: 'POST', body: fd });
+            return true;
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function openTestModal() {
+        if (!modal || !iframe) {
+            return;
+        }
+        iframe.src = <?php echo json_encode($webRoot . '/ui/tests/stt-test.php'); ?> + '?cb=' + Date.now() + <?php echo json_encode($isEmbed ? '&embed=1' : ''); ?>;
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        if (!modal || !iframe) {
+            return;
+        }
+        modal.style.display = 'none';
+        iframe.src = 'about:blank';
+    }
+
+    if (driverSelect) {
+        driverSelect.addEventListener('change', syncDriverFields);
+        syncDriverFields();
+    }
+
+    driverCards.forEach(function(card){
+        card.addEventListener('click', function(){
+            if (!driverSelect) {
+                return;
+            }
+            const value = card.getAttribute('data-driver-card') || '';
+            driverSelect.value = value;
+            syncDriverFields();
+        });
+    });
+
+    if (apiBadgeSelect) {
+        apiBadgeSelect.addEventListener('change', updateApiBadgeNotice);
+        updateApiBadgeNotice();
+    }
+
+    testButtons.forEach(function(button){
+        button.addEventListener('click', async function(){
+            const saved = await saveBeforeTest();
+            if (!saved) {
+                return;
+            }
+            openTestModal();
+        });
+    });
+
+    googleButtons.forEach(function(button){
+        button.addEventListener('click', function(){
+            if (!modal || !iframe) {
+                return;
+            }
+            iframe.src = <?php echo json_encode($webRoot . '/ui/addons/pmstt/index.html'); ?> + '?cb=' + Date.now();
+            modal.style.display = 'flex';
+        });
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+    if (modal) {
+        modal.addEventListener('click', function(event){
+            if (event.target === modal) {
+                closeModal();
+            }
         });
     }
 })();
 </script>
 
-
+<?php
+include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "footer.html");
+$buffer = ob_get_contents();
+ob_end_clean();
+$buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $TITLE . '$3', $buffer);
+echo $buffer;
+?>

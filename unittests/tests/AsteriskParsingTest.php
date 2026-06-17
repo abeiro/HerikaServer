@@ -164,6 +164,26 @@ final class AsteriskParsingTest extends TestCase
         );
     }
 
+    public function testPlayerSubtitleTextStripsShoutTargetTag(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+
+        $this->assertSame(
+            "Hello there",
+            formatPlayerSubtitleText("Rangroo: Hello there (Shouting to Corpulus Vinius)")
+        );
+    }
+
+    public function testPlayerSubtitleTextStripsWhisperTargetTag(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+
+        $this->assertSame(
+            "Keep this quiet",
+            formatPlayerSubtitleText("Rangroo: Keep this quiet (Whispering to Corpulus Vinius)")
+        );
+    }
+
     public function testSanitizePlayerRespeechTextStripsLeadingNarrationAndPlayerPrefix(): void
     {
         $GLOBALS['PLAYER_NAME'] = 'Rangroo';
@@ -188,6 +208,50 @@ final class AsteriskParsingTest extends TestCase
             "Sven. The air bites today, doesn't it? (Talking to Sven)",
             sanitizePlayerRespeechText(
                 "*A shiver runs down Rangroo's spine, despite his heavy furs.* Rangroo: Sven. The air bites today, doesn't it? (Talking to Sven)",
+                $GLOBALS['PLAYER_NAME']
+            )
+        );
+    }
+
+    public function testSanitizePlayerRespeechTextUnwrapsEchoedAutochatMarker(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Anna';
+        $GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'] = true;
+
+        $this->assertSame(
+            "Oh, yeah... I feel very relaxed!",
+            sanitizePlayerRespeechText(
+                "Anna:**(Oh, yeah... I feel very relaxed!)",
+                $GLOBALS['PLAYER_NAME']
+            )
+        );
+
+        $this->assertSame(
+            "Oh, yeah... I feel very relaxed!",
+            sanitizePlayerRespeechText(
+                "Anna: **(Oh, yeah... I feel very relaxed!)**",
+                $GLOBALS['PLAYER_NAME']
+            )
+        );
+
+        $this->assertSame(
+            "Oh (yeah)... I feel very relaxed!",
+            sanitizePlayerRespeechText(
+                "Anna: **(Oh (yeah)... I feel very relaxed!)**",
+                $GLOBALS['PLAYER_NAME']
+            )
+        );
+    }
+
+    public function testSanitizePlayerRespeechTextStripsLeadingDoubleStarNarration(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Anna';
+        $GLOBALS['REMOVE_PLAYER_AUTOCHAT_ASTERISKS'] = true;
+
+        $this->assertSame(
+            "Oh, yeah... I feel very relaxed!",
+            sanitizePlayerRespeechText(
+                "Anna: **(smiles softly)** Oh, yeah... I feel very relaxed!",
                 $GLOBALS['PLAYER_NAME']
             )
         );
