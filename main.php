@@ -886,6 +886,15 @@ if ($gameRequest[0] == "npcspellcast") {
     terminate(); // Always exit, whether logged or not
 }
 
+if (in_array($gameRequest[0], ["ext_held_item_raw", "ext_vr_item_raw"], true)) {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "vr_items.php");
+    $processedHeldItemRequest = HeldItems::processEventRequest($gameRequest);
+    if ($processedHeldItemRequest !== null) {
+        logEvent($processedHeldItemRequest);
+    }
+    terminate();
+}
+
 // Exit if only a event info log.
 // Optional events
 
