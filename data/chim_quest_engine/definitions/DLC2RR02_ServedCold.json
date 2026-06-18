@@ -1,244 +1,267 @@
 {
-    "quest_key":  "dlc2rr02_servedcold",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00018B14",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2RR02",
-    "title":  "Served Cold",
-    "description":  "Investigate a conspiracy by the Ulen family of House Hlaalu to assassinate Councilor Morvayn in Raven Rock. Stake out the Ulen Ancestral Tomb, uncover evidence at Severin Manor, and end the threat at Ashfallow Citadel.",
-    "npc_facts":  {
-                      "Captain Veleth":  {
-                                             "base_facts":  [
-                                                                "I am the captain of the Redoran Guard in Raven Rock.",
-                                                                "Adril Arano needs to speak with the player urgently about a threat to Councilor Morvayn."
-                                                            ],
-                                             "beat_facts":  {
-                                                                "ARANO_BRIEFING":  [
-                                                                                       "The player has agreed to help investigate the threat to Councilor Morvayn."
-                                                                                   ],
-                                                                "ASHFALLOW_CITADEL":  [
-                                                                                          "The player has gone to Ashfallow Citadel to confront the conspirators."
-                                                                                      ],
-                                                                "QUEST_COMPLETE":  [
-                                                                                       "The threat to Councilor Morvayn has been eliminated. The player earned Severin Manor."
-                                                                                   ]
-                                                            }
-                                         },
-                      "Adril Arano":  {
-                                          "base_facts":  [
-                                                             "I am the Second Councilor of Raven Rock.",
-                                                             "I suspect the Ulen family of House Hlaalu seeks revenge against Councilor Morvayn for executing their ancestor.",
-                                                             "Geldis Sadri at the Retching Netch may have useful leads."
-                                                         ],
-                                          "beat_facts":  {
-                                                             "ARANO_BRIEFING":  [
-                                                                                    "I asked the player to investigate the threat to Councilor Morvayn and suggested speaking to Geldis Sadri."
-                                                                                ],
-                                                             "TOMB_INVESTIGATION":  [
-                                                                                        "Tilisu Severin was seen at the Ulen Ancestral Tomb. I need hard evidence before I can act against her."
-                                                                                    ],
-                                                             "SEVERIN_EVIDENCE":  [
-                                                                                      "The evidence confirms the Severins are actually the Ulens plotting with the Morag Tong at Ashfallow Citadel. I am sending Redoran Guards to assist."
-                                                                                  ],
-                                                             "ASHFALLOW_CITADEL":  [
-                                                                                       "The player has eliminated Vendil Ulen and the Morag Tong at Ashfallow Citadel."
-                                                                                   ],
-                                                             "QUEST_COMPLETE":  [
-                                                                                    "Councilor Morvayn is safe. The player has been granted Severin Manor and honorary citizenship."
-                                                                                ]
-                                                         }
-                                      },
-                      "Geldis Sadri":  {
-                                           "base_facts":  [
-                                                              "I run the Retching Netch Cornerclub in Raven Rock.",
-                                                              "Someone has been leaving ash yam offerings in the Ulen Ancestral Tomb even though no Ulens live on Solstheim."
-                                                          ],
-                                           "beat_facts":  {
-                                                              "ARANO_BRIEFING":  [
-                                                                                     "I told the player about the ash yam offerings at the Ulen Ancestral Tomb. Whoever leaves them may know something about the Ulens."
-                                                                                 ],
-                                                              "TOMB_INVESTIGATION":  [
-                                                                                         "The player discovered Tilisu Severin visiting the tomb at night."
-                                                                                     ]
-                                                          }
-                                       },
-                      "Councilor Morvayn":  {
-                                                "base_facts":  [
-                                                                   "I am Councilor Lleril Morvayn, leader of Raven Rock.",
-                                                                   "I ordered the execution of a member of House Hlaalu years ago, which may have sparked this vendetta."
-                                                               ],
-                                                "beat_facts":  {
-                                                                   "QUEST_COMPLETE":  [
-                                                                                          "The assassination threat has been ended. I have rewarded the player with Severin Manor and honorary citizenship of Raven Rock."
-                                                                                      ]
-                                                               }
-                                            }
-                  },
-    "beats":  [
-                  {
-                      "id":  "ARANO_BRIEFING",
-                      "focus_npc":  "Adril Arano",
-                      "comment":  "Player learns of the assassination threat and agrees to investigate. Covers stages 10-20.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2RR02",
-                                           "min_stage":  10,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Arano needs to speak with me",
-                                                            "threat to Councilor Morvayn",
-                                                            "Ulen family"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "TOMB_INVESTIGATION",
-                      "focus_npc":  "Geldis Sadri",
-                      "comment":  "Player stakes out the Ulen Ancestral Tomb and discovers Tilisu Severin. Covers stages 30-50.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2RR02",
-                                           "min_stage":  30,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "ash yam offerings",
-                                                            "Ulen Ancestral Tomb",
-                                                            "Tilisu Severin"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ARANO_BRIEFING"
-                                        ]
-                  },
-                  {
-                      "id":  "SEVERIN_EVIDENCE",
-                      "focus_npc":  "Adril Arano",
-                      "comment":  "Player searches Severin Manor and recovers The Ulen Matter letter confirming the conspiracy. Covers stages 60-70.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2RR02",
-                                           "min_stage":  60,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "evidence from Severin Manor",
-                                                            "Vendil Ulen",
-                                                            "The Ulen Matter"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TOMB_INVESTIGATION"
-                                        ]
-                  },
-                  {
-                      "id":  "ASHFALLOW_CITADEL",
-                      "focus_npc":  "Adril Arano",
-                      "comment":  "Player assaults Ashfallow Citadel, finds Redoran Guards dead, kills Vendil Ulen and the Morag Tong. Covers stages 80-90.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2RR02",
-                                           "min_stage":  80,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Ashfallow Citadel",
-                                                            "Vendil is dead",
-                                                            "Morag Tong eliminated"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SEVERIN_EVIDENCE"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Councilor Morvayn",
-                      "comment":  "Player follows Arano to Morvayn, receives Severin Manor and honorary citizenship. Stage 200.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2RR02",
-                                           "min_stage":  200,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ASHFALLOW_CITADEL"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "ARANO_BRIEFING"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "dlc2rr01_marchofthedead",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dlc2rr02_servedcold",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00018B14",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2RR02",
+  "title": "Served Cold",
+  "description": "Investigate a conspiracy by the Ulen family of House Hlaalu to assassinate Councilor Morvayn in Raven Rock. Stake out the Ulen Ancestral Tomb, uncover evidence at Severin Manor, and end the threat at Ashfallow Citadel.",
+  "npc_facts": {
+    "Captain Veleth": {
+      "base_facts": [
+        "I am the captain of the Redoran Guard in Raven Rock.",
+        "Adril Arano needs to speak with the player urgently about a threat to Councilor Morvayn."
+      ],
+      "beat_facts": {
+        "ARANO_BRIEFING": [
+          "The player has agreed to help investigate the threat to Councilor Morvayn."
+        ],
+        "ASHFALLOW_CITADEL": [
+          "The player has gone to Ashfallow Citadel to confront the conspirators."
+        ],
+        "QUEST_COMPLETE": [
+          "The threat to Councilor Morvayn has been eliminated. The player earned Severin Manor."
+        ]
+      }
+    },
+    "Adril Arano": {
+      "base_facts": [
+        "I am the Second Councilor of Raven Rock.",
+        "I suspect the Ulen family of House Hlaalu seeks revenge against Councilor Morvayn for executing their ancestor.",
+        "Geldis Sadri at the Retching Netch may have useful leads."
+      ],
+      "beat_facts": {
+        "ARANO_BRIEFING": [
+          "I asked the player to investigate the threat to Councilor Morvayn and suggested speaking to Geldis Sadri."
+        ],
+        "TOMB_INVESTIGATION": [
+          "Tilisu Severin was seen at the Ulen Ancestral Tomb. I need hard evidence before I can act against her."
+        ],
+        "SEVERIN_EVIDENCE": [
+          "The evidence confirms the Severins are actually the Ulens plotting with the Morag Tong at Ashfallow Citadel. I am sending Redoran Guards to assist."
+        ],
+        "ASHFALLOW_CITADEL": [
+          "The player has eliminated Vendil Ulen and the Morag Tong at Ashfallow Citadel."
+        ],
+        "QUEST_COMPLETE": [
+          "Councilor Morvayn is safe. The player has been granted Severin Manor and honorary citizenship."
+        ]
+      }
+    },
+    "Geldis Sadri": {
+      "base_facts": [
+        "I run the Retching Netch Cornerclub in Raven Rock.",
+        "Someone has been leaving ash yam offerings in the Ulen Ancestral Tomb even though no Ulens live on Solstheim."
+      ],
+      "beat_facts": {
+        "ARANO_BRIEFING": [
+          "I told the player about the ash yam offerings at the Ulen Ancestral Tomb. Whoever leaves them may know something about the Ulens."
+        ],
+        "TOMB_INVESTIGATION": [
+          "The player discovered Tilisu Severin visiting the tomb at night."
+        ]
+      }
+    },
+    "Councilor Morvayn": {
+      "base_facts": [
+        "I am Councilor Lleril Morvayn, leader of Raven Rock.",
+        "I ordered the execution of a member of House Hlaalu years ago, which may have sparked this vendetta."
+      ],
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "The assassination threat has been ended. I have rewarded the player with Severin Manor and honorary citizenship of Raven Rock."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ARANO_BRIEFING",
+      "focus_npc": "Adril Arano",
+      "comment": "Player learns of the assassination threat and agrees to investigate. Covers stages 10-20.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00018B14",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2RR02",
+          "min_stage": 10,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Arano needs to speak with me",
+            "threat to Councilor Morvayn",
+            "Ulen family"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "TOMB_INVESTIGATION",
+      "focus_npc": "Geldis Sadri",
+      "comment": "Player stakes out the Ulen Ancestral Tomb and discovers Tilisu Severin. Covers stages 30-50.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00018B14",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2RR02",
+          "min_stage": 30,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "ash yam offerings",
+            "Ulen Ancestral Tomb",
+            "Tilisu Severin"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ARANO_BRIEFING"
+      ]
+    },
+    {
+      "id": "SEVERIN_EVIDENCE",
+      "focus_npc": "Adril Arano",
+      "comment": "Player searches Severin Manor and recovers The Ulen Matter letter confirming the conspiracy. Covers stages 60-70.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00018B14",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 60
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2RR02",
+          "min_stage": 60,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "evidence from Severin Manor",
+            "Vendil Ulen",
+            "The Ulen Matter"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TOMB_INVESTIGATION"
+      ]
+    },
+    {
+      "id": "ASHFALLOW_CITADEL",
+      "focus_npc": "Adril Arano",
+      "comment": "Player assaults Ashfallow Citadel, finds Redoran Guards dead, kills Vendil Ulen and the Morag Tong. Covers stages 80-90.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00018B14",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 80
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2RR02",
+          "min_stage": 80,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Ashfallow Citadel",
+            "Vendil is dead",
+            "Morag Tong eliminated"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SEVERIN_EVIDENCE"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Councilor Morvayn",
+      "comment": "Player follows Arano to Morvayn, receives Severin Manor and honorary citizenship. Stage 200.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00018B14",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2RR02",
+          "min_stage": 200,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ASHFALLOW_CITADEL"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "ARANO_BRIEFING"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc2rr01_marchofthedead",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

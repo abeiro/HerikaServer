@@ -1,224 +1,265 @@
 {
-    "quest_key":  "db07_cureformadness",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001EA56",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DB07",
-    "title":  "The Cure for Madness",
-    "description":  "After Cicero attacks Astrid and flees the Falkreath Sanctuary, the player is ordered to track him to the abandoned Dawnstar Sanctuary and decide his fate.",
-    "npc_facts":  {
-                      "Gabriella":  {
-                                        "base_facts":  [
-                                                           "I am a Dark Brotherhood assassin residing in the Falkreath Sanctuary.",
-                                                           "Something terrible happened with Cicero while the player was away on contract."
-                                                       ],
-                                        "beat_facts":  {
-                                                           "LEARN_OF_INCIDENT":  [
-                                                                                     "I directed the player to speak with Astrid about Cicero\u0027s outburst."
-                                                                                 ]
-                                                       }
-                                    },
-                      "Astrid":  {
-                                     "base_facts":  [
-                                                        "I am the leader of the Dark Brotherhood\u0027s Falkreath Sanctuary.",
-                                                        "Cicero tried to murder me and wounded Veezara.",
-                                                        "Arnbjorn pursued Cicero as he fled."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "LEARN_OF_INCIDENT":  [
-                                                                                  "I told the player about Cicero\u0027s attack and ordered them to search his room for clues."
-                                                                              ],
-                                                        "RECEIVE_ORDERS":  [
-                                                                               "I granted the player use of Shadowmere to reach the Dawnstar Sanctuary.",
-                                                                               "Cicero\u0027s journal suggests he fled to the old sanctuary near Dawnstar."
-                                                                           ]
-                                                    }
-                                 },
-                      "Arnbjorn":  {
-                                       "base_facts":  [
-                                                          "I am a Dark Brotherhood member and werewolf.",
-                                                          "I chased Cicero but he wounded me and escaped into the Dawnstar Sanctuary."
-                                                      ],
-                                       "beat_facts":  {
-                                                          "PURSUE_CICERO":  [
-                                                                                "I told the player to follow the blood inside the sanctuary.",
-                                                                                "The pass phrase to enter is \u0027Innocence, my brother\u0027."
-                                                                            ]
-                                                      }
-                                   },
-                      "Cicero":  {
-                                     "base_facts":  [
-                                                        "I am the Keeper of the Night Mother.",
-                                                        "I fled to the abandoned Dawnstar Sanctuary after attacking Astrid."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "CONFRONT_CICERO":  [
-                                                                                "I warned the player that the Night Mother would not be pleased if they killed me.",
-                                                                                "If spared, I will return to serve the Night Mother after Hail Sithis is complete."
-                                                                            ]
-                                                    }
-                                 }
-                  },
-    "beats":  [
-                  {
-                      "id":  "LEARN_OF_INCIDENT",
-                      "focus_npc":  "Astrid",
-                      "comment":  "Player returns from Breaching Security and learns Cicero attacked Astrid and fled.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DB07",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "incident with Cicero",
-                                                            "what happened",
-                                                            "Cicero attacked"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "RECEIVE_ORDERS",
-                      "focus_npc":  "Astrid",
-                      "comment":  "Player searches Cicero\u0027s room, reads his journal, and Astrid provides Shadowmere for the pursuit.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DB07",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Shadowmere",
-                                                            "Dawnstar sanctuary",
-                                                            "find Cicero"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "LEARN_OF_INCIDENT"
-                                        ]
-                  },
-                  {
-                      "id":  "PURSUE_CICERO",
-                      "focus_npc":  "Arnbjorn",
-                      "comment":  "Player speaks to wounded Arnbjorn and enters the Dawnstar Sanctuary.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DB07",
-                                           "min_stage":  30
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "follow the blood",
-                                                            "innocence my brother",
-                                                            "entered the sanctuary"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RECEIVE_ORDERS"
-                                        ]
-                  },
-                  {
-                      "id":  "CONFRONT_CICERO",
-                      "focus_npc":  "Cicero",
-                      "comment":  "Player finds Cicero feigning injury and chooses to kill or spare him.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DB07",
-                                           "min_stage":  50
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "kill Cicero",
-                                                            "spare Cicero",
-                                                            "leave the sanctuary"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PURSUE_CICERO"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Astrid",
-                      "comment":  "Player reports back to Astrid and the quest concludes.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DB07",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CONFRONT_CICERO"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "LEARN_OF_INCIDENT"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "db06_breachingsecurity",
-                                               "beat_id":  "BREACHING_SECURITY_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "db07_cureformadness",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001EA56",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DB07",
+  "title": "The Cure for Madness",
+  "description": "After Cicero attacks Astrid and flees the Falkreath Sanctuary, the player is ordered to track him to the abandoned Dawnstar Sanctuary and decide his fate.",
+  "npc_facts": {
+    "Gabriella": {
+      "base_facts": [
+        "I am a Dark Brotherhood assassin residing in the Falkreath Sanctuary.",
+        "Something terrible happened with Cicero while the player was away on contract."
+      ],
+      "beat_facts": {
+        "LEARN_OF_INCIDENT": [
+          "I directed the player to speak with Astrid about Cicero's outburst."
+        ],
+        "QUEST_COMPLETE": [
+          "The crisis with Cicero has been resolved and the Falkreath Sanctuary can return to normal operations.",
+          "I am relieved that the threat Cicero posed to the Brotherhood family has been dealt with."
+        ]
+      }
+    },
+    "Astrid": {
+      "base_facts": [
+        "I am the leader of the Dark Brotherhood's Falkreath Sanctuary.",
+        "Cicero tried to murder me and wounded Veezara.",
+        "Arnbjorn pursued Cicero as he fled."
+      ],
+      "beat_facts": {
+        "LEARN_OF_INCIDENT": [
+          "I told the player about Cicero's attack and ordered them to search his room for clues."
+        ],
+        "RECEIVE_ORDERS": [
+          "I granted the player use of Shadowmere to reach the Dawnstar Sanctuary.",
+          "Cicero's journal suggests he fled to the old sanctuary near Dawnstar."
+        ],
+        "QUEST_COMPLETE": [
+          "I have received the player's report on Cicero's fate; the matter of his betrayal is now resolved.",
+          "Shadowmere has been permanently given to the player as a reward for handling the Cicero situation.",
+          "I am ready to offer the next contract to the player, which will involve targeting the Emperor's Gourmand."
+        ]
+      }
+    },
+    "Arnbjorn": {
+      "base_facts": [
+        "I am a Dark Brotherhood member and werewolf.",
+        "I chased Cicero but he wounded me and escaped into the Dawnstar Sanctuary."
+      ],
+      "beat_facts": {
+        "PURSUE_CICERO": [
+          "I told the player to follow the blood inside the sanctuary.",
+          "The pass phrase to enter is 'Innocence, my brother'."
+        ],
+        "QUEST_COMPLETE": [
+          "I survived the wounds Cicero inflicted outside the Dawnstar Sanctuary.",
+          "I have returned to the Falkreath Sanctuary to recover from the fight."
+        ]
+      }
+    },
+    "Cicero": {
+      "base_facts": [
+        "I am the Keeper of the Night Mother.",
+        "I fled to the abandoned Dawnstar Sanctuary after attacking Astrid."
+      ],
+      "beat_facts": {
+        "CONFRONT_CICERO": [
+          "I warned the player that the Night Mother would not be pleased if they killed me.",
+          "If spared, I will return to serve the Night Mother after Hail Sithis is complete."
+        ],
+        "QUEST_COMPLETE": [
+          "If spared by the player, I will remain hidden in the Dawnstar Sanctuary and return to tend the Night Mother after Hail Sithis! is complete.",
+          "If spared, I can be recruited as a follower by the player.",
+          "If killed, my body lies in the Dawnstar Sanctuary and my threat to the Brotherhood is ended."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "LEARN_OF_INCIDENT",
+      "focus_npc": "Astrid",
+      "comment": "Player returns from Breaching Security and learns Cicero attacked Astrid and fled.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB07",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "incident with Cicero",
+            "what happened",
+            "Cicero attacked"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "RECEIVE_ORDERS",
+      "focus_npc": "Astrid",
+      "comment": "Player searches Cicero's room, reads his journal, and Astrid provides Shadowmere for the pursuit.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB07",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Shadowmere",
+            "Dawnstar sanctuary",
+            "find Cicero"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEARN_OF_INCIDENT"
+      ]
+    },
+    {
+      "id": "PURSUE_CICERO",
+      "focus_npc": "Arnbjorn",
+      "comment": "Player speaks to wounded Arnbjorn and enters the Dawnstar Sanctuary.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB07",
+          "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "follow the blood",
+            "innocence my brother",
+            "entered the sanctuary"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RECEIVE_ORDERS"
+      ]
+    },
+    {
+      "id": "CONFRONT_CICERO",
+      "focus_npc": "Cicero",
+      "comment": "Player finds Cicero feigning injury and chooses to kill or spare him.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB07",
+          "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "kill Cicero",
+            "spare Cicero",
+            "leave the sanctuary"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PURSUE_CICERO"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Astrid",
+      "comment": "Player reports back to Astrid and the quest concludes.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB07",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONFRONT_CICERO"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "LEARN_OF_INCIDENT"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "db06_breachingsecurity",
+        "beat_id": "BREACHING_SECURITY_COMPLETE"
+      }
+    ]
+  }
 }

@@ -1,221 +1,219 @@
 {
-    "quest_key":  "dlc2mq04_pathofknowledge",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00016E1F",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2MQ04",
-    "title":  "The Path of Knowledge",
-    "description":  "Storn Crag-Strider suggests seeking the Telvanni wizard Neloth, who may know the location of a Black Book connected to Miraak\u0027s power. Neloth reveals that a Black Book lies sealed in a Dwemer protective case in the ruins of Nchardak, and together you must restore the ancient steam systems to release it.",
-    "npc_facts":  {
-                      "Storn Crag-Strider":  {
-                                                 "base_facts":  [
-                                                                    "The Skaal shaman who suggested seeking Neloth for knowledge of the Black Books.",
-                                                                    "Believes the Black Books are the source of Miraak\u0027s knowledge and power over dragons."
-                                                                ],
-                                                 "beat_facts":  {
-
-                                                                }
-                                             },
-                      "Neloth":  {
-                                     "base_facts":  [
-                                                        "A Telvanni wizard residing in Tel Mithryn on Solstheim.",
-                                                        "Owns a Black Book but believes it is unconnected to Miraak.",
-                                                        "Knows the location of another Black Book sealed inside a Dwemer protective case in Nchardak.",
-                                                        "Sealed the door to Nchardak on his last visit to keep out intruders."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "STAGE_10_TALK_TO_NELOTH":  [
-                                                                                        "Has discussed the Black Books with the player and agreed to help find the one connected to Miraak."
-                                                                                    ],
-                                                        "STAGE_50_TRAVEL_TO_NCHARDAK":  [
-                                                                                            "Is leading the player to the Dwemer ruin of Nchardak to retrieve the Black Book."
-                                                                                        ],
-                                                        "STAGE_230_RESTORE_STEAM":  [
-                                                                                        "Explained that five control cubes are needed to activate the boilers and restore steam to the reading room."
-                                                                                    ],
-                                                        "STAGE_500_RELEASE_BOOK":  [
-                                                                                       "The steam supply has been restored and the book\u0027s protective case can now be opened."
-                                                                                   ]
-                                                    }
-                                 }
-                  },
-    "beats":  [
-                  {
-                      "id":  "STAGE_10_TALK_TO_NELOTH",
-                      "focus_npc":  "Neloth",
-                      "comment":  "Player talks to Neloth at Tel Mithryn about Black Books and Miraak.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00016E1F",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2MQ04",
-                                           "min_stage":  10,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Black Book",
-                                                            "Neloth",
-                                                            "Miraak\u0027s power"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "STAGE_50_TRAVEL_TO_NCHARDAK",
-                      "focus_npc":  "Neloth",
-                      "comment":  "Neloth agrees to lead the player to Nchardak to retrieve the sealed Black Book.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00016E1F",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  50
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2MQ04",
-                                           "min_stage":  50,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Nchardak",
-                                                            "Dwemer ruin",
-                                                            "follow you"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "STAGE_10_TALK_TO_NELOTH"
-                                        ]
-                  },
-                  {
-                      "id":  "STAGE_230_RESTORE_STEAM",
-                      "focus_npc":  "Neloth",
-                      "comment":  "Player must find control cubes and restore steam supply to the Dwemer reading room.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00016E1F",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  230
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2MQ04",
-                                           "min_stage":  230,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "control cube",
-                                                            "boilers",
-                                                            "steam supply"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "STAGE_50_TRAVEL_TO_NCHARDAK"
-                                        ]
-                  },
-                  {
-                      "id":  "STAGE_500_RELEASE_BOOK",
-                      "focus_npc":  "Neloth",
-                      "comment":  "Steam restored, player releases the Black Book from its Dwemer protective case.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00016E1F",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  500
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2MQ04",
-                                           "min_stage":  500,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "release the book",
-                                                            "open the case",
-                                                            "Epistolary Acumen"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "STAGE_230_RESTORE_STEAM"
-                                        ]
-                  },
-                  {
-                      "id":  "STAGE_550_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest complete - Black Book Epistolary Acumen retrieved from Nchardak.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2MQ04",
-                                           "min_stage":  550,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "STAGE_500_RELEASE_BOOK"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "STAGE_10_TALK_TO_NELOTH"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "dlc2mq03_fateoftheskaal",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dlc2mq04_pathofknowledge",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00016E1F",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2MQ04",
+  "title": "The Path of Knowledge",
+  "description": "Storn Crag-Strider suggests seeking the Telvanni wizard Neloth, who may know the location of a Black Book connected to Miraak's power. Neloth reveals that a Black Book lies sealed in a Dwemer protective case in the ruins of Nchardak, and together you must restore the ancient steam systems to release it.",
+  "npc_facts": {
+    "Storn Crag-Strider": {
+      "base_facts": [
+        "The Skaal shaman who suggested seeking Neloth for knowledge of the Black Books.",
+        "Believes the Black Books are the source of Miraak's knowledge and power over dragons."
+      ],
+      "beat_facts": {
+        "STAGE_550_COMPLETE": [
+          "The Black Book Epistolary Acumen he recommended seeking has been retrieved from Nchardak with Neloth's assistance.",
+          "His direction to consult Neloth about Black Books connected to Miraak proved fruitful.",
+          "With the Black Book obtained, the player can pursue the knowledge needed to confront Miraak's influence over Solstheim."
+        ]
+      }
+    },
+    "Neloth": {
+      "base_facts": [
+        "A Telvanni wizard residing in Tel Mithryn on Solstheim.",
+        "Owns a Black Book but believes it is unconnected to Miraak.",
+        "Knows the location of another Black Book sealed inside a Dwemer protective case in Nchardak.",
+        "Sealed the door to Nchardak on his last visit to keep out intruders."
+      ],
+      "beat_facts": {
+        "STAGE_10_TALK_TO_NELOTH": [
+          "Has discussed the Black Books with the player and agreed to help find the one connected to Miraak."
+        ],
+        "STAGE_50_TRAVEL_TO_NCHARDAK": [
+          "Is leading the player to the Dwemer ruin of Nchardak to retrieve the Black Book."
+        ],
+        "STAGE_230_RESTORE_STEAM": [
+          "Explained that five control cubes are needed to activate the boilers and restore steam to the reading room."
+        ],
+        "STAGE_500_RELEASE_BOOK": [
+          "The steam supply has been restored and the book's protective case can now be opened."
+        ],
+        "STAGE_550_COMPLETE": [
+          "Successfully assisted in retrieving the Black Book Epistolary Acumen from its Dwemer protective case in Nchardak.",
+          "The Nchardak expedition concluded with all five control cubes used to restore steam and release the book.",
+          "The player now possesses a Black Book connected to Miraak's power over dragons.",
+          "Reading the Black Book will transport the reader to Apocrypha and begin the next quest The Gardener of Men."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "STAGE_10_TALK_TO_NELOTH",
+      "focus_npc": "Neloth",
+      "comment": "Player talks to Neloth at Tel Mithryn about Black Books and Miraak.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00016E1F",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ04",
+          "min_stage": 10,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Black Book",
+            "Neloth",
+            "Miraak's power"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "STAGE_50_TRAVEL_TO_NCHARDAK",
+      "focus_npc": "Neloth",
+      "comment": "Neloth agrees to lead the player to Nchardak to retrieve the sealed Black Book.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00016E1F",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 50
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ04",
+          "min_stage": 50,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Nchardak",
+            "Dwemer ruin",
+            "follow you"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "STAGE_10_TALK_TO_NELOTH"
+      ]
+    },
+    {
+      "id": "STAGE_230_RESTORE_STEAM",
+      "focus_npc": "Neloth",
+      "comment": "Player must find control cubes and restore steam supply to the Dwemer reading room.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00016E1F",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 230
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ04",
+          "min_stage": 230,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "control cube",
+            "boilers",
+            "steam supply"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "STAGE_50_TRAVEL_TO_NCHARDAK"
+      ]
+    },
+    {
+      "id": "STAGE_500_RELEASE_BOOK",
+      "focus_npc": "Neloth",
+      "comment": "Steam restored, player releases the Black Book from its Dwemer protective case.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00016E1F",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 500
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ04",
+          "min_stage": 500,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "release the book",
+            "open the case",
+            "Epistolary Acumen"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "STAGE_230_RESTORE_STEAM"
+      ]
+    },
+    {
+      "id": "STAGE_550_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest complete - Black Book Epistolary Acumen retrieved from Nchardak.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2MQ04",
+          "min_stage": 550,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "STAGE_500_RELEASE_BOOK"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "STAGE_10_TALK_TO_NELOTH"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc2mq03_fateoftheskaal",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

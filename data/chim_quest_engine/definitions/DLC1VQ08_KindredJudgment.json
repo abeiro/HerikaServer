@@ -1,216 +1,205 @@
 {
-    "quest_key":  "dlc1vq08_kindredjudgment",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00007C25",
-    "quest_plugin":  "Dawnguard.esm",
-    "quest_editor_id":  "DLC1VQ08",
-    "title":  "Kindred Judgment",
-    "description":  "With Auriel\u0027s Bow secured, the final confrontation with Lord Harkon is at hand. Rally your allies and storm Castle Volkihar to end the Tyranny of the Sun prophecy once and for all.",
-    "npc_facts":  {
-                      "Lord Harkon":  {
-                                          "base_facts":  [
-                                                             "I am the leader of the Volkihar vampire clan.",
-                                                             "I will use Auriel\u0027s Bow and my daughter\u0027s blood to blot out the sun and fulfill the prophecy.",
-                                                             "I will destroy anyone who stands between me and the Tyranny of the Sun."
-                                                         ],
-                                          "beat_facts":  {
-                                                             "CONFRONT_HARKON":  [
-                                                                                     "The Dragonborn has come to confront me with Auriel\u0027s Bow. I demand they hand it over."
-                                                                                 ],
-                                                             "SLAY_HARKON":  [
-                                                                                 "I have been slain. My daughter has betrayed me and the prophecy will never be fulfilled."
-                                                                             ]
-                                                         }
-                                      },
-                      "Serana":  {
-                                     "base_facts":  [
-                                                        "I am Lord Harkon\u0027s daughter and a pure-blood vampire.",
-                                                        "I refuse to let my father sacrifice me for his prophecy.",
-                                                        "I will stand with the Dragonborn against my father."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "QUEST_START":  [
-                                                                            "It is time to confront my father. We have Auriel\u0027s Bow and we must end this."
-                                                                        ],
-                                                        "SLAY_HARKON":  [
-                                                                            "My father is dead. The prophecy is over."
-                                                                        ],
-                                                        "QUEST_COMPLETE":  [
-                                                                               "I will stay at Castle Volkihar or Fort Dawnguard, but I will accompany the Dragonborn if they ask."
-                                                                           ]
-                                                    }
-                                 },
-                      "Isran":  {
-                                    "base_facts":  [
-                                                       "I am the leader of the Dawnguard.",
-                                                       "We must destroy Lord Harkon and the Volkihar vampires to protect Skyrim."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "RALLY_FORCES":  [
-                                                                            "The Dawnguard is assembled and ready to assault Castle Volkihar."
-                                                                        ],
-                                                       "QUEST_COMPLETE":  [
-                                                                              "The Dawnguard has prevailed. Lord Harkon is destroyed and the prophecy is ended."
-                                                                          ]
-                                                   }
-                                }
-                  },
-    "beats":  [
-                  {
-                      "id":  "QUEST_START",
-                      "focus_npc":  "Serana",
-                      "comment":  "Quest begins after acquiring Auriel\u0027s Bow. Player must speak to Serana to proceed.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VQ08",
-                                           "min_stage":  10,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "confront your father",
-                                                            "time to face harkon",
-                                                            "ready to confront harkon"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "RALLY_FORCES",
-                      "focus_npc":  "Isran",
-                      "comment":  "Dawnguard side: speak to Isran to rally the Dawnguard for the assault on Castle Volkihar.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VQ08",
-                                           "min_stage":  20,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "rally the dawnguard",
-                                                            "gather the dawnguard",
-                                                            "speak to isran"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ]
-                  },
-                  {
-                      "id":  "CONFRONT_HARKON",
-                      "focus_npc":  "Lord Harkon",
-                      "comment":  "Player confronts Lord Harkon in Volkihar Cathedral. He demands Auriel\u0027s Bow and attacks regardless of the player\u0027s choice.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VQ08",
-                                           "min_stage":  40,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "give him the bow",
-                                                            "refuse to give the bow",
-                                                            "confront harkon"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ]
-                  },
-                  {
-                      "id":  "SLAY_HARKON",
-                      "focus_npc":  "Lord Harkon",
-                      "comment":  "Lord Harkon must be slain. He fights in Vampire Lord form, summons skeletons and gargoyles, and regenerates behind a blood magic shield that Auriel\u0027s Bow can destroy.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VQ08",
-                                           "min_stage":  60,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest completes after Harkon\u0027s defeat. The Dawnguard questline ends. Serana remains as a companion.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VQ08",
-                                           "min_stage":  200,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "QUEST_START"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "dlc1vq07_touchingthesky",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dlc1vq08_kindredjudgment",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00007C25",
+  "quest_plugin": "Dawnguard.esm",
+  "quest_editor_id": "DLC1VQ08",
+  "title": "Kindred Judgment",
+  "description": "With Auriel's Bow secured, the final confrontation with Lord Harkon is at hand. Rally your allies and storm Castle Volkihar to end the Tyranny of the Sun prophecy once and for all.",
+  "npc_facts": {
+    "Lord Harkon": {
+      "base_facts": [
+        "I am the leader of the Volkihar vampire clan.",
+        "I will use Auriel's Bow and my daughter's blood to blot out the sun and fulfill the prophecy.",
+        "I will destroy anyone who stands between me and the Tyranny of the Sun."
+      ],
+      "beat_facts": {
+        "CONFRONT_HARKON": [
+          "The Dragonborn has come to confront me with Auriel's Bow. I demand they hand it over."
+        ],
+        "SLAY_HARKON": [
+          "I have been slain. My daughter has betrayed me and the prophecy will never be fulfilled."
+        ]
+      }
+    },
+    "Serana": {
+      "base_facts": [
+        "I am Lord Harkon's daughter and a pure-blood vampire.",
+        "I refuse to let my father sacrifice me for his prophecy.",
+        "I will stand with the Dragonborn against my father."
+      ],
+      "beat_facts": {
+        "QUEST_START": [
+          "It is time to confront my father. We have Auriel's Bow and we must end this."
+        ],
+        "SLAY_HARKON": [
+          "My father is dead. The prophecy is over."
+        ],
+        "QUEST_COMPLETE": [
+          "I will stay at Castle Volkihar or Fort Dawnguard, but I will accompany the Dragonborn if they ask."
+        ]
+      }
+    },
+    "Isran": {
+      "base_facts": [
+        "I am the leader of the Dawnguard.",
+        "We must destroy Lord Harkon and the Volkihar vampires to protect Skyrim."
+      ],
+      "beat_facts": {
+        "RALLY_FORCES": [
+          "The Dawnguard is assembled and ready to assault Castle Volkihar."
+        ],
+        "QUEST_COMPLETE": [
+          "The Dawnguard has prevailed. Lord Harkon is destroyed and the prophecy is ended."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_START",
+      "focus_npc": "Serana",
+      "comment": "Quest begins after acquiring Auriel's Bow. Player must speak to Serana to proceed.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00007C25",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ08",
+          "min_stage": 10,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "confront your father",
+            "time to face harkon",
+            "ready to confront harkon"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "RALLY_FORCES",
+      "focus_npc": "Isran",
+      "comment": "Dawnguard side: speak to Isran to rally the Dawnguard for the assault on Castle Volkihar.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00007C25",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ08",
+          "min_stage": 20,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "rally the dawnguard",
+            "gather the dawnguard",
+            "speak to isran"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": []
+    },
+    {
+      "id": "CONFRONT_HARKON",
+      "focus_npc": "Lord Harkon",
+      "comment": "Player confronts Lord Harkon in Volkihar Cathedral. He demands Auriel's Bow and attacks regardless of the player's choice.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00007C25",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 40
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ08",
+          "min_stage": 40,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "give him the bow",
+            "refuse to give the bow",
+            "confront harkon"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": []
+    },
+    {
+      "id": "SLAY_HARKON",
+      "focus_npc": "Lord Harkon",
+      "comment": "Lord Harkon must be slain. He fights in Vampire Lord form, summons skeletons and gargoyles, and regenerates behind a blood magic shield that Auriel's Bow can destroy.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ08",
+          "min_stage": 60,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": []
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest completes after Harkon's defeat. The Dawnguard questline ends. Serana remains as a companion.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ08",
+          "min_stage": 200,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": []
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "QUEST_START"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc1vq07_touchingthesky",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

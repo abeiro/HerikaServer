@@ -26,7 +26,10 @@
           "The player has the Argonian Ale. I hope they bring it to me soon."
         ],
         "QUEST_COMPLETE": [
-          "The player brought me the Argonian Ale. I gave them a Potion of Vigorous Healing I found at the Temple of Kynareth."
+          "The player brought me the Argonian Ale. I gave them a Potion of Vigorous Healing I found at the Temple of Kynareth.",
+          "Player gave the Argonian Ale to Brenuin and received a Potion of Vigorous Healing.",
+          "Detailed Walkthrough [ edit ] After you give Brenuin a gold coin on the streets of Whiterun , the option to ask him if he is always drunk will become available.",
+          "Return to Brenuin to be rewarded."
         ]
       }
     }
@@ -85,7 +88,10 @@
       "focus_npc": "Brenuin",
       "comment": "Player gave the Argonian Ale to Brenuin and received a Potion of Vigorous Healing.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0009380B",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -93,6 +99,26 @@
           "type": "quest_stage",
           "quest_editor_id": "FreeformWhiterunQuest02",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

@@ -12,7 +12,13 @@
         "Brynjolf is your sponsor in the Thieves Guild.",
         "He told you to speak with Vex, Delvin Mallory, and Tonilia to get acquainted with the Guild."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "Quest finishes at after speaking with Vex, Delvin, and receiving armor.",
+          "Speak to Delvin Mallory .",
+          "Detailed Walkthrough [ edit ] Soon after Mercer has agreed to let you into the Guild, Brynjolf will instruct you to talk to Delvin Mallory and Vex to learn more about the Guild and to Tonilia to get yourself equipped."
+        ]
+      }
     },
     "Vex": {
       "base_facts": [

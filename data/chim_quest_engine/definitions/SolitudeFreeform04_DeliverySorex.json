@@ -25,7 +25,10 @@
           "I told the player about who runs Solitude."
         ],
         "SOREX_ASKS_DELIVERY": [
-          "I asked the player to deliver Stros M'Kai Rum to Falk Firebeard."
+          "I asked the player to deliver Stros M'Kai Rum to Falk Firebeard.",
+          "Sorex asks the player to deliver Stros M'Kai Rum to Falk Firebeard. Starts the quest at .",
+          "Upon delivering the rum, he will thank you and reward you with a leveled amount of gold to complete the quest.",
+          "Talking to Sorex after the execution will open up discussion about the leaders of Solitude; continuing the conversation will end with him asking you to bring a delivery of Stros M'Kai Rum to one of those leaders, Falk."
         ]
       }
     },

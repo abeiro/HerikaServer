@@ -61,6 +61,12 @@
           "Learned of the dragon attack on Helgen from the player.",
           "Agreed to send soldiers to protect Riverwood.",
           "Rewarded the player with a piece of leveled armor."
+        ],
+        "QUEST_COMPLETE": [
+          "Rewarded the player with a piece of leveled armor, choosing light or heavy based on their skill aptitude; grants heavy armor if both are equal.",
+          "Dispatched three Whiterun guards to Riverwood to defend the village against the dragon threat.",
+          "His disposition toward the player increased by one point.",
+          "Now seeks further help investigating the dragon threat, leading to a request involving Bleak Falls Barrow."
         ]
       }
     }
@@ -90,7 +96,10 @@
       "focus_npc": "Alvor",
       "comment": "Alvor or Gerdur tells the player to inform the Jarl about the dragon. Stage 30.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0004E50D",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [
@@ -141,7 +150,10 @@
       "focus_npc": "Jarl Balgruuf",
       "comment": "Player tells Jarl Balgruuf about the dragon attack on Helgen. Stage 110.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0004E50D",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 110
       },
       "downstream": [],
       "triggers": [
@@ -170,7 +182,10 @@
       "focus_npc": "Jarl Balgruuf",
       "comment": "Quest complete. Jarl rewards player with leveled armor and sends troops to Riverwood. Stage 160.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0004E50D",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 160
       },
       "downstream": [],
       "triggers": [
@@ -178,6 +193,26 @@
           "type": "quest_stage",
           "quest_editor_id": "MQ102",
           "min_stage": 160
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

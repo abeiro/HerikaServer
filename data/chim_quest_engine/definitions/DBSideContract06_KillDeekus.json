@@ -1,146 +1,148 @@
 {
-    "quest_key":  "dbsidecontract06_killdeekus",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001EA62",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DBSideContract06",
-    "title":  "Kill Deekus",
-    "description":  "A Dark Brotherhood side contract from Nazir to assassinate Deekus, an Argonian scavenging at the Hela\u0027s Folly shipwreck on the northern coast near Dawnstar, and return for a leveled gold reward.",
-    "npc_facts":  {
-                      "Nazir":  {
-                                    "base_facts":  [
-                                                       "I am a Redguard assassin and the Dark Brotherhood\u0027s contract handler in the Sanctuary.",
-                                                       "I assign side contracts to Brotherhood members."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "BEAT_CONTRACT_RECEIVED":  [
-                                                                                      "I have given the contract to kill Deekus at Hela\u0027s Folly."
-                                                                                  ],
-                                                       "BEAT_DEEKUS_KILLED":  [
-                                                                                  "The contract on Deekus has been fulfilled. I await confirmation."
-                                                                              ],
-                                                       "BEAT_QUEST_COMPLETE":  [
-                                                                                   "I have paid the reward for completing the Deekus contract."
-                                                                               ]
-                                                   }
-                                },
-                      "Deekus":  {
-                                     "base_facts":  [
-                                                        "I am an Argonian living alone at the Hela\u0027s Folly shipwreck on the northern coast near Dawnstar.",
-                                                        "I scavenge loot from shipwrecks, including gems and a Dibella Statue."
-                                                    ],
-                                     "beat_facts":  {
-
-                                                    }
-                                 }
-                  },
-    "beats":  [
-                  {
-                      "id":  "BEAT_CONTRACT_RECEIVED",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Player receives the contract from Nazir to kill Deekus at Hela\u0027s Folly.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract06",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "kill Deekus",
-                                                            "Deekus contract",
-                                                            "Hela\u0027s Folly"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "BEAT_DEEKUS_KILLED",
-                      "focus_npc":  "Deekus",
-                      "comment":  "Deekus has been killed; player must report back to Nazir.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract06",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Deekus is dead",
-                                                            "killed Deekus",
-                                                            "report to Nazir"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "BEAT_CONTRACT_RECEIVED"
-                                        ]
-                  },
-                  {
-                      "id":  "BEAT_QUEST_COMPLETE",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Player reports back to Nazir and collects the leveled gold reward.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract06",
-                                           "min_stage":  200
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "collected my reward",
-                                                            "Deekus contract done",
-                                                            "payment for Deekus"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "BEAT_DEEKUS_KILLED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "BEAT_CONTRACT_RECEIVED"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "db02a_sanctuary",
-                                               "beat_id":  "CONTRACTS_RECEIVED"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dbsidecontract06_killdeekus",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001EA62",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DBSideContract06",
+  "title": "Kill Deekus",
+  "description": "A Dark Brotherhood side contract from Nazir to assassinate Deekus, an Argonian scavenging at the Hela's Folly shipwreck on the northern coast near Dawnstar, and return for a leveled gold reward.",
+  "npc_facts": {
+    "Nazir": {
+      "base_facts": [
+        "I am a Redguard assassin and the Dark Brotherhood's contract handler in the Sanctuary.",
+        "I assign side contracts to Brotherhood members."
+      ],
+      "beat_facts": {
+        "BEAT_CONTRACT_RECEIVED": [
+          "I have given the contract to kill Deekus at Hela's Folly."
+        ],
+        "BEAT_DEEKUS_KILLED": [
+          "The contract on Deekus has been fulfilled. I await confirmation."
+        ],
+        "BEAT_QUEST_COMPLETE": [
+          "I have paid the reward for completing the Deekus contract.",
+          "Player reports back to Nazir and collects the leveled gold reward.",
+          "After the kill, report back to Nazir for some leveled gold as a reward.",
+          "Report back to Nazir to collect your reward."
+        ]
+      }
+    },
+    "Deekus": {
+      "base_facts": [
+        "I am an Argonian living alone at the Hela's Folly shipwreck on the northern coast near Dawnstar.",
+        "I scavenge loot from shipwrecks, including gems and a Dibella Statue."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "BEAT_CONTRACT_RECEIVED",
+      "focus_npc": "Nazir",
+      "comment": "Player receives the contract from Nazir to kill Deekus at Hela's Folly.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA62",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract06",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "kill Deekus",
+            "Deekus contract",
+            "Hela's Folly"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "BEAT_DEEKUS_KILLED",
+      "focus_npc": "Deekus",
+      "comment": "Deekus has been killed; player must report back to Nazir.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA62",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract06",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Deekus is dead",
+            "killed Deekus",
+            "report to Nazir"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BEAT_CONTRACT_RECEIVED"
+      ]
+    },
+    {
+      "id": "BEAT_QUEST_COMPLETE",
+      "focus_npc": "Nazir",
+      "comment": "Player reports back to Nazir and collects the leveled gold reward.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA62",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract06",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "collected my reward",
+            "Deekus contract done",
+            "payment for Deekus"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BEAT_DEEKUS_KILLED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "BEAT_CONTRACT_RECEIVED"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "db02a_sanctuary",
+        "beat_id": "CONTRACTS_RECEIVED"
+      }
+    ]
+  }
 }

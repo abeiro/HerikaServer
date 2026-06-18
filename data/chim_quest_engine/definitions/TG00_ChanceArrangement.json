@@ -1,187 +1,292 @@
 {
-    "quest_key":  "tg00_chancearrangement",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00021556",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "TG00",
-    "title":  "A Chance Arrangement",
-    "description":  "Brynjolf in Riften proposes a scheme to frame the vendor Brand-Shei by stealing Madesi\u0027s silver ring and planting it on him, offering gold and a chance to join the Thieves Guild in return.",
-    "npc_facts":  {
-                      "Brynjolf":  {
-                                       "base_facts":  [
-                                                          "A member of the Thieves Guild operating in Riften\u0027s marketplace.",
-                                                          "Sells a supposed Falmer Blood Elixir as a front for his schemes.",
-                                                          "Can be found at the Riften bazaar during the day or at The Bee and Barb at night."
-                                                      ],
-                                       "beat_facts":  {
-                                                          "BRYNJOLF_SCHEME":  [
-                                                                                  "Wants to frame Brand-Shei by planting a stolen ring on him to get him arrested.",
-                                                                                  "Will create a distraction in the bazaar while the player steals the ring."
-                                                                              ],
-                                                          "SPEAK_TO_BRYNJOLF":  [
-                                                                                    "Satisfied with the outcome of the scheme and pays 100 septims.",
-                                                                                    "Offers the player a chance to join the Thieves Guild."
-                                                                                ],
-                                                          "QUEST_COMPLETE":  [
-                                                                                 "Considers this the beginning of a profitable friendship with the player."
-                                                                             ]
-                                                      }
-                                   },
-                      "Madesi":  {
-                                     "base_facts":  [
-                                                        "An Argonian jeweler with a stall in Riften\u0027s marketplace.",
-                                                        "Keeps his silver ring in a locked strongbox inside the cabinet under his counter."
-                                                    ],
-                                     "beat_facts":  {
-
-                                                    }
-                                 },
-                      "Brand-Shei":  {
-                                         "base_facts":  [
-                                                            "A Dunmer merchant selling wares in Riften\u0027s marketplace.",
-                                                            "Someone wants him in jail where he cannot interfere with their activities."
-                                                        ],
-                                         "beat_facts":  {
-                                                            "PLANT_RING_ON_BRAND_SHEI":  [
-                                                                                             "Has been framed for theft and will be arrested by the Riften guards."
-                                                                                         ]
-                                                        }
-                                     }
-                  },
-    "beats":  [
-                  {
-                      "id":  "BRYNJOLF_SCHEME",
-                      "focus_npc":  "Brynjolf",
-                      "comment":  "Brynjolf approaches the player with his scheme to frame Brand-Shei.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_form_id":  "0x00021556",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  8
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "scheme",
-                                                            "Thieves Guild",
-                                                            "help you"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "STEAL_MADESI_RING",
-                      "focus_npc":  "Madesi",
-                      "comment":  "Player must steal Madesi\u0027s Silver Ring from his strongbox during Brynjolf\u0027s distraction.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_form_id":  "0x00021556",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  10
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "BRYNJOLF_SCHEME"
-                                        ]
-                  },
-                  {
-                      "id":  "PLANT_RING_ON_BRAND_SHEI",
-                      "focus_npc":  "Brand-Shei",
-                      "comment":  "Player plants Madesi\u0027s stolen ring on Brand-Shei via reverse pickpocket, or drops the ring and reports failure.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_form_id":  "0x00021556",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  20
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "STEAL_MADESI_RING"
-                                        ]
-                  },
-                  {
-                      "id":  "SPEAK_TO_BRYNJOLF",
-                      "focus_npc":  "Brynjolf",
-                      "comment":  "Player reports back to Brynjolf after the scheme, whether the pickpocket succeeded, failed, or the player took too long.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_form_id":  "0x00021556",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  30
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PLANT_RING_ON_BRAND_SHEI"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Brynjolf",
-                      "comment":  "Quest completes; Brynjolf rewards the player with 100 gold and offers Thieves Guild membership.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_form_id":  "0x00021556",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SPEAK_TO_BRYNJOLF"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "BRYNJOLF_SCHEME"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "tg00_chancearrangement",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00021556",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "TG00",
+  "title": "A Chance Arrangement",
+  "description": "Brynjolf in Riften proposes a scheme to frame the vendor Brand-Shei by stealing Madesi's silver ring and planting it on him, offering gold and a chance to join the Thieves Guild in return.",
+  "npc_facts": {
+    "Brynjolf": {
+      "base_facts": [
+        "A member of the Thieves Guild operating in Riften's marketplace.",
+        "Sells a supposed Falmer Blood Elixir as a front for his schemes.",
+        "Can be found at the Riften bazaar during the day or at The Bee and Barb at night."
+      ],
+      "beat_facts": {
+        "BRYNJOLF_SCHEME": [
+          "Wants to frame Brand-Shei by planting a stolen ring on him to get him arrested.",
+          "Will create a distraction in the bazaar while the player steals the ring."
+        ],
+        "ACCEPT_STEAL_RING": [
+          "The player agreed to steal Madesi's Silver Ring during my distraction.",
+          "The player should steal Madesi's Silver Ring from the strongbox under Madesi's stall."
+        ],
+        "SPEAK_TO_BRYNJOLF": [
+          "Satisfied with the outcome of the scheme and pays 100 septims.",
+          "Offers the player a chance to join the Thieves Guild."
+        ],
+        "QUEST_COMPLETE": [
+          "Considers this the beginning of a profitable friendship with the player.",
+          "Quest completes; Brynjolf rewards the player with 100 gold and offers Thieves Guild membership.",
+          "Speak to Brynjolf to receive a reward of 100 septims and a chance to join the Thieves Guild .",
+          "If you speak to Maul after speaking to Brynjolf and pick the conversational option \"Know anything about the Thieves Guild?\" , the miscellaneous quest \"Talk to Brynjolf about joining the Thieves Guild\" may become stuck."
+        ]
+      }
+    },
+    "Madesi": {
+      "base_facts": [
+        "An Argonian jeweler with a stall in Riften's marketplace.",
+        "Keeps his silver ring in a locked strongbox inside the cabinet under his counter."
+      ],
+      "beat_facts": {}
+    },
+    "Brand-Shei": {
+      "base_facts": [
+        "A Dunmer merchant selling wares in Riften's marketplace.",
+        "Someone wants him in jail where he cannot interfere with their activities."
+      ],
+      "beat_facts": {
+        "PLANT_RING_ON_BRAND_SHEI": [
+          "Has been framed for theft and will be arrested by the Riften guards."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "BRYNJOLF_SCHEME",
+      "focus_npc": "Brynjolf",
+      "comment": "Brynjolf approaches the player with his scheme to frame Brand-Shei.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00021556",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 8
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_form_id": "0x00021556",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 8
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "scheme",
+            "Thieves Guild",
+            "help you"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "ACCEPT_STEAL_RING",
+      "focus_npc": "Brynjolf",
+      "comment": "Player explicitly agrees to help Brynjolf by stealing Madesi's Silver Ring.",
+      "intent_summary": "Player commits to stealing Madesi's Silver Ring for Brynjolf's scheme.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00021556",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00021556",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 8
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00021556",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I will steal the ring",
+            "I'll steal the ring",
+            "I'll get the ring",
+            "I will get the ring",
+            "I will take the ring",
+            "I'll take the ring",
+            "steal Madesi's ring",
+            "steal Madesi's Silver Ring"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player explicitly agrees to steal Madesi's Silver Ring for Brynjolf.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "Okay, I will steal the ring.",
+            "I'll get Madesi's ring for you.",
+            "I will take the ring and plant it.",
+            "Fine, I'll steal the ring during your distraction."
+          ],
+          "examples_no": [
+            "What ring?",
+            "Why do you want Brand-Shei framed?",
+            "Tell me the plan again.",
+            "I don't want to steal anything."
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BRYNJOLF_SCHEME"
+      ],
+      "allow_natural_start": false
+    },
+    {
+      "id": "STEAL_MADESI_RING",
+      "focus_npc": "Madesi",
+      "comment": "Player must steal Madesi's Silver Ring from his strongbox during Brynjolf's distraction.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_form_id": "0x00021556",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_STEAL_RING"
+      ]
+    },
+    {
+      "id": "PLANT_RING_ON_BRAND_SHEI",
+      "focus_npc": "Brand-Shei",
+      "comment": "Player plants Madesi's stolen ring on Brand-Shei via reverse pickpocket, or drops the ring and reports failure.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_form_id": "0x00021556",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "STEAL_MADESI_RING"
+      ]
+    },
+    {
+      "id": "SPEAK_TO_BRYNJOLF",
+      "focus_npc": "Brynjolf",
+      "comment": "Player reports back to Brynjolf after the scheme, whether the pickpocket succeeded, failed, or the player took too long.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00021556",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_form_id": "0x00021556",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PLANT_RING_ON_BRAND_SHEI"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Brynjolf",
+      "comment": "Quest completes; Brynjolf rewards the player with 100 gold and offers Thieves Guild membership.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00021556",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_form_id": "0x00021556",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_TO_BRYNJOLF"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "BRYNJOLF_SCHEME"
+    ],
+    "requires": []
+  }
 }

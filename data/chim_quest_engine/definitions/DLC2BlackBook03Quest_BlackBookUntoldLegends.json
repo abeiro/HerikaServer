@@ -18,7 +18,10 @@
           "The reader has been transported to Apocrypha and must uncover the hidden knowledge."
         ],
         "COMPLETED_QUEST": [
-          "The hidden knowledge has been learned and a reward power chosen."
+          "The hidden knowledge has been learned and a reward power chosen.",
+          "Player learned the hidden knowledge and chose a reward. Quest is complete.",
+          "Once any side areas have been dealt with, the corridor should return to its original position, leading to the Black Book : Untold Legends .",
+          "Detailed Walkthrough [ edit ] There are five chapters: Chapter I is basically a corridor that leads to Chapter II, containing no enemies and only three soul gems in the way of loot."
         ]
       }
     },

@@ -1,225 +1,242 @@
 {
-    "quest_key":  "ms03_promisestokeep",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001DA3C",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MS03",
-    "title":  "Promises to Keep",
-    "description":  "Louis Letrush asks the player to retrieve a horse named Frost from Sibbi Black-Briar, who is jailed in Riften. Sibbi reveals Frost belongs to Maven Black-Briar and offers payment to steal the horse from Black-Briar Lodge along with its lineage papers.",
-    "npc_facts":  {
-                      "Louis Letrush":  {
-                                            "base_facts":  [
-                                                               "I purchased a horse named Frost from Sibbi Black-Briar but the deal was never finalized before Sibbi was arrested.",
-                                                               "I want someone to speak with Sibbi in Riften Jail and deliver Frost and the lineage papers to me.",
-                                                               "I can be found at the Bee and Barb in Riften."
-                                                           ],
-                                            "beat_facts":  {
-                                                               "LISTEN_TO_OFFER":  [
-                                                                                       "I have asked someone to help me get Frost from Sibbi Black-Briar."
-                                                                                   ],
-                                                               "RETURN_TO_LOUIS":  [
-                                                                                       "This person has returned with Frost and the lineage papers."
-                                                                                   ],
-                                                               "QUEST_COMPLETE":  [
-                                                                                      "I have received Frost and paid for the horse deal, or been persuaded to let them keep the horse."
-                                                                                  ]
-                                                           }
-                                        },
-                      "Sibbi Black-Briar":  {
-                                                "base_facts":  [
-                                                                   "I am locked up in Riften Jail.",
-                                                                   "I sold a horse named Frost to Louis Letrush but the deal was not finished before I was arrested.",
-                                                                   "Frost actually belongs to the Black-Briar estate, not me personally."
-                                                               ],
-                                                "beat_facts":  {
-                                                                   "SPEAK_TO_SIBBI":  [
-                                                                                          "I have asked someone to steal Frost from Black-Briar Lodge and deliver him to Louis, and I will pay them for it.",
-                                                                                          "The lineage papers are at Black-Briar Lodge."
-                                                                                      ]
-                                                               }
-                                            },
-                      "Maven Black-Briar":  {
-                                                "base_facts":  [
-                                                                   "I own the Black-Briar Lodge and all its property, including the horse Frost.",
-                                                                   "I would not approve of anyone stealing from my estate."
-                                                               ],
-                                                "beat_facts":  {
-
-                                                               }
-                                            }
-                  },
-    "beats":  [
-                  {
-                      "id":  "LISTEN_TO_OFFER",
-                      "focus_npc":  "Louis Letrush",
-                      "comment":  "Player hears Louis Letrush\u0027s offer about retrieving Frost from Sibbi.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS03",
-                                           "min_stage":  5
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "horse",
-                                                            "Frost",
-                                                            "Sibbi",
-                                                            "offer"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "SPEAK_TO_SIBBI",
-                      "focus_npc":  "Sibbi Black-Briar",
-                      "comment":  "Player speaks to Sibbi in Riften Jail and learns Frost belongs to Maven.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS03",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Sibbi",
-                                                            "jail",
-                                                            "Maven",
-                                                            "steal"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "LISTEN_TO_OFFER"
-                                        ]
-                  },
-                  {
-                      "id":  "STEAL_LINEAGE_PAPERS",
-                      "focus_npc":  "",
-                      "comment":  "Player steals Frost\u0027s lineage papers from Black-Briar Lodge.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS03",
-                                           "min_stage":  25
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SPEAK_TO_SIBBI"
-                                        ]
-                  },
-                  {
-                      "id":  "STEAL_FROST",
-                      "focus_npc":  "",
-                      "comment":  "Player steals the horse Frost from Black-Briar Lodge stables.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS03",
-                                           "min_stage":  30
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "STEAL_LINEAGE_PAPERS"
-                                        ]
-                  },
-                  {
-                      "id":  "RETURN_TO_LOUIS",
-                      "focus_npc":  "Louis Letrush",
-                      "comment":  "Player returns to Louis Letrush with Frost and the lineage papers for reward.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS03",
-                                           "min_stage":  50
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Louis",
-                                                            "payment",
-                                                            "reward",
-                                                            "horse"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "STEAL_FROST"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Louis Letrush",
-                      "comment":  "Quest completes after Louis rewards the player. Player may keep Frost through persuasion or threats.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS03",
-                                           "min_stage":  275
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RETURN_TO_LOUIS"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "LISTEN_TO_OFFER"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "ms03_promisestokeep",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001DA3C",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MS03",
+  "title": "Promises to Keep",
+  "description": "Louis Letrush asks the player to retrieve a horse named Frost from Sibbi Black-Briar, who is jailed in Riften. Sibbi reveals Frost belongs to Maven Black-Briar and offers payment to steal the horse from Black-Briar Lodge along with its lineage papers.",
+  "npc_facts": {
+    "Louis Letrush": {
+      "base_facts": [
+        "I purchased a horse named Frost from Sibbi Black-Briar but the deal was never finalized before Sibbi was arrested.",
+        "I want someone to speak with Sibbi in Riften Jail and deliver Frost and the lineage papers to me.",
+        "I can be found at the Bee and Barb in Riften."
+      ],
+      "beat_facts": {
+        "LISTEN_TO_OFFER": [
+          "I have asked someone to help me get Frost from Sibbi Black-Briar."
+        ],
+        "RETURN_TO_LOUIS": [
+          "This person has returned with Frost and the lineage papers."
+        ],
+        "QUEST_COMPLETE": [
+          "I have received Frost and paid for the horse deal, or been persuaded to let them keep the horse.",
+          "Quest completes after Louis rewards the player. Player may keep Frost through persuasion or threats.",
+          "For your completion conversation with Louis, there are multiple options: Let him go with the horse and receive the leveled gold payment.",
+          "It is possible though to receive the payment and then immediately steal the horse; the quest will count as finished without double-crossing Louis."
+        ]
+      }
+    },
+    "Sibbi Black-Briar": {
+      "base_facts": [
+        "I am locked up in Riften Jail.",
+        "I sold a horse named Frost to Louis Letrush but the deal was not finished before I was arrested.",
+        "Frost actually belongs to the Black-Briar estate, not me personally."
+      ],
+      "beat_facts": {
+        "SPEAK_TO_SIBBI": [
+          "I have asked someone to steal Frost from Black-Briar Lodge and deliver him to Louis, and I will pay them for it.",
+          "The lineage papers are at Black-Briar Lodge."
+        ]
+      }
+    },
+    "Maven Black-Briar": {
+      "base_facts": [
+        "I own the Black-Briar Lodge and all its property, including the horse Frost.",
+        "I would not approve of anyone stealing from my estate."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "LISTEN_TO_OFFER",
+      "focus_npc": "Louis Letrush",
+      "comment": "Player hears Louis Letrush's offer about retrieving Frost from Sibbi.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001DA3C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 5
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS03",
+          "min_stage": 5
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "horse",
+            "Frost",
+            "Sibbi",
+            "offer"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "SPEAK_TO_SIBBI",
+      "focus_npc": "Sibbi Black-Briar",
+      "comment": "Player speaks to Sibbi in Riften Jail and learns Frost belongs to Maven.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001DA3C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS03",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Sibbi",
+            "jail",
+            "Maven",
+            "steal"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LISTEN_TO_OFFER"
+      ]
+    },
+    {
+      "id": "STEAL_LINEAGE_PAPERS",
+      "focus_npc": "",
+      "comment": "Player steals Frost's lineage papers from Black-Briar Lodge.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS03",
+          "min_stage": 25
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_TO_SIBBI"
+      ]
+    },
+    {
+      "id": "STEAL_FROST",
+      "focus_npc": "",
+      "comment": "Player steals the horse Frost from Black-Briar Lodge stables.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS03",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "STEAL_LINEAGE_PAPERS"
+      ]
+    },
+    {
+      "id": "RETURN_TO_LOUIS",
+      "focus_npc": "Louis Letrush",
+      "comment": "Player returns to Louis Letrush with Frost and the lineage papers for reward.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001DA3C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS03",
+          "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Louis",
+            "payment",
+            "reward",
+            "horse"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "STEAL_FROST"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Louis Letrush",
+      "comment": "Quest completes after Louis rewards the player. Player may keep Frost through persuasion or threats.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001DA3C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 275
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS03",
+          "min_stage": 275
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETURN_TO_LOUIS"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "LISTEN_TO_OFFER"
+    ],
+    "requires": []
+  }
 }

@@ -1,269 +1,317 @@
 {
-    "quest_key":  "mq205_elderknowledge",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0002D516",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MQ205",
-    "title":  "Elder Knowledge",
-    "description":  "Paarthurnax reveals that the ancient Nords used an Elder Scroll to cast Alduin forward in time. The Dragonborn must recover that Elder Scroll to learn the Dragonrend Shout from the ancient heroes through the Time-Wound atop the Throat of the World.",
-    "npc_facts":  {
-                      "Paarthurnax":  {
-                                          "base_facts":  [
-                                                             "I am the master of the Greybeards.",
-                                                             "The ancient Nords used an Elder Scroll to send Alduin forward in time, creating the Time-Wound.",
-                                                             "The Dragonrend shout crippled Alduin but did not truly defeat him.",
-                                                             "Recovering the Elder Scroll and using it on the Time-Wound may allow one to learn Dragonrend from the ancient heroes."
-                                                         ],
-                                          "beat_facts":  {
-                                                             "PAARTHURNAX_TASK":  [
-                                                                                      "The Dragonborn has agreed to seek the Elder Scroll to learn Dragonrend."
-                                                                                  ]
-                                                         }
-                                      },
-                      "Esbern":  {
-                                     "base_facts":  [
-                                                        "I am a Blade and scholar of dragon lore.",
-                                                        "The College of Winterhold may have knowledge about the Elder Scrolls."
-                                                    ],
-                                     "beat_facts":  {
-
-                                                    }
-                                 },
-                      "Arngeir":  {
-                                      "base_facts":  [
-                                                         "I am the eldest and most vocal of the Greybeards.",
-                                                         "The College of Winterhold may have knowledge about the Elder Scrolls."
-                                                     ],
-                                      "beat_facts":  {
-
-                                                     }
-                                  },
-                      "Urag gro-Shub":  {
-                                            "base_facts":  [
-                                                               "I am the librarian of the Arcanaeum at the College of Winterhold.",
-                                                               "Elder Scrolls are instruments of immense knowledge and power; reading one risks madness and costs the reader\u0027s sight.",
-                                                               "Septimus Signus is a specialist in Elder Scrolls lore who left the College to study Dwemer artifacts.",
-                                                               "I have two rare books on the Elder Scrolls: Ruminations on the Elder Scrolls and Effects of the Elder Scrolls."
-                                                           ],
-                                            "beat_facts":  {
-
-                                                           }
-                                        },
-                      "Septimus Signus":  {
-                                              "base_facts":  [
-                                                                 "I am a scholar obsessed with the Dwemer and Elder Scrolls.",
-                                                                 "The Elder Scroll lies deep within Blackreach, beneath the Tower of Mzark.",
-                                                                 "Alftand is the point of entry to reach Blackreach.",
-                                                                 "I possess the Blank Lexicon and Attunement Sphere needed to access Blackreach and the Elder Scroll."
-                                                             ],
-                                              "beat_facts":  {
-                                                                 "SEPTIMUS_SIGNUS_FOUND":  [
-                                                                                               "I have given the Dragonborn the Blank Lexicon and Attunement Sphere to access Blackreach."
-                                                                                           ]
-                                                             }
-                                          }
-                  },
-    "beats":  [
-                  {
-                      "id":  "PAARTHURNAX_TASK",
-                      "focus_npc":  "Paarthurnax",
-                      "comment":  "Paarthurnax reveals the Elder Scroll is needed to learn Dragonrend through the Time-Wound.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ205",
-                                           "quest_form_id":  "0x0002D516",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "elder scroll",
-                                                            "dragonrend",
-                                                            "time-wound"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "OPTIONAL_ESBERN",
-                      "focus_npc":  "Esbern",
-                      "comment":  "Optional: talk to Esbern for advice on finding the Elder Scroll.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ205",
-                                           "quest_form_id":  "0x0002D516",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  20
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PAARTHURNAX_TASK"
-                                        ]
-                  },
-                  {
-                      "id":  "OPTIONAL_ARNGEIR",
-                      "focus_npc":  "Arngeir",
-                      "comment":  "Optional: talk to Arngeir for advice on finding the Elder Scroll.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ205",
-                                           "quest_form_id":  "0x0002D516",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  30
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PAARTHURNAX_TASK"
-                                        ]
-                  },
-                  {
-                      "id":  "COLLEGE_LEAD",
-                      "focus_npc":  "",
-                      "comment":  "Esbern or Arngeir directs the player to the College of Winterhold for Elder Scroll knowledge.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ205",
-                                           "quest_form_id":  "0x0002D516",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  50
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PAARTHURNAX_TASK"
-                                        ]
-                  },
-                  {
-                      "id":  "SEPTIMUS_SIGNUS_FOUND",
-                      "focus_npc":  "Septimus Signus",
-                      "comment":  "Urag points to Septimus Signus, who provides the Blank Lexicon and Attunement Sphere for Blackreach.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ205",
-                                           "quest_form_id":  "0x0002D516",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  60
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "septimus signus",
-                                                            "blackreach",
-                                                            "attunement sphere",
-                                                            "blank lexicon"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "COLLEGE_LEAD"
-                                        ]
-                  },
-                  {
-                      "id":  "RECOVER_ELDER_SCROLL",
-                      "focus_npc":  "",
-                      "comment":  "Journey through Alftand and Blackreach to the Tower of Mzark to claim the Elder Scroll.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ205",
-                                           "quest_form_id":  "0x0002D516",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  80
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SEPTIMUS_SIGNUS_FOUND"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "The Elder Scroll has been recovered; the quest is complete.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ205",
-                                           "quest_form_id":  "0x0002D516",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  100
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RECOVER_ELDER_SCROLL"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "PAARTHURNAX_TASK"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "mq204_throatoftheworld",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "mq205_elderknowledge",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0002D516",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MQ205",
+  "title": "Elder Knowledge",
+  "description": "Paarthurnax reveals that the ancient Nords used an Elder Scroll to cast Alduin forward in time. The Dragonborn must recover that Elder Scroll to learn the Dragonrend Shout from the ancient heroes through the Time-Wound atop the Throat of the World.",
+  "npc_facts": {
+    "Paarthurnax": {
+      "base_facts": [
+        "I am the master of the Greybeards.",
+        "The ancient Nords used an Elder Scroll to send Alduin forward in time, creating the Time-Wound.",
+        "The Dragonrend shout crippled Alduin but did not truly defeat him.",
+        "Recovering the Elder Scroll and using it on the Time-Wound may allow one to learn Dragonrend from the ancient heroes."
+      ],
+      "beat_facts": {
+        "PAARTHURNAX_TASK": [
+          "The Dragonborn has agreed to seek the Elder Scroll to learn Dragonrend."
+        ],
+        "QUEST_COMPLETE": [
+          "The Dragonborn has recovered the Elder Scroll from the Tower of Mzark deep within Blackreach.",
+          "The Dragonborn must now return to the Throat of the World and use the Elder Scroll upon the Time-Wound to glimpse the ancient Nords and learn Dragonrend.",
+          "Paarthurnax awaits the Dragonborn's return atop the mountain to witness the opening of the Time-Wound."
+        ]
+      }
+    },
+    "Esbern": {
+      "base_facts": [
+        "I am a Blade and scholar of dragon lore.",
+        "The College of Winterhold may have knowledge about the Elder Scrolls."
+      ],
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "The Dragonborn has recovered the Elder Scroll, following the lead Esbern provided about the College of Winterhold.",
+          "The next step is for the Dragonborn to return to Paarthurnax and use the Scroll at the Time-Wound atop the Throat of the World."
+        ]
+      }
+    },
+    "Arngeir": {
+      "base_facts": [
+        "I am the eldest and most vocal of the Greybeards.",
+        "The College of Winterhold may have knowledge about the Elder Scrolls."
+      ],
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "The Dragonborn has recovered the Elder Scroll, following the guidance Arngeir provided about seeking knowledge at the College of Winterhold.",
+          "The Dragonborn must now return to the Throat of the World to use the Elder Scroll on the Time-Wound and learn Dragonrend."
+        ]
+      }
+    },
+    "Urag gro-Shub": {
+      "base_facts": [
+        "I am the librarian of the Arcanaeum at the College of Winterhold.",
+        "Elder Scrolls are instruments of immense knowledge and power; reading one risks madness and costs the reader's sight.",
+        "Septimus Signus is a specialist in Elder Scrolls lore who left the College to study Dwemer artifacts.",
+        "I have two rare books on the Elder Scrolls: Ruminations on the Elder Scrolls and Effects of the Elder Scrolls."
+      ],
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "The Dragonborn recovered the Elder Scroll using the knowledge traced through the two rare books Urag provided.",
+          "Septimus Signus's Ruminations on the Elder Scrolls led the Dragonborn to Blackreach and the Scroll within the Tower of Mzark."
+        ]
+      }
+    },
+    "Septimus Signus": {
+      "base_facts": [
+        "I am a scholar obsessed with the Dwemer and Elder Scrolls.",
+        "The Elder Scroll lies deep within Blackreach, beneath the Tower of Mzark.",
+        "Alftand is the point of entry to reach Blackreach.",
+        "I possess the Blank Lexicon and Attunement Sphere needed to access Blackreach and the Elder Scroll."
+      ],
+      "beat_facts": {
+        "SEPTIMUS_SIGNUS_FOUND": [
+          "I have given the Dragonborn the Blank Lexicon and Attunement Sphere to access Blackreach."
+        ],
+        "QUEST_COMPLETE": [
+          "The Dragonborn used the Blank Lexicon and Attunement Sphere Septimus provided to reach the Elder Scroll in Blackreach.",
+          "The concurrent quest Discerning the Transmundane remains ongoing; the Inscribed Lexicon must still be returned to Septimus at his outpost.",
+          "Septimus still needs the information from the Lexicon to unlock the Dwemer lockbox he obsesses over."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "PAARTHURNAX_TASK",
+      "focus_npc": "Paarthurnax",
+      "comment": "Paarthurnax reveals the Elder Scroll is needed to learn Dragonrend through the Time-Wound.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002D516",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ205",
+          "quest_form_id": "0x0002D516",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "elder scroll",
+            "dragonrend",
+            "time-wound"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "OPTIONAL_ESBERN",
+      "focus_npc": "Esbern",
+      "comment": "Optional: talk to Esbern for advice on finding the Elder Scroll.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002D516",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "MQ205",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ205",
+          "quest_form_id": "0x0002D516",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I agree",
+            "I accept",
+            "I will do it",
+            "I am ready",
+            "let's continue",
+            "what are my orders",
+            "tell me what to do",
+            "tell me more",
+            "I need to speak with them",
+            "I understand"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player explicitly agrees to proceed with this quest handoff: Optional: talk to Esbern for advice on finding the Elder Scroll.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I agree. Let's do this.",
+            "I am ready to proceed.",
+            "I will follow your instructions.",
+            "Tell me what needs to happen next."
+          ],
+          "examples_no": [
+            "What are you asking me to do?",
+            "I need more information first.",
+            "I am not ready yet.",
+            "No, I do not want to do that."
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PAARTHURNAX_TASK"
+      ],
+      "intent_summary": "Player agrees to proceed with this quest handoff: Optional: talk to Esbern for advice on finding the Elder Scroll."
+    },
+    {
+      "id": "OPTIONAL_ARNGEIR",
+      "focus_npc": "Arngeir",
+      "comment": "Optional: talk to Arngeir for advice on finding the Elder Scroll.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ205",
+          "quest_form_id": "0x0002D516",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PAARTHURNAX_TASK"
+      ]
+    },
+    {
+      "id": "COLLEGE_LEAD",
+      "focus_npc": "",
+      "comment": "Esbern or Arngeir directs the player to the College of Winterhold for Elder Scroll knowledge.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ205",
+          "quest_form_id": "0x0002D516",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PAARTHURNAX_TASK"
+      ]
+    },
+    {
+      "id": "SEPTIMUS_SIGNUS_FOUND",
+      "focus_npc": "Septimus Signus",
+      "comment": "Urag points to Septimus Signus, who provides the Blank Lexicon and Attunement Sphere for Blackreach.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002D516",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 60
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ205",
+          "quest_form_id": "0x0002D516",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 60
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "septimus signus",
+            "blackreach",
+            "attunement sphere",
+            "blank lexicon"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "COLLEGE_LEAD"
+      ]
+    },
+    {
+      "id": "RECOVER_ELDER_SCROLL",
+      "focus_npc": "",
+      "comment": "Journey through Alftand and Blackreach to the Tower of Mzark to claim the Elder Scroll.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ205",
+          "quest_form_id": "0x0002D516",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 80
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SEPTIMUS_SIGNUS_FOUND"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "The Elder Scroll has been recovered; the quest is complete.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ205",
+          "quest_form_id": "0x0002D516",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 100
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RECOVER_ELDER_SCROLL"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "PAARTHURNAX_TASK"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mq204_throatoftheworld",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

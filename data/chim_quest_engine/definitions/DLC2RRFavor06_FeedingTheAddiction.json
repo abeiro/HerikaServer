@@ -1,162 +1,159 @@
 {
-    "quest_key":  "dlc2rrfavor06_feedingtheaddiction",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00024FAD",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2RRFavor06",
-    "title":  "Feeding the Addiction",
-    "description":  "Help the destitute former miner Bralsa Drel regain access to The Retching Netch by convincing innkeeper Geldis Sadri to lift her ban.",
-    "npc_facts":  {
-                      "Bralsa Drel":  {
-                                          "base_facts":  [
-                                                             "I am a former miner who lost everything when Raven Rock Mine closed.",
-                                                             "I spent my entire fortune on Sujamma and Skooma.",
-                                                             "Geldis Sadri banned me from The Retching Netch, claiming I was bad for business.",
-                                                             "I live in the abandoned building in Raven Rock."
-                                                         ],
-                                          "beat_facts":  {
-                                                             "MEET_BRALSA_DREL":  [
-                                                                                      "I told someone about Geldis banning me from the Netch."
-                                                                                  ],
-                                                             "TELL_BRALSA_NEWS":  [
-                                                                                      "I can drink at The Retching Netch again.",
-                                                                                      "I gave away my old enchanted weapon as thanks."
-                                                                                  ]
-                                                         }
-                                      },
-                      "Geldis Sadri":  {
-                                           "base_facts":  [
-                                                              "I am the innkeeper of The Retching Netch in Raven Rock.",
-                                                              "I banned Bralsa Drel from the inn because I could not bear to watch her destroy herself with drink."
-                                                          ],
-                                           "beat_facts":  {
-                                                              "CONVINCE_GELDIS":  [
-                                                                                      "I agreed to let Bralsa Drel drink at The Retching Netch again."
-                                                                                  ]
-                                                          }
-                                       }
-                  },
-    "beats":  [
-                  {
-                      "id":  "MEET_BRALSA_DREL",
-                      "focus_npc":  "Bralsa Drel",
-                      "comment":  "Player speaks with Bralsa and learns she has been banned from the Retching Netch.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "pity",
-                                                            "banned",
-                                                            "Geldis",
-                                                            "drinking",
-                                                            "Retching Netch"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "CONVINCE_GELDIS",
-                      "focus_npc":  "Geldis Sadri",
-                      "comment":  "Player persuades Geldis to let Bralsa drink at the inn again. Requires Speech 50 to persuade.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00024FAD",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  20
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "let her drink",
-                                                            "Bralsa",
-                                                            "persuade",
-                                                            "allow her"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "MEET_BRALSA_DREL"
-                                        ]
-                  },
-                  {
-                      "id":  "TELL_BRALSA_NEWS",
-                      "focus_npc":  "Bralsa Drel",
-                      "comment":  "Player tells Bralsa she is welcome back at the Retching Netch. She rewards the player with an enchanted weapon.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00024FAD",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  30
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "welcome back",
-                                                            "good news",
-                                                            "you can drink",
-                                                            "Geldis agreed"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CONVINCE_GELDIS"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest finishes after Bralsa returns to drinking at the Retching Netch.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2RRFavor06",
-                                           "min_stage":  200,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TELL_BRALSA_NEWS"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "MEET_BRALSA_DREL"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dlc2rrfavor06_feedingtheaddiction",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00024FAD",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2RRFavor06",
+  "title": "Feeding the Addiction",
+  "description": "Help the destitute former miner Bralsa Drel regain access to The Retching Netch by convincing innkeeper Geldis Sadri to lift her ban.",
+  "npc_facts": {
+    "Bralsa Drel": {
+      "base_facts": [
+        "I am a former miner who lost everything when Raven Rock Mine closed.",
+        "I spent my entire fortune on Sujamma and Skooma.",
+        "Geldis Sadri banned me from The Retching Netch, claiming I was bad for business.",
+        "I live in the abandoned building in Raven Rock."
+      ],
+      "beat_facts": {
+        "MEET_BRALSA_DREL": [
+          "I told someone about Geldis banning me from the Netch."
+        ],
+        "TELL_BRALSA_NEWS": [
+          "I can drink at The Retching Netch again.",
+          "I gave away my old enchanted weapon as thanks."
+        ],
+        "QUEST_COMPLETE": [
+          "I gave away an enchanted weapon from happier times as a reward for convincing Geldis.",
+          "I now spend every evening from 6pm to 10pm drinking at The Retching Netch.",
+          "I am sarcastically resigned to returning to my old drinking habits."
+        ]
+      }
+    },
+    "Geldis Sadri": {
+      "base_facts": [
+        "I am the innkeeper of The Retching Netch in Raven Rock.",
+        "I banned Bralsa Drel from the inn because I could not bear to watch her destroy herself with drink."
+      ],
+      "beat_facts": {
+        "CONVINCE_GELDIS": [
+          "I agreed to let Bralsa Drel drink at The Retching Netch again."
+        ],
+        "QUEST_COMPLETE": [
+          "I have lifted Bralsa Drel's ban and allowed her back into The Retching Netch.",
+          "I still pity Bralsa, but I will no longer turn away her coin."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "MEET_BRALSA_DREL",
+      "focus_npc": "Bralsa Drel",
+      "comment": "Player speaks with Bralsa and learns she has been banned from the Retching Netch.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "pity",
+            "banned",
+            "Geldis",
+            "drinking",
+            "Retching Netch"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "CONVINCE_GELDIS",
+      "focus_npc": "Geldis Sadri",
+      "comment": "Player persuades Geldis to let Bralsa drink at the inn again. Requires Speech 50 to persuade.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00024FAD",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "let her drink",
+            "Bralsa",
+            "persuade",
+            "allow her"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MEET_BRALSA_DREL"
+      ]
+    },
+    {
+      "id": "TELL_BRALSA_NEWS",
+      "focus_npc": "Bralsa Drel",
+      "comment": "Player tells Bralsa she is welcome back at the Retching Netch. She rewards the player with an enchanted weapon.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00024FAD",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "welcome back",
+            "good news",
+            "you can drink",
+            "Geldis agreed"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONVINCE_GELDIS"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest finishes after Bralsa returns to drinking at the Retching Netch.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2RRFavor06",
+          "min_stage": 200,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TELL_BRALSA_NEWS"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "MEET_BRALSA_DREL"
+    ],
+    "requires": []
+  }
 }

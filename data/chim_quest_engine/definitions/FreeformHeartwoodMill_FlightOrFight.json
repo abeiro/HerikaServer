@@ -28,6 +28,12 @@
         "TELL_GROSTA": [
           "Leifnarr is dead. He was murdered by bandits at Broken Helm Hollow, not unfaithful.",
           "I gave my helper a weapon as thanks for bringing me closure."
+        ],
+        "QUEST_COMPLETE": [
+          "I now know Leifnarr was murdered by bandits at Broken Helm Hollow, not unfaithful. I regret suspecting him.",
+          "I gave my helper a leveled enchanted weapon as thanks for bringing me closure about Leifnarr's fate.",
+          "I consider the player a friend now and allow them to take supplies from my house without penalty.",
+          "Despite my grief, I still speak bitterly about men in general."
         ]
       }
     },
@@ -36,7 +42,12 @@
         "My father Leifnarr disappeared without a trace.",
         "I live at Heartwood Mill with my mother Grosta."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "My father Leifnarr was confirmed dead, murdered by bandits at Broken Helm Hollow rather than having abandoned us.",
+          "My mother Grosta now knows the truth about what happened to him."
+        ]
+      }
     }
   },
   "beats": [

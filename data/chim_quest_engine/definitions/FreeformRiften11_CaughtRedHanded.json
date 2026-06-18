@@ -38,7 +38,10 @@
       ],
       "beat_facts": {
         "CONFRONT_HAELGA": [
-          "Someone confronted me with the Marks of Dibella from my lovers. I gave them a scroll to keep quiet."
+          "Someone confronted me with the Marks of Dibella from my lovers. I gave them a scroll to keep quiet.",
+          "Player confronts Haelga with the collected Marks of Dibella.",
+          "Two Rewards [ edit ] Once you have all three Marks of Dibella, return to Haelga's Bunkhouse and show them to Haelga.",
+          "After you complete this quest, you will be allowed to take low value items from anywhere in Haelga's Bunkhouse (due to your new friendship with Svana), even items found in her boarders' containers."
         ]
       }
     }

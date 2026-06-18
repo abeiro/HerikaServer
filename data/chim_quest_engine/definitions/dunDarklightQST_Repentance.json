@@ -1,143 +1,197 @@
 {
-    "quest_key":  "dundarklightqst_repentance",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0003FA89",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "dunDarklightQST",
-    "title":  "Repentance",
-    "description":  "Help Illia stop her mother Silvia from completing a hagraven ritual at the top of Darklight Tower.",
-    "npc_facts":  {
-                      "Illia":  {
-                                    "base_facts":  [
-                                                       "I am a witch in Darklight Tower.",
-                                                       "My mother Silvia plans to become a hagraven through a ritual requiring a human sacrifice.",
-                                                       "I was tasked with finding a sacrifice but I refused to take an innocent life.",
-                                                       "I want to stop my mother before she completes the ritual."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "MEET_ILLIA":  [
-                                                                          "The player agreed to help me reach the top of Darklight Tower."
-                                                                      ],
-                                                       "ILLIA_PLAN":  [
-                                                                          "I revealed my plan to present the player as the sacrifice to gain the element of surprise against my mother."
-                                                                      ],
-                                                       "DEFEAT_SILVIA":  [
-                                                                             "My mother Silvia is dead. I stopped her from becoming a monster."
-                                                                         ],
-                                                       "QUEST_COMPLETE":  [
-                                                                              "I gave the player my mother\u0027s Staff of Hag\u0027s Wrath as thanks.",
-                                                                              "I agreed to travel with the player and do some good for a change."
-                                                                          ]
-                                                   }
-                                }
-                  },
-    "beats":  [
-                  {
-                      "id":  "MEET_ILLIA",
-                      "focus_npc":  "Illia",
-                      "comment":  "Player meets Illia in Darklight Tower and agrees to help her stop her mother.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "dunDarklightQST",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "help you",
-                                                            "stop your mother",
-                                                            "I\u0027ll help"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "ILLIA_PLAN",
-                      "focus_npc":  "Illia",
-                      "comment":  "Illia reveals her plan to present the player as the sacrifice to surprise Silvia.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "dunDarklightQST",
-                                           "min_stage":  20
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "MEET_ILLIA"
-                                        ]
-                  },
-                  {
-                      "id":  "DEFEAT_SILVIA",
-                      "focus_npc":  "Illia",
-                      "comment":  "Player defeats Silvia at the top of Darklight Tower.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "dunDarklightQST",
-                                           "min_stage":  25
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ILLIA_PLAN"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Illia",
-                      "comment":  "Silvia is dead. Illia gives the Staff of Hag\u0027s Wrath and offers to become a follower.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "dunDarklightQST",
-                                           "min_stage":  40
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DEFEAT_SILVIA"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "MEET_ILLIA"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dundarklightqst_repentance",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0003FA89",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "dunDarklightQST",
+  "title": "Repentance",
+  "description": "Help Illia stop her mother Silvia from completing a hagraven ritual at the top of Darklight Tower.",
+  "npc_facts": {
+    "Illia": {
+      "base_facts": [
+        "I am a witch in Darklight Tower.",
+        "My mother Silvia plans to become a hagraven through a ritual requiring a human sacrifice.",
+        "I was tasked with finding a sacrifice but I refused to take an innocent life.",
+        "I want to stop my mother before she completes the ritual."
+      ],
+      "beat_facts": {
+        "MEET_ILLIA": [
+          "The player agreed to help me reach the top of Darklight Tower."
+        ],
+        "ILLIA_PLAN": [
+          "I revealed my plan to present the player as the sacrifice to gain the element of surprise against my mother."
+        ],
+        "DEFEAT_SILVIA": [
+          "My mother Silvia is dead. I stopped her from becoming a monster."
+        ],
+        "QUEST_COMPLETE": [
+          "I gave the player my mother's Staff of Hag's Wrath as thanks.",
+          "I agreed to travel with the player and do some good for a change."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "MEET_ILLIA",
+      "focus_npc": "Illia",
+      "comment": "Player meets Illia in Darklight Tower and agrees to help her stop her mother.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0003FA89",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "dunDarklightQST",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help you",
+            "stop your mother",
+            "I'll help"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "ILLIA_PLAN",
+      "focus_npc": "Illia",
+      "comment": "Illia reveals her plan to present the player as the sacrifice to surprise Silvia.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0003FA89",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "dunDarklightQST",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "dunDarklightQST",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I agree",
+            "I accept",
+            "I will do it",
+            "I am ready",
+            "let's continue",
+            "what are my orders",
+            "tell me what to do",
+            "I will meet them",
+            "lead the way",
+            "I will follow",
+            "let's go"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player explicitly agrees to proceed with this quest handoff: Illia reveals her plan to present the player as the sacrifice to surprise Silvia.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I agree. Let's do this.",
+            "I am ready to proceed.",
+            "I will follow your instructions.",
+            "Tell me what needs to happen next."
+          ],
+          "examples_no": [
+            "What are you asking me to do?",
+            "I need more information first.",
+            "I am not ready yet.",
+            "No, I do not want to do that."
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MEET_ILLIA"
+      ],
+      "intent_summary": "Player agrees to proceed with this quest handoff: Illia reveals her plan to present the player as the sacrifice to surprise Silvia."
+    },
+    {
+      "id": "DEFEAT_SILVIA",
+      "focus_npc": "Illia",
+      "comment": "Player defeats Silvia at the top of Darklight Tower.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "dunDarklightQST",
+          "min_stage": 25
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ILLIA_PLAN"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Illia",
+      "comment": "Silvia is dead. Illia gives the Staff of Hag's Wrath and offers to become a follower.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0003FA89",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "dunDarklightQST",
+          "min_stage": 40
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEFEAT_SILVIA"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "MEET_ILLIA"
+    ],
+    "requires": []
+  }
 }

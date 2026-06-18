@@ -1,166 +1,161 @@
 {
-    "quest_key":  "dlc2rrfavor01_recipefordistraction",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00024DDE",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2RRFavor01",
-    "title":  "Recipe for Distraction",
-    "description":  "Captain Veleth asks the player to locate a hidden stash of Emberbrand Wine that his Redoran Guard soldiers have been secretly consuming near the abandoned buildings on the outskirts of Raven Rock.",
-    "npc_facts":  {
-                      "Captain Veleth":  {
-                                             "base_facts":  [
-                                                                "I command the Redoran Guard in Raven Rock.",
-                                                                "Some of my men have become addicted to a spirit called Emberbrand Wine.",
-                                                                "I despise the stuff â€” it is powerful and tremendously addicting.",
-                                                                "I suspect the stash is hidden near the abandoned houses on the outskirts of town, not in the Bulwark."
-                                                            ],
-                                             "beat_facts":  {
-                                                                "QUEST_OFFERED":  [
-                                                                                      "I have asked someone to track down the hidden Emberbrand Wine stash for me."
-                                                                                  ],
-                                                                "WINE_LOCATED":  [
-                                                                                     "The Emberbrand Wine stash has been found. I am awaiting a report on its location."
-                                                                                 ],
-                                                                "QUEST_COMPLETE":  [
-                                                                                       "The wine stash has been dealt with. This will help keep my soldiers from falling asleep on duty."
-                                                                                   ]
-                                                            }
-                                         }
-                  },
-    "beats":  [
-                  {
-                      "id":  "QUEST_OFFERED",
-                      "focus_npc":  "Captain Veleth",
-                      "comment":  "Player learns about the Emberbrand Wine problem from Captain Veleth.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "distractions",
-                                                            "wine",
-                                                            "Emberbrand"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "ACCEPT_QUEST",
-                      "focus_npc":  "Captain Veleth",
-                      "comment":  "Player agrees to find the hidden wine stash for Captain Veleth.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00024DDE",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  20
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x00024DDE",
-                                             "quest_plugin":  "Dragonborn.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "track it down",
-                                                            "find the stash",
-                                                            "help you",
-                                                            "I could find it"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "QUEST_OFFERED"
-                                        ]
-                  },
-                  {
-                      "id":  "WINE_LOCATED",
-                      "focus_npc":  "",
-                      "comment":  "Player locates the hidden barrel of Emberbrand Wine near the abandoned building past the blacksmith.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2RRFavor01",
-                                           "min_stage":  30,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ACCEPT_QUEST"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Captain Veleth",
-                      "comment":  "Player reports the stash location to Captain Veleth and receives leveled gold reward.",
-                      "action":  {
-                                     "type":  "set_stage_cascade",
-                                     "quest_form_id":  "0x00024DDE",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x00024DDE",
-                                             "quest_plugin":  "Dragonborn.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "found the wine",
-                                                            "found the stash",
-                                                            "report"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2RRFavor01",
-                                           "min_stage":  200,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "WINE_LOCATED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "QUEST_OFFERED"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dlc2rrfavor01_recipefordistraction",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00024DDE",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2RRFavor01",
+  "title": "Recipe for Distraction",
+  "description": "Captain Veleth asks the player to locate a hidden stash of Emberbrand Wine that his Redoran Guard soldiers have been secretly consuming near the abandoned buildings on the outskirts of Raven Rock.",
+  "npc_facts": {
+    "Captain Veleth": {
+      "base_facts": [
+        "I command the Redoran Guard in Raven Rock.",
+        "Some of my men have become addicted to a spirit called Emberbrand Wine.",
+        "I despise the stuff â€” it is powerful and tremendously addicting.",
+        "I suspect the stash is hidden near the abandoned houses on the outskirts of town, not in the Bulwark."
+      ],
+      "beat_facts": {
+        "QUEST_OFFERED": [
+          "I have asked someone to track down the hidden Emberbrand Wine stash for me."
+        ],
+        "WINE_LOCATED": [
+          "The Emberbrand Wine stash has been found. I am awaiting a report on its location."
+        ],
+        "QUEST_COMPLETE": [
+          "The wine stash has been dealt with. This will help keep my soldiers from falling asleep on duty.",
+          "Player reports the stash location to Captain Veleth and receives leveled gold reward.",
+          "Talk to Second Councilor Arano if you're willing to help us.\" Speaking to Arano to advance Served Cold will allow you to converse with Veleth and turn in this quest.",
+          "Return to Captain Veleth for your reward: I found the Emberbrand Wine stash."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_OFFERED",
+      "focus_npc": "Captain Veleth",
+      "comment": "Player learns about the Emberbrand Wine problem from Captain Veleth.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "distractions",
+            "wine",
+            "Emberbrand"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "ACCEPT_QUEST",
+      "focus_npc": "Captain Veleth",
+      "comment": "Player agrees to find the hidden wine stash for Captain Veleth.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00024DDE",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00024DDE",
+          "quest_plugin": "Dragonborn.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "track it down",
+            "find the stash",
+            "help you",
+            "I could find it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_OFFERED"
+      ]
+    },
+    {
+      "id": "WINE_LOCATED",
+      "focus_npc": "",
+      "comment": "Player locates the hidden barrel of Emberbrand Wine near the abandoned building past the blacksmith.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2RRFavor01",
+          "min_stage": 30,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_QUEST"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Captain Veleth",
+      "comment": "Player reports the stash location to Captain Veleth and receives leveled gold reward.",
+      "action": {
+        "type": "set_stage_cascade",
+        "quest_form_id": "0x00024DDE",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00024DDE",
+          "quest_plugin": "Dragonborn.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "found the wine",
+            "found the stash",
+            "report"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2RRFavor01",
+          "min_stage": 200,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "WINE_LOCATED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "QUEST_OFFERED"
+    ],
+    "requires": []
+  }
 }

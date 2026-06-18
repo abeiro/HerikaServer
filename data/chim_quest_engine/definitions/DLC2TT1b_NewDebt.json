@@ -1,196 +1,190 @@
 {
-    "quest_key":  "dlc2tt1b_newdebt",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001844E",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2TT1b",
-    "title":  "A New Debt",
-    "description":  "After helping Drovas Relvi become Neloth\u0027s steward, the money lender Mogrul demands you pay Drovas\u0027 debt of 1000 septims. You must pay the debt, persuade Mogrul to accept less, or kill him.",
-    "npc_facts":  {
-                      "Mogrul":  {
-                                     "base_facts":  [
-                                                        "I am a money lender operating out of Raven Rock.",
-                                                        "Drovas Relvi owes me 1000 septims but is now untouchable under Neloth\u0027s protection.",
-                                                        "I hold the player responsible for Drovas\u0027s debt and will send thugs until it is paid."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "DEBT_DEMANDED":  [
-                                                                              "The player knows I demand 1000 septims for Drovas\u0027s debt and will send thugs if unpaid."
-                                                                          ],
-                                                        "DEBT_RESOLVED_PAID":  [
-                                                                                   "The player paid the full debt of 1000 septims."
-                                                                               ],
-                                                        "DEBT_RESOLVED_KILLED":  [
-                                                                                     "I am dead, killed by the player."
-                                                                                 ],
-                                                        "DEBT_RESOLVED_PERSUADED":  [
-                                                                                        "I accepted half payment from the player to settle the debt."
-                                                                                    ]
-                                                    }
-                                 },
-                      "Drovas Relvi":  {
-                                           "base_facts":  [
-                                                              "I owe Mogrul 1000 septims but am now protected by Neloth.",
-                                                              "If persuaded, I can provide 250 gold to help pay off the debt."
-                                                          ],
-                                           "beat_facts":  {
-                                                              "DEBT_RESOLVED_PAID":  [
-                                                                                         "The player paid my debt to Mogrul. I am deeply grateful."
-                                                                                     ],
-                                                              "DEBT_RESOLVED_KILLED":  [
-                                                                                           "Mogrul is dead. That is a great relief."
-                                                                                       ]
-                                                          }
-                                       }
-                  },
-    "beats":  [
-                  {
-                      "id":  "MOGRUL_MESSENGER",
-                      "focus_npc":  "Mogrul",
-                      "comment":  "Mogrul sends a messenger; player must go talk to him.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2TT1b",
-                                           "min_stage":  100,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Mogrul wants to talk",
-                                                            "messenger from Mogrul",
-                                                            "inherited a situation"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "DEBT_DEMANDED",
-                      "focus_npc":  "Mogrul",
-                      "comment":  "Mogrul confronts the player and demands 1000 septims for Drovas\u0027s debt, threatening thugs.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2TT1b",
-                                           "min_stage":  200,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "pay the debt",
-                                                            "Drovas owes you",
-                                                            "1000 septims",
-                                                            "send thugs"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "MOGRUL_MESSENGER"
-                                        ]
-                  },
-                  {
-                      "id":  "DEBT_RESOLVED_PAID",
-                      "focus_npc":  "Mogrul",
-                      "comment":  "Player paid the full 1000 septim debt to Mogrul.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2TT1b",
-                                           "stage":  300,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DEBT_DEMANDED"
-                                        ]
-                  },
-                  {
-                      "id":  "DEBT_RESOLVED_KILLED",
-                      "focus_npc":  "Mogrul",
-                      "comment":  "Player killed Mogrul instead of paying the debt.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2TT1b",
-                                           "stage":  310,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DEBT_DEMANDED"
-                                        ]
-                  },
-                  {
-                      "id":  "DEBT_RESOLVED_PERSUADED",
-                      "focus_npc":  "Mogrul",
-                      "comment":  "Player persuaded Mogrul to accept half the debt.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2TT1b",
-                                           "stage":  320,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DEBT_DEMANDED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "MOGRUL_MESSENGER"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "dlc2tt1_reluctantsteward",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dlc2tt1b_newdebt",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001844E",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2TT1b",
+  "title": "A New Debt",
+  "description": "After helping Drovas Relvi become Neloth's steward, the money lender Mogrul demands you pay Drovas' debt of 1000 septims. You must pay the debt, persuade Mogrul to accept less, or kill him.",
+  "npc_facts": {
+    "Mogrul": {
+      "base_facts": [
+        "I am a money lender operating out of Raven Rock.",
+        "Drovas Relvi owes me 1000 septims but is now untouchable under Neloth's protection.",
+        "I hold the player responsible for Drovas's debt and will send thugs until it is paid."
+      ],
+      "beat_facts": {
+        "DEBT_DEMANDED": [
+          "The player knows I demand 1000 septims for Drovas's debt and will send thugs if unpaid."
+        ],
+        "DEBT_RESOLVED_PAID": [
+          "The player paid the full debt of 1000 septims."
+        ],
+        "DEBT_RESOLVED_KILLED": [
+          "I am dead, killed by the player."
+        ],
+        "DEBT_RESOLVED_PERSUADED": [
+          "I accepted half payment from the player to settle the debt."
+        ]
+      }
+    },
+    "Drovas Relvi": {
+      "base_facts": [
+        "I owe Mogrul 1000 septims but am now protected by Neloth.",
+        "If persuaded, I can provide 250 gold to help pay off the debt."
+      ],
+      "beat_facts": {
+        "DEBT_RESOLVED_PAID": [
+          "The player paid my debt to Mogrul. I am deeply grateful."
+        ],
+        "DEBT_RESOLVED_KILLED": [
+          "Mogrul is dead. That is a great relief."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "MOGRUL_MESSENGER",
+      "focus_npc": "Mogrul",
+      "comment": "Mogrul sends a messenger; player must go talk to him.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001844E",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 100
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2TT1b",
+          "min_stage": 100,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Mogrul wants to talk",
+            "messenger from Mogrul",
+            "inherited a situation"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "DEBT_DEMANDED",
+      "focus_npc": "Mogrul",
+      "comment": "Mogrul confronts the player and demands 1000 septims for Drovas's debt, threatening thugs.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001844E",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2TT1b",
+          "min_stage": 200,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "pay the debt",
+            "Drovas owes you",
+            "1000 septims",
+            "send thugs"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MOGRUL_MESSENGER"
+      ]
+    },
+    {
+      "id": "DEBT_RESOLVED_PAID",
+      "focus_npc": "Mogrul",
+      "comment": "Player paid the full 1000 septim debt to Mogrul.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2TT1b",
+          "stage": 300,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEBT_DEMANDED"
+      ]
+    },
+    {
+      "id": "DEBT_RESOLVED_KILLED",
+      "focus_npc": "Mogrul",
+      "comment": "Player killed Mogrul instead of paying the debt.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2TT1b",
+          "stage": 310,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEBT_DEMANDED"
+      ]
+    },
+    {
+      "id": "DEBT_RESOLVED_PERSUADED",
+      "focus_npc": "Mogrul",
+      "comment": "Player persuaded Mogrul to accept half the debt.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2TT1b",
+          "stage": 320,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEBT_DEMANDED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "MOGRUL_MESSENGER"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc2tt1_reluctantsteward",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

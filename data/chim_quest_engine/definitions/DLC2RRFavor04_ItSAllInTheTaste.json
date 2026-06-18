@@ -1,175 +1,167 @@
 {
-    "quest_key":  "dlc2rrfavor04_itsallinthetaste",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00024E04",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2RRFavor04",
-    "title":  "It\u0027s All In The Taste",
-    "description":  "Geldis Sadri, proprietor of the Retching Netch in Raven Rock, asks you to distribute ten samples of his improved Sadri\u0027s Sujamma to the citizens of Raven Rock to spread the word about his new recipe.",
-    "npc_facts":  {
-                      "Geldis Sadri":  {
-                                           "base_facts":  [
-                                                              "I run the Retching Netch cornerclub in Raven Rock.",
-                                                              "I brew my own sujamma called Sadri\u0027s Sujamma.",
-                                                              "I\u0027ve added new ingredients to my sujamma mixture that make it taste better than ever."
-                                                          ],
-                                           "beat_facts":  {
-                                                              "HEAR_ABOUT_SUJAMMA":  [
-                                                                                         "I told someone about my new sujamma mixture and how I need to get the word out."
-                                                                                     ],
-                                                              "OFFER_HELP":  [
-                                                                                 "Someone offered to help me distribute samples of my sujamma around Raven Rock."
-                                                                             ],
-                                                              "REPORT_TO_GELDIS":  [
-                                                                                       "The samples have been distributed and I paid the helper with leveled gold."
-                                                                                   ]
-                                                          }
-                                       }
-                  },
-    "beats":  [
-                  {
-                      "id":  "HEAR_ABOUT_SUJAMMA",
-                      "focus_npc":  "Geldis Sadri",
-                      "comment":  "Player asks Geldis about his house specialty and learns about the new sujamma mixture.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "specialty",
-                                                            "sujamma",
-                                                            "house specialty",
-                                                            "drink"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "OFFER_HELP",
-                      "focus_npc":  "Geldis Sadri",
-                      "comment":  "Player offers to help distribute sujamma samples, starting the distribution objective.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00024E04",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  20
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "help",
-                                                            "spread the word",
-                                                            "distribute",
-                                                            "i can help"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "HEAR_ABOUT_SUJAMMA"
-                                        ]
-                  },
-                  {
-                      "id":  "DISTRIBUTION_DONE",
-                      "focus_npc":  "",
-                      "comment":  "All ten sujamma samples have been distributed to Raven Rock citizens; game advances to stage 30.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2RRFavor04",
-                                           "min_stage":  30,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "OFFER_HELP"
-                                        ]
-                  },
-                  {
-                      "id":  "REPORT_TO_GELDIS",
-                      "focus_npc":  "Geldis Sadri",
-                      "comment":  "Player returns to Geldis to report distribution is complete and receives leveled gold reward.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00024E04",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "distributed",
-                                                            "done",
-                                                            "finished",
-                                                            "samples",
-                                                            "handed out"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DISTRIBUTION_DONE"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Observation beat for quest completion at stage 200.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2RRFavor04",
-                                           "min_stage":  200,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DISTRIBUTION_DONE"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "HEAR_ABOUT_SUJAMMA"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dlc2rrfavor04_itsallinthetaste",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00024E04",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2RRFavor04",
+  "title": "It's All In The Taste",
+  "description": "Geldis Sadri, proprietor of the Retching Netch in Raven Rock, asks you to distribute ten samples of his improved Sadri's Sujamma to the citizens of Raven Rock to spread the word about his new recipe.",
+  "npc_facts": {
+    "Geldis Sadri": {
+      "base_facts": [
+        "I run the Retching Netch cornerclub in Raven Rock.",
+        "I brew my own sujamma called Sadri's Sujamma.",
+        "I've added new ingredients to my sujamma mixture that make it taste better than ever."
+      ],
+      "beat_facts": {
+        "HEAR_ABOUT_SUJAMMA": [
+          "I told someone about my new sujamma mixture and how I need to get the word out."
+        ],
+        "OFFER_HELP": [
+          "Someone offered to help me distribute samples of my sujamma around Raven Rock."
+        ],
+        "REPORT_TO_GELDIS": [
+          "The samples have been distributed and I paid the helper with leveled gold."
+        ],
+        "QUEST_COMPLETE": [
+          "I paid the helper with leveled gold as promised for distributing my sujamma samples across Raven Rock.",
+          "I'm pleased the word about my improved sujamma has spread and I expect new patrons to come to the Retching Netch.",
+          "My disposition toward the helper has increased by 1 for their assistance.",
+          "All ten samples of my improved Sadri's Sujamma have been successfully distributed to Raven Rock citizens."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "HEAR_ABOUT_SUJAMMA",
+      "focus_npc": "Geldis Sadri",
+      "comment": "Player asks Geldis about his house specialty and learns about the new sujamma mixture.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "specialty",
+            "sujamma",
+            "house specialty",
+            "drink"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "OFFER_HELP",
+      "focus_npc": "Geldis Sadri",
+      "comment": "Player offers to help distribute sujamma samples, starting the distribution objective.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00024E04",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help",
+            "spread the word",
+            "distribute",
+            "i can help"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEAR_ABOUT_SUJAMMA"
+      ]
+    },
+    {
+      "id": "DISTRIBUTION_DONE",
+      "focus_npc": "",
+      "comment": "All ten sujamma samples have been distributed to Raven Rock citizens; game advances to stage 30.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2RRFavor04",
+          "min_stage": 30,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "OFFER_HELP"
+      ]
+    },
+    {
+      "id": "REPORT_TO_GELDIS",
+      "focus_npc": "Geldis Sadri",
+      "comment": "Player returns to Geldis to report distribution is complete and receives leveled gold reward.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00024E04",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "distributed",
+            "done",
+            "finished",
+            "samples",
+            "handed out"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DISTRIBUTION_DONE"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Observation beat for quest completion at stage 200.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2RRFavor04",
+          "min_stage": 200,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DISTRIBUTION_DONE"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "HEAR_ABOUT_SUJAMMA"
+    ],
+    "requires": []
+  }
 }

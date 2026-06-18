@@ -1,330 +1,348 @@
 {
-    "quest_key":  "c00_takeuparms",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0004B2D9",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "C00",
-    "title":  "Take Up Arms",
-    "description":  "Prove yourself worthy to join the Companions by speaking with Kodlak Whitemane, training with Vilkas, and running errands for the guild members in Jorrvaskr.",
-    "npc_facts":  {
-                      "Kodlak Whitemane":  {
-                                               "base_facts":  [
-                                                                  "I am the Harbinger of the Companions.",
-                                                                  "I lead the Companions from Jorrvaskr in Whiterun."
-                                                              ],
-                                               "beat_facts":  {
-                                                                  "SPEAK_WITH_KODLAK":  [
-                                                                                            "I have agreed to consider this newcomer for membership.",
-                                                                                            "I asked Vilkas to test their combat skills in the yard."
-                                                                                        ]
-                                                              }
-                                           },
-                      "Vilkas":  {
-                                     "base_facts":  [
-                                                        "I am a senior member of the Companions.",
-                                                        "I train new recruits at Jorrvaskr."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "TRAIN_WITH_VILKAS":  [
-                                                                                  "I tested the newcomer in the yard.",
-                                                                                  "They show some promise as a warrior."
-                                                                              ]
-                                                    }
-                                 },
-                      "Eorlund Gray-Mane":  {
-                                                "base_facts":  [
-                                                                   "I am the smith at the Skyforge above Jorrvaskr.",
-                                                                   "I craft and maintain weapons and armor for the Companions."
-                                                               ],
-                                                "beat_facts":  {
-                                                                   "DELIVER_SWORD_TO_EORLUND":  [
-                                                                                                    "The newcomer brought Vilkas\u0027s sword for sharpening.",
-                                                                                                    "I asked them to deliver Aela\u0027s shield to her."
-                                                                                                ]
-                                                               }
-                                            },
-                      "Aela the Huntress":  {
-                                                "base_facts":  [
-                                                                   "I am a member of the Companions.",
-                                                                   "I can often be found in Jorrvaskr\u0027s living quarters."
-                                                               ],
-                                                "beat_facts":  {
-                                                                   "BRING_AELA_SHIELD":  [
-                                                                                             "The newcomer delivered my shield.",
-                                                                                             "I asked Farkas to show them to their quarters."
-                                                                                         ]
-                                                               }
-                                            },
-                      "Farkas":  {
-                                     "base_facts":  [
-                                                        "I am a member of the Companions.",
-                                                        "I help new recruits settle into Jorrvaskr."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "FOLLOW_FARKAS_TO_QUARTERS":  [
-                                                                                          "I showed the newcomer to their quarters.",
-                                                                                          "They are now a whelp of the Companions."
-                                                                                      ]
-                                                    }
-                                 }
-                  },
-    "beats":  [
-                  {
-                      "id":  "SPEAK_WITH_KODLAK",
-                      "focus_npc":  "Kodlak Whitemane",
-                      "comment":  "Player speaks with Kodlak about joining the Companions.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0004B2D9",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0004B2D9",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C00",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "join the Companions",
-                                                            "Kodlak",
-                                                            "membership"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "TRAIN_WITH_VILKAS",
-                      "focus_npc":  "Vilkas",
-                      "comment":  "Player spars with Vilkas in the yard to prove their worth.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0004B2D9",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  20
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0004B2D9",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0004B2D9",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C00",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "train",
-                                                            "spar",
-                                                            "fight Vilkas"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SPEAK_WITH_KODLAK"
-                                        ]
-                  },
-                  {
-                      "id":  "DELIVER_SWORD_TO_EORLUND",
-                      "focus_npc":  "Eorlund Gray-Mane",
-                      "comment":  "Player takes Vilkas\u0027s sword to Eorlund at the Skyforge for sharpening.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0004B2D9",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  30
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0004B2D9",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0004B2D9",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  30
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C00",
-                                           "min_stage":  30
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "sword",
-                                                            "Eorlund",
-                                                            "sharpening",
-                                                            "Skyforge"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TRAIN_WITH_VILKAS"
-                                        ]
-                  },
-                  {
-                      "id":  "BRING_AELA_SHIELD",
-                      "focus_npc":  "Aela the Huntress",
-                      "comment":  "Player delivers Aela\u0027s shield to her in the living quarters.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0004B2D9",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  40
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0004B2D9",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  30
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0004B2D9",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  40
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C00",
-                                           "min_stage":  40
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "shield",
-                                                            "Aela"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DELIVER_SWORD_TO_EORLUND"
-                                        ]
-                  },
-                  {
-                      "id":  "FOLLOW_FARKAS_TO_QUARTERS",
-                      "focus_npc":  "Farkas",
-                      "comment":  "Player follows Farkas to their new quarters in Jorrvaskr.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0004B2D9",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  50
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0004B2D9",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  40
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0004B2D9",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  50
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C00",
-                                           "min_stage":  50
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "quarters",
-                                                            "Farkas",
-                                                            "bed",
-                                                            "room"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "BRING_AELA_SHIELD"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest completes; player has officially joined the Companions.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0004B2D9",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  50
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C00",
-                                           "min_stage":  100
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FOLLOW_FARKAS_TO_QUARTERS"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "SPEAK_WITH_KODLAK"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "c00_takeuparms",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0004B2D9",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "C00",
+  "title": "Take Up Arms",
+  "description": "Prove yourself worthy to join the Companions by speaking with Kodlak Whitemane, training with Vilkas, and running errands for the guild members in Jorrvaskr.",
+  "npc_facts": {
+    "Kodlak Whitemane": {
+      "base_facts": [
+        "I am the Harbinger of the Companions.",
+        "I lead the Companions from Jorrvaskr in Whiterun."
+      ],
+      "beat_facts": {
+        "SPEAK_WITH_KODLAK": [
+          "I have agreed to consider this newcomer for membership.",
+          "I asked Vilkas to test their combat skills in the yard."
+        ],
+        "QUEST_COMPLETE": [
+          "The newcomer has completed their initiation and joined the Companions as a whelp.",
+          "Kodlak's instinct about their potential appears to have been well-founded.",
+          "They must now prove themselves through the guild's tasks before earning greater trust."
+        ]
+      }
+    },
+    "Vilkas": {
+      "base_facts": [
+        "I am a senior member of the Companions.",
+        "I train new recruits at Jorrvaskr."
+      ],
+      "beat_facts": {
+        "TRAIN_WITH_VILKAS": [
+          "I tested the newcomer in the yard.",
+          "They show some promise as a warrior."
+        ],
+        "QUEST_COMPLETE": [
+          "The newcomer has earned their place as a whelp, though they still have much to prove.",
+          "They will need to complete jobs for the guild before earning the full respect of senior members."
+        ]
+      }
+    },
+    "Eorlund Gray-Mane": {
+      "base_facts": [
+        "I am the smith at the Skyforge above Jorrvaskr.",
+        "I craft and maintain weapons and armor for the Companions."
+      ],
+      "beat_facts": {
+        "DELIVER_SWORD_TO_EORLUND": [
+          "The newcomer brought Vilkas's sword for sharpening.",
+          "I asked them to deliver Aela's shield to her."
+        ],
+        "QUEST_COMPLETE": [
+          "The newcomer completed their errands and is now a whelp of the Companions.",
+          "Like all newcomers, they must work their way up through service to the guild."
+        ]
+      }
+    },
+    "Aela the Huntress": {
+      "base_facts": [
+        "I am a member of the Companions.",
+        "I can often be found in Jorrvaskr's living quarters."
+      ],
+      "beat_facts": {
+        "BRING_AELA_SHIELD": [
+          "The newcomer delivered my shield.",
+          "I asked Farkas to show them to their quarters."
+        ],
+        "QUEST_COMPLETE": [
+          "The newcomer has joined the Companions as a whelp.",
+          "They will need to take on jobs from guild members to advance beyond their current rank."
+        ]
+      }
+    },
+    "Farkas": {
+      "base_facts": [
+        "I am a member of the Companions.",
+        "I help new recruits settle into Jorrvaskr."
+      ],
+      "beat_facts": {
+        "FOLLOW_FARKAS_TO_QUARTERS": [
+          "I showed the newcomer to their quarters.",
+          "They are now a whelp of the Companions."
+        ],
+        "QUEST_COMPLETE": [
+          "The newcomer is now a whelp with a bed in Jorrvaskr's living quarters.",
+          "Farkas offered them a job to help prove themselves to the Companions.",
+          "They must complete at least one task for the guild before receiving a more significant assignment."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "SPEAK_WITH_KODLAK",
+      "focus_npc": "Kodlak Whitemane",
+      "comment": "Player speaks with Kodlak about joining the Companions.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0004B2D9",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0004B2D9",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C00",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "join the Companions",
+            "Kodlak",
+            "membership"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "TRAIN_WITH_VILKAS",
+      "focus_npc": "Vilkas",
+      "comment": "Player spars with Vilkas in the yard to prove their worth.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0004B2D9",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0004B2D9",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0004B2D9",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C00",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "train",
+            "spar",
+            "fight Vilkas"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_WITH_KODLAK"
+      ]
+    },
+    {
+      "id": "DELIVER_SWORD_TO_EORLUND",
+      "focus_npc": "Eorlund Gray-Mane",
+      "comment": "Player takes Vilkas's sword to Eorlund at the Skyforge for sharpening.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0004B2D9",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0004B2D9",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0004B2D9",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 30
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C00",
+          "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "sword",
+            "Eorlund",
+            "sharpening",
+            "Skyforge"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TRAIN_WITH_VILKAS"
+      ]
+    },
+    {
+      "id": "BRING_AELA_SHIELD",
+      "focus_npc": "Aela the Huntress",
+      "comment": "Player delivers Aela's shield to her in the living quarters.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0004B2D9",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0004B2D9",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 30
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0004B2D9",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 40
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C00",
+          "min_stage": 40
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "shield",
+            "Aela"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DELIVER_SWORD_TO_EORLUND"
+      ]
+    },
+    {
+      "id": "FOLLOW_FARKAS_TO_QUARTERS",
+      "focus_npc": "Farkas",
+      "comment": "Player follows Farkas to their new quarters in Jorrvaskr.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0004B2D9",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0004B2D9",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 40
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0004B2D9",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 50
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C00",
+          "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "quarters",
+            "Farkas",
+            "bed",
+            "room"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BRING_AELA_SHIELD"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest completes; player has officially joined the Companions.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0004B2D9",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 50
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C00",
+          "min_stage": 100
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FOLLOW_FARKAS_TO_QUARTERS"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "SPEAK_WITH_KODLAK"
+    ],
+    "requires": []
+  }
 }

@@ -1,174 +1,171 @@
 {
-    "quest_key":  "dbsidecontract04_killhern",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001EA60",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DBSideContract04",
-    "title":  "Kill Hern",
-    "description":  "A Dark Brotherhood side contract to assassinate the vampire Hern at Half-Moon Mill and report back to Nazir for a leveled gold reward.",
-    "npc_facts":  {
-                      "Nazir":  {
-                                    "base_facts":  [
-                                                       "I am a Redguard assassin of the Dark Brotherhood stationed at the Sanctuary.",
-                                                       "I hand out side contracts to fellow Brotherhood members."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "CONTRACT_ACCEPTED":  [
-                                                                                 "I have assigned the contract to kill the vampire Hern at Half-Moon Mill."
-                                                                             ],
-                                                       "QUEST_FINISHED":  [
-                                                                              "The contract on Hern is fulfilled and I have paid the reward."
-                                                                          ]
-                                                   }
-                                },
-                      "Hern":  {
-                                   "base_facts":  [
-                                                      "I am a vampire living at Half-Moon Mill with my wife Hert.",
-                                                      "I pretend to be a simple lumberjack to hide my true nature."
-                                                  ],
-                                   "beat_facts":  {
-
-                                                  }
-                               }
-                  },
-    "beats":  [
-                  {
-                      "id":  "CONTRACT_ACCEPTED",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Player accepts the contract from Nazir to kill Hern.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001EA60",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001EA60",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "kill Hern",
-                                                            "contract",
-                                                            "Hern"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "HERN_KILLED",
-                      "focus_npc":  "",
-                      "comment":  "Hern has been killed; the game advances to stage 20 automatically.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001EA60",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001EA60",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract04",
-                                           "min_stage":  20
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CONTRACT_ACCEPTED"
-                                        ]
-                  },
-                  {
-                      "id":  "REPORT_TO_NAZIR",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Player reports back to Nazir and collects the leveled gold reward.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001EA60",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001EA60",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Hern is dead",
-                                                            "job is done",
-                                                            "killed Hern",
-                                                            "completed the contract"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "HERN_KILLED"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_FINISHED",
-                      "focus_npc":  "",
-                      "comment":  "Quest completion observed; Hern is dead and reward collected.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract04",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "REPORT_TO_NAZIR"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "CONTRACT_ACCEPTED"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "db02a_sanctuary",
-                                               "beat_id":  "CONTRACTS_RECEIVED"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dbsidecontract04_killhern",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001EA60",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DBSideContract04",
+  "title": "Kill Hern",
+  "description": "A Dark Brotherhood side contract to assassinate the vampire Hern at Half-Moon Mill and report back to Nazir for a leveled gold reward.",
+  "npc_facts": {
+    "Nazir": {
+      "base_facts": [
+        "I am a Redguard assassin of the Dark Brotherhood stationed at the Sanctuary.",
+        "I hand out side contracts to fellow Brotherhood members."
+      ],
+      "beat_facts": {
+        "CONTRACT_ACCEPTED": [
+          "I have assigned the contract to kill the vampire Hern at Half-Moon Mill."
+        ],
+        "QUEST_FINISHED": [
+          "The contract on Hern is fulfilled and I have paid the reward.",
+          "Quest completion observed; Hern is dead and reward collected.",
+          "They can both be killed with any weapons—as long as Hern dies, the mission completes.",
+          "You can sneak into a shack next to the bridge and attack him safely with a ranged attack from an open window."
+        ]
+      }
+    },
+    "Hern": {
+      "base_facts": [
+        "I am a vampire living at Half-Moon Mill with my wife Hert.",
+        "I pretend to be a simple lumberjack to hide my true nature."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "CONTRACT_ACCEPTED",
+      "focus_npc": "Nazir",
+      "comment": "Player accepts the contract from Nazir to kill Hern.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA60",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001EA60",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "kill Hern",
+            "contract",
+            "Hern"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "HERN_KILLED",
+      "focus_npc": "",
+      "comment": "Hern has been killed; the game advances to stage 20 automatically.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001EA60",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001EA60",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract04",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONTRACT_ACCEPTED"
+      ]
+    },
+    {
+      "id": "REPORT_TO_NAZIR",
+      "focus_npc": "Nazir",
+      "comment": "Player reports back to Nazir and collects the leveled gold reward.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA60",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001EA60",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Hern is dead",
+            "job is done",
+            "killed Hern",
+            "completed the contract"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HERN_KILLED"
+      ]
+    },
+    {
+      "id": "QUEST_FINISHED",
+      "focus_npc": "",
+      "comment": "Quest completion observed; Hern is dead and reward collected.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract04",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "REPORT_TO_NAZIR"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "CONTRACT_ACCEPTED"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "db02a_sanctuary",
+        "beat_id": "CONTRACTS_RECEIVED"
+      }
+    ]
+  }
 }

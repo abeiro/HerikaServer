@@ -1,121 +1,162 @@
 {
-    "quest_key":  "dlc1rv09_amuletsofnightpower",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0000CE0B",
-    "quest_plugin":  "Dawnguard.esm",
-    "quest_editor_id":  "DLC1RV09",
-    "title":  "Amulets of Night Power",
-    "description":  "Feran Sadri tasks the player with retrieving the Amulet of Bats and the Amulet of The Gargoyle from two radiant dungeons to augment Vampire Lord powers.",
-    "npc_facts":  {
-                      "Feran Sadri":  {
-                                          "base_facts":  [
-                                                             "I am a vampire residing in Volkihar Keep.",
-                                                             "I study artifacts that can augment a Vampire Lord\u0027s powers.",
-                                                             "I know the locations of powerful amulets tied to night creatures."
-                                                         ],
-                                          "beat_facts":  {
-                                                             "FERAN_SENDS_FOR_AMULETS":  [
-                                                                                             "I have sent the vampire to retrieve the Amulet of Bats and the Amulet of The Gargoyle from two separate locations."
-                                                                                         ],
-                                                             "RETURN_TO_FERAN":  [
-                                                                                     "The vampire has retrieved both amulets and should return them to me."
-                                                                                 ],
-                                                             "QUEST_COMPLETE":  [
-                                                                                    "I have rewarded the vampire with the amulets and potions of blood for completing the task."
-                                                                                ]
-                                                         }
-                                      }
-                  },
-    "beats":  [
-                  {
-                      "id":  "FERAN_SENDS_FOR_AMULETS",
-                      "focus_npc":  "Feran Sadri",
-                      "comment":  "Feran offers the quest and directs the player to two radiant dungeons.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0000CE0B",
-                                     "quest_plugin":  "Dawnguard.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "amulets of night power",
-                                                            "night power",
-                                                            "vampire lord powers",
-                                                            "amulets"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "RETURN_TO_FERAN",
-                      "focus_npc":  "Feran Sadri",
-                      "comment":  "Both amulets retrieved; player must return to Feran.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1RV09",
-                                           "min_stage":  200,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FERAN_SENDS_FOR_AMULETS"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Feran Sadri",
-                      "comment":  "Quest finishes; Feran rewards the player with the amulets and potions of blood.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1RV09",
-                                           "stage":  255,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RETURN_TO_FERAN"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "FERAN_SENDS_FOR_AMULETS"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "dlc1vampirebaseintro_bloodstonechalice",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dlc1rv09_amuletsofnightpower",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0000CE0B",
+  "quest_plugin": "Dawnguard.esm",
+  "quest_editor_id": "DLC1RV09",
+  "title": "Amulets of Night Power",
+  "description": "Feran Sadri tasks the player with retrieving the Amulet of Bats and the Amulet of The Gargoyle from two radiant dungeons to augment Vampire Lord powers.",
+  "npc_facts": {
+    "Feran Sadri": {
+      "base_facts": [
+        "I am a vampire residing in Volkihar Keep.",
+        "I study artifacts that can augment a Vampire Lord's powers.",
+        "I know the locations of powerful amulets tied to night creatures."
+      ],
+      "beat_facts": {
+        "FERAN_SENDS_FOR_AMULETS": [
+          "I have sent the vampire to retrieve the Amulet of Bats and the Amulet of The Gargoyle from two separate locations."
+        ],
+        "RETURN_TO_FERAN": [
+          "The vampire has retrieved both amulets and should return them to me."
+        ],
+        "QUEST_COMPLETE": [
+          "I have rewarded the vampire with the amulets and potions of blood for completing the task.",
+          "Quest finishes; Feran rewards the player with the amulets and potions of blood.",
+          "Head to the two dungeons shown on your map, retrieve the amulets, and return to Feran, who will give you several potions of blood as a reward.",
+          "Detailed Walkthrough [ edit ] Talk to Feran Sadri in Volkihar Keep and he will tell you of two amulets which will augment your powers as a Vampire Lord ."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "FERAN_SENDS_FOR_AMULETS",
+      "focus_npc": "Feran Sadri",
+      "comment": "Feran offers the quest and directs the player to two radiant dungeons.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000CE0B",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "amulets of night power",
+            "night power",
+            "vampire lord powers",
+            "amulets"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "RETURN_TO_FERAN",
+      "focus_npc": "Feran Sadri",
+      "comment": "Both amulets retrieved; player must return to Feran.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000CE0B",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1RV09",
+          "min_stage": 200,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FERAN_SENDS_FOR_AMULETS"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Feran Sadri",
+      "comment": "Quest finishes; Feran rewards the player with the amulets and potions of blood.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000CE0B",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 255
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1RV09",
+          "stage": 255,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETURN_TO_FERAN"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "FERAN_SENDS_FOR_AMULETS"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc1vampirebaseintro_bloodstonechalice",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

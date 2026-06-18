@@ -19,7 +19,10 @@
           "He needed my blood to corrupt Auri-El's influence on Nirn."
         ],
         "QUEST_COMPLETE": [
-          "We now possess Auriel's Bow, the final piece of the Tyranny of the Sun."
+          "We now possess Auriel's Bow, the final piece of the Tyranny of the Sun.",
+          "Quest complete; player possesses Auriel's Bow and knows the truth of the Tyranny of the Sun prophecy.",
+          "Head north through the chambers, placing the Ewer on any pedestals to open the gates nearby, until you reach an icy tunnel leading to Auriel's Chapel .",
+          "This tunnel branches to the left and doubles back leading to another chest and some more loose items."
         ]
       }
     },
@@ -74,7 +77,10 @@
       "focus_npc": "Gelebor",
       "comment": "Player meets Gelebor and learns about the deal to slay Vyrthur for Auriel's Bow.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00002853",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [
@@ -168,7 +174,10 @@
       "focus_npc": "Gelebor",
       "comment": "Player speaks to Gelebor and retrieves Auriel's Bow.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00002853",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 150
       },
       "downstream": [],
       "triggers": [
@@ -198,7 +207,10 @@
       "focus_npc": "Serana",
       "comment": "Quest complete; player possesses Auriel's Bow and knows the truth of the Tyranny of the Sun prophecy.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00002853",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -207,6 +219,26 @@
           "quest_form_id": "0x00002853",
           "quest_plugin": "Dawnguard.esm",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

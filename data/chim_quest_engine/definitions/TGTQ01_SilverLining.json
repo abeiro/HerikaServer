@@ -1,266 +1,265 @@
 {
-    "quest_key":  "tgtq01_silverlining",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x000799DF",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "TGTQ01",
-    "title":  "Silver Lining",
-    "description":  "Delvin Mallory sends the player to assist Endon, a silversmith in Markarth, whose silver mold was stolen by bandits led by Rigel Strong-Arm and taken to Pinewatch. The player must infiltrate Pinewatch, recover the mold, and return it to Endon.",
-    "npc_facts":  {
-                      "Delvin Mallory":  {
-                                             "base_facts":  [
-                                                                "I am a member of the Thieves Guild and handle special jobs.",
-                                                                "I received word from Endon in Markarth requesting the Guild\u0027s assistance.",
-                                                                "After a successful job I compliment my operatives and share news of new merchants in the Ragged Flagon."
-                                                            ],
-                                             "beat_facts":  {
-                                                                "RECEIVE_QUEST":  [
-                                                                                      "I have assigned the player to help Endon recover his stolen silver mold."
-                                                                                  ],
-                                                                "COMPLETE_QUEST":  [
-                                                                                       "Endon is pleased to have his merchandise back and is now a powerful ally for the Guild in Markarth."
-                                                                                   ]
-                                                            }
-                                         },
-                      "Endon":  {
-                                    "base_facts":  [
-                                                       "I am a silversmith residing in Markarth and can be found at the Silver-Blood Inn.",
-                                                       "I had a silver mold stolen while it was en route to me.",
-                                                       "The mold was taken by bandits led by Rigel Strong-Arm to a hideout called Pinewatch."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "SPEAK_TO_ENDON":  [
-                                                                              "I have explained that my silver mold was stolen by bandits and taken to Pinewatch."
-                                                                          ],
-                                                       "RETURN_MOLD":  [
-                                                                           "I am grateful for the return of my silver mold and will serve as a fence for the Thieves Guild in Markarth."
-                                                                       ]
-                                                   }
-                                },
-                      "Rigel Strong-Arm":  {
-                                               "base_facts":  [
-                                                                  "I am the bandit leader at Pinewatch.",
-                                                                  "I carry the Pinewatch Treasure Room Key.",
-                                                                  "I have set up traps to protect my treasure room."
-                                                              ],
-                                               "beat_facts":  {
-
-                                                              }
-                                           }
-                  },
-    "beats":  [
-                  {
-                      "id":  "RECEIVE_QUEST",
-                      "focus_npc":  "Delvin Mallory",
-                      "comment":  "Player accepts the special job from Delvin to help Endon in Markarth.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x000799DF",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x000799DF",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "special job",
-                                                            "Endon",
-                                                            "Markarth job"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "SPEAK_TO_ENDON",
-                      "focus_npc":  "Endon",
-                      "comment":  "Player speaks to Endon at the Silver-Blood Inn and learns about the stolen silver mold.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x000799DF",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  20
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x000799DF",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x000799DF",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "silver mold",
-                                                            "stolen mold",
-                                                            "Pinewatch"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TGTQ01",
-                                           "min_stage":  10
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RECEIVE_QUEST"
-                                        ]
-                  },
-                  {
-                      "id":  "ENTER_PINEWATCH",
-                      "focus_npc":  "",
-                      "comment":  "Player enters Pinewatch to find the bandit hideout and the silver mold.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x000799DF",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  30
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x000799DF",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x000799DF",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  30
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TGTQ01",
-                                           "min_stage":  20
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SPEAK_TO_ENDON"
-                                        ]
-                  },
-                  {
-                      "id":  "RECOVER_MOLD",
-                      "focus_npc":  "Rigel Strong-Arm",
-                      "comment":  "Player recovers the silver mold from the Pinewatch treasure room, dealing with Rigel Strong-Arm and her traps.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x000799DF",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  40
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x000799DF",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  30
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x000799DF",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  40
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "found the mold",
-                                                            "got the mold",
-                                                            "silver mold recovered"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TGTQ01",
-                                           "min_stage":  30
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ENTER_PINEWATCH"
-                                        ]
-                  },
-                  {
-                      "id":  "RETURN_MOLD",
-                      "focus_npc":  "Endon",
-                      "comment":  "Player returns the silver mold to Endon, completing the quest. Endon becomes a fence for the Guild.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x000799DF",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x000799DF",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  40
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "return the mold",
-                                                            "here is the mold",
-                                                            "got your mold back"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TGTQ01",
-                                           "min_stage":  40
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RECOVER_MOLD"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "RECEIVE_QUEST"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "tg02_loudandclear",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "tgtq01_silverlining",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000799DF",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "TGTQ01",
+  "title": "Silver Lining",
+  "description": "Delvin Mallory sends the player to assist Endon, a silversmith in Markarth, whose silver mold was stolen by bandits led by Rigel Strong-Arm and taken to Pinewatch. The player must infiltrate Pinewatch, recover the mold, and return it to Endon.",
+  "npc_facts": {
+    "Delvin Mallory": {
+      "base_facts": [
+        "I am a member of the Thieves Guild and handle special jobs.",
+        "I received word from Endon in Markarth requesting the Guild's assistance.",
+        "After a successful job I compliment my operatives and share news of new merchants in the Ragged Flagon."
+      ],
+      "beat_facts": {
+        "RECEIVE_QUEST": [
+          "I have assigned the player to help Endon recover his stolen silver mold."
+        ],
+        "COMPLETE_QUEST": [
+          "Endon is pleased to have his merchandise back and is now a powerful ally for the Guild in Markarth."
+        ]
+      }
+    },
+    "Endon": {
+      "base_facts": [
+        "I am a silversmith residing in Markarth and can be found at the Silver-Blood Inn.",
+        "I had a silver mold stolen while it was en route to me.",
+        "The mold was taken by bandits led by Rigel Strong-Arm to a hideout called Pinewatch."
+      ],
+      "beat_facts": {
+        "SPEAK_TO_ENDON": [
+          "I have explained that my silver mold was stolen by bandits and taken to Pinewatch."
+        ],
+        "RETURN_MOLD": [
+          "I am grateful for the return of my silver mold and will serve as a fence for the Thieves Guild in Markarth.",
+          "Player returns the silver mold to Endon, completing the quest. Endon becomes a fence for the Guild.",
+          "The button opens a hidden entrance that leads down to some caves.",
+          "At the start of the next tunnel is another pressure plate that activates blades in front of you, and another plate at the far end that activates a battering ram from the right."
+        ]
+      }
+    },
+    "Rigel Strong-Arm": {
+      "base_facts": [
+        "I am the bandit leader at Pinewatch.",
+        "I carry the Pinewatch Treasure Room Key.",
+        "I have set up traps to protect my treasure room."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "RECEIVE_QUEST",
+      "focus_npc": "Delvin Mallory",
+      "comment": "Player accepts the special job from Delvin to help Endon in Markarth.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000799DF",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000799DF",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "special job",
+            "Endon",
+            "Markarth job"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "SPEAK_TO_ENDON",
+      "focus_npc": "Endon",
+      "comment": "Player speaks to Endon at the Silver-Blood Inn and learns about the stolen silver mold.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000799DF",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000799DF",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000799DF",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "silver mold",
+            "stolen mold",
+            "Pinewatch"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TGTQ01",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RECEIVE_QUEST"
+      ]
+    },
+    {
+      "id": "ENTER_PINEWATCH",
+      "focus_npc": "",
+      "comment": "Player enters Pinewatch to find the bandit hideout and the silver mold.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000799DF",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000799DF",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000799DF",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 30
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TGTQ01",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_TO_ENDON"
+      ]
+    },
+    {
+      "id": "RECOVER_MOLD",
+      "focus_npc": "Rigel Strong-Arm",
+      "comment": "Player recovers the silver mold from the Pinewatch treasure room, dealing with Rigel Strong-Arm and her traps.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000799DF",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000799DF",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 30
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000799DF",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 40
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "found the mold",
+            "got the mold",
+            "silver mold recovered"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TGTQ01",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENTER_PINEWATCH"
+      ]
+    },
+    {
+      "id": "RETURN_MOLD",
+      "focus_npc": "Endon",
+      "comment": "Player returns the silver mold to Endon, completing the quest. Endon becomes a fence for the Guild.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000799DF",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000799DF",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 40
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "return the mold",
+            "here is the mold",
+            "got your mold back"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TGTQ01",
+          "min_stage": 40
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RECOVER_MOLD"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "RECEIVE_QUEST"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "tg02_loudandclear",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

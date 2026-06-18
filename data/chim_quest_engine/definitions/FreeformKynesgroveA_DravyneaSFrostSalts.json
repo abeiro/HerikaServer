@@ -98,7 +98,10 @@
       "focus_npc": "Dravynea the Stoneweaver",
       "comment": "Player delivers frost salts and receives Alteration training. Quest completes.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00069043",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -106,6 +109,26 @@
           "type": "quest_stage",
           "quest_editor_id": "FreeformKynesgroveA",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

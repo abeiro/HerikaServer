@@ -89,7 +89,10 @@
       "focus_npc": "Serana",
       "comment": "Serana explains Harkon's prophecy and the need for a Moth Priest. Isran reluctantly agrees to let her help.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000098CB",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 15
       },
       "downstream": [],
       "triggers": [
@@ -120,7 +123,10 @@
       "focus_npc": "Serana",
       "comment": "Search for the Moth Priest by asking innkeepers, carriage drivers, or visiting the College of Winterhold. Trail leads to Solitude and Dragon Bridge.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000098CB",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 45
       },
       "downstream": [],
       "triggers": [
@@ -151,7 +157,10 @@
       "focus_npc": "",
       "comment": "Investigate the ambush south of Dragon Bridge, find the overturned cart and read the vampire's note pointing to Forebears' Holdout.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000098CB",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 57
       },
       "downstream": [],
       "triggers": [
@@ -182,7 +191,10 @@
       "focus_npc": "Dexion Evicus",
       "comment": "Enter Forebears' Holdout, defeat Malkus, use the Weystone Focus to free Dexion, then defeat the enthralled Moth Priest to break the vampire's hold.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000098CB",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 70
       },
       "downstream": [],
       "triggers": [

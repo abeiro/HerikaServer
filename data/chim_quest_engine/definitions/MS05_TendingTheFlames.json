@@ -1,248 +1,253 @@
 {
-    "quest_key":  "ms05_tendingtheflames",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00053511",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MS05",
-    "title":  "Tending the Flames",
-    "description":  "Help the Bards College save the Burning of King Olaf festival by retrieving King Olaf\u0027s Verse from Dead Men\u0027s Respite, improvising missing parts for the Jarl\u0027s court, and preparing the festival effigy.",
-    "npc_facts":  {
-                      "Viarmo":  {
-                                     "base_facts":  [
-                                                        "I am the Headmaster of the Bards College in Solitude.",
-                                                        "The Burning of King Olaf festival has been canceled by Jarl Elisif the Fair due to High King Torygg\u0027s death.",
-                                                        "I need King Olaf\u0027s Verse from the Poetic Edda to convince the Jarl to allow the festival."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "FIND_VERSE":  [
-                                                                           "The player has agreed to retrieve King Olaf\u0027s Verse from Dead Men\u0027s Respite."
-                                                                       ],
-                                                        "RETURN_AND_RECONSTRUCT":  [
-                                                                                       "The player returned with the Verse but parts are decayed. We must improvise the missing sections to save the festival."
-                                                                                   ],
-                                                        "COURT_PERFORMANCE":  [
-                                                                                  "The court accepted our performance of King Olaf\u0027s Verse. The player should speak to me about joining the College."
-                                                                              ]
-                                                    }
-                                 },
-                      "Jorn":  {
-                                   "base_facts":  [
-                                                      "I am preparing the effigy of King Olaf for the Burning of King Olaf festival at the Bards College."
-                                                  ],
-                                   "beat_facts":  {
-                                                      "FESTIVAL_PREP":  [
-                                                                            "I need General Tullius\u0027 coat to finish the effigy. The player must steal it for me."
-                                                                        ],
-                                                      "FESTIVAL":  [
-                                                                       "The player brought the coat. The effigy is ready and the festival can begin after dusk."
-                                                                   ]
-                                                  }
-                               },
-                      "Giraud Gemane":  {
-                                            "base_facts":  [
-                                                               "I am the Dean of History at the Bards College.",
-                                                               "I believe King Olaf\u0027s Verse can be found in Dead Men\u0027s Respite, which may also be King Olaf\u0027s burial tomb."
-                                                           ],
-                                            "beat_facts":  {
-
-                                                           }
-                                        }
-                  },
-    "beats":  [
-                  {
-                      "id":  "FIND_VERSE",
-                      "focus_npc":  "Viarmo",
-                      "comment":  "Player accepts the task to find King Olaf\u0027s Verse at Dead Men\u0027s Respite.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS05",
-                                           "min_stage":  75
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "find the verse",
-                                                            "king olaf\u0027s verse",
-                                                            "dead men\u0027s respite"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "RETURN_AND_RECONSTRUCT",
-                      "focus_npc":  "Viarmo",
-                      "comment":  "Player returns with the Verse and helps Viarmo reconstruct the decayed parts through improvisation.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS05",
-                                           "min_stage":  125
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "reconstruct the verse",
-                                                            "improvise",
-                                                            "missing parts"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FIND_VERSE"
-                                        ]
-                  },
-                  {
-                      "id":  "COURT_PERFORMANCE",
-                      "focus_npc":  "Viarmo",
-                      "comment":  "Player attends Viarmo\u0027s performance at the Blue Palace and speaks to him after the court accepts the Verse.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS05",
-                                           "min_stage":  175
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "blue palace",
-                                                            "performance",
-                                                            "court accepted"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RETURN_AND_RECONSTRUCT"
-                                        ]
-                  },
-                  {
-                      "id":  "FESTIVAL_PREP",
-                      "focus_npc":  "Jorn",
-                      "comment":  "Player speaks to Jorn and must steal General Tullius\u0027 coat for the effigy.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS05",
-                                           "min_stage":  225
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "effigy",
-                                                            "tullius coat",
-                                                            "steal the coat"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "COURT_PERFORMANCE"
-                                        ]
-                  },
-                  {
-                      "id":  "FESTIVAL",
-                      "focus_npc":  "Jorn",
-                      "comment":  "Player places the coat on the effigy and attends the Burning of King Olaf.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS05",
-                                           "min_stage":  260
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "burning of king olaf",
-                                                            "festival",
-                                                            "place the coat"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FESTIVAL_PREP"
-                                        ]
-                  },
-                  {
-                      "id":  "COMPLETION",
-                      "focus_npc":  "",
-                      "comment":  "Player is inducted into the Bards College after the festival.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS05",
-                                           "min_stage":  300
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "inducted",
-                                                            "bards college membership"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FESTIVAL"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "FIND_VERSE"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "ms05_tendingtheflames",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00053511",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MS05",
+  "title": "Tending the Flames",
+  "description": "Help the Bards College save the Burning of King Olaf festival by retrieving King Olaf's Verse from Dead Men's Respite, improvising missing parts for the Jarl's court, and preparing the festival effigy.",
+  "npc_facts": {
+    "Viarmo": {
+      "base_facts": [
+        "I am the Headmaster of the Bards College in Solitude.",
+        "The Burning of King Olaf festival has been canceled by Jarl Elisif the Fair due to High King Torygg's death.",
+        "I need King Olaf's Verse from the Poetic Edda to convince the Jarl to allow the festival."
+      ],
+      "beat_facts": {
+        "FIND_VERSE": [
+          "The player has agreed to retrieve King Olaf's Verse from Dead Men's Respite."
+        ],
+        "RETURN_AND_RECONSTRUCT": [
+          "The player returned with the Verse but parts are decayed. We must improvise the missing sections to save the festival."
+        ],
+        "COURT_PERFORMANCE": [
+          "The court accepted our performance of King Olaf's Verse. The player should speak to me about joining the College."
+        ],
+        "COMPLETION": [
+          "Player is inducted into the Bards College after the festival.",
+          "It soon becomes clear that the ghost shows you the correct path, so follow it and pull the chain at the dead end.",
+          "Return to the Bards College and pay a visit to the Blue Palace ."
+        ]
+      }
+    },
+    "Jorn": {
+      "base_facts": [
+        "I am preparing the effigy of King Olaf for the Burning of King Olaf festival at the Bards College."
+      ],
+      "beat_facts": {
+        "FESTIVAL_PREP": [
+          "I need General Tullius' coat to finish the effigy. The player must steal it for me."
+        ],
+        "FESTIVAL": [
+          "The player brought the coat. The effigy is ready and the festival can begin after dusk."
+        ]
+      }
+    },
+    "Giraud Gemane": {
+      "base_facts": [
+        "I am the Dean of History at the Bards College.",
+        "I believe King Olaf's Verse can be found in Dead Men's Respite, which may also be King Olaf's burial tomb."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "FIND_VERSE",
+      "focus_npc": "Viarmo",
+      "comment": "Player accepts the task to find King Olaf's Verse at Dead Men's Respite.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00053511",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 75
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS05",
+          "min_stage": 75
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "find the verse",
+            "king olaf's verse",
+            "dead men's respite"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "RETURN_AND_RECONSTRUCT",
+      "focus_npc": "Viarmo",
+      "comment": "Player returns with the Verse and helps Viarmo reconstruct the decayed parts through improvisation.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00053511",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 125
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS05",
+          "min_stage": 125
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "reconstruct the verse",
+            "improvise",
+            "missing parts"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIND_VERSE"
+      ]
+    },
+    {
+      "id": "COURT_PERFORMANCE",
+      "focus_npc": "Viarmo",
+      "comment": "Player attends Viarmo's performance at the Blue Palace and speaks to him after the court accepts the Verse.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00053511",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 175
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS05",
+          "min_stage": 175
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "blue palace",
+            "performance",
+            "court accepted"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETURN_AND_RECONSTRUCT"
+      ]
+    },
+    {
+      "id": "FESTIVAL_PREP",
+      "focus_npc": "Jorn",
+      "comment": "Player speaks to Jorn and must steal General Tullius' coat for the effigy.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00053511",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 225
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS05",
+          "min_stage": 225
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "effigy",
+            "tullius coat",
+            "steal the coat"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "COURT_PERFORMANCE"
+      ]
+    },
+    {
+      "id": "FESTIVAL",
+      "focus_npc": "Jorn",
+      "comment": "Player places the coat on the effigy and attends the Burning of King Olaf.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00053511",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 260
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS05",
+          "min_stage": 260
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "burning of king olaf",
+            "festival",
+            "place the coat"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FESTIVAL_PREP"
+      ]
+    },
+    {
+      "id": "COMPLETION",
+      "focus_npc": "",
+      "comment": "Player is inducted into the Bards College after the festival.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00053511",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 300
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS05",
+          "min_stage": 300
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "inducted",
+            "bards college membership"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FESTIVAL"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "FIND_VERSE"
+    ],
+    "requires": []
+  }
 }

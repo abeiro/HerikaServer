@@ -19,6 +19,11 @@
         ],
         "REPORT_TO_GALMAR": [
           "Raerek gave up the location of an Imperial shipment heading to Solitude. I've ordered an ambush along the road."
+        ],
+        "QUEST_COMPLETE": [
+          "The Imperial shipment has been seized — weapons and coin for the Stormcloaks. This will arm our next campaign.",
+          "Raerek's leverage paid off. The steward knows what happens if he refuses us again.",
+          "Gold well earned by the soldier who handled this. They've proven their worth to the cause."
         ]
       }
     },
@@ -30,6 +35,10 @@
       "beat_facts": {
         "BLACKMAIL_RAEREK": [
           "I was forced to reveal Imperial shipment routes to protect my secret. I just want my amulet back and this forgotten."
+        ],
+        "QUEST_COMPLETE": [
+          "My Talos worship remains a secret, but I am now compromised and at the Stormcloaks' mercy.",
+          "The Imperial shipment I revealed has been captured. I pray this is the last they demand of me."
         ]
       }
     },
@@ -41,6 +50,10 @@
       "beat_facts": {
         "AMBUSH_CARAVAN": [
           "The Imperial caravan has been hit. We secured the weapons and coin for the Stormcloaks."
+        ],
+        "QUEST_COMPLETE": [
+          "The caravan ambush was a success. Imperial weapons and coin now belong to the rebellion.",
+          "Galmar will want a full report — this haul will arm our soldiers well."
         ]
       }
     }
@@ -71,7 +84,10 @@
       "focus_npc": "Raerek",
       "comment": "Player found the inscribed Amulet of Talos in Raerek's quarters and blackmailed him into revealing shipment intel.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000504F0",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [
@@ -101,7 +117,10 @@
       "focus_npc": "Galmar Stone-Fist",
       "comment": "Player reports Raerek's intel about the shipment to Galmar, who orders the ambush.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000504F0",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
       },
       "downstream": [],
       "triggers": [
@@ -110,6 +129,26 @@
           "quest_form_id": "0x000504F0",
           "quest_plugin": "Skyrim.esm",
           "min_stage": 40
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

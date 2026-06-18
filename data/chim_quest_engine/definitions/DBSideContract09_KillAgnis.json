@@ -1,147 +1,169 @@
 {
-    "quest_key":  "dbsidecontract09_killagnis",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001EA65",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DBSideContract09",
-    "title":  "Kill Agnis",
-    "description":  "A Dark Brotherhood side contract given by Nazir to assassinate Agnis, an old servant living inside Fort Greymoor west of Whiterun. After the kill, report back to Nazir at the Sanctuary for a leveled gold reward.",
-    "npc_facts":  {
-                      "Nazir":  {
-                                    "base_facts":  [
-                                                       "I am a Redguard assassin and the keeper of contracts at the Dark Brotherhood Sanctuary.",
-                                                       "I assign side contracts to fellow family members.",
-                                                       "I pay leveled gold for completed contracts."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "CONTRACT_ACCEPTED":  [
-                                                                                 "I have given the contract to kill Agnis at Fort Greymoor."
-                                                                             ],
-                                                       "QUEST_COMPLETE":  [
-                                                                              "The contract on Agnis is fulfilled. I have paid the reward for infiltrating the occupied fort."
-                                                                          ]
-                                                   }
-                                },
-                      "Agnis":  {
-                                    "base_facts":  [
-                                                       "I am an old woman working as a servant inside the keep of Fort Greymoor.",
-                                                       "I have only a dagger and modest clothing for protection.",
-                                                       "I do not become hostile if spoken to."
-                                                   ],
-                                    "beat_facts":  {
-
-                                                   }
-                                }
-                  },
-    "beats":  [
-                  {
-                      "id":  "CONTRACT_ACCEPTED",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Player accepts the contract from Nazir to kill Agnis at Fort Greymoor.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001EA65",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001EA65",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "kill agnis",
-                                                            "agnis contract",
-                                                            "fort greymoor contract",
-                                                            "accept the contract"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "AGNIS_KILLED",
-                      "focus_npc":  "",
-                      "comment":  "Agnis has been killed inside Fort Greymoor. Quest advances to the report-back stage.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001EA65",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001EA65",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract09",
-                                           "min_stage":  20
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CONTRACT_ACCEPTED"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Player reports back to Nazir at the Sanctuary and collects the leveled gold reward.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001EA65",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract09",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "AGNIS_KILLED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "CONTRACT_ACCEPTED"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "db02a_sanctuary",
-                                               "beat_id":  "CONTRACTS_RECEIVED"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dbsidecontract09_killagnis",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001EA65",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DBSideContract09",
+  "title": "Kill Agnis",
+  "description": "A Dark Brotherhood side contract given by Nazir to assassinate Agnis, an old servant living inside Fort Greymoor west of Whiterun. After the kill, report back to Nazir at the Sanctuary for a leveled gold reward.",
+  "npc_facts": {
+    "Nazir": {
+      "base_facts": [
+        "I am a Redguard assassin and the keeper of contracts at the Dark Brotherhood Sanctuary.",
+        "I assign side contracts to fellow family members.",
+        "I pay leveled gold for completed contracts."
+      ],
+      "beat_facts": {
+        "CONTRACT_ACCEPTED": [
+          "I have given the contract to kill Agnis at Fort Greymoor."
+        ],
+        "QUEST_COMPLETE": [
+          "The contract on Agnis is fulfilled. I have paid the reward for infiltrating the occupied fort.",
+          "Player reports back to Nazir at the Sanctuary and collects the leveled gold reward.",
+          "After the kill, report back to Nazir for a leveled gold as a reward.",
+          "Reward [ edit ] Notes [ edit ] When receiving payment for the finished job, Nazir will say \"Infiltrating an occupied fort and making it out in one piece is nothing to joke about."
+        ]
+      }
+    },
+    "Agnis": {
+      "base_facts": [
+        "I am an old woman working as a servant inside the keep of Fort Greymoor.",
+        "I have only a dagger and modest clothing for protection.",
+        "I do not become hostile if spoken to."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "CONTRACT_ACCEPTED",
+      "focus_npc": "Nazir",
+      "comment": "Player accepts the contract from Nazir to kill Agnis at Fort Greymoor.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA65",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001EA65",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "kill agnis",
+            "agnis contract",
+            "fort greymoor contract",
+            "accept the contract"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "AGNIS_KILLED",
+      "focus_npc": "",
+      "comment": "Agnis has been killed inside Fort Greymoor. Quest advances to the report-back stage.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001EA65",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001EA65",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract09",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONTRACT_ACCEPTED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Nazir",
+      "comment": "Player reports back to Nazir at the Sanctuary and collects the leveled gold reward.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA65",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001EA65",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract09",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "AGNIS_KILLED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "CONTRACT_ACCEPTED"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "db02a_sanctuary",
+        "beat_id": "CONTRACTS_RECEIVED"
+      }
+    ]
+  }
 }

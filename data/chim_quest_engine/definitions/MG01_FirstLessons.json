@@ -45,7 +45,10 @@
           "I taught the new apprentice about ward spells and gave them Lesser Ward."
         ],
         "QUEST_COMPLETE": [
-          "The apprentice successfully used a ward against my firebolt. I proposed an expedition to Saarthal and consider them a friend."
+          "The apprentice successfully used a ward against my firebolt. I proposed an expedition to Saarthal and consider them a friend.",
+          "Player successfully defends with a ward; Tolfdir announces the Saarthal expedition.",
+          "If one of the three students die by any means, Tolfdir will cancel the ward training and immediately start the next quest.",
+          "Most of the other optional quests do not become available until after the next quest, Under Saarthal , has been completed."
         ]
       }
     }
@@ -75,7 +78,10 @@
       "focus_npc": "Faralda",
       "comment": "Faralda demands the player cast a spell to prove their ability.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001F251",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -165,7 +171,10 @@
       "focus_npc": "Tolfdir",
       "comment": "Player successfully defends with a ward; Tolfdir announces the Saarthal expedition.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001F251",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -173,6 +182,26 @@
           "type": "quest_stage",
           "quest_editor_id": "MG01",
           "stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

@@ -1,142 +1,139 @@
 {
-    "quest_key":  "dlc2thirskffelmusback_elmusfavorquestberries",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00038EC4",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2ThirskFFElmusBack",
-    "title":  "Elmus Favor Quest (berries)",
-    "description":  "After the Nords retake Thirsk Mead Hall, Elmus asks the player to bring him juniper berries from Skyrim to flavor a new batch of mead. He rewards the player with ten bottles of Ashfire Mead and leveled gold.",
-    "npc_facts":  {
-                      "Elmus":  {
-                                    "base_facts":  [
-                                                       "I am a brewer at Thirsk Mead Hall.",
-                                                       "We lost most of our brewing batches when the rieklings took over.",
-                                                       "I need juniper berries to flavor a new batch of mead.",
-                                                       "Juniper berries add a tart sweetness that makes the flavor more round.",
-                                                       "You cannot find juniper berries on Solstheim."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "LEARN_ABOUT_BERRIES":  [
-                                                                                   "I have told someone about my need for juniper berries."
-                                                                               ],
-                                                       "ACCEPT_QUEST":  [
-                                                                            "Someone has agreed to bring me juniper berries from Skyrim."
-                                                                        ],
-                                                       "RETURN_BERRIES":  [
-                                                                              "I received the juniper berries and gave them Ashfire Mead and gold as a reward."
-                                                                          ]
-                                                   }
-                                }
-                  },
-    "beats":  [
-                  {
-                      "id":  "LEARN_ABOUT_BERRIES",
-                      "focus_npc":  "Elmus",
-                      "comment":  "Player learns Elmus needs juniper berries for his mead.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "mead",
-                                                            "berries",
-                                                            "juniper",
-                                                            "flavorings"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "ACCEPT_QUEST",
-                      "focus_npc":  "Elmus",
-                      "comment":  "Player agrees to bring juniper berries. Sets stage 10 and displays objective.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00038EC4",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x00038EC4",
-                                             "quest_plugin":  "Dragonborn.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "bring berries",
-                                                            "find berries",
-                                                            "get berries",
-                                                            "juniper berries",
-                                                            "i\u0027ll help",
-                                                            "i can help"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "LEARN_ABOUT_BERRIES"
-                                        ]
-                  },
-                  {
-                      "id":  "RETURN_BERRIES",
-                      "focus_npc":  "Elmus",
-                      "comment":  "Player returns with juniper berries. Sets stage 200, completes objective, finishes quest.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00038EC4",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x00038EC4",
-                                             "quest_plugin":  "Dragonborn.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "got berries",
-                                                            "have berries",
-                                                            "juniper berries",
-                                                            "here are the berries"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ACCEPT_QUEST"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "LEARN_ABOUT_BERRIES"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dlc2thirskffelmusback_elmusfavorquestberries",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00038EC4",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2ThirskFFElmusBack",
+  "title": "Elmus Favor Quest (berries)",
+  "description": "After the Nords retake Thirsk Mead Hall, Elmus asks the player to bring him juniper berries from Skyrim to flavor a new batch of mead. He rewards the player with ten bottles of Ashfire Mead and leveled gold.",
+  "npc_facts": {
+    "Elmus": {
+      "base_facts": [
+        "I am a brewer at Thirsk Mead Hall.",
+        "We lost most of our brewing batches when the rieklings took over.",
+        "I need juniper berries to flavor a new batch of mead.",
+        "Juniper berries add a tart sweetness that makes the flavor more round.",
+        "You cannot find juniper berries on Solstheim."
+      ],
+      "beat_facts": {
+        "LEARN_ABOUT_BERRIES": [
+          "I have told someone about my need for juniper berries."
+        ],
+        "ACCEPT_QUEST": [
+          "Someone has agreed to bring me juniper berries from Skyrim."
+        ],
+        "RETURN_BERRIES": [
+          "I received the juniper berries and gave them Ashfire Mead and gold as a reward.",
+          "Player returns with juniper berries. Sets , completes objective, finishes quest.",
+          "Once you have retrieved a sample of the ingredient, return to Elmus at Thirsk Mead Hall for your reward: ten bottles of Ashfire Mead and a leveled amount of gold: I've got some juniper berries.",
+          "Detailed Walkthrough [ edit ] After the Nords from Bujold's Retreat have retaken Thirsk Mead Hall , speak to Elmus there to learn that he is in need of some juniper berries to make some mead: How is the mead?"
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "LEARN_ABOUT_BERRIES",
+      "focus_npc": "Elmus",
+      "comment": "Player learns Elmus needs juniper berries for his mead.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "mead",
+            "berries",
+            "juniper",
+            "flavorings"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "ACCEPT_QUEST",
+      "focus_npc": "Elmus",
+      "comment": "Player agrees to bring juniper berries. Sets stage 10 and displays objective.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00038EC4",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00038EC4",
+          "quest_plugin": "Dragonborn.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "bring berries",
+            "find berries",
+            "get berries",
+            "juniper berries",
+            "i'll help",
+            "i can help"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEARN_ABOUT_BERRIES"
+      ]
+    },
+    {
+      "id": "RETURN_BERRIES",
+      "focus_npc": "Elmus",
+      "comment": "Player returns with juniper berries. Sets stage 200, completes objective, finishes quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00038EC4",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00038EC4",
+          "quest_plugin": "Dragonborn.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "got berries",
+            "have berries",
+            "juniper berries",
+            "here are the berries"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_QUEST"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "LEARN_ABOUT_BERRIES"
+    ],
+    "requires": []
+  }
 }

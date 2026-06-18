@@ -1,163 +1,180 @@
 {
-    "quest_key":  "mgritual05_alterationritualspell",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x000D0755",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MGRitual05",
-    "title":  "Alteration Ritual Spell",
-    "description":  "Tolfdir requests help completing his research on a new Master Alteration spell. He needs dragon heartscales, which can only be harvested using Kahvozein\u0027s Fangâ€”a dagger found in a dragon priest dungeon. Retrieve the dagger, harvest heartscales from a dragon corpse, and return them to Tolfdir for the Dragonhide spell tome.",
-    "npc_facts":  {
-                      "Tolfdir":  {
-                                      "base_facts":  [
-                                                         "I am a master of Alteration magic at the College of Winterhold.",
-                                                         "I have been working on a new Master-level Alteration spell."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "QUEST_ACCEPTED":  [
-                                                                                "I need dragon heartscales to complete my research on the Dragonhide spell.",
-                                                                                "Only Kahvozein\u0027s Fang can cut heartscales from a dragon\u0027s skeleton."
-                                                                            ],
-                                                         "HEARTSCALES_COLLECTED":  [
-                                                                                       "The Dragonborn has collected the dragon heartscales I need.",
-                                                                                       "I am eager to see the heartscales and complete my research."
-                                                                                   ],
-                                                         "QUEST_COMPLETE":  [
-                                                                                "My research is complete thanks to the heartscales.",
-                                                                                "I have given the Dragonborn the Dragonhide spell tome as a reward.",
-                                                                                "I can now sell the Mass Paralysis spell tome."
-                                                                            ]
-                                                     }
-                                  }
-                  },
-    "beats":  [
-                  {
-                      "id":  "QUEST_ACCEPTED",
-                      "focus_npc":  "Tolfdir",
-                      "comment":  "Player speaks to Tolfdir with Alteration 90+ and agrees to help retrieve Kahvozein\u0027s Fang and harvest heartscales.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x000D0755",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x000D0755",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "teach me",
-                                                            "anything new",
-                                                            "alteration",
-                                                            "master spell",
-                                                            "new spell"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "HEARTSCALES_COLLECTED",
-                      "focus_npc":  "",
-                      "comment":  "Player has used Kahvozein\u0027s Fang on a dragon corpse to harvest heartscales. Observed via quest stage.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRitual05",
-                                           "min_stage":  20
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "QUEST_ACCEPTED"
-                                        ]
-                  },
-                  {
-                      "id":  "HEARTSCALES_RETURNED",
-                      "focus_npc":  "Tolfdir",
-                      "comment":  "Player returns dragon heartscales to Tolfdir and receives the Dragonhide spell tome.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x000D0755",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x000D0755",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "heartscales",
-                                                            "here are the scales",
-                                                            "I have the heartscales",
-                                                            "dragon scales"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "HEARTSCALES_COLLECTED"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Tolfdir",
-                      "comment":  "Quest finishes at stage 200. Tolfdir rewards the Dragonhide spell tome and offers Mass Paralysis for purchase.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRitual05",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "HEARTSCALES_RETURNED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "QUEST_ACCEPTED"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "mg01_firstlessons",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "mgritual05_alterationritualspell",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000D0755",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MGRitual05",
+  "title": "Alteration Ritual Spell",
+  "description": "Tolfdir requests help completing his research on a new Master Alteration spell. He needs dragon heartscales, which can only be harvested using Kahvozein's Fangâ€”a dagger found in a dragon priest dungeon. Retrieve the dagger, harvest heartscales from a dragon corpse, and return them to Tolfdir for the Dragonhide spell tome.",
+  "npc_facts": {
+    "Tolfdir": {
+      "base_facts": [
+        "I am a master of Alteration magic at the College of Winterhold.",
+        "I have been working on a new Master-level Alteration spell."
+      ],
+      "beat_facts": {
+        "QUEST_ACCEPTED": [
+          "I need dragon heartscales to complete my research on the Dragonhide spell.",
+          "Only Kahvozein's Fang can cut heartscales from a dragon's skeleton."
+        ],
+        "HEARTSCALES_COLLECTED": [
+          "The Dragonborn has collected the dragon heartscales I need.",
+          "I am eager to see the heartscales and complete my research."
+        ],
+        "QUEST_COMPLETE": [
+          "My research is complete thanks to the heartscales.",
+          "I have given the Dragonborn the Dragonhide spell tome as a reward.",
+          "I can now sell the Mass Paralysis spell tome."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_ACCEPTED",
+      "focus_npc": "Tolfdir",
+      "comment": "Player speaks to Tolfdir with Alteration 90+ and agrees to help retrieve Kahvozein's Fang and harvest heartscales.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D0755",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000D0755",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "teach me",
+            "anything new",
+            "alteration",
+            "master spell",
+            "new spell"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "HEARTSCALES_COLLECTED",
+      "focus_npc": "",
+      "comment": "Player has used Kahvozein's Fang on a dragon corpse to harvest heartscales. Observed via quest stage.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRitual05",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_ACCEPTED"
+      ]
+    },
+    {
+      "id": "HEARTSCALES_RETURNED",
+      "focus_npc": "Tolfdir",
+      "comment": "Player returns dragon heartscales to Tolfdir and receives the Dragonhide spell tome.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D0755",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000D0755",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "heartscales",
+            "here are the scales",
+            "I have the heartscales",
+            "dragon scales"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEARTSCALES_COLLECTED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Tolfdir",
+      "comment": "Quest finishes at stage 200. Tolfdir rewards the Dragonhide spell tome and offers Mass Paralysis for purchase.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D0755",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRitual05",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEARTSCALES_RETURNED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "QUEST_ACCEPTED"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mg01_firstlessons",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

@@ -21,7 +21,10 @@
           "The player has returned after dealing with the vampire advisor."
         ],
         "QUEST_COMPLETE": [
-          "The vampire threat in the Jarl's court has been eliminated."
+          "The vampire threat in the Jarl's court has been eliminated.",
+          "Quest completed - vampire threat eliminated or Jarl deposed.",
+          "Note that if your pickpocket attempt fails he will attack you, often leading to confrontation with nearby NPCs and likely death.",
+          "Return to the jarl with the note and they will grant you leave to kill the vampire with no retaliation from the hold's guards."
         ]
       }
     }
@@ -53,7 +56,10 @@
       "focus_npc": "",
       "comment": "Player pickpockets the Visiting Advisor for orders proving vampire identity.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00007EC5",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -83,7 +89,10 @@
       "focus_npc": "",
       "comment": "Player presents evidence to the Jarl, gaining permission to kill the vampire without guard retaliation.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00007EC5",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [
@@ -112,7 +121,10 @@
       "focus_npc": "",
       "comment": "Player destroys the Visiting Advisor, either with Jarl's permission or discreetly without evidence.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00007EC5",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 40
       },
       "downstream": [],
       "triggers": [
@@ -142,7 +154,10 @@
       "focus_npc": "Isran",
       "comment": "Player returns to Isran after destroying the vampire.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00007EC5",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 100
       },
       "downstream": [],
       "triggers": [

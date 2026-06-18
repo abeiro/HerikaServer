@@ -29,7 +29,10 @@
           "Someone has offered to retrieve Grimsever for me, though it may be a fool's errand."
         ],
         "COMPLETE_QUEST": [
-          "My blade Grimsever has been returned to me. I am grateful and will accompany this person as a follower."
+          "My blade Grimsever has been returned to me. I am grateful and will accompany this person as a follower.",
+          "Player returns Grimsever to Mjoll; she becomes available as a follower.",
+          "Detailed Walkthrough [ edit ] Mjoll the Lioness [ edit ] Mjoll the Lioness lives in Riften where she spends her time speaking out against the Thieves Guild and talking to her faithful follower Aerin about the evils in.",
+          "If you are already level 14 or above when you first interact with Mjoll, you must also gain another level after your initial conversation and return to her before the dialogue option to begin this quest becomes."
         ]
       }
     }
@@ -137,7 +140,10 @@
       "focus_npc": "Mjoll the Lioness",
       "comment": "Player returns Grimsever to Mjoll; she becomes available as a follower.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0005331C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [
         {
@@ -152,6 +158,26 @@
           "type": "quest_stage",
           "quest_editor_id": "FreeformRiften09",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

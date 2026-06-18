@@ -1,166 +1,157 @@
 {
-    "quest_key":  "cwfortsiegefort_battleforfortkastav",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00083042",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "CWFortSiegeFort",
-    "title":  "The Battle for Fort Kastav",
-    "description":  "Galmar Stone-Fist orders the player to assist Stormcloak forces in capturing Fort Kastav from the Imperial Legion. The player must join the attackers west of the fort and defeat the Imperial defenders. Completing this quest reinstates Korir as Jarl of Winterhold and exiles Kraldar.",
-    "npc_facts":  {
-                      "Galmar Stone-Fist":  {
-                                                "base_facts":  [
-                                                                   "I am second-in-command of the Stormcloak rebellion under Ulfric Stormcloak.",
-                                                                   "I command the assault to retake Fort Kastav from the Imperials.",
-                                                                   "I give orders from the Winterhold Stormcloak Camp."
-                                                               ],
-                                                "beat_facts":  {
-                                                                   "ORDERS_FROM_GALMAR":  [
-                                                                                              "I have sent the warrior to join the attack on Fort Kastav."
-                                                                                          ],
-                                                                   "FORT_CAPTURED":  [
-                                                                                         "Fort Kastav has fallen to our forces. The Imperials are driven from Winterhold."
-                                                                                     ]
-                                                               }
-                                            },
-                      "Korir":  {
-                                    "base_facts":  [
-                                                       "I am the rightful Jarl of Winterhold, displaced by the Empire.",
-                                                       "If the Stormcloaks retake Fort Kastav, I will be reinstated as Jarl."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "FORT_CAPTURED":  [
-                                                                             "The Stormcloaks have taken Fort Kastav. I am Jarl of Winterhold once more."
-                                                                         ]
-                                                   }
-                                },
-                      "Kraldar":  {
-                                      "base_facts":  [
-                                                         "I serve as Jarl of Winterhold under Imperial appointment.",
-                                                         "If the Stormcloaks take Fort Kastav, I will be exiled from Winterhold."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "FORT_CAPTURED":  [
-                                                                               "The Stormcloaks have won. I have been exiled to Erikur\u0027s House in Solitude."
-                                                                           ]
-                                                     }
-                                  }
-                  },
-    "beats":  [
-                  {
-                      "id":  "ORDERS_FROM_GALMAR",
-                      "focus_npc":  "Galmar Stone-Fist",
-                      "comment":  "Player receives orders from Galmar at the Winterhold Stormcloak Camp to attack Fort Kastav.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00083042",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "fort kastav",
-                                                            "attack the fort",
-                                                            "take the fort",
-                                                            "orders",
-                                                            "join the men"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "JOIN_THE_MEN",
-                      "focus_npc":  "",
-                      "comment":  "Player travels to Fort Kastav and joins the Stormcloak attackers west of the fort.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CWFortSiegeFort",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "join the stormcloaks",
-                                                            "ready to attack",
-                                                            "with the men"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ORDERS_FROM_GALMAR"
-                                        ]
-                  },
-                  {
-                      "id":  "ASSAULT_FORT",
-                      "focus_npc":  "",
-                      "comment":  "Player engages in the assault on Fort Kastav, defeating Imperial defenders.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CWFortSiegeFort",
-                                           "min_stage":  50
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "JOIN_THE_MEN"
-                                        ]
-                  },
-                  {
-                      "id":  "FORT_CAPTURED",
-                      "focus_npc":  "",
-                      "comment":  "Fort Kastav is taken. Korir is reinstated as Jarl; Kraldar and Thonjolf are exiled. Player should report to Ulfric for the next phase of Liberation of Skyrim.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CWFortSiegeFort",
-                                           "min_stage":  9000
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ASSAULT_FORT"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "ORDERS_FROM_GALMAR"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "cwfortsiegefort_battleforfortkastav",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00083042",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "CWFortSiegeFort",
+  "title": "The Battle for Fort Kastav",
+  "description": "Galmar Stone-Fist orders the player to assist Stormcloak forces in capturing Fort Kastav from the Imperial Legion. The player must join the attackers west of the fort and defeat the Imperial defenders. Completing this quest reinstates Korir as Jarl of Winterhold and exiles Kraldar.",
+  "npc_facts": {
+    "Galmar Stone-Fist": {
+      "base_facts": [
+        "I am second-in-command of the Stormcloak rebellion under Ulfric Stormcloak.",
+        "I command the assault to retake Fort Kastav from the Imperials.",
+        "I give orders from the Winterhold Stormcloak Camp."
+      ],
+      "beat_facts": {
+        "ORDERS_FROM_GALMAR": [
+          "I have sent the warrior to join the attack on Fort Kastav."
+        ],
+        "FORT_CAPTURED": [
+          "Fort Kastav has fallen to our forces. The Imperials are driven from Winterhold."
+        ]
+      }
+    },
+    "Korir": {
+      "base_facts": [
+        "I am the rightful Jarl of Winterhold, displaced by the Empire.",
+        "If the Stormcloaks retake Fort Kastav, I will be reinstated as Jarl."
+      ],
+      "beat_facts": {
+        "FORT_CAPTURED": [
+          "The Stormcloaks have taken Fort Kastav. I am Jarl of Winterhold once more."
+        ]
+      }
+    },
+    "Kraldar": {
+      "base_facts": [
+        "I serve as Jarl of Winterhold under Imperial appointment.",
+        "If the Stormcloaks take Fort Kastav, I will be exiled from Winterhold."
+      ],
+      "beat_facts": {
+        "FORT_CAPTURED": [
+          "The Stormcloaks have won. I have been exiled to Erikur's House in Solitude."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ORDERS_FROM_GALMAR",
+      "focus_npc": "Galmar Stone-Fist",
+      "comment": "Player receives orders from Galmar at the Winterhold Stormcloak Camp to attack Fort Kastav.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00083042",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "fort kastav",
+            "attack the fort",
+            "take the fort",
+            "orders",
+            "join the men"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "JOIN_THE_MEN",
+      "focus_npc": "",
+      "comment": "Player travels to Fort Kastav and joins the Stormcloak attackers west of the fort.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00083042",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWFortSiegeFort",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "join the stormcloaks",
+            "ready to attack",
+            "with the men"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ORDERS_FROM_GALMAR"
+      ]
+    },
+    {
+      "id": "ASSAULT_FORT",
+      "focus_npc": "",
+      "comment": "Player engages in the assault on Fort Kastav, defeating Imperial defenders.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWFortSiegeFort",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "JOIN_THE_MEN"
+      ]
+    },
+    {
+      "id": "FORT_CAPTURED",
+      "focus_npc": "",
+      "comment": "Fort Kastav is taken. Korir is reinstated as Jarl; Kraldar and Thonjolf are exiled. Player should report to Ulfric for the next phase of Liberation of Skyrim.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWFortSiegeFort",
+          "min_stage": 9000
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ASSAULT_FORT"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "ORDERS_FROM_GALMAR"
+    ],
+    "requires": []
+  }
 }

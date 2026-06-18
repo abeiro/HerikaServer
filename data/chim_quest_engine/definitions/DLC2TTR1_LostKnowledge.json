@@ -1,117 +1,133 @@
 {
-    "quest_key":  "dlc2ttr1_lostknowledge",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001B65F",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2TTR1",
-    "title":  "Lost Knowledge",
-    "description":  "After completing The Gardener of Men, Neloth asks you to retrieve one of Hermaeus Mora\u0027s Black Books from a dungeon on Solstheim. Return the book to him for a gold reward.",
-    "npc_facts":  {
-                      "Neloth":  {
-                                     "base_facts":  [
-                                                        "I am a Telvanni wizard residing in Tel Mithryn on Solstheim.",
-                                                        "I study Hermaeus Mora\u0027s Black Books and seek copies of them.",
-                                                        "I will reward anyone who retrieves Black Books for me and let them keep the original."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "QUEST_START":  [
-                                                                            "I have sent the traveler to retrieve a Black Book from a dungeon on Solstheim."
-                                                                        ],
-                                                        "BOOK_RETRIEVED":  [
-                                                                               "The traveler has found the Black Book and should return it to me."
-                                                                           ],
-                                                        "QUEST_COMPLETE":  [
-                                                                               "I have made a copy of the Black Book and rewarded the traveler for their efforts."
-                                                                           ]
-                                                    }
-                                 }
-                  },
-    "beats":  [
-                  {
-                      "id":  "QUEST_START",
-                      "focus_npc":  "Neloth",
-                      "comment":  "Neloth offers the quest after The Gardener of Men is completed, asking you to retrieve a Black Book.",
-                      "action":  {
-                                     "type":  "set_stage_cascade",
-                                     "quest_form_id":  "0x0001B65F",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  100
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "black books",
-                                                            "another book",
-                                                            "lost knowledge",
-                                                            "hermaeus mora"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "BOOK_RETRIEVED",
-                      "focus_npc":  "",
-                      "comment":  "Player has retrieved the Black Book from the dungeon and the quest advances to the return stage.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2TTR1",
-                                           "min_stage":  200,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "QUEST_START"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Neloth",
-                      "comment":  "Neloth makes a copy of the Black Book, rewards the player with gold, and the quest concludes.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2TTR1",
-                                           "min_stage":  300,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "BOOK_RETRIEVED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "QUEST_START"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dlc2ttr1_lostknowledge",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001B65F",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2TTR1",
+  "title": "Lost Knowledge",
+  "description": "After completing The Gardener of Men, Neloth asks you to retrieve one of Hermaeus Mora's Black Books from a dungeon on Solstheim. Return the book to him for a gold reward.",
+  "npc_facts": {
+    "Neloth": {
+      "base_facts": [
+        "I am a Telvanni wizard residing in Tel Mithryn on Solstheim.",
+        "I study Hermaeus Mora's Black Books and seek copies of them.",
+        "I will reward anyone who retrieves Black Books for me and let them keep the original."
+      ],
+      "beat_facts": {
+        "QUEST_START": [
+          "I have sent the traveler to retrieve a Black Book from a dungeon on Solstheim."
+        ],
+        "BOOK_RETRIEVED": [
+          "The traveler has found the Black Book and should return it to me."
+        ],
+        "QUEST_COMPLETE": [
+          "I have made a copy of the Black Book and rewarded the traveler for their efforts.",
+          "Neloth makes a copy of the Black Book, rewards the player with gold, and the quest concludes.",
+          "Once you have the book in your possession, find the door leading back to Benkongerike and return to Neloth for your reward and your next task, a trip through Raven Rock Mine .",
+          "Once you return from the realm of Hermaeus Mora , head back to the chamber with the caged and deceased Servos Rendas and follow the path leading northeast from the cage."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_START",
+      "focus_npc": "Neloth",
+      "comment": "Neloth offers the quest after The Gardener of Men is completed, asking you to retrieve a Black Book.",
+      "action": {
+        "type": "set_stage_cascade",
+        "quest_form_id": "0x0001B65F",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 100
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "black books",
+            "another book",
+            "lost knowledge",
+            "hermaeus mora"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "BOOK_RETRIEVED",
+      "focus_npc": "",
+      "comment": "Player has retrieved the Black Book from the dungeon and the quest advances to the return stage.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2TTR1",
+          "min_stage": 200,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_START"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Neloth",
+      "comment": "Neloth makes a copy of the Black Book, rewards the player with gold, and the quest concludes.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001B65F",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 300
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2TTR1",
+          "min_stage": 300,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BOOK_RETRIEVED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "QUEST_START"
+    ],
+    "requires": []
+  }
 }

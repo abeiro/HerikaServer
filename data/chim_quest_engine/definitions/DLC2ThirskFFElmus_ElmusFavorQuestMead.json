@@ -1,158 +1,154 @@
 {
-    "quest_key":  "dlc2thirskffelmus_elmusfavorquestmead",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00038EBF",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2ThirskFFElmus",
-    "title":  "Elmus Favor Quest (mead)",
-    "description":  "Elmus at Bujold\u0027s Retreat asks the player to bring him a bottle of Ashfire Mead from Thirsk Mead Hall, which has been taken over by Rieklings. Any Ashfire Mead will suffice.",
-    "npc_facts":  {
-                      "Elmus":  {
-                                    "base_facts":  [
-                                                       "I am a Nord staying at Bujold\u0027s Retreat.",
-                                                       "I long for the taste of Thirsk mead.",
-                                                       "I want someone to bring me Ashfire Mead from Thirsk Mead Hall."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "ELMUS_REQUEST":  [
-                                                                             "I have asked the traveler to bring me Ashfire Mead from Thirsk Mead Hall."
-                                                                         ],
-                                                       "DELIVER_MEAD":  [
-                                                                            "The traveler brought me Ashfire Mead. I am grateful."
-                                                                        ]
-                                                   }
-                                }
-                  },
-    "beats":  [
-                  {
-                      "id":  "ELMUS_REQUEST",
-                      "focus_npc":  "Elmus",
-                      "comment":  "Player speaks to Elmus and accepts the fetch request for Ashfire Mead.",
-                      "action":  {
-                                     "type":  "set_stage_cascade",
-                                     "quest_form_id":  "0x00038EBF",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x00038EBF",
-                                             "quest_plugin":  "Dragonborn.esm",
-                                             "index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "ashfire mead",
-                                                            "thirsk mead",
-                                                            "bring mead",
-                                                            "miss mead"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "OBTAIN_ASHFIRE_MEAD",
-                      "focus_npc":  "",
-                      "comment":  "Player retrieves Ashfire Mead from Thirsk Mead Hall or elsewhere.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "got the mead",
-                                                            "found ashfire",
-                                                            "have mead",
-                                                            "bottle of mead"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ELMUS_REQUEST"
-                                        ]
-                  },
-                  {
-                      "id":  "DELIVER_MEAD",
-                      "focus_npc":  "Elmus",
-                      "comment":  "Player gives Ashfire Mead to Elmus and completes the quest.",
-                      "action":  {
-                                     "type":  "set_stage_cascade",
-                                     "quest_form_id":  "0x00038EBF",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x00038EBF",
-                                             "quest_plugin":  "Dragonborn.esm",
-                                             "index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "here is the mead",
-                                                            "brought you mead",
-                                                            "your mead",
-                                                            "ashfire mead"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "OBTAIN_ASHFIRE_MEAD"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Observational beat for quest completion at stage 200.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2ThirskFFElmus",
-                                           "min_stage":  200,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "ELMUS_REQUEST"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dlc2thirskffelmus_elmusfavorquestmead",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00038EBF",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2ThirskFFElmus",
+  "title": "Elmus Favor Quest (mead)",
+  "description": "Elmus at Bujold's Retreat asks the player to bring him a bottle of Ashfire Mead from Thirsk Mead Hall, which has been taken over by Rieklings. Any Ashfire Mead will suffice.",
+  "npc_facts": {
+    "Elmus": {
+      "base_facts": [
+        "I am a Nord staying at Bujold's Retreat.",
+        "I long for the taste of Thirsk mead.",
+        "I want someone to bring me Ashfire Mead from Thirsk Mead Hall."
+      ],
+      "beat_facts": {
+        "ELMUS_REQUEST": [
+          "I have asked the traveler to bring me Ashfire Mead from Thirsk Mead Hall."
+        ],
+        "DELIVER_MEAD": [
+          "The traveler brought me Ashfire Mead. I am grateful."
+        ],
+        "QUEST_COMPLETE": [
+          "The traveler brought me Ashfire Mead and I paid them a leveled amount of gold for their trouble.",
+          "My disposition toward the traveler has warmed for helping me.",
+          "I can finally enjoy the taste of Thirsk mead again, even though the hall itself remains in riekling hands.",
+          "I am grateful the traveler braved Thirsk Mead Hall to retrieve this for me."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ELMUS_REQUEST",
+      "focus_npc": "Elmus",
+      "comment": "Player speaks to Elmus and accepts the fetch request for Ashfire Mead.",
+      "action": {
+        "type": "set_stage_cascade",
+        "quest_form_id": "0x00038EBF",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00038EBF",
+          "quest_plugin": "Dragonborn.esm",
+          "index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "ashfire mead",
+            "thirsk mead",
+            "bring mead",
+            "miss mead"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "OBTAIN_ASHFIRE_MEAD",
+      "focus_npc": "",
+      "comment": "Player retrieves Ashfire Mead from Thirsk Mead Hall or elsewhere.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "got the mead",
+            "found ashfire",
+            "have mead",
+            "bottle of mead"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ELMUS_REQUEST"
+      ]
+    },
+    {
+      "id": "DELIVER_MEAD",
+      "focus_npc": "Elmus",
+      "comment": "Player gives Ashfire Mead to Elmus and completes the quest.",
+      "action": {
+        "type": "set_stage_cascade",
+        "quest_form_id": "0x00038EBF",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00038EBF",
+          "quest_plugin": "Dragonborn.esm",
+          "index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "here is the mead",
+            "brought you mead",
+            "your mead",
+            "ashfire mead"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "OBTAIN_ASHFIRE_MEAD"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Observational beat for quest completion at stage 200.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2ThirskFFElmus",
+          "min_stage": 200,
+          "quest_plugin": "Dragonborn.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": []
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "ELMUS_REQUEST"
+    ],
+    "requires": []
+  }
 }

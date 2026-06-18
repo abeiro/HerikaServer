@@ -23,6 +23,11 @@
         ],
         "DELIVER_SAADIA": [
           "The player betrayed me and led me into Kematu's trap at the stables."
+        ],
+        "QUEST_COMPLETE": [
+          "Quest ends either by helping Saadia kill Kematu or delivering her to Kematu for justice.",
+          "Once the Alik'r are dead, loot Kematu's corpse for bonus gold, then return to Saadia in the Bannered Mare for your reward.",
+          "After paying 100 gold to a guard, the prisoner will tell you that the leader of the Alik'r is in a cave west of Whiterun called Swindler's Den ."
         ]
       }
     },
@@ -70,7 +75,10 @@
       "focus_npc": "Saadia",
       "comment": "Player finds Saadia at The Bannered Mare and hears her claim of being hunted by Dominion assassins.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001CF25",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 25
       },
       "downstream": [],
       "triggers": [
@@ -145,7 +153,10 @@
       "focus_npc": "Saadia",
       "comment": "Player kills Kematu and must return to Saadia for a reward.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001CF25",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 160
       },
       "downstream": [],
       "triggers": [
@@ -155,6 +166,26 @@
           "quest_form_id": "0x0001CF25",
           "quest_plugin": "Skyrim.esm",
           "min_stage": 160
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",
@@ -167,7 +198,10 @@
       "focus_npc": "Kematu",
       "comment": "Player lures Saadia to the Whiterun Stables where Kematu captures her with a paralysis spell.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001CF25",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 175
       },
       "downstream": [],
       "triggers": [
@@ -177,6 +211,26 @@
           "quest_form_id": "0x0001CF25",
           "quest_plugin": "Skyrim.esm",
           "min_stage": 175
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

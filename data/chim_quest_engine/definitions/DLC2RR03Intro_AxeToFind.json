@@ -24,6 +24,11 @@
         ],
         "LIE_TO_GLOVER": [
           "Crescius refused to return the pickaxe. I paid for the trouble anyway."
+        ],
+        "QUEST_COMPLETE": [
+          "Quest finishes after player resolves the pickaxe situation with Glover.",
+          "Although Glover lets you keep the pickaxe as a reward for finishing the quest, you can choose not to return the pickaxe and keep it that way instead.",
+          "If you return the pickaxe, Glover explains that he only wanted to teach Crescuis a lesson that stealing is wrong."
         ]
       }
     },

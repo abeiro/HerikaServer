@@ -1,274 +1,337 @@
 {
-    "quest_key":  "dlc1vampirebaseintro_bloodstonechalice",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0000594C",
-    "quest_plugin":  "Dawnguard.esm",
-    "quest_editor_id":  "DLC1VampireBaseIntro",
-    "title":  "The Bloodstone Chalice",
-    "description":  "Lord Harkon sends the player to Garan Marethi with a coded message. Garan reveals the Bloodstone Chalice must be filled at the Redwater Den spring and augmented with vampire blood. Rival factions send assassins to steal the chalice, but the player defeats them and returns it, earning Harkon\u0027s favor.",
-    "npc_facts":  {
-                      "Garan Marethi":  {
-                                            "base_facts":  [
-                                                               "I am Garan Marethi, a senior member of the Volkihar court.",
-                                                               "I serve Lord Harkon and manage affairs in Castle Volkihar.",
-                                                               "I know the Bloodstone Chalice can amplify vampire powers."
-                                                           ],
-                                            "beat_facts":  {
-                                                               "SPEAK_TO_GARAN":  [
-                                                                                      "I received Harkon\u0027s message and told the new vampire about the Bloodstone Chalice."
-                                                                                  ],
-                                                               "FILL_CHALICE_SPRING":  [
-                                                                                           "I sent the new vampire to fill the Chalice at Redwater Den."
-                                                                                       ],
-                                                               "DEFEAT_ASSASSINS":  [
-                                                                                        "I suspected rivals would send assassins; the new vampire proved their worth."
-                                                                                    ],
-                                                               "RETURN_CHALICE":  [
-                                                                                      "The Chalice is restored. Vingalmo and Orthjolf\u0027s pawns are dead. I warned the new vampire about court politics."
-                                                                                  ]
-                                                           }
-                                        },
-                      "Stalf":  {
-                                    "base_facts":  [
-                                                       "I am Stalf, a vampire serving Orthjolf in Castle Volkihar."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "DEFEAT_ASSASSINS":  [
-                                                                                "I was sent to kill the new vampire and steal the Chalice for Orthjolf, but I failed."
-                                                                            ]
-                                                   }
-                                },
-                      "Salonia Caelia":  {
-                                             "base_facts":  [
-                                                                "I am Salonia Caelia, a vampire serving Vingalmo in Castle Volkihar."
-                                                            ],
-                                             "beat_facts":  {
-                                                                "DEFEAT_ASSASSINS":  [
-                                                                                         "I was sent to kill the new vampire and return the Chalice to Vingalmo, but I failed."
-                                                                                     ]
-                                                            }
-                                         }
-                  },
-    "beats":  [
-                  {
-                      "id":  "SPEAK_TO_GARAN",
-                      "focus_npc":  "Garan Marethi",
-                      "comment":  "Player delivers Harkon\u0027s message and learns about the Bloodstone Chalice.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VampireBaseIntro",
-                                           "min_stage":  10,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "it is time",
-                                                            "harkon sent me",
-                                                            "speak with garan"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "FOLLOW_GARAN_TO_CHALICE",
-                      "focus_npc":  "Garan Marethi",
-                      "comment":  "Garan leads the player to the Chalice and gives detailed orders.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VampireBaseIntro",
-                                           "min_stage":  15,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SPEAK_TO_GARAN"
-                                        ]
-                  },
-                  {
-                      "id":  "FILL_CHALICE_SPRING",
-                      "focus_npc":  "",
-                      "comment":  "Player travels to Redwater Den and fills the Chalice from the Bloodspring.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VampireBaseIntro",
-                                           "min_stage":  30,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "fill the chalice",
-                                                            "bloodspring",
-                                                            "redwater spring"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FOLLOW_GARAN_TO_CHALICE"
-                                        ]
-                  },
-                  {
-                      "id":  "DEFEAT_ASSASSINS",
-                      "focus_npc":  "Stalf",
-                      "comment":  "Stalf and Salonia ambush the player at the spring; player must kill them.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VampireBaseIntro",
-                                           "min_stage":  40,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "defeat stalf",
-                                                            "kill salonia",
-                                                            "ambush"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FILL_CHALICE_SPRING"
-                                        ]
-                  },
-                  {
-                      "id":  "ADD_VAMPIRE_BLOOD",
-                      "focus_npc":  "",
-                      "comment":  "Player adds the blood of one of the defeated vampires to the Chalice.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VampireBaseIntro",
-                                           "min_stage":  50,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "add vampire blood",
-                                                            "fill with blood",
-                                                            "chalice with blood"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DEFEAT_ASSASSINS"
-                                        ]
-                  },
-                  {
-                      "id":  "RETURN_CHALICE",
-                      "focus_npc":  "Garan Marethi",
-                      "comment":  "Player returns the filled Chalice to Garan, who explains the court politics.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VampireBaseIntro",
-                                           "min_stage":  60,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "return to garan",
-                                                            "deliver the chalice",
-                                                            "bring the chalice back"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ADD_VAMPIRE_BLOOD"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest finishes; player has earned Harkon\u0027s favor and restored the Chalice.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VampireBaseIntro",
-                                           "min_stage":  200,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RETURN_CHALICE"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "SPEAK_TO_GARAN"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "dlc1vq02_bloodline",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dlc1vampirebaseintro_bloodstonechalice",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0000594C",
+  "quest_plugin": "Dawnguard.esm",
+  "quest_editor_id": "DLC1VampireBaseIntro",
+  "title": "The Bloodstone Chalice",
+  "description": "Lord Harkon sends the player to Garan Marethi with a coded message. Garan reveals the Bloodstone Chalice must be filled at the Redwater Den spring and augmented with vampire blood. Rival factions send assassins to steal the chalice, but the player defeats them and returns it, earning Harkon's favor.",
+  "npc_facts": {
+    "Garan Marethi": {
+      "base_facts": [
+        "I am Garan Marethi, a senior member of the Volkihar court.",
+        "I serve Lord Harkon and manage affairs in Castle Volkihar.",
+        "I know the Bloodstone Chalice can amplify vampire powers."
+      ],
+      "beat_facts": {
+        "SPEAK_TO_GARAN": [
+          "I received Harkon's message and told the new vampire about the Bloodstone Chalice."
+        ],
+        "FILL_CHALICE_SPRING": [
+          "I sent the new vampire to fill the Chalice at Redwater Den."
+        ],
+        "DEFEAT_ASSASSINS": [
+          "I suspected rivals would send assassins; the new vampire proved their worth."
+        ],
+        "RETURN_CHALICE": [
+          "The Chalice is restored. Vingalmo and Orthjolf's pawns are dead. I warned the new vampire about court politics."
+        ],
+        "QUEST_COMPLETE": [
+          "The Bloodstone Chalice is restored, and Harkon's position is strengthened.",
+          "With Stalf and Salonia dead, Vingalmo and Orthjolf have lost their pawns and cannot act against Harkon through them.",
+          "I warned the new vampire to be careful who they trust in the Volkihar court.",
+          "I told the new vampire that Lord Harkon wishes to speak with them, leading to their next task."
+        ]
+      }
+    },
+    "Stalf": {
+      "base_facts": [
+        "I am Stalf, a vampire serving Orthjolf in Castle Volkihar."
+      ],
+      "beat_facts": {
+        "DEFEAT_ASSASSINS": [
+          "I was sent to kill the new vampire and steal the Chalice for Orthjolf, but I failed."
+        ],
+        "QUEST_COMPLETE": [
+          "I was killed at Redwater Den after failing to steal the Chalice for Orthjolf.",
+          "My death has left Orthjolf without a pawn to act against Lord Harkon."
+        ]
+      }
+    },
+    "Salonia Caelia": {
+      "base_facts": [
+        "I am Salonia Caelia, a vampire serving Vingalmo in Castle Volkihar."
+      ],
+      "beat_facts": {
+        "DEFEAT_ASSASSINS": [
+          "I was sent to kill the new vampire and return the Chalice to Vingalmo, but I failed."
+        ],
+        "QUEST_COMPLETE": [
+          "I was killed at Redwater Den after failing to secure the Chalice for Vingalmo.",
+          "My death has left Vingalmo without a pawn to act against Lord Harkon."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "SPEAK_TO_GARAN",
+      "focus_npc": "Garan Marethi",
+      "comment": "Player delivers Harkon's message and learns about the Bloodstone Chalice.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000594C",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VampireBaseIntro",
+          "min_stage": 10,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "it is time",
+            "harkon sent me",
+            "speak with garan"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "FOLLOW_GARAN_TO_CHALICE",
+      "focus_npc": "Garan Marethi",
+      "comment": "Garan leads the player to the Chalice and gives detailed orders.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000594C",
+        "quest_plugin": "Dawnguard.esm",
+        "quest_editor_id": "DLC1VampireBaseIntro",
+        "stage": 15
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VampireBaseIntro",
+          "min_stage": 15,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I agree",
+            "I accept",
+            "I will do it",
+            "I am ready",
+            "let's continue",
+            "what are my orders",
+            "tell me what to do",
+            "I have returned",
+            "I am reporting back",
+            "I delivered it",
+            "it is done",
+            "I will meet them",
+            "lead the way",
+            "I will follow",
+            "let's go",
+            "give me my orders",
+            "what is the mission",
+            "brief me",
+            "tell me more",
+            "I need to speak with them",
+            "I understand"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player explicitly agrees to proceed with this quest handoff: Garan leads the player to the Chalice and gives detailed orders.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I agree. Let's do this.",
+            "I am ready to proceed.",
+            "I will follow your instructions.",
+            "Tell me what needs to happen next."
+          ],
+          "examples_no": [
+            "What are you asking me to do?",
+            "I need more information first.",
+            "I am not ready yet.",
+            "No, I do not want to do that."
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_TO_GARAN"
+      ],
+      "intent_summary": "Player agrees to proceed with this quest handoff: Garan leads the player to the Chalice and gives detailed orders."
+    },
+    {
+      "id": "FILL_CHALICE_SPRING",
+      "focus_npc": "",
+      "comment": "Player travels to Redwater Den and fills the Chalice from the Bloodspring.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000594C",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VampireBaseIntro",
+          "min_stage": 30,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "fill the chalice",
+            "bloodspring",
+            "redwater spring"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FOLLOW_GARAN_TO_CHALICE"
+      ]
+    },
+    {
+      "id": "DEFEAT_ASSASSINS",
+      "focus_npc": "Stalf",
+      "comment": "Stalf and Salonia ambush the player at the spring; player must kill them.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000594C",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 40
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VampireBaseIntro",
+          "min_stage": 40,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "defeat stalf",
+            "kill salonia",
+            "ambush"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FILL_CHALICE_SPRING"
+      ]
+    },
+    {
+      "id": "ADD_VAMPIRE_BLOOD",
+      "focus_npc": "",
+      "comment": "Player adds the blood of one of the defeated vampires to the Chalice.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000594C",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 50
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VampireBaseIntro",
+          "min_stage": 50,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "add vampire blood",
+            "fill with blood",
+            "chalice with blood"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEFEAT_ASSASSINS"
+      ]
+    },
+    {
+      "id": "RETURN_CHALICE",
+      "focus_npc": "Garan Marethi",
+      "comment": "Player returns the filled Chalice to Garan, who explains the court politics.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000594C",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 60
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VampireBaseIntro",
+          "min_stage": 60,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "return to garan",
+            "deliver the chalice",
+            "bring the chalice back"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ADD_VAMPIRE_BLOOD"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest finishes; player has earned Harkon's favor and restored the Chalice.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VampireBaseIntro",
+          "min_stage": 200,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETURN_CHALICE"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "SPEAK_TO_GARAN"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc1vq02_bloodline",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

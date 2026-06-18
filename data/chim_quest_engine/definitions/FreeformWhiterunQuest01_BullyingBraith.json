@@ -27,7 +27,10 @@
           "Someone agreed to help me deal with Braith."
         ],
         "QUEST_COMPLETE": [
-          "Braith has stopped bullying me. I am grateful."
+          "Braith has stopped bullying me. I am grateful.",
+          "Observational beat for quest completion.",
+          "You do not have to complete this quest to receive your reward (2 gold pieces).",
+          "Talk to Braith and get her to stop bullying Lars."
         ]
       }
     },

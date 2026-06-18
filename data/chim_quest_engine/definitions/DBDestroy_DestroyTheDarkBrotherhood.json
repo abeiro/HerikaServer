@@ -28,7 +28,10 @@
           "Commander Maro has given me the passphrase 'Silence, my brother' to enter the Dark Brotherhood Sanctuary and ordered me to kill everyone inside."
         ],
         "QUEST_COMPLETE": [
-          "Commander Maro rewarded me with 3,000 gold for destroying the Dark Brotherhood Sanctuary. He will ensure the Emperor hears of my deeds."
+          "Commander Maro rewarded me with 3,000 gold for destroying the Dark Brotherhood Sanctuary. He will ensure the Emperor hears of my deeds.",
+          "Player reports success to Commander Maro and receives 3,000 gold reward. Quest finishes.",
+          "Inform them that you killed the Dark Brotherhood's leader, and you will be directed to speak to Commander Maro in Dragon Bridge southwest of Solitude .",
+          "Rewards and consequences [ edit ] Return to Commander Maro in Dragon Bridge, and he will be overjoyed and reward you with 3,000 gold, regardless of your level."
         ]
       }
     }
@@ -58,7 +61,10 @@
       "focus_npc": "",
       "comment": "Player reports Astrid's death to a city guard and is directed to Commander Maro.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000934FB",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -87,7 +93,10 @@
       "focus_npc": "Commander Maro",
       "comment": "Commander Maro gives the passphrase and orders the player to wipe out the Sanctuary.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000934FB",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [
@@ -136,7 +145,10 @@
       "focus_npc": "Commander Maro",
       "comment": "Player reports success to Commander Maro and receives 3,000 gold reward. Quest finishes.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000934FB",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -144,6 +156,26 @@
           "type": "quest_stage",
           "quest_editor_id": "DBDestroy",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

@@ -1,242 +1,246 @@
 {
-    "quest_key":  "tgcrownmisc_nostoneunturned",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0006D585",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "TGCrownMisc",
-    "title":  "No Stone Unturned",
-    "description":  "Find all twenty-four Stones of Barenziah scattered across Skyrim, have them appraised by Vex of the Thieves Guild, recover the Crown of Barenziah from Tolvald\u0027s Cave, and return it to earn the Prowler\u0027s Profit ability.",
-    "npc_facts":  {
-                      "Vex":  {
-                                  "base_facts":  [
-                                                     "I am a member of the Thieves Guild in Riften.",
-                                                     "I appraise unusual gems and other valuables."
-                                                 ],
-                                  "beat_facts":  {
-                                                     "GEM_APPRAISED":  [
-                                                                           "I told the player the Unusual Gem is one of twenty-four Stones of Barenziah pried from Queen Barenziah\u0027s crown by a thief.",
-                                                                           "The stones are worthless individually but valuable as a complete set."
-                                                                       ],
-                                                     "ALL_STONES_COLLECTED":  [
-                                                                                  "The player has gathered all twenty-four Stones of Barenziah.",
-                                                                                  "I revealed the Crown of Barenziah is in Tolvald\u0027s Cave and serves as a paragon for the Thieves Guild."
-                                                                              ],
-                                                     "CROWN_RETURNED":  [
-                                                                            "The player returned the Crown of Barenziah to me.",
-                                                                            "I restored the crown to its original condition as a paragon for the Guild."
-                                                                        ]
-                                                 }
-                              },
-                      "Maul":  {
-                                   "base_facts":  [
-                                                      "I am a Nord in Riften with connections to the Thieves Guild.",
-                                                      "I know about appraising unusual goods."
-                                                  ],
-                                   "beat_facts":  {
-                                                      "FOUND_UNUSUAL_GEM":  [
-                                                                                "I told the player to show the Unusual Gem to Vex of the Thieves Guild.",
-                                                                                "I explained the player must become a full member of the Guild to speak with Vex.",
-                                                                                "I directed the player to find Brynjolf in Riften\u0027s marketplace to join the Guild."
-                                                                            ]
-                                                  }
-                               }
-                  },
-    "beats":  [
-                  {
-                      "id":  "FOUND_UNUSUAL_GEM",
-                      "focus_npc":  "Maul",
-                      "comment":  "Player finds an Unusual Gem and seeks an appraiser. Stage 5/10 triggers.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TGCrownMisc",
-                                           "min_stage":  5
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "unusual gem",
-                                                            "strange gem",
-                                                            "appraise gem",
-                                                            "identify gem"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "GEM_APPRAISED",
-                      "focus_npc":  "Vex",
-                      "comment":  "Vex identifies the gem as a Stone of Barenziah and explains the set of 24. Stage 20 trigger.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TGCrownMisc",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "stone of barenziah",
-                                                            "barenziah",
-                                                            "vex gem",
-                                                            "twenty-four stones"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FOUND_UNUSUAL_GEM"
-                                        ]
-                  },
-                  {
-                      "id":  "ALL_STONES_COLLECTED",
-                      "focus_npc":  "Vex",
-                      "comment":  "Player collects all 24 Stones and speaks to Vex, who reveals the crown location. Stage 30 trigger.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TGCrownMisc",
-                                           "min_stage":  30
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "all the stones",
-                                                            "crown of barenziah",
-                                                            "tolvald\u0027s cave",
-                                                            "found all stones"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "GEM_APPRAISED"
-                                        ]
-                  },
-                  {
-                      "id":  "CROWN_RECOVERED",
-                      "focus_npc":  "",
-                      "comment":  "Player retrieves the Crown of Barenziah from Tolvald\u0027s Cave. Stage 40 trigger.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TGCrownMisc",
-                                           "min_stage":  40
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "recovered the crown",
-                                                            "found the crown",
-                                                            "crown of barenziah"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ALL_STONES_COLLECTED"
-                                        ]
-                  },
-                  {
-                      "id":  "CROWN_RETURNED",
-                      "focus_npc":  "Vex",
-                      "comment":  "Player returns the Crown to Vex. Stage 50 trigger.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TGCrownMisc",
-                                           "min_stage":  50
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "return crown",
-                                                            "brought the crown",
-                                                            "here is the crown"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CROWN_RECOVERED"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest finishes. Vex restores the crown, player receives Prowler\u0027s Profit. Stage 200 trigger.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TGCrownMisc",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CROWN_RETURNED"
-                                        ]
-                  }
-              ],
-    "external_ids":  {
-                         "quest_form_id":  "0x0006D585",
-                         "quest_plugin":  "Skyrim.esm",
-                         "source":  "local-esm:Skyrim.esm QUST",
-                         "matched_by":  "quest_editor_id"
-                     },
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "FOUND_UNUSUAL_GEM"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "tgcrownmisc_nostoneunturned",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0006D585",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "TGCrownMisc",
+  "title": "No Stone Unturned",
+  "description": "Find all twenty-four Stones of Barenziah scattered across Skyrim, have them appraised by Vex of the Thieves Guild, recover the Crown of Barenziah from Tolvald's Cave, and return it to earn the Prowler's Profit ability.",
+  "npc_facts": {
+    "Vex": {
+      "base_facts": [
+        "I am a member of the Thieves Guild in Riften.",
+        "I appraise unusual gems and other valuables."
+      ],
+      "beat_facts": {
+        "GEM_APPRAISED": [
+          "I told the player the Unusual Gem is one of twenty-four Stones of Barenziah pried from Queen Barenziah's crown by a thief.",
+          "The stones are worthless individually but valuable as a complete set."
+        ],
+        "ALL_STONES_COLLECTED": [
+          "The player has gathered all twenty-four Stones of Barenziah.",
+          "I revealed the Crown of Barenziah is in Tolvald's Cave and serves as a paragon for the Thieves Guild."
+        ],
+        "CROWN_RETURNED": [
+          "The player returned the Crown of Barenziah to me.",
+          "I restored the crown to its original condition as a paragon for the Guild."
+        ],
+        "QUEST_COMPLETE": [
+          "Quest finishes. Vex restores the crown, player receives Prowler's Profit. trigger.",
+          "You'll need to complete some other tasks before you have access to all locations where the gems are to be found: Begin the Dark Brotherhood questline or start the Destroy the Dark Brotherhood!",
+          "(25,000 gold) Join the College of Winterhold by completing First Lessons ."
+        ]
+      }
+    },
+    "Maul": {
+      "base_facts": [
+        "I am a Nord in Riften with connections to the Thieves Guild.",
+        "I know about appraising unusual goods."
+      ],
+      "beat_facts": {
+        "FOUND_UNUSUAL_GEM": [
+          "I told the player to show the Unusual Gem to Vex of the Thieves Guild.",
+          "I explained the player must become a full member of the Guild to speak with Vex.",
+          "I directed the player to find Brynjolf in Riften's marketplace to join the Guild."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "FOUND_UNUSUAL_GEM",
+      "focus_npc": "Maul",
+      "comment": "Player finds an Unusual Gem and seeks an appraiser. Stage 5/10 triggers.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0006D585",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 5
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TGCrownMisc",
+          "min_stage": 5
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "unusual gem",
+            "strange gem",
+            "appraise gem",
+            "identify gem"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "GEM_APPRAISED",
+      "focus_npc": "Vex",
+      "comment": "Vex identifies the gem as a Stone of Barenziah and explains the set of 24. Stage 20 trigger.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0006D585",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TGCrownMisc",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "stone of barenziah",
+            "barenziah",
+            "vex gem",
+            "twenty-four stones"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FOUND_UNUSUAL_GEM"
+      ]
+    },
+    {
+      "id": "ALL_STONES_COLLECTED",
+      "focus_npc": "Vex",
+      "comment": "Player collects all 24 Stones and speaks to Vex, who reveals the crown location. Stage 30 trigger.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0006D585",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TGCrownMisc",
+          "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "all the stones",
+            "crown of barenziah",
+            "tolvald's cave",
+            "found all stones"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "GEM_APPRAISED"
+      ]
+    },
+    {
+      "id": "CROWN_RECOVERED",
+      "focus_npc": "",
+      "comment": "Player retrieves the Crown of Barenziah from Tolvald's Cave. Stage 40 trigger.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0006D585",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TGCrownMisc",
+          "min_stage": 40
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "recovered the crown",
+            "found the crown",
+            "crown of barenziah"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ALL_STONES_COLLECTED"
+      ]
+    },
+    {
+      "id": "CROWN_RETURNED",
+      "focus_npc": "Vex",
+      "comment": "Player returns the Crown to Vex. Stage 50 trigger.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0006D585",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TGCrownMisc",
+          "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "return crown",
+            "brought the crown",
+            "here is the crown"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CROWN_RECOVERED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest finishes. Vex restores the crown, player receives Prowler's Profit. Stage 200 trigger.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TGCrownMisc",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CROWN_RETURNED"
+      ]
+    }
+  ],
+  "external_ids": {
+    "quest_form_id": "0x0006D585",
+    "quest_plugin": "Skyrim.esm",
+    "source": "local-esm:Skyrim.esm QUST",
+    "matched_by": "quest_editor_id"
+  },
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "FOUND_UNUSUAL_GEM"
+    ],
+    "requires": []
+  }
 }

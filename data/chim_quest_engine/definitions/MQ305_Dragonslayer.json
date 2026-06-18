@@ -1,195 +1,202 @@
 {
-    "quest_key":  "mq305_dragonslayer",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00046EF2",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MQ305",
-    "title":  "Dragonslayer",
-    "description":  "The Dragonborn joins the three heroes of Sovngardeâ€”Hakon One-Eye, Gormlaith Golden-Hilt, and Felldir the Oldâ€”to dispel Alduin\u0027s mist with Clear Skies and defeat the World-Eater in final combat, freeing Sovngarde and Skyrim from his tyranny.",
-    "npc_facts":  {
-                      "Hakon":  {
-                                    "base_facts":  [
-                                                       "I am Hakon One-Eye, one of the three Nord heroes who first fought Alduin long ago.",
-                                                       "We used Dragonrend to force Alduin to the ground in our first battle.",
-                                                       "I stand in Sovngarde ready to help the Dragonborn defeat Alduin once and for all."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "HEROES_UNITE":  [
-                                                                            "The Dragonborn has joined us at the edge of the Shadowed Vale to face Alduin."
-                                                                        ],
-                                                       "DISPEL_MIST":  [
-                                                                           "Together we used Clear Skies to blow away Alduin\u0027s mist. He must face us now."
-                                                                       ],
-                                                       "ALDUIN_DEFEATED":  [
-                                                                               "Alduin is destroyed at last. Sovngarde and Skyrim are free from his shadow."
-                                                                           ]
-                                                   }
-                                },
-                      "Gormlaith":  {
-                                        "base_facts":  [
-                                                           "I am Gormlaith Golden-Hilt, one of the three heroes of Sovngarde.",
-                                                           "I fell in battle against Alduin long ago, but my spirit endures here.",
-                                                           "We will use Clear Skies together to blow away Alduin\u0027s mist."
-                                                       ],
-                                        "beat_facts":  {
-                                                           "HEROES_UNITE":  [
-                                                                                "The Dragonborn stands beside us. Together we are strong enough."
-                                                                            ],
-                                                           "DISPEL_MIST":  [
-                                                                               "Our combined Thu\u0027um has cleared the mist. Alduin can no longer hide."
-                                                                           ],
-                                                           "ALDUIN_DEFEATED":  [
-                                                                                   "The World-Eater is vanquished. Our long watch is finally over."
-                                                                               ]
-                                                       }
-                                    },
-                      "Felldir":  {
-                                      "base_facts":  [
-                                                         "I am Felldir the Old, one of the three Nord heroes who fought Alduin.",
-                                                         "We recorded Dragonrend on the Dragon Wall so future generations could use it against him.",
-                                                         "I am ready to help the Dragonborn end Alduin\u0027s reign of terror."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "HEROES_UNITE":  [
-                                                                              "The Dragonborn has come to Sovngarde to join our final stand."
-                                                                          ],
-                                                         "DISPEL_MIST":  [
-                                                                             "We have dispelled Alduin\u0027s mist with our Shouts. Now he must fight us directly."
-                                                                         ],
-                                                         "ALDUIN_DEFEATED":  [
-                                                                                 "Alduin is no more. The prophecy is fulfilled and the World-Eater is gone."
-                                                                             ]
-                                                     }
-                                  }
-                  },
-    "beats":  [
-                  {
-                      "id":  "HEROES_UNITE",
-                      "focus_npc":  "Hakon",
-                      "comment":  "The three heroes assemble with the Dragonborn at the edge of the Shadowed Vale to dispel Alduin\u0027s mist.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x00046EF2",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ305",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "dispel the mist",
-                                                            "clear skies",
-                                                            "together"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "DISPEL_MIST",
-                      "focus_npc":  "Gormlaith",
-                      "comment":  "The heroes use Clear Skies three times to dispel Alduin\u0027s mist, forcing him into open battle.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x00046EF2",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         },
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x00046EF2",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ305",
-                                           "min_stage":  100
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "defeat Alduin",
-                                                            "Dragonrend",
-                                                            "force him to land"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "HEROES_UNITE"
-                                        ]
-                  },
-                  {
-                      "id":  "ALDUIN_DEFEATED",
-                      "focus_npc":  "Felldir",
-                      "comment":  "Alduin is defeated in combat. Tsun teaches Call of Valor and returns the Dragonborn to Tamriel.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x00046EF2",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ305",
-                                           "min_stage":  200
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Alduin is defeated",
-                                                            "it is done",
-                                                            "Sovngarde is free"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DISPEL_MIST"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "HEROES_UNITE"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "mq304_sovngardequest",
-                                               "beat_id":  "HEROES_JOIN_BATTLE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "mq305_dragonslayer",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00046EF2",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MQ305",
+  "title": "Dragonslayer",
+  "description": "The Dragonborn joins the three heroes of Sovngardeâ€”Hakon One-Eye, Gormlaith Golden-Hilt, and Felldir the Oldâ€”to dispel Alduin's mist with Clear Skies and defeat the World-Eater in final combat, freeing Sovngarde and Skyrim from his tyranny.",
+  "npc_facts": {
+    "Hakon": {
+      "base_facts": [
+        "I am Hakon One-Eye, one of the three Nord heroes who first fought Alduin long ago.",
+        "We used Dragonrend to force Alduin to the ground in our first battle.",
+        "I stand in Sovngarde ready to help the Dragonborn defeat Alduin once and for all."
+      ],
+      "beat_facts": {
+        "HEROES_UNITE": [
+          "The Dragonborn has joined us at the edge of the Shadowed Vale to face Alduin."
+        ],
+        "DISPEL_MIST": [
+          "Together we used Clear Skies to blow away Alduin's mist. He must face us now."
+        ],
+        "ALDUIN_DEFEATED": [
+          "Alduin is destroyed at last. Sovngarde and Skyrim are free from his shadow."
+        ]
+      }
+    },
+    "Gormlaith": {
+      "base_facts": [
+        "I am Gormlaith Golden-Hilt, one of the three heroes of Sovngarde.",
+        "I fell in battle against Alduin long ago, but my spirit endures here.",
+        "We will use Clear Skies together to blow away Alduin's mist."
+      ],
+      "beat_facts": {
+        "HEROES_UNITE": [
+          "The Dragonborn stands beside us. Together we are strong enough."
+        ],
+        "DISPEL_MIST": [
+          "Our combined Thu'um has cleared the mist. Alduin can no longer hide."
+        ],
+        "ALDUIN_DEFEATED": [
+          "The World-Eater is vanquished. Our long watch is finally over."
+        ]
+      }
+    },
+    "Felldir": {
+      "base_facts": [
+        "I am Felldir the Old, one of the three Nord heroes who fought Alduin.",
+        "We recorded Dragonrend on the Dragon Wall so future generations could use it against him.",
+        "I am ready to help the Dragonborn end Alduin's reign of terror."
+      ],
+      "beat_facts": {
+        "HEROES_UNITE": [
+          "The Dragonborn has come to Sovngarde to join our final stand."
+        ],
+        "DISPEL_MIST": [
+          "We have dispelled Alduin's mist with our Shouts. Now he must fight us directly."
+        ],
+        "ALDUIN_DEFEATED": [
+          "Alduin is no more. The prophecy is fulfilled and the World-Eater is gone."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "HEROES_UNITE",
+      "focus_npc": "Hakon",
+      "comment": "The three heroes assemble with the Dragonborn at the edge of the Shadowed Vale to dispel Alduin's mist.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00046EF2",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00046EF2",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ305",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "dispel the mist",
+            "clear skies",
+            "together"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "DISPEL_MIST",
+      "focus_npc": "Gormlaith",
+      "comment": "The heroes use Clear Skies three times to dispel Alduin's mist, forcing him into open battle.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00046EF2",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 100
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00046EF2",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        },
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00046EF2",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ305",
+          "min_stage": 100
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "defeat Alduin",
+            "Dragonrend",
+            "force him to land"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEROES_UNITE"
+      ]
+    },
+    {
+      "id": "ALDUIN_DEFEATED",
+      "focus_npc": "Felldir",
+      "comment": "Alduin is defeated in combat. Tsun teaches Call of Valor and returns the Dragonborn to Tamriel.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00046EF2",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00046EF2",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ305",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Alduin is defeated",
+            "it is done",
+            "Sovngarde is free"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DISPEL_MIST"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "HEROES_UNITE"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mq304_sovngardequest",
+        "beat_id": "HEROES_JOIN_BATTLE"
+      }
+    ]
+  }
 }

@@ -1,193 +1,229 @@
 {
-    "quest_key":  "dungauldursonqst_forbiddenlegend",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x000E4D31",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "dunGauldursonQST",
-    "title":  "Forbidden Legend",
-    "description":  "Investigate the ancient legend of Archmage Gauldur, murdered by his three sons who stole his amulet of power. Track down the amulet fragments from the tombs of Mikrul in Folgunthur, Jyrik in Saarthal, and Sigdis in Geirmund\u0027s Hall, then reforge the Gauldur Amulet at Reachwater Rock.",
-    "npc_facts":  {
-                      "Daynas Valen":  {
-                                           "base_facts":  [
-                                                              "I am a Dunmer scholar who spent my life researching the Gauldur legend.",
-                                                              "I traveled to Folgunthur seeking the truth about Gauldur and his three sons.",
-                                                              "I carry the ivory dragon claw needed to open the deeper chambers of Folgunthur."
-                                                          ],
-                                           "beat_facts":  {
-
-                                                          }
-                                       }
-                  },
-    "beats":  [
-                  {
-                      "id":  "LEGEND_DISCOVERED",
-                      "focus_npc":  "",
-                      "comment":  "Player discovers the Gauldur legend via a cryptic message or the book Lost Legends.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "dunGauldursonQST",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Gauldur legend",
-                                                            "Lost Legends",
-                                                            "forbidden legend",
-                                                            "Gauldur amulet"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "DAYNAS_VALEN_REACHED",
-                      "focus_npc":  "Daynas Valen",
-                      "comment":  "Player reaches Daynas Valen\u0027s corpse in Folgunthur and learns his findings.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "dunGauldursonQST",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Daynas Valen",
-                                                            "Valen\u0027s notes",
-                                                            "ivory dragon claw"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "LEGEND_DISCOVERED"
-                                        ]
-                  },
-                  {
-                      "id":  "TRUTH_REVEALED",
-                      "focus_npc":  "",
-                      "comment":  "Player reads Daynas Valen\u0027s notes and learns the full truth about the three brothers and the amulet fragments.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "dunGauldursonQST",
-                                           "min_stage":  30
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DAYNAS_VALEN_REACHED"
-                                        ]
-                  },
-                  {
-                      "id":  "FRAGMENTS_COLLECTED",
-                      "focus_npc":  "",
-                      "comment":  "Player has defeated all three Gauldurson brothers and collected every amulet fragment.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "dunGauldursonQST",
-                                           "min_stage":  100
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "all three fragments",
-                                                            "amulet fragments collected",
-                                                            "reforge the amulet"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TRUTH_REVEALED"
-                                        ]
-                  },
-                  {
-                      "id":  "AMULET_REFORGED",
-                      "focus_npc":  "",
-                      "comment":  "Player defeats the ghost brothers at Reachwater Rock and forges the Gauldur Amulet anew.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "dunGauldursonQST",
-                                           "min_stage":  150
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FRAGMENTS_COLLECTED"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Forbidden Legend quest is finished. The Gauldur Amulet has been reclaimed.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "dunGauldursonQST",
-                                           "min_stage":  255
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "AMULET_REFORGED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "LEGEND_DISCOVERED"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dungauldursonqst_forbiddenlegend",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000E4D31",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "dunGauldursonQST",
+  "title": "Forbidden Legend",
+  "description": "Investigate the ancient legend of Archmage Gauldur, murdered by his three sons who stole his amulet of power. Track down the amulet fragments from the tombs of Mikrul in Folgunthur, Jyrik in Saarthal, and Sigdis in Geirmund's Hall, then reforge the Gauldur Amulet at Reachwater Rock.",
+  "npc_facts": {
+    "Daynas Valen": {
+      "base_facts": [
+        "I am a Dunmer scholar who spent my life researching the Gauldur legend.",
+        "I traveled to Folgunthur seeking the truth about Gauldur and his three sons.",
+        "I carry the ivory dragon claw needed to open the deeper chambers of Folgunthur."
+      ],
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "Forbidden Legend quest is finished. The Gauldur Amulet has been reclaimed.",
+          "Return to the first room and pull the chain, which will now remove the grate leading downstairs.",
+          "However, a few other items scattered around Skyrim will start the quest as well."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "LEGEND_DISCOVERED",
+      "focus_npc": "",
+      "comment": "Player discovers the Gauldur legend via a cryptic message or the book Lost Legends.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000E4D31",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "dunGauldursonQST",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Gauldur legend",
+            "Lost Legends",
+            "forbidden legend",
+            "Gauldur amulet"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "DAYNAS_VALEN_REACHED",
+      "focus_npc": "Daynas Valen",
+      "comment": "Player reaches Daynas Valen's corpse in Folgunthur and learns his findings.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000E4D31",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "dunGauldursonQST",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Daynas Valen",
+            "Valen's notes",
+            "ivory dragon claw"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEGEND_DISCOVERED"
+      ]
+    },
+    {
+      "id": "TRUTH_REVEALED",
+      "focus_npc": "",
+      "comment": "Player reads Daynas Valen's notes and learns the full truth about the three brothers and the amulet fragments.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000E4D31",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "dunGauldursonQST",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "dunGauldursonQST",
+          "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I agree",
+            "I accept",
+            "I will do it",
+            "I am ready",
+            "let's continue",
+            "what are my orders",
+            "tell me what to do",
+            "tell me more",
+            "I need to speak with them",
+            "I understand"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player explicitly agrees to proceed with this quest handoff: Player reads Daynas Valen's notes and learns the full truth about the three brothers and the amulet fragments.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I agree. Let's do this.",
+            "I am ready to proceed.",
+            "I will follow your instructions.",
+            "Tell me what needs to happen next."
+          ],
+          "examples_no": [
+            "What are you asking me to do?",
+            "I need more information first.",
+            "I am not ready yet.",
+            "No, I do not want to do that."
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DAYNAS_VALEN_REACHED"
+      ],
+      "intent_summary": "Player agrees to proceed with this quest handoff: Player reads Daynas Valen's notes and learns the full truth about the three brothers and the amulet fragments."
+    },
+    {
+      "id": "FRAGMENTS_COLLECTED",
+      "focus_npc": "",
+      "comment": "Player has defeated all three Gauldurson brothers and collected every amulet fragment.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000E4D31",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 100
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "dunGauldursonQST",
+          "min_stage": 100
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "all three fragments",
+            "amulet fragments collected",
+            "reforge the amulet"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TRUTH_REVEALED"
+      ]
+    },
+    {
+      "id": "AMULET_REFORGED",
+      "focus_npc": "",
+      "comment": "Player defeats the ghost brothers at Reachwater Rock and forges the Gauldur Amulet anew.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "dunGauldursonQST",
+          "min_stage": 150
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FRAGMENTS_COLLECTED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Forbidden Legend quest is finished. The Gauldur Amulet has been reclaimed.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "dunGauldursonQST",
+          "min_stage": 255
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "AMULET_REFORGED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "LEGEND_DISCOVERED"
+    ],
+    "requires": []
+  }
 }

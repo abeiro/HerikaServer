@@ -1,157 +1,156 @@
 {
-    "quest_key":  "dbsidecontract07_killmarandrujo",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001EA63",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DBSideContract07",
-    "title":  "Kill Ma\u0027randru-jo",
-    "description":  "A Dark Brotherhood side contract to assassinate Ma\u0027randru-jo, a Khajiit merchant traveling with Ri\u0027saad\u0027s caravan between Markarth and Whiterun. Report back to Nazir at the Sanctuary for a leveled gold reward.",
-    "npc_facts":  {
-                      "Nazir":  {
-                                    "base_facts":  [
-                                                       "I am a Redguard assassin and member of the Dark Brotherhood.",
-                                                       "I manage the smaller side contracts from the Sanctuary.",
-                                                       "I reward those who complete contracts for the Brotherhood."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "CONTRACT_ACCEPTED":  [
-                                                                                 "I have assigned the contract to kill Ma\u0027randru-jo."
-                                                                             ],
-                                                       "QUEST_COMPLETE":  [
-                                                                              "The contract on Ma\u0027randru-jo has been fulfilled and the reward paid."
-                                                                          ]
-                                                   }
-                                },
-                      "Ma\u0027randru-jo":  {
-                                                "base_facts":  [
-                                                                   "I am a Khajiit merchant who travels with Ri\u0027saad\u0027s caravan.",
-                                                                   "My caravan travels the route between Markarth and Whiterun, spending two days camped outside each city."
-                                                               ],
-                                                "beat_facts":  {
-
-                                                               }
-                                            }
-                  },
-    "beats":  [
-                  {
-                      "id":  "CONTRACT_ACCEPTED",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Player accepts the contract from Nazir to kill Ma\u0027randru-jo.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001EA63",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001EA63",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Ma\u0027randru-jo",
-                                                            "contract",
-                                                            "kill the khajiit"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "TARGET_ELIMINATED",
-                      "focus_npc":  "Ma\u0027randru-jo",
-                      "comment":  "Ma\u0027randru-jo has been killed; the game advances to stage 20.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001EA63",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001EA63",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract07",
-                                           "min_stage":  20
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CONTRACT_ACCEPTED"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Player reports back to Nazir and collects the leveled gold reward.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001EA63",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001EA63",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "job is done",
-                                                            "Ma\u0027randru-jo is dead",
-                                                            "collected my reward"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract07",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TARGET_ELIMINATED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "CONTRACT_ACCEPTED"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "db02a_sanctuary",
-                                               "beat_id":  "CONTRACTS_RECEIVED"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dbsidecontract07_killmarandrujo",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001EA63",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DBSideContract07",
+  "title": "Kill Ma'randru-jo",
+  "description": "A Dark Brotherhood side contract to assassinate Ma'randru-jo, a Khajiit merchant traveling with Ri'saad's caravan between Markarth and Whiterun. Report back to Nazir at the Sanctuary for a leveled gold reward.",
+  "npc_facts": {
+    "Nazir": {
+      "base_facts": [
+        "I am a Redguard assassin and member of the Dark Brotherhood.",
+        "I manage the smaller side contracts from the Sanctuary.",
+        "I reward those who complete contracts for the Brotherhood."
+      ],
+      "beat_facts": {
+        "CONTRACT_ACCEPTED": [
+          "I have assigned the contract to kill Ma'randru-jo."
+        ],
+        "QUEST_COMPLETE": [
+          "The contract on Ma'randru-jo has been fulfilled and the reward paid.",
+          "Player reports back to Nazir and collects the leveled gold reward.",
+          "Return to the sanctuary and speak with Nazir to complete the quest and receive a reward of leveled Gold.",
+          "Return to Nazir and receive your reward."
+        ]
+      }
+    },
+    "Ma'randru-jo": {
+      "base_facts": [
+        "I am a Khajiit merchant who travels with Ri'saad's caravan.",
+        "My caravan travels the route between Markarth and Whiterun, spending two days camped outside each city."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "CONTRACT_ACCEPTED",
+      "focus_npc": "Nazir",
+      "comment": "Player accepts the contract from Nazir to kill Ma'randru-jo.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA63",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001EA63",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Ma'randru-jo",
+            "contract",
+            "kill the khajiit"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "TARGET_ELIMINATED",
+      "focus_npc": "Ma'randru-jo",
+      "comment": "Ma'randru-jo has been killed; the game advances to stage 20.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001EA63",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001EA63",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract07",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONTRACT_ACCEPTED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Nazir",
+      "comment": "Player reports back to Nazir and collects the leveled gold reward.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA63",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001EA63",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "job is done",
+            "Ma'randru-jo is dead",
+            "collected my reward"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract07",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TARGET_ELIMINATED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "CONTRACT_ACCEPTED"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "db02a_sanctuary",
+        "beat_id": "CONTRACTS_RECEIVED"
+      }
+    ]
+  }
 }

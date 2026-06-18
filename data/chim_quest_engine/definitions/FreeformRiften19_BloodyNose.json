@@ -24,7 +24,10 @@
           "This fool actually bet 100 gold they could beat me in a brawl."
         ],
         "BRAWL_COMPLETE": [
-          "I lost the brawl fair and square. I paid what I owed."
+          "I lost the brawl fair and square. I paid what I owed.",
+          "Player defeats Hofgrir and claims the reward of 200 gold total.",
+          "Claiming your reward [ edit ] After winning the brawl, talk to Hofgrir and he will give you your 100 gold back, as well as another 100 gold for winning the bet.",
+          "Talk to him about the dangers of living outside the walls, which will lead to him boasting about being the strongest brawler in Skyrim."
         ]
       }
     }
@@ -100,7 +103,10 @@
       "focus_npc": "Hofgrir Horse-Crusher",
       "comment": "Player defeats Hofgrir and claims the reward of 200 gold total.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00065C30",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -108,6 +114,26 @@
           "type": "quest_stage",
           "quest_editor_id": "FreeformRiften19",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

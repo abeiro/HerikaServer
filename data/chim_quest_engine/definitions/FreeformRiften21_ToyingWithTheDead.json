@@ -1,166 +1,188 @@
 {
-    "quest_key":  "freeformriften21_toyingwiththedead",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0009F179",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "FreeformRiften21",
-    "title":  "Toying With The Dead",
-    "description":  "Vekel the Man at the Ragged Flagon wants four journals written by the necromancer Arondil, who fled to Yngvild after being driven out of Dawnstar for reanimation experiments. Retrieve the journals from the ice caves and return them for a leveled enchanted one-handed weapon.",
-    "npc_facts":  {
-                      "Vekel the Man":  {
-                                            "base_facts":  [
-                                                               "I tend bar at the Ragged Flagon for the Thieves Guild.",
-                                                               "I have a buyer looking for the four journals of a necromancer named Arondil.",
-                                                               "Arondil was driven out of Dawnstar for unspeakable reanimation experiments and fled to Yngvild."
-                                                           ],
-                                            "beat_facts":  {
-                                                               "ACCEPT_QUEST":  [
-                                                                                    "The player agreed to retrieve Arondil\u0027s journals from Yngvild for a share of the reward."
-                                                                                ],
-                                                               "QUEST_COMPLETE":  [
-                                                                                      "The player returned all four journals. I paid them their share from my client."
-                                                                                  ]
-                                                           }
-                                        }
-                  },
-    "beats":  [
-                  {
-                      "id":  "ACCEPT_QUEST",
-                      "focus_npc":  "Vekel the Man",
-                      "comment":  "Player accepts Vekel\u0027s job to retrieve Arondil\u0027s journals from Yngvild.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0009F179",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  20
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0009F179",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "work",
-                                                            "journals",
-                                                            "Arondil",
-                                                            "books"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "ENTER_YNGVILD",
-                      "focus_npc":  "",
-                      "comment":  "Observational: game advances to stage 30 when player enters Yngvild.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0009F179",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0009F179",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "FreeformRiften21",
-                                           "min_stage":  30
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ACCEPT_QUEST"
-                                        ]
-                  },
-                  {
-                      "id":  "JOURNALS_COLLECTED",
-                      "focus_npc":  "",
-                      "comment":  "Observational: game advances to stage 40 when all four journals are collected.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0009F179",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0009F179",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  30
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "FreeformRiften21",
-                                           "min_stage":  40
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ENTER_YNGVILD"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Vekel the Man",
-                      "comment":  "Quest finishes at stage 200 when player returns journals to Vekel.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0009F179",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  30
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "FreeformRiften21",
-                                           "stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "JOURNALS_COLLECTED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "ACCEPT_QUEST"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "freeformriften21_toyingwiththedead",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0009F179",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformRiften21",
+  "title": "Toying With The Dead",
+  "description": "Vekel the Man at the Ragged Flagon wants four journals written by the necromancer Arondil, who fled to Yngvild after being driven out of Dawnstar for reanimation experiments. Retrieve the journals from the ice caves and return them for a leveled enchanted one-handed weapon.",
+  "npc_facts": {
+    "Vekel the Man": {
+      "base_facts": [
+        "I tend bar at the Ragged Flagon for the Thieves Guild.",
+        "I have a buyer looking for the four journals of a necromancer named Arondil.",
+        "Arondil was driven out of Dawnstar for unspeakable reanimation experiments and fled to Yngvild."
+      ],
+      "beat_facts": {
+        "ACCEPT_QUEST": [
+          "The player agreed to retrieve Arondil's journals from Yngvild for a share of the reward."
+        ],
+        "QUEST_COMPLETE": [
+          "The player returned all four journals. I paid them their share from my client.",
+          "Quest finishes at when player returns journals to Vekel.",
+          "This quest can be started without talking to Vekel; if you go to Yngvild and pick up all four journals, you will receive a quest update telling you to return them to Vekel, even if you never spoke to him before.",
+          "The third journal can be found on a table just before the door leading to Yngvild Throne Room ."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ACCEPT_QUEST",
+      "focus_npc": "Vekel the Man",
+      "comment": "Player accepts Vekel's job to retrieve Arondil's journals from Yngvild.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0009F179",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0009F179",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "work",
+            "journals",
+            "Arondil",
+            "books"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "ENTER_YNGVILD",
+      "focus_npc": "",
+      "comment": "Observational: game advances to stage 30 when player enters Yngvild.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0009F179",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0009F179",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformRiften21",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_QUEST"
+      ]
+    },
+    {
+      "id": "JOURNALS_COLLECTED",
+      "focus_npc": "",
+      "comment": "Observational: game advances to stage 40 when all four journals are collected.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0009F179",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0009F179",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 30
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformRiften21",
+          "min_stage": 40
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENTER_YNGVILD"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Vekel the Man",
+      "comment": "Quest finishes at stage 200 when player returns journals to Vekel.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0009F179",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0009F179",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 30
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "FreeformRiften21",
+          "stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "JOURNALS_COLLECTED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "ACCEPT_QUEST"
+    ],
+    "requires": []
+  }
 }

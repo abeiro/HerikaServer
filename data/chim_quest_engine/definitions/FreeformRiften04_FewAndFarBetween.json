@@ -32,7 +32,10 @@
           "The player has gathered the ingredients and returned to speak with me."
         ],
         "DELIVER_ALL_INGREDIENTS": [
-          "I have given the player my supply chest key and gold as thanks for restoring Master Elgrim's ingredients."
+          "I have given the player my supply chest key and gold as thanks for restoring Master Elgrim's ingredients.",
+          "Player delivers the last of the ingredients and receives the supply chest key and gold.",
+          "Reward [ edit ] Ingun will reward you with leveled amount of gold (listed in the table below) for each set of ingredients brought to her.",
+          "The quality of her experiments seem to indicate a dark nature in this well-to-do girl, as she will allude to when speaking to her."
         ]
       }
     }
@@ -97,7 +100,10 @@
       "focus_npc": "Ingun Black-Briar",
       "comment": "Player has collected ingredients and the quest advances to speak with Ingun.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00053308",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 60
       },
       "downstream": [],
       "triggers": [
@@ -105,6 +111,26 @@
           "type": "quest_stage",
           "quest_editor_id": "FreeformRiften04",
           "min_stage": 60
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

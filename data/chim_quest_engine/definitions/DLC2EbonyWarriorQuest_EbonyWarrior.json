@@ -21,7 +21,10 @@
           "The Dragonborn has accepted my challenge to fight at Last Vigil."
         ],
         "DEFEAT_EBONY_WARRIOR": [
-          "I have been defeated by the Dragonborn. May my soul find rest in Sovngarde."
+          "I have been defeated by the Dragonborn. May my soul find rest in Sovngarde.",
+          "The player defeats the Ebony Warrior in combat at Last Vigil, completing the quest.",
+          "The Ebony Warrior will not attack you when approached, and will not speak.",
+          "You must initiate the attack for the battle to begin."
         ]
       }
     }
@@ -52,7 +55,10 @@
       "focus_npc": "Ebony Warrior",
       "comment": "The player talks to the Ebony Warrior and accepts his challenge to fight at Last Vigil.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0002C49E",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 100
       },
       "downstream": [],
       "triggers": [

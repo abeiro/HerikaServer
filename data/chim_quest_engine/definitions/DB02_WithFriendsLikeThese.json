@@ -19,6 +19,12 @@
         ],
         "JOINED_BROTHERHOOD": [
           "Welcome to the Family. You are now a full member of the Dark Brotherhood."
+        ],
+        "KILLED_ASTRID": [
+          "I am dead, slain by the very person I abducted for the test.",
+          "My corpse carries the key to the Abandoned Shack door.",
+          "My death permanently bars the player from ever joining the Dark Brotherhood.",
+          "My murder has triggered the Destroy the Dark Brotherhood! quest against my sanctuary."
         ]
       }
     },
@@ -27,14 +33,24 @@
         "I am a mercenary, a sell-sword by trade.",
         "Maybe there were times I got carried away, but war is war."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "KILLED_ASTRID": [
+          "With Astrid dead, my bonds can be loosened and I can walk free from the shack.",
+          "I will remain tied up in the Abandoned Shack unless the player chooses to release me."
+        ]
+      }
     },
     "Alea Quintus": {
       "base_facts": [
         "I am a mother of six and I have had to be tough to survive.",
         "Do some people look down on me? Have I made some enemies? You are damn right."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "KILLED_ASTRID": [
+          "Astrid's death means my captor is gone and I can finally be freed from this chair.",
+          "I remain bound and demanding release unless the player unties me."
+        ]
+      }
     },
     "Vasha": {
       "base_facts": [
@@ -42,7 +58,12 @@
         "This is not the first time I have been bagged and dragged.",
         "If one of my enemies would not pay to have me killed, I would take it as a personal insult."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "KILLED_ASTRID": [
+          "Astrid's death is merely a change in circumstance; my bonds can now be undone.",
+          "I wait calmly in the shack, free to be released now that my captor lies dead."
+        ]
+      }
     }
   },
   "beats": [
@@ -71,7 +92,10 @@
       "focus_npc": "Astrid",
       "comment": "Player kills one of the three captives; Astrid provides the passphrase to the Sanctuary.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA51",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [
@@ -101,7 +125,10 @@
       "focus_npc": "Astrid",
       "comment": "Astrid gives the passphrase Silence my Brother; player must find and enter the Sanctuary.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA51",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
       },
       "downstream": [],
       "triggers": [
@@ -131,7 +158,10 @@
       "focus_npc": "Astrid",
       "comment": "Player has entered the Dark Brotherhood Sanctuary and must speak with Astrid inside.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA51",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
       },
       "downstream": [],
       "triggers": [

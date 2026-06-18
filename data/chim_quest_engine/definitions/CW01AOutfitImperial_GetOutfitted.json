@@ -15,6 +15,10 @@
       "beat_facts": {
         "TULLIUS_ORDERS": [
           "I've sent the new recruit to Beirand for Imperial armor."
+        ],
+        "QUEST_COMPLETE": [
+          "The new recruit has been properly outfitted as an Imperial soldier.",
+          "The recruit is now equipped and ready to serve the Empire."
         ]
       }
     },
@@ -27,6 +31,12 @@
       "beat_facts": {
         "GET_IMPERIAL_GEAR": [
           "I've given the new recruit their Imperial armor set."
+        ],
+        "QUEST_COMPLETE": [
+          "I've finished outfitting the new recruit with their Imperial armor.",
+          "I am no longer under special protection now that this outfitting duty is done.",
+          "My shop inventory carries fewer items now that the assignment is complete.",
+          "The recruit has received their one free outfit; any replacements must be paid for."
         ]
       }
     }

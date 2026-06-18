@@ -27,7 +27,10 @@
           "I have given my supplies to someone willing to deliver them to the Greybeards."
         ],
         "QUEST_COMPLETE": [
-          "My supplies were delivered to High Hrothgar. I am grateful for the help."
+          "My supplies were delivered to High Hrothgar. I am grateful for the help.",
+          "Quest finishes after player returns to Klimmek following delivery.",
+          "They can be taken and returned at any time, however doing so will not grant you any further reward.",
+          "Return to Klimmek for your reward."
         ]
       }
     }
@@ -101,7 +104,10 @@
       "focus_npc": "Klimmek",
       "comment": "Quest finishes after player returns to Klimmek following delivery.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000D9B66",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -109,6 +115,26 @@
           "type": "quest_stage",
           "quest_editor_id": "FreeformIvarstead04",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

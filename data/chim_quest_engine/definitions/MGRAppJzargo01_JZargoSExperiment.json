@@ -1,150 +1,168 @@
 {
-    "quest_key":  "mgrappjzargo01_jzargosexperiment",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x000958B3",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MGRAppJzargo01",
-    "title":  "J\u0027zargo\u0027s Experiment",
-    "description":  "J\u0027zargo asks the player to test his experimental Flame Cloak scrolls on undead creatures. The scrolls prove dangerously explosive, harming allies as well as enemies. After reporting results, J\u0027zargo becomes available as a follower.",
-    "npc_facts":  {
-                      "J\u0027zargo":  {
-                                           "base_facts":  [
-                                                              "J\u0027zargo is a Khajiit student at the College of Winterhold.",
-                                                              "J\u0027zargo is ambitious and believes himself to be very skilled in magic.",
-                                                              "J\u0027zargo has been developing new Destruction spells."
-                                                          ],
-                                           "beat_facts":  {
-                                                              "BEAT_ACCEPT_EXPERIMENT":  [
-                                                                                             "J\u0027zargo has given the player ten Flame Cloak scrolls to test on the undead."
-                                                                                         ],
-                                                              "BEAT_UNDEAD_KILLED":  [
-                                                                                         "The player has killed undead with J\u0027zargo\u0027s Flame Cloak scrolls.",
-                                                                                         "The scrolls cause a massive explosion that harms the wielder and nearby allies."
-                                                                                     ],
-                                                              "BEAT_REPORT_COMPLETE":  [
-                                                                                           "J\u0027zargo\u0027s experiment had an unfortunate side effect, but he is grateful for the help.",
-                                                                                           "J\u0027zargo is now available as a follower."
-                                                                                       ],
-                                                              "BEAT_QUEST_FAILED":  [
-                                                                                        "The player ran out of J\u0027zargo\u0027s scrolls without killing enough undead."
-                                                                                    ]
-                                                          }
-                                       }
-                  },
-    "beats":  [
-                  {
-                      "id":  "BEAT_ACCEPT_EXPERIMENT",
-                      "focus_npc":  "J\u0027zargo",
-                      "comment":  "Player agrees to help J\u0027zargo test his Flame Cloak scrolls on undead.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x000958B3",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  20
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x000958B3",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "help you",
-                                                            "test the scrolls",
-                                                            "experiment",
-                                                            "flame cloak"
-                                                        ]
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "BEAT_UNDEAD_KILLED",
-                      "focus_npc":  "J\u0027zargo",
-                      "comment":  "Player has killed three undead with the scrolls and should report back.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRAppJzargo01",
-                                           "min_stage":  30
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "BEAT_ACCEPT_EXPERIMENT"
-                                        ]
-                  },
-                  {
-                      "id":  "BEAT_REPORT_COMPLETE",
-                      "focus_npc":  "J\u0027zargo",
-                      "comment":  "Player reports the scroll results to J\u0027zargo and the quest finishes.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRAppJzargo01",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "BEAT_UNDEAD_KILLED"
-                                        ]
-                  },
-                  {
-                      "id":  "BEAT_QUEST_FAILED",
-                      "focus_npc":  "J\u0027zargo",
-                      "comment":  "Player ran out of scrolls without killing enough undead; quest fails.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRAppJzargo01",
-                                           "min_stage":  255
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "BEAT_ACCEPT_EXPERIMENT"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "BEAT_ACCEPT_EXPERIMENT"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "mg01_firstlessons",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "mgrappjzargo01_jzargosexperiment",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000958B3",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MGRAppJzargo01",
+  "title": "J'zargo's Experiment",
+  "description": "J'zargo asks the player to test his experimental Flame Cloak scrolls on undead creatures. The scrolls prove dangerously explosive, harming allies as well as enemies. After reporting results, J'zargo becomes available as a follower.",
+  "npc_facts": {
+    "J'zargo": {
+      "base_facts": [
+        "J'zargo is a Khajiit student at the College of Winterhold.",
+        "J'zargo is ambitious and believes himself to be very skilled in magic.",
+        "J'zargo has been developing new Destruction spells."
+      ],
+      "beat_facts": {
+        "BEAT_ACCEPT_EXPERIMENT": [
+          "J'zargo has given the player ten Flame Cloak scrolls to test on the undead."
+        ],
+        "BEAT_UNDEAD_KILLED": [
+          "The player has killed undead with J'zargo's Flame Cloak scrolls.",
+          "The scrolls cause a massive explosion that harms the wielder and nearby allies."
+        ],
+        "BEAT_REPORT_COMPLETE": [
+          "J'zargo's experiment had an unfortunate side effect, but he is grateful for the help.",
+          "J'zargo is now available as a follower."
+        ],
+        "BEAT_QUEST_FAILED": [
+          "The player ran out of J'zargo's scrolls without killing enough undead.",
+          "Player ran out of scrolls without killing enough undead; quest fails.",
+          "A Job \"Well Done\" [ edit ] Return to J'zargo after you have killed three undead to report the unfortunate side-effect.",
+          "However, undead that are killed indirectly by the explosions of other undead do not count."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "BEAT_ACCEPT_EXPERIMENT",
+      "focus_npc": "J'zargo",
+      "comment": "Player agrees to help J'zargo test his Flame Cloak scrolls on undead.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000958B3",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000958B3",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help you",
+            "test the scrolls",
+            "experiment",
+            "flame cloak"
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "BEAT_UNDEAD_KILLED",
+      "focus_npc": "J'zargo",
+      "comment": "Player has killed three undead with the scrolls and should report back.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRAppJzargo01",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BEAT_ACCEPT_EXPERIMENT"
+      ]
+    },
+    {
+      "id": "BEAT_REPORT_COMPLETE",
+      "focus_npc": "J'zargo",
+      "comment": "Player reports the scroll results to J'zargo and the quest finishes.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000958B3",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRAppJzargo01",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BEAT_UNDEAD_KILLED"
+      ]
+    },
+    {
+      "id": "BEAT_QUEST_FAILED",
+      "focus_npc": "J'zargo",
+      "comment": "Player ran out of scrolls without killing enough undead; quest fails.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRAppJzargo01",
+          "min_stage": 255
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BEAT_ACCEPT_EXPERIMENT"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "BEAT_ACCEPT_EXPERIMENT"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mg01_firstlessons",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

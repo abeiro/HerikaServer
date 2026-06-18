@@ -16,6 +16,11 @@
       "beat_facts": {
         "ARRIVE_AT_SKAAL_VILLAGE": [
           "I have brought the Dragonborn to Skaal Village to seek my father's wisdom about Miraak."
+        ],
+        "QUEST_COMPLETE": [
+          "Quest completes; Storn directs player to cleanse remaining stones and seek Neloth.",
+          "The villagers will then return to Skaal Village, as should you to report back to Storn.",
+          "For the next step in weakening Miraak, he will task you with cleansing the rest of the shrines all over Solsteim, thus starting the quest Cleansing the Stones ."
         ]
       }
     },
@@ -65,7 +70,10 @@
       "focus_npc": "Storn Crag-Strider",
       "comment": "Player speaks with Storn, who explains Miraak's influence and sends them to Saering's Watch.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00017F90",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -116,7 +124,10 @@
       "focus_npc": "Storn Crag-Strider",
       "comment": "Player reports learning Bend Will to Storn, who instructs them to use it on the Wind Stone.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00017F90",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 40
       },
       "downstream": [],
       "triggers": [
@@ -167,7 +178,10 @@
       "focus_npc": "Storn Crag-Strider",
       "comment": "Player defeats the Lurker released from the Wind Stone and returns to Storn, who names them an ally of the Skaal.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00017F90",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 70
       },
       "downstream": [],
       "triggers": [

@@ -25,6 +25,11 @@
         ],
         "RETURN_LUTE": [
           "The player has returned Finn's Lute to me. I taught them a few stealth tricks as thanks."
+        ],
+        "QUEST_COMPLETE": [
+          "Finn's Lute has been returned to me at last. I am overwhelmed with joy to have it back after over a year of grieving its loss.",
+          "I taught the player stealth tricks I've picked up over the years—raising each Stealth skill by one point—as I could not pay what the lute is truly worth.",
+          "My disposition toward the player has improved for recovering the College's most precious instrument."
         ]
       }
     }

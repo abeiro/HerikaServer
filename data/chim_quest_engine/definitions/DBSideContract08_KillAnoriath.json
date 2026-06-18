@@ -1,135 +1,157 @@
 {
-    "quest_key":  "dbsidecontract08_killanoriath",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001EA64",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DBSideContract08",
-    "title":  "Kill Anoriath",
-    "description":  "A Dark Brotherhood side contract given by Nazir to assassinate Anoriath, a Bosmer hunter who works at his food stall in Whiterun\u0027s market by day and sleeps at The Drunken Huntsman by night.",
-    "npc_facts":  {
-                      "Nazir":  {
-                                    "base_facts":  [
-                                                       "I am the Dark Brotherhood\u0027s quest handler and assign side contracts from the Sanctuary.",
-                                                       "I reward completed contracts with leveled gold."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "CONTRACT_GIVEN":  [
-                                                                              "I have assigned the contract to kill Anoriath, a hunter in Whiterun."
-                                                                          ],
-                                                       "REWARD_COLLECTED":  [
-                                                                                "Anoriath is dead. The hunter came to know the fear of the hunted. The contract is fulfilled."
-                                                                            ]
-                                                   }
-                                },
-                      "Anoriath":  {
-                                       "base_facts":  [
-                                                          "I am a Bosmer hunter who runs a food stall in Whiterun\u0027s market during the day.",
-                                                          "I sleep at The Drunken Huntsman at night, which is run by my brother Elrindir.",
-                                                          "I never actually leave the city to hunt on the plains despite what some may say."
-                                                      ],
-                                       "beat_facts":  {
-
-                                                      }
-                                   }
-                  },
-    "beats":  [
-                  {
-                      "id":  "CONTRACT_GIVEN",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Player receives the contract from Nazir to kill Anoriath in Whiterun.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract08",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "kill anoriath",
-                                                            "anoriath contract",
-                                                            "hunter in whiterun"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "TARGET_ELIMINATED",
-                      "focus_npc":  "Anoriath",
-                      "comment":  "Anoriath has been killed; the objective to report back to Nazir is now active.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract08",
-                                           "min_stage":  20
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CONTRACT_GIVEN"
-                                        ]
-                  },
-                  {
-                      "id":  "REWARD_COLLECTED",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Player reports back to Nazir at the Sanctuary and collects the leveled gold reward. Quest is complete.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract08",
-                                           "min_stage":  200
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "report to nazir",
-                                                            "collected reward",
-                                                            "contract complete"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TARGET_ELIMINATED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "CONTRACT_GIVEN"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "db02a_sanctuary",
-                                               "beat_id":  "CONTRACTS_RECEIVED"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dbsidecontract08_killanoriath",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001EA64",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DBSideContract08",
+  "title": "Kill Anoriath",
+  "description": "A Dark Brotherhood side contract given by Nazir to assassinate Anoriath, a Bosmer hunter who works at his food stall in Whiterun's market by day and sleeps at The Drunken Huntsman by night.",
+  "npc_facts": {
+    "Nazir": {
+      "base_facts": [
+        "I am the Dark Brotherhood's quest handler and assign side contracts from the Sanctuary.",
+        "I reward completed contracts with leveled gold."
+      ],
+      "beat_facts": {
+        "CONTRACT_GIVEN": [
+          "I have assigned the contract to kill Anoriath, a hunter in Whiterun."
+        ],
+        "REWARD_COLLECTED": [
+          "Anoriath is dead. The hunter came to know the fear of the hunted. The contract is fulfilled.",
+          "Player reports back to Nazir at the Sanctuary and collects the leveled gold reward. Quest is complete.",
+          "Alternatively, like most other assassination targets, you have the option to talk to Anoriath, which gives you three dialogue choices, one of which will turn Anoriath hostile, allowing you to kill him anywhere without.",
+          "Upon rewarding you with leveled gold, Nazir will remark \"Ah, so the hunter came to know the fear of the hunted, hmm?\" ."
+        ]
+      }
+    },
+    "Anoriath": {
+      "base_facts": [
+        "I am a Bosmer hunter who runs a food stall in Whiterun's market during the day.",
+        "I sleep at The Drunken Huntsman at night, which is run by my brother Elrindir.",
+        "I never actually leave the city to hunt on the plains despite what some may say."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "CONTRACT_GIVEN",
+      "focus_npc": "Nazir",
+      "comment": "Player receives the contract from Nazir to kill Anoriath in Whiterun.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA64",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract08",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "kill anoriath",
+            "anoriath contract",
+            "hunter in whiterun"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "TARGET_ELIMINATED",
+      "focus_npc": "Anoriath",
+      "comment": "Anoriath has been killed; the objective to report back to Nazir is now active.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA64",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract08",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONTRACT_GIVEN"
+      ]
+    },
+    {
+      "id": "REWARD_COLLECTED",
+      "focus_npc": "Nazir",
+      "comment": "Player reports back to Nazir at the Sanctuary and collects the leveled gold reward. Quest is complete.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA64",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract08",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "report to nazir",
+            "collected reward",
+            "contract complete"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TARGET_ELIMINATED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "CONTRACT_GIVEN"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "db02a_sanctuary",
+        "beat_id": "CONTRACTS_RECEIVED"
+      }
+    ]
+  }
 }

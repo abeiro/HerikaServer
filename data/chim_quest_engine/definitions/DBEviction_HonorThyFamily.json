@@ -15,6 +15,12 @@
       "beat_facts": {
         "PAY_FINE": [
           "The player has paid their disciplinary fine and is once again in good standing with the Dark Brotherhood."
+        ],
+        "HONOR_RESTORED": [
+          "Nazir has accepted the disciplinary fine and restored the player's good standing within the Dark Brotherhood.",
+          "The player is now permitted to resume accepting and completing assassination contracts.",
+          "Nazir and other Sanctuary members will no longer refuse to speak with the player.",
+          "The fine paid was 500 gold, or reduced to 300 gold if Hail Sithis! was already completed."
         ]
       }
     }

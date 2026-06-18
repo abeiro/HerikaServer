@@ -68,7 +68,10 @@
       ],
       "beat_facts": {
         "THONAR_PARDON_COMPLETE": [
-          "The prisoner killed Madanach and earned my pardon. Their name is cleared."
+          "The prisoner killed Madanach and earned my pardon. Their name is cleared.",
+          "Quest completes after killing Madanach. Thonar Silver-Blood grants a pardon and clears the player's name.",
+          "Once he's dead, return to Madanach, who will declare you an honorary member of the Forsworn and lead the prisoners to the escape tunnel.",
+          "You'll need to do this quickly and/or stealthily, before the city guards can become hostile to you and thereby prevent you from fast traveling; you can still complete the quest later by speaking to Madanach after he."
         ]
       }
     }
@@ -292,7 +295,10 @@
       "focus_npc": "Thonar Silver-Blood",
       "comment": "Quest completes after killing Madanach. Thonar Silver-Blood grants a pardon and clears the player's name.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00040A5E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 250
       },
       "downstream": [],
       "triggers": [
@@ -300,6 +306,26 @@
           "type": "quest_stage",
           "quest_editor_id": "MS02",
           "min_stage": 250
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

@@ -1,241 +1,283 @@
 {
-    "quest_key":  "da05_illmetbymoonlight",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0002A49A",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DA05",
-    "title":  "Ill Met By Moonlight",
-    "description":  "A Daedric quest in which the player must choose whether to help the werewolf Sinding escape Hircine\u0027s Great Hunt or kill him and claim the Savior\u0027s Hide.",
-    "npc_facts":  {
-                      "Mathies":  {
-                                      "base_facts":  [
-                                                         "My daughter Lavinia was killed by a laborer named Sinding.",
-                                                         "I work at Corpselight Farm in Falkreath."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "LEARN_OF_SINDING":  [
-                                                                                  "A stranger has offered to look into Sinding\u0027s crime."
-                                                                              ]
-                                                     }
-                                  },
-                      "Sinding":  {
-                                      "base_facts":  [
-                                                         "I am a werewolf who stole the Ring of Hircine to control my transformations.",
-                                                         "Hircine cursed the ring, causing me to transform uncontrollably.",
-                                                         "I accidentally killed a little girl when I transformed."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "MEET_SINDING":  [
-                                                                              "I gave the Ring of Hircine to someone who might appease Hircine for me."
-                                                                          ],
-                                                         "GROTTO_CONFRONTATION":  [
-                                                                                      "I have fled to Bloated Man\u0027s Grotto to escape the hunters."
-                                                                                  ],
-                                                         "COMPLETE_SAVE_SINDING":  [
-                                                                                       "I am free and will never return to civilized life."
-                                                                                   ]
-                                                     }
-                                  },
-                      "Hircine":  {
-                                      "base_facts":  [
-                                                         "I am the Daedric Prince of the Hunt.",
-                                                         "Sinding stole my ring and must be punished."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "HIRCINES_CHALLENGE":  [
-                                                                                    "I have commanded the Great Hunt for Sinding\u0027s skin."
-                                                                                ],
-                                                         "COMPLETE_KILL_SINDING":  [
-                                                                                       "The hunt is complete. I have rewarded the hunter with the Savior\u0027s Hide."
-                                                                                   ],
-                                                         "COMPLETE_SAVE_SINDING":  [
-                                                                                       "The prey escaped, but the hunt was still glorious. I have granted the Ring of Hircine."
-                                                                                   ]
-                                                     }
-                                  }
-                  },
-    "beats":  [
-                  {
-                      "id":  "LEARN_OF_SINDING",
-                      "focus_npc":  "Mathies",
-                      "comment":  "Player learns about the vagrant who killed a child in Falkreath.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DA05",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Sinding",
-                                                            "murder",
-                                                            "killed a girl",
-                                                            "Falkreath jail"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "MEET_SINDING",
-                      "focus_npc":  "Sinding",
-                      "comment":  "Player speaks to Sinding in Falkreath Jail and receives the Cursed Ring of Hircine.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DA05",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "ring",
-                                                            "werewolf",
-                                                            "Hircine",
-                                                            "forgiveness"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "LEARN_OF_SINDING"
-                                        ]
-                  },
-                  {
-                      "id":  "HIRCINES_CHALLENGE",
-                      "focus_npc":  "Hircine",
-                      "comment":  "After killing the White Stag, Hircine tasks the player with hunting Sinding.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DA05",
-                                           "min_stage":  50
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "hunt",
-                                                            "White Stag",
-                                                            "skin",
-                                                            "Hircine\u0027s challenge"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "MEET_SINDING"
-                                        ]
-                  },
-                  {
-                      "id":  "GROTTO_CONFRONTATION",
-                      "focus_npc":  "Sinding",
-                      "comment":  "Player confronts Sinding in Bloated Man\u0027s Grotto and must choose to kill or spare him.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DA05",
-                                           "min_stage":  55
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "spare",
-                                                            "kill Sinding",
-                                                            "hunters",
-                                                            "grotto"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "HIRCINES_CHALLENGE"
-                                        ]
-                  },
-                  {
-                      "id":  "COMPLETE_KILL_SINDING",
-                      "focus_npc":  "Hircine",
-                      "comment":  "Player killed Sinding and skinned him, receiving the Savior\u0027s Hide from Hircine.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DA05",
-                                           "min_stage":  100
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "GROTTO_CONFRONTATION"
-                                        ]
-                  },
-                  {
-                      "id":  "COMPLETE_SAVE_SINDING",
-                      "focus_npc":  "Sinding",
-                      "comment":  "Player defended Sinding from the hunters and received the Ring of Hircine.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DA05",
-                                           "min_stage":  105
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "GROTTO_CONFRONTATION"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "LEARN_OF_SINDING"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "da05_illmetbymoonlight",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0002A49A",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DA05",
+  "title": "Ill Met By Moonlight",
+  "description": "A Daedric quest in which the player must choose whether to help the werewolf Sinding escape Hircine's Great Hunt or kill him and claim the Savior's Hide.",
+  "npc_facts": {
+    "Mathies": {
+      "base_facts": [
+        "My daughter Lavinia was killed by a laborer named Sinding.",
+        "I work at Corpselight Farm in Falkreath."
+      ],
+      "beat_facts": {
+        "LEARN_OF_SINDING": [
+          "A stranger has offered to look into Sinding's crime."
+        ]
+      }
+    },
+    "Sinding": {
+      "base_facts": [
+        "I am a werewolf who stole the Ring of Hircine to control my transformations.",
+        "Hircine cursed the ring, causing me to transform uncontrollably.",
+        "I accidentally killed a little girl when I transformed."
+      ],
+      "beat_facts": {
+        "MEET_SINDING": [
+          "I gave the Ring of Hircine to someone who might appease Hircine for me."
+        ],
+        "GROTTO_CONFRONTATION": [
+          "I have fled to Bloated Man's Grotto to escape the hunters."
+        ],
+        "COMPLETE_SAVE_SINDING": [
+          "I am free and will never return to civilized life."
+        ]
+      }
+    },
+    "Hircine": {
+      "base_facts": [
+        "I am the Daedric Prince of the Hunt.",
+        "Sinding stole my ring and must be punished."
+      ],
+      "beat_facts": {
+        "HIRCINES_CHALLENGE": [
+          "I have commanded the Great Hunt for Sinding's skin."
+        ],
+        "COMPLETE_KILL_SINDING": [
+          "The hunt is complete. I have rewarded the hunter with the Savior's Hide."
+        ],
+        "COMPLETE_SAVE_SINDING": [
+          "The prey escaped, but the hunt was still glorious. I have granted the Ring of Hircine."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "LEARN_OF_SINDING",
+      "focus_npc": "Mathies",
+      "comment": "Player learns about the vagrant who killed a child in Falkreath.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002A49A",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA05",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Sinding",
+            "murder",
+            "killed a girl",
+            "Falkreath jail"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "MEET_SINDING",
+      "focus_npc": "Sinding",
+      "comment": "Player speaks to Sinding in Falkreath Jail and receives the Cursed Ring of Hircine.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002A49A",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA05",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "ring",
+            "werewolf",
+            "Hircine",
+            "forgiveness"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEARN_OF_SINDING"
+      ]
+    },
+    {
+      "id": "HIRCINES_CHALLENGE",
+      "focus_npc": "Hircine",
+      "comment": "After killing the White Stag, Hircine tasks the player with hunting Sinding.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002A49A",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA05",
+          "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "hunt",
+            "White Stag",
+            "skin",
+            "Hircine's challenge"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MEET_SINDING"
+      ]
+    },
+    {
+      "id": "GROTTO_CONFRONTATION",
+      "focus_npc": "Sinding",
+      "comment": "Player confronts Sinding in Bloated Man's Grotto and must choose to kill or spare him.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002A49A",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 55
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA05",
+          "min_stage": 55
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "spare",
+            "kill Sinding",
+            "hunters",
+            "grotto"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HIRCINES_CHALLENGE"
+      ]
+    },
+    {
+      "id": "COMPLETE_KILL_SINDING",
+      "focus_npc": "Hircine",
+      "comment": "Player killed Sinding and skinned him, receiving the Savior's Hide from Hircine.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002A49A",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 100
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA05",
+          "min_stage": 100
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "GROTTO_CONFRONTATION"
+      ]
+    },
+    {
+      "id": "COMPLETE_SAVE_SINDING",
+      "focus_npc": "Sinding",
+      "comment": "Player defended Sinding from the hunters and received the Ring of Hircine.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002A49A",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 105
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA05",
+          "min_stage": 105
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "GROTTO_CONFRONTATION"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "LEARN_OF_SINDING"
+    ],
+    "requires": []
+  }
 }

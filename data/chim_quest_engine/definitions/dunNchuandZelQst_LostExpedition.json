@@ -113,7 +113,10 @@
       "focus_npc": "Calcelmo",
       "comment": "Player reports to Calcelmo in Understone Keep and receives a leveled gold reward. Quest complete.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000C3709",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 110
       },
       "downstream": [],
       "triggers": [

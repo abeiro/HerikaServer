@@ -1,121 +1,120 @@
 {
-    "quest_key":  "dbolavareadingmiscobjective_locatetheassassinofold",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0002E655",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DBOlavaReadingMiscObjective",
-    "title":  "Locate the Assassin of Old",
-    "description":  "After completing Breaching Security and receiving Olava\u0027s Token from Gabriella, show it to Olava the Feeble in Whiterun for a reading pointing to Hag\u0027s End. Travel through Deepwood Redoubt to Hag\u0027s End and find the Dark Brotherhood Assassin\u0027s corpse behind a hidden wall to claim the Ancient Shrouded Armor.",
-    "npc_facts":  {
-                      "Olava the Feeble":  {
-                                               "base_facts":  [
-                                                                  "I am an elderly seer living in Whiterun, usually found resting on my porch behind Breezehome.",
-                                                                  "I provide readings of the future when presented with Olava\u0027s Token from the Dark Brotherhood."
-                                                              ],
-                                               "beat_facts":  {
-                                                                  "OLAVA_READING":  [
-                                                                                        "I have given a reading pointing to Hag\u0027s End, the last resting place of an assassin of old whose fortunes await."
-                                                                                    ]
-                                                              }
-                                           }
-                  },
-    "beats":  [
-                  {
-                      "id":  "OLAVA_READING",
-                      "focus_npc":  "Olava the Feeble",
-                      "comment":  "Player receives a reading from Olava after presenting Olava\u0027s Token obtained from Gabriella after Breaching Security.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_form_id":  "0x0002E655",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "quest_editor_id":  "DBOlavaReadingMiscObjective",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "reading",
-                                                            "olava\u0027s token",
-                                                            "future"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "EXPEDITION_TO_HAGS_END",
-                      "focus_npc":  "",
-                      "comment":  "Player travels through Deepwood Redoubt to reach Hag\u0027s End and locate the assassin of old.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "deepwood redoubt",
-                                                            "hag\u0027s end",
-                                                            "assassin of old"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "OLAVA_READING"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest completes when the player finds the Dark Brotherhood Assassin\u0027s corpse behind the hidden wall in Hag\u0027s End.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_form_id":  "0x0002E655",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "quest_editor_id":  "DBOlavaReadingMiscObjective",
-                                           "stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "OLAVA_READING"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "db07_cureformadness",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dbolavareadingmiscobjective_locatetheassassinofold",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0002E655",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DBOlavaReadingMiscObjective",
+  "title": "Locate the Assassin of Old",
+  "description": "After completing Breaching Security and receiving Olava's Token from Gabriella, show it to Olava the Feeble in Whiterun for a reading pointing to Hag's End. Travel through Deepwood Redoubt to Hag's End and find the Dark Brotherhood Assassin's corpse behind a hidden wall to claim the Ancient Shrouded Armor.",
+  "npc_facts": {
+    "Olava the Feeble": {
+      "base_facts": [
+        "I am an elderly seer living in Whiterun, usually found resting on my porch behind Breezehome.",
+        "I provide readings of the future when presented with Olava's Token from the Dark Brotherhood."
+      ],
+      "beat_facts": {
+        "OLAVA_READING": [
+          "I have given a reading pointing to Hag's End, the last resting place of an assassin of old whose fortunes await."
+        ],
+        "QUEST_COMPLETE": [
+          "My reading proved true — the assassin of old has been found at Hag's End and their fortunes claimed as I foresaw.",
+          "I am still weary from the effort of that reading; such visions drain me deeply.",
+          "Olava's Token has served its purpose, and I have no further prophecies regarding this matter.",
+          "The Ancient Shrouded Armor now belongs to the one who sought my vision."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "OLAVA_READING",
+      "focus_npc": "Olava the Feeble",
+      "comment": "Player receives a reading from Olava after presenting Olava's Token obtained from Gabriella after Breaching Security.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002E655",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_form_id": "0x0002E655",
+          "quest_plugin": "Skyrim.esm",
+          "quest_editor_id": "DBOlavaReadingMiscObjective",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "reading",
+            "olava's token",
+            "future"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "EXPEDITION_TO_HAGS_END",
+      "focus_npc": "",
+      "comment": "Player travels through Deepwood Redoubt to reach Hag's End and locate the assassin of old.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "deepwood redoubt",
+            "hag's end",
+            "assassin of old"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "OLAVA_READING"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest completes when the player finds the Dark Brotherhood Assassin's corpse behind the hidden wall in Hag's End.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_form_id": "0x0002E655",
+          "quest_plugin": "Skyrim.esm",
+          "quest_editor_id": "DBOlavaReadingMiscObjective",
+          "stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": []
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "OLAVA_READING"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "db07_cureformadness",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

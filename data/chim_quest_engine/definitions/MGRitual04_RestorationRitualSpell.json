@@ -1,134 +1,131 @@
 {
-    "quest_key":  "mgritual04_restorationritualspell",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x000CD987",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MGRitual04",
-    "title":  "Restoration Ritual Spell",
-    "description":  "After reaching Restoration skill 90 and completing Good Intentions, Colette Marence directs the player to the Augur of Dunlain in The Midden. The Augur tests the player by stripping their items and summoning ghosts; surviving using only Restoration magic earns the Bane of the Undead spell.",
-    "npc_facts":  {
-                      "Colette Marence":  {
-                                              "base_facts":  [
-                                                                 "I am the Restoration instructor at the College of Winterhold.",
-                                                                 "The Augur of Dunlain in The Midden holds knowledge of master Restoration spells.",
-                                                                 "Only those who gain the Augur\u0027s approval can learn the deepest Restoration magic."
-                                                             ],
-                                              "beat_facts":  {
-                                                                 "COLETTE_DIRECTS_TO_AUGUR":  [
-                                                                                                  "I have sent this student to seek the Augur of Dunlain in The Midden for further training."
-                                                                                              ]
-                                                             }
-                                          },
-                      "Augur of Dunlain":  {
-                                               "base_facts":  [
-                                                                  "I dwell in The Midden beneath the College of Winterhold.",
-                                                                  "I test those who seek mastery of Restoration magic.",
-                                                                  "My test requires surviving ghost attacks using only Restoration spells."
-                                                              ],
-                                               "beat_facts":  {
-                                                                  "SPEAK_WITH_AUGUR":  [
-                                                                                           "This mage has come seeking my test of Restoration mastery."
-                                                                                       ],
-                                                                  "PASS_AUGUR_TEST":  [
-                                                                                          "This mage has proven worthy and earned the Bane of the Undead spell."
-                                                                                      ]
-                                                              }
-                                           }
-                  },
-    "beats":  [
-                  {
-                      "id":  "COLETTE_DIRECTS_TO_AUGUR",
-                      "focus_npc":  "Colette Marence",
-                      "comment":  "Player asks Colette about further Restoration training; she directs them to the Augur in The Midden.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x000CD987",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x000CD987",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "restoration training",
-                                                            "learn more restoration",
-                                                            "master restoration"
-                                                        ]
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "SPEAK_WITH_AUGUR",
-                      "focus_npc":  "Augur of Dunlain",
-                      "comment":  "Player finds and speaks with the Augur of Dunlain in The Midden and learns about the test.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "augur",
-                                                            "test",
-                                                            "restoration"
-                                                        ]
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "COLETTE_DIRECTS_TO_AUGUR"
-                                        ]
-                  },
-                  {
-                      "id":  "PASS_AUGUR_TEST",
-                      "focus_npc":  "Augur of Dunlain",
-                      "comment":  "Player survives the Augur\u0027s ghost test and receives Bane of the Undead. Quest completes at stage 200.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRitual04",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SPEAK_WITH_AUGUR"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "COLETTE_DIRECTS_TO_AUGUR"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "mg01_firstlessons",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "mgritual04_restorationritualspell",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000CD987",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MGRitual04",
+  "title": "Restoration Ritual Spell",
+  "description": "After reaching Restoration skill 90 and completing Good Intentions, Colette Marence directs the player to the Augur of Dunlain in The Midden. The Augur tests the player by stripping their items and summoning ghosts; surviving using only Restoration magic earns the Bane of the Undead spell.",
+  "npc_facts": {
+    "Colette Marence": {
+      "base_facts": [
+        "I am the Restoration instructor at the College of Winterhold.",
+        "The Augur of Dunlain in The Midden holds knowledge of master Restoration spells.",
+        "Only those who gain the Augur's approval can learn the deepest Restoration magic."
+      ],
+      "beat_facts": {
+        "COLETTE_DIRECTS_TO_AUGUR": [
+          "I have sent this student to seek the Augur of Dunlain in The Midden for further training."
+        ]
+      }
+    },
+    "Augur of Dunlain": {
+      "base_facts": [
+        "I dwell in The Midden beneath the College of Winterhold.",
+        "I test those who seek mastery of Restoration magic.",
+        "My test requires surviving ghost attacks using only Restoration spells."
+      ],
+      "beat_facts": {
+        "SPEAK_WITH_AUGUR": [
+          "This mage has come seeking my test of Restoration mastery."
+        ],
+        "PASS_AUGUR_TEST": [
+          "This mage has proven worthy and earned the Bane of the Undead spell.",
+          "Player survives the Augur's ghost test and receives Bane of the Undead. Quest completes at .",
+          "Then, before the first ghost notices you, talk to your follower and trade items to retrieve them.",
+          "Unlike other ritual quests, this one grants you the first spell directly rather than as a spell tome."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "COLETTE_DIRECTS_TO_AUGUR",
+      "focus_npc": "Colette Marence",
+      "comment": "Player asks Colette about further Restoration training; she directs them to the Augur in The Midden.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000CD987",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000CD987",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "restoration training",
+            "learn more restoration",
+            "master restoration"
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "SPEAK_WITH_AUGUR",
+      "focus_npc": "Augur of Dunlain",
+      "comment": "Player finds and speaks with the Augur of Dunlain in The Midden and learns about the test.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "augur",
+            "test",
+            "restoration"
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "COLETTE_DIRECTS_TO_AUGUR"
+      ]
+    },
+    {
+      "id": "PASS_AUGUR_TEST",
+      "focus_npc": "Augur of Dunlain",
+      "comment": "Player survives the Augur's ghost test and receives Bane of the Undead. Quest completes at stage 200.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRitual04",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_WITH_AUGUR"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "COLETTE_DIRECTS_TO_AUGUR"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mg01_firstlessons",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

@@ -23,7 +23,10 @@
           "I have asked someone to retrieve my spoon, soul gem, and orichalcum ingot from my travels."
         ],
         "ALL_ITEMS_RETURNED": [
-          "I have no recollection of asking anyone to fetch my items, but I appreciate them nonetheless."
+          "I have no recollection of asking anyone to fetch my items, but I appreciate them nonetheless.",
+          "All three items collected; player returns to Wylandriah. Sets and completes objectives.",
+          "Return to Wylandriah with the items and she will give you several random scrolls as a reward, but will have no recollection of actually setting you on the task.",
+          "After she enters, the house becomes unlocked, and you can enter the house without trespassing."
         ]
       }
     }

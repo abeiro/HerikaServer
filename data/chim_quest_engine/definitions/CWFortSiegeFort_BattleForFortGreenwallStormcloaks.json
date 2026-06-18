@@ -1,131 +1,124 @@
 {
-    "quest_key":  "cwfortsiegefort_battleforfortgreenwallstormcloaks",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00083042",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "CWFortSiegeFort",
-    "title":  "The Battle for Fort Greenwall (Stormcloaks)",
-    "description":  "Galmar Stone-Fist orders the assault on Fort Greenwall to reclaim The Rift from Imperial control after it was traded away during Season Unending.",
-    "npc_facts":  {
-                      "Galmar Stone-Fist":  {
-                                                "base_facts":  [
-                                                                   "I am Galmar Stone-Fist, Ulfric Stormcloak\u0027s right hand and military commander.",
-                                                                   "The Rift must be reclaimed for the Stormcloaks.",
-                                                                   "Fort Greenwall is held by Imperial forces and must be taken."
-                                                               ],
-                                                "beat_facts":  {
-                                                                   "RECEIVE_ORDERS":  [
-                                                                                          "I have dispatched warriors to take Fort Greenwall from the Imperials."
-                                                                                      ]
-                                                               }
-                                            }
-                  },
-    "beats":  [
-                  {
-                      "id":  "RECEIVE_ORDERS",
-                      "focus_npc":  "Galmar Stone-Fist",
-                      "comment":  "Player receives orders from Galmar at Rift Stormcloak Camp to attack Fort Greenwall.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00083042",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "orders",
-                                                            "fort greenwall",
-                                                            "attack the fort",
-                                                            "take the fort"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "JOIN_ASSAULT",
-                      "focus_npc":  "",
-                      "comment":  "Player joins the Stormcloak force preparing to attack Fort Greenwall.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CWFortSiegeFort",
-                                           "min_stage":  10
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RECEIVE_ORDERS"
-                                        ]
-                  },
-                  {
-                      "id":  "DEFEAT_ENEMY",
-                      "focus_npc":  "",
-                      "comment":  "Player fights to take over Fort Greenwall by defeating the Imperial defenders.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CWFortSiegeFort",
-                                           "min_stage":  50
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "JOIN_ASSAULT"
-                                        ]
-                  },
-                  {
-                      "id":  "FORT_TAKEN",
-                      "focus_npc":  "",
-                      "comment":  "Fort Greenwall has been captured; Laila Law-Giver will be re-instated as Jarl of The Rift. Report to Ulfric Stormcloak for the next phase of Liberation of Skyrim.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CWFortSiegeFort",
-                                           "min_stage":  9000
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DEFEAT_ENEMY"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "RECEIVE_ORDERS"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "cwfortsiegefort_battleforfortgreenwallstormcloaks",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00083042",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "CWFortSiegeFort",
+  "title": "The Battle for Fort Greenwall (Stormcloaks)",
+  "description": "Galmar Stone-Fist orders the assault on Fort Greenwall to reclaim The Rift from Imperial control after it was traded away during Season Unending.",
+  "npc_facts": {
+    "Galmar Stone-Fist": {
+      "base_facts": [
+        "I am Galmar Stone-Fist, Ulfric Stormcloak's right hand and military commander.",
+        "The Rift must be reclaimed for the Stormcloaks.",
+        "Fort Greenwall is held by Imperial forces and must be taken."
+      ],
+      "beat_facts": {
+        "RECEIVE_ORDERS": [
+          "I have dispatched warriors to take Fort Greenwall from the Imperials."
+        ],
+        "FORT_TAKEN": [
+          "Fort Greenwall has fallen to our forces; the Rift is reclaimed for the Stormcloaks.",
+          "Laila Law-Giver will be reinstated as Jarl of Riften now that Imperial hold on the Rift is broken.",
+          "The warrior who took the fort should report to Ulfric Stormcloak to continue the Liberation of Skyrim."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "RECEIVE_ORDERS",
+      "focus_npc": "Galmar Stone-Fist",
+      "comment": "Player receives orders from Galmar at Rift Stormcloak Camp to attack Fort Greenwall.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00083042",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "orders",
+            "fort greenwall",
+            "attack the fort",
+            "take the fort"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "JOIN_ASSAULT",
+      "focus_npc": "",
+      "comment": "Player joins the Stormcloak force preparing to attack Fort Greenwall.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWFortSiegeFort",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RECEIVE_ORDERS"
+      ]
+    },
+    {
+      "id": "DEFEAT_ENEMY",
+      "focus_npc": "",
+      "comment": "Player fights to take over Fort Greenwall by defeating the Imperial defenders.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWFortSiegeFort",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "JOIN_ASSAULT"
+      ]
+    },
+    {
+      "id": "FORT_TAKEN",
+      "focus_npc": "",
+      "comment": "Fort Greenwall has been captured; Laila Law-Giver will be re-instated as Jarl of The Rift. Report to Ulfric Stormcloak for the next phase of Liberation of Skyrim.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWFortSiegeFort",
+          "min_stage": 9000
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEFEAT_ENEMY"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "RECEIVE_ORDERS"
+    ],
+    "requires": []
+  }
 }

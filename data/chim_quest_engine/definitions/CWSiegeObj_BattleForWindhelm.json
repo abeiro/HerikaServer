@@ -172,7 +172,10 @@
       "focus_npc": "General Tullius",
       "comment": "Windhelm is captured, Ulfric is dead, the rebellion is destroyed. Tullius gives a victory speech. Brunwulf Free-Winter becomes Jarl. Stage 9000 finishes the quest.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00096E71",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 9000
       },
       "downstream": [],
       "triggers": [
@@ -180,6 +183,26 @@
           "type": "quest_stage",
           "quest_editor_id": "CWSiegeObj",
           "min_stage": 9000
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

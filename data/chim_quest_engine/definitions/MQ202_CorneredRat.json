@@ -32,6 +32,11 @@
         "CONVINCE_ESBERN": [
           "The player convinced me to trust them. I agreed to follow them back to Delphine in Riverwood.",
           "I warned the player about Alduin the World-Eater's return and its apocalyptic implications."
+        ],
+        "QUEST_COMPLETE": [
+          "Esbern agrees to follow the player back to Delphine. Quest ends and Alduin's Wall begins.",
+          "The quest ends here, and the next quest, Alduin's Wall , begins.",
+          "Brynjolf Vekel the Man Dirge If you have already joined the Thieves Guild , the Ratway is accessible and you can locate Esbern directly."
         ]
       }
     },
@@ -81,7 +86,10 @@
       "focus_npc": "",
       "comment": "Player asks around Riften and enters the Ratway to search for Esbern's hideout.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00036191",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -131,7 +139,10 @@
       "focus_npc": "Esbern",
       "comment": "Player convinces Esbern to open his door using the secret phrase, Delphine's name, or Dragonborn identity.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00036191",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 150
       },
       "downstream": [],
       "triggers": [
@@ -161,7 +172,10 @@
       "focus_npc": "Esbern",
       "comment": "Esbern agrees to follow the player back to Delphine. Quest ends and Alduin's Wall begins.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00036191",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 180
       },
       "downstream": [],
       "triggers": [
@@ -169,6 +183,26 @@
           "type": "quest_stage",
           "quest_editor_id": "MQ202",
           "min_stage": 180
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

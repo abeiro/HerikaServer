@@ -1,90 +1,86 @@
 {
-    "quest_key":  "dlc2blackbook07quest_blackbookthehiddentwilight",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00032170",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2BlackBook07Quest",
-    "title":  "Black Book: The Hidden Twilight",
-    "description":  "Read the Black Book The Hidden Twilight in Tel Mithryn, traverse the chapters of Apocrypha past seekers and lurkers, and choose one of three greater powers as a reward.",
-    "npc_facts":  {
-
-                  },
-    "beats":  [
-                  {
-                      "id":  "ENTER_APOCRYPHA",
-                      "focus_npc":  "",
-                      "comment":  "Player reads the Black Book and is transported to Apocrypha.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2BlackBook07Quest",
-                                           "min_stage":  10,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "black book",
-                                                            "hidden twilight",
-                                                            "apocrypha"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "CLAIM_REWARD",
-                      "focus_npc":  "",
-                      "comment":  "Player reaches The Hidden Twilight, chooses a power, and returns to Tel Mithryn.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2BlackBook07Quest",
-                                           "min_stage":  20,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "mora\u0027s agony",
-                                                            "mora\u0027s boon",
-                                                            "mora\u0027s grasp",
-                                                            "chose a power",
-                                                            "hidden knowledge"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ENTER_APOCRYPHA"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "ENTER_APOCRYPHA"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dlc2blackbook07quest_blackbookthehiddentwilight",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00032170",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2BlackBook07Quest",
+  "title": "Black Book: The Hidden Twilight",
+  "description": "Read the Black Book The Hidden Twilight in Tel Mithryn, traverse the chapters of Apocrypha past seekers and lurkers, and choose one of three greater powers as a reward.",
+  "npc_facts": {},
+  "beats": [
+    {
+      "id": "ENTER_APOCRYPHA",
+      "focus_npc": "",
+      "comment": "Player reads the Black Book and is transported to Apocrypha.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00032170",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2BlackBook07Quest",
+          "min_stage": 10,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "black book",
+            "hidden twilight",
+            "apocrypha"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "CLAIM_REWARD",
+      "focus_npc": "",
+      "comment": "Player reaches The Hidden Twilight, chooses a power, and returns to Tel Mithryn.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00032170",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2BlackBook07Quest",
+          "min_stage": 20,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "mora's agony",
+            "mora's boon",
+            "mora's grasp",
+            "chose a power",
+            "hidden knowledge"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENTER_APOCRYPHA"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "ENTER_APOCRYPHA"
+    ],
+    "requires": []
+  }
 }

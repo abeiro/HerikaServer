@@ -26,7 +26,10 @@
           "A stranger has agreed to talk to my father about letting me become an adventurer."
         ],
         "QUEST_COMPLETE": [
-          "My father changed his mind! I'm going to be an adventurer. I'll call myself Erik the Slayer."
+          "My father changed his mind! I'm going to be an adventurer. I'll call myself Erik the Slayer.",
+          "Player returns to Erik with the good news that his father has agreed to let him become an adventurer.",
+          "Maybe we can swap stories about our adventures over a mug of ale at the inn!\" The next time you see him, he will be equipped with a set of iron armor and you can also ask him to be your follower .",
+          "Convince Mralki to allow Erik to become an adventurer."
         ]
       }
     },

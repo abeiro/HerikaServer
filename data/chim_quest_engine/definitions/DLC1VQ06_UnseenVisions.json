@@ -13,7 +13,13 @@
         "The Ritual of the Ancestor Moth is the only way left to read the Elder Scrolls.",
         "The Ancestor Glade is where the ritual must be performed."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "The player successfully performed the Ritual of the Ancestor Moth and read the Elder Scrolls.",
+          "The player has learned the location of Auriel's Bow from the vision.",
+          "If the player is aligned with the Dawnguard, they can sell me the Elder Scroll (Sun) and Elder Scroll (Blood)."
+        ]
+      }
     },
     "Serana": {
       "base_facts": [
@@ -26,6 +32,11 @@
         ],
         "SPEAK_TO_SERANA": [
           "The player told me Auriel's Bow is near Darkfall Cave."
+        ],
+        "QUEST_COMPLETE": [
+          "The player confirmed Auriel's Bow is hidden near Darkfall Cave.",
+          "We were ambushed by Dawnguard soldiers or vampires as we left the Ancestor Glade, depending on the player's faction allegiance.",
+          "Our immediate next step is to travel to Darkfall Cave to find Auriel's Bow and stop Harkon."
         ]
       }
     }
@@ -119,7 +130,10 @@
       "focus_npc": "Serana",
       "comment": "Player tells Serana about the vision and that Auriel's Bow is near Darkfall Cave.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00002852",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 70
       },
       "downstream": [],
       "triggers": [

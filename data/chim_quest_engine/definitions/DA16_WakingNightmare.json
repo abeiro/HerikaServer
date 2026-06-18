@@ -1,194 +1,207 @@
 {
-    "quest_key":  "da16_wakingnightmare",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x000242AF",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DA16",
-    "title":  "Waking Nightmare",
-    "description":  "The people of Dawnstar suffer from nightmares caused by Vaermina\u0027s Skull of Corruption hidden within Nightcaller Temple. Aid the priest Erandur in destroying the artifact, or claim it for yourself.",
-    "npc_facts":  {
-                      "Erandur":  {
-                                      "base_facts":  [
-                                                         "I am a priest of Mara serving in Dawnstar.",
-                                                         "Dawnstar\u0027s nightmares are caused by Vaermina\u0027s influence from Nightcaller Temple.",
-                                                         "The Skull of Corruption is stealing the memories of Dawnstar\u0027s people.",
-                                                         "I was once a priest of Vaermina named Casimir.",
-                                                         "I fled the temple when Orcs attacked, abandoning my companions Veren and Thorek to the Miasma."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "NIGHTMARES_HEARD":  [
-                                                                                  "I have asked the traveler to help me end the nightmares plaguing Dawnstar."
-                                                                              ],
-                                                         "TEMPLE_ENTERED":  [
-                                                                                "I explained how the Miasma put both priests and Orcs into a deep sleep for years."
-                                                                            ],
-                                                         "SKULL_AND_LIBRARY":  [
-                                                                                   "The Skull of Corruption must be destroyed to stop the nightmares.",
-                                                                                   "The Dreamstride and Vaermina\u0027s Torpor can breach the inner sanctum."
-                                                                               ],
-                                                         "DREAMSTRIDE_COMPLETED":  [
-                                                                                       "My companion passed through the Dreamstride and disabled the magical barrier."
-                                                                                   ],
-                                                         "CONFRONTATION":  [
-                                                                               "I had to kill Veren and Thorek, my former friends. Now I will destroy the Skull."
-                                                                           ],
-                                                         "QUEST_COMPLETE":  [
-                                                                                "The Skull of Corruption is destroyed. I offer myself as a companion to the traveler."
-                                                                            ]
-                                                     }
-                                  }
-                  },
-    "beats":  [
-                  {
-                      "id":  "NIGHTMARES_HEARD",
-                      "focus_npc":  "Erandur",
-                      "comment":  "Player hears of Dawnstar\u0027s nightmares and speaks to Erandur at the Windpeak Inn.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DA16",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "nightmares",
-                                                            "bad dreams",
-                                                            "can\u0027t sleep"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "TEMPLE_ENTERED",
-                      "focus_npc":  "Erandur",
-                      "comment":  "Erandur leads the player to Nightcaller Temple and explains the history of the Miasma.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DA16",
-                                           "min_stage":  25
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "NIGHTMARES_HEARD"
-                                        ]
-                  },
-                  {
-                      "id":  "SKULL_AND_LIBRARY",
-                      "focus_npc":  "Erandur",
-                      "comment":  "Player learns of the Skull of Corruption, finds The Dreamstride, and learns Vaermina\u0027s Torpor is needed.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DA16",
-                                           "min_stage":  50
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TEMPLE_ENTERED"
-                                        ]
-                  },
-                  {
-                      "id":  "DREAMSTRIDE_COMPLETED",
-                      "focus_npc":  "Erandur",
-                      "comment":  "Player drinks Vaermina\u0027s Torpor, completes the Dreamstride, releases the Miasma, and disables the barrier.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DA16",
-                                           "min_stage":  140
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SKULL_AND_LIBRARY"
-                                        ]
-                  },
-                  {
-                      "id":  "CONFRONTATION",
-                      "focus_npc":  "Erandur",
-                      "comment":  "Player follows Erandur to the Skull, defeats Veren and Thorek, and Erandur begins his ritual.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DA16",
-                                           "min_stage":  180
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DREAMSTRIDE_COMPLETED"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Erandur",
-                      "comment":  "Final choice: spare Erandur and destroy the Skull, or kill Erandur and claim the Skull of Corruption.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DA16",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CONFRONTATION"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "NIGHTMARES_HEARD"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "da16_wakingnightmare",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000242AF",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DA16",
+  "title": "Waking Nightmare",
+  "description": "The people of Dawnstar suffer from nightmares caused by Vaermina's Skull of Corruption hidden within Nightcaller Temple. Aid the priest Erandur in destroying the artifact, or claim it for yourself.",
+  "npc_facts": {
+    "Erandur": {
+      "base_facts": [
+        "I am a priest of Mara serving in Dawnstar.",
+        "Dawnstar's nightmares are caused by Vaermina's influence from Nightcaller Temple.",
+        "The Skull of Corruption is stealing the memories of Dawnstar's people.",
+        "I was once a priest of Vaermina named Casimir.",
+        "I fled the temple when Orcs attacked, abandoning my companions Veren and Thorek to the Miasma."
+      ],
+      "beat_facts": {
+        "NIGHTMARES_HEARD": [
+          "I have asked the traveler to help me end the nightmares plaguing Dawnstar."
+        ],
+        "TEMPLE_ENTERED": [
+          "I explained how the Miasma put both priests and Orcs into a deep sleep for years."
+        ],
+        "SKULL_AND_LIBRARY": [
+          "The Skull of Corruption must be destroyed to stop the nightmares.",
+          "The Dreamstride and Vaermina's Torpor can breach the inner sanctum."
+        ],
+        "DREAMSTRIDE_COMPLETED": [
+          "My companion passed through the Dreamstride and disabled the magical barrier."
+        ],
+        "CONFRONTATION": [
+          "I had to kill Veren and Thorek, my former friends. Now I will destroy the Skull."
+        ],
+        "QUEST_COMPLETE": [
+          "The Skull of Corruption is destroyed. I offer myself as a companion to the traveler.",
+          "Final choice: spare Erandur and destroy the Skull, or kill Erandur and claim the Skull of Corruption.",
+          "Follow him down the stairs, where you will meet two Orcish invaders at the bottom.",
+          "Words of Power [ edit ] Follow Erandur back up the stairs and allow him to unlock the door to the library."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "NIGHTMARES_HEARD",
+      "focus_npc": "Erandur",
+      "comment": "Player hears of Dawnstar's nightmares and speaks to Erandur at the Windpeak Inn.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000242AF",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA16",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "nightmares",
+            "bad dreams",
+            "can't sleep"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "TEMPLE_ENTERED",
+      "focus_npc": "Erandur",
+      "comment": "Erandur leads the player to Nightcaller Temple and explains the history of the Miasma.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA16",
+          "min_stage": 25
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "NIGHTMARES_HEARD"
+      ]
+    },
+    {
+      "id": "SKULL_AND_LIBRARY",
+      "focus_npc": "Erandur",
+      "comment": "Player learns of the Skull of Corruption, finds The Dreamstride, and learns Vaermina's Torpor is needed.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA16",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TEMPLE_ENTERED"
+      ]
+    },
+    {
+      "id": "DREAMSTRIDE_COMPLETED",
+      "focus_npc": "Erandur",
+      "comment": "Player drinks Vaermina's Torpor, completes the Dreamstride, releases the Miasma, and disables the barrier.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA16",
+          "min_stage": 140
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SKULL_AND_LIBRARY"
+      ]
+    },
+    {
+      "id": "CONFRONTATION",
+      "focus_npc": "Erandur",
+      "comment": "Player follows Erandur to the Skull, defeats Veren and Thorek, and Erandur begins his ritual.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA16",
+          "min_stage": 180
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DREAMSTRIDE_COMPLETED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Erandur",
+      "comment": "Final choice: spare Erandur and destroy the Skull, or kill Erandur and claim the Skull of Corruption.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000242AF",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DA16",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONFRONTATION"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "NIGHTMARES_HEARD"
+    ],
+    "requires": []
+  }
 }

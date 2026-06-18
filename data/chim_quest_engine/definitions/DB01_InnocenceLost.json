@@ -1,187 +1,186 @@
 {
-    "quest_key":  "db01_innocencelost",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001EA50",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DB01",
-    "title":  "Innocence Lost",
-    "description":  "A boy named Aventus Aretino is performing the Black Sacrament in Windhelm to summon the Dark Brotherhood. He wants the cruel headmistress Grelod the Kind killed for abusing the orphans at Honorhall Orphanage in Riften.",
-    "npc_facts":  {
-                      "Aventus Aretino":  {
-                                              "base_facts":  [
-                                                                 "I am performing the Black Sacrament to contact the Dark Brotherhood.",
-                                                                 "My mother died and I was sent to Honorhall Orphanage in Riften.",
-                                                                 "Grelod the Kind is a cruel monster who abuses the orphans.",
-                                                                 "I escaped the orphanage and returned to my home in Windhelm.",
-                                                                 "Please do not harm Constance Michel. She was kind to us."
-                                                             ],
-                                              "beat_facts":  {
-                                                                 "SPEAK_WITH_AVENTUS":  [
-                                                                                            "The stranger agreed to kill Grelod the Kind for me.",
-                                                                                            "I promised them my family heirloom as payment."
-                                                                                        ],
-                                                                 "REPORT_TO_AVENTUS":  [
-                                                                                           "Grelod is dead! The Dark Brotherhood answered my call!",
-                                                                                           "I gave the stranger my family heirloom as thanks.",
-                                                                                           "I can return to the orphanage now and live in peace."
-                                                                                       ]
-                                                             }
-                                          },
-                      "Grelod the Kind":  {
-                                              "base_facts":  [
-                                                                 "I am the headmistress of Honorhall Orphanage in Riften.",
-                                                                 "The children call me Grelod the Kind but they fear me.",
-                                                                 "None of these orphans are going anywhere."
-                                                             ],
-                                              "beat_facts":  {
-
-                                                             }
-                                          }
-                  },
-    "beats":  [
-                  {
-                      "id":  "HEAR_RUMOR",
-                      "focus_npc":  "",
-                      "comment":  "Player hears rumor about Aventus performing the Black Sacrament in Windhelm.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DB01",
-                                           "min_stage":  5
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Aventus Aretino",
-                                                            "Black Sacrament",
-                                                            "Dark Brotherhood ritual"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "SPEAK_WITH_AVENTUS",
-                      "focus_npc":  "Aventus Aretino",
-                      "comment":  "Player speaks with Aventus who mistakes them for a Dark Brotherhood assassin and asks them to kill Grelod the Kind.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001EA50",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  20
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "kill Grelod",
-                                                            "help you",
-                                                            "Dark Brotherhood",
-                                                            "I\u0027ll do it"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "HEAR_RUMOR"
-                                        ]
-                  },
-                  {
-                      "id":  "GRELOD_KILLED",
-                      "focus_npc":  "Grelod the Kind",
-                      "comment":  "Grelod the Kind has been killed at Honorhall Orphanage.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DB01",
-                                           "min_stage":  30
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SPEAK_WITH_AVENTUS"
-                                        ]
-                  },
-                  {
-                      "id":  "REPORT_TO_AVENTUS",
-                      "focus_npc":  "Aventus Aretino",
-                      "comment":  "Player returns to Aventus to report Grelod\u0027s death and receives the Aretino Family Heirloom as reward.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001EA50",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Grelod is dead",
-                                                            "job\u0027s done",
-                                                            "she\u0027s dead"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "GRELOD_KILLED"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest complete. Aventus rewarded the player and can return to the orphanage. A courier will deliver a mysterious note from the Dark Brotherhood.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DB01",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "REPORT_TO_AVENTUS"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "HEAR_RUMOR"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "db01_innocencelost",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001EA50",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DB01",
+  "title": "Innocence Lost",
+  "description": "A boy named Aventus Aretino is performing the Black Sacrament in Windhelm to summon the Dark Brotherhood. He wants the cruel headmistress Grelod the Kind killed for abusing the orphans at Honorhall Orphanage in Riften.",
+  "npc_facts": {
+    "Aventus Aretino": {
+      "base_facts": [
+        "I am performing the Black Sacrament to contact the Dark Brotherhood.",
+        "My mother died and I was sent to Honorhall Orphanage in Riften.",
+        "Grelod the Kind is a cruel monster who abuses the orphans.",
+        "I escaped the orphanage and returned to my home in Windhelm.",
+        "Please do not harm Constance Michel. She was kind to us."
+      ],
+      "beat_facts": {
+        "SPEAK_WITH_AVENTUS": [
+          "The stranger agreed to kill Grelod the Kind for me.",
+          "I promised them my family heirloom as payment."
+        ],
+        "REPORT_TO_AVENTUS": [
+          "Grelod is dead! The Dark Brotherhood answered my call!",
+          "I gave the stranger my family heirloom as thanks.",
+          "I can return to the orphanage now and live in peace."
+        ],
+        "QUEST_COMPLETE": [
+          "I rewarded the stranger with my family heirloom, a dinner plate worth 100 gold.",
+          "I will always view the stranger as my savior for answering the Black Sacrament.",
+          "I plan to return to Honorhall Orphanage now that Grelod is dead.",
+          "I want to grow up to be an assassin, just like the stranger."
+        ]
+      }
+    },
+    "Grelod the Kind": {
+      "base_facts": [
+        "I am the headmistress of Honorhall Orphanage in Riften.",
+        "The children call me Grelod the Kind but they fear me.",
+        "None of these orphans are going anywhere."
+      ],
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "I was killed by the stranger who answered Aventus Aretino's Black Sacrament.",
+          "My death frees the orphans of Honorhall Orphanage from my cruelty.",
+          "Constance Michel will take over running the orphanage in my place."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "HEAR_RUMOR",
+      "focus_npc": "",
+      "comment": "Player hears rumor about Aventus performing the Black Sacrament in Windhelm.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA50",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 5
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB01",
+          "min_stage": 5
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Aventus Aretino",
+            "Black Sacrament",
+            "Dark Brotherhood ritual"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "SPEAK_WITH_AVENTUS",
+      "focus_npc": "Aventus Aretino",
+      "comment": "Player speaks with Aventus who mistakes them for a Dark Brotherhood assassin and asks them to kill Grelod the Kind.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA50",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "kill Grelod",
+            "help you",
+            "Dark Brotherhood",
+            "I'll do it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEAR_RUMOR"
+      ]
+    },
+    {
+      "id": "GRELOD_KILLED",
+      "focus_npc": "Grelod the Kind",
+      "comment": "Grelod the Kind has been killed at Honorhall Orphanage.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB01",
+          "min_stage": 30
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_WITH_AVENTUS"
+      ]
+    },
+    {
+      "id": "REPORT_TO_AVENTUS",
+      "focus_npc": "Aventus Aretino",
+      "comment": "Player returns to Aventus to report Grelod's death and receives the Aretino Family Heirloom as reward.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA50",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Grelod is dead",
+            "job's done",
+            "she's dead"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "GRELOD_KILLED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest complete. Aventus rewarded the player and can return to the orphanage. A courier will deliver a mysterious note from the Dark Brotherhood.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB01",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "REPORT_TO_AVENTUS"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "HEAR_RUMOR"
+    ],
+    "requires": []
+  }
 }

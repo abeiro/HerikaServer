@@ -1,222 +1,209 @@
 {
-    "quest_key":  "dlc2dunhrodulf_hrodulfsmadness",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00037560",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2dunHrodulf",
-    "title":  "Hrodulf\u0027s Madness",
-    "description":  "A non-journal quest investigating the charred ruins of Hrodulf\u0027s House on Solstheim, uncovering the tragic fate of Hrodulf and his lover Bjornolfr through letters and a journal, and discovering a hidden Dwemer chamber beneath the house that drove Hrodulf mad.",
-    "npc_facts":  {
-                      "Hrodulf":  {
-                                      "base_facts":  [
-                                                         "I moved into a house on Solstheim and became obsessed with a strange rumbling from beneath the basement.",
-                                                         "I heard a calling from the depths and broke through the wall behind my bookshelf to find the source.",
-                                                         "I begged Bjornolfr to stay away from the house for his own safety."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "READ_HRODULF_JOURNAL":  [
-                                                                                      "My journal reveals I grew obsessed with voices from beneath the basement and bought digging tools."
-                                                                                  ],
-                                                         "DISCOVER_DWEMER_CHAMBER":  [
-                                                                                         "I dug a tunnel to a Dwemer chamber with still-functioning machines that likely drove me mad."
-                                                                                     ],
-                                                         "FIND_HRODULF":  [
-                                                                              "I tried to escape Solstheim by canoe but was killed by a burnt spriggan on the coast south of my house."
-                                                                          ]
-                                                     }
-                                  },
-                      "Bjornolfr":  {
-                                        "base_facts":  [
-                                                           "I am from Solitude and Hrodulf is my lover.",
-                                                           "I wrote to Hrodulf begging him to leave Solstheim and return to Solitude."
-                                                       ],
-                                        "beat_facts":  {
-                                                           "READ_BJORNOLFR_LETTER":  [
-                                                                                         "My letter to Hrodulf shows great concern for his welfare and pleads with him to return to Solitude."
-                                                                                     ],
-                                                           "DISCOVER_DWEMER_CHAMBER":  [
-                                                                                           "I traveled to Solstheim to find Hrodulf but was killed by reavers in the tunnel beneath his house."
-                                                                                       ]
-                                                       }
-                                    }
-                  },
-    "beats":  [
-                  {
-                      "id":  "ARRIVE_HRODULF_HOUSE",
-                      "focus_npc":  "",
-                      "comment":  "Player arrives at Hrodulf\u0027s House and encounters ash spawn outside the charred shack.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Hrodulf\u0027s House",
-                                                            "charred shack",
-                                                            "ash spawn"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "DISCOVER_REAVERS",
-                      "focus_npc":  "",
-                      "comment":  "Player goes through the trap door and finds reavers in the basement who were reading Bjornolfr\u0027s letter.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "reavers",
-                                                            "basement",
-                                                            "trap door",
-                                                            "cellar"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ARRIVE_HRODULF_HOUSE"
-                                        ]
-                  },
-                  {
-                      "id":  "READ_BJORNOLFR_LETTER",
-                      "focus_npc":  "Bjornolfr",
-                      "comment":  "Player reads Bjornolfr\u0027s letter on the table expressing concern for Hrodulf and urging him to return to Solitude.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Bjornolfr\u0027s letter",
-                                                            "return to Solitude",
-                                                            "letter on the table"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DISCOVER_REAVERS"
-                                        ]
-                  },
-                  {
-                      "id":  "READ_HRODULF_JOURNAL",
-                      "focus_npc":  "Hrodulf",
-                      "comment":  "Player reads Hrodulf\u0027s journal on the crate, learning about his growing madness and obsession with the voices from the depths.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Hrodulf\u0027s journal",
-                                                            "calling from the depths",
-                                                            "strange rumbling",
-                                                            "digging tools"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DISCOVER_REAVERS"
-                                        ]
-                  },
-                  {
-                      "id":  "DISCOVER_DWEMER_CHAMBER",
-                      "focus_npc":  "",
-                      "comment":  "Player pushes aside the bookshelf, finds the tunnel Hrodulf dug, and discovers the Dwemer chamber with Bjornolfr\u0027s body and a bloodstained letter.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "bookshelf",
-                                                            "tunnel",
-                                                            "Dwemer machines",
-                                                            "Bjornolfr\u0027s body",
-                                                            "bloodstained letter"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "READ_HRODULF_JOURNAL"
-                                        ]
-                  },
-                  {
-                      "id":  "FIND_HRODULF",
-                      "focus_npc":  "Hrodulf",
-                      "comment":  "Player finds Hrodulf\u0027s body on the coast south of his house near a canoe, killed by a burnt spriggan after trying to escape Solstheim.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Hrodulf\u0027s body",
-                                                            "canoe",
-                                                            "burnt spriggan",
-                                                            "coast south"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DISCOVER_DWEMER_CHAMBER"
-                                        ]
-                  }
-              ],
-    "external_ids":  {
-                         "quest_form_id":  "0x00037560",
-                         "quest_plugin":  "Dragonborn.esm",
-                         "source":  "local-esm:Dragonborn.esm QUST",
-                         "matched_by":  "quest_editor_id"
-                     },
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "ARRIVE_HRODULF_HOUSE"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dlc2dunhrodulf_hrodulfsmadness",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00037560",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2dunHrodulf",
+  "title": "Hrodulf's Madness",
+  "description": "A non-journal quest investigating the charred ruins of Hrodulf's House on Solstheim, uncovering the tragic fate of Hrodulf and his lover Bjornolfr through letters and a journal, and discovering a hidden Dwemer chamber beneath the house that drove Hrodulf mad.",
+  "npc_facts": {
+    "Hrodulf": {
+      "base_facts": [
+        "I moved into a house on Solstheim and became obsessed with a strange rumbling from beneath the basement.",
+        "I heard a calling from the depths and broke through the wall behind my bookshelf to find the source.",
+        "I begged Bjornolfr to stay away from the house for his own safety."
+      ],
+      "beat_facts": {
+        "READ_HRODULF_JOURNAL": [
+          "My journal reveals I grew obsessed with voices from beneath the basement and bought digging tools."
+        ],
+        "DISCOVER_DWEMER_CHAMBER": [
+          "I dug a tunnel to a Dwemer chamber with still-functioning machines that likely drove me mad."
+        ],
+        "FIND_HRODULF": [
+          "I tried to escape Solstheim by canoe but was killed by a burnt spriggan on the coast south of my house.",
+          "Player finds Hrodulf's body on the coast south of his house near a canoe, killed by a burnt spriggan after trying to escape Solstheim.",
+          "Dispose of them and look around for some minor loot in a chest, an East Empire Company strongbox holding a pendant for the quest Pain in the Necklace , and finally, a trap door leading to a secret underground basement.",
+          "Sounds like those Ash Spawn are back.\" Reaver #2 : \"Well, at least if the other Nord returns, they'll take care of him.\" After the conversation, the reavers will start walking towards you and the trapdoor, so expose."
+        ]
+      }
+    },
+    "Bjornolfr": {
+      "base_facts": [
+        "I am from Solitude and Hrodulf is my lover.",
+        "I wrote to Hrodulf begging him to leave Solstheim and return to Solitude."
+      ],
+      "beat_facts": {
+        "READ_BJORNOLFR_LETTER": [
+          "My letter to Hrodulf shows great concern for his welfare and pleads with him to return to Solitude."
+        ],
+        "DISCOVER_DWEMER_CHAMBER": [
+          "I traveled to Solstheim to find Hrodulf but was killed by reavers in the tunnel beneath his house."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ARRIVE_HRODULF_HOUSE",
+      "focus_npc": "",
+      "comment": "Player arrives at Hrodulf's House and encounters ash spawn outside the charred shack.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Hrodulf's House",
+            "charred shack",
+            "ash spawn"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "DISCOVER_REAVERS",
+      "focus_npc": "",
+      "comment": "Player goes through the trap door and finds reavers in the basement who were reading Bjornolfr's letter.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "reavers",
+            "basement",
+            "trap door",
+            "cellar"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ARRIVE_HRODULF_HOUSE"
+      ]
+    },
+    {
+      "id": "READ_BJORNOLFR_LETTER",
+      "focus_npc": "Bjornolfr",
+      "comment": "Player reads Bjornolfr's letter on the table expressing concern for Hrodulf and urging him to return to Solitude.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Bjornolfr's letter",
+            "return to Solitude",
+            "letter on the table"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DISCOVER_REAVERS"
+      ]
+    },
+    {
+      "id": "READ_HRODULF_JOURNAL",
+      "focus_npc": "Hrodulf",
+      "comment": "Player reads Hrodulf's journal on the crate, learning about his growing madness and obsession with the voices from the depths.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Hrodulf's journal",
+            "calling from the depths",
+            "strange rumbling",
+            "digging tools"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DISCOVER_REAVERS"
+      ]
+    },
+    {
+      "id": "DISCOVER_DWEMER_CHAMBER",
+      "focus_npc": "",
+      "comment": "Player pushes aside the bookshelf, finds the tunnel Hrodulf dug, and discovers the Dwemer chamber with Bjornolfr's body and a bloodstained letter.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "bookshelf",
+            "tunnel",
+            "Dwemer machines",
+            "Bjornolfr's body",
+            "bloodstained letter"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "READ_HRODULF_JOURNAL"
+      ]
+    },
+    {
+      "id": "FIND_HRODULF",
+      "focus_npc": "Hrodulf",
+      "comment": "Player finds Hrodulf's body on the coast south of his house near a canoe, killed by a burnt spriggan after trying to escape Solstheim.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Hrodulf's body",
+            "canoe",
+            "burnt spriggan",
+            "coast south"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DISCOVER_DWEMER_CHAMBER"
+      ]
+    }
+  ],
+  "external_ids": {
+    "quest_form_id": "0x00037560",
+    "quest_plugin": "Dragonborn.esm",
+    "source": "local-esm:Dragonborn.esm QUST",
+    "matched_by": "quest_editor_id"
+  },
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "ARRIVE_HRODULF_HOUSE"
+    ],
+    "requires": []
+  }
 }

@@ -1,262 +1,289 @@
 {
-    "quest_key":  "dlc1vq04_chasingechoes",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0000284F",
-    "quest_plugin":  "Dawnguard.esm",
-    "quest_editor_id":  "DLC1VQ04",
-    "title":  "Chasing Echoes",
-    "description":  "After Dexion\u0027s Elder Scroll reading reveals the need for two more Elder Scrolls, Serana suggests seeking her mother Valerica who may possess one. The search leads through Castle Volkihar\u0027s hidden passages, a moondial puzzle, and Valerica\u0027s laboratory where a portal to the Soul Cairn must be opened by recreating Valerica\u0027s experiment.",
-    "npc_facts":  {
-                      "Serana":  {
-                                     "base_facts":  [
-                                                        "I am a vampire and the daughter of Lord Harkon and Valerica.",
-                                                        "My mother fled Castle Volkihar with an Elder Scroll to keep it from my father.",
-                                                        "I know of a secret entrance to Castle Volkihar on the back side of the island.",
-                                                        "I will not travel with you if you have another follower; they must be dismissed entirely."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "QUEST_START":  [
-                                                                            "The Moth Priest\u0027s reading confirmed we need two more Elder Scrolls to unravel the Tyranny of the Sun prophecy. My mother may know where to find one."
-                                                                        ],
-                                                        "EXPLORE_COURTYARD":  [
-                                                                                  "The moondial in the courtyard is missing its crests. My mother must have hidden something beneath it. We need to find the Half Moon Crest, Full Moon Crest, and Crescent Moon Crest."
-                                                                              ],
-                                                        "FIND_JOURNAL":  [
-                                                                             "My mother\u0027s journal reveals she fled to the Soul Cairn, a plane of Oblivion. We must recreate her experiment to open a portal there."
-                                                                         ],
-                                                        "GATHER_INGREDIENTS":  [
-                                                                                   "The portal requires Soul Gem Shards, Finely Ground Bone Meal, and Purified Void Salts placed in the vessel, then my blood to activate it. Regular bonemeal, soul gem fragments, and void salts will not work."
-                                                                               ],
-                                                        "SOUL_CAIRN_CHOICE":  [
-                                                                                  "To enter the Soul Cairn you must be dead. I can turn you into a Vampire Lord, or partially soul trap you which will weaken you inside the Cairn."
-                                                                              ],
-                                                        "QUEST_COMPLETE":  [
-                                                                               "We have entered the Soul Cairn. My mother Valerica must be somewhere in this place with the Elder Scroll."
-                                                                           ]
-                                                    }
-                                 },
-                      "Dexion Evicus":  {
-                                            "base_facts":  [
-                                                               "I am a Moth Priest who read the Elder Scroll.",
-                                                               "My reading revealed a vision of Auriel\u0027s Bow but raised more questions than answers."
-                                                           ],
-                                            "beat_facts":  {
-                                                               "QUEST_START":  [
-                                                                                   "Two more Elder Scrolls are needed to fully unravel the Tyranny of the Sun prophecy."
-                                                                               ]
-                                                           }
-                                        }
-                  },
-    "beats":  [
-                  {
-                      "id":  "QUEST_START",
-                      "focus_npc":  "Serana",
-                      "comment":  "Player speaks to Serana after Dexion\u0027s reading; she suggests seeking her mother Valerica.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VQ04",
-                                           "quest_form_id":  "0x0000284F",
-                                           "quest_plugin":  "Dawnguard.esm",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Serana",
-                                                            "Valerica",
-                                                            "Elder Scroll",
-                                                            "mother"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "EXPLORE_COURTYARD",
-                      "focus_npc":  "Serana",
-                      "comment":  "Player explores Castle Volkihar courtyard and discovers the moondial puzzle with missing crests.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VQ04",
-                                           "quest_form_id":  "0x0000284F",
-                                           "quest_plugin":  "Dawnguard.esm",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "courtyard",
-                                                            "moondial",
-                                                            "crests",
-                                                            "moon dial"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "QUEST_START"
-                                        ]
-                  },
-                  {
-                      "id":  "FIND_JOURNAL",
-                      "focus_npc":  "Serana",
-                      "comment":  "Player locates Valerica\u0027s journal in her study within the ruined tower, learning she fled to the Soul Cairn.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VQ04",
-                                           "quest_form_id":  "0x0000284F",
-                                           "quest_plugin":  "Dawnguard.esm",
-                                           "min_stage":  50
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "journal",
-                                                            "Valerica\u0027s study",
-                                                            "Soul Cairn",
-                                                            "laboratory"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "EXPLORE_COURTYARD"
-                                        ]
-                  },
-                  {
-                      "id":  "GATHER_INGREDIENTS",
-                      "focus_npc":  "Serana",
-                      "comment":  "Player gathers Soul Gem Shards, Finely Ground Bone Meal, and Purified Void Salts, places them in the vessel, and Serana adds her blood.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VQ04",
-                                           "quest_form_id":  "0x0000284F",
-                                           "quest_plugin":  "Dawnguard.esm",
-                                           "min_stage":  60
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "ingredients",
-                                                            "bone meal",
-                                                            "soul gem shards",
-                                                            "void salts",
-                                                            "vessel"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FIND_JOURNAL"
-                                        ]
-                  },
-                  {
-                      "id":  "SOUL_CAIRN_CHOICE",
-                      "focus_npc":  "Serana",
-                      "comment":  "Portal is open; non-vampire player must choose between becoming a Vampire Lord or being partially soul trapped to enter the Soul Cairn.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VQ04",
-                                           "quest_form_id":  "0x0000284F",
-                                           "quest_plugin":  "Dawnguard.esm",
-                                           "min_stage":  90
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Soul Cairn",
-                                                            "portal",
-                                                            "vampire",
-                                                            "soul trap",
-                                                            "dead"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "GATHER_INGREDIENTS"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Serana",
-                      "comment":  "Player has entered the Soul Cairn; quest completes and transitions to Beyond Death.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1VQ04",
-                                           "quest_form_id":  "0x0000284F",
-                                           "quest_plugin":  "Dawnguard.esm",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SOUL_CAIRN_CHOICE"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "QUEST_START"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "dlc1vqelder_seekingdisclosure",
-                                               "beat_id":  "DEXION_BLIND"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dlc1vq04_chasingechoes",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0000284F",
+  "quest_plugin": "Dawnguard.esm",
+  "quest_editor_id": "DLC1VQ04",
+  "title": "Chasing Echoes",
+  "description": "After Dexion's Elder Scroll reading reveals the need for two more Elder Scrolls, Serana suggests seeking her mother Valerica who may possess one. The search leads through Castle Volkihar's hidden passages, a moondial puzzle, and Valerica's laboratory where a portal to the Soul Cairn must be opened by recreating Valerica's experiment.",
+  "npc_facts": {
+    "Serana": {
+      "base_facts": [
+        "I am a vampire and the daughter of Lord Harkon and Valerica.",
+        "My mother fled Castle Volkihar with an Elder Scroll to keep it from my father.",
+        "I know of a secret entrance to Castle Volkihar on the back side of the island.",
+        "I will not travel with you if you have another follower; they must be dismissed entirely."
+      ],
+      "beat_facts": {
+        "QUEST_START": [
+          "The Moth Priest's reading confirmed we need two more Elder Scrolls to unravel the Tyranny of the Sun prophecy. My mother may know where to find one."
+        ],
+        "EXPLORE_COURTYARD": [
+          "The moondial in the courtyard is missing its crests. My mother must have hidden something beneath it. We need to find the Half Moon Crest, Full Moon Crest, and Crescent Moon Crest."
+        ],
+        "FIND_JOURNAL": [
+          "My mother's journal reveals she fled to the Soul Cairn, a plane of Oblivion. We must recreate her experiment to open a portal there."
+        ],
+        "GATHER_INGREDIENTS": [
+          "The portal requires Soul Gem Shards, Finely Ground Bone Meal, and Purified Void Salts placed in the vessel, then my blood to activate it. Regular bonemeal, soul gem fragments, and void salts will not work."
+        ],
+        "SOUL_CAIRN_CHOICE": [
+          "To enter the Soul Cairn you must be dead. I can turn you into a Vampire Lord, or partially soul trap you which will weaken you inside the Cairn."
+        ],
+        "QUEST_COMPLETE": [
+          "We have entered the Soul Cairn. My mother Valerica must be somewhere in this place with the Elder Scroll.",
+          "Player has entered the Soul Cairn; quest completes and transitions to Beyond Death.",
+          "Choosing to become a Vampire Lord and then returning to Fort Dawnguard will prompt Florentius , Sorine , or Gunmar to direct you to Falion , thus beginning the quest Rising at Dawn .",
+          "This leads to the Castle Volkihar Balcony , a small outside area from which you can fast-travel and then return to the Soul Cairn without having to traverse the castle ruins and courtyard again."
+        ]
+      }
+    },
+    "Dexion Evicus": {
+      "base_facts": [
+        "I am a Moth Priest who read the Elder Scroll.",
+        "My reading revealed a vision of Auriel's Bow but raised more questions than answers."
+      ],
+      "beat_facts": {
+        "QUEST_START": [
+          "Two more Elder Scrolls are needed to fully unravel the Tyranny of the Sun prophecy."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_START",
+      "focus_npc": "Serana",
+      "comment": "Player speaks to Serana after Dexion's reading; she suggests seeking her mother Valerica.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000284F",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ04",
+          "quest_form_id": "0x0000284F",
+          "quest_plugin": "Dawnguard.esm",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Serana",
+            "Valerica",
+            "Elder Scroll",
+            "mother"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "EXPLORE_COURTYARD",
+      "focus_npc": "Serana",
+      "comment": "Player explores Castle Volkihar courtyard and discovers the moondial puzzle with missing crests.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000284F",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ04",
+          "quest_form_id": "0x0000284F",
+          "quest_plugin": "Dawnguard.esm",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "courtyard",
+            "moondial",
+            "crests",
+            "moon dial"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_START"
+      ]
+    },
+    {
+      "id": "FIND_JOURNAL",
+      "focus_npc": "Serana",
+      "comment": "Player locates Valerica's journal in her study within the ruined tower, learning she fled to the Soul Cairn.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000284F",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 50
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ04",
+          "quest_form_id": "0x0000284F",
+          "quest_plugin": "Dawnguard.esm",
+          "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "journal",
+            "Valerica's study",
+            "Soul Cairn",
+            "laboratory"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "EXPLORE_COURTYARD"
+      ]
+    },
+    {
+      "id": "GATHER_INGREDIENTS",
+      "focus_npc": "Serana",
+      "comment": "Player gathers Soul Gem Shards, Finely Ground Bone Meal, and Purified Void Salts, places them in the vessel, and Serana adds her blood.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000284F",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 60
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ04",
+          "quest_form_id": "0x0000284F",
+          "quest_plugin": "Dawnguard.esm",
+          "min_stage": 60
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "ingredients",
+            "bone meal",
+            "soul gem shards",
+            "void salts",
+            "vessel"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIND_JOURNAL"
+      ]
+    },
+    {
+      "id": "SOUL_CAIRN_CHOICE",
+      "focus_npc": "Serana",
+      "comment": "Portal is open; non-vampire player must choose between becoming a Vampire Lord or being partially soul trapped to enter the Soul Cairn.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000284F",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 90
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ04",
+          "quest_form_id": "0x0000284F",
+          "quest_plugin": "Dawnguard.esm",
+          "min_stage": 90
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Soul Cairn",
+            "portal",
+            "vampire",
+            "soul trap",
+            "dead"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "GATHER_INGREDIENTS"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Serana",
+      "comment": "Player has entered the Soul Cairn; quest completes and transitions to Beyond Death.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0000284F",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1VQ04",
+          "quest_form_id": "0x0000284F",
+          "quest_plugin": "Dawnguard.esm",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SOUL_CAIRN_CHOICE"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "QUEST_START"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc1vqelder_seekingdisclosure",
+        "beat_id": "DEXION_BLIND"
+      }
+    ]
+  }
 }

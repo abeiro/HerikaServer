@@ -1,254 +1,273 @@
 {
-    "quest_key":  "cw03_messagetowhiterunimperial",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x000D661C",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "CW03",
-    "title":  "Message to Whiterun (Imperial)",
-    "description":  "General Tullius sends the player to deliver a message to Jarl Balgruuf of Whiterun, offering Imperial military support against a potential Stormcloak attack. Balgruuf sends his war axe to Ulfric Stormcloak as a traditional Nord peace offering, but Ulfric rejects it, signaling war. The player must warn Balgruuf and report to Legate Quentin Cipius as the Battle for Whiterun begins.",
-    "npc_facts":  {
-                      "General Tullius":  {
-                                              "base_facts":  [
-                                                                 "I am the military governor of Skyrim and commander of the Imperial Legion stationed in Solitude.",
-                                                                 "I am concerned about a potential Stormcloak attack on Whiterun and want the Legion to be part of its defense."
-                                                             ],
-                                              "beat_facts":  {
-                                                                 "QUEST_BEGUN":  [
-                                                                                     "I have sent the player to deliver my message to Jarl Balgruuf, offering Imperial military support in exchange for Whiterun\u0027s allegiance to the Empire."
-                                                                                 ]
-                                                             }
-                                          },
-                      "Balgruuf the Greater":  {
-                                                   "base_facts":  [
-                                                                      "I am the Jarl of Whiterun, trying to keep my hold neutral in the Civil War.",
-                                                                      "I will not commit to the Empire until the dragon threat at Whiterun is dealt with."
-                                                                  ],
-                                                   "beat_facts":  {
-                                                                      "MESSAGE_DELIVERED":  [
-                                                                                                "I have received General Tullius\u0027s message but am reluctant to pick a side.",
-                                                                                                "I am sending my war axe to Ulfric Stormcloak as a traditional Nord peace offering."
-                                                                                            ],
-                                                                      "JARL_WARNED":  [
-                                                                                          "Ulfric has rejected my axe, meaning war is coming to Whiterun.",
-                                                                                          "I have accepted Imperial military support to defend the city."
-                                                                                      ]
-                                                                  }
-                                               },
-                      "Ulfric Stormcloak":  {
-                                                "base_facts":  [
-                                                                   "I am the Jarl of Windhelm and leader of the Stormcloak rebellion.",
-                                                                   "I seek to liberate Skyrim from Imperial rule."
-                                                               ],
-                                                "beat_facts":  {
-                                                                   "AXE_DELIVERED":  [
-                                                                                         "I have rejected Balgruuf\u0027s war axe, signaling that I will attack Whiterun.",
-                                                                                         "I told the courier that Balgruuf should prepare to entertain visitors."
-                                                                                     ]
-                                                               }
-                                            },
-                      "Legate Quentin Cipius":  {
-                                                    "base_facts":  [
-                                                                       "I am the Imperial Legate stationed in Whiterun."
-                                                                   ],
-                                                    "beat_facts":  {
-                                                                       "REPORTED_TO_LEGATE":  [
-                                                                                                  "The Stormcloaks are already on the move toward Whiterun.",
-                                                                                                  "The defense of Whiterun must begin immediately."
-                                                                                              ]
-                                                                   }
-                                                }
-                  },
-    "beats":  [
-                  {
-                      "id":  "QUEST_BEGUN",
-                      "focus_npc":  "General Tullius",
-                      "comment":  "Player receives the quest from General Tullius to deliver a message to Jarl Balgruuf.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW03",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "deliver message to Whiterun",
-                                                            "Tullius sent me",
-                                                            "message for the Jarl"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "MESSAGE_DELIVERED",
-                      "focus_npc":  "Balgruuf the Greater",
-                      "comment":  "Player has delivered Tullius\u0027s message to Balgruuf and is waiting for his response.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW03",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Balgruuf\u0027s response",
-                                                            "Jarl\u0027s decision",
-                                                            "axe to Ulfric"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "QUEST_BEGUN"
-                                        ]
-                  },
-                  {
-                      "id":  "AXE_DELIVERED",
-                      "focus_npc":  "Ulfric Stormcloak",
-                      "comment":  "Player has delivered Balgruuf\u0027s axe to Ulfric, who rejects it and prepares to attack Whiterun.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW03",
-                                           "min_stage":  50
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Ulfric rejected the axe",
-                                                            "bring the axe back",
-                                                            "war on Whiterun"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "MESSAGE_DELIVERED"
-                                        ]
-                  },
-                  {
-                      "id":  "JARL_WARNED",
-                      "focus_npc":  "Balgruuf the Greater",
-                      "comment":  "Player returns to warn Balgruuf that Ulfric plans to attack Whiterun.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW03",
-                                           "min_stage":  100
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "warn the Jarl",
-                                                            "Ulfric plans to attack",
-                                                            "Stormcloaks are coming"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "AXE_DELIVERED"
-                                        ]
-                  },
-                  {
-                      "id":  "REPORTED_TO_LEGATE",
-                      "focus_npc":  "Legate Quentin Cipius",
-                      "comment":  "Player reports to Legate Quentin Cipius as the Stormcloaks approach Whiterun.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW03",
-                                           "min_stage":  150
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "report to the Legate",
-                                                            "Cipius sent me",
-                                                            "defend the city"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "JARL_WARNED"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest finishes, leading into Battle for Whiterun.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW03",
-                                           "stage":  210
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "REPORTED_TO_LEGATE"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "QUEST_BEGUN"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "cw02a_jaggedcrownimperial",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "cw03_messagetowhiterunimperial",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000D661C",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "CW03",
+  "title": "Message to Whiterun (Imperial)",
+  "description": "General Tullius sends the player to deliver a message to Jarl Balgruuf of Whiterun, offering Imperial military support against a potential Stormcloak attack. Balgruuf sends his war axe to Ulfric Stormcloak as a traditional Nord peace offering, but Ulfric rejects it, signaling war. The player must warn Balgruuf and report to Legate Quentin Cipius as the Battle for Whiterun begins.",
+  "npc_facts": {
+    "General Tullius": {
+      "base_facts": [
+        "I am the military governor of Skyrim and commander of the Imperial Legion stationed in Solitude.",
+        "I am concerned about a potential Stormcloak attack on Whiterun and want the Legion to be part of its defense."
+      ],
+      "beat_facts": {
+        "QUEST_BEGUN": [
+          "I have sent the player to deliver my message to Jarl Balgruuf, offering Imperial military support in exchange for Whiterun's allegiance to the Empire."
+        ],
+        "QUEST_COMPLETE": [
+          "I have received Balgruuf's letter confirming Whiterun's allegiance to the Empire and the terms for Legionnaires in the hold.",
+          "My Imperial forces are now actively defending Whiterun against the Stormcloak invasion."
+        ]
+      }
+    },
+    "Balgruuf the Greater": {
+      "base_facts": [
+        "I am the Jarl of Whiterun, trying to keep my hold neutral in the Civil War.",
+        "I will not commit to the Empire until the dragon threat at Whiterun is dealt with."
+      ],
+      "beat_facts": {
+        "MESSAGE_DELIVERED": [
+          "I have received General Tullius's message but am reluctant to pick a side.",
+          "I am sending my war axe to Ulfric Stormcloak as a traditional Nord peace offering."
+        ],
+        "JARL_WARNED": [
+          "Ulfric has rejected my axe, meaning war is coming to Whiterun.",
+          "I have accepted Imperial military support to defend the city."
+        ],
+        "QUEST_COMPLETE": [
+          "I have taken back my rejected war axe and abandoned Whiterun's neutrality to side with the Empire.",
+          "I am organizing the city's defenses alongside the Imperial forces stationed in Whiterun.",
+          "War has come to my city because Ulfric rejected my traditional peace offering."
+        ]
+      }
+    },
+    "Ulfric Stormcloak": {
+      "base_facts": [
+        "I am the Jarl of Windhelm and leader of the Stormcloak rebellion.",
+        "I seek to liberate Skyrim from Imperial rule."
+      ],
+      "beat_facts": {
+        "AXE_DELIVERED": [
+          "I have rejected Balgruuf's war axe, signaling that I will attack Whiterun.",
+          "I told the courier that Balgruuf should prepare to entertain visitors."
+        ],
+        "QUEST_COMPLETE": [
+          "I have rejected Balgruuf's war axe and ordered my Stormcloak forces to invade Whiterun.",
+          "My army is already marching on Whiterun to take the city by force."
+        ]
+      }
+    },
+    "Legate Quentin Cipius": {
+      "base_facts": [
+        "I am the Imperial Legate stationed in Whiterun."
+      ],
+      "beat_facts": {
+        "REPORTED_TO_LEGATE": [
+          "The Stormcloaks are already on the move toward Whiterun.",
+          "The defense of Whiterun must begin immediately."
+        ],
+        "QUEST_COMPLETE": [
+          "I have confirmed the Stormcloaks are already on the move toward Whiterun.",
+          "I have directed the player to rush to the city gates to defend against the incoming attack.",
+          "I am now commanding the Imperial defense of Whiterun as the Battle for Whiterun begins."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_BEGUN",
+      "focus_npc": "General Tullius",
+      "comment": "Player receives the quest from General Tullius to deliver a message to Jarl Balgruuf.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D661C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW03",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "deliver message to Whiterun",
+            "Tullius sent me",
+            "message for the Jarl"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "MESSAGE_DELIVERED",
+      "focus_npc": "Balgruuf the Greater",
+      "comment": "Player has delivered Tullius's message to Balgruuf and is waiting for his response.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D661C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW03",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Balgruuf's response",
+            "Jarl's decision",
+            "axe to Ulfric"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_BEGUN"
+      ]
+    },
+    {
+      "id": "AXE_DELIVERED",
+      "focus_npc": "Ulfric Stormcloak",
+      "comment": "Player has delivered Balgruuf's axe to Ulfric, who rejects it and prepares to attack Whiterun.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D661C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW03",
+          "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Ulfric rejected the axe",
+            "bring the axe back",
+            "war on Whiterun"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MESSAGE_DELIVERED"
+      ]
+    },
+    {
+      "id": "JARL_WARNED",
+      "focus_npc": "Balgruuf the Greater",
+      "comment": "Player returns to warn Balgruuf that Ulfric plans to attack Whiterun.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D661C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 100
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW03",
+          "min_stage": 100
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "warn the Jarl",
+            "Ulfric plans to attack",
+            "Stormcloaks are coming"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "AXE_DELIVERED"
+      ]
+    },
+    {
+      "id": "REPORTED_TO_LEGATE",
+      "focus_npc": "Legate Quentin Cipius",
+      "comment": "Player reports to Legate Quentin Cipius as the Stormcloaks approach Whiterun.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D661C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 150
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW03",
+          "min_stage": 150
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "report to the Legate",
+            "Cipius sent me",
+            "defend the city"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "JARL_WARNED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest finishes, leading into Battle for Whiterun.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW03",
+          "stage": 210
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "REPORTED_TO_LEGATE"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "QUEST_BEGUN"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "cw02a_jaggedcrownimperial",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

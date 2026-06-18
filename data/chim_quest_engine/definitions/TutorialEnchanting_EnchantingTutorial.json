@@ -23,6 +23,11 @@
           "I explained the basics of enchanting: learn enchantments by disenchanting enchanted items at the Arcane Enchanter, then use a filled soul gem and the enchanter to apply the enchantment to another item.",
           "Disenchanting destroys the source item, so I warned the student to be careful.",
           "I have soul gems and other supplies for sale if the student needs them."
+        ],
+        "TUTORIAL_COMPLETED": [
+          "Quest completes when the player activates the Arcane Enchanter in Dragonsreach. No enchanting or disenchanting is required.",
+          "Of course I have everything you need for sale, if you have the coin.\"' Master in the Making [ edit ] Using this advice, you may walk over to his arcane enchanter and begin enchanting.",
+          "You'll need to start by learning an enchantment ."
         ]
       }
     }

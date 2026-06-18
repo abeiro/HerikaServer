@@ -1,334 +1,339 @@
 {
-    "quest_key":  "c06_gloryofthedead",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001CEF6",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "C06",
-    "title":  "Glory of the Dead",
-    "description":  "After Kodlak Whitemane\u0027s death, the Companions hold his funeral at the Skyforge. Eorlund reforges Wuuthrad from its fragments, and the Circle travels to Ysgramor\u0027s Tomb to cleanse Kodlak\u0027s soul of lycanthropy using a Glenmoril Witch head so he may reach Sovngarde. The player is named the new Harbinger.",
-    "npc_facts":  {
-                      "Vilkas":  {
-                                     "base_facts":  [
-                                                        "I am a member of the Circle and Kodlak\u0027s shield-brother.",
-                                                        "I grieve deeply for Kodlak and wanted him cleansed of the beast blood.",
-                                                        "I will not enter the deeper tomb; my grief is too heavy."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "FUNERAL":  [
-                                                                        "I attended Kodlak\u0027s funeral at the Skyforge."
-                                                                    ],
-                                                        "CIRCLE_MEETING":  [
-                                                                               "I spoke of Kodlak\u0027s wish to be cleansed and the way through Ysgramor\u0027s Tomb."
-                                                                           ],
-                                                        "CURE_KODLAK":  [
-                                                                            "Kodlak\u0027s soul is finally at peace in Sovngarde."
-                                                                        ],
-                                                        "HARBINGER":  [
-                                                                          "A new Harbinger has been named to lead the Companions."
-                                                                      ]
-                                                    }
-                                 },
-                      "Aela the Huntress":  {
-                                                "base_facts":  [
-                                                                   "I am a member of the Circle and a werewolf.",
-                                                                   "I do not see lycanthropy as a curse the way Kodlak did.",
-                                                                   "I lit the funeral pyre for Kodlak."
-                                                               ],
-                                                "beat_facts":  {
-                                                                   "FUNERAL":  [
-                                                                                   "I lit the flame at Kodlak\u0027s funeral."
-                                                                               ],
-                                                                   "TOMB_EXPEDITION":  [
-                                                                                           "I accompanied the new Harbinger into Ysgramor\u0027s Tomb."
-                                                                                       ],
-                                                                   "CURE_KODLAK":  [
-                                                                                       "Kodlak\u0027s wolf spirit has been defeated and his soul is free."
-                                                                                   ],
-                                                                   "HARBINGER":  [
-                                                                                     "I acknowledge the new Harbinger and will stay in the tomb a while longer."
-                                                                                 ]
-                                                               }
-                                            },
-                      "Farkas":  {
-                                     "base_facts":  [
-                                                        "I am a member of the Circle and a werewolf.",
-                                                        "I am terrified of large spiders since Dustman\u0027s Cairn.",
-                                                        "I cared for Kodlak and wanted to honor his wishes."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "TOMB_EXPEDITION":  [
-                                                                                "I could not go past the spiders in the tomb and turned back."
-                                                                            ],
-                                                        "HARBINGER":  [
-                                                                          "I accept the new Harbinger of the Companions."
-                                                                      ]
-                                                    }
-                                 },
-                      "Kodlak Whitemane":  {
-                                               "base_facts":  [
-                                                                  "I was the Harbinger of the Companions.",
-                                                                  "I wished to be cleansed of my werewolf curse so I could enter Sovngarde.",
-                                                                  "I knew of a way to cleanse my soul even in death through the Tomb of Ysgramor."
-                                                              ],
-                                               "beat_facts":  {
-                                                                  "BURIAL_CHAMBER":  [
-                                                                                         "My ghost appeared near the Flame of the Harbinger and asked for the witch head."
-                                                                                     ],
-                                                                  "CURE_KODLAK":  [
-                                                                                      "My wolf spirit was defeated and my soul is finally free to go to Sovngarde."
-                                                                                  ],
-                                                                  "HARBINGER":  [
-                                                                                    "I named my successor as the new Harbinger before departing to Sovngarde."
-                                                                                ]
-                                                              }
-                                           },
-                      "Eorlund Gray-Mane":  {
-                                                "base_facts":  [
-                                                                   "I am the smith of the Companions and work at the Skyforge.",
-                                                                   "I repaired Wuuthrad from its fragments.",
-                                                                   "Kodlak\u0027s funeral flame fueled the rebirth of Wuuthrad."
-                                                               ],
-                                                "beat_facts":  {
-                                                                   "WUUTHRAD_REFORGED":  [
-                                                                                             "I have reforged Wuuthrad from all its fragments including Kodlak\u0027s secret piece."
-                                                                                         ],
-                                                                   "CIRCLE_MEETING":  [
-                                                                                          "I brought the reforged Wuuthrad to the Circle in the Underforge."
-                                                                                      ]
-                                                               }
-                                            }
-                  },
-    "beats":  [
-                  {
-                      "id":  "FUNERAL",
-                      "focus_npc":  "Vilkas",
-                      "comment":  "Kodlak\u0027s funeral at the Skyforge; Aela lights the pyre.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C06",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "attend funeral",
-                                                            "Kodlak\u0027s funeral",
-                                                            "say goodbye to Kodlak"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "WUUTHRAD_REFORGED",
-                      "focus_npc":  "Eorlund Gray-Mane",
-                      "comment":  "All Wuuthrad fragments collected and given to Eorlund for reforging.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C06",
-                                           "min_stage":  18
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Wuuthrad reforged",
-                                                            "repair the blade",
-                                                            "all the pieces"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FUNERAL"
-                                        ]
-                  },
-                  {
-                      "id":  "CIRCLE_MEETING",
-                      "focus_npc":  "Vilkas",
-                      "comment":  "Circle gathers in the Underforge; Eorlund brings reforged Wuuthrad.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C06",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "meet the Circle",
-                                                            "Underforge",
-                                                            "cleanse Kodlak\u0027s soul"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "WUUTHRAD_REFORGED"
-                                        ]
-                  },
-                  {
-                      "id":  "TOMB_EXPEDITION",
-                      "focus_npc":  "Aela the Huntress",
-                      "comment":  "Travel to Ysgramor\u0027s Tomb; place Wuuthrad on Ysgramor\u0027s statue to open the way.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C06",
-                                           "min_stage":  35
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Ysgramor\u0027s Tomb",
-                                                            "return Wuuthrad",
-                                                            "place Wuuthrad"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CIRCLE_MEETING"
-                                        ]
-                  },
-                  {
-                      "id":  "BURIAL_CHAMBER",
-                      "focus_npc":  "Kodlak Whitemane",
-                      "comment":  "Reach the burial chamber and speak to Kodlak\u0027s ghost near the Flame of the Harbinger.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C06",
-                                           "min_stage":  50
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "speak to Kodlak",
-                                                            "Kodlak\u0027s ghost",
-                                                            "Flame of the Harbinger"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TOMB_EXPEDITION"
-                                        ]
-                  },
-                  {
-                      "id":  "CURE_KODLAK",
-                      "focus_npc":  "Kodlak Whitemane",
-                      "comment":  "Throw witch head into fire, defeat Kodlak\u0027s wolf spirit, and speak to Kodlak one last time.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C06",
-                                           "min_stage":  70
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "defeat the wolf spirit",
-                                                            "witch head in fire",
-                                                            "cure Kodlak"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "BURIAL_CHAMBER"
-                                        ]
-                  },
-                  {
-                      "id":  "HARBINGER",
-                      "focus_npc":  "",
-                      "comment":  "Kodlak names the player as the new Harbinger and departs to Sovngarde; quest complete.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "C06",
-                                           "min_stage":  200
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "new Harbinger",
-                                                            "Harbinger of the Companions",
-                                                            "Kodlak\u0027s at peace"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CURE_KODLAK"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "FUNERAL"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "c05_purityofrevenge",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "c06_gloryofthedead",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001CEF6",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "C06",
+  "title": "Glory of the Dead",
+  "description": "After Kodlak Whitemane's death, the Companions hold his funeral at the Skyforge. Eorlund reforges Wuuthrad from its fragments, and the Circle travels to Ysgramor's Tomb to cleanse Kodlak's soul of lycanthropy using a Glenmoril Witch head so he may reach Sovngarde. The player is named the new Harbinger.",
+  "npc_facts": {
+    "Vilkas": {
+      "base_facts": [
+        "I am a member of the Circle and Kodlak's shield-brother.",
+        "I grieve deeply for Kodlak and wanted him cleansed of the beast blood.",
+        "I will not enter the deeper tomb; my grief is too heavy."
+      ],
+      "beat_facts": {
+        "FUNERAL": [
+          "I attended Kodlak's funeral at the Skyforge."
+        ],
+        "CIRCLE_MEETING": [
+          "I spoke of Kodlak's wish to be cleansed and the way through Ysgramor's Tomb."
+        ],
+        "CURE_KODLAK": [
+          "Kodlak's soul is finally at peace in Sovngarde."
+        ],
+        "HARBINGER": [
+          "A new Harbinger has been named to lead the Companions."
+        ]
+      }
+    },
+    "Aela the Huntress": {
+      "base_facts": [
+        "I am a member of the Circle and a werewolf.",
+        "I do not see lycanthropy as a curse the way Kodlak did.",
+        "I lit the funeral pyre for Kodlak."
+      ],
+      "beat_facts": {
+        "FUNERAL": [
+          "I lit the flame at Kodlak's funeral."
+        ],
+        "TOMB_EXPEDITION": [
+          "I accompanied the new Harbinger into Ysgramor's Tomb."
+        ],
+        "CURE_KODLAK": [
+          "Kodlak's wolf spirit has been defeated and his soul is free."
+        ],
+        "HARBINGER": [
+          "I acknowledge the new Harbinger and will stay in the tomb a while longer."
+        ]
+      }
+    },
+    "Farkas": {
+      "base_facts": [
+        "I am a member of the Circle and a werewolf.",
+        "I am terrified of large spiders since Dustman's Cairn.",
+        "I cared for Kodlak and wanted to honor his wishes."
+      ],
+      "beat_facts": {
+        "TOMB_EXPEDITION": [
+          "I could not go past the spiders in the tomb and turned back."
+        ],
+        "HARBINGER": [
+          "I accept the new Harbinger of the Companions."
+        ]
+      }
+    },
+    "Kodlak Whitemane": {
+      "base_facts": [
+        "I was the Harbinger of the Companions.",
+        "I wished to be cleansed of my werewolf curse so I could enter Sovngarde.",
+        "I knew of a way to cleanse my soul even in death through the Tomb of Ysgramor."
+      ],
+      "beat_facts": {
+        "BURIAL_CHAMBER": [
+          "My ghost appeared near the Flame of the Harbinger and asked for the witch head."
+        ],
+        "CURE_KODLAK": [
+          "My wolf spirit was defeated and my soul is finally free to go to Sovngarde."
+        ],
+        "HARBINGER": [
+          "I named my successor as the new Harbinger before departing to Sovngarde."
+        ]
+      }
+    },
+    "Eorlund Gray-Mane": {
+      "base_facts": [
+        "I am the smith of the Companions and work at the Skyforge.",
+        "I repaired Wuuthrad from its fragments.",
+        "Kodlak's funeral flame fueled the rebirth of Wuuthrad."
+      ],
+      "beat_facts": {
+        "WUUTHRAD_REFORGED": [
+          "I have reforged Wuuthrad from all its fragments including Kodlak's secret piece."
+        ],
+        "CIRCLE_MEETING": [
+          "I brought the reforged Wuuthrad to the Circle in the Underforge."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "FUNERAL",
+      "focus_npc": "Vilkas",
+      "comment": "Kodlak's funeral at the Skyforge; Aela lights the pyre.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001CEF6",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C06",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "attend funeral",
+            "Kodlak's funeral",
+            "say goodbye to Kodlak"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "WUUTHRAD_REFORGED",
+      "focus_npc": "Eorlund Gray-Mane",
+      "comment": "All Wuuthrad fragments collected and given to Eorlund for reforging.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001CEF6",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 18
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C06",
+          "min_stage": 18
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Wuuthrad reforged",
+            "repair the blade",
+            "all the pieces"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FUNERAL"
+      ]
+    },
+    {
+      "id": "CIRCLE_MEETING",
+      "focus_npc": "Vilkas",
+      "comment": "Circle gathers in the Underforge; Eorlund brings reforged Wuuthrad.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001CEF6",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C06",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "meet the Circle",
+            "Underforge",
+            "cleanse Kodlak's soul"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "WUUTHRAD_REFORGED"
+      ]
+    },
+    {
+      "id": "TOMB_EXPEDITION",
+      "focus_npc": "Aela the Huntress",
+      "comment": "Travel to Ysgramor's Tomb; place Wuuthrad on Ysgramor's statue to open the way.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001CEF6",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 35
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C06",
+          "min_stage": 35
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Ysgramor's Tomb",
+            "return Wuuthrad",
+            "place Wuuthrad"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CIRCLE_MEETING"
+      ]
+    },
+    {
+      "id": "BURIAL_CHAMBER",
+      "focus_npc": "Kodlak Whitemane",
+      "comment": "Reach the burial chamber and speak to Kodlak's ghost near the Flame of the Harbinger.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001CEF6",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C06",
+          "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "speak to Kodlak",
+            "Kodlak's ghost",
+            "Flame of the Harbinger"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TOMB_EXPEDITION"
+      ]
+    },
+    {
+      "id": "CURE_KODLAK",
+      "focus_npc": "Kodlak Whitemane",
+      "comment": "Throw witch head into fire, defeat Kodlak's wolf spirit, and speak to Kodlak one last time.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001CEF6",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 70
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C06",
+          "min_stage": 70
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "defeat the wolf spirit",
+            "witch head in fire",
+            "cure Kodlak"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BURIAL_CHAMBER"
+      ]
+    },
+    {
+      "id": "HARBINGER",
+      "focus_npc": "",
+      "comment": "Kodlak names the player as the new Harbinger and departs to Sovngarde; quest complete.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001CEF6",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "C06",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "new Harbinger",
+            "Harbinger of the Companions",
+            "Kodlak's at peace"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CURE_KODLAK"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "FUNERAL"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "c05_purityofrevenge",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

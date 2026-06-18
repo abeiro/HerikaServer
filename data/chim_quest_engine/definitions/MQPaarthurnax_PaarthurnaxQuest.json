@@ -125,7 +125,10 @@
       "focus_npc": "Delphine",
       "comment": "Paarthurnax has been killed; player must report back to the Blades.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003FA16",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
       },
       "downstream": [],
       "triggers": [
@@ -133,6 +136,26 @@
           "type": "quest_stage",
           "quest_editor_id": "MQPaarthurnax",
           "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",
@@ -145,7 +168,10 @@
       "focus_npc": "Delphine",
       "comment": "Quest complete; Blades welcome Dragonborn back, Greybeards are outraged.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003FA16",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 100
       },
       "downstream": [],
       "triggers": [
@@ -153,6 +179,26 @@
           "type": "quest_stage",
           "quest_editor_id": "MQPaarthurnax",
           "min_stage": 100
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

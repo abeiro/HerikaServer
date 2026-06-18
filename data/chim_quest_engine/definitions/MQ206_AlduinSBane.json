@@ -22,6 +22,11 @@
         ],
         "DEFEAT_ALDUIN": [
           "Alduin has been forced to flee, but he is not truly slain. He will retreat to Sovngarde to feast on souls."
+        ],
+        "QUEST_COMPLETE": [
+          "Alduin has been forced to flee the Throat of the World, but he is not truly slain; he has retreated to Sovngarde to feast on the souls of the dead.",
+          "The Dovahkiin has proven strong enough to wound Alduin with Dragonrend, but the World-Eater's threat persists beyond Mundus.",
+          "The Kel (Elder Scroll) remains with the Dovahkiin, still bound to their destiny and unable to be discarded."
         ]
       }
     },
@@ -33,6 +38,11 @@
       "beat_facts": {
         "DEFEAT_ALDUIN": [
           "I have been wounded by Dragonrend but I cannot be slain here. I will outlast the mortals and feast in Sovngarde."
+        ],
+        "QUEST_COMPLETE": [
+          "I cannot be slain here on Mundus by any mortal, not even the Dovahkiin.",
+          "I will outlast the mortals and retreat to Sovngarde, where I will continue to grow in power by feasting on the souls of the dead.",
+          "The Dovahkiin has become strong, but I am Al-du-in, Firstborn of Akatosh, and my lordship will be restored."
         ]
       }
     }

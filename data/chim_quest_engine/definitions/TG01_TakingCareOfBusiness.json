@@ -19,6 +19,11 @@
         ],
         "RETURN_TO_BRYNJOLF": [
           "The player has collected all three debts. I am impressed and ready to offer them a permanent place in the Guild."
+        ],
+        "QUEST_COMPLETE": [
+          "Quest finishes; player is welcomed into the Thieves Guild.",
+          "If you return to Brynjolf after receiving Keerava's payment, but before finishing all three debtors, you can offer him Keerava's payment on its own, to which he will respond \"She was the toughest of the bunch.",
+          "The south door leads onward to a room with five bear traps scattered near the entrance."
         ]
       }
     },
@@ -84,7 +89,10 @@
       "focus_npc": "Brynjolf",
       "comment": "Brynjolf assigns the player to collect debts from Keerava, Bersi, and Haelga.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001F326",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -190,7 +198,10 @@
       "focus_npc": "Brynjolf",
       "comment": "All three debts collected; player returns to Brynjolf in the Ragged Flagon.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001F326",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
       },
       "downstream": [],
       "triggers": [
@@ -221,7 +232,10 @@
       "focus_npc": "Brynjolf",
       "comment": "Quest finishes; player is welcomed into the Thieves Guild.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001F326",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -229,6 +243,26 @@
           "type": "quest_stage",
           "quest_editor_id": "TG01",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

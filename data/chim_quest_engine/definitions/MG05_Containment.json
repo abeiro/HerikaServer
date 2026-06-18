@@ -18,6 +18,12 @@
           "I gave the player Savos Aren's amulet to aid them on their journey.",
           "I gave the player the Torc of Labyrinthian.",
           "The Staff of Magnus is needed to contain the Eye of Magnus."
+        ],
+        "QUEST_COMPLETE": [
+          "I gave the player Savos Aren's Amulet, which enhances magicka, believing they will be better served by it than I.",
+          "Savos Aren had recently given me the Torc of Labyrinthian with cryptic instructions that I would know what to do with it when the time came—I believe it was meant for the player.",
+          "Tolfdir and I are struggling to contain the Eye of Magnus, which remains unreachable and continues to jeopardize the College.",
+          "I have directed the player to seek the Staff of Magnus in Labyrinthian—it is our only hope of containing the Eye."
         ]
       }
     },
@@ -29,6 +35,10 @@
       "beat_facts": {
         "FIND_ARCH_MAGE": [
           "Whatever killed the Arch-Mage has also affected the town of Winterhold."
+        ],
+        "QUEST_COMPLETE": [
+          "I am assisting Mirabelle in trying to contain the Eye of Magnus, but it remains unreachable and continues to threaten the College.",
+          "The town of Winterhold has been secured from the magic anomalies, but the danger from the Eye is far from over."
         ]
       }
     },
@@ -39,6 +49,10 @@
       "beat_facts": {
         "PROTECT_WINTERHOLD": [
           "I went to Winterhold to help fight the magic anomalies alongside the player."
+        ],
+        "QUEST_COMPLETE": [
+          "I fought alongside the player and Arniel to defeat the magic anomalies attacking Winterhold.",
+          "Arniel has chosen to remain in Winterhold after the fighting ended."
         ]
       }
     }
@@ -68,7 +82,10 @@
       "focus_npc": "Tolfdir",
       "comment": "Player finds the Arch-Mage's body in the courtyard; Tolfdir says Winterhold is in danger.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001F255",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -98,7 +115,10 @@
       "focus_npc": "Faralda",
       "comment": "Player crosses the bridge to Winterhold; Faralda and Arniel join to help fight anomalies.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001F255",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [
@@ -148,7 +168,10 @@
       "focus_npc": "Mirabelle Ervine",
       "comment": "Player reports to Mirabelle; she gives Savos Aren's Amulet and the Torc of Labyrinthian.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001F255",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
       },
       "downstream": [],
       "triggers": [

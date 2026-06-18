@@ -1,152 +1,150 @@
 {
-    "quest_key":  "darkbrotherhoodsanctuaryrepair_whereyouhangyourenemyshead",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00087BA2",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DarkBrotherhoodSanctuaryRepair",
-    "title":  "Where You Hang Your Enemy\u0027s Head...",
-    "description":  "Nazir directs the player to Delvin Mallory at The Ragged Flagon in Riften to purchase upgrades and restore the Dawnstar Dark Brotherhood Sanctuary. After buying all available upgrades from Delvin, the sanctuary is fully refurnished and the quest completes.",
-    "npc_facts":  {
-                      "Nazir":  {
-                                    "base_facts":  [
-                                                       "Nazir is a Redguard assassin of the Dark Brotherhood who survived the attack on the old sanctuary.",
-                                                       "Nazir now resides in the Dawnstar Sanctuary and oversees its operations.",
-                                                       "Nazir can direct the player to Delvin Mallory for sanctuary renovations."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "NAZIR_DIRECTS_TO_DELVIN":  [
-                                                                                       "Nazir has sent the player to speak with Delvin Mallory about restoring the Dawnstar Sanctuary."
-                                                                                   ]
-                                                   }
-                                },
-                      "Delvin Mallory":  {
-                                             "base_facts":  [
-                                                                "Delvin Mallory is a member of the Thieves Guild operating out of The Ragged Flagon in Riften.",
-                                                                "Delvin offers renovation services for the Dawnstar Sanctuary for gold.",
-                                                                "Delvin sells upgrades including new banners, a Poisoner\u0027s Nook with an alchemy lab, a torture chamber, a secret entrance, and a master bedroom."
-                                                            ],
-                                             "beat_facts":  {
-                                                                "DELVIN_UPGRADES_AVAILABLE":  [
-                                                                                                  "Delvin has discussed the available sanctuary upgrades with the player."
-                                                                                              ],
-                                                                "SANCTUARY_FULLY_RESTORED":  [
-                                                                                                 "Delvin has completed all possible renovations to the Dawnstar Sanctuary."
-                                                                                             ]
-                                                            }
-                                         }
-                  },
-    "beats":  [
-                  {
-                      "id":  "NAZIR_DIRECTS_TO_DELVIN",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Nazir tells the player to seek Delvin Mallory at The Ragged Flagon for sanctuary repairs.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00087BA2",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "sanctuary",
-                                                            "Delvin",
-                                                            "repairs",
-                                                            "restore",
-                                                            "upgrades"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "DELVIN_UPGRADES_AVAILABLE",
-                      "focus_npc":  "Delvin Mallory",
-                      "comment":  "Player speaks to Delvin about available sanctuary upgrades at The Ragged Flagon.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "sanctuary",
-                                                            "upgrade",
-                                                            "Dawnstar",
-                                                            "renovate"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DarkBrotherhoodSanctuaryRepair",
-                                           "min_stage":  10
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "NAZIR_DIRECTS_TO_DELVIN"
-                                        ]
-                  },
-                  {
-                      "id":  "SANCTUARY_FULLY_RESTORED",
-                      "focus_npc":  "Delvin Mallory",
-                      "comment":  "All upgrades purchased; Delvin confirms nothing more he can do. Quest completes at stage 200.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00087BA2",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "done",
-                                                            "complete",
-                                                            "finished",
-                                                            "nothing else"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DarkBrotherhoodSanctuaryRepair",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DELVIN_UPGRADES_AVAILABLE"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "NAZIR_DIRECTS_TO_DELVIN"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "db11_hailsithis",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "darkbrotherhoodsanctuaryrepair_whereyouhangyourenemyshead",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00087BA2",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DarkBrotherhoodSanctuaryRepair",
+  "title": "Where You Hang Your Enemy's Head...",
+  "description": "Nazir directs the player to Delvin Mallory at The Ragged Flagon in Riften to purchase upgrades and restore the Dawnstar Dark Brotherhood Sanctuary. After buying all available upgrades from Delvin, the sanctuary is fully refurnished and the quest completes.",
+  "npc_facts": {
+    "Nazir": {
+      "base_facts": [
+        "Nazir is a Redguard assassin of the Dark Brotherhood who survived the attack on the old sanctuary.",
+        "Nazir now resides in the Dawnstar Sanctuary and oversees its operations.",
+        "Nazir can direct the player to Delvin Mallory for sanctuary renovations."
+      ],
+      "beat_facts": {
+        "NAZIR_DIRECTS_TO_DELVIN": [
+          "Nazir has sent the player to speak with Delvin Mallory about restoring the Dawnstar Sanctuary."
+        ]
+      }
+    },
+    "Delvin Mallory": {
+      "base_facts": [
+        "Delvin Mallory is a member of the Thieves Guild operating out of The Ragged Flagon in Riften.",
+        "Delvin offers renovation services for the Dawnstar Sanctuary for gold.",
+        "Delvin sells upgrades including new banners, a Poisoner's Nook with an alchemy lab, a torture chamber, a secret entrance, and a master bedroom."
+      ],
+      "beat_facts": {
+        "DELVIN_UPGRADES_AVAILABLE": [
+          "Delvin has discussed the available sanctuary upgrades with the player."
+        ],
+        "SANCTUARY_FULLY_RESTORED": [
+          "Delvin has completed all possible renovations to the Dawnstar Sanctuary.",
+          "All upgrades purchased; Delvin confirms nothing more he can do. Quest completes at .",
+          "You will have just 1,000 gold left of your previous reward after purchasing all of the upgrades.",
+          "After buying all the upgrades, talking to Delvin Mallory once more about the Dawnstar Sanctuary will complete the quest."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "NAZIR_DIRECTS_TO_DELVIN",
+      "focus_npc": "Nazir",
+      "comment": "Nazir tells the player to seek Delvin Mallory at The Ragged Flagon for sanctuary repairs.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00087BA2",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "sanctuary",
+            "Delvin",
+            "repairs",
+            "restore",
+            "upgrades"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "DELVIN_UPGRADES_AVAILABLE",
+      "focus_npc": "Delvin Mallory",
+      "comment": "Player speaks to Delvin about available sanctuary upgrades at The Ragged Flagon.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00087BA2",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "sanctuary",
+            "upgrade",
+            "Dawnstar",
+            "renovate"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DarkBrotherhoodSanctuaryRepair",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "NAZIR_DIRECTS_TO_DELVIN"
+      ]
+    },
+    {
+      "id": "SANCTUARY_FULLY_RESTORED",
+      "focus_npc": "Delvin Mallory",
+      "comment": "All upgrades purchased; Delvin confirms nothing more he can do. Quest completes at stage 200.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00087BA2",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "done",
+            "complete",
+            "finished",
+            "nothing else"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DarkBrotherhoodSanctuaryRepair",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DELVIN_UPGRADES_AVAILABLE"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "NAZIR_DIRECTS_TO_DELVIN"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "db11_hailsithis",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

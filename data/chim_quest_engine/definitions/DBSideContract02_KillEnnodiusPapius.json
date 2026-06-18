@@ -21,7 +21,10 @@
           "The contract on Ennodius Papius has been fulfilled. I await the killer's return to the Sanctuary."
         ],
         "QUEST_COMPLETE": [
-          "I have paid the reward for the Ennodius Papius contract. The deed is done."
+          "I have paid the reward for the Ennodius Papius contract. The deed is done.",
+          "Player reports back to Nazir and collects the leveled gold reward. finishes the quest.",
+          "Reward [ edit ] Return to the sanctuary and speak with Nazir, who will comment, \"How went your meeting with Ennodius Papius?",
+          "Alternatively, like most other assassination targets, you have the option to talk to Ennodius which gives you three dialogue choices, all of which will either turn Ennodius hostile (allowing you to kill him without fear."
         ]
       }
     },
@@ -62,7 +65,10 @@
       "focus_npc": "Ennodius Papius",
       "comment": "Ennodius Papius has been killed. Stage 20 updates the objective to report back to Nazir.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA5E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -70,6 +76,26 @@
           "type": "quest_stage",
           "quest_editor_id": "DBSideContract02",
           "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",
@@ -82,7 +108,10 @@
       "focus_npc": "Nazir",
       "comment": "Player reports back to Nazir and collects the leveled gold reward. Stage 200 finishes the quest.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA5E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -90,6 +119,26 @@
           "type": "quest_stage",
           "quest_editor_id": "DBSideContract02",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

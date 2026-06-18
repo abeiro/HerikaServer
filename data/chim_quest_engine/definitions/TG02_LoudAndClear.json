@@ -24,7 +24,10 @@
           "The recruit finished the Goldenglow job. I paid them their cut."
         ],
         "QUEST_COMPLETE": [
-          "The Goldenglow matter is settled. Maven has another job lined up."
+          "The Goldenglow matter is settled. Maven has another job lined up.",
+          "Quest finishes. Player is rewarded and pointed to Maven Black-Briar for the next job.",
+          "The secret sewer entrance leading into the estate To set the beehives on fire you can use a torch , the Fire Breath Shout, or a fire-based spell ; simply standing next to a hive with a torch or spell equipped will.",
+          "As long as you've completed the job to the letter, he'll be very pleased and reward you with a leveled amount of gold, as detailed below."
         ]
       }
     },
@@ -104,7 +107,10 @@
       "focus_npc": "Brynjolf",
       "comment": "Brynjolf explains the Goldenglow job: burn three hives and clear Aringoth's safe.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0002154E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [
@@ -134,7 +140,10 @@
       "focus_npc": "Vex",
       "comment": "Optional: Vex reveals the sewer entrance on the northwest side of Goldenglow.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0002154E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 45
       },
       "downstream": [],
       "triggers": [
@@ -183,7 +192,10 @@
       "focus_npc": "Brynjolf",
       "comment": "Player returns to Brynjolf after completing the Goldenglow job.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0002154E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
       },
       "downstream": [],
       "triggers": [
@@ -212,7 +224,10 @@
       "focus_npc": "Brynjolf",
       "comment": "Quest finishes. Player is rewarded and pointed to Maven Black-Briar for the next job.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0002154E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -220,6 +235,26 @@
           "type": "quest_stage",
           "quest_editor_id": "TG02",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

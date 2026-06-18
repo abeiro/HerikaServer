@@ -36,7 +36,10 @@
       ],
       "beat_facts": {
         "DELIVER_LETTER": [
-          "Gorm's request to remove Jarl Idgrod is impossible during wartime. I will take the matter under advisement."
+          "Gorm's request to remove Jarl Idgrod is impossible during wartime. I will take the matter under advisement.",
+          "Player delivers Gorm's letter to Captain Aldis at Castle Dour, completing the quest.",
+          "Unlike many quest items, reading or obtaining Gorm’s letter by looting or pickpocketing will not allow the quest to begin.",
+          "If siding with the Stormcloaks, this quest needs to be started before The Battle for Fort Hraggstad and finished before the Battle for Solitude to avoid issues."
         ]
       }
     }

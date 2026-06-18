@@ -1,124 +1,140 @@
 {
-    "quest_key":  "dlc2ttr8_huntingandgathering",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001F13B",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2TTR8",
-    "title":  "Hunting and Gathering",
-    "description":  "After completing Healing a House, Elynea Mothren at Tel Mithryn Apothecary asks for a rare alchemy ingredient â€” a briar heart, daedra heart, giant\u0027s toe, hagraven claw, vampire dust, or void salts. Return with the requested ingredient for a variable gold reward.",
-    "npc_facts":  {
-                      "Elynea Mothren":  {
-                                             "base_facts":  [
-                                                                "I run the apothecary at Tel Mithryn.",
-                                                                "I need rare alchemy ingredients I can\u0027t grow in my garden.",
-                                                                "Neloth keeps taking all my briar hearts.",
-                                                                "I pay well for hard-to-find ingredients."
-                                                            ],
-                                             "beat_facts":  {
-                                                                "HEAR_ABOUT_INGREDIENTS":  [
-                                                                                               "I\u0027ve asked the traveler to bring me a rare ingredient."
-                                                                                           ],
-                                                                "DELIVER_INGREDIENT":  [
-                                                                                           "The traveler brought me the ingredient I needed."
-                                                                                       ],
-                                                                "QUEST_COMPLETE":  [
-                                                                                       "The traveler delivered the ingredient and I paid them. Good help is hard to find."
-                                                                                   ]
-                                                            }
-                                         }
-                  },
-    "beats":  [
-                  {
-                      "id":  "HEAR_ABOUT_INGREDIENTS",
-                      "focus_npc":  "Elynea Mothren",
-                      "comment":  "Player learns Elynea needs a rare alchemy ingredient after Healing a House is done.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "ingredients",
-                                                            "need",
-                                                            "help",
-                                                            "alchemy",
-                                                            "rare"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "DELIVER_INGREDIENT",
-                      "focus_npc":  "Elynea Mothren",
-                      "comment":  "Player returns with the requested ingredient and completes the quest.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001F13B",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  100
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "brought",
-                                                            "here",
-                                                            "ingredient",
-                                                            "found",
-                                                            "got it"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "HEAR_ABOUT_INGREDIENTS"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Elynea Mothren",
-                      "comment":  "Observational beat: quest finishes at stage 100 after ingredient delivery.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2TTR8",
-                                           "min_stage":  100,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DELIVER_INGREDIENT"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "HEAR_ABOUT_INGREDIENTS"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dlc2ttr8_huntingandgathering",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001F13B",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2TTR8",
+  "title": "Hunting and Gathering",
+  "description": "After completing Healing a House, Elynea Mothren at Tel Mithryn Apothecary asks for a rare alchemy ingredient â€” a briar heart, daedra heart, giant's toe, hagraven claw, vampire dust, or void salts. Return with the requested ingredient for a variable gold reward.",
+  "npc_facts": {
+    "Elynea Mothren": {
+      "base_facts": [
+        "I run the apothecary at Tel Mithryn.",
+        "I need rare alchemy ingredients I can't grow in my garden.",
+        "Neloth keeps taking all my briar hearts.",
+        "I pay well for hard-to-find ingredients."
+      ],
+      "beat_facts": {
+        "HEAR_ABOUT_INGREDIENTS": [
+          "I've asked the traveler to bring me a rare ingredient."
+        ],
+        "DELIVER_INGREDIENT": [
+          "The traveler brought me the ingredient I needed."
+        ],
+        "QUEST_COMPLETE": [
+          "The traveler delivered the ingredient and I paid them. Good help is hard to find.",
+          "Observational beat: quest finishes at after ingredient delivery.",
+          "Once you have collected the ingredient, return to Elynea for your reward.",
+          "Detailed Walkthrough [ edit ] After completing the quest Healing a House , speak to Elynea Mothren in the Tel Mithryn Apothecary and she'll request that you bring her a particular rare alchemy ingredient ."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "HEAR_ABOUT_INGREDIENTS",
+      "focus_npc": "Elynea Mothren",
+      "comment": "Player learns Elynea needs a rare alchemy ingredient after Healing a House is done.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "ingredients",
+            "need",
+            "help",
+            "alchemy",
+            "rare"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "DELIVER_INGREDIENT",
+      "focus_npc": "Elynea Mothren",
+      "comment": "Player returns with the requested ingredient and completes the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001F13B",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 100
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "brought",
+            "here",
+            "ingredient",
+            "found",
+            "got it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEAR_ABOUT_INGREDIENTS"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Elynea Mothren",
+      "comment": "Observational beat: quest finishes at stage 100 after ingredient delivery.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001F13B",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 100
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2TTR8",
+          "min_stage": 100,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DELIVER_INGREDIENT"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "HEAR_ABOUT_INGREDIENTS"
+    ],
+    "requires": []
+  }
 }

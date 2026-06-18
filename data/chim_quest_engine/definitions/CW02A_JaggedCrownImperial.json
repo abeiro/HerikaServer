@@ -1,235 +1,313 @@
 {
-    "quest_key":  "cw02a_jaggedcrownimperial",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0002D75C",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "CW02A",
-    "title":  "The Jagged Crown (Imperial)",
-    "description":  "After joining the Imperial Legion, Legate Rikke sends the player to recover the Jagged Crown from the ruins of Korvanjund before the Stormcloaks can claim it, then deliver it to General Tullius in Solitude.",
-    "npc_facts":  {
-                      "Legate Rikke":  {
-                                           "base_facts":  [
-                                                              "I am a Legate in the Imperial Legion serving under General Tullius.",
-                                                              "The Jagged Crown is an ancient symbol of Skyrim\u0027s rulers hidden in Korvanjund.",
-                                                              "Recovering the crown before the Stormcloaks would strike a blow to Ulfric\u0027s claim."
-                                                          ],
-                                           "beat_facts":  {
-                                                              "TALK_TO_RIKKE":  [
-                                                                                    "I have assigned the new recruit to help recover the Jagged Crown from Korvanjund."
-                                                                                ],
-                                                              "MEET_AT_KORVANJUND":  [
-                                                                                         "The Imperial force has arrived at Korvanjund and Stormcloaks are already here."
-                                                                                     ],
-                                                              "RETRIEVE_CROWN":  [
-                                                                                     "The recruit has retrieved the Jagged Crown from the depths of Korvanjund."
-                                                                                 ]
-                                                          }
-                                       },
-                      "General Tullius":  {
-                                              "base_facts":  [
-                                                                 "I am the military governor of Skyrim and commander of the Imperial Legion here.",
-                                                                 "The Jagged Crown is a symbol of legitimacy for whoever claims the throne of Skyrim."
-                                                             ],
-                                              "beat_facts":  {
-                                                                 "DELIVER_CROWN":  [
-                                                                                       "The Jagged Crown has been delivered. This strengthens the Empire\u0027s claim in Skyrim."
-                                                                                   ]
-                                                             }
-                                          },
-                      "Hadvar":  {
-                                     "base_facts":  [
-                                                        "I am an Imperial soldier who escaped Helgen alongside the recruit.",
-                                                        "I have concerns about what lurks inside ancient Nordic ruins."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "MEET_AT_KORVANJUND":  [
-                                                                                   "The Stormcloaks are a threat, but the ruins themselves may be worse."
-                                                                               ]
-                                                    }
-                                 }
-                  },
-    "beats":  [
-                  {
-                      "id":  "TALK_TO_RIKKE",
-                      "focus_npc":  "Legate Rikke",
-                      "comment":  "Player receives assignment from Legate Rikke to recover the Jagged Crown.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0002D75C",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW02A",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "join the legion",
-                                                            "first assignment",
-                                                            "jagged crown"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "MEET_AT_KORVANJUND",
-                      "focus_npc":  "Legate Rikke",
-                      "comment":  "Player meets Rikke outside Korvanjund where Imperial forces gather before the assault.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0002D75C",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0002D75C",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW02A",
-                                           "min_stage":  30
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TALK_TO_RIKKE"
-                                        ]
-                  },
-                  {
-                      "id":  "RETRIEVE_CROWN",
-                      "focus_npc":  "",
-                      "comment":  "Player fights through Korvanjund ruins and retrieves the Jagged Crown from the draugr overlord.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0002D75C",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0002D75C",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  40
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW02A",
-                                           "min_stage":  50
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "MEET_AT_KORVANJUND"
-                                        ]
-                  },
-                  {
-                      "id":  "DELIVER_CROWN",
-                      "focus_npc":  "General Tullius",
-                      "comment":  "Player delivers the Jagged Crown to General Tullius in Solitude.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0002D75C",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  40
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0002D75C",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  80
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW02A",
-                                           "min_stage":  180
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RETRIEVE_CROWN"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest completes after delivering the crown. Tullius gives next assignment leading to Message to Whiterun.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0002D75C",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  80
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0002D75C",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  90
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW02A",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DELIVER_CROWN"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "TALK_TO_RIKKE"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "cw01aoutfitimperial_getoutfitted",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "cw02a_jaggedcrownimperial",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0002D75C",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "CW02A",
+  "title": "The Jagged Crown (Imperial)",
+  "description": "After joining the Imperial Legion, Legate Rikke sends the player to recover the Jagged Crown from the ruins of Korvanjund before the Stormcloaks can claim it, then deliver it to General Tullius in Solitude.",
+  "npc_facts": {
+    "Legate Rikke": {
+      "base_facts": [
+        "I am a Legate in the Imperial Legion serving under General Tullius.",
+        "The Jagged Crown is an ancient symbol of Skyrim's rulers hidden in Korvanjund.",
+        "Recovering the crown before the Stormcloaks would strike a blow to Ulfric's claim."
+      ],
+      "beat_facts": {
+        "TALK_TO_RIKKE": [
+          "I have assigned the new recruit to help recover the Jagged Crown from Korvanjund."
+        ],
+        "MEET_AT_KORVANJUND": [
+          "The Imperial force has arrived at Korvanjund and Stormcloaks are already here."
+        ],
+        "RETRIEVE_CROWN": [
+          "The recruit has retrieved the Jagged Crown from the depths of Korvanjund."
+        ],
+        "QUEST_COMPLETE": [
+          "The recruit successfully delivered the Jagged Crown to General Tullius as ordered.",
+          "The Korvanjund operation was completed despite Stormcloak interference inside the ruins.",
+          "The Empire's strategic position in the civil war is strengthened by securing the ancient crown."
+        ]
+      }
+    },
+    "General Tullius": {
+      "base_facts": [
+        "I am the military governor of Skyrim and commander of the Imperial Legion here.",
+        "The Jagged Crown is a symbol of legitimacy for whoever claims the throne of Skyrim."
+      ],
+      "beat_facts": {
+        "DELIVER_CROWN": [
+          "The Jagged Crown has been delivered. This strengthens the Empire's claim in Skyrim."
+        ],
+        "QUEST_COMPLETE": [
+          "The Jagged Crown is now in Imperial custody, strengthening the Empire's claim to Skyrim's throne.",
+          "He commended the recruit for successfully recovering the crown from Korvanjund.",
+          "He immediately issued new orders directing the recruit to the next mission: Message to Whiterun.",
+          "With the crown secured, Ulfric Stormcloak's claim to rulership lacks its most potent symbol of legitimacy."
+        ]
+      }
+    },
+    "Hadvar": {
+      "base_facts": [
+        "I am an Imperial soldier who escaped Helgen alongside the recruit.",
+        "I have concerns about what lurks inside ancient Nordic ruins."
+      ],
+      "beat_facts": {
+        "MEET_AT_KORVANJUND": [
+          "The Stormcloaks are a threat, but the ruins themselves may be worse."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "TALK_TO_RIKKE",
+      "focus_npc": "Legate Rikke",
+      "comment": "Player receives assignment from Legate Rikke to recover the Jagged Crown.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002D75C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0002D75C",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW02A",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "join the legion",
+            "first assignment",
+            "jagged crown"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "MEET_AT_KORVANJUND",
+      "focus_npc": "Legate Rikke",
+      "comment": "Player meets Rikke outside Korvanjund where Imperial forces gather before the assault.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002D75C",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "CW02A",
+        "stage": 30
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0002D75C",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0002D75C",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW02A",
+          "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I agree",
+            "I accept",
+            "I will do it",
+            "I am ready",
+            "let's continue",
+            "what are my orders",
+            "tell me what to do",
+            "I will meet them",
+            "lead the way",
+            "I will follow",
+            "let's go",
+            "tell me more",
+            "I need to speak with them",
+            "I understand"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player explicitly agrees to proceed with this quest handoff: Player meets Rikke outside Korvanjund where Imperial forces gather before the assault.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I agree. Let's do this.",
+            "I am ready to proceed.",
+            "I will follow your instructions.",
+            "Tell me what needs to happen next."
+          ],
+          "examples_no": [
+            "What are you asking me to do?",
+            "I need more information first.",
+            "I am not ready yet.",
+            "No, I do not want to do that."
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TALK_TO_RIKKE"
+      ],
+      "intent_summary": "Player agrees to proceed with this quest handoff: Player meets Rikke outside Korvanjund where Imperial forces gather before the assault."
+    },
+    {
+      "id": "RETRIEVE_CROWN",
+      "focus_npc": "",
+      "comment": "Player fights through Korvanjund ruins and retrieves the Jagged Crown from the draugr overlord.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0002D75C",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0002D75C",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 40
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW02A",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MEET_AT_KORVANJUND"
+      ]
+    },
+    {
+      "id": "DELIVER_CROWN",
+      "focus_npc": "General Tullius",
+      "comment": "Player delivers the Jagged Crown to General Tullius in Solitude.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0002D75C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 180
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0002D75C",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 40
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0002D75C",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 80
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW02A",
+          "min_stage": 180
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETRIEVE_CROWN"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest completes after delivering the crown. Tullius gives next assignment leading to Message to Whiterun.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0002D75C",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 80
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0002D75C",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 90
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW02A",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DELIVER_CROWN"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "TALK_TO_RIKKE"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "cw01aoutfitimperial_getoutfitted",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

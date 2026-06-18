@@ -18,7 +18,10 @@
           "Hilund has asked me to collect 50 Riekling spears from across Solstheim."
         ],
         "QUEST_COMPLETE": [
-          "Hilund has received the spears and is decorating Thirsk Mead Hall with them."
+          "Hilund has received the spears and is decorating Thirsk Mead Hall with them.",
+          "Quest finishes - Hilund decorates the hall with the spears as a warning to Rieklings.",
+          "Return to Hilund for your reward.",
+          "Give them here, and I'll get to work soon!\" She will then hand you a leveled amount of gold as reward."
         ]
       }
     }
@@ -83,7 +86,10 @@
       "focus_npc": "Hilund",
       "comment": "Quest finishes - Hilund decorates the hall with the spears as a warning to Rieklings.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00038FBB",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -92,6 +98,26 @@
           "quest_editor_id": "DLC2ThirskFFHilund",
           "min_stage": 200,
           "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

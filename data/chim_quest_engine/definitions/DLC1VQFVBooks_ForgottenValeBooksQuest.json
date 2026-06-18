@@ -25,7 +25,10 @@
           "I have purchased an Ancient Falmer Tome and provided a translated copy."
         ],
         "ALL_TOMES_DELIVERED": [
-          "All four Ancient Falmer Tomes have been recovered and translated."
+          "All four Ancient Falmer Tomes have been recovered and translated.",
+          "All four Ancient Falmer Tomes have been delivered and the quest is complete.",
+          "One on the right, that leads up along the mountain side and one on the left that goes over the river.",
+          "You will reach a fork, to the left is a Falmer bridge (made of chitin ) and to the right is a rocky pathway leading up into the mountains."
         ]
       }
     }
@@ -56,7 +59,10 @@
       "focus_npc": "Urag gro-Shub",
       "comment": "Player has a tome and the objective to bring it to Urag is displayed.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001A3E4",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [

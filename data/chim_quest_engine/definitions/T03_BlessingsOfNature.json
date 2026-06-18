@@ -142,7 +142,10 @@
       "focus_npc": "Danica Pure-Spring",
       "comment": "Player retrieved Nettlebane from the hagravens and brought it to Danica.",
       "action": {
-        "type": "gate"
+        "type": "set_stage_cascade",
+        "quest_form_id": "0x0001C48E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
       },
       "downstream": [],
       "triggers": [
@@ -150,9 +153,39 @@
           "type": "quest_stage",
           "quest_editor_id": "T03",
           "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "i got nettlebane",
+            "got nettlebane",
+            "have nettlebane",
+            "i have nettlebane",
+            "brought nettlebane",
+            "brought back nettlebane",
+            "returned with nettlebane",
+            "here is nettlebane",
+            "here's nettlebane",
+            "i got it",
+            "got it",
+            "i have it",
+            "brought it",
+            "brought it back",
+            "i brought it back",
+            "got the dagger",
+            "brought the dagger",
+            "i have the blade",
+            "i brought the blade"
+          ],
+          "min_matches": 1
         }
       ],
-      "trigger_mode": "any",
+      "trigger_mode": "all",
+      "required_item": {
+        "plugin": "Skyrim.esm",
+        "form_id": "0x0001C492",
+        "name": "Nettlebane"
+      },
       "prerequisites": [
         "AGREE_TO_HELP"
       ]
@@ -162,7 +195,10 @@
       "focus_npc": "Danica Pure-Spring",
       "comment": "Danica sends player to the Eldergleam Sanctuary to retrieve sap.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001C48E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
       },
       "downstream": [],
       "triggers": [
@@ -202,17 +238,48 @@
       "focus_npc": "Danica Pure-Spring",
       "comment": "Quest complete - player returned with sap or sapling to restore the Gildergreen.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001C48E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 100
       },
       "downstream": [],
       "triggers": [
         {
           "type": "quest_stage",
           "quest_editor_id": "T03",
-          "min_stage": 100
+          "min_stage": 70
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "i got the sap",
+            "got the sap",
+            "i have the sap",
+            "have the sap",
+            "brought the sap",
+            "brought back the sap",
+            "here is the sap",
+            "here's the sap",
+            "i got the eldergleam sap",
+            "got the eldergleam sap",
+            "i have the eldergleam sap",
+            "have the eldergleam sap",
+            "sure you can have it",
+            "you can have it",
+            "take it",
+            "i brought it back",
+            "here it is"
+          ],
+          "min_matches": 1
         }
       ],
-      "trigger_mode": "any",
+      "trigger_mode": "all",
+      "required_item": {
+        "plugin": "Skyrim.esm",
+        "form_id": "0x0001C494",
+        "name": "Eldergleam Sap"
+      },
       "prerequisites": [
         "ELDERGLEAM_MISSION"
       ]

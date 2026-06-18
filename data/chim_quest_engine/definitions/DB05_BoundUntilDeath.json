@@ -1,159 +1,183 @@
 {
-    "quest_key":  "db05_bounduntildeath",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001EA54",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DB05",
-    "title":  "Bound Until Death",
-    "description":  "Assassinate Vittoria Vici at her wedding in Solitude. Kill her during her speech for a bonus reward, then report back to Astrid at the Sanctuary.",
-    "npc_facts":  {
-                      "Astrid":  {
-                                     "base_facts":  [
-                                                        "Leader of the Dark Brotherhood sanctuary. Assigns contracts to family members."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "MISSION_BRIEFING":  [
-                                                                                 "Has tasked the player with assassinating Vittoria Vici at her wedding in Solitude. Bonus reward if killed during her speech to the guests."
-                                                                             ],
-                                                        "VITTORIA_KILLED":  [
-                                                                                "Knows Vittoria Vici is dead. Awaiting the player\u0027s return to the Sanctuary."
-                                                                            ],
-                                                        "QUEST_COMPLETE":  [
-                                                                               "Rewarded the player with the Summon Spectral Assassin spell and leveled gold. The Emperor will now be forced to visit Skyrim. Directing the player to speak with Gabriella about the next contract."
-                                                                           ]
-                                                    }
-                                 },
-                      "Vittoria Vici":  {
-                                            "base_facts":  [
-                                                               "The Emperor\u0027s cousin. Marrying Asgeir Snow-Shod at the Temple of the Divines in Solitude."
-                                                           ],
-                                            "beat_facts":  {
-                                                               "MISSION_BRIEFING":  [
-                                                                                        "The target for assassination. Will address the wedding guests from the balcony."
-                                                                                    ]
-                                                           }
-                                        },
-                      "Babette":  {
-                                      "base_facts":  [
-                                                         "A vampire child who is a member of the Dark Brotherhood."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "MISSION_BRIEFING":  [
-                                                                                  "Mentioned a loose gargoyle statue hanging above the balcony where Vittoria will give her speech. It could be pushed to fall on the target."
-                                                                              ]
-                                                     }
-                                  },
-                      "Gabriella":  {
-                                        "base_facts":  [
-                                                           "A Dunmer assassin of the Dark Brotherhood."
-                                                       ],
-                                        "beat_facts":  {
-                                                           "MISSION_BRIEFING":  [
-                                                                                    "Surveyed the wedding site and left Firiniel\u0027s End bow and arrows on a parapet opposite the balcony for a long-range kill."
-                                                                                ]
-                                                       }
-                                    }
-                  },
-    "beats":  [
-                  {
-                      "id":  "MISSION_BRIEFING",
-                      "focus_npc":  "Astrid",
-                      "comment":  "Player receives the contract to assassinate Vittoria Vici at her wedding.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DB05",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "wedding",
-                                                            "Vittoria",
-                                                            "kill the bride",
-                                                            "contract"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "VITTORIA_KILLED",
-                      "focus_npc":  "",
-                      "comment":  "Vittoria Vici has been assassinated. Player must report back to Astrid.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DB05",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "she\u0027s dead",
-                                                            "killed her",
-                                                            "assassinated",
-                                                            "job done"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "MISSION_BRIEFING"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Astrid",
-                      "comment":  "Player reports to Astrid, receives reward, and quest completes.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DB05",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "VITTORIA_KILLED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "MISSION_BRIEFING"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "db04a_silencehasbeenbroken",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "db05_bounduntildeath",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001EA54",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DB05",
+  "title": "Bound Until Death",
+  "description": "Assassinate Vittoria Vici at her wedding in Solitude. Kill her during her speech for a bonus reward, then report back to Astrid at the Sanctuary.",
+  "npc_facts": {
+    "Astrid": {
+      "base_facts": [
+        "Leader of the Dark Brotherhood sanctuary. Assigns contracts to family members."
+      ],
+      "beat_facts": {
+        "MISSION_BRIEFING": [
+          "Has tasked the player with assassinating Vittoria Vici at her wedding in Solitude. Bonus reward if killed during her speech to the guests."
+        ],
+        "VITTORIA_KILLED": [
+          "Knows Vittoria Vici is dead. Awaiting the player's return to the Sanctuary."
+        ],
+        "QUEST_COMPLETE": [
+          "Rewarded the player with the Summon Spectral Assassin spell and leveled gold. The Emperor will now be forced to visit Skyrim. Directing the player to speak with Gabriella about the next contract.",
+          "Player reports to Astrid, receives reward, and quest completes.",
+          "it does involve everyone.\" The next quest, Breaching Security , will now begin.",
+          "Assassinate her while she speaks to earn the bonus reward."
+        ]
+      }
+    },
+    "Vittoria Vici": {
+      "base_facts": [
+        "The Emperor's cousin. Marrying Asgeir Snow-Shod at the Temple of the Divines in Solitude."
+      ],
+      "beat_facts": {
+        "MISSION_BRIEFING": [
+          "The target for assassination. Will address the wedding guests from the balcony."
+        ]
+      }
+    },
+    "Babette": {
+      "base_facts": [
+        "A vampire child who is a member of the Dark Brotherhood."
+      ],
+      "beat_facts": {
+        "MISSION_BRIEFING": [
+          "Mentioned a loose gargoyle statue hanging above the balcony where Vittoria will give her speech. It could be pushed to fall on the target."
+        ]
+      }
+    },
+    "Gabriella": {
+      "base_facts": [
+        "A Dunmer assassin of the Dark Brotherhood."
+      ],
+      "beat_facts": {
+        "MISSION_BRIEFING": [
+          "Surveyed the wedding site and left Firiniel's End bow and arrows on a parapet opposite the balcony for a long-range kill."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "MISSION_BRIEFING",
+      "focus_npc": "Astrid",
+      "comment": "Player receives the contract to assassinate Vittoria Vici at her wedding.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA54",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB05",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "wedding",
+            "Vittoria",
+            "kill the bride",
+            "contract"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "VITTORIA_KILLED",
+      "focus_npc": "",
+      "comment": "Vittoria Vici has been assassinated. Player must report back to Astrid.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA54",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB05",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "she's dead",
+            "killed her",
+            "assassinated",
+            "job done"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MISSION_BRIEFING"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Astrid",
+      "comment": "Player reports to Astrid, receives reward, and quest completes.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA54",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DB05",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "VITTORIA_KILLED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "MISSION_BRIEFING"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "db04a_silencehasbeenbroken",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

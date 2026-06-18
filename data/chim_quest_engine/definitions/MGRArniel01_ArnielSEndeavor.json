@@ -1,292 +1,358 @@
 {
-    "quest_key":  "mgrarniel01_arnielsendeavor",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0006A086",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MGRArniel01",
-    "title":  "Arniel\u0027s Endeavor",
-    "description":  "A multi-part College of Winterhold side quest in which Arniel Gane enlists the player\u0027s help researching the disappearance of the Dwemer, from gathering cogs to charging a warped soul gem and ultimately witnessing his fateful experiment with Keening.",
-    "npc_facts":  {
-                      "Arniel Gane":  {
-                                          "base_facts":  [
-                                                             "I am a researcher at the College of Winterhold studying the disappearance of the Dwemer.",
-                                                             "I need help acquiring Dwemer artifacts for my secret project.",
-                                                             "I am working with Enthir to obtain special items from Morrowind."
-                                                         ],
-                                          "beat_facts":  {
-                                                             "PART1_COGS_REQUEST":  [
-                                                                                        "I have asked someone to bring me ten Dwemer cogs for my project."
-                                                                                    ],
-                                                             "PART1_COGS_DELIVERED":  [
-                                                                                          "The Dwemer cogs have been delivered. My project is making progress."
-                                                                                      ],
-                                                             "PART2_ENTHIR_TRADE":  [
-                                                                                        "I need a specific item from Enthir but he is refusing to hand it over."
-                                                                                    ],
-                                                             "PART2_TRADE_COMPLETE":  [
-                                                                                          "I now have the warped soul gem I needed from Enthir."
-                                                                                      ],
-                                                             "PART3_SOUL_GEM_CHARGE":  [
-                                                                                           "The warped soul gem must be charged in Dwemer convectors using Arniel\u0027s Convection."
-                                                                                       ],
-                                                             "PART3_CHARGE_COMPLETE":  [
-                                                                                           "The warped soul gem has been fully charged and returned to me."
-                                                                                       ],
-                                                             "PART4_KEENING":  [
-                                                                                   "I am waiting for a delivery from Morrowind â€” the dagger Keening â€” via Enthir\u0027s courier."
-                                                                               ],
-                                                             "PART4_EXPERIMENT_COMPLETE":  [
-                                                                                               "I struck the warped soul gem with Keening and vanished in a flash of light."
-                                                                                           ]
-                                                         }
-                                      },
-                      "Enthir":  {
-                                     "base_facts":  [
-                                                        "I am a merchant at the College of Winterhold dealing in rare and unusual goods.",
-                                                        "I have business arrangements with Arniel Gane for certain items."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "PART2_ENTHIR_TRADE":  [
-                                                                                   "Arniel wants an item from me but has not paid. I will trade it for the Staff of Tandil."
-                                                                               ],
-                                                        "PART2_TRADE_COMPLETE":  [
-                                                                                     "The trade with Arniel is complete. I gave up the warped soul gem."
-                                                                                 ],
-                                                        "PART4_KEENING":  [
-                                                                              "I was supposed to arrange transport for an item from Morrowind but the courier never arrived."
-                                                                          ]
-                                                    }
-                                 }
-                  },
-    "beats":  [
-                  {
-                      "id":  "PART1_COGS_REQUEST",
-                      "focus_npc":  "Arniel Gane",
-                      "comment":  "Arniel asks the player to bring him ten Dwemer cogs for his secret project.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRArniel01",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "help arniel",
-                                                            "cogs",
-                                                            "dwarven cogs",
-                                                            "arniel\u0027s project"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "PART1_COGS_DELIVERED",
-                      "focus_npc":  "Arniel Gane",
-                      "comment":  "Player delivers ten Dwemer cogs to Arniel; he rewards gold and hints at more work.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRArniel01",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PART1_COGS_REQUEST"
-                                        ]
-                  },
-                  {
-                      "id":  "PART2_ENTHIR_TRADE",
-                      "focus_npc":  "Enthir",
-                      "comment":  "Arniel needs an item from Enthir who refuses unless the player retrieves the Staff of Tandil from a radiant dungeon.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRArniel02",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "enthir trade",
-                                                            "staff of tandil",
-                                                            "warped soul gem"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PART1_COGS_DELIVERED"
-                                        ]
-                  },
-                  {
-                      "id":  "PART2_TRADE_COMPLETE",
-                      "focus_npc":  "Arniel Gane",
-                      "comment":  "Staff delivered to Enthir; warped soul gem obtained and given to Arniel. Part 2 complete.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRArniel02",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PART2_ENTHIR_TRADE"
-                                        ]
-                  },
-                  {
-                      "id":  "PART3_SOUL_GEM_CHARGE",
-                      "focus_npc":  "Arniel Gane",
-                      "comment":  "Arniel reveals his project relates to the Dwemer disappearance. Player must charge the warped soul gem in Dwemer convectors using Arniel\u0027s Convection.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRArniel03",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "convector",
-                                                            "charge the gem",
-                                                            "arniel\u0027s convection",
-                                                            "dwemer convector"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PART2_TRADE_COMPLETE"
-                                        ]
-                  },
-                  {
-                      "id":  "PART3_CHARGE_COMPLETE",
-                      "focus_npc":  "Arniel Gane",
-                      "comment":  "Warped soul gem fully charged and returned to Arniel. Part 3 complete.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRArniel03",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PART3_SOUL_GEM_CHARGE"
-                                        ]
-                  },
-                  {
-                      "id":  "PART4_KEENING",
-                      "focus_npc":  "Enthir",
-                      "comment":  "Arniel waits for Keening from Morrowind. Enthir says the courier never arrived. Player must find the dead courier and retrieve Keening.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRArniel04",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "courier",
-                                                            "keening",
-                                                            "missing delivery",
-                                                            "morrowind delivery"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PART3_CHARGE_COMPLETE"
-                                        ]
-                  },
-                  {
-                      "id":  "PART4_EXPERIMENT_COMPLETE",
-                      "focus_npc":  "Arniel Gane",
-                      "comment":  "Arniel strikes the warped soul gem with Keening and vanishes. Player receives Keening and the spell Summon Arniel\u0027s Shade. Quest complete.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRArniel04",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PART4_KEENING"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "PART1_COGS_REQUEST"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "mg01_firstlessons",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "mgrarniel01_arnielsendeavor",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0006A086",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MGRArniel01",
+  "title": "Arniel's Endeavor",
+  "description": "A multi-part College of Winterhold side quest in which Arniel Gane enlists the player's help researching the disappearance of the Dwemer, from gathering cogs to charging a warped soul gem and ultimately witnessing his fateful experiment with Keening.",
+  "npc_facts": {
+    "Arniel Gane": {
+      "base_facts": [
+        "I am a researcher at the College of Winterhold studying the disappearance of the Dwemer.",
+        "I need help acquiring Dwemer artifacts for my secret project.",
+        "I am working with Enthir to obtain special items from Morrowind."
+      ],
+      "beat_facts": {
+        "PART1_COGS_REQUEST": [
+          "I have asked someone to bring me ten Dwemer cogs for my project."
+        ],
+        "PART1_COGS_DELIVERED": [
+          "The Dwemer cogs have been delivered. My project is making progress."
+        ],
+        "PART2_ENTHIR_TRADE": [
+          "I need a specific item from Enthir but he is refusing to hand it over."
+        ],
+        "PART2_TRADE_COMPLETE": [
+          "I now have the warped soul gem I needed from Enthir."
+        ],
+        "PART3_SOUL_GEM_CHARGE": [
+          "The warped soul gem must be charged in Dwemer convectors using Arniel's Convection."
+        ],
+        "PART3_CHARGE_COMPLETE": [
+          "The warped soul gem has been fully charged and returned to me."
+        ],
+        "PART4_KEENING": [
+          "I am waiting for a delivery from Morrowind â€” the dagger Keening â€” via Enthir's courier."
+        ],
+        "PART4_EXPERIMENT_COMPLETE": [
+          "I struck the warped soul gem with Keening and vanished in a flash of light.",
+          "Arniel strikes the warped soul gem with Keening and vanishes. Player receives Keening and the spell Summon Arniel's Shade. Quest complete.",
+          "Once you have obtained the ten Dwemer cogs, return to Arniel and he will reward you with a small amount of gold .",
+          "He'd like you to speak to Enthir and return to him with the item."
+        ]
+      }
+    },
+    "Enthir": {
+      "base_facts": [
+        "I am a merchant at the College of Winterhold dealing in rare and unusual goods.",
+        "I have business arrangements with Arniel Gane for certain items."
+      ],
+      "beat_facts": {
+        "PART2_ENTHIR_TRADE": [
+          "Arniel wants an item from me but has not paid. I will trade it for the Staff of Tandil."
+        ],
+        "PART2_TRADE_COMPLETE": [
+          "The trade with Arniel is complete. I gave up the warped soul gem."
+        ],
+        "PART4_KEENING": [
+          "I was supposed to arrange transport for an item from Morrowind but the courier never arrived."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "PART1_COGS_REQUEST",
+      "focus_npc": "Arniel Gane",
+      "comment": "Arniel asks the player to bring him ten Dwemer cogs for his secret project.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0006A086",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRArniel01",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help arniel",
+            "cogs",
+            "dwarven cogs",
+            "arniel's project"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "PART1_COGS_DELIVERED",
+      "focus_npc": "Arniel Gane",
+      "comment": "Player delivers ten Dwemer cogs to Arniel; he rewards gold and hints at more work.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRArniel01",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PART1_COGS_REQUEST"
+      ]
+    },
+    {
+      "id": "PART2_ENTHIR_TRADE",
+      "focus_npc": "Enthir",
+      "comment": "Arniel needs an item from Enthir who refuses unless the player retrieves the Staff of Tandil from a radiant dungeon.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0006A086",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRArniel02",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "enthir trade",
+            "staff of tandil",
+            "warped soul gem"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PART1_COGS_DELIVERED"
+      ]
+    },
+    {
+      "id": "PART2_TRADE_COMPLETE",
+      "focus_npc": "Arniel Gane",
+      "comment": "Staff delivered to Enthir; warped soul gem obtained and given to Arniel. Part 2 complete.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0006A086",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRArniel02",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PART2_ENTHIR_TRADE"
+      ]
+    },
+    {
+      "id": "PART3_SOUL_GEM_CHARGE",
+      "focus_npc": "Arniel Gane",
+      "comment": "Arniel reveals his project relates to the Dwemer disappearance. Player must charge the warped soul gem in Dwemer convectors using Arniel's Convection.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0006A086",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRArniel03",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "convector",
+            "charge the gem",
+            "arniel's convection",
+            "dwemer convector"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PART2_TRADE_COMPLETE"
+      ]
+    },
+    {
+      "id": "PART3_CHARGE_COMPLETE",
+      "focus_npc": "Arniel Gane",
+      "comment": "Warped soul gem fully charged and returned to Arniel. Part 3 complete.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0006A086",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRArniel03",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PART3_SOUL_GEM_CHARGE"
+      ]
+    },
+    {
+      "id": "PART4_KEENING",
+      "focus_npc": "Enthir",
+      "comment": "Arniel waits for Keening from Morrowind. Enthir says the courier never arrived. Player must find the dead courier and retrieve Keening.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0006A086",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRArniel04",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "courier",
+            "keening",
+            "missing delivery",
+            "morrowind delivery"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PART3_CHARGE_COMPLETE"
+      ]
+    },
+    {
+      "id": "PART4_EXPERIMENT_COMPLETE",
+      "focus_npc": "Arniel Gane",
+      "comment": "Arniel strikes the warped soul gem with Keening and vanishes. Player receives Keening and the spell Summon Arniel's Shade. Quest complete.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0006A086",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRArniel04",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PART4_KEENING"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "PART1_COGS_REQUEST"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mg01_firstlessons",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

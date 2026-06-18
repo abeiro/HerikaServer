@@ -1,232 +1,245 @@
 {
-    "quest_key":  "ms07_lightsout",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00023A64",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MS07",
-    "title":  "Lights Out!",
-    "description":  "Jaree-Ra on the Solitude docks offers a scheme to extinguish the lighthouse fire and plunder a wrecked ship, but the Argonian siblings betray you and you must fight through the Blackblood Marauders to survive.",
-    "npc_facts":  {
-                      "Jaree-Ra":  {
-                                       "base_facts":  [
-                                                          "I am an Argonian at the Solitude docks with a profitable offer.",
-                                                          "I want someone to put out the Solitude Lighthouse fire so the Icerunner crashes on the rocks.",
-                                                          "I promised the crew would not be harmed and there would be a share of the plunder.",
-                                                          "I plan to betray my partner and keep all the loot at Broken Oar Grotto."
-                                                      ],
-                                       "beat_facts":  {
-                                                          "JAREE_RA_OFFER":  [
-                                                                                 "I have recruited someone to extinguish the lighthouse beacon. I told them to meet me at the docks afterward."
-                                                                             ],
-                                                          "RETURN_TO_JAREE_RA":  [
-                                                                                     "The lighthouse fire is out and the Icerunner never made it to port. I sent my partner to find Deeja at the wreck."
-                                                                                 ],
-                                                          "HUNT_JAREE_RA":  [
-                                                                                "My sister Deeja is dead and my partner knows I betrayed them. I am at Broken Oar Grotto with the loot."
-                                                                            ]
-                                                      }
-                                   },
-                      "Deeja":  {
-                                    "base_facts":  [
-                                                       "I am Jaree-Ra\u0027s sister and a Blackblood Marauder.",
-                                                       "I am waiting at the Wreck of the Icerunner for Jaree-Ra\u0027s partner.",
-                                                       "I have no intention of sharing the plunder. I will kill them once they arrive."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "DEEJA_BETRAYAL_AND_DEFEAT":  [
-                                                                                         "My partner has arrived at the wreck. The plunder has already been moved. Time to dispose of them."
-                                                                                     ]
-                                                   }
-                                }
-                  },
-    "beats":  [
-                  {
-                      "id":  "JAREE_RA_OFFER",
-                      "focus_npc":  "Jaree-Ra",
-                      "comment":  "Player hears Jaree-Ra\u0027s offer to extinguish the lighthouse fire for a share of plunder.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS07",
-                                           "quest_form_id":  "0x00023A64",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Jaree-Ra\u0027s offer",
-                                                            "make some gold",
-                                                            "lighthouse fire",
-                                                            "put out the fire"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "EXTINGUISH_BEACON",
-                      "focus_npc":  "",
-                      "comment":  "Player extinguishes the Solitude Lighthouse fire.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS07",
-                                           "quest_form_id":  "0x00023A64",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  50
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "JAREE_RA_OFFER"
-                                        ]
-                  },
-                  {
-                      "id":  "RETURN_TO_JAREE_RA",
-                      "focus_npc":  "Jaree-Ra",
-                      "comment":  "Player returns to Jaree-Ra at the docks after extinguishing the fire.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS07",
-                                           "quest_form_id":  "0x00023A64",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  100
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "EXTINGUISH_BEACON"
-                                        ]
-                  },
-                  {
-                      "id":  "DEEJA_BETRAYAL_AND_DEFEAT",
-                      "focus_npc":  "Deeja",
-                      "comment":  "Player finds Deeja at the wreck; she betrays them and attacks. Player must defeat her and finds Jaree-Ra\u0027s note.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS07",
-                                           "quest_form_id":  "0x00023A64",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  125
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RETURN_TO_JAREE_RA"
-                                        ]
-                  },
-                  {
-                      "id":  "HUNT_JAREE_RA",
-                      "focus_npc":  "Jaree-Ra",
-                      "comment":  "Player learns from Deeja\u0027s note that Jaree-Ra took the loot to Broken Oar Grotto and travels there.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS07",
-                                           "quest_form_id":  "0x00023A64",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  175
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DEEJA_BETRAYAL_AND_DEFEAT"
-                                        ]
-                  },
-                  {
-                      "id":  "DEFEAT_JAREE_RA",
-                      "focus_npc":  "Jaree-Ra",
-                      "comment":  "Player confronts and defeats Jaree-Ra at Broken Oar Grotto.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS07",
-                                           "quest_form_id":  "0x00023A64",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  225
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "HUNT_JAREE_RA"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest complete after defeating Jaree-Ra and his bandits.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS07",
-                                           "quest_form_id":  "0x00023A64",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "min_stage":  250
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DEFEAT_JAREE_RA"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "JAREE_RA_OFFER"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "ms07_lightsout",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00023A64",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MS07",
+  "title": "Lights Out!",
+  "description": "Jaree-Ra on the Solitude docks offers a scheme to extinguish the lighthouse fire and plunder a wrecked ship, but the Argonian siblings betray you and you must fight through the Blackblood Marauders to survive.",
+  "npc_facts": {
+    "Jaree-Ra": {
+      "base_facts": [
+        "I am an Argonian at the Solitude docks with a profitable offer.",
+        "I want someone to put out the Solitude Lighthouse fire so the Icerunner crashes on the rocks.",
+        "I promised the crew would not be harmed and there would be a share of the plunder.",
+        "I plan to betray my partner and keep all the loot at Broken Oar Grotto."
+      ],
+      "beat_facts": {
+        "JAREE_RA_OFFER": [
+          "I have recruited someone to extinguish the lighthouse beacon. I told them to meet me at the docks afterward."
+        ],
+        "RETURN_TO_JAREE_RA": [
+          "The lighthouse fire is out and the Icerunner never made it to port. I sent my partner to find Deeja at the wreck."
+        ],
+        "HUNT_JAREE_RA": [
+          "My sister Deeja is dead and my partner knows I betrayed them. I am at Broken Oar Grotto with the loot."
+        ],
+        "QUEST_COMPLETE": [
+          "Quest complete after defeating Jaree-Ra and his bandits.",
+          "Speak to him, and he asks how you would like making some gold.",
+          "Make your way to Deeja, kill her, and loot the note from Jaree-Ra that will start the next part of the quest."
+        ]
+      }
+    },
+    "Deeja": {
+      "base_facts": [
+        "I am Jaree-Ra's sister and a Blackblood Marauder.",
+        "I am waiting at the Wreck of the Icerunner for Jaree-Ra's partner.",
+        "I have no intention of sharing the plunder. I will kill them once they arrive."
+      ],
+      "beat_facts": {
+        "DEEJA_BETRAYAL_AND_DEFEAT": [
+          "My partner has arrived at the wreck. The plunder has already been moved. Time to dispose of them."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "JAREE_RA_OFFER",
+      "focus_npc": "Jaree-Ra",
+      "comment": "Player hears Jaree-Ra's offer to extinguish the lighthouse fire for a share of plunder.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00023A64",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS07",
+          "quest_form_id": "0x00023A64",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Jaree-Ra's offer",
+            "make some gold",
+            "lighthouse fire",
+            "put out the fire"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "EXTINGUISH_BEACON",
+      "focus_npc": "",
+      "comment": "Player extinguishes the Solitude Lighthouse fire.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS07",
+          "quest_form_id": "0x00023A64",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "JAREE_RA_OFFER"
+      ]
+    },
+    {
+      "id": "RETURN_TO_JAREE_RA",
+      "focus_npc": "Jaree-Ra",
+      "comment": "Player returns to Jaree-Ra at the docks after extinguishing the fire.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00023A64",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 100
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS07",
+          "quest_form_id": "0x00023A64",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 100
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "EXTINGUISH_BEACON"
+      ]
+    },
+    {
+      "id": "DEEJA_BETRAYAL_AND_DEFEAT",
+      "focus_npc": "Deeja",
+      "comment": "Player finds Deeja at the wreck; she betrays them and attacks. Player must defeat her and finds Jaree-Ra's note.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS07",
+          "quest_form_id": "0x00023A64",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 125
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETURN_TO_JAREE_RA"
+      ]
+    },
+    {
+      "id": "HUNT_JAREE_RA",
+      "focus_npc": "Jaree-Ra",
+      "comment": "Player learns from Deeja's note that Jaree-Ra took the loot to Broken Oar Grotto and travels there.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS07",
+          "quest_form_id": "0x00023A64",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 175
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEEJA_BETRAYAL_AND_DEFEAT"
+      ]
+    },
+    {
+      "id": "DEFEAT_JAREE_RA",
+      "focus_npc": "Jaree-Ra",
+      "comment": "Player confronts and defeats Jaree-Ra at Broken Oar Grotto.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS07",
+          "quest_form_id": "0x00023A64",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 225
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HUNT_JAREE_RA"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest complete after defeating Jaree-Ra and his bandits.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS07",
+          "quest_form_id": "0x00023A64",
+          "quest_plugin": "Skyrim.esm",
+          "min_stage": 250
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DEFEAT_JAREE_RA"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "JAREE_RA_OFFER"
+    ],
+    "requires": []
+  }
 }

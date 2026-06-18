@@ -38,7 +38,10 @@
           "Horgeir has a secret stash of Dragon's Breath Mead hidden in a cave guarded by wolves."
         ],
         "GIVE_MEAD_TO_HORGEIR": [
-          "Horgeir got his mead back and showed his friend how to block a punch from an angry spouse."
+          "Horgeir got his mead back and showed his friend how to block a punch from an angry spouse.",
+          "Player gives the mead to Horgeir instead for Block training, failing the original quest.",
+          "She will reward you with some gold, saying: \"If my Horgeir doesn't give up the mead this time, I'll hit him over the head with it.\" You may instead choose to tell everything to Horgeir and return his favorite mead to.",
+          "If you talk to her about her husband, she will complain to you: \"He promised me, swore on his ancestors, that he'd give up the mead."
         ]
       }
     }

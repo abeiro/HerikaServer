@@ -1,243 +1,263 @@
 {
-    "quest_key":  "vc01_risingatdawn",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0005C625",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "VC01",
-    "title":  "Rising at Dawn",
-    "description":  "Falion in Morthal can cure vampirism through a ritual requiring a filled black soul gem, performed at his summoning circle at dawn.",
-    "npc_facts":  {
-                      "Falion":  {
-                                     "base_facts":  [
-                                                        "I am Falion, a mage in Morthal who studies vampires and the undead.",
-                                                        "I can cure vampirism through a ritual at the summoning circle north of town.",
-                                                        "I require a filled black soul gem to perform the cure ritual.",
-                                                        "I perform the ritual at dawn and will not help if the vampire is Blood-Starved."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "HEAR_ABOUT_CURE":  [
-                                                                                "Someone has been asking about a cure for vampirism."
-                                                                            ],
-                                                        "SPEAK_TO_FALION":  [
-                                                                                "I have agreed to cure this vampire. They must bring me a filled black soul gem."
-                                                                            ],
-                                                        "DELIVER_SOUL_GEM":  [
-                                                                                 "The vampire has brought me a filled black soul gem. They must meet me at the summoning circle at dawn."
-                                                                             ],
-                                                        "PERFORM_RITUAL":  [
-                                                                               "I am performing the ritual to cure vampirism at the summoning circle."
-                                                                           ],
-                                                        "CURE_COMPLETE":  [
-                                                                              "I have successfully cured the vampire of their vampirism."
-                                                                          ]
-                                                    }
-                                 }
-                  },
-    "beats":  [
-                  {
-                      "id":  "HEAR_ABOUT_CURE",
-                      "focus_npc":  "Falion",
-                      "comment":  "Player learns about Falion as a potential cure for vampirism from innkeepers or Dawnguard members.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "cure vampirism",
-                                                            "Falion",
-                                                            "vampire cure"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "SPEAK_TO_FALION",
-                      "focus_npc":  "Falion",
-                      "comment":  "Player speaks to Falion and agrees to the cure process.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0005C625",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  50
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0005C625",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "index":  50
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "cure my vampirism",
-                                                            "remove vampirism",
-                                                            "need a cure"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "HEAR_ABOUT_CURE"
-                                        ]
-                  },
-                  {
-                      "id":  "DELIVER_SOUL_GEM",
-                      "focus_npc":  "Falion",
-                      "comment":  "Player brings a filled black soul gem to Falion.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0005C625",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  100
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0005C625",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "index":  50
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0005C625",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "index":  100
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "filled black soul gem",
-                                                            "have the soul gem",
-                                                            "brought the gem"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SPEAK_TO_FALION"
-                                        ]
-                  },
-                  {
-                      "id":  "PERFORM_RITUAL",
-                      "focus_npc":  "Falion",
-                      "comment":  "Player meets Falion at the summoning circle at dawn and the ritual sequence begins.",
-                      "action":  {
-                                     "type":  "set_stage_cascade",
-                                     "quest_form_id":  "0x0005C625",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stages":  [
-                                                    150,
-                                                    175,
-                                                    185
-                                                ]
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0005C625",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "index":  100
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0005C625",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "index":  150
-                                         },
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0005C625",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "index":  150
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0005C625",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "index":  175
-                                         },
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0005C625",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "index":  175
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0005C625",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "index":  185
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "ready for the ritual",
-                                                            "perform the ritual",
-                                                            "meet at dawn"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DELIVER_SOUL_GEM"
-                                        ]
-                  },
-                  {
-                      "id":  "CURE_COMPLETE",
-                      "focus_npc":  "Falion",
-                      "comment":  "Falion completes the ritual and cures the player of vampirism.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0005C625",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "index":  185
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "VC01",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PERFORM_RITUAL"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "HEAR_ABOUT_CURE"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "vc01_risingatdawn",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0005C625",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "VC01",
+  "title": "Rising at Dawn",
+  "description": "Falion in Morthal can cure vampirism through a ritual requiring a filled black soul gem, performed at his summoning circle at dawn.",
+  "npc_facts": {
+    "Falion": {
+      "base_facts": [
+        "I am Falion, a mage in Morthal who studies vampires and the undead.",
+        "I can cure vampirism through a ritual at the summoning circle north of town.",
+        "I require a filled black soul gem to perform the cure ritual.",
+        "I perform the ritual at dawn and will not help if the vampire is Blood-Starved."
+      ],
+      "beat_facts": {
+        "HEAR_ABOUT_CURE": [
+          "Someone has been asking about a cure for vampirism."
+        ],
+        "SPEAK_TO_FALION": [
+          "I have agreed to cure this vampire. They must bring me a filled black soul gem."
+        ],
+        "DELIVER_SOUL_GEM": [
+          "The vampire has brought me a filled black soul gem. They must meet me at the summoning circle at dawn."
+        ],
+        "PERFORM_RITUAL": [
+          "I am performing the ritual to cure vampirism at the summoning circle."
+        ],
+        "CURE_COMPLETE": [
+          "I have successfully cured the vampire of their vampirism.",
+          "Falion completes the ritual and cures the player of vampirism.",
+          "Go to Morthal and talk to Falion .",
+          "Meet Falion at Dawn [ edit ] At 3am, Falion will start making his way to the circle and remains there until 7am."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "HEAR_ABOUT_CURE",
+      "focus_npc": "Falion",
+      "comment": "Player learns about Falion as a potential cure for vampirism from innkeepers or Dawnguard members.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "cure vampirism",
+            "Falion",
+            "vampire cure"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "SPEAK_TO_FALION",
+      "focus_npc": "Falion",
+      "comment": "Player speaks to Falion and agrees to the cure process.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0005C625",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0005C625",
+          "quest_plugin": "Skyrim.esm",
+          "index": 50
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "cure my vampirism",
+            "remove vampirism",
+            "need a cure"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEAR_ABOUT_CURE"
+      ]
+    },
+    {
+      "id": "DELIVER_SOUL_GEM",
+      "focus_npc": "Falion",
+      "comment": "Player brings a filled black soul gem to Falion.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0005C625",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 100
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0005C625",
+          "quest_plugin": "Skyrim.esm",
+          "index": 50
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0005C625",
+          "quest_plugin": "Skyrim.esm",
+          "index": 100
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "filled black soul gem",
+            "have the soul gem",
+            "brought the gem"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_TO_FALION"
+      ]
+    },
+    {
+      "id": "PERFORM_RITUAL",
+      "focus_npc": "Falion",
+      "comment": "Player meets Falion at the summoning circle at dawn and the ritual sequence begins.",
+      "action": {
+        "type": "set_stage_cascade",
+        "quest_form_id": "0x0005C625",
+        "quest_plugin": "Skyrim.esm",
+        "stages": [
+          150,
+          175,
+          185
+        ]
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0005C625",
+          "quest_plugin": "Skyrim.esm",
+          "index": 100
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0005C625",
+          "quest_plugin": "Skyrim.esm",
+          "index": 150
+        },
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0005C625",
+          "quest_plugin": "Skyrim.esm",
+          "index": 150
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0005C625",
+          "quest_plugin": "Skyrim.esm",
+          "index": 175
+        },
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0005C625",
+          "quest_plugin": "Skyrim.esm",
+          "index": 175
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0005C625",
+          "quest_plugin": "Skyrim.esm",
+          "index": 185
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "ready for the ritual",
+            "perform the ritual",
+            "meet at dawn"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DELIVER_SOUL_GEM"
+      ]
+    },
+    {
+      "id": "CURE_COMPLETE",
+      "focus_npc": "Falion",
+      "comment": "Falion completes the ritual and cures the player of vampirism.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0005C625",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0005C625",
+          "quest_plugin": "Skyrim.esm",
+          "index": 185
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "VC01",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PERFORM_RITUAL"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "HEAR_ABOUT_CURE"
+    ],
+    "requires": []
+  }
 }

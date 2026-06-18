@@ -1,254 +1,255 @@
 {
-    "quest_key":  "dlc1hunterbaseintro_neworder",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00004E24",
-    "quest_plugin":  "Dawnguard.esm",
-    "quest_editor_id":  "DLC1HunterBaseIntro",
-    "title":  "A New Order",
-    "description":  "After rejecting Lord Harkon\u0027s offer at Castle Volkihar, the Dragonborn returns to Isran at Fort Dawnguard and helps recruit Sorine Jurard and Gunmar to bolster the Dawnguard against the vampire threat.",
-    "npc_facts":  {
-                      "Isran":  {
-                                    "base_facts":  [
-                                                       "I lead the Dawnguard from Fort Dawnguard.",
-                                                       "I am determined to destroy the vampire threat no matter the cost.",
-                                                       "I once worked with Sorine Jurard and Gunmar but parted ways with them.",
-                                                       "I test new recruits with concentrated sunlight to ensure they are not vampires."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "REPORT_TO_ISRAN":  [
-                                                                               "The Dragonborn has returned from Castle Volkihar with news that the vampires possess an Elder Scroll."
-                                                                           ],
-                                                       "FIND_RECRUITS":  [
-                                                                             "I have sent the Dragonborn to find Sorine Jurard in the Reach and Gunmar in the wilderness."
-                                                                         ],
-                                                       "RETURN_TO_ISRAN":  [
-                                                                               "Sorine and Gunmar have arrived at Fort Dawnguard. I tested them with sunlight to confirm they are not vampires."
-                                                                           ],
-                                                       "QUEST_COMPLETE":  [
-                                                                              "The Dawnguard is growing stronger. We must now question the vampire who came here looking for the Dragonborn."
-                                                                          ]
-                                                   }
-                                },
-                      "Gunmar":  {
-                                     "base_facts":  [
-                                                        "I am a Nord who works with animals, especially armored trolls.",
-                                                        "I hate vampires as much as Isran does.",
-                                                        "I left the Dawnguard after a falling out with Isran."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "HELP_GUNMAR_BEAR":  [
-                                                                                 "The Dragonborn helped me kill the bear I had been tracking for two weeks. I agreed to rejoin the Dawnguard."
-                                                                             ]
-                                                    }
-                                 },
-                      "Sorine Jurard":  {
-                                            "base_facts":  [
-                                                               "I am a Breton tinkerer fascinated by Dwemer technology and crossbow design.",
-                                                               "Isran rejected my help before and said hurtful things to me.",
-                                                               "I lost my satchel of Dwemer gyros, possibly to a mudcrab."
-                                                           ],
-                                            "beat_facts":  {
-                                                               "RECRUIT_SORINE":  [
-                                                                                      "The Dragonborn brought me a Dwemer gyro and convinced me to rejoin the Dawnguard."
-                                                                                  ]
-                                                           }
-                                        }
-                  },
-    "beats":  [
-                  {
-                      "id":  "REPORT_TO_ISRAN",
-                      "focus_npc":  "Isran",
-                      "comment":  "Player returns to Isran after rejecting Harkon\u0027s offer and reports on the Elder Scroll.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1HunterBaseIntro",
-                                           "min_stage":  20,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "report to Isran",
-                                                            "Harkon\u0027s offer",
-                                                            "Elder Scroll",
-                                                            "vampire castle"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "FIND_RECRUITS",
-                      "focus_npc":  "Isran",
-                      "comment":  "Isran asks the player to find Sorine Jurard and Gunmar to reinforce the Dawnguard.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1HunterBaseIntro",
-                                           "min_stage":  30,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "find Sorine",
-                                                            "find Gunmar",
-                                                            "recruit",
-                                                            "reinforcements"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "REPORT_TO_ISRAN"
-                                        ]
-                  },
-                  {
-                      "id":  "HELP_GUNMAR_BEAR",
-                      "focus_npc":  "Gunmar",
-                      "comment":  "Player finds Gunmar and helps him kill the bear he has been tracking.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1HunterBaseIntro",
-                                           "min_stage":  45,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "help Gunmar",
-                                                            "kill the bear",
-                                                            "track the bear"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FIND_RECRUITS"
-                                        ]
-                  },
-                  {
-                      "id":  "RECRUIT_SORINE",
-                      "focus_npc":  "Sorine Jurard",
-                      "comment":  "Player finds Sorine Jurard and gives her a Dwemer gyro or persuades her to rejoin the Dawnguard.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Dwemer gyro",
-                                                            "Sorine join",
-                                                            "come to Fort Dawnguard",
-                                                            "Isran needs your help"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FIND_RECRUITS"
-                                        ]
-                  },
-                  {
-                      "id":  "RETURN_TO_ISRAN",
-                      "focus_npc":  "Isran",
-                      "comment":  "Player returns to Fort Dawnguard after recruiting both Sorine and Gunmar. Isran tests them with sunlight.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1HunterBaseIntro",
-                                           "min_stage":  70,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "return to Isran",
-                                                            "Isran\u0027s speech",
-                                                            "both recruited"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "HELP_GUNMAR_BEAR",
-                                            "RECRUIT_SORINE"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Isran finishes his speech, the Dawnguard is reinforced, and the Prophet quest begins.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1HunterBaseIntro",
-                                           "min_stage":  200,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RETURN_TO_ISRAN"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "REPORT_TO_ISRAN"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "dlc1vq02_bloodline",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dlc1hunterbaseintro_neworder",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00004E24",
+  "quest_plugin": "Dawnguard.esm",
+  "quest_editor_id": "DLC1HunterBaseIntro",
+  "title": "A New Order",
+  "description": "After rejecting Lord Harkon's offer at Castle Volkihar, the Dragonborn returns to Isran at Fort Dawnguard and helps recruit Sorine Jurard and Gunmar to bolster the Dawnguard against the vampire threat.",
+  "npc_facts": {
+    "Isran": {
+      "base_facts": [
+        "I lead the Dawnguard from Fort Dawnguard.",
+        "I am determined to destroy the vampire threat no matter the cost.",
+        "I once worked with Sorine Jurard and Gunmar but parted ways with them.",
+        "I test new recruits with concentrated sunlight to ensure they are not vampires."
+      ],
+      "beat_facts": {
+        "REPORT_TO_ISRAN": [
+          "The Dragonborn has returned from Castle Volkihar with news that the vampires possess an Elder Scroll."
+        ],
+        "FIND_RECRUITS": [
+          "I have sent the Dragonborn to find Sorine Jurard in the Reach and Gunmar in the wilderness."
+        ],
+        "RETURN_TO_ISRAN": [
+          "Sorine and Gunmar have arrived at Fort Dawnguard. I tested them with sunlight to confirm they are not vampires."
+        ],
+        "QUEST_COMPLETE": [
+          "The Dawnguard is growing stronger. We must now question the vampire who came here looking for the Dragonborn.",
+          "Isran finishes his speech, the Dawnguard is reinforced, and the Prophet quest begins.",
+          "He will then lead you to a cave near his initial starting point: Possible locations : Bonechill Passage • Bronze Water Cave • Brood Cavern • Clearspring Tarn • Cronvangr Cave • Crystaldrift Cave • Fallowstone Cave •.",
+          "Let's go have a little chat with it, shall we?\" Once Isran has removed the barrier, the quest will end and the next quest, Prophet , will initiate."
+        ]
+      }
+    },
+    "Gunmar": {
+      "base_facts": [
+        "I am a Nord who works with animals, especially armored trolls.",
+        "I hate vampires as much as Isran does.",
+        "I left the Dawnguard after a falling out with Isran."
+      ],
+      "beat_facts": {
+        "HELP_GUNMAR_BEAR": [
+          "The Dragonborn helped me kill the bear I had been tracking for two weeks. I agreed to rejoin the Dawnguard."
+        ]
+      }
+    },
+    "Sorine Jurard": {
+      "base_facts": [
+        "I am a Breton tinkerer fascinated by Dwemer technology and crossbow design.",
+        "Isran rejected my help before and said hurtful things to me.",
+        "I lost my satchel of Dwemer gyros, possibly to a mudcrab."
+      ],
+      "beat_facts": {
+        "RECRUIT_SORINE": [
+          "The Dragonborn brought me a Dwemer gyro and convinced me to rejoin the Dawnguard."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "REPORT_TO_ISRAN",
+      "focus_npc": "Isran",
+      "comment": "Player returns to Isran after rejecting Harkon's offer and reports on the Elder Scroll.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00004E24",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1HunterBaseIntro",
+          "min_stage": 20,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "report to Isran",
+            "Harkon's offer",
+            "Elder Scroll",
+            "vampire castle"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "FIND_RECRUITS",
+      "focus_npc": "Isran",
+      "comment": "Isran asks the player to find Sorine Jurard and Gunmar to reinforce the Dawnguard.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00004E24",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1HunterBaseIntro",
+          "min_stage": 30,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "find Sorine",
+            "find Gunmar",
+            "recruit",
+            "reinforcements"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "REPORT_TO_ISRAN"
+      ]
+    },
+    {
+      "id": "HELP_GUNMAR_BEAR",
+      "focus_npc": "Gunmar",
+      "comment": "Player finds Gunmar and helps him kill the bear he has been tracking.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00004E24",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 45
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1HunterBaseIntro",
+          "min_stage": 45,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help Gunmar",
+            "kill the bear",
+            "track the bear"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIND_RECRUITS"
+      ]
+    },
+    {
+      "id": "RECRUIT_SORINE",
+      "focus_npc": "Sorine Jurard",
+      "comment": "Player finds Sorine Jurard and gives her a Dwemer gyro or persuades her to rejoin the Dawnguard.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Dwemer gyro",
+            "Sorine join",
+            "come to Fort Dawnguard",
+            "Isran needs your help"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIND_RECRUITS"
+      ]
+    },
+    {
+      "id": "RETURN_TO_ISRAN",
+      "focus_npc": "Isran",
+      "comment": "Player returns to Fort Dawnguard after recruiting both Sorine and Gunmar. Isran tests them with sunlight.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00004E24",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 70
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1HunterBaseIntro",
+          "min_stage": 70,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "return to Isran",
+            "Isran's speech",
+            "both recruited"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HELP_GUNMAR_BEAR",
+        "RECRUIT_SORINE"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Isran finishes his speech, the Dawnguard is reinforced, and the Prophet quest begins.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1HunterBaseIntro",
+          "min_stage": 200,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETURN_TO_ISRAN"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "REPORT_TO_ISRAN"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc1vq02_bloodline",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

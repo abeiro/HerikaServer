@@ -42,7 +42,10 @@
       ],
       "beat_facts": {
         "QUEST_COMPLETE": [
-          "Malacath has named me the new chief of Largashbur."
+          "Malacath has named me the new chief of Largashbur.",
+          "Quest complete. Malacath names Gularzob the new chief. The hammer transforms into Volendrung.",
+          "Meet Yamarz at Fallowstone Cave .",
+          "Malacath's Ritual [ edit ] \"Now, we begin the ritual...\" After you bring the ingredients to Atub, she will enter Largashbur Longhouse and speak with Chief Yamarz about performing the ritual."
         ]
       }
     }
@@ -72,7 +75,10 @@
       "focus_npc": "Atub",
       "comment": "Player helps fight the giant and brings Troll Fat and Daedra Heart to Atub.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003B681",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
       },
       "downstream": [],
       "triggers": [
@@ -101,7 +107,10 @@
       "focus_npc": "Atub",
       "comment": "Atub performs the ritual and Malacath commands Yamarz to reclaim the shrine.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003B681",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 70
       },
       "downstream": [],
       "triggers": [
@@ -130,7 +139,10 @@
       "focus_npc": "Chief Yamarz",
       "comment": "Player escorts Yamarz to Fallowstone Cave and protects him through the cave.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003B681",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 90
       },
       "downstream": [],
       "triggers": [
@@ -159,7 +171,10 @@
       "focus_npc": "Chief Yamarz",
       "comment": "Player defeats the giant at Giant's Grove. Yamarz may die here.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003B681",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 100
       },
       "downstream": [],
       "triggers": [
@@ -188,7 +203,10 @@
       "focus_npc": "",
       "comment": "Player returns Shagrol's Hammer to Largashbur and places it on the shrine.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003B681",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 120
       },
       "downstream": [],
       "triggers": [

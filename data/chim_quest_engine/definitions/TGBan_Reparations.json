@@ -20,7 +20,10 @@
           "This member owes 1,000 gold in reparations before they can be reinstated into the Thieves Guild."
         ],
         "REPARATIONS_PAID": [
-          "The former guild member has paid their reparations and been reinstated into the Thieves Guild."
+          "The former guild member has paid their reparations and been reinstated into the Thieves Guild.",
+          "Player has paid 1,000 gold in reparations and been reinstated into the Thieves Guild.",
+          "Talk to Vex and pay 1,000 gold.",
+          "To rejoin the guild, speak to Vex in The Ragged Flagon , who will reprimand you and demand 1,000 gold as reparations."
         ]
       }
     }
@@ -50,7 +53,10 @@
       "focus_npc": "Vex",
       "comment": "Player speaks to Vex about making reparations after being banned from the guild.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000B03A2",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -79,7 +85,10 @@
       "focus_npc": "Vex",
       "comment": "Player needs to bring 1,000 gold to Vex as reparations for rejoining the guild.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000B03A2",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [

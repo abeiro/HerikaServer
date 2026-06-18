@@ -1,143 +1,165 @@
 {
-    "quest_key":  "dunhillgrundstombqst_ancestralworship",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0003E897",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "dunHillgrundsTombQST",
-    "title":  "Ancestral Worship",
-    "description":  "Help Golldir protect his ancestral tomb in Hillgrund\u0027s Tomb from the Dunmer necromancer Vals Veran, who has already killed Golldir\u0027s aunt Agna.",
-    "npc_facts":  {
-                      "Golldir":  {
-                                      "base_facts":  [
-                                                         "I am a Nord standing outside Hillgrund\u0027s Tomb in Whiterun Hold.",
-                                                         "A Dunmer necromancer named Vals Veran is defiling my family\u0027s ancestral barrow inside.",
-                                                         "My aunt Agna went in alone to confront him but I was too afraid to follow.",
-                                                         "I have been terrified of this barrow ever since my father locked me inside as a child."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "AGREE_TO_HELP":  [
-                                                                               "This adventurer agreed to help me stop Vals Veran and rescue Aunt Agna."
-                                                                           ],
-                                                         "VALS_VERAN_DEFEATED":  [
-                                                                                     "Vals Veran is dead, but Aunt Agna did not survive. I am grateful for the help."
-                                                                                 ],
-                                                         "QUEST_COMPLETE":  [
-                                                                                "I will stay near the tomb and spend my time hunting. I would follow this adventurer if asked."
-                                                                            ]
-                                                     }
-                                  }
-                  },
-    "beats":  [
-                  {
-                      "id":  "AGREE_TO_HELP",
-                      "focus_npc":  "Golldir",
-                      "comment":  "Player agrees to help Golldir protect the tomb and rescue Agna from Vals Veran.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0003E897",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0003E897",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0003E897",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  5
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "help you",
-                                                            "protect the tomb",
-                                                            "stop the necromancer",
-                                                            "come with you",
-                                                            "save your aunt"
-                                                        ]
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "VALS_VERAN_DEFEATED",
-                      "focus_npc":  "Golldir",
-                      "comment":  "Vals Veran is defeated; the objective to speak with Golldir becomes available.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0003E897",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0003E897",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  90
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "dunHillgrundsTombQST",
-                                           "min_stage":  90
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "AGREE_TO_HELP"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Golldir",
-                      "comment":  "Quest completes after the player speaks with Golldir following Vals Veran\u0027s defeat.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0003E897",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  90
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "dunHillgrundsTombQST",
-                                           "min_stage":  100
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "VALS_VERAN_DEFEATED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "AGREE_TO_HELP"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dunhillgrundstombqst_ancestralworship",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0003E897",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "dunHillgrundsTombQST",
+  "title": "Ancestral Worship",
+  "description": "Help Golldir protect his ancestral tomb in Hillgrund's Tomb from the Dunmer necromancer Vals Veran, who has already killed Golldir's aunt Agna.",
+  "npc_facts": {
+    "Golldir": {
+      "base_facts": [
+        "I am a Nord standing outside Hillgrund's Tomb in Whiterun Hold.",
+        "A Dunmer necromancer named Vals Veran is defiling my family's ancestral barrow inside.",
+        "My aunt Agna went in alone to confront him but I was too afraid to follow.",
+        "I have been terrified of this barrow ever since my father locked me inside as a child."
+      ],
+      "beat_facts": {
+        "AGREE_TO_HELP": [
+          "This adventurer agreed to help me stop Vals Veran and rescue Aunt Agna."
+        ],
+        "VALS_VERAN_DEFEATED": [
+          "Vals Veran is dead, but Aunt Agna did not survive. I am grateful for the help."
+        ],
+        "QUEST_COMPLETE": [
+          "I will stay near the tomb and spend my time hunting. I would follow this adventurer if asked.",
+          "Quest completes after the player speaks with Golldir following Vals Veran's defeat.",
+          "If Golldir is killed, the quest will still act as if it's active and that you can still \"talk to Golldir\" to finish the quest.",
+          "A chain hanging from that plaque will open a secret door that leads to the main chamber."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "AGREE_TO_HELP",
+      "focus_npc": "Golldir",
+      "comment": "Player agrees to help Golldir protect the tomb and rescue Agna from Vals Veran.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0003E897",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0003E897",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0003E897",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 5
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help you",
+            "protect the tomb",
+            "stop the necromancer",
+            "come with you",
+            "save your aunt"
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "VALS_VERAN_DEFEATED",
+      "focus_npc": "Golldir",
+      "comment": "Vals Veran is defeated; the objective to speak with Golldir becomes available.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0003E897",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0003E897",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 90
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "dunHillgrundsTombQST",
+          "min_stage": 90
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "AGREE_TO_HELP"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Golldir",
+      "comment": "Quest completes after the player speaks with Golldir following Vals Veran's defeat.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0003E897",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 100
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0003E897",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 90
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "dunHillgrundsTombQST",
+          "min_stage": 100
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "VALS_VERAN_DEFEATED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "AGREE_TO_HELP"
+    ],
+    "requires": []
+  }
 }

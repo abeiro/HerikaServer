@@ -38,7 +38,9 @@
       "beat_facts": {
         "DELIVER_SWORD": [
           "Adrianne's greatsword for the Jarl has been delivered.",
-          "I'll present it to Balgruuf when his mood is agreeable."
+          "I'll present it to Balgruuf when his mood is agreeable.",
+          "Player delivers the greatsword to Proventus Avenicci at Dragonsreach.",
+          "agreeable.\" He will then reward you with twenty gold."
         ]
       }
     }

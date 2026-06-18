@@ -29,6 +29,11 @@
         ],
         "REFUSE_GIFT": [
           "The stranger refused my father's gift and was banished from the castle."
+        ],
+        "QUEST_COMPLETE": [
+          "The stranger who freed me has either become a Vampire Lord of my father's court or been banished to rejoin Isran and the Dawnguard.",
+          "I remain at Castle Volkihar regardless of the stranger's choice about my father's gift.",
+          "Whether the stranger joined us or now opposes us, I am grateful they freed me from Dimhollow."
         ]
       }
     },
@@ -50,6 +55,11 @@
         ],
         "REFUSE_GIFT": [
           "The stranger refused my gift and is banished from my castle forever."
+        ],
+        "QUEST_COMPLETE": [
+          "If the stranger accepted my gift, they are now a Vampire Lord of my court and have earned my favor; The Bloodstone Chalice awaits to test their worth.",
+          "If the stranger refused my gift, they are banished from my castle forever and have returned to Isran and the Dawnguard as my enemy.",
+          "The stranger's choice leaves them either standing with my court or against it; there is no middle ground."
         ]
       }
     }

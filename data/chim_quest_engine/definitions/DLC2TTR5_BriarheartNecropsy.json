@@ -1,150 +1,149 @@
 {
-    "quest_key":  "dlc2ttr5_briarheartnecropsy",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001C05C",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2TTR5",
-    "title":  "Briarheart Necropsy",
-    "description":  "Neloth asks the player to examine a Forsworn Briarheart warrior to learn how their hearts are replaced with briar seeds, casting a memory trace spell to record observations. The player must travel to The Reach, kill and harvest a Briarheart, then return to Neloth for a 250 gold reward.",
-    "npc_facts":  {
-                      "Neloth":  {
-                                     "base_facts":  [
-                                                        "I am a Telvanni wizard conducting heart stone experiments at Tel Mithryn.",
-                                                        "All my test subjects in heart replacement experiments have died.",
-                                                        "Forsworn Briarhearts replace their hearts with large briar seeds, connecting their lifesparks to natural forces.",
-                                                        "I can cast a memory trace spell to record someone\u0027s observations without them needing to take notes."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "ACCEPT_QUEST":  [
-                                                                             "I have sent the player to The Reach to examine a Briarheart warrior and cast my memory spell on them."
-                                                                         ],
-                                                        "EXAMINE_BRIARHEART":  [
-                                                                                   "The player has examined a Briarheart and seen how the heart was implanted. I await their return."
-                                                                               ],
-                                                        "REPORT_TO_NELOTH":  [
-                                                                                 "I have extracted the player\u0027s memories of the Briarheart examination and paid them 250 gold for their efforts."
-                                                                             ]
-                                                    }
-                                 }
-                  },
-    "beats":  [
-                  {
-                      "id":  "ACCEPT_QUEST",
-                      "focus_npc":  "Neloth",
-                      "comment":  "Player talks to Neloth about his research and agrees to examine a Briarheart.",
-                      "action":  {
-                                     "type":  "set_stage_cascade",
-                                     "quest_form_id":  "0x0001C05C",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  100
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001C05C",
-                                             "quest_plugin":  "Dragonborn.esm",
-                                             "objective_index":  100
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "help with research",
-                                                            "briarheart",
-                                                            "examine one"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "EXAMINE_BRIARHEART",
-                      "focus_npc":  "",
-                      "comment":  "Player kills a Forsworn Briarheart in The Reach and harvests the heart.",
-                      "action":  {
-                                     "type":  "set_stage_cascade",
-                                     "quest_form_id":  "0x0001C05C",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001C05C",
-                                             "quest_plugin":  "Dragonborn.esm",
-                                             "objective_index":  100
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001C05C",
-                                             "quest_plugin":  "Dragonborn.esm",
-                                             "objective_index":  200
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "harvested the heart",
-                                                            "examined the briarheart",
-                                                            "removed the briar heart"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ACCEPT_QUEST"
-                                        ]
-                  },
-                  {
-                      "id":  "REPORT_TO_NELOTH",
-                      "focus_npc":  "Neloth",
-                      "comment":  "Player returns to Neloth at Tel Mithryn; he extracts memories and pays 250 gold.",
-                      "action":  {
-                                     "type":  "set_stage_cascade",
-                                     "quest_form_id":  "0x0001C05C",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  300
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001C05C",
-                                             "quest_plugin":  "Dragonborn.esm",
-                                             "objective_index":  200
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "examined a briarheart",
-                                                            "found what you need",
-                                                            "here are my findings"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "EXAMINE_BRIARHEART"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "ACCEPT_QUEST"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dlc2ttr5_briarheartnecropsy",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001C05C",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2TTR5",
+  "title": "Briarheart Necropsy",
+  "description": "Neloth asks the player to examine a Forsworn Briarheart warrior to learn how their hearts are replaced with briar seeds, casting a memory trace spell to record observations. The player must travel to The Reach, kill and harvest a Briarheart, then return to Neloth for a 250 gold reward.",
+  "npc_facts": {
+    "Neloth": {
+      "base_facts": [
+        "I am a Telvanni wizard conducting heart stone experiments at Tel Mithryn.",
+        "All my test subjects in heart replacement experiments have died.",
+        "Forsworn Briarhearts replace their hearts with large briar seeds, connecting their lifesparks to natural forces.",
+        "I can cast a memory trace spell to record someone's observations without them needing to take notes."
+      ],
+      "beat_facts": {
+        "ACCEPT_QUEST": [
+          "I have sent the player to The Reach to examine a Briarheart warrior and cast my memory spell on them."
+        ],
+        "EXAMINE_BRIARHEART": [
+          "The player has examined a Briarheart and seen how the heart was implanted. I await their return."
+        ],
+        "REPORT_TO_NELOTH": [
+          "I have extracted the player's memories of the Briarheart examination and paid them 250 gold for their efforts.",
+          "Player returns to Neloth at Tel Mithryn; he extracts memories and pays 250 gold.",
+          "Return to Neloth for your reward.",
+          "It puts their lifesparks in direct connection to the natural forces."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "ACCEPT_QUEST",
+      "focus_npc": "Neloth",
+      "comment": "Player talks to Neloth about his research and agrees to examine a Briarheart.",
+      "action": {
+        "type": "set_stage_cascade",
+        "quest_form_id": "0x0001C05C",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 100
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001C05C",
+          "quest_plugin": "Dragonborn.esm",
+          "objective_index": 100
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help with research",
+            "briarheart",
+            "examine one"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "EXAMINE_BRIARHEART",
+      "focus_npc": "",
+      "comment": "Player kills a Forsworn Briarheart in The Reach and harvests the heart.",
+      "action": {
+        "type": "set_stage_cascade",
+        "quest_form_id": "0x0001C05C",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001C05C",
+          "quest_plugin": "Dragonborn.esm",
+          "objective_index": 100
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001C05C",
+          "quest_plugin": "Dragonborn.esm",
+          "objective_index": 200
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "harvested the heart",
+            "examined the briarheart",
+            "removed the briar heart"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_QUEST"
+      ]
+    },
+    {
+      "id": "REPORT_TO_NELOTH",
+      "focus_npc": "Neloth",
+      "comment": "Player returns to Neloth at Tel Mithryn; he extracts memories and pays 250 gold.",
+      "action": {
+        "type": "set_stage_cascade",
+        "quest_form_id": "0x0001C05C",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 300
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001C05C",
+          "quest_plugin": "Dragonborn.esm",
+          "objective_index": 200
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "examined a briarheart",
+            "found what you need",
+            "here are my findings"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "EXAMINE_BRIARHEART"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "ACCEPT_QUEST"
+    ],
+    "requires": []
+  }
 }

@@ -21,7 +21,10 @@
           "I have informed the suspended member of the fine they must pay to be reinstated. The amount depends on how many past incidents there have been."
         ],
         "QUEST_COMPLETE": [
-          "The suspension has been lifted after the fine was paid."
+          "The suspension has been lifted after the fine was paid.",
+          "Player has paid the fine and their suspension from the College has been lifted.",
+          "Detailed Walkthrough [ edit ] This quest will automatically begin after killing another College member, provided you have already joined the College yourself.",
+          "Therefore, as long as it's your first such incident, you can murder a non-essential member of the College and only have to pay 250 gold, one quarter of the bounty that would be charged in any hold for murder."
         ]
       }
     }
@@ -51,7 +54,10 @@
       "focus_npc": "Tolfdir",
       "comment": "Tolfdir has determined the fine amount based on the number of past incidents. Stage 10=250 gold, 20=500 gold, 30=1000 gold.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000C9A0E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
       },
       "downstream": [],
       "triggers": [
@@ -82,7 +88,10 @@
       "focus_npc": "Tolfdir",
       "comment": "Player has paid the fine and their suspension from the College has been lifted.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000C9A0E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -90,6 +99,26 @@
           "type": "quest_stage",
           "quest_editor_id": "MGRejoinQuest",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

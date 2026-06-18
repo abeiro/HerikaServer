@@ -1,167 +1,186 @@
 {
-    "quest_key":  "dlc1rv10_destroyingthedawnguard",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00019938",
-    "quest_plugin":  "Dawnguard.esm",
-    "quest_editor_id":  "DLC1RV10",
-    "title":  "Destroying the Dawnguard",
-    "description":  "Garan Marethi or Fura Bloodmouth sends you to Dayspring Canyon to eliminate the Dawnguard leaders at Fort Dawnguard, including Isran, to prevent an all-out war between vampires and the Dawnguard.",
-    "npc_facts":  {
-                      "Garan Marethi":  {
-                                            "base_facts":  [
-                                                               "I am a vampire residing in Volkihar Keep.",
-                                                               "I want the Dawnguard leaders destroyed to avoid an all-out war."
-                                                           ],
-                                            "beat_facts":  {
-                                                               "ACCEPT_QUEST":  [
-                                                                                    "I have sent a vampire to destroy the Dawnguard leaders at Fort Dawnguard."
-                                                                                ],
-                                                               "QUEST_COMPLETE":  [
-                                                                                      "The Dawnguard leaders are dead, though the organization may still linger."
-                                                                                  ]
-                                                           }
-                                        },
-                      "Fura Bloodmouth":  {
-                                              "base_facts":  [
-                                                                 "I am a vampire residing in Volkihar Keep.",
-                                                                 "I want the Dawnguard leaders destroyed to avoid an all-out war."
-                                                             ],
-                                              "beat_facts":  {
-                                                                 "ACCEPT_QUEST":  [
-                                                                                      "I have sent a vampire to destroy the Dawnguard leaders at Fort Dawnguard."
-                                                                                  ],
-                                                                 "QUEST_COMPLETE":  [
-                                                                                        "The Dawnguard leaders are dead, though the organization may still linger."
-                                                                                    ]
-                                                             }
-                                          },
-                      "Isran":  {
-                                    "base_facts":  [
-                                                       "I am the leader of the Dawnguard.",
-                                                       "I use Stendarr\u0027s Aura against vampires in melee range.",
-                                                       "I rebuilt the Dawnguard to hunt vampires."
-                                                   ],
-                                    "beat_facts":  {
-
-                                                   }
-                                }
-                  },
-    "beats":  [
-                  {
-                      "id":  "ACCEPT_QUEST",
-                      "focus_npc":  "Garan Marethi",
-                      "comment":  "Player accepts the quest to destroy the Dawnguard leaders from Garan or Fura.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00019938",
-                                     "quest_plugin":  "Dawnguard.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x00019938",
-                                             "quest_plugin":  "Dawnguard.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "destroy the dawnguard",
-                                                            "kill the leaders",
-                                                            "dawnguard leaders"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1RV10",
-                                           "min_stage":  10,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "LEADERS_KILLED",
-                      "focus_npc":  "",
-                      "comment":  "All Dawnguard leaders at Fort Dawnguard have been killed, advancing to return objective.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x00019938",
-                                             "quest_plugin":  "Dawnguard.esm",
-                                             "objective_index":  10
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x00019938",
-                                             "quest_plugin":  "Dawnguard.esm",
-                                             "objective_index":  100
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1RV10",
-                                           "min_stage":  100,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ACCEPT_QUEST"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Garan Marethi",
-                      "comment":  "Player returns to quest giver after destroying Dawnguard leaders. Quest finishes at stage 255.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x00019938",
-                                             "quest_plugin":  "Dawnguard.esm",
-                                             "objective_index":  100
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC1RV10",
-                                           "min_stage":  255,
-                                           "quest_plugin":  "Dawnguard.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "LEADERS_KILLED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "ACCEPT_QUEST"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "dlc1vampirebaseintro_bloodstonechalice",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dlc1rv10_destroyingthedawnguard",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00019938",
+  "quest_plugin": "Dawnguard.esm",
+  "quest_editor_id": "DLC1RV10",
+  "title": "Destroying the Dawnguard",
+  "description": "Garan Marethi or Fura Bloodmouth sends you to Dayspring Canyon to eliminate the Dawnguard leaders at Fort Dawnguard, including Isran, to prevent an all-out war between vampires and the Dawnguard.",
+  "npc_facts": {
+    "Garan Marethi": {
+      "base_facts": [
+        "I am a vampire residing in Volkihar Keep.",
+        "I want the Dawnguard leaders destroyed to avoid an all-out war."
+      ],
+      "beat_facts": {
+        "ACCEPT_QUEST": [
+          "I have sent a vampire to destroy the Dawnguard leaders at Fort Dawnguard."
+        ],
+        "QUEST_COMPLETE": [
+          "The Dawnguard leaders are dead, though the organization may still linger."
+        ]
+      }
+    },
+    "Fura Bloodmouth": {
+      "base_facts": [
+        "I am a vampire residing in Volkihar Keep.",
+        "I want the Dawnguard leaders destroyed to avoid an all-out war."
+      ],
+      "beat_facts": {
+        "ACCEPT_QUEST": [
+          "I have sent a vampire to destroy the Dawnguard leaders at Fort Dawnguard."
+        ],
+        "QUEST_COMPLETE": [
+          "The Dawnguard leaders are dead, though the organization may still linger."
+        ]
+      }
+    },
+    "Isran": {
+      "base_facts": [
+        "I am the leader of the Dawnguard.",
+        "I use Stendarr's Aura against vampires in melee range.",
+        "I rebuilt the Dawnguard to hunt vampires."
+      ],
+      "beat_facts": {}
+    }
+  },
+  "beats": [
+    {
+      "id": "ACCEPT_QUEST",
+      "focus_npc": "Garan Marethi",
+      "comment": "Player accepts the quest to destroy the Dawnguard leaders from Garan or Fura.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00019938",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00019938",
+          "quest_plugin": "Dawnguard.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "destroy the dawnguard",
+            "kill the leaders",
+            "dawnguard leaders"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1RV10",
+          "min_stage": 10,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "LEADERS_KILLED",
+      "focus_npc": "",
+      "comment": "All Dawnguard leaders at Fort Dawnguard have been killed, advancing to return objective.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00019938",
+          "quest_plugin": "Dawnguard.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00019938",
+          "quest_plugin": "Dawnguard.esm",
+          "objective_index": 100
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1RV10",
+          "min_stage": 100,
+          "quest_plugin": "Dawnguard.esm"
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ACCEPT_QUEST"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Garan Marethi",
+      "comment": "Player returns to quest giver after destroying Dawnguard leaders. Quest finishes at stage 255.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00019938",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 255
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00019938",
+          "quest_plugin": "Dawnguard.esm",
+          "objective_index": 100
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC1RV10",
+          "min_stage": 255,
+          "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEADERS_KILLED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "ACCEPT_QUEST"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "dlc1vampirebaseintro_bloodstonechalice",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

@@ -1,242 +1,244 @@
 {
-    "quest_key":  "ms13_goldenclaw",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00039645",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MS13",
-    "title":  "The Golden Claw",
-    "description":  "Lucan Valerius\u0027s antique Golden Claw was stolen from the Riverwood Trader by bandits who fled to Bleak Falls Barrow. Retrieve the claw, discover the barrow\u0027s secret, and return the claw to Lucan or Camilla for a gold reward.",
-    "npc_facts":  {
-                      "Lucan Valerius":  {
-                                             "base_facts":  [
-                                                                "My antique Golden Claw was stolen from the Riverwood Trader by bandits.",
-                                                                "I am offering a gold reward for its return from Bleak Falls Barrow."
-                                                            ],
-                                             "beat_facts":  {
-                                                                "QUEST_ACCEPTED":  [
-                                                                                       "Someone has agreed to help retrieve the Golden Claw from Bleak Falls Barrow."
-                                                                                   ],
-                                                                "CLAW_RETURNED":  [
-                                                                                      "The Golden Claw has been returned! I rewarded the hero generously."
-                                                                                  ]
-                                                            }
-                                         },
-                      "Camilla Valerius":  {
-                                               "base_facts":  [
-                                                                  "Our shop was robbed. The golden claw was stolen by bandits.",
-                                                                  "I can guide you to Bleak Falls Barrow to find the claw."
-                                                              ],
-                                               "beat_facts":  {
-                                                                  "QUEST_ACCEPTED":  [
-                                                                                         "Someone is heading to Bleak Falls Barrow to retrieve the Golden Claw. I offered to show them the way."
-                                                                                     ],
-                                                                  "CLAW_RETURNED":  [
-                                                                                        "The Golden Claw has been returned! I gave them a reward for their effort."
-                                                                                    ]
-                                                              }
-                                           },
-                      "Arvel the Swift":  {
-                                              "base_facts":  [
-                                                                 "I stole the golden claw from the Riverwood Trader and fled to Bleak Falls Barrow.",
-                                                                 "I am trapped in a spider\u0027s web deeper in the barrow."
-                                                             ],
-                                              "beat_facts":  {
-                                                                 "ARVEL_ENCOUNTERED":  [
-                                                                                           "Someone found me trapped in the spider\u0027s web. I promised to give them the claw if they cut me free."
-                                                                                       ]
-                                                             }
-                                          }
-                  },
-    "beats":  [
-                  {
-                      "id":  "QUEST_ACCEPTED",
-                      "focus_npc":  "Lucan Valerius",
-                      "comment":  "Player learns about the stolen Golden Claw and accepts the quest from Lucan or overhears bandits.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS13",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "golden claw",
-                                                            "stolen claw",
-                                                            "robbery",
-                                                            "break-in"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "ARVEL_ENCOUNTERED",
-                      "focus_npc":  "Arvel the Swift",
-                      "comment":  "Player finds Arvel trapped in a spider web and must decide to free him for the claw.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS13",
-                                           "min_stage":  15
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "arvel",
-                                                            "cut down",
-                                                            "free him",
-                                                            "spider web"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "QUEST_ACCEPTED"
-                                        ]
-                  },
-                  {
-                      "id":  "CLAW_OBTAINED",
-                      "focus_npc":  "",
-                      "comment":  "Player obtains the Golden Claw from Arvel\u0027s body and learns it is also a key.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS13",
-                                           "min_stage":  35
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "got the claw",
-                                                            "claw is a key",
-                                                            "arvel\u0027s journal"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ARVEL_ENCOUNTERED"
-                                        ]
-                  },
-                  {
-                      "id":  "SECRET_DISCOVERED",
-                      "focus_npc":  "",
-                      "comment":  "Player solves the puzzle door using the claw and learns a Word of Power from the Word Wall.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS13",
-                                           "min_stage":  40
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "word wall",
-                                                            "puzzle door",
-                                                            "dragon shout",
-                                                            "fus"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CLAW_OBTAINED"
-                                        ]
-                  },
-                  {
-                      "id":  "CLAW_RETURNED",
-                      "focus_npc":  "Lucan Valerius",
-                      "comment":  "Player returns the Golden Claw to Lucan or Camilla and receives a leveled gold reward.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS13",
-                                           "min_stage":  100
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "return the claw",
-                                                            "give back the claw",
-                                                            "claw is home"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SECRET_DISCOVERED"
-                                        ]
-                  },
-                  {
-                      "id":  "VALERIUS_DEAD",
-                      "focus_npc":  "",
-                      "comment":  "Both Lucan and Camilla are dead; the quest reward is no longer available.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS13",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "QUEST_ACCEPTED"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "ms13_goldenclaw",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00039645",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MS13",
+  "title": "The Golden Claw",
+  "description": "Lucan Valerius's antique Golden Claw was stolen from the Riverwood Trader by bandits who fled to Bleak Falls Barrow. Retrieve the claw, discover the barrow's secret, and return the claw to Lucan or Camilla for a gold reward.",
+  "npc_facts": {
+    "Lucan Valerius": {
+      "base_facts": [
+        "My antique Golden Claw was stolen from the Riverwood Trader by bandits.",
+        "I am offering a gold reward for its return from Bleak Falls Barrow."
+      ],
+      "beat_facts": {
+        "QUEST_ACCEPTED": [
+          "Someone has agreed to help retrieve the Golden Claw from Bleak Falls Barrow."
+        ],
+        "CLAW_RETURNED": [
+          "The Golden Claw has been returned! I rewarded the hero generously."
+        ],
+        "VALERIUS_DEAD": [
+          "Both Lucan and Camilla are dead; the quest reward is no longer available.",
+          "In the shape of a dragon's claw.\" If you offer to help him get the claw back, he will offer a gold reward and will then continue debating with Camilla.",
+          "Follow her outside and she will point out Bleak Falls Barrow , barely visible in the distance behind Alvor and Sigrid's House , and lead you to the bridge northeast of town."
+        ]
+      }
+    },
+    "Camilla Valerius": {
+      "base_facts": [
+        "Our shop was robbed. The golden claw was stolen by bandits.",
+        "I can guide you to Bleak Falls Barrow to find the claw."
+      ],
+      "beat_facts": {
+        "QUEST_ACCEPTED": [
+          "Someone is heading to Bleak Falls Barrow to retrieve the Golden Claw. I offered to show them the way."
+        ],
+        "CLAW_RETURNED": [
+          "The Golden Claw has been returned! I gave them a reward for their effort."
+        ]
+      }
+    },
+    "Arvel the Swift": {
+      "base_facts": [
+        "I stole the golden claw from the Riverwood Trader and fled to Bleak Falls Barrow.",
+        "I am trapped in a spider's web deeper in the barrow."
+      ],
+      "beat_facts": {
+        "ARVEL_ENCOUNTERED": [
+          "Someone found me trapped in the spider's web. I promised to give them the claw if they cut me free."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_ACCEPTED",
+      "focus_npc": "Lucan Valerius",
+      "comment": "Player learns about the stolen Golden Claw and accepts the quest from Lucan or overhears bandits.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00039645",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS13",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "golden claw",
+            "stolen claw",
+            "robbery",
+            "break-in"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "ARVEL_ENCOUNTERED",
+      "focus_npc": "Arvel the Swift",
+      "comment": "Player finds Arvel trapped in a spider web and must decide to free him for the claw.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00039645",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 15
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS13",
+          "min_stage": 15
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "arvel",
+            "cut down",
+            "free him",
+            "spider web"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_ACCEPTED"
+      ]
+    },
+    {
+      "id": "CLAW_OBTAINED",
+      "focus_npc": "",
+      "comment": "Player obtains the Golden Claw from Arvel's body and learns it is also a key.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00039645",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 35
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS13",
+          "min_stage": 35
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "got the claw",
+            "claw is a key",
+            "arvel's journal"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ARVEL_ENCOUNTERED"
+      ]
+    },
+    {
+      "id": "SECRET_DISCOVERED",
+      "focus_npc": "",
+      "comment": "Player solves the puzzle door using the claw and learns a Word of Power from the Word Wall.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00039645",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS13",
+          "min_stage": 40
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "word wall",
+            "puzzle door",
+            "dragon shout",
+            "fus"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CLAW_OBTAINED"
+      ]
+    },
+    {
+      "id": "CLAW_RETURNED",
+      "focus_npc": "Lucan Valerius",
+      "comment": "Player returns the Golden Claw to Lucan or Camilla and receives a leveled gold reward.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00039645",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 100
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS13",
+          "min_stage": 100
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "return the claw",
+            "give back the claw",
+            "claw is home"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SECRET_DISCOVERED"
+      ]
+    },
+    {
+      "id": "VALERIUS_DEAD",
+      "focus_npc": "",
+      "comment": "Both Lucan and Camilla are dead; the quest reward is no longer available.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS13",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": []
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "QUEST_ACCEPTED"
+    ],
+    "requires": []
+  }
 }

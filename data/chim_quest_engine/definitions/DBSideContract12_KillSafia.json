@@ -1,147 +1,151 @@
 {
-    "quest_key":  "dbsidecontract12_killsafia",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001EA68",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "DBSideContract12",
-    "title":  "Kill Safia",
-    "description":  "A Dark Brotherhood contract to assassinate Safia, the pirate captain of the Red Wave, a ship moored near the East Empire Company Warehouse in Solitude. After the kill, report back to Nazir at the Sanctuary for a leveled gold reward.",
-    "npc_facts":  {
-                      "Nazir":  {
-                                    "base_facts":  [
-                                                       "Dark Brotherhood member who assigns side contracts from the Sanctuary.",
-                                                       "Respects those who complete difficult kills."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "CONTRACT_ACCEPTED":  [
-                                                                                 "Has given the player a contract to kill Safia, the pirate captain of the Red Wave moored at the Solitude docks."
-                                                                             ],
-                                                       "QUEST_COMPLETE":  [
-                                                                              "Impressed the player killed a pirate captain on her own ship. All additional Dark Brotherhood side contracts are now exhausted."
-                                                                          ]
-                                                   }
-                                },
-                      "Safia":  {
-                                    "base_facts":  [
-                                                       "Pirate captain of the ship Red Wave.",
-                                                       "Her ship is moored at the docks in Solitude near the East Empire Company Warehouse.",
-                                                       "Can be provoked into attacking through dialogue, allowing a bounty-free kill.",
-                                                       "Her crew will not defend her if she initiates combat."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "TARGET_ELIMINATED":  [
-                                                                                 "Has been killed by the player."
-                                                                             ]
-                                                   }
-                                }
-                  },
-    "beats":  [
-                  {
-                      "id":  "CONTRACT_ACCEPTED",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Player accepts the contract to kill Safia from Nazir.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract12",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "kill Safia",
-                                                            "pirate captain",
-                                                            "Red Wave contract"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "TARGET_ELIMINATED",
-                      "focus_npc":  "Safia",
-                      "comment":  "Safia has been killed. Player must report back to Nazir.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract12",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Safia is dead",
-                                                            "killed Safia",
-                                                            "pirate is dead"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CONTRACT_ACCEPTED"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Nazir",
-                      "comment":  "Player reports back to Nazir and collects leveled gold reward. This is the final Dark Brotherhood side contract.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DBSideContract12",
-                                           "stage":  200
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "collected my reward",
-                                                            "job is done",
-                                                            "payment from Nazir"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TARGET_ELIMINATED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "CONTRACT_ACCEPTED"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "db02a_sanctuary",
-                                               "beat_id":  "CONTRACTS_RECEIVED"
-                                           }
-                                       ]
-                      }
+  "quest_key": "dbsidecontract12_killsafia",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001EA68",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "DBSideContract12",
+  "title": "Kill Safia",
+  "description": "A Dark Brotherhood contract to assassinate Safia, the pirate captain of the Red Wave, a ship moored near the East Empire Company Warehouse in Solitude. After the kill, report back to Nazir at the Sanctuary for a leveled gold reward.",
+  "npc_facts": {
+    "Nazir": {
+      "base_facts": [
+        "Dark Brotherhood member who assigns side contracts from the Sanctuary.",
+        "Respects those who complete difficult kills."
+      ],
+      "beat_facts": {
+        "CONTRACT_ACCEPTED": [
+          "Has given the player a contract to kill Safia, the pirate captain of the Red Wave moored at the Solitude docks."
+        ],
+        "QUEST_COMPLETE": [
+          "Impressed the player killed a pirate captain on her own ship. All additional Dark Brotherhood side contracts are now exhausted.",
+          "Player reports back to Nazir and collects leveled gold reward. This is the final Dark Brotherhood side contract.",
+          "After the kill, report back to Nazir for some leveled gold as a reward: \"You haven't faced that pirate captain yet, have you?",
+          "Report back to Nazir and claim your reward."
+        ]
+      }
+    },
+    "Safia": {
+      "base_facts": [
+        "Pirate captain of the ship Red Wave.",
+        "Her ship is moored at the docks in Solitude near the East Empire Company Warehouse.",
+        "Can be provoked into attacking through dialogue, allowing a bounty-free kill.",
+        "Her crew will not defend her if she initiates combat."
+      ],
+      "beat_facts": {
+        "TARGET_ELIMINATED": [
+          "Has been killed by the player."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "CONTRACT_ACCEPTED",
+      "focus_npc": "Nazir",
+      "comment": "Player accepts the contract to kill Safia from Nazir.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA68",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract12",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "kill Safia",
+            "pirate captain",
+            "Red Wave contract"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "TARGET_ELIMINATED",
+      "focus_npc": "Safia",
+      "comment": "Safia has been killed. Player must report back to Nazir.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA68",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract12",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Safia is dead",
+            "killed Safia",
+            "pirate is dead"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CONTRACT_ACCEPTED"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Nazir",
+      "comment": "Player reports back to Nazir and collects leveled gold reward. This is the final Dark Brotherhood side contract.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001EA68",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DBSideContract12",
+          "stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "collected my reward",
+            "job is done",
+            "payment from Nazir"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TARGET_ELIMINATED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "CONTRACT_ACCEPTED"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "db02a_sanctuary",
+        "beat_id": "CONTRACTS_RECEIVED"
+      }
+    ]
+  }
 }

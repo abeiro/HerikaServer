@@ -18,6 +18,11 @@
         ],
         "MEET_FARALDA": [
           "I have met a prospective student at the bridge and will test them before granting entry."
+        ],
+        "QUEST_COMPLETE": [
+          "A visitor directed to the College has reached my bridge and must now prove themselves worthy of entry.",
+          "I will begin the First Lessons trial to test this prospective student's magical ability before granting them passage into the College.",
+          "No one bypasses my judgment; this seeker will face the same test as all who wish to join the College."
         ]
       }
     },

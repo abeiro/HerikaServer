@@ -19,6 +19,11 @@
         ],
         "CHOOSE_NIGHTINGALE_ROLE": [
           "The new recruit must choose which Nightingale ability to receive from Nocturnal."
+        ],
+        "QUEST_COMPLETE": [
+          "Quest complete. Player has become a true Nightingale Agent with Nocturnal's blessing.",
+          "The Fourth Test [ edit ] The two paths in the room of the fourth test The corridor that lies ahead has a path leading directly through to a door.",
+          "This will cause a hidden passage to open from behind the statue, leading to a corridor and your fourth test."
         ]
       }
     },
@@ -79,7 +84,10 @@
       "focus_npc": "Gallus",
       "comment": "Player speaks to Gallus's spirit and learns about the Pilgrim's Path and the Ebonmere.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00021555",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -109,7 +117,11 @@
       "focus_npc": "",
       "comment": "Player navigates the five tests of the Pilgrim's Path through the Sepulcher.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00021555",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "TG09",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [
@@ -117,19 +129,61 @@
           "type": "quest_stage",
           "quest_editor_id": "TG09",
           "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I agree",
+            "I accept",
+            "I will do it",
+            "I am ready",
+            "let's continue",
+            "what are my orders",
+            "tell me what to do",
+            "I will meet them",
+            "lead the way",
+            "I will follow",
+            "let's go",
+            "tell me more",
+            "I need to speak with them",
+            "I understand"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player explicitly agrees to proceed with this quest handoff: Player navigates the five tests of the Pilgrim's Path through the Sepulcher.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I agree. Let's do this.",
+            "I am ready to proceed.",
+            "I will follow your instructions.",
+            "Tell me what needs to happen next."
+          ],
+          "examples_no": [
+            "What are you asking me to do?",
+            "I need more information first.",
+            "I am not ready yet.",
+            "No, I do not want to do that."
+          ]
         }
       ],
       "trigger_mode": "any",
       "prerequisites": [
         "SPEAK_TO_SENTINEL"
-      ]
+      ],
+      "intent_summary": "Player agrees to proceed with this quest handoff: Player navigates the five tests of the Pilgrim's Path through the Sepulcher."
     },
     {
       "id": "RETURN_SKELETON_KEY",
       "focus_npc": "Nocturnal",
       "comment": "Player unlocks the Ebonmere with the Skeleton Key.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00021555",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
       },
       "downstream": [],
       "triggers": [
@@ -137,6 +191,26 @@
           "type": "quest_stage",
           "quest_editor_id": "TG09",
           "min_stage": 40
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",
@@ -169,7 +243,10 @@
       "focus_npc": "Karliah",
       "comment": "Player speaks to Karliah and chooses a Nightingale blessing: Agent of Shadow, Subterfuge, or Strife.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00021555",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 70
       },
       "downstream": [],
       "triggers": [

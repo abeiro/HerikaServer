@@ -17,7 +17,10 @@
           "I have sent warriors to take Fort Sungard from the Imperials."
         ],
         "FORT_SUNGARD_VICTORY": [
-          "Fort Sungard has fallen to the Stormcloaks. The Reach is ours."
+          "Fort Sungard has fallen to the Stormcloaks. The Reach is ours.",
+          "Fort Sungard is taken; quest completes. Thongvor Silver-Blood becomes Jarl, Igmund is displaced, Ondolemar perishes.",
+          "Return to Legate Rikke to receive the leveled gold reward only when you want to start the next quest in the series and skip the reward when the game doesn't prompt you to return to her.",
+          "When you do so she will reward you with a leveled amount of gold and automatically start the next quest in the series, Battle for Windhelm ."
         ]
       }
     }

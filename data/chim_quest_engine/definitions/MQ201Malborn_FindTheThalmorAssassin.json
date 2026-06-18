@@ -33,7 +33,10 @@
           "Malborn's request for help has been accepted. The assassin is believed to be a Khajiit near the city gates."
         ],
         "TELL_MALBORN": [
-          "Malborn has been told the assassin is dead. He is grateful and leaving for Morrowind."
+          "Malborn has been told the assassin is dead. He is grateful and leaving for Morrowind.",
+          "Player tells Malborn the assassin is dead, completing the quest.",
+          "Upon your next visit anywhere near the city of Windhelm a hidden timer of 1 in-game day starts, so be sure to receive and complete this quest fast.",
+          "If you miss speaking to Ri'saad before the 1 in-game day timer runs out, he will return to his usual route and the final dialogue with the assassin cannot be unlocked, preventing the quest from progressing."
         ]
       }
     }

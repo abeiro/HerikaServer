@@ -12,7 +12,12 @@
         "I sell Kagrumez Resonance Gems to travelers who ask about them.",
         "I tend the silt strider just west of Tel Mithryn."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "The Kagrumez trials have been completed, though I still sell resonance gems to any who ask about them.",
+          "I continue tending the silt strider west of Tel Mithryn as I always have."
+        ]
+      }
     },
     "Steadfast Dwarven Spider": {
       "base_facts": [
@@ -22,6 +27,12 @@
       "beat_facts": {
         "FIRST_PATTERN_COMPLETE": [
           "I have been freed from my chamber after the first Kagrumez trial was completed."
+        ],
+        "QUEST_COMPLETE": [
+          "All three Kagrumez trials have been completed and the gauntlet is conquered.",
+          "I am available as a pet follower but cannot accompany someone who already has the Steadfast Dwarven Sphere or another pet.",
+          "I do not count as a summon, so my master can still use conjurations alongside me.",
+          "I will respawn in my Kagrumez chamber if I am destroyed."
         ]
       }
     },
@@ -33,6 +44,12 @@
       "beat_facts": {
         "SECOND_PATTERN_COMPLETE": [
           "I have been freed from my chamber after the second Kagrumez trial was completed."
+        ],
+        "QUEST_COMPLETE": [
+          "All three Kagrumez trials have been completed and the gauntlet is conquered.",
+          "I am available as a pet follower but cannot accompany someone who already has the Steadfast Dwarven Spider or another pet.",
+          "I do not count as a summon, so my master can still use conjurations alongside me.",
+          "I will respawn in my Kagrumez chamber if I am destroyed."
         ]
       }
     }

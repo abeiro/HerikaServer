@@ -1,215 +1,214 @@
 {
-    "quest_key":  "freeformvalddebt_valdsdebt",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x000C04BA",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "FreeformValdDebt",
-    "title":  "Vald\u0027s Debt",
-    "description":  "Clear Vald\u0027s debt to Maven Black-Briar by retrieving the lost Quill of Gemination from the bottom of Lake Honrich, so Vald will stop guarding Riftweald Manor for Mercer Frey.",
-    "npc_facts":  {
-                      "Maven Black-Briar":  {
-                                                "base_facts":  [
-                                                                   "I commissioned a unique quill from Winterhold years ago.",
-                                                                   "Vald was supposed to deliver it but lost it at the bottom of Lake Honrich.",
-                                                                   "Vald owes me a debt."
-                                                               ],
-                                                "beat_facts":  {
-                                                                   "TALK_TO_MAVEN":  [
-                                                                                         "I told someone about the Quill of Gemination lost in Lake Honrich."
-                                                                                     ],
-                                                                   "RETURN_QUILL":  [
-                                                                                        "The Quill has been returned to me. I wrote a note clearing Vald\u0027s debt."
-                                                                                    ]
-                                                               }
-                                            },
-                      "Vald":  {
-                                   "base_facts":  [
-                                                      "I owe Maven Black-Briar a debt.",
-                                                      "I guard Riftweald Manor for Mercer Frey because of my debt to Maven."
-                                                  ],
-                                   "beat_facts":  {
-                                                      "QUEST_COMPLETE":  [
-                                                                             "My debt to Maven has been cleared. I gave the key to Riftweald Manor and opened the back gate."
-                                                                         ]
-                                                  }
-                               }
-                  },
-    "beats":  [
-                  {
-                      "id":  "TALK_TO_MAVEN",
-                      "focus_npc":  "Maven Black-Briar",
-                      "comment":  "Player asks Maven about Vald\u0027s debt and learns about the Quill of Gemination.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x000C04BA",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x000C04BA",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_form_id":  "0x000C04BA",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "quest_editor_id":  "FreeformValdDebt",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Vald\u0027s debt",
-                                                            "help Vald",
-                                                            "clear Vald\u0027s debt"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "LOCATE_QUILL",
-                      "focus_npc":  "",
-                      "comment":  "Player finds the Quill of Gemination in Vald\u0027s sunken rowboat in Lake Honrich.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x000C04BA",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  20
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x000C04BA",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x000C04BA",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_form_id":  "0x000C04BA",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "quest_editor_id":  "FreeformValdDebt",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "found the quill",
-                                                            "Quill of Gemination",
-                                                            "got the quill"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TALK_TO_MAVEN"
-                                        ]
-                  },
-                  {
-                      "id":  "RETURN_QUILL",
-                      "focus_npc":  "Maven Black-Briar",
-                      "comment":  "Player brings the Quill of Gemination to Maven and receives a note clearing Vald\u0027s debt.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x000C04BA",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  30
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x000C04BA",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x000C04BA",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  30
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_form_id":  "0x000C04BA",
-                                           "quest_plugin":  "Skyrim.esm",
-                                           "quest_editor_id":  "FreeformValdDebt",
-                                           "min_stage":  30
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "brought the quill",
-                                                            "here is the quill",
-                                                            "return the quill"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "LOCATE_QUILL"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Vald",
-                      "comment":  "Player gives Vald the note from Maven clearing his debt. Vald provides the key to Riftweald Manor.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x000C04BA",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  30
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "debt is cleared",
-                                                            "Maven cleared your debt",
-                                                            "your debt is gone"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RETURN_QUILL"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "TALK_TO_MAVEN"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "freeformvalddebt_valdsdebt",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000C04BA",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "FreeformValdDebt",
+  "title": "Vald's Debt",
+  "description": "Clear Vald's debt to Maven Black-Briar by retrieving the lost Quill of Gemination from the bottom of Lake Honrich, so Vald will stop guarding Riftweald Manor for Mercer Frey.",
+  "npc_facts": {
+    "Maven Black-Briar": {
+      "base_facts": [
+        "I commissioned a unique quill from Winterhold years ago.",
+        "Vald was supposed to deliver it but lost it at the bottom of Lake Honrich.",
+        "Vald owes me a debt."
+      ],
+      "beat_facts": {
+        "TALK_TO_MAVEN": [
+          "I told someone about the Quill of Gemination lost in Lake Honrich."
+        ],
+        "RETURN_QUILL": [
+          "The Quill has been returned to me. I wrote a note clearing Vald's debt."
+        ]
+      }
+    },
+    "Vald": {
+      "base_facts": [
+        "I owe Maven Black-Briar a debt.",
+        "I guard Riftweald Manor for Mercer Frey because of my debt to Maven."
+      ],
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "My debt to Maven has been cleared. I gave the key to Riftweald Manor and opened the back gate.",
+          "Player gives Vald the note from Maven clearing his debt. Vald provides the key to Riftweald Manor.",
+          "Attempting to erase Vald's debt after he is dead will still earn you leveled gold, but you will be unable to complete the quest by delivering the letter of pardon.",
+          "To do this, talk to Maven to get the quill to spawn, go and obtain the quill, then go to Vald and intimidate/bribe him to let you pass."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "TALK_TO_MAVEN",
+      "focus_npc": "Maven Black-Briar",
+      "comment": "Player asks Maven about Vald's debt and learns about the Quill of Gemination.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000C04BA",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000C04BA",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_form_id": "0x000C04BA",
+          "quest_plugin": "Skyrim.esm",
+          "quest_editor_id": "FreeformValdDebt",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Vald's debt",
+            "help Vald",
+            "clear Vald's debt"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "LOCATE_QUILL",
+      "focus_npc": "",
+      "comment": "Player finds the Quill of Gemination in Vald's sunken rowboat in Lake Honrich.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000C04BA",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000C04BA",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000C04BA",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_form_id": "0x000C04BA",
+          "quest_plugin": "Skyrim.esm",
+          "quest_editor_id": "FreeformValdDebt",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "found the quill",
+            "Quill of Gemination",
+            "got the quill"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TALK_TO_MAVEN"
+      ]
+    },
+    {
+      "id": "RETURN_QUILL",
+      "focus_npc": "Maven Black-Briar",
+      "comment": "Player brings the Quill of Gemination to Maven and receives a note clearing Vald's debt.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000C04BA",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000C04BA",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x000C04BA",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 30
+        }
+      ],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_form_id": "0x000C04BA",
+          "quest_plugin": "Skyrim.esm",
+          "quest_editor_id": "FreeformValdDebt",
+          "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "brought the quill",
+            "here is the quill",
+            "return the quill"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LOCATE_QUILL"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Vald",
+      "comment": "Player gives Vald the note from Maven clearing his debt. Vald provides the key to Riftweald Manor.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x000C04BA",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 30
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "debt is cleared",
+            "Maven cleared your debt",
+            "your debt is gone"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETURN_QUILL"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "TALK_TO_MAVEN"
+    ],
+    "requires": []
+  }
 }

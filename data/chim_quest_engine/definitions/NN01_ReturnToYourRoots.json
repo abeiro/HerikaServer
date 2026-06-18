@@ -25,7 +25,10 @@
           "The player has collected thirty Crimson Nirnroot samples from Blackreach."
         ],
         "QUEST_COMPLETE": [
-          "The player delivered the Crimson Nirnroot and I pledged to continue Sinderion's research in his memory."
+          "The player delivered the Crimson Nirnroot and I pledged to continue Sinderion's research in his memory.",
+          "Player delivers thirty Crimson Nirnroot to Avrusa Sarethi, completing the quest.",
+          "In order to get started, begin at the beginning in Sinderion's Field Laboratory .",
+          "To complete the quest even if the quest log does not represent the actual amount of Crimson Nirnroot you have in inventory simply go to Avrusa with thirty in your inventory, and the quest will complete itself without."
         ]
       }
     }
@@ -101,7 +104,10 @@
       "focus_npc": "Avrusa Sarethi",
       "comment": "Player delivers thirty Crimson Nirnroot to Avrusa Sarethi, completing the quest.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000C9BA0",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -109,6 +115,26 @@
           "type": "quest_stage",
           "quest_editor_id": "NN01",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

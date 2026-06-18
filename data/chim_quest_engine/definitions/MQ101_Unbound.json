@@ -22,6 +22,12 @@
         ],
         "ESCAPE_THROUGH_KEEP": [
           "I led the player through Helgen Keep to escape the dragon."
+        ],
+        "FREEDOM": [
+          "I escaped Helgen alongside the player after surviving Alduin's attack on the town.",
+          "I plan to head to Riverwood to find my sister Gerdur for shelter and supplies.",
+          "I urged the player to warn the Jarl of Whiterun about the dragon threat.",
+          "I told the player the Stormcloaks could use someone with their skills in Windhelm."
         ]
       }
     },
@@ -40,6 +46,12 @@
         ],
         "ESCAPE_THROUGH_KEEP": [
           "I led the player through Helgen Keep to escape the dragon."
+        ],
+        "FREEDOM": [
+          "I escaped Helgen alongside the player after surviving Alduin's attack on the town.",
+          "I plan to head to Riverwood to find my uncle Alvor the blacksmith for shelter and supplies.",
+          "I urged the player to warn the Jarl of Whiterun about the dragon threat.",
+          "I told the player the Imperial Legion could use someone with their skills in Solitude."
         ]
       }
     }
@@ -69,7 +81,10 @@
       "focus_npc": "",
       "comment": "Alduin's attack creates chaos. Player must make their way to Helgen Keep and choose to enter with either Ralof or Hadvar.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003372B",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 160
       },
       "downstream": [],
       "triggers": [

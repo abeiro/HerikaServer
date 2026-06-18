@@ -1,186 +1,206 @@
 {
-    "quest_key":  "ms06_wolfqueenawakened",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00026C4D",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MS06",
-    "title":  "The Wolf Queen Awakened",
-    "description":  "Potema the Wolf Queen has escaped her binding and is gathering power in her catacombs beneath Solitude. Falk Firebeard sends the player to Styrr for the key, then into Potema\u0027s Catacombs to defeat her and retrieve her remains for sanctification.",
-    "npc_facts":  {
-                      "Falk Firebeard":  {
-                                             "base_facts":  [
-                                                                "I am the steward of the Blue Palace in Solitude.",
-                                                                "Potema the Wolf Queen has escaped her binding ritual and must be stopped.",
-                                                                "I sent a letter warning of the threat and requesting the adventurer\u0027s return.",
-                                                                "Styrr the priest of Arkay can provide guidance and the key to Potema\u0027s Catacombs."
-                                                            ],
-                                             "beat_facts":  {
-                                                                "MS06_STAGE_50":  [
-                                                                                      "I have sent the adventurer to speak with Styrr about how to stop Potema."
-                                                                                  ],
-                                                                "MS06_COMPLETE":  [
-                                                                                      "Potema has been defeated. I rewarded the adventurer with gold and the Shield of Solitude on behalf of the jarl."
-                                                                                  ]
-                                                            }
-                                         },
-                      "Styrr":  {
-                                    "base_facts":  [
-                                                       "I am a priest of Arkay at Solitude\u0027s Hall of the Dead.",
-                                                       "Potema was a formidable necromancer and former Queen of Solitude who raised armies of the dead.",
-                                                       "Potema\u0027s remains must be sanctified to prevent her full resurrection.",
-                                                       "I hold the key to Potema\u0027s Catacombs beneath the Temple of the Divines."
-                                                   ],
-                                    "beat_facts":  {
-                                                       "MS06_STAGE_50":  [
-                                                                             "I gave the adventurer the key to Potema\u0027s Catacombs and the spell Turn Undead."
-                                                                         ],
-                                                       "MS06_STAGE_150":  [
-                                                                              "I have received Potema\u0027s remains and will bless them to prevent her return."
-                                                                          ]
-                                                   }
-                                }
-                  },
-    "beats":  [
-                  {
-                      "id":  "MS06_STAGE_50",
-                      "focus_npc":  "Styrr",
-                      "comment":  "Player sent to speak with Styrr about Potema and receive the catacombs key.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS06",
-                                           "min_stage":  50
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Styrr",
-                                                            "Potema",
-                                                            "catacombs key"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "MS06_STAGE_100",
-                      "focus_npc":  "",
-                      "comment":  "Player enters Potema\u0027s Catacombs to confront and defeat Potema.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS06",
-                                           "min_stage":  100
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "MS06_STAGE_50"
-                                        ]
-                  },
-                  {
-                      "id":  "MS06_STAGE_125",
-                      "focus_npc":  "",
-                      "comment":  "Player retrieves Potema\u0027s skull from the throne in the sanctum.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS06",
-                                           "min_stage":  125
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "MS06_STAGE_100"
-                                        ]
-                  },
-                  {
-                      "id":  "MS06_STAGE_150",
-                      "focus_npc":  "Styrr",
-                      "comment":  "Player returns Potema\u0027s remains to Styrr for blessing and must report to Falk.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS06",
-                                           "min_stage":  150
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Potema\u0027s remains",
-                                                            "bless the remains"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "MS06_STAGE_125"
-                                        ]
-                  },
-                  {
-                      "id":  "MS06_COMPLETE",
-                      "focus_npc":  "Falk Firebeard",
-                      "comment":  "Quest complete. Falk rewards the player with gold and the Shield of Solitude.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MS06",
-                                           "min_stage":  250
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "MS06_STAGE_150"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "MS06_STAGE_50"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "ms06start_manwhocriedwolf",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "ms06_wolfqueenawakened",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00026C4D",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MS06",
+  "title": "The Wolf Queen Awakened",
+  "description": "Potema the Wolf Queen has escaped her binding and is gathering power in her catacombs beneath Solitude. Falk Firebeard sends the player to Styrr for the key, then into Potema's Catacombs to defeat her and retrieve her remains for sanctification.",
+  "npc_facts": {
+    "Falk Firebeard": {
+      "base_facts": [
+        "I am the steward of the Blue Palace in Solitude.",
+        "Potema the Wolf Queen has escaped her binding ritual and must be stopped.",
+        "I sent a letter warning of the threat and requesting the adventurer's return.",
+        "Styrr the priest of Arkay can provide guidance and the key to Potema's Catacombs."
+      ],
+      "beat_facts": {
+        "MS06_STAGE_50": [
+          "I have sent the adventurer to speak with Styrr about how to stop Potema."
+        ],
+        "MS06_COMPLETE": [
+          "Potema has been defeated. I rewarded the adventurer with gold and the Shield of Solitude on behalf of the jarl.",
+          "Quest complete. Falk rewards the player with gold and the Shield of Solitude.",
+          "Reading this letter will trigger the next quest, Let Sleeping Wolves Lie .",
+          "Your reward is gold and the Shield of Solitude ."
+        ]
+      }
+    },
+    "Styrr": {
+      "base_facts": [
+        "I am a priest of Arkay at Solitude's Hall of the Dead.",
+        "Potema was a formidable necromancer and former Queen of Solitude who raised armies of the dead.",
+        "Potema's remains must be sanctified to prevent her full resurrection.",
+        "I hold the key to Potema's Catacombs beneath the Temple of the Divines."
+      ],
+      "beat_facts": {
+        "MS06_STAGE_50": [
+          "I gave the adventurer the key to Potema's Catacombs and the spell Turn Undead."
+        ],
+        "MS06_STAGE_150": [
+          "I have received Potema's remains and will bless them to prevent her return."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "MS06_STAGE_50",
+      "focus_npc": "Styrr",
+      "comment": "Player sent to speak with Styrr about Potema and receive the catacombs key.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00026C4D",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS06",
+          "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Styrr",
+            "Potema",
+            "catacombs key"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "MS06_STAGE_100",
+      "focus_npc": "",
+      "comment": "Player enters Potema's Catacombs to confront and defeat Potema.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS06",
+          "min_stage": 100
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MS06_STAGE_50"
+      ]
+    },
+    {
+      "id": "MS06_STAGE_125",
+      "focus_npc": "",
+      "comment": "Player retrieves Potema's skull from the throne in the sanctum.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS06",
+          "min_stage": 125
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MS06_STAGE_100"
+      ]
+    },
+    {
+      "id": "MS06_STAGE_150",
+      "focus_npc": "Styrr",
+      "comment": "Player returns Potema's remains to Styrr for blessing and must report to Falk.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00026C4D",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 150
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS06",
+          "min_stage": 150
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Potema's remains",
+            "bless the remains"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MS06_STAGE_125"
+      ]
+    },
+    {
+      "id": "MS06_COMPLETE",
+      "focus_npc": "Falk Firebeard",
+      "comment": "Quest complete. Falk rewards the player with gold and the Shield of Solitude.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00026C4D",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 250
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MS06",
+          "min_stage": 250
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MS06_STAGE_150"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "MS06_STAGE_50"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "ms06start_manwhocriedwolf",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

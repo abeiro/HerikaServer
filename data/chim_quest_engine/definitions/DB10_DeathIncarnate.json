@@ -142,7 +142,10 @@
       "focus_npc": "Night Mother",
       "comment": "Player returns to the Night Mother after killing Astrid. The Night Mother instructs the player to fulfill the Emperor contract via Amaund Motierre, leading into Hail Sithis!",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003CEDA",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -150,6 +153,26 @@
           "type": "quest_stage",
           "quest_editor_id": "DB10",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

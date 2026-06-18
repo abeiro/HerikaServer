@@ -49,7 +49,10 @@
           "The Pale Lady appeared before I could seal her. I may be dead or dying."
         ],
         "BANISH_PALE_LADY": [
-          "The stranger returned The Pale Blade to the altar and banished the Pale Lady."
+          "The stranger returned The Pale Blade to the altar and banished the Pale Lady.",
+          "Player returns The Pale Blade to the altar, banishing the Pale Lady and completing the quest peacefully.",
+          "After you have slain The Pale Lady, make sure that you follow the path west-southwest of the pedestal until you get to the end of a rock formation, turn right and climb up to find another path that leads to a.",
+          "The next room has a bridge leading over a pool of water back to the entrance of the ruins."
         ],
         "SLAY_PALE_LADY": [
           "The stranger killed the Pale Lady and claimed The Pale Blade."

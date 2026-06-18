@@ -16,6 +16,11 @@
       "beat_facts": {
         "CONTRACT_REVEALED": [
           "The true Emperor must be assassinated. The contract with Amaund Motierre must be completed."
+        ],
+        "QUEST_COMPLETE": [
+          "The contract is fulfilled. Emperor Titus Mede II is dead by the Listener's hand.",
+          "The Dark Brotherhood is restored. Once more, we shall be feared and respected the world over.",
+          "The Listener has proven worthy. Sithis is pleased."
         ]
       }
     },
@@ -31,6 +36,12 @@
         ],
         "REPORT_TO_NAZIR": [
           "The gold should be used to restore the Dawnstar Sanctuary. Delvin Mallory of the Thieves Guild can help with that."
+        ],
+        "QUEST_COMPLETE": [
+          "The Emperor is dead and the 20,000 gold payment has been collected from Volunruud.",
+          "The gold should go toward restoring the Dawnstar Sanctuary. Delvin Mallory of the Thieves Guild can help with renovations.",
+          "The Dark Brotherhood is reborn from the Dawnstar Sanctuary. We survive, and we will thrive.",
+          "The Listener may lie about the payment amount, but the full reward stays with them regardless."
         ]
       }
     },
@@ -47,6 +58,12 @@
         ],
         "REPORT_AND_COLLECT": [
           "The payment is in a dead drop at Volunruud, in the chamber where we first met."
+        ],
+        "QUEST_COMPLETE": [
+          "The Emperor is dead. The contract is fulfilled and the 20,000 gold payment was retrieved from the urn at Volunruud.",
+          "The Emperor's dying wish was for his assassin to kill the one who masterminded his assassination. Amaund may be slain to honor that request.",
+          "If killed, Amaund's last words are 'But... we had a deal...' His corpse carries a significant amount of gems.",
+          "If spared, Amaund remains at the Bannered Mare, unaware of the Emperor's final request."
         ]
       }
     }

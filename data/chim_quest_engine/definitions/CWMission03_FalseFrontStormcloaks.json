@@ -1,217 +1,218 @@
 {
-    "quest_key":  "cwmission03_falsefrontstormcloaks",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0003BCC4",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "CWMission03",
-    "title":  "A False Front (Stormcloaks)",
-    "description":  "Galmar Stone-Fist sends you to intercept an Imperial courier traveling through Dragon Bridge or Rorikstead, steal their documents, return them to camp for forging, and deliver the forged documents to Legate Taurinus Duilis in Morthal to deceive the Imperial Legion before the Battle for Fort Snowhawk.",
-    "npc_facts":  {
-                      "Galmar Stone-Fist":  {
-                                                "base_facts":  [
-                                                                   "I am Galmar Stone-Fist, second-in-command of the Stormcloak rebellion under Ulfric Stormcloak.",
-                                                                   "I coordinate military intelligence operations against the Imperial Legion.",
-                                                                   "I need operatives to intercept Imperial communications and plant false orders."
-                                                               ],
-                                                "beat_facts":  {
-                                                                   "QUEST_ORDERS":  [
-                                                                                        "I have dispatched a soldier to intercept an Imperial courier traveling through Dragon Bridge or Rorikstead.",
-                                                                                        "The stolen documents will be forged with false orders to mislead the enemy."
-                                                                                    ],
-                                                                   "RETURN_TO_GALMAR":  [
-                                                                                            "I have received the stolen Imperial documents and forged them with false military orders.",
-                                                                                            "The forged documents must now be delivered to Legate Taurinus Duilis in Morthal."
-                                                                                        ],
-                                                                   "QUEST_COMPLETE":  [
-                                                                                          "The forged documents have been successfully delivered to the Imperial Legate in Morthal.",
-                                                                                          "We are now prepared to move against Fort Snowhawk."
-                                                                                      ]
-                                                               }
-                                            },
-                      "Legate Taurinus Duilis":  {
-                                                     "base_facts":  [
-                                                                        "I am Legate Taurinus Duilis, commanding the Imperial garrison in Morthal.",
-                                                                        "I operate from Highmoon Hall in Morthal.",
-                                                                        "I rely on courier-delivered documents for military orders and intelligence."
-                                                                    ],
-                                                     "beat_facts":  {
-                                                                        "DELIVER_FORGED":  [
-                                                                                               "I have received new military documents from a courier.",
-                                                                                               "These orders will guide our troop deployments."
-                                                                                           ]
-                                                                    }
-                                                 }
-                  },
-    "beats":  [
-                  {
-                      "id":  "QUEST_ORDERS",
-                      "focus_npc":  "Galmar Stone-Fist",
-                      "comment":  "Galmar assigns the mission to intercept the Imperial courier and steal their documents.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CWMission03",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "orders",
-                                                            "mission",
-                                                            "courier",
-                                                            "intercept"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "RETRIEVE_DOCUMENTS",
-                      "focus_npc":  "",
-                      "comment":  "Player locates and retrieves documents from the Imperial courier at an inn or on the road.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CWMission03",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "documents",
-                                                            "package",
-                                                            "stolen",
-                                                            "retrieved"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "QUEST_ORDERS"
-                                        ]
-                  },
-                  {
-                      "id":  "RETURN_TO_GALMAR",
-                      "focus_npc":  "Galmar Stone-Fist",
-                      "comment":  "Player returns the stolen documents to Galmar, who forges them with false orders.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CWMission03",
-                                           "min_stage":  30
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "return",
-                                                            "Galmar",
-                                                            "forged",
-                                                            "bring documents"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RETRIEVE_DOCUMENTS"
-                                        ]
-                  },
-                  {
-                      "id":  "DELIVER_FORGED",
-                      "focus_npc":  "Legate Taurinus Duilis",
-                      "comment":  "Player delivers forged documents to Legate Taurinus Duilis in Highmoon Hall, Morthal.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CWMission03",
-                                           "min_stage":  40
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "forged documents",
-                                                            "legate",
-                                                            "Morthal",
-                                                            "deliver"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "RETURN_TO_GALMAR"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Galmar Stone-Fist",
-                      "comment":  "Quest complete - forged documents delivered, preparing for Battle for Fort Snowhawk.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CWMission03",
-                                           "min_stage":  200
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "complete",
-                                                            "done",
-                                                            "finished",
-                                                            "mission accomplished"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "DELIVER_FORGED"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "QUEST_ORDERS"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "cwmission03_falsefrontstormcloaks",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0003BCC4",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "CWMission03",
+  "title": "A False Front (Stormcloaks)",
+  "description": "Galmar Stone-Fist sends you to intercept an Imperial courier traveling through Dragon Bridge or Rorikstead, steal their documents, return them to camp for forging, and deliver the forged documents to Legate Taurinus Duilis in Morthal to deceive the Imperial Legion before the Battle for Fort Snowhawk.",
+  "npc_facts": {
+    "Galmar Stone-Fist": {
+      "base_facts": [
+        "I am Galmar Stone-Fist, second-in-command of the Stormcloak rebellion under Ulfric Stormcloak.",
+        "I coordinate military intelligence operations against the Imperial Legion.",
+        "I need operatives to intercept Imperial communications and plant false orders."
+      ],
+      "beat_facts": {
+        "QUEST_ORDERS": [
+          "I have dispatched a soldier to intercept an Imperial courier traveling through Dragon Bridge or Rorikstead.",
+          "The stolen documents will be forged with false orders to mislead the enemy."
+        ],
+        "RETURN_TO_GALMAR": [
+          "I have received the stolen Imperial documents and forged them with false military orders.",
+          "The forged documents must now be delivered to Legate Taurinus Duilis in Morthal."
+        ],
+        "QUEST_COMPLETE": [
+          "The forged documents have been successfully delivered to the Imperial Legate in Morthal.",
+          "We are now prepared to move against Fort Snowhawk."
+        ]
+      }
+    },
+    "Legate Taurinus Duilis": {
+      "base_facts": [
+        "I am Legate Taurinus Duilis, commanding the Imperial garrison in Morthal.",
+        "I operate from Highmoon Hall in Morthal.",
+        "I rely on courier-delivered documents for military orders and intelligence."
+      ],
+      "beat_facts": {
+        "DELIVER_FORGED": [
+          "I have received new military documents from a courier.",
+          "These orders will guide our troop deployments."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "QUEST_ORDERS",
+      "focus_npc": "Galmar Stone-Fist",
+      "comment": "Galmar assigns the mission to intercept the Imperial courier and steal their documents.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0003BCC4",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWMission03",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "orders",
+            "mission",
+            "courier",
+            "intercept"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "RETRIEVE_DOCUMENTS",
+      "focus_npc": "",
+      "comment": "Player locates and retrieves documents from the Imperial courier at an inn or on the road.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0003BCC4",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWMission03",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "documents",
+            "package",
+            "stolen",
+            "retrieved"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "QUEST_ORDERS"
+      ]
+    },
+    {
+      "id": "RETURN_TO_GALMAR",
+      "focus_npc": "Galmar Stone-Fist",
+      "comment": "Player returns the stolen documents to Galmar, who forges them with false orders.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0003BCC4",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWMission03",
+          "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "return",
+            "Galmar",
+            "forged",
+            "bring documents"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETRIEVE_DOCUMENTS"
+      ]
+    },
+    {
+      "id": "DELIVER_FORGED",
+      "focus_npc": "Legate Taurinus Duilis",
+      "comment": "Player delivers forged documents to Legate Taurinus Duilis in Highmoon Hall, Morthal.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0003BCC4",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWMission03",
+          "min_stage": 40
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "forged documents",
+            "legate",
+            "Morthal",
+            "deliver"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "RETURN_TO_GALMAR"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Galmar Stone-Fist",
+      "comment": "Quest complete - forged documents delivered, preparing for Battle for Fort Snowhawk.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0003BCC4",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CWMission03",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "complete",
+            "done",
+            "finished",
+            "mission accomplished"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DELIVER_FORGED"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "QUEST_ORDERS"
+    ],
+    "requires": []
+  }
 }

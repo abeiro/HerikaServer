@@ -1,148 +1,167 @@
 {
-    "quest_key":  "mgrappbrelyna01_brelynaspractice",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x000C0416",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MGRAppBrelyna01",
-    "title":  "Brelyna\u0027s Practice",
-    "description":  "Brelyna Maryon, a Dunmer student at the College of Winterhold, asks the player to serve as a test subject for her experimental Alteration spells. Her first attempt turns the player green, and her second attempt transforms them into various animals before finally succeeding. She rewards the player with a Resist Magic necklace and becomes available as a follower.",
-    "npc_facts":  {
-                      "Brelyna Maryon":  {
-                                             "base_facts":  [
-                                                                "I am a Dunmer student at the College of Winterhold studying Alteration magic.",
-                                                                "I have been developing new spells and need someone to practice casting them on.",
-                                                                "I would rather not ask J\u0027zargo to be my test subject."
-                                                            ],
-                                             "beat_facts":  {
-                                                                "FIRST_SPELL_EFFECT":  [
-                                                                                           "My first spell turned the player green. That was not supposed to happen, but the effect is temporary."
-                                                                                       ],
-                                                                "GREEN_WORN_OFF":  [
-                                                                                       "The green effect has worn off. I am confident I can fix the spell if the player lets me try again."
-                                                                                   ],
-                                                                "QUEST_COMPLETE":  [
-                                                                                       "I finally got the spell right after several mishaps. I gave the player a Resist Magic necklace as thanks, and we agreed to never speak of this again."
-                                                                                   ]
-                                                            }
-                                         }
-                  },
-    "beats":  [
-                  {
-                      "id":  "BRELAYNA_REQUEST",
-                      "focus_npc":  "Brelyna Maryon",
-                      "comment":  "Brelyna asks the player to be a test subject for her spells.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "practice spells",
-                                                            "help with spells",
-                                                            "test subject",
-                                                            "assist with magic"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "FIRST_SPELL_EFFECT",
-                      "focus_npc":  "Brelyna Maryon",
-                      "comment":  "Brelyna casts her first spell, turning the player green. The player must wait for the effect to wear off.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRAppBrelyna01",
-                                           "min_stage":  20
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "BRELAYNA_REQUEST"
-                                        ]
-                  },
-                  {
-                      "id":  "GREEN_WORN_OFF",
-                      "focus_npc":  "Brelyna Maryon",
-                      "comment":  "The green effect wears off and the player speaks to Brelyna, who asks to try again.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRAppBrelyna01",
-                                           "min_stage":  30
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "spell wore off",
-                                                            "try again",
-                                                            "feel better",
-                                                            "green gone"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FIRST_SPELL_EFFECT"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Brelyna Maryon",
-                      "comment":  "Brelyna\u0027s second attempt transforms the player into various animals before returning them to normal. She rewards the player with a Resist Magic necklace and the quest concludes.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MGRAppBrelyna01",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "GREEN_WORN_OFF"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "BRELAYNA_REQUEST"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "mg01_firstlessons",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "mgrappbrelyna01_brelynaspractice",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000C0416",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MGRAppBrelyna01",
+  "title": "Brelyna's Practice",
+  "description": "Brelyna Maryon, a Dunmer student at the College of Winterhold, asks the player to serve as a test subject for her experimental Alteration spells. Her first attempt turns the player green, and her second attempt transforms them into various animals before finally succeeding. She rewards the player with a Resist Magic necklace and becomes available as a follower.",
+  "npc_facts": {
+    "Brelyna Maryon": {
+      "base_facts": [
+        "I am a Dunmer student at the College of Winterhold studying Alteration magic.",
+        "I have been developing new spells and need someone to practice casting them on.",
+        "I would rather not ask J'zargo to be my test subject."
+      ],
+      "beat_facts": {
+        "FIRST_SPELL_EFFECT": [
+          "My first spell turned the player green. That was not supposed to happen, but the effect is temporary."
+        ],
+        "GREEN_WORN_OFF": [
+          "The green effect has worn off. I am confident I can fix the spell if the player lets me try again."
+        ],
+        "QUEST_COMPLETE": [
+          "I finally got the spell right after several mishaps. I gave the player a Resist Magic necklace as thanks, and we agreed to never speak of this again.",
+          "Brelyna's second attempt transforms the player into various animals before returning them to normal. She rewards the player with a Resist Magic necklace and the quest concludes.",
+          "Brelyna will also become a potential candidate for marriage , and can be asked to join you as a follower .",
+          "When you speak to her, she'll request your help: \"We're all trying to become better mages, right?"
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "BRELAYNA_REQUEST",
+      "focus_npc": "Brelyna Maryon",
+      "comment": "Brelyna asks the player to be a test subject for her spells.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "practice spells",
+            "help with spells",
+            "test subject",
+            "assist with magic"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "FIRST_SPELL_EFFECT",
+      "focus_npc": "Brelyna Maryon",
+      "comment": "Brelyna casts her first spell, turning the player green. The player must wait for the effect to wear off.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRAppBrelyna01",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BRELAYNA_REQUEST"
+      ]
+    },
+    {
+      "id": "GREEN_WORN_OFF",
+      "focus_npc": "Brelyna Maryon",
+      "comment": "The green effect wears off and the player speaks to Brelyna, who asks to try again.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000C0416",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRAppBrelyna01",
+          "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "spell wore off",
+            "try again",
+            "feel better",
+            "green gone"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIRST_SPELL_EFFECT"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Brelyna Maryon",
+      "comment": "Brelyna's second attempt transforms the player into various animals before returning them to normal. She rewards the player with a Resist Magic necklace and the quest concludes.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000C0416",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MGRAppBrelyna01",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "GREEN_WORN_OFF"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "BRELAYNA_REQUEST"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mg01_firstlessons",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

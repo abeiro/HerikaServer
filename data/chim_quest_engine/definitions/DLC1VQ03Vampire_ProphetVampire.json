@@ -21,7 +21,10 @@
           "The Moth Priest has been captured and brought to Castle Volkihar. Now the prophecy can be read."
         ],
         "QUEST_COMPLETE": [
-          "The Moth Priest's reading revealed Auriel's Bow, but two more Elder Scrolls are needed to unravel the full prophecy."
+          "The Moth Priest's reading revealed Auriel's Bow, but two more Elder Scrolls are needed to unravel the full prophecy.",
+          "The Moth Priest's reading reveals Auriel's Bow but two more Elder Scrolls are needed. Quest finishes.",
+          "Speak to innkeepers, carriage drivers, anyone who would meet a traveler.",
+          "Once you have arrived in Dragon Bridge, ask people \"Know anything about a Moth Priest visiting Dragon Bridge?\" , seven people have the asking dialogue option, two of them can lead you the direction, all are listed in."
         ]
       }
     },
@@ -71,7 +74,10 @@
       "focus_npc": "Serana",
       "comment": "Player searches for the Moth Priest by asking innkeepers, carriage drivers, or visiting the College of Winterhold. Trail leads to Dragon Bridge.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00004C3D",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -143,7 +149,10 @@
       "focus_npc": "Lord Harkon",
       "comment": "Player reports success to Harkon and commands Dexion to read the Elder Scroll, revealing a vision of Auriel's Bow.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00004C3D",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 80
       },
       "downstream": [],
       "triggers": [
@@ -152,6 +161,26 @@
           "quest_editor_id": "DLC1VQ03Vampire",
           "min_stage": 80,
           "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",
@@ -164,7 +193,10 @@
       "focus_npc": "Lord Harkon",
       "comment": "The Moth Priest's reading reveals Auriel's Bow but two more Elder Scrolls are needed. Quest finishes.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00004C3D",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -173,6 +205,26 @@
           "quest_editor_id": "DLC1VQ03Vampire",
           "min_stage": 200,
           "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

@@ -45,7 +45,9 @@
       ],
       "beat_facts": {
         "QUEST_STARTED": [
-          "The player agreed to recover {QuestItem}."
+          "The player agreed to recover {QuestItem}.",
+          "The radiant favor has started and aliases are resolved.",
+          "{QuestGiver} asks the player to recover {QuestItem} from a bandit hideout."
         ],
         "ITEM_RECOVERED": [
           "The player has recovered {QuestItem} and can return it to me."

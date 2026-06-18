@@ -24,7 +24,10 @@
           "I've asked someone to deliver the Stallion's Potion to the steward for me."
         ],
         "BOTHELAS_DISCREET_DELIVERY_ACCEPT": [
-          "My courier has agreed to deliver the Stallion's Potion to the steward."
+          "My courier has agreed to deliver the Stallion's Potion to the steward.",
+          "Player accepts the delivery task. Stallion's Potion is added to inventory and quest is set.",
+          "Some gold for your assistance and your, discretion.\" After speaking with him, the Stallion's Potion will be removed from your inventory and Raerek will reward you with a leveled amount of gold.",
+          "The Stallion's Potion is marked as stolen when it is in your inventory, which means if you get arrested and decide to pay off your bounty or go to jail, it will disappear from your inventory and the quest will get stuck."
         ]
       }
     },

@@ -1,117 +1,136 @@
 {
-    "quest_key":  "dlc2rrfavor02_fetchthenetch",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00024DE7",
-    "quest_plugin":  "Dragonborn.esm",
-    "quest_editor_id":  "DLC2RRFavor02",
-    "title":  "Fetch the Netch",
-    "description":  "Milore Ienth, the apothecary of Raven Rock, cannot gather netch jelly herself due to the dangers outside the Bulwark. She asks the player to bring her five samples of netch jelly from the netch of Solstheim, offering two Potions of Ultimate Well-being as a reward.",
-    "npc_facts":  {
-                      "Milore Ienth":  {
-                                           "base_facts":  [
-                                                              "I am the apothecary and Alchemy trainer in Raven Rock.",
-                                                              "I grow and harvest exotic ingredients myself.",
-                                                              "I have trouble gathering netch jelly because of the dangers outside the Bulwark."
-                                                          ],
-                                           "beat_facts":  {
-                                                              "BEAT_MILORE_REQUEST":  [
-                                                                                          "I need five samples of netch jelly and will reward anyone who brings them to me."
-                                                                                      ],
-                                                              "BEAT_RETURN_JELLY":  [
-                                                                                        "I am grateful for the netch jelly and have given two Potions of Ultimate Well-being as a reward."
-                                                                                    ]
-                                                          }
-                                       }
-                  },
-    "beats":  [
-                  {
-                      "id":  "BEAT_MILORE_REQUEST",
-                      "focus_npc":  "Milore Ienth",
-                      "comment":  "Player speaks to Milore and learns she needs netch jelly.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "help",
-                                                            "netch jelly",
-                                                            "gather",
-                                                            "ingredients"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "BEAT_RETURN_JELLY",
-                      "focus_npc":  "Milore Ienth",
-                      "comment":  "Player returns to Milore with five netch jelly samples, completing the quest.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x00024DE7",
-                                     "quest_plugin":  "Dragonborn.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "netch jelly",
-                                                            "brought the jelly",
-                                                            "five samples"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "BEAT_MILORE_REQUEST"
-                                        ]
-                  },
-                  {
-                      "id":  "BEAT_QUEST_COMPLETE",
-                      "focus_npc":  "Milore Ienth",
-                      "comment":  "Observational beat for quest completion at stage 200.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "DLC2RRFavor02",
-                                           "min_stage":  200,
-                                           "quest_plugin":  "Dragonborn.esm"
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "BEAT_RETURN_JELLY"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "BEAT_MILORE_REQUEST"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "dlc2rrfavor02_fetchthenetch",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00024DE7",
+  "quest_plugin": "Dragonborn.esm",
+  "quest_editor_id": "DLC2RRFavor02",
+  "title": "Fetch the Netch",
+  "description": "Milore Ienth, the apothecary of Raven Rock, cannot gather netch jelly herself due to the dangers outside the Bulwark. She asks the player to bring her five samples of netch jelly from the netch of Solstheim, offering two Potions of Ultimate Well-being as a reward.",
+  "npc_facts": {
+    "Milore Ienth": {
+      "base_facts": [
+        "I am the apothecary and Alchemy trainer in Raven Rock.",
+        "I grow and harvest exotic ingredients myself.",
+        "I have trouble gathering netch jelly because of the dangers outside the Bulwark."
+      ],
+      "beat_facts": {
+        "BEAT_MILORE_REQUEST": [
+          "I need five samples of netch jelly and will reward anyone who brings them to me."
+        ],
+        "BEAT_RETURN_JELLY": [
+          "I am grateful for the netch jelly and have given two Potions of Ultimate Well-being as a reward."
+        ],
+        "BEAT_QUEST_COMPLETE": [
+          "I am impressed by anyone who braved the dangers outside the Bulwark to gather netch jelly.",
+          "I have rewarded the player with two Potions of Ultimate Well-Being for the five netch jelly samples.",
+          "My disposition toward the player has increased by one for completing this favor.",
+          "I believe the potions I gave will help the player during their journeys across Solstheim."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "BEAT_MILORE_REQUEST",
+      "focus_npc": "Milore Ienth",
+      "comment": "Player speaks to Milore and learns she needs netch jelly.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "help",
+            "netch jelly",
+            "gather",
+            "ingredients"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "BEAT_RETURN_JELLY",
+      "focus_npc": "Milore Ienth",
+      "comment": "Player returns to Milore with five netch jelly samples, completing the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00024DE7",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "netch jelly",
+            "brought the jelly",
+            "five samples"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BEAT_MILORE_REQUEST"
+      ]
+    },
+    {
+      "id": "BEAT_QUEST_COMPLETE",
+      "focus_npc": "Milore Ienth",
+      "comment": "Observational beat for quest completion at stage 200.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00024DE7",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "DLC2RRFavor02",
+          "min_stage": 200,
+          "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "BEAT_RETURN_JELLY"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "BEAT_MILORE_REQUEST"
+    ],
+    "requires": []
+  }
 }

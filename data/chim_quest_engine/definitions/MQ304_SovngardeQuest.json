@@ -16,6 +16,11 @@
       "beat_facts": {
         "REACH_HALL_OF_VALOR": [
           "The Dragonborn has proven their worth in combat and earned the right to enter the Hall of Valor."
+        ],
+        "HEROES_JOIN_BATTLE": [
+          "The three heroes join the Dragonborn to clear the mist and face Alduin. Quest completes and transitions to Dragonslayer.",
+          "When you meet with the three heroes that you are directed towards, they decide to join Shouts with you to clear the mist from Sovngarde.",
+          "The quest ends with you running out to join them near the misty valley."
         ]
       }
     },

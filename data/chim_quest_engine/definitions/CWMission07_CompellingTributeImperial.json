@@ -20,7 +20,10 @@
           "I have sent the player to meet our scouts and capture the shipment."
         ],
         "QUEST_COMPLETE": [
-          "The player successfully captured the Stormcloak shipment. I will send men to collect the prize and forward the coin to Solitude."
+          "The player successfully captured the Stormcloak shipment. I will send men to collect the prize and forward the coin to Solitude.",
+          "Player reports to Hadvar after the battle; quest completes with the shipment captured.",
+          "Return to Legate Rikke to receive the leveled gold reward only when you want to start the next quest in the series and skip the reward when the game doesn't prompt you to return to her.",
+          "Leaving the area and waiting for a few in-game days before trying to talk to him again can allow you to finally report to him."
         ]
       }
     },
@@ -74,7 +77,10 @@
       "focus_npc": "Anuriel",
       "comment": "Player finds the incriminating letter and confronts Anuriel, who reveals intel about the Stormcloak shipment.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000504F0",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -104,7 +110,10 @@
       "focus_npc": "Legate Rikke",
       "comment": "Player reports the wagon intel to Rikke, who sends them to meet the scouts.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000504F0",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [

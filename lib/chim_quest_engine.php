@@ -2509,6 +2509,9 @@ if (!function_exists('chimQuestEngineQueueResolvedAction')) {
         if ($sourceActionType !== '') {
             $payload['source_action_type'] = $sourceActionType;
         }
+        if (!isset($payload['index']) && isset($payload['objective_index'])) {
+            $payload['index'] = $payload['objective_index'];
+        }
 
         chimQuestEngineQueueAction($questKey, $beatId, $actionType, $payload, $actionGamets);
     }

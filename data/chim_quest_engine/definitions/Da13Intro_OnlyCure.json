@@ -1,229 +1,237 @@
 {
-    "quest_key":  "da13intro_onlycure",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x000BEDEC",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "Da13Intro",
-    "title":  "The Only Cure",
-    "description":  "Peryite, the Daedric Prince of Pestilence, tasks the player with killing his former follower Orchendor in the Dwemer ruin of Bthardamz after the player gathers incense ingredients and communes with the Prince at his shrine.",
-    "npc_facts":  {
-                      "Afflicted Refugee":  {
-                                                "base_facts":  [
-                                                                   "I suffer from a wasting plague but Peryite\u0027s protection keeps me alive.",
-                                                                   "I am traveling to High Rock.",
-                                                                   "Kesh the Clean tends the Shrine to Peryite and can tell you more about the Prince."
-                                                               ],
-                                                "beat_facts":  {
-
-                                                               }
-                                            },
-                      "Kesh the Clean":  {
-                                             "base_facts":  [
-                                                                "I am the last worshipper at the Shrine to Peryite.",
-                                                                "To commune with Peryite, one must inhale special incense from the cauldron.",
-                                                                "The incense requires vampire dust, a deathbell flower, a silver ingot, and a flawless ruby."
-                                                            ],
-                                             "beat_facts":  {
-                                                                "GATHER_INGREDIENTS":  [
-                                                                                           "The player has been asked to bring me the four incense ingredients."
-                                                                                       ],
-                                                                "INHALE_FUMES":  [
-                                                                                     "The player has inhaled the incense and spoken with Lord Peryite."
-                                                                                 ],
-                                                                "KILL_ORCHENDOR":  [
-                                                                                       "Peryite demands Orchendor\u0027s death for betraying him at Bthardamz."
-                                                                                   ]
-                                                            }
-                                         }
-                  },
-    "beats":  [
-                  {
-                      "id":  "FIND_KESH",
-                      "focus_npc":  "Kesh the Clean",
-                      "comment":  "Player is directed to find Kesh at the Shrine to Peryite, either from the Afflicted Refugee or independently.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "Da13Intro",
-                                           "min_stage":  1
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "find Kesh",
-                                                            "Peryite Shrine",
-                                                            "Kesh the Clean"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "GATHER_INGREDIENTS",
-                      "focus_npc":  "Kesh the Clean",
-                      "comment":  "Kesh asks the player to collect vampire dust, deathbell, silver ingot, and flawless ruby for the incense.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "Da13Intro",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "gather ingredients",
-                                                            "incense ingredients",
-                                                            "vampire dust",
-                                                            "flawless ruby"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FIND_KESH"
-                                        ]
-                  },
-                  {
-                      "id":  "INHALE_FUMES",
-                      "focus_npc":  "Kesh the Clean",
-                      "comment":  "Player inhales the incense fumes and communes with Peryite, who reveals his task.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "Da13Intro",
-                                           "min_stage":  21
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "inhale fumes",
-                                                            "breathe deep",
-                                                            "commune with Peryite"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "GATHER_INGREDIENTS"
-                                        ]
-                  },
-                  {
-                      "id":  "KILL_ORCHENDOR",
-                      "focus_npc":  "",
-                      "comment":  "Peryite demands the player kill Orchendor in Bthardamz for betraying him.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "Da13Intro",
-                                           "min_stage":  40
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "kill Orchendor",
-                                                            "Orchendor",
-                                                            "Bthardamz"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "INHALE_FUMES"
-                                        ]
-                  },
-                  {
-                      "id":  "REPORT_TO_PERYITE",
-                      "focus_npc":  "",
-                      "comment":  "Player has killed Orchendor and must report back to Peryite at the shrine.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "Da13Intro",
-                                           "min_stage":  75
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Orchendor is dead",
-                                                            "report to Peryite",
-                                                            "Orchendor\u0027s death"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "KILL_ORCHENDOR"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest finishes; player receives Spellbreaker as reward.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "Da13Intro",
-                                           "min_stage":  100
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "REPORT_TO_PERYITE"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "FIND_KESH"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "da13intro_onlycure",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000BEDEC",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "Da13Intro",
+  "title": "The Only Cure",
+  "description": "Peryite, the Daedric Prince of Pestilence, tasks the player with killing his former follower Orchendor in the Dwemer ruin of Bthardamz after the player gathers incense ingredients and communes with the Prince at his shrine.",
+  "npc_facts": {
+    "Afflicted Refugee": {
+      "base_facts": [
+        "I suffer from a wasting plague but Peryite's protection keeps me alive.",
+        "I am traveling to High Rock.",
+        "Kesh the Clean tends the Shrine to Peryite and can tell you more about the Prince."
+      ],
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "Orchendor has been slain for betraying Lord Peryite at Bthardamz.",
+          "I continue toward High Rock, still sustained by Peryite's protection despite my affliction.",
+          "The Afflicted who followed Orchendor into Bthardamz have lost their false shepherd."
+        ]
+      }
+    },
+    "Kesh the Clean": {
+      "base_facts": [
+        "I am the last worshipper at the Shrine to Peryite.",
+        "To commune with Peryite, one must inhale special incense from the cauldron.",
+        "The incense requires vampire dust, a deathbell flower, a silver ingot, and a flawless ruby."
+      ],
+      "beat_facts": {
+        "GATHER_INGREDIENTS": [
+          "The player has been asked to bring me the four incense ingredients."
+        ],
+        "INHALE_FUMES": [
+          "The player has inhaled the incense and spoken with Lord Peryite."
+        ],
+        "KILL_ORCHENDOR": [
+          "Peryite demands Orchendor's death for betraying him at Bthardamz."
+        ],
+        "QUEST_COMPLETE": [
+          "Lord Peryite bestowed Spellbreaker upon the player for enacting his judgment on Orchendor.",
+          "My devotion at the shrine is vindicated; the Prince's will has been carried out.",
+          "The cauldron's incense served its purpose in connecting a worthy mortal to Lord Peryite."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "FIND_KESH",
+      "focus_npc": "Kesh the Clean",
+      "comment": "Player is directed to find Kesh at the Shrine to Peryite, either from the Afflicted Refugee or independently.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000BEDEC",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 1
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "Da13Intro",
+          "min_stage": 1
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "find Kesh",
+            "Peryite Shrine",
+            "Kesh the Clean"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "GATHER_INGREDIENTS",
+      "focus_npc": "Kesh the Clean",
+      "comment": "Kesh asks the player to collect vampire dust, deathbell, silver ingot, and flawless ruby for the incense.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000BEDEC",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "Da13Intro",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "gather ingredients",
+            "incense ingredients",
+            "vampire dust",
+            "flawless ruby"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIND_KESH"
+      ]
+    },
+    {
+      "id": "INHALE_FUMES",
+      "focus_npc": "Kesh the Clean",
+      "comment": "Player inhales the incense fumes and communes with Peryite, who reveals his task.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000BEDEC",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 21
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "Da13Intro",
+          "min_stage": 21
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "inhale fumes",
+            "breathe deep",
+            "commune with Peryite"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "GATHER_INGREDIENTS"
+      ]
+    },
+    {
+      "id": "KILL_ORCHENDOR",
+      "focus_npc": "",
+      "comment": "Peryite demands the player kill Orchendor in Bthardamz for betraying him.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000BEDEC",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "Da13Intro",
+          "min_stage": 40
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "kill Orchendor",
+            "Orchendor",
+            "Bthardamz"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "INHALE_FUMES"
+      ]
+    },
+    {
+      "id": "REPORT_TO_PERYITE",
+      "focus_npc": "",
+      "comment": "Player has killed Orchendor and must report back to Peryite at the shrine.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000BEDEC",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 75
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "Da13Intro",
+          "min_stage": 75
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Orchendor is dead",
+            "report to Peryite",
+            "Orchendor's death"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "KILL_ORCHENDOR"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest finishes; player receives Spellbreaker as reward.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "Da13Intro",
+          "min_stage": 100
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "REPORT_TO_PERYITE"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "FIND_KESH"
+    ],
+    "requires": []
+  }
 }

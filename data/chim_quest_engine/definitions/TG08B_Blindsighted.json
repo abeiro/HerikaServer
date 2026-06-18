@@ -84,7 +84,10 @@
       "focus_npc": "Karliah",
       "comment": "Karliah and Brynjolf join the player inside Irkngthand to pursue Mercer.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00021554",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [
@@ -113,7 +116,10 @@
       "focus_npc": "Mercer Frey",
       "comment": "Player locates and fights Mercer Frey in the Irkngthand Sanctuary.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00021554",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
       },
       "downstream": [],
       "triggers": [
@@ -162,7 +168,10 @@
       "focus_npc": "Karliah",
       "comment": "Player escapes the flooding Irkngthand and speaks with Karliah at Bronze Water Cave.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00021554",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 60
       },
       "downstream": [],
       "triggers": [
@@ -191,7 +200,10 @@
       "focus_npc": "Karliah",
       "comment": "Quest completes; Karliah gives the Nightingale Bow and instructs the player to return the Skeleton Key to the Twilight Sepulcher.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00021554",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -199,6 +211,26 @@
           "type": "quest_stage",
           "quest_editor_id": "TG08B",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

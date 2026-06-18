@@ -38,7 +38,10 @@
       ],
       "beat_facts": {
         "DELIVER_COMPLETE": [
-          "The Nightshade Extract has been delivered to me."
+          "The Nightshade Extract has been delivered to me.",
+          "Player delivers Nightshade Extract to Wuunferth, quest completes at .",
+          "When asked whether she grows the crops all by herself she will mention that her family owns Hollyfrost Farm outside the city, and, on top of that, also receive payment from Wuunferth the Unliving for every portion of.",
+          "Hand over the extract and he will thank you with a leveled amount of gold."
         ]
       }
     }

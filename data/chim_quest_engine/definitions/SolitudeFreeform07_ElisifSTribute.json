@@ -34,7 +34,10 @@
           "The player has agreed to take Torygg's War Horn to the Shrine of Talos."
         ],
         "ELISIFS_TRIBUTE_COMPLETE": [
-          "The player placed Torygg's War Horn at the Shrine of Talos. I am grateful and have allowed them to purchase Proudspire Manor."
+          "The player placed Torygg's War Horn at the Shrine of Talos. I am grateful and have allowed them to purchase Proudspire Manor.",
+          "Player returns to Elisif after placing the horn. Quest completes and Proudspire Manor becomes available for purchase.",
+          "The Jarl's Good Grace [ edit ] Return to Elisif at the Blue Palace in Solitude where she will reaffirm her belief in you and allow you to purchase Proudspire Manor as well as take the next step to becoming a thane .",
+          "Follow the path near Shimmermist Cave , along the northern bank of the river, and you can find the shrine behind some trees."
         ]
       }
     }
@@ -132,7 +135,10 @@
       "focus_npc": "Elisif the Fair",
       "comment": "Player returns to Elisif after placing the horn. Quest completes and Proudspire Manor becomes available for purchase.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000E77BA",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -141,6 +147,26 @@
           "quest_form_id": "0x000E77BA",
           "quest_plugin": "Skyrim.esm",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

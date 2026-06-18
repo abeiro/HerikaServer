@@ -13,7 +13,13 @@
         "All three Elder Scrolls must be obtained for me to read the whole prophecy.",
         "The College of Winterhold may have information on the Dragon Elder Scroll."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "The player has begun the search for the Elder Scroll (Dragon) at my direction, either through the College of Winterhold or Septimus Signus.",
+          "I still require all three Elder Scrolls before I can read the full prophecy of Auriel's Bow.",
+          "I await the player's return with the Elder Scroll (Dragon) so the prophecy reading can proceed."
+        ]
+      }
     },
     "Urag gro-Shub": {
       "base_facts": [
@@ -28,6 +34,11 @@
         ],
         "BUY_BACK_ELDER_SCROLL": [
           "I have agreed to sell back the Elder Scroll (Dragon) to the player."
+        ],
+        "QUEST_COMPLETE": [
+          "I have shared my knowledge of the Elder Scrolls and directed the player to Septimus Signus as the foremost living expert on them.",
+          "I brought out two books for the player: Effects of the Elder Scrolls and Ruminations on the Elder Scrolls.",
+          "If the player previously sold me the Elder Scroll (Dragon), I have sold it back—full price is 4,000 gold, half price if the player is Arch-Mage, or 3,000 gold with successful persuasion otherwise."
         ]
       }
     },
@@ -36,7 +47,13 @@
         "I am an expert on the Elder Scrolls.",
         "I live at my outpost in the northern ice fields."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "The player has either been directed to me by Urag gro-Shub or has come directly to my outpost seeking the Elder Scroll (Dragon).",
+          "I am acknowledged as the foremost expert on the Elder Scrolls and the key to locating the Dragon Elder Scroll.",
+          "My outpost in the northern ice fields is where the player must come to pursue the Elder Scroll further."
+        ]
+      }
     }
   },
   "beats": [

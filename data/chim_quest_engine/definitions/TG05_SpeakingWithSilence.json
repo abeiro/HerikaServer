@@ -1,194 +1,196 @@
 {
-    "quest_key":  "tg05_speakingwithsilence",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00021551",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "TG05",
-    "title":  "Speaking With Silence",
-    "description":  "Mercer Frey leads the player to Snow Veil Sanctum to hunt down Karliah, accused of murdering Gallus. Inside, Karliah shoots the player with a paralytic arrow, revealing Mercer as Gallus\u0027s true killer before he abandons the player to die. Karliah nurses the player back to health and introduces the Nightingales.",
-    "npc_facts":  {
-                      "Mercer Frey":  {
-                                          "base_facts":  [
-                                                             "I lead the Thieves Guild and want Karliah dead for murdering Gallus.",
-                                                             "I have scouted Snow Veil Sanctum and found Karliah\u0027s horse outside.",
-                                                             "I expect the player to follow my lead without question."
-                                                         ],
-                                          "beat_facts":  {
-                                                             "MEET_MERCER_OUTSIDE":  [
-                                                                                         "I have taken care of Karliah\u0027s horse so she cannot escape.",
-                                                                                         "I want to catch Karliah inside while she is distracted."
-                                                                                     ],
-                                                             "ENTER_SANCTUM":  [
-                                                                                   "I can unlock ancient Nordic locks with ease.",
-                                                                                   "I warn the player about traps Karliah has reset."
-                                                                               ],
-                                                             "QUEST_COMPLETE":  [
-                                                                                    "I killed Gallus and framed Karliah for his murder.",
-                                                                                    "I betrayed the player and left them to die in Snow Veil Sanctum.",
-                                                                                    "I told Brynjolf I would give him the player\u0027s regards."
-                                                                                ]
-                                                         }
-                                      },
-                      "Karliah":  {
-                                      "base_facts":  [
-                                                         "I am a Dunmer and former Nightingale, accused of murdering Gallus.",
-                                                         "I have been hiding from Mercer Frey for over twenty years."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "SPEAK_TO_KARLIAH":  [
-                                                                                  "I shot the player with a paralytic poison arrow to save their life, not kill them.",
-                                                                                  "I never had a clear shot at Mercer with the poisoned arrow.",
-                                                                                  "I made a split-second decision to get the player out of harm\u0027s way."
-                                                                              ],
-                                                         "QUEST_COMPLETE":  [
-                                                                                "Mercer Frey is the true killer of Gallus, not me.",
-                                                                                "Gallus, Mercer, and I were Nightingales, guardians in service to Nocturnal.",
-                                                                                "I tended to the player\u0027s wounds outside Snow Veil Sanctum after Mercer\u0027s betrayal."
-                                                                            ]
-                                                     }
-                                  }
-                  },
-    "beats":  [
-                  {
-                      "id":  "MEET_MERCER_OUTSIDE",
-                      "focus_npc":  "Mercer Frey",
-                      "comment":  "Player meets Mercer Frey outside Snow Veil Sanctum to begin the hunt for Karliah.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TG05",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "meet mercer",
-                                                            "snow veil",
-                                                            "hunt karliah",
-                                                            "ready to go"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "ENTER_SANCTUM",
-                      "focus_npc":  "Mercer Frey",
-                      "comment":  "Player enters Snow Veil Sanctum with Mercer as a temporary follower, facing draugr and traps.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TG05",
-                                           "min_stage":  20
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "inside the sanctum",
-                                                            "entered the ruins",
-                                                            "follow mercer"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "MEET_MERCER_OUTSIDE"
-                                        ]
-                  },
-                  {
-                      "id":  "SPEAK_TO_KARLIAH",
-                      "focus_npc":  "Karliah",
-                      "comment":  "After Karliah\u0027s paralytic arrow and Mercer\u0027s betrayal, the player wakes outside and speaks with Karliah.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TG05",
-                                           "min_stage":  60
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "karliah saved me",
-                                                            "why did you shoot me",
-                                                            "mercer betrayed",
-                                                            "mercer is the killer"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "ENTER_SANCTUM"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Karliah",
-                      "comment":  "Quest ends with Mercer revealed as Gallus\u0027s killer and the Nightingale secret uncovered.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "TG05",
-                                           "stage":  200
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "nightingales",
-                                                            "nocturnal",
-                                                            "gallus journal",
-                                                            "mercer killed gallus"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SPEAK_TO_KARLIAH"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "MEET_MERCER_OUTSIDE"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "tg04_scoundrelsfolly",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "tg05_speakingwithsilence",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00021551",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "TG05",
+  "title": "Speaking With Silence",
+  "description": "Mercer Frey leads the player to Snow Veil Sanctum to hunt down Karliah, accused of murdering Gallus. Inside, Karliah shoots the player with a paralytic arrow, revealing Mercer as Gallus's true killer before he abandons the player to die. Karliah nurses the player back to health and introduces the Nightingales.",
+  "npc_facts": {
+    "Mercer Frey": {
+      "base_facts": [
+        "I lead the Thieves Guild and want Karliah dead for murdering Gallus.",
+        "I have scouted Snow Veil Sanctum and found Karliah's horse outside.",
+        "I expect the player to follow my lead without question."
+      ],
+      "beat_facts": {
+        "MEET_MERCER_OUTSIDE": [
+          "I have taken care of Karliah's horse so she cannot escape.",
+          "I want to catch Karliah inside while she is distracted."
+        ],
+        "ENTER_SANCTUM": [
+          "I can unlock ancient Nordic locks with ease.",
+          "I warn the player about traps Karliah has reset."
+        ],
+        "QUEST_COMPLETE": [
+          "I killed Gallus and framed Karliah for his murder.",
+          "I betrayed the player and left them to die in Snow Veil Sanctum.",
+          "I told Brynjolf I would give him the player's regards."
+        ]
+      }
+    },
+    "Karliah": {
+      "base_facts": [
+        "I am a Dunmer and former Nightingale, accused of murdering Gallus.",
+        "I have been hiding from Mercer Frey for over twenty years."
+      ],
+      "beat_facts": {
+        "SPEAK_TO_KARLIAH": [
+          "I shot the player with a paralytic poison arrow to save their life, not kill them.",
+          "I never had a clear shot at Mercer with the poisoned arrow.",
+          "I made a split-second decision to get the player out of harm's way."
+        ],
+        "QUEST_COMPLETE": [
+          "Mercer Frey is the true killer of Gallus, not me.",
+          "Gallus, Mercer, and I were Nightingales, guardians in service to Nocturnal.",
+          "I tended to the player's wounds outside Snow Veil Sanctum after Mercer's betrayal."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "MEET_MERCER_OUTSIDE",
+      "focus_npc": "Mercer Frey",
+      "comment": "Player meets Mercer Frey outside Snow Veil Sanctum to begin the hunt for Karliah.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00021551",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG05",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "meet mercer",
+            "snow veil",
+            "hunt karliah",
+            "ready to go"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "ENTER_SANCTUM",
+      "focus_npc": "Mercer Frey",
+      "comment": "Player enters Snow Veil Sanctum with Mercer as a temporary follower, facing draugr and traps.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00021551",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG05",
+          "min_stage": 20
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "inside the sanctum",
+            "entered the ruins",
+            "follow mercer"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "MEET_MERCER_OUTSIDE"
+      ]
+    },
+    {
+      "id": "SPEAK_TO_KARLIAH",
+      "focus_npc": "Karliah",
+      "comment": "After Karliah's paralytic arrow and Mercer's betrayal, the player wakes outside and speaks with Karliah.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00021551",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 60
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG05",
+          "min_stage": 60
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "karliah saved me",
+            "why did you shoot me",
+            "mercer betrayed",
+            "mercer is the killer"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "ENTER_SANCTUM"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Karliah",
+      "comment": "Quest ends with Mercer revealed as Gallus's killer and the Nightingale secret uncovered.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00021551",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "TG05",
+          "stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "nightingales",
+            "nocturnal",
+            "gallus journal",
+            "mercer killed gallus"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_TO_KARLIAH"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "MEET_MERCER_OUTSIDE"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "tg04_scoundrelsfolly",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

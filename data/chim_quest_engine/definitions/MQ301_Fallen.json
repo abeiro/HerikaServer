@@ -1,329 +1,361 @@
 {
-    "quest_key":  "mq301_fallen",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x00044C56",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MQ301",
-    "title":  "The Fallen",
-    "description":  "After defeating Alduin at the Throat of the World, the World-Eater fled. The Dragonborn must trap one of Alduin\u0027s dragon allies at Dragonsreach to learn the location of his lair, navigating the civil war if necessary to gain the Jarl of Whiterun\u0027s cooperation.",
-    "npc_facts":  {
-                      "Paarthurnax":  {
-                                          "base_facts":  [
-                                                             "Dragonsreach was once used to imprison a dragon by the ancient Nords.",
-                                                             "A dragon\u0027s name is a Word of Power that can be Shouted to summon it.",
-                                                             "Odahviing is one of Alduin\u0027s allies who may be called."
-                                                         ],
-                                          "beat_facts":  {
-                                                             "SEEK_COUNCIL":  [
-                                                                                  "The Dragonborn has asked how to find Alduin after he fled the Throat of the World."
-                                                                              ],
-                                                             "LEARN_CALL_DRAGON":  [
-                                                                                       "I have shared the name Odahviing so the Dragonborn can call him."
-                                                                                   ]
-                                                         }
-                                      },
-                      "Arngeir":  {
-                                      "base_facts":  [
-                                                         "Dragonsreach was once used to capture a dragon.",
-                                                         "The Greybeards can host a peace council to negotiate a civil war truce."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "SEEK_COUNCIL":  [
-                                                                              "The Dragonborn seeks a way to track Alduin after he fled."
-                                                                          ],
-                                                         "NEGOTIATE_TRUCE":  [
-                                                                                 "I have agreed to host the peace negotiations at High Hrothgar."
-                                                                             ]
-                                                     }
-                                  },
-                      "Esbern":  {
-                                     "base_facts":  [
-                                                        "The Blades\u0027 records contain the names of dragons.",
-                                                        "A dragon\u0027s name can be used as a Shout to summon it."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "SEEK_COUNCIL":  [
-                                                                             "The Dragonborn seeks a way to track Alduin."
-                                                                         ],
-                                                        "LEARN_CALL_DRAGON":  [
-                                                                                  "I have revealed the name Odahviing from the Blades\u0027 records."
-                                                                              ]
-                                                    }
-                                 },
-                      "Odahviing":  {
-                                        "base_facts":  [
-                                                           "I am one of Alduin\u0027s allies.",
-                                                           "I was curious to test the Dragonborn\u0027s power when called."
-                                                       ],
-                                        "beat_facts":  {
-                                                           "TRAP_ODAHVIING":  [
-                                                                                  "I have been trapped in the Dragonsreach yoke."
-                                                                              ],
-                                                           "INTERROGATE_ODAHVIING":  [
-                                                                                         "Alduin\u0027s lair is at Skuldafn, an ancient Dragon Cult temple reachable only by air.",
-                                                                                         "I will fly the Dragonborn to Skuldafn if released."
-                                                                                     ]
-                                                       }
-                                    }
-                  },
-    "beats":  [
-                  {
-                      "id":  "SEEK_COUNCIL",
-                      "focus_npc":  "Paarthurnax",
-                      "comment":  "Player consults Paarthurnax, Arngeir, or Esbern after Alduin flees. Learns Dragonsreach was used to trap a dragon.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ301",
-                                           "min_stage":  10
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "where did alduin go",
-                                                            "track alduin",
-                                                            "find alduin",
-                                                            "trap a dragon",
-                                                            "dragonsreach"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "TALK_TO_JARL",
-                      "focus_npc":  "",
-                      "comment":  "Player approaches the Jarl of Whiterun about using Dragonsreach to trap a dragon. Civil war status affects the Jarl\u0027s response.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ301",
-                                           "min_stage":  25
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "jarl of whiterun",
-                                                            "help trap a dragon",
-                                                            "use dragonsreach"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SEEK_COUNCIL"
-                                        ]
-                  },
-                  {
-                      "id":  "NEGOTIATE_TRUCE",
-                      "focus_npc":  "Arngeir",
-                      "comment":  "If the civil war is unresolved, the Jarl requires a truce. The Greybeards host the peace council, starting Season Unending.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ301",
-                                           "min_stage":  30
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "negotiate a truce",
-                                                            "peace council",
-                                                            "greybeards help",
-                                                            "season unending"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TALK_TO_JARL"
-                                        ]
-                  },
-                  {
-                      "id":  "LEARN_CALL_DRAGON",
-                      "focus_npc":  "Esbern",
-                      "comment":  "Esbern or Paarthurnax reveals the name Odahviing. The Dragonborn learns the Call Dragon Shout automatically.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ301",
-                                           "min_stage":  50
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "call dragon shout",
-                                                            "odahviing",
-                                                            "dragon\u0027s name",
-                                                            "summon a dragon"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "NEGOTIATE_TRUCE"
-                                        ]
-                  },
-                  {
-                      "id":  "PREPARE_TRAP",
-                      "focus_npc":  "",
-                      "comment":  "Player prepares the trap at the Dragonsreach Great Porch with the Jarl\u0027s assistance.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ301",
-                                           "min_stage":  70
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "prepare the trap",
-                                                            "dragonsreach porch",
-                                                            "ready the trap"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "LEARN_CALL_DRAGON"
-                                        ]
-                  },
-                  {
-                      "id":  "TRAP_ODAHVIING",
-                      "focus_npc":  "Odahviing",
-                      "comment":  "Player calls Odahviing with the Shout, fights him, and draws him into the yoke trap at Dragonsreach.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ301",
-                                           "min_stage":  150
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "trap odahviing",
-                                                            "captured the dragon",
-                                                            "dragon is trapped"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "PREPARE_TRAP"
-                                        ]
-                  },
-                  {
-                      "id":  "INTERROGATE_ODAHVIING",
-                      "focus_npc":  "Odahviing",
-                      "comment":  "Player interrogates the trapped Odahviing, who reveals Alduin\u0027s lair at Skuldafn and offers to fly the Dragonborn there.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ301",
-                                           "min_stage":  200
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "interrogate odahviing",
-                                                            "where is alduin",
-                                                            "skuldafn",
-                                                            "alduin\u0027s lair"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TRAP_ODAHVIING"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "Odahviing",
-                      "comment":  "Odahviing is released and flies the Dragonborn to Skuldafn. Quest finishes.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MQ301",
-                                           "min_stage":  220
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "INTERROGATE_ODAHVIING"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "SEEK_COUNCIL"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "mq206_alduinsbane",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "mq301_fallen",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x00044C56",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MQ301",
+  "title": "The Fallen",
+  "description": "After defeating Alduin at the Throat of the World, the World-Eater fled. The Dragonborn must trap one of Alduin's dragon allies at Dragonsreach to learn the location of his lair, navigating the civil war if necessary to gain the Jarl of Whiterun's cooperation.",
+  "npc_facts": {
+    "Paarthurnax": {
+      "base_facts": [
+        "Dragonsreach was once used to imprison a dragon by the ancient Nords.",
+        "A dragon's name is a Word of Power that can be Shouted to summon it.",
+        "Odahviing is one of Alduin's allies who may be called."
+      ],
+      "beat_facts": {
+        "SEEK_COUNCIL": [
+          "The Dragonborn has asked how to find Alduin after he fled the Throat of the World."
+        ],
+        "LEARN_CALL_DRAGON": [
+          "I have shared the name Odahviing so the Dragonborn can call him."
+        ]
+      }
+    },
+    "Arngeir": {
+      "base_facts": [
+        "Dragonsreach was once used to capture a dragon.",
+        "The Greybeards can host a peace council to negotiate a civil war truce."
+      ],
+      "beat_facts": {
+        "SEEK_COUNCIL": [
+          "The Dragonborn seeks a way to track Alduin after he fled."
+        ],
+        "NEGOTIATE_TRUCE": [
+          "I have agreed to host the peace negotiations at High Hrothgar."
+        ]
+      }
+    },
+    "Esbern": {
+      "base_facts": [
+        "The Blades' records contain the names of dragons.",
+        "A dragon's name can be used as a Shout to summon it."
+      ],
+      "beat_facts": {
+        "SEEK_COUNCIL": [
+          "The Dragonborn seeks a way to track Alduin."
+        ],
+        "LEARN_CALL_DRAGON": [
+          "I have revealed the name Odahviing from the Blades' records."
+        ]
+      }
+    },
+    "Odahviing": {
+      "base_facts": [
+        "I am one of Alduin's allies.",
+        "I was curious to test the Dragonborn's power when called."
+      ],
+      "beat_facts": {
+        "TRAP_ODAHVIING": [
+          "I have been trapped in the Dragonsreach yoke."
+        ],
+        "INTERROGATE_ODAHVIING": [
+          "Alduin's lair is at Skuldafn, an ancient Dragon Cult temple reachable only by air.",
+          "I will fly the Dragonborn to Skuldafn if released."
+        ],
+        "QUEST_COMPLETE": [
+          "I have been released from the Dragonsreach yoke and am now free.",
+          "I honor my bargain to fly the Dragonborn to Skuldafn, having begun to question whether Alduin is fit to lead after his defeat at the Throat of the World.",
+          "The Dragonborn must speak with me on the Great Porch to begin the flight to Skuldafn.",
+          "The Dragonborn now possesses all three words of the Call Dragon shout and may summon me as an ally in future battles."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "SEEK_COUNCIL",
+      "focus_npc": "Paarthurnax",
+      "comment": "Player consults Paarthurnax, Arngeir, or Esbern after Alduin flees. Learns Dragonsreach was used to trap a dragon.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00044C56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ301",
+          "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "where did alduin go",
+            "track alduin",
+            "find alduin",
+            "trap a dragon",
+            "dragonsreach"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "TALK_TO_JARL",
+      "focus_npc": "",
+      "comment": "Player approaches the Jarl of Whiterun about using Dragonsreach to trap a dragon. Civil war status affects the Jarl's response.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00044C56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 25
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ301",
+          "min_stage": 25
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "jarl of whiterun",
+            "help trap a dragon",
+            "use dragonsreach"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SEEK_COUNCIL"
+      ]
+    },
+    {
+      "id": "NEGOTIATE_TRUCE",
+      "focus_npc": "Arngeir",
+      "comment": "If the civil war is unresolved, the Jarl requires a truce. The Greybeards host the peace council, starting Season Unending.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00044C56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ301",
+          "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "negotiate a truce",
+            "peace council",
+            "greybeards help",
+            "season unending"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TALK_TO_JARL"
+      ]
+    },
+    {
+      "id": "LEARN_CALL_DRAGON",
+      "focus_npc": "Esbern",
+      "comment": "Esbern or Paarthurnax reveals the name Odahviing. The Dragonborn learns the Call Dragon Shout automatically.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00044C56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ301",
+          "min_stage": 50
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "call dragon shout",
+            "odahviing",
+            "dragon's name",
+            "summon a dragon"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "NEGOTIATE_TRUCE"
+      ]
+    },
+    {
+      "id": "PREPARE_TRAP",
+      "focus_npc": "",
+      "comment": "Player prepares the trap at the Dragonsreach Great Porch with the Jarl's assistance.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00044C56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 70
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ301",
+          "min_stage": 70
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "prepare the trap",
+            "dragonsreach porch",
+            "ready the trap"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LEARN_CALL_DRAGON"
+      ]
+    },
+    {
+      "id": "TRAP_ODAHVIING",
+      "focus_npc": "Odahviing",
+      "comment": "Player calls Odahviing with the Shout, fights him, and draws him into the yoke trap at Dragonsreach.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00044C56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 150
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ301",
+          "min_stage": 150
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "trap odahviing",
+            "captured the dragon",
+            "dragon is trapped"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "PREPARE_TRAP"
+      ]
+    },
+    {
+      "id": "INTERROGATE_ODAHVIING",
+      "focus_npc": "Odahviing",
+      "comment": "Player interrogates the trapped Odahviing, who reveals Alduin's lair at Skuldafn and offers to fly the Dragonborn there.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00044C56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ301",
+          "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "interrogate odahviing",
+            "where is alduin",
+            "skuldafn",
+            "alduin's lair"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TRAP_ODAHVIING"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "Odahviing",
+      "comment": "Odahviing is released and flies the Dragonborn to Skuldafn. Quest finishes.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00044C56",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 220
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MQ301",
+          "min_stage": 220
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "INTERROGATE_ODAHVIING"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "SEEK_COUNCIL"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mq206_alduinsbane",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

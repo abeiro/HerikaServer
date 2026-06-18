@@ -28,7 +28,10 @@
           "The player has agreed to help me retrieve my amulet from the catacombs."
         ],
         "QUEST_COMPLETE": [
-          "The player returned my Amulet of Arkay. I rewarded them with 15 gold and I am very grateful."
+          "The player returned my Amulet of Arkay. I rewarded them with 15 gold and I am very grateful.",
+          "Player returns the amulet to Andurs, completing the quest.",
+          "Amulet of Arkay [ edit ] Follow the stairs down by the second skeleton and go through the door; the amulet lies next to a wreath on the right-hand table.",
+          "and reward you with 15 gold."
         ]
       }
     }
@@ -39,7 +42,10 @@
       "focus_npc": "Andurs",
       "comment": "Andurs tells the player about his lost Amulet of Arkay in the catacombs.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00094E3C",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
       },
       "downstream": [],
       "triggers": [

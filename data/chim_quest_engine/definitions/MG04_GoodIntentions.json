@@ -1,350 +1,351 @@
 {
-    "quest_key":  "mg04_goodintentions",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x0001F254",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "MG04",
-    "title":  "Good Intentions",
-    "description":  "After discovering the orb from Saarthal, the player must navigate growing concern around the Eye of Magnus. Ancano introduces a Psijic Order monk who warns of danger, leading the player to seek the Augur of Dunlain beneath the College and ultimately report the need for the Staff of Magnus to the Arch-Mage.",
-    "npc_facts":  {
-                      "Tolfdir":  {
-                                      "base_facts":  [
-                                                         "I am a master wizard at the College of Winterhold.",
-                                                         "I have been studying the orb recovered from Saarthal, which appears to be the Eye of Magnus.",
-                                                         "The markings on the orb are unlike any Elven, Daedric, or Ayleid script I have seen."
-                                                     ],
-                                      "beat_facts":  {
-                                                         "LISTEN_TO_TOLFDIR":  [
-                                                                                   "I shared my observations about the Eye of Magnus with the student before Ancano interrupted."
-                                                                               ],
-                                                         "FIND_AUGUR":  [
-                                                                            "I told the student that the Augur of Dunlain is a former student who can be found in the Midden beneath the College."
-                                                                        ]
-                                                     }
-                                  },
-                      "Ancano":  {
-                                     "base_facts":  [
-                                                        "I am the Thalmor advisor to the College of Winterhold.",
-                                                        "I am deeply interested in the Eye of Magnus and its potential."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "FOLLOW_ANCANO":  [
-                                                                              "I insisted the student follow me to meet a visitor from the Psijic Order in the Arch-Mage\u0027s quarters."
-                                                                          ]
-                                                    }
-                                 },
-                      "Quaranir":  {
-                                       "base_facts":  [
-                                                          "I am a monk of the Psijic Order.",
-                                                          "I have come to warn that the Eye of Magnus is dangerous and must not be used."
-                                                      ],
-                                       "beat_facts":  {
-                                                          "SPEAK_WITH_QUARANIR":  [
-                                                                                      "I froze time to speak privately and directed the student to seek the Augur of Dunlain within the College for guidance on dealing with the Eye of Magnus."
-                                                                                  ]
-                                                      }
-                                   },
-                      "Augur of Dunlain":  {
-                                               "base_facts":  [
-                                                                  "I am a former student of the College of Winterhold, transformed by my own ambitions.",
-                                                                  "I reside in the Midden beneath the College."
-                                                              ],
-                                               "beat_facts":  {
-                                                                  "FIND_AUGUR":  [
-                                                                                     "I told the student that the Staff of Magnus is needed to deal with the Eye of Magnus and urged them to inform their superiors immediately."
-                                                                                 ]
-                                                              }
-                                           },
-                      "Savos Aren":  {
-                                         "base_facts":  [
-                                                            "I am the Arch-Mage of the College of Winterhold."
-                                                        ],
-                                         "beat_facts":  {
-                                                            "REPORT_TO_SAVOS":  [
-                                                                                    "I directed the student to Mirabelle Ervine for more information on the Staff of Magnus and rewarded them with the Mage\u0027s Circlet."
-                                                                                ]
-                                                        }
-                                     }
-                  },
-    "beats":  [
-                  {
-                      "id":  "SPEAK_WITH_TOLFDIR",
-                      "focus_npc":  "Tolfdir",
-                      "comment":  "Player speaks with Tolfdir about the Night of Tears book and the Saarthal orb.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001F254",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  10
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001F254",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Night of Tears",
-                                                            "Tolfdir",
-                                                            "book",
-                                                            "Urag"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "LISTEN_TO_TOLFDIR",
-                      "focus_npc":  "Tolfdir",
-                      "comment":  "Tolfdir shares his thoughts on the Eye of Magnus before Ancano interrupts.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001F254",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  15
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001F254",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  10
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001F254",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  15
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "orb",
-                                                            "Eye of Magnus",
-                                                            "Saarthal",
-                                                            "markings"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MG04",
-                                           "min_stage":  10
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SPEAK_WITH_TOLFDIR"
-                                        ]
-                  },
-                  {
-                      "id":  "FOLLOW_ANCANO",
-                      "focus_npc":  "Ancano",
-                      "comment":  "Ancano interrupts and insists the player follow him to the Arch-Mage\u0027s quarters.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001F254",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  20
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001F254",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  15
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001F254",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "follow",
-                                                            "Ancano",
-                                                            "visitor",
-                                                            "Psijic"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MG04",
-                                           "min_stage":  15
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "LISTEN_TO_TOLFDIR"
-                                        ]
-                  },
-                  {
-                      "id":  "SPEAK_WITH_QUARANIR",
-                      "focus_npc":  "Quaranir",
-                      "comment":  "Quaranir freezes time, warns about the Eye of Magnus, and directs player to the Augur of Dunlain.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001F254",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  30
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001F254",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  20
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001F254",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  30
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Quaranir",
-                                                            "Psijic Order",
-                                                            "dangerous",
-                                                            "Augur"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MG04",
-                                           "min_stage":  20
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FOLLOW_ANCANO"
-                                        ]
-                  },
-                  {
-                      "id":  "FIND_AUGUR",
-                      "focus_npc":  "Augur of Dunlain",
-                      "comment":  "Player finds the Augur of Dunlain in the Midden and learns about the Staff of Magnus.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001F254",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  50
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001F254",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  30
-                                         },
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001F254",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  40
-                                         },
-                                         {
-                                             "type":  "set_objective_displayed",
-                                             "quest_form_id":  "0x0001F254",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  50
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Augur",
-                                                            "Staff of Magnus",
-                                                            "Midden",
-                                                            "disappointment"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MG04",
-                                           "min_stage":  40
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SPEAK_WITH_QUARANIR"
-                                        ]
-                  },
-                  {
-                      "id":  "REPORT_TO_SAVOS",
-                      "focus_npc":  "Savos Aren",
-                      "comment":  "Player reports the Augur\u0027s message about the Staff of Magnus to Arch-Mage Savos Aren and receives the Mage\u0027s Circlet.",
-                      "action":  {
-                                     "type":  "set_stage",
-                                     "quest_form_id":  "0x0001F254",
-                                     "quest_plugin":  "Skyrim.esm",
-                                     "stage":  200
-                                 },
-                      "downstream":  [
-                                         {
-                                             "type":  "set_objective_completed",
-                                             "quest_form_id":  "0x0001F254",
-                                             "quest_plugin":  "Skyrim.esm",
-                                             "objective_index":  50
-                                         }
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "Savos",
-                                                            "Staff of Magnus",
-                                                            "Augur",
-                                                            "report"
-                                                        ],
-                                           "min_matches":  1
-                                       },
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "MG04",
-                                           "min_stage":  50
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "FIND_AUGUR"
-                                        ]
-                  }
-              ],
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "SPEAK_WITH_TOLFDIR"
-                                    ],
-                          "requires":  [
-                                           {
-                                               "type":  "quest_beat_fired",
-                                               "quest_key":  "mg03_hittingthebooks",
-                                               "beat_id":  "QUEST_COMPLETE"
-                                           }
-                                       ]
-                      }
+  "quest_key": "mg04_goodintentions",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x0001F254",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "MG04",
+  "title": "Good Intentions",
+  "description": "After discovering the orb from Saarthal, the player must navigate growing concern around the Eye of Magnus. Ancano introduces a Psijic Order monk who warns of danger, leading the player to seek the Augur of Dunlain beneath the College and ultimately report the need for the Staff of Magnus to the Arch-Mage.",
+  "npc_facts": {
+    "Tolfdir": {
+      "base_facts": [
+        "I am a master wizard at the College of Winterhold.",
+        "I have been studying the orb recovered from Saarthal, which appears to be the Eye of Magnus.",
+        "The markings on the orb are unlike any Elven, Daedric, or Ayleid script I have seen."
+      ],
+      "beat_facts": {
+        "LISTEN_TO_TOLFDIR": [
+          "I shared my observations about the Eye of Magnus with the student before Ancano interrupted."
+        ],
+        "FIND_AUGUR": [
+          "I told the student that the Augur of Dunlain is a former student who can be found in the Midden beneath the College."
+        ]
+      }
+    },
+    "Ancano": {
+      "base_facts": [
+        "I am the Thalmor advisor to the College of Winterhold.",
+        "I am deeply interested in the Eye of Magnus and its potential."
+      ],
+      "beat_facts": {
+        "FOLLOW_ANCANO": [
+          "I insisted the student follow me to meet a visitor from the Psijic Order in the Arch-Mage's quarters."
+        ]
+      }
+    },
+    "Quaranir": {
+      "base_facts": [
+        "I am a monk of the Psijic Order.",
+        "I have come to warn that the Eye of Magnus is dangerous and must not be used."
+      ],
+      "beat_facts": {
+        "SPEAK_WITH_QUARANIR": [
+          "I froze time to speak privately and directed the student to seek the Augur of Dunlain within the College for guidance on dealing with the Eye of Magnus."
+        ]
+      }
+    },
+    "Augur of Dunlain": {
+      "base_facts": [
+        "I am a former student of the College of Winterhold, transformed by my own ambitions.",
+        "I reside in the Midden beneath the College."
+      ],
+      "beat_facts": {
+        "FIND_AUGUR": [
+          "I told the student that the Staff of Magnus is needed to deal with the Eye of Magnus and urged them to inform their superiors immediately."
+        ]
+      }
+    },
+    "Savos Aren": {
+      "base_facts": [
+        "I am the Arch-Mage of the College of Winterhold."
+      ],
+      "beat_facts": {
+        "REPORT_TO_SAVOS": [
+          "I directed the student to Mirabelle Ervine for more information on the Staff of Magnus and rewarded them with the Mage's Circlet.",
+          "Player reports the Augur's message about the Staff of Magnus to Arch-Mage Savos Aren and receives the Mage's Circlet.",
+          "Ancano will interrupt Tolfdir's musings and demand that you follow him to meet a mysterious visitor who has asked to speak with you.",
+          "You may not get the next quest \"Revealing the Unseen\" after completing the quest."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "SPEAK_WITH_TOLFDIR",
+      "focus_npc": "Tolfdir",
+      "comment": "Player speaks with Tolfdir about the Night of Tears book and the Saarthal orb.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001F254",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
+      },
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001F254",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Night of Tears",
+            "Tolfdir",
+            "book",
+            "Urag"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "LISTEN_TO_TOLFDIR",
+      "focus_npc": "Tolfdir",
+      "comment": "Tolfdir shares his thoughts on the Eye of Magnus before Ancano interrupts.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001F254",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 15
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001F254",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001F254",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 15
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "orb",
+            "Eye of Magnus",
+            "Saarthal",
+            "markings"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MG04",
+          "min_stage": 10
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_WITH_TOLFDIR"
+      ]
+    },
+    {
+      "id": "FOLLOW_ANCANO",
+      "focus_npc": "Ancano",
+      "comment": "Ancano interrupts and insists the player follow him to the Arch-Mage's quarters.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001F254",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001F254",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 15
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001F254",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "follow",
+            "Ancano",
+            "visitor",
+            "Psijic"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MG04",
+          "min_stage": 15
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "LISTEN_TO_TOLFDIR"
+      ]
+    },
+    {
+      "id": "SPEAK_WITH_QUARANIR",
+      "focus_npc": "Quaranir",
+      "comment": "Quaranir freezes time, warns about the Eye of Magnus, and directs player to the Augur of Dunlain.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001F254",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001F254",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 20
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001F254",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 30
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Quaranir",
+            "Psijic Order",
+            "dangerous",
+            "Augur"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MG04",
+          "min_stage": 20
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FOLLOW_ANCANO"
+      ]
+    },
+    {
+      "id": "FIND_AUGUR",
+      "focus_npc": "Augur of Dunlain",
+      "comment": "Player finds the Augur of Dunlain in the Midden and learns about the Staff of Magnus.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001F254",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 50
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001F254",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 30
+        },
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001F254",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 40
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001F254",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 50
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Augur",
+            "Staff of Magnus",
+            "Midden",
+            "disappointment"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MG04",
+          "min_stage": 40
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_WITH_QUARANIR"
+      ]
+    },
+    {
+      "id": "REPORT_TO_SAVOS",
+      "focus_npc": "Savos Aren",
+      "comment": "Player reports the Augur's message about the Staff of Magnus to Arch-Mage Savos Aren and receives the Mage's Circlet.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x0001F254",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x0001F254",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 50
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "Savos",
+            "Staff of Magnus",
+            "Augur",
+            "report"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "MG04",
+          "min_stage": 50
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "FIND_AUGUR"
+      ]
+    }
+  ],
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "SPEAK_WITH_TOLFDIR"
+    ],
+    "requires": [
+      {
+        "type": "quest_beat_fired",
+        "quest_key": "mg03_hittingthebooks",
+        "beat_id": "QUEST_COMPLETE"
+      }
+    ]
+  }
 }

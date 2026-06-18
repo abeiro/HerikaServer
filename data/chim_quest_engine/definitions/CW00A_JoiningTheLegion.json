@@ -1,257 +1,253 @@
 {
-    "quest_key":  "cw00a_joiningthelegion",
-    "skeleton_type":  "quest",
-    "quest_form_id":  "0x000D3C5F",
-    "quest_plugin":  "Skyrim.esm",
-    "quest_editor_id":  "CW00A",
-    "title":  "Joining the Legion",
-    "description":  "Prove your worth to the Imperial Legion by clearing Fort Hraggstad of bandits, then take the oath before General Tullius to become an Auxiliary.",
-    "npc_facts":  {
-                      "Legate Rikke":  {
-                                           "base_facts":  [
-                                                              "I am Legate Rikke, the commanding officer overseeing Imperial Legion recruitment in Skyrim.",
-                                                              "I serve under General Tullius at Castle Dour in Solitude.",
-                                                              "I test potential recruits before allowing them to join the Legion."
-                                                          ],
-                                           "beat_facts":  {
-                                                              "HEAR_ABOUT_LEGION":  [
-                                                                                        "A survivor from Helgen is seeking to join the Imperial Legion."
-                                                                                    ],
-                                                              "SPEAK_TO_LEADERS":  [
-                                                                                       "I have sent the recruit to clear Fort Hraggstad of bandits as a test of their usefulness."
-                                                                                   ],
-                                                              "CLEAR_FORT_HRAGGSTAD":  [
-                                                                                           "The recruit has cleared Fort Hraggstad. I will send men to garrison it."
-                                                                                       ],
-                                                              "REPORT_TO_RIKKE":  [
-                                                                                      "The recruit has proven themselves. It is time for them to take the Imperial oath."
-                                                                                  ],
-                                                              "TAKE_OATH":  [
-                                                                                "The recruit has taken the oath and is now an Auxiliary of the Imperial Legion."
-                                                                            ],
-                                                              "QUEST_COMPLETE":  [
-                                                                                     "Our new Auxiliary has been inducted and sent to Beirand for equipment."
-                                                                                 ]
-                                                          }
-                                       },
-                      "General Tullius":  {
-                                              "base_facts":  [
-                                                                 "I am General Tullius, military governor of Skyrim and commander of the Imperial Legion forces here.",
-                                                                 "I am stationed at Castle Dour in Solitude, managing the war against the Stormcloaks.",
-                                                                 "I rely on Legate Rikke to evaluate new recruits."
-                                                             ],
-                                              "beat_facts":  {
-                                                                 "SPEAK_TO_LEADERS":  [
-                                                                                          "I directed a resourceful survivor from Helgen to Legate Rikke for recruitment."
-                                                                                      ],
-                                                                 "TAKE_OATH":  [
-                                                                                   "I administered the Imperial oath to the new recruit."
-                                                                               ],
-                                                                 "QUEST_COMPLETE":  [
-                                                                                        "The new Auxiliary has been welcomed into the Legion and sent to get outfitted."
-                                                                                    ]
-                                                             }
-                                          },
-                      "Hadvar":  {
-                                     "base_facts":  [
-                                                        "I am Hadvar, a soldier of the Imperial Legion stationed in Riverwood.",
-                                                        "I survived the dragon attack at Helgen alongside the player."
-                                                    ],
-                                     "beat_facts":  {
-                                                        "HEAR_ABOUT_LEGION":  [
-                                                                                  "I encouraged the survivor from Helgen to travel to Solitude and join the Imperial Legion."
-                                                                              ]
-                                                    }
-                                 }
-                  },
-    "beats":  [
-                  {
-                      "id":  "HEAR_ABOUT_LEGION",
-                      "focus_npc":  "Hadvar",
-                      "comment":  "Player hears about joining the Imperial Legion from someone with Legion ties.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW00A",
-                                           "min_stage":  1
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "join the legion",
-                                                            "imperial legion",
-                                                            "enlist"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-
-                                        ],
-                      "allow_natural_start":  true
-                  },
-                  {
-                      "id":  "SPEAK_TO_LEADERS",
-                      "focus_npc":  "Legate Rikke",
-                      "comment":  "Player speaks to Legate Rikke and General Tullius at Castle Dour.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW00A",
-                                           "min_stage":  7
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "talk to rikke",
-                                                            "general tullius",
-                                                            "castle dour"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "HEAR_ABOUT_LEGION"
-                                        ]
-                  },
-                  {
-                      "id":  "CLEAR_FORT_HRAGGSTAD",
-                      "focus_npc":  "",
-                      "comment":  "Player clears bandits from Fort Hraggstad to prove their usefulness.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "cleared the fort",
-                                                            "fort hraggstad",
-                                                            "bandits cleared"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "SPEAK_TO_LEADERS"
-                                        ]
-                  },
-                  {
-                      "id":  "REPORT_TO_RIKKE",
-                      "focus_npc":  "Legate Rikke",
-                      "comment":  "Player returns to Legate Rikke after clearing Fort Hraggstad.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW00A",
-                                           "min_stage":  100
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "report to rikke",
-                                                            "fort is cleared",
-                                                            "mission complete"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "CLEAR_FORT_HRAGGSTAD"
-                                        ]
-                  },
-                  {
-                      "id":  "TAKE_OATH",
-                      "focus_npc":  "General Tullius",
-                      "comment":  "Player takes the Imperial oath before General Tullius.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW00A",
-                                           "min_stage":  160
-                                       },
-                                       {
-                                           "type":  "dialogue",
-                                           "keywords":  [
-                                                            "take the oath",
-                                                            "swear loyalty",
-                                                            "long live the emperor"
-                                                        ],
-                                           "min_matches":  1
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "REPORT_TO_RIKKE"
-                                        ]
-                  },
-                  {
-                      "id":  "QUEST_COMPLETE",
-                      "focus_npc":  "",
-                      "comment":  "Quest completes; player is now an Auxiliary of the Imperial Legion.",
-                      "action":  {
-                                     "type":  "gate"
-                                 },
-                      "downstream":  [
-
-                                     ],
-                      "triggers":  [
-                                       {
-                                           "type":  "quest_stage",
-                                           "quest_editor_id":  "CW00A",
-                                           "min_stage":  200
-                                       }
-                                   ],
-                      "trigger_mode":  "any",
-                      "prerequisites":  [
-                                            "TAKE_OATH"
-                                        ]
-                  }
-              ],
-    "external_ids":  {
-                         "quest_form_id":  "0x000D3C5F",
-                         "quest_plugin":  "Skyrim.esm",
-                         "source":  "local-esm:Skyrim.esm QUST",
-                         "matched_by":  "quest_editor_id"
-                     },
-    "natural_start":  {
-                          "enabled":  true,
-                          "beats":  [
-                                        "HEAR_ABOUT_LEGION"
-                                    ],
-                          "requires":  [
-
-                                       ]
-                      }
+  "quest_key": "cw00a_joiningthelegion",
+  "skeleton_type": "quest",
+  "quest_form_id": "0x000D3C5F",
+  "quest_plugin": "Skyrim.esm",
+  "quest_editor_id": "CW00A",
+  "title": "Joining the Legion",
+  "description": "Prove your worth to the Imperial Legion by clearing Fort Hraggstad of bandits, then take the oath before General Tullius to become an Auxiliary.",
+  "npc_facts": {
+    "Legate Rikke": {
+      "base_facts": [
+        "I am Legate Rikke, the commanding officer overseeing Imperial Legion recruitment in Skyrim.",
+        "I serve under General Tullius at Castle Dour in Solitude.",
+        "I test potential recruits before allowing them to join the Legion."
+      ],
+      "beat_facts": {
+        "HEAR_ABOUT_LEGION": [
+          "A survivor from Helgen is seeking to join the Imperial Legion."
+        ],
+        "SPEAK_TO_LEADERS": [
+          "I have sent the recruit to clear Fort Hraggstad of bandits as a test of their usefulness."
+        ],
+        "CLEAR_FORT_HRAGGSTAD": [
+          "The recruit has cleared Fort Hraggstad. I will send men to garrison it."
+        ],
+        "REPORT_TO_RIKKE": [
+          "The recruit has proven themselves. It is time for them to take the Imperial oath."
+        ],
+        "TAKE_OATH": [
+          "The recruit has taken the oath and is now an Auxiliary of the Imperial Legion."
+        ],
+        "QUEST_COMPLETE": [
+          "Our new Auxiliary has been inducted and sent to Beirand for equipment."
+        ]
+      }
+    },
+    "General Tullius": {
+      "base_facts": [
+        "I am General Tullius, military governor of Skyrim and commander of the Imperial Legion forces here.",
+        "I am stationed at Castle Dour in Solitude, managing the war against the Stormcloaks.",
+        "I rely on Legate Rikke to evaluate new recruits."
+      ],
+      "beat_facts": {
+        "SPEAK_TO_LEADERS": [
+          "I directed a resourceful survivor from Helgen to Legate Rikke for recruitment."
+        ],
+        "TAKE_OATH": [
+          "I administered the Imperial oath to the new recruit."
+        ],
+        "QUEST_COMPLETE": [
+          "The new Auxiliary has been welcomed into the Legion and sent to get outfitted."
+        ]
+      }
+    },
+    "Hadvar": {
+      "base_facts": [
+        "I am Hadvar, a soldier of the Imperial Legion stationed in Riverwood.",
+        "I survived the dragon attack at Helgen alongside the player."
+      ],
+      "beat_facts": {
+        "HEAR_ABOUT_LEGION": [
+          "I encouraged the survivor from Helgen to travel to Solitude and join the Imperial Legion."
+        ]
+      }
+    }
+  },
+  "beats": [
+    {
+      "id": "HEAR_ABOUT_LEGION",
+      "focus_npc": "Hadvar",
+      "comment": "Player hears about joining the Imperial Legion from someone with Legion ties.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D3C5F",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 1
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW00A",
+          "min_stage": 1
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "join the legion",
+            "imperial legion",
+            "enlist"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": true
+    },
+    {
+      "id": "SPEAK_TO_LEADERS",
+      "focus_npc": "Legate Rikke",
+      "comment": "Player speaks to Legate Rikke and General Tullius at Castle Dour.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D3C5F",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 7
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW00A",
+          "min_stage": 7
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "talk to rikke",
+            "general tullius",
+            "castle dour"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "HEAR_ABOUT_LEGION"
+      ]
+    },
+    {
+      "id": "CLEAR_FORT_HRAGGSTAD",
+      "focus_npc": "",
+      "comment": "Player clears bandits from Fort Hraggstad to prove their usefulness.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "cleared the fort",
+            "fort hraggstad",
+            "bandits cleared"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "SPEAK_TO_LEADERS"
+      ]
+    },
+    {
+      "id": "REPORT_TO_RIKKE",
+      "focus_npc": "Legate Rikke",
+      "comment": "Player returns to Legate Rikke after clearing Fort Hraggstad.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D3C5F",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 100
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW00A",
+          "min_stage": 100
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "report to rikke",
+            "fort is cleared",
+            "mission complete"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "CLEAR_FORT_HRAGGSTAD"
+      ]
+    },
+    {
+      "id": "TAKE_OATH",
+      "focus_npc": "General Tullius",
+      "comment": "Player takes the Imperial oath before General Tullius.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x000D3C5F",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 160
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW00A",
+          "min_stage": 160
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "take the oath",
+            "swear loyalty",
+            "long live the emperor"
+          ],
+          "min_matches": 1
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "REPORT_TO_RIKKE"
+      ]
+    },
+    {
+      "id": "QUEST_COMPLETE",
+      "focus_npc": "",
+      "comment": "Quest completes; player is now an Auxiliary of the Imperial Legion.",
+      "action": {
+        "type": "gate"
+      },
+      "downstream": [],
+      "triggers": [
+        {
+          "type": "quest_stage",
+          "quest_editor_id": "CW00A",
+          "min_stage": 200
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "TAKE_OATH"
+      ]
+    }
+  ],
+  "external_ids": {
+    "quest_form_id": "0x000D3C5F",
+    "quest_plugin": "Skyrim.esm",
+    "source": "local-esm:Skyrim.esm QUST",
+    "matched_by": "quest_editor_id"
+  },
+  "natural_start": {
+    "enabled": true,
+    "beats": [
+      "HEAR_ABOUT_LEGION"
+    ],
+    "requires": []
+  }
 }

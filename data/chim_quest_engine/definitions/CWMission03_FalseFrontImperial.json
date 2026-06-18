@@ -18,7 +18,10 @@
           "Rikke has forged the stolen documents with false intelligence about Fort Dunstad reinforcements and Imperial troop movements."
         ],
         "QUEST_COMPLETE": [
-          "The forged documents were successfully delivered to the enemy commander. Rikke rewarded the player with gold."
+          "The forged documents were successfully delivered to the enemy commander. Rikke rewarded the player with gold.",
+          "Quest complete. Forged documents delivered successfully, player rewarded with gold by Rikke.",
+          "Return to Legate Rikke to receive the leveled gold reward only when you want to start the next quest in the series and skip the reward when the game doesn't prompt you to return to her.",
+          "As an alternative to meeting the courier and getting the map marker by chance, you can follow Rikke's advice and ask the innkeepers."
         ]
       }
     },
@@ -87,7 +90,10 @@
       "focus_npc": "Legate Rikke",
       "comment": "Player returns the stolen documents to Legate Rikke, who forges them with false intelligence.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003BCC4",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 30
       },
       "downstream": [],
       "triggers": [
@@ -95,6 +101,26 @@
           "type": "quest_stage",
           "quest_editor_id": "CWMission03",
           "min_stage": 30
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",
@@ -107,7 +133,10 @@
       "focus_npc": "Frorkmar Banner-Torn",
       "comment": "Player delivers the forged documents to Frorkmar Banner-Torn in Dawnstar, posing as a Stormcloak courier.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003BCC4",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 40
       },
       "downstream": [],
       "triggers": [
@@ -115,6 +144,26 @@
           "type": "quest_stage",
           "quest_editor_id": "CWMission03",
           "min_stage": 40
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",
@@ -127,7 +176,10 @@
       "focus_npc": "Legate Rikke",
       "comment": "Quest complete. Forged documents delivered successfully, player rewarded with gold by Rikke.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003BCC4",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -135,6 +187,26 @@
           "type": "quest_stage",
           "quest_editor_id": "CWMission03",
           "min_stage": 200
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

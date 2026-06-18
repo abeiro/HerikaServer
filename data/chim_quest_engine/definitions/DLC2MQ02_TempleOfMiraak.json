@@ -34,7 +34,10 @@
           "Miraak is alive in Apocrypha and plans to return. We must warn my father Storn at the Skaal Village."
         ],
         "QUEST_COMPLETE": [
-          "We must take what we learned to my village. My father Storn Crag-Strider will know what to do."
+          "We must take what we learned to my village. My father Storn Crag-Strider will know what to do.",
+          "Quest completes. Frea suggests returning to Skaal Village to speak with Storn Crag-Strider, leading to The Fate of the Skaal.",
+          "To the right is a passage leading to a room with several potions, coin purses, and two spell tomes: an apprentice level Alteration and an apprentice level Conjuration spell tome.",
+          "The path ahead is quite narrow and leads onto a bridge where you will encounter at least six skeletons ."
         ]
       }
     },
@@ -80,7 +83,10 @@
       "focus_npc": "Frea",
       "comment": "Player talks to Frea at the temple exterior. She explains the situation and offers to accompany the player inside.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00017F8F",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 10
       },
       "downstream": [],
       "triggers": [
@@ -175,7 +181,10 @@
       "focus_npc": "Frea",
       "comment": "Player returns from Apocrypha and tells Frea what they saw. She suggests going to her village.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00017F8F",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 60
       },
       "downstream": [],
       "triggers": [
@@ -207,7 +216,10 @@
       "focus_npc": "Frea",
       "comment": "Quest completes. Frea suggests returning to Skaal Village to speak with Storn Crag-Strider, leading to The Fate of the Skaal.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00017F8F",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 200
       },
       "downstream": [],
       "triggers": [
@@ -216,6 +228,26 @@
           "quest_editor_id": "DLC2MQ02",
           "min_stage": 200,
           "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "I have returned",
+            "I came back",
+            "I am reporting back",
+            "reporting back",
+            "I did it",
+            "it's done",
+            "it is done",
+            "I finished it",
+            "I completed it",
+            "I brought it",
+            "I brought it back",
+            "I have it",
+            "here it is",
+            "I delivered it"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",

@@ -12,7 +12,12 @@
         "I am the leader of this Dark Brotherhood sanctuary.",
         "New family members should speak with Nazir to receive their first contracts."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "CONTRACTS_RECEIVED": [
+          "The new family member has received their first contracts from Nazir, following my instructions.",
+          "The recruit is now carrying out the Brotherhood's sacred work as a full member of this family."
+        ]
+      }
     },
     "Nazir": {
       "base_facts": [
@@ -23,6 +28,11 @@
       "beat_facts": {
         "SPEAK_WITH_NAZIR": [
           "I have given the new recruit their first contracts: Narfi, Beitild, and Ennodius Papius."
+        ],
+        "CONTRACTS_RECEIVED": [
+          "I have issued the new recruit three contracts targeting Narfi, Beitild, and Ennodius Papius.",
+          "The recruit may complete each contract individually or all at once, returning to me for payment after each kill.",
+          "I remain skeptical of the new recruit's prospects—I have no intention of getting invested in someone who may be dead tomorrow."
         ]
       }
     }
@@ -52,7 +62,10 @@
       "focus_npc": "Nazir",
       "comment": "Player speaks with Nazir and receives the first set of assassination contracts.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00022F47",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
