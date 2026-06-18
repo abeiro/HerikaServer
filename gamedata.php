@@ -102,6 +102,9 @@ try {
         case 'loaded_plugins':
             handleLoadedPluginsUpdate($data);
             break;
+        case 'low_process_actors':
+            handleLowProcessActorsUpdate($data,$npcMaster);
+            break;    
         default:
             http_response_code(400);
             echo "Bad Request: Unknown type";
@@ -647,3 +650,46 @@ function handleMarketStockUpdate(array $data): void {
     }
 }
 
+function handleLowProcessActorsUpdate(array $data,NpcMaster $npcMaster): void {
+
+
+    $actorList = isset($data['actors_nearby']) && is_array($data['actors_nearby']) ? $data['actors_nearby'] : [];
+    
+    $currentData = $npcMaster->getByName($data['actor_name']);
+    if ($currentData) {
+        $extendedData=$npcMaster->getMetadata(($currentData));
+        // Ensure the history bucket exists and is always an array.
+        if (!isset($extendedData['low_process_actors']) || !is_array($extendedData['low_process_actors'])) {
+            $extendedData['low_process_actors'] = [];
+        }
+
+        $actorSanitizedList = [];
+        foreach ($data['actors_nearby'] as $k=>$v) {
+            $unsignedInt = (intval($v["formId"]) + 0) & 0xFFFFFFFF;
+            $hexRefId = strtoupper(str_pad(dechex($unsignedInt), 8, '0', STR_PAD_LEFT));
+            $actorSanitizedList[$hexRefId] = $v["name"];
+        }
+
+        // Store current nearby actors snapshot keyed by game timestamp.
+        if ($actorSanitizedList === []) {
+            error_log("[gamedata.php] Received empty low_process_actors list for {$data['actor_name']}");
+            return;
+        } else {
+            Logger::debug("[gamedata.php] Received low_process_actors list for {$data['actor_name']}: " . count($actorSanitizedList) . " actor(s)");
+        }
+        $gametsKey = isset($data['gamets']) ? (string)$data['gamets'] : (string)time();
+        $extendedData['low_process_actors'][$gametsKey] = $actorSanitizedList;
+
+        // Keep entries ordered by timestamp and retain only the 5 most recent snapshots.
+        ksort($extendedData['low_process_actors'], SORT_NUMERIC);
+        if (count($extendedData['low_process_actors']) > 5) {
+            $extendedData['low_process_actors'] = array_slice($extendedData['low_process_actors'], -5, null, true);
+        }
+
+        $currentData=$npcMaster->setMetadata($currentData, $extendedData);
+        $npcMaster->updateByArray($currentData);
+
+        Logger::debug("[gamedata.php] Updated low_process_actors list for {$data['actor_name']}: " . count($actorList) . " actor(s)");
+        error_log("[gamedata.php] Updated low_process_actors list for {$data['actor_name']}: " . count($actorList) . " actor(s)");
+    }
+}
