@@ -972,7 +972,7 @@ function loadNarratorVoiceSettings() {
     $narrator = new Narrator();
     $profileId = $narrator->getProfileId();
     if ($profileId) {
-        $profileManager = new CoreProfiles();
+        $profileManager = new CoreProfile();
         $profileData = $profileManager->getById($profileId);
         if (is_array($profileData) && !empty($profileData)) {
             $ttsConnectorId = intval($profileData['tts_connector_id'] ?? 0);
