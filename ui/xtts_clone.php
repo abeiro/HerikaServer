@@ -233,6 +233,152 @@ if (!function_exists('chimTtsStudioStoreSpeakersList')) {
     }
 }
 
+if (!function_exists('chimTtsStudioVoiceSamplePath')) {
+    function chimTtsStudioVoiceSamplePath(string $voice): string
+    {
+        $voice = trim($voice);
+        $voice = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $voice);
+        $voice = basename($voice);
+        if (strtolower(substr($voice, -4)) !== '.wav') {
+            $voice .= '.wav';
+        }
+
+        return __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'voices' . DIRECTORY_SEPARATOR . $voice;
+    }
+}
+
+if (!function_exists('chimTtsStudioSyncVoiceSampleForTest')) {
+    function chimTtsStudioSyncVoiceSampleForTest(string $driver, string $voice, string $logFile = ''): array
+    {
+        $endpoint = chimTtsStudioResolveEndpointForDriver($driver);
+        if ($endpoint === '') {
+            return ['success' => false, 'message' => 'No endpoint configured for ' . $driver . '.'];
+        }
+
+        $voiceSamplePath = chimTtsStudioVoiceSamplePath($voice);
+        if (!file_exists($voiceSamplePath)) {
+            return ['success' => false, 'message' => 'Voice sample not found: ' . basename($voiceSamplePath) . '.'];
+        }
+
+        $fileName = basename($voiceSamplePath);
+        $fileType = function_exists('mime_content_type') ? trim(strval(@mime_content_type($voiceSamplePath))) : '';
+        if ($fileType === '') {
+            $fileType = 'audio/wav';
+        }
+
+        $url = $endpoint . '/upload_sample';
+        @file_put_contents($logFile, "Attempting automatic voice sync to {$url} for {$fileName}\n", FILE_APPEND);
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, ['wavFile' => new CURLFile($voiceSamplePath, $fileType, $fileName)]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'accept: application/json',
+            'Content-Type: multipart/form-data'
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+
+        $response = curl_exec($ch);
+        $httpCode = intval(curl_getinfo($ch, CURLINFO_HTTP_CODE));
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        $alreadyExists = ($httpCode === 400 && stripos(strval($response), 'already exists') !== false);
+        if ($curlError !== '') {
+            @file_put_contents($logFile, "Automatic voice sync failed: {$curlError}\n", FILE_APPEND);
+            return ['success' => false, 'message' => 'Voice sync failed: ' . $curlError];
+        }
+        if ($httpCode === 200 || $alreadyExists) {
+            chimTtsStudioStoreSpeakersList($driver, chimTtsStudioFetchSpeakersList($driver));
+            @file_put_contents($logFile, "Automatic voice sync succeeded with HTTP {$httpCode}\n", FILE_APPEND);
+            return [
+                'success' => true,
+                'message' => $alreadyExists ? 'Voice already exists on server.' : 'Voice synced to server.',
+            ];
+        }
+
+        @file_put_contents($logFile, "Automatic voice sync failed with HTTP {$httpCode}: " . strval($response) . "\n", FILE_APPEND);
+        return ['success' => false, 'message' => 'Voice sync failed with HTTP ' . $httpCode . ': ' . strval($response)];
+    }
+}
+
+if (!function_exists('chimTtsStudioConfigureCompatibleTestGlobals')) {
+    function chimTtsStudioConfigureCompatibleTestGlobals(string $driver, string $ttsFunction, string $voice): void
+    {
+        chimTtsStudioApplyConnectorGlobals($driver);
+        $GLOBALS["TTSFUNCTION"] = $ttsFunction;
+        $GLOBALS["HERIKA_NAME"] = "The Narrator";
+        $GLOBALS["AVOID_TTS_CACHE"] = true;
+        $GLOBALS["TTS_FFMPEG_FILTERS"] = [];
+        $GLOBALS["HERIKA_ANIMATIONS"] = false;
+        $GLOBALS["SCRIPTLINE_LISTENER"] = '';
+        $GLOBALS["SCRIPTLINE_EXPRESSION"] = '';
+        $GLOBALS["DEBUG_DATA"] = [];
+        if (!isset($GLOBALS["HTTP_TIMEOUT"]) || (int)$GLOBALS["HTTP_TIMEOUT"] <= 0) {
+            $GLOBALS["HTTP_TIMEOUT"] = 20;
+        }
+        $GLOBALS["FEATURES"] = $GLOBALS["FEATURES"] ?? [];
+        if (!isset($GLOBALS["FEATURES"]["MISC"])) {
+            $GLOBALS["FEATURES"]["MISC"] = [];
+        }
+        if (!isset($GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"])) {
+            $GLOBALS["FEATURES"]["MISC"]["TTS_RANDOM_PITCH"] = false;
+        }
+        if (!isset($GLOBALS["PLAYER_NAME"])) {
+            $GLOBALS["PLAYER_NAME"] = 'Player';
+        }
+        $GLOBALS["PATCH_DONT_STORE_SPEECH_ON_DB"] = true;
+        $GLOBALS["PATCH_OVERRIDE_VOICE"] = $voice;
+        if (!isset($GLOBALS["TRACK"]) || !is_array($GLOBALS["TRACK"])) {
+            $GLOBALS["TRACK"] = [];
+        }
+        $GLOBALS["TRACK"]["FILES_GENERATED"] = [];
+    }
+}
+
+if (!function_exists('chimTtsStudioRunReturnLinesTest')) {
+    function chimTtsStudioRunReturnLinesTest(string $testText, string $logFile): array
+    {
+        if (!function_exists('returnLines')) {
+            @file_put_contents($logFile, "ERROR: returnLines function not found!\n", FILE_APPEND);
+            return ['file' => '', 'error' => 'returnLines function not available'];
+        }
+
+        $GLOBALS["TRACK"]["FILES_GENERATED"] = [];
+        $bufferLevel = ob_get_level();
+        ob_start();
+
+        try {
+            @file_put_contents($logFile, "Calling returnLines...\n", FILE_APPEND);
+            returnLines([$testText], false);
+            $capturedOutput = ob_get_clean();
+            if ($capturedOutput !== '') {
+                @file_put_contents($logFile, "Captured output from returnLines: " . $capturedOutput . "\n", FILE_APPEND);
+            }
+
+            $file = isset($GLOBALS["TRACK"]["FILES_GENERATED"][0])
+                ? basename((string)$GLOBALS["TRACK"]["FILES_GENERATED"][0])
+                : '';
+            @file_put_contents($logFile, "Generated file: " . ($file ?: 'NONE') . "\n", FILE_APPEND);
+
+            if ($file === '') {
+                return ['file' => '', 'error' => 'Failed to generate audio file'];
+            }
+
+            return ['file' => $file, 'error' => ''];
+        } catch (Throwable $e) {
+            while (ob_get_level() > $bufferLevel) {
+                ob_end_clean();
+            }
+            @file_put_contents($logFile, "EXCEPTION: " . $e->getMessage() . "\n", FILE_APPEND);
+            return ['file' => '', 'error' => $e->getMessage()];
+        }
+    }
+}
+
 // XTTS voice test handler - MUST be before output buffering starts
 if (isset($_GET['action']) && $_GET['action'] === 'test_xtts' && isset($_GET['voice'])) {
     // Set up logging
@@ -308,6 +454,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'test_xtts' && isset($_GET['vo
         
         $file = isset($GLOBALS["TRACK"]["FILES_GENERATED"][0]) ? basename((string)$GLOBALS["TRACK"]["FILES_GENERATED"][0]) : '';
         @file_put_contents($logFile, "Generated file: " . ($file ?: 'NONE') . "\n", FILE_APPEND);
+        $testError = 'Failed to generate audio file';
+
+        if ($file === '') {
+            @file_put_contents($logFile, "No XTTS test file generated; attempting automatic voice sync and retry.\n", FILE_APPEND);
+            $syncResult = chimTtsStudioSyncVoiceSampleForTest('xtts-fastapi', $voice, $logFile);
+            if ($syncResult['success']) {
+                chimTtsStudioConfigureCompatibleTestGlobals('xtts-fastapi', 'xtts-fastapi', $voice);
+                $retryResult = chimTtsStudioRunReturnLinesTest($testText, $logFile);
+                $file = $retryResult['file'];
+                if ($file === '') {
+                    @file_put_contents($logFile, "XTTS retry after sync failed: " . $retryResult['error'] . "\n", FILE_APPEND);
+                    $testError = 'Automatic voice sync completed, but retry still failed: ' . $retryResult['error'];
+                }
+            } else {
+                @file_put_contents($logFile, "Automatic XTTS voice sync failed: " . $syncResult['message'] . "\n", FILE_APPEND);
+                $testError = 'Failed to generate audio file. Automatic voice sync failed: ' . $syncResult['message'];
+            }
+        }
         
         header('Content-Type: application/json');
         if ($file !== '') {
@@ -319,7 +483,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'test_xtts' && isset($_GET['vo
         } else {
             @file_put_contents($logFile, "ERROR: No file generated\n", FILE_APPEND);
             http_response_code(500);
-            echo json_encode(['error' => 'Failed to generate audio file']);
+            echo json_encode(['error' => $testError]);
         }
     } catch (Throwable $e) {
         $errMsg = "EXCEPTION: " . $e->getMessage() . "\nTrace: " . $e->getTraceAsString() . "\n";
@@ -396,6 +560,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'test_chatterbox' && isset($_G
         }
         
         $file = isset($GLOBALS["TRACK"]["FILES_GENERATED"][0]) ? basename((string)$GLOBALS["TRACK"]["FILES_GENERATED"][0]) : '';
+        $testError = 'Failed to generate audio file';
+
+        if ($file === '') {
+            @file_put_contents($logFile, "No Chatterbox test file generated; attempting automatic voice sync and retry.\n", FILE_APPEND);
+            $syncResult = chimTtsStudioSyncVoiceSampleForTest('chatterbox', $voice, $logFile);
+            if ($syncResult['success']) {
+                chimTtsStudioConfigureCompatibleTestGlobals('chatterbox', 'chatterbox', $voice);
+                $retryResult = chimTtsStudioRunReturnLinesTest($testText, $logFile);
+                $file = $retryResult['file'];
+                if ($file === '') {
+                    @file_put_contents($logFile, "Chatterbox retry after sync failed: " . $retryResult['error'] . "\n", FILE_APPEND);
+                    $testError = 'Automatic voice sync completed, but retry still failed: ' . $retryResult['error'];
+                }
+            } else {
+                @file_put_contents($logFile, "Automatic Chatterbox voice sync failed: " . $syncResult['message'] . "\n", FILE_APPEND);
+                $testError = 'Failed to generate audio file. Automatic voice sync failed: ' . $syncResult['message'];
+            }
+        }
         
         header('Content-Type: application/json');
         if ($file !== '') {
@@ -403,7 +585,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'test_chatterbox' && isset($_G
             echo json_encode(['url' => $url]);
         } else {
             http_response_code(500);
-            echo json_encode(['error' => 'Failed to generate audio file']);
+            echo json_encode(['error' => $testError]);
         }
     } catch (Throwable $e) {
         @file_put_contents($logFile, "EXCEPTION: " . $e->getMessage() . "\n", FILE_APPEND);
@@ -480,6 +662,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'test_pockettts' && isset($_GE
         }
         
         $file = isset($GLOBALS["TRACK"]["FILES_GENERATED"][0]) ? basename((string)$GLOBALS["TRACK"]["FILES_GENERATED"][0]) : '';
+        $testError = 'Failed to generate audio file';
+
+        if ($file === '') {
+            @file_put_contents($logFile, "No PocketTTS test file generated; attempting automatic voice sync and retry.\n", FILE_APPEND);
+            $syncResult = chimTtsStudioSyncVoiceSampleForTest('pockettts', $voice, $logFile);
+            if ($syncResult['success']) {
+                chimTtsStudioConfigureCompatibleTestGlobals('pockettts', 'pockettts', $voice);
+                $retryResult = chimTtsStudioRunReturnLinesTest($testText, $logFile);
+                $file = $retryResult['file'];
+                if ($file === '') {
+                    @file_put_contents($logFile, "PocketTTS retry after sync failed: " . $retryResult['error'] . "\n", FILE_APPEND);
+                    $testError = 'Automatic voice sync completed, but retry still failed: ' . $retryResult['error'];
+                }
+            } else {
+                @file_put_contents($logFile, "Automatic PocketTTS voice sync failed: " . $syncResult['message'] . "\n", FILE_APPEND);
+                $testError = 'Failed to generate audio file. Automatic voice sync failed: ' . $syncResult['message'];
+            }
+        }
         
         header('Content-Type: application/json');
         if ($file !== '') {
@@ -487,7 +687,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'test_pockettts' && isset($_GE
             echo json_encode(['url' => $url]);
         } else {
             http_response_code(500);
-            echo json_encode(['error' => 'Failed to generate audio file']);
+            echo json_encode(['error' => $testError]);
         }
     } catch (Throwable $e) {
         @file_put_contents($logFile, "EXCEPTION: " . $e->getMessage() . "\n", FILE_APPEND);
@@ -553,15 +753,36 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
         $clonedVoices = getClonedVoicesForTest('cartesia');
         
         if (!isset($clonedVoices[$voice]) || empty($clonedVoices[$voice])) {
+            $syncedVoiceId = getOrCreateCartesiaVoice($voice);
+            if ($syncedVoiceId !== false && !empty($syncedVoiceId)) {
+                $clonedVoices = getClonedVoicesForTest('cartesia');
+                if (!isset($clonedVoices[$voice]) || empty($clonedVoices[$voice])) {
+                    $clonedVoices[$voice] = $syncedVoiceId;
+                }
+            }
+        }
+
+        if (!isset($clonedVoices[$voice]) || empty($clonedVoices[$voice])) {
+            $detailedError = function_exists('getCartesiaLastError') ? getCartesiaLastError() : '';
+            $message = 'Voice not generated yet and automatic sync failed.';
+            if ($detailedError !== '') {
+                $message .= ' ' . $detailedError;
+            }
             header('Content-Type: application/json');
             http_response_code(400);
-            echo json_encode(['error' => 'Voice not generated yet. Please sync this voice first.']);
+            echo json_encode(['error' => $message]);
             exit;
         }
         
         require_once(__DIR__ . '/../tts/tts-cartesia.php');
         $testText = 'CHIM has been described as the secret syllable of royalty, and can be considered a form of Apotheosis';
         $audioData = generateCartesiaTTS($testText, $clonedVoices[$voice]);
+        if (($audioData === false || empty($audioData))) {
+            $syncedVoiceId = getOrCreateCartesiaVoice($voice);
+            if ($syncedVoiceId !== false && !empty($syncedVoiceId)) {
+                $audioData = generateCartesiaTTS($testText, $syncedVoiceId);
+            }
+        }
         
         if ($audioData !== false && !empty($audioData)) {
             // Save to soundcache like other TTS functions
@@ -586,7 +807,12 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
         
         header('Content-Type: application/json');
         http_response_code(500);
-        echo json_encode(['error' => 'Failed to generate test audio. The voice ID may be invalid or expired.']);
+        $detailedError = function_exists('getCartesiaLastError') ? getCartesiaLastError() : '';
+        $message = 'Failed to generate test audio after automatic sync retry. The voice ID may be invalid or expired.';
+        if ($detailedError !== '') {
+            $message .= ' ' . $detailedError;
+        }
+        echo json_encode(['error' => $message]);
         exit;
     }
     
@@ -604,9 +830,24 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
         $clonedVoices = getClonedVoicesForTest('inworld');
         
         if (!isset($clonedVoices[$voice]) || empty($clonedVoices[$voice])) {
+            $syncedVoiceId = getOrCreateInworldVoice($voice);
+            if ($syncedVoiceId !== false && !empty($syncedVoiceId)) {
+                $clonedVoices = getClonedVoicesForTest('inworld');
+                if (!isset($clonedVoices[$voice]) || empty($clonedVoices[$voice])) {
+                    $clonedVoices[$voice] = $syncedVoiceId;
+                }
+            }
+        }
+
+        if (!isset($clonedVoices[$voice]) || empty($clonedVoices[$voice])) {
+            $detailedError = function_exists('getInworldLastError') ? getInworldLastError() : '';
+            $message = 'Voice not generated yet and automatic sync failed.';
+            if ($detailedError !== '') {
+                $message .= ' ' . $detailedError;
+            }
             header('Content-Type: application/json');
             http_response_code(400);
-            echo json_encode(['error' => 'Voice not generated yet. Please sync this voice first.']);
+            echo json_encode(['error' => $message]);
             exit;
         }
         
@@ -615,6 +856,12 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
         
         // Generate raw PCM audio data (no output file = returns raw PCM)
         $audioData = generateInworldTTS($testText, $clonedVoices[$voice]);
+        if (($audioData === false || empty($audioData))) {
+            $syncedVoiceId = getOrCreateInworldVoice($voice);
+            if ($syncedVoiceId !== false && !empty($syncedVoiceId)) {
+                $audioData = generateInworldTTS($testText, $syncedVoiceId);
+            }
+        }
         
         if ($audioData !== false && !empty($audioData)) {
             // Save to soundcache like other TTS functions
@@ -661,7 +908,12 @@ if (isset($_GET['action']) && ($_GET['action'] === 'test_cartesia' || $_GET['act
         
         header('Content-Type: application/json');
         http_response_code(500);
-        echo json_encode(['error' => 'Failed to generate test audio. The voice ID may be invalid or expired.']);
+        $detailedError = function_exists('getInworldLastError') ? getInworldLastError() : '';
+        $message = 'Failed to generate test audio after automatic sync retry. The voice ID may be invalid or expired.';
+        if ($detailedError !== '') {
+            $message .= ' ' . $detailedError;
+        }
+        echo json_encode(['error' => $message]);
         exit;
     }
 }
