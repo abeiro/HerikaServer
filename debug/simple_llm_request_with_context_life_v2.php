@@ -369,6 +369,25 @@ if (isset($metadata['last_coords_history'])) {
     }
 }
 */
+
+
+if (isset($metadata['low_process_actors'])) {
+    
+    foreach ($metadata['low_process_actors'] as $gamets_lpa_processed=>$actorList) {
+        if ($gamets_lpa_processed <= $lastItGamets) {
+            continue;
+        }
+        $hoursAgo   = number_format(($last_gamets - $gamets_lpa_processed) * GAMETS_TO_HOURS, 2);
+
+        $bgEvents[] = [
+            'gamets'  => $gamets_lpa_processed,
+            'content' => "Nearby actors {$GLOBALS['HERIKA_NAME']} can see: " . implode(", ", $actorList).", $hoursAgo hours ago",
+            'type'    => 'nearby_actors',
+        ];
+        
+    }
+}
+
 // ─── Rumors Near Current Location ────────────────────────────────────────────
 
 if ($LAST_REPORTED_LOCATION) {
