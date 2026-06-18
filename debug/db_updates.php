@@ -3807,6 +3807,80 @@ if ($checkVersion("bio_templates_custom")<20250913001) {
     Logger::info("Applied patch bio_templates_custom 20250913001");
 }
 
+// Backups created before the bio template primary keys existed can restore the
+// tables without constraints. Repair that shape before migrations use
+// ON CONFLICT (npc_name).
+$repairBioTemplateTable = function($tableName) use ($checkTableExists) {
+    global $db;
+
+    if (!in_array($tableName, ["bio_templates", "bio_templates_custom"], true)) {
+        return;
+    }
+
+    if ($checkTableExists($tableName) == -1) {
+        return;
+    }
+
+    $columns = [
+        "npc_name" => "character varying(128)",
+        "oghma_knowledge_tags" => "text",
+        "core" => "text",
+        "npc_static_bio" => "text",
+        "appearance" => "text",
+        "personality" => "text",
+        "relationships" => "text",
+        "occupation" => "text",
+        "skills" => "text",
+        "speechstyle" => "text",
+        "goals" => "text",
+        "voiceid" => "text",
+        "gender" => "text",
+        "race" => "text",
+        "refid" => "text",
+    ];
+
+    foreach ($columns as $columnName => $columnType) {
+        $db->execQuery("ALTER TABLE public.{$tableName} ADD COLUMN IF NOT EXISTS {$columnName} {$columnType}");
+    }
+
+    $db->execQuery("DELETE FROM public.{$tableName} WHERE npc_name IS NULL OR btrim(npc_name::text) = ''");
+    $db->execQuery("
+        DELETE FROM public.{$tableName} a
+        USING public.{$tableName} b
+        WHERE a.npc_name = b.npc_name
+          AND a.ctid < b.ctid
+    ");
+    $db->execQuery("ALTER TABLE public.{$tableName} ALTER COLUMN npc_name SET NOT NULL");
+
+    $indexName = "idx_{$tableName}_npc_name_unique";
+    $db->execQuery("
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                  FROM pg_index i
+                  JOIN pg_class t ON t.oid = i.indrelid
+                  JOIN pg_namespace n ON n.oid = t.relnamespace
+                  JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(i.indkey)
+                 WHERE n.nspname = 'public'
+                   AND t.relname = '{$tableName}'
+                   AND i.indisunique
+                   AND i.indnatts = 1
+                   AND a.attname = 'npc_name'
+            ) THEN
+                CREATE UNIQUE INDEX {$indexName} ON public.{$tableName} (npc_name);
+            END IF;
+        END $$;
+    ");
+};
+
+try {
+    $repairBioTemplateTable("bio_templates");
+    $repairBioTemplateTable("bio_templates_custom");
+} catch (Throwable $e) {
+    Logger::warn("Bio template schema repair failed: " . $e->getMessage());
+}
+
 // Seed base bio templates from SQL file (run once)
 if ($checkVersion("bio_templates_seed")<20250913001) {
     try {
@@ -6722,13 +6796,18 @@ if ($relationshipMetadataNeedsRefresh) {
             if ($sqlContent !== false && strlen($sqlContent) > 0) {
                 $sqlContent = preg_replace('/^\xEF\xBB\xBF/', '', $sqlContent);
                 $refreshResult = $db->execQuery($sqlContent);
-                $cleanupResult = $db->execQuery("
-                    UPDATE public.bio_templates_custom
-                       SET relationships = NULL
-                     WHERE relationships IS NOT NULL
-                       AND btrim(relationships) <> ''
-                       AND left(ltrim(relationships), 1) <> '{'
-                ");
+                $cleanupResult = false;
+                if ($refreshResult) {
+                    $cleanupResult = $db->execQuery("
+                        UPDATE public.bio_templates_custom
+                           SET relationships = NULL
+                         WHERE relationships IS NOT NULL
+                           AND btrim(relationships) <> ''
+                           AND left(ltrim(relationships), 1) <> '{'
+                    ");
+                } else {
+                    $db->execQuery("ROLLBACK");
+                }
                 if ($refreshResult && $cleanupResult) {
                     $updateVersion("bio_templates_relationship_refresh", 20260505003);
                     Logger::info("Applied patch bio_templates_relationship_refresh 20260505003");
