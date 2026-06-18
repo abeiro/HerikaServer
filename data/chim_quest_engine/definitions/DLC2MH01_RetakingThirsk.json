@@ -46,20 +46,42 @@
       "focus_npc": "Bujold the Unworthy",
       "comment": "Player discovers the exiled Nords at Bujold's Retreat and learns about their situation.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001A50B",
+        "quest_plugin": "Dragonborn.esm",
+        "stage": 10
       },
-      "downstream": [],
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001A50B",
+          "quest_plugin": "Dragonborn.esm",
+          "objective_index": 10
+        }
+      ],
       "triggers": [
         {
           "type": "quest_stage",
           "quest_editor_id": "DLC2MH01",
           "min_stage": 10,
           "quest_plugin": "Dragonborn.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "thirsk",
+            "bujold",
+            "exiled nords",
+            "retake thirsk",
+            "help you",
+            "fight the rieklings"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",
       "prerequisites": [],
-      "allow_natural_start": false
+      "allow_natural_start": true
     },
     {
       "id": "JOIN_ASSAULT",
@@ -79,7 +101,12 @@
             "help you",
             "retake Thirsk",
             "fight the rieklings",
-            "join the assault"
+            "join the assault",
+            "I will help you",
+            "I will help retake Thirsk",
+            "let's retake Thirsk",
+            "I will fight the rieklings",
+            "I will join the assault"
           ],
           "min_matches": 1
         }
@@ -209,7 +236,7 @@
     }
   ],
   "natural_start": {
-    "enabled": false,
+    "enabled": true,
     "beats": [
       "MEET_EXILED_NORDS"
     ],

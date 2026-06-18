@@ -39,7 +39,10 @@
       "focus_npc": "Durnehviir",
       "comment": "Player speaks to Durnehviir at his lair in the Soul Cairn after defeating him in the Boneyard.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0000C73A",
+        "quest_plugin": "Dawnguard.esm",
+        "stage": 10
       },
       "downstream": [],
       "triggers": [
@@ -48,11 +51,24 @@
           "quest_editor_id": "DLC1VQDragon",
           "min_stage": 10,
           "quest_plugin": "Dawnguard.esm"
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "durnehviir",
+            "qahnaarin",
+            "soul cairn",
+            "speak to you",
+            "summon you",
+            "pact",
+            "teach me"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",
       "prerequisites": [],
-      "allow_natural_start": false
+      "allow_natural_start": true
     },
     {
       "id": "MAKE_PACT",
@@ -79,7 +95,11 @@
             "pact",
             "agreement",
             "teach me",
-            "I agree"
+            "I agree",
+            "I accept",
+            "make a pact",
+            "teach me Soul Tear",
+            "I will summon you"
           ],
           "min_matches": 1
         }
@@ -182,7 +202,7 @@
     }
   ],
   "natural_start": {
-    "enabled": false,
+    "enabled": true,
     "beats": [
       "SPEAK_TO_DURNEHVIIR"
     ],

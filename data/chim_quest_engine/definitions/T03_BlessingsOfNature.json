@@ -63,19 +63,41 @@
       "focus_npc": "Danica Pure-Spring",
       "comment": "Player learns about the dying Gildergreen tree and Danica's need for help.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0001C48E",
+        "quest_plugin": "Skyrim.esm",
+        "stage": 10
       },
-      "downstream": [],
+      "downstream": [
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x0001C48E",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10
+        }
+      ],
       "triggers": [
         {
           "type": "quest_stage",
           "quest_editor_id": "T03",
           "min_stage": 10
+        },
+        {
+          "type": "dialogue",
+          "keywords": [
+            "gildergreen",
+            "gilder green",
+            "dying tree",
+            "restore the tree",
+            "nettle bane",
+            "nettlebane"
+          ],
+          "min_matches": 1
         }
       ],
       "trigger_mode": "any",
       "prerequisites": [],
-      "allow_natural_start": false
+      "allow_natural_start": true
     },
     {
       "id": "AGREE_TO_HELP",
@@ -101,7 +123,11 @@
           "keywords": [
             "help you",
             "restore the tree",
-            "get the Nettlebane"
+            "get the Nettlebane",
+            "get Nettlebane",
+            "retrieve Nettlebane",
+            "find Nettlebane",
+            "I will get it"
           ],
           "min_matches": 1
         }
@@ -193,7 +219,7 @@
     }
   ],
   "natural_start": {
-    "enabled": false,
+    "enabled": true,
     "beats": [
       "GILDERGREEN_PROBLEM"
     ],
