@@ -169,6 +169,68 @@ if (!function_exists('chimQuestEngineFeatureEnabled')) {
     }
 }
 
+if (!function_exists('chimQuestEnginePlayerOnlyAdvancementEnabled')) {
+    function chimQuestEnginePlayerOnlyAdvancementEnabled()
+    {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        if (!function_exists('chimGetGeneralSettingBool')) {
+            $settingsPath = __DIR__ . DIRECTORY_SEPARATOR . 'settings.php';
+            if (file_exists($settingsPath)) {
+                require_once($settingsPath);
+            }
+        }
+
+        if (function_exists('chimGetGeneralSettingRow') && function_exists('chimGetGeneralSettingBool')) {
+            try {
+                if (chimGetGeneralSettingRow('CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT')) {
+                    $cached = chimGetGeneralSettingBool('CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT', true);
+                    return $cached;
+                }
+            } catch (Throwable $e) {
+                chimQuestEngineLog('warn', 'Could not read CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT general setting: ' . $e->getMessage());
+            }
+        }
+
+        if (array_key_exists('CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT', $GLOBALS)) {
+            $valueCn = strtolower(trim((string)$GLOBALS['CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT']));
+            $cached = in_array($valueCn, array('1', 'true', 'on', 'yes', 'enabled'), true);
+            return $cached;
+        }
+
+        if (!chimQuestEngineHasDb() || !chimQuestEngineTableExists('conf_opts')) {
+            $cached = true;
+            return true;
+        }
+
+        try {
+            $row = $GLOBALS["db"]->fetchOne("
+                SELECT value
+                FROM public.conf_opts
+                WHERE lower(id) = 'chim_player_only_quest_advancement'
+                LIMIT 1
+            ");
+            $valueCn = strtolower(trim((string)($row['value'] ?? '')));
+            if (in_array($valueCn, array('1', 'true', 'on', 'yes', 'enabled'), true)) {
+                $cached = true;
+                return true;
+            }
+            if (in_array($valueCn, array('0', 'false', 'off', 'no', 'disabled'), true)) {
+                $cached = false;
+                return false;
+            }
+        } catch (Exception $e) {
+            chimQuestEngineLog('warn', 'Could not read chim_player_only_quest_advancement: ' . $e->getMessage());
+        }
+
+        $cached = true;
+        return true;
+    }
+}
+
 if (!function_exists('chimQuestEngineNormalizeQuestKey')) {
     function chimQuestEngineNormalizeQuestKey($value)
     {
@@ -1533,6 +1595,40 @@ if (!function_exists('chimQuestEngineBeatIsNaturalStartCandidate')) {
     }
 }
 
+if (!function_exists('chimQuestEngineBeatIsNaturalStartCandidateForEvent')) {
+    function chimQuestEngineBeatIsNaturalStartCandidateForEvent(array $definition, array $beat, $eventType)
+    {
+        $eventTypeCn = strtolower(trim((string)$eventType));
+        if ($eventTypeCn === 'dialogue_turn' || $eventTypeCn === 'dialogue_turn_intent') {
+            return chimQuestEngineBeatIsNaturalStartCandidate($definition, $beat);
+        }
+
+        if (!empty($beat['allow_natural_start']) || !empty($beat['natural_start']) || !empty($beat['activation'])) {
+            return true;
+        }
+
+        $beatId = trim((string)($beat['id'] ?? ''));
+        $naturalStart = $definition['natural_start'] ?? null;
+        if (is_array($naturalStart)) {
+            if (array_key_exists('enabled', $naturalStart) && empty($naturalStart['enabled'])) {
+                return false;
+            }
+
+            $allowedBeats = $naturalStart['beats'] ?? array();
+            if (is_array($allowedBeats) && !empty($allowedBeats)) {
+                return in_array($beatId, array_map('strval', $allowedBeats), true);
+            }
+
+            if (!empty($naturalStart['enabled'])) {
+                return ($beatId !== '' && $beatId === chimQuestEngineFirstBeatId($definition));
+            }
+        }
+
+        $prerequisites = $beat['prerequisites'] ?? array();
+        return ($beatId !== '' && $beatId === chimQuestEngineFirstBeatId($definition) && (empty($prerequisites) || !is_array($prerequisites)));
+    }
+}
+
 if (!function_exists('chimQuestEngineNaturalStartConditionsMet')) {
     function chimQuestEngineNaturalStartConditionsMet(array $definition, array $beat, array $state)
     {
@@ -1563,11 +1659,11 @@ if (!function_exists('chimQuestEngineBeatAllowedForRuntime')) {
             return true;
         }
 
-        if ($eventTypeCn !== 'dialogue_turn' && $eventTypeCn !== 'dialogue_turn_intent') {
+        if (chimQuestEnginePlayerOnlyAdvancementEnabled() && $eventTypeCn !== 'dialogue_turn' && $eventTypeCn !== 'dialogue_turn_intent') {
             return false;
         }
 
-        if (!chimQuestEngineBeatIsNaturalStartCandidate($definition, $beat)) {
+        if (!chimQuestEngineBeatIsNaturalStartCandidateForEvent($definition, $beat, $eventTypeCn)) {
             return false;
         }
 
@@ -2588,6 +2684,22 @@ if (!function_exists('chimQuestEngineApplyBeatToStateOnly')) {
     }
 }
 
+if (!function_exists('chimQuestEngineEventCanFireBeats')) {
+    function chimQuestEngineEventCanFireBeats($eventType, array $payload)
+    {
+        if (!chimQuestEnginePlayerOnlyAdvancementEnabled()) {
+            return true;
+        }
+
+        $eventTypeCn = strtolower(trim((string)$eventType));
+        if ($eventTypeCn !== 'dialogue_turn' && $eventTypeCn !== 'dialogue_turn_intent') {
+            return false;
+        }
+
+        return !empty($payload['player_driven']);
+    }
+}
+
 if (!function_exists('chimQuestEngineFetchMaxRuntimeGamets')) {
     function chimQuestEngineFetchMaxRuntimeGamets()
     {
@@ -2789,6 +2901,21 @@ if (!function_exists('chimQuestEngineHandleEventForDefinition')) {
         }
         chimQuestEngineRehydrateBeatStateFromStage($definition, $instance, $beatStateMap, $eventType, $payload);
 
+        if (!chimQuestEngineEventCanFireBeats($eventType, $payload)) {
+            if ($instance['run_state'] === 'inactive' && $instance['current_stage'] !== null) {
+                $instance['run_state'] = 'running';
+            }
+            chimQuestEnginePersistInstance($definition, $instance);
+            return array(
+                'quest_key' => $definition['quest_key'],
+                'quest_editor_id' => $definition['quest_editor_id'] ?? $definition['quest_key'],
+                'current_stage' => $instance['current_stage'],
+                'run_state' => $instance['run_state'],
+                'beats' => array(),
+                'advancement_blocked' => 'player_only',
+            );
+        }
+
         $firedBeats = array();
         $passes = 0;
         do {
@@ -2942,7 +3069,28 @@ if (!function_exists('chimQuestEngineHandleLiveDialogueTurn')) {
         if (strcasecmp($npcNameCn, 'The Narrator') === 0 || strcasecmp($npcNameCn, 'Player') === 0) {
             return array('ok' => false, 'error' => 'ignored actor');
         }
-        if (!in_array($requestType, array('inputtext', 'inputtext_s', 'ginputtext', 'ginputtext_s'), true)) {
+
+        $playerRequestTypes = array('inputtext', 'inputtext_s', 'ginputtext', 'ginputtext_s');
+        $isPlayerDriven = in_array($requestType, $playerRequestTypes, true);
+        if (chimQuestEnginePlayerOnlyAdvancementEnabled()) {
+            if (!$isPlayerDriven) {
+                return array('ok' => false, 'error' => 'request type not eligible');
+            }
+        } else {
+            $npcResponseRequestTypes = array(
+                'instruction',
+                'suggestion',
+                'rechat',
+                'continue',
+                'continue_group',
+                'combatbark',
+            );
+            if (!$isPlayerDriven && !in_array($requestType, $npcResponseRequestTypes, true)) {
+                return array('ok' => false, 'error' => 'request type not eligible');
+            }
+        }
+
+        if (!$isPlayerDriven && empty($gameRequest[3])) {
             return array('ok' => false, 'error' => 'request type not eligible');
         }
 
@@ -2956,6 +3104,8 @@ if (!function_exists('chimQuestEngineHandleLiveDialogueTurn')) {
             'npc_name' => $npcNameCn,
             'player_text' => $playerText,
             'npc_text' => $npcResponseCn,
+            'player_driven' => $isPlayerDriven,
+            'request_type' => $requestType,
             'gamets' => intval($gameRequest[2] ?? 0),
             'ts' => intval($gameRequest[1] ?? 0),
             'location_name' => $GLOBALS["CACHE_LOCATION"] ?? '',

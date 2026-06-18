@@ -6451,6 +6451,67 @@ if ($checkVersion("general_settings") < 20260615003) {
 
 //----------------------------------------------------
 
+if ($checkVersion("general_settings") < 20260617001) {
+    Logger::debug("Applying general_settings 20260617001 - add CHIM player-only quest advancement toggle");
+    $b_ok = true;
+
+    try {
+        $settingId = 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT';
+        $existingRow = chimGetGeneralSettingRow($settingId);
+
+        if (!$existingRow) {
+            $definition = chimGetSchemaDefinition($settingId);
+            $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+            $currentValue = ($hasLegacyValue === "__CHIM_SETTING_MISSING__")
+                ? ($definition['default'] ?? true)
+                : $hasLegacyValue;
+            $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing general setting '{$settingId}'");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error adding CHIM player-only quest advancement setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260617001);
+        Logger::info("Applied patch general_settings 20260617001");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("general_settings") < 20260617002) {
+    Logger::debug("Applying general_settings 20260617002 - update CHIM AI quest progression description");
+    $b_ok = true;
+
+    try {
+        $settingId = 'CHIM_AI_QUEST_PROGRESSION';
+        $row = chimGetGeneralSettingRow($settingId);
+        $description = chimGetSchemaDescription($settingId);
+
+        if ($row && $description !== '') {
+            $value = $row['value'] ?? false;
+            if (!chimSetGeneralSetting($settingId, $value, $description)) {
+                throw new Exception("Failed updating general setting description '{$settingId}'");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error updating CHIM AI quest progression description: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260617002);
+        Logger::info("Applied patch general_settings 20260617002");
+    }
+}
+
+//----------------------------------------------------
+
 if ($checkVersion("core_action") < 20260502011) {
     Logger::debug("Applying core_action 20260502011 - sync sitting restrictions for Drink, Toast, and StartRitualCeremony");
     $b_ok = true;

@@ -53,6 +53,7 @@ $gsSections = [
     ],
     'Quests' => [
         [ 'name' => 'CHIM_AI_QUEST_PROGRESSION', 'type' => 'boolean' ],
+        [ 'name' => 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT', 'type' => 'boolean' ],
     ],
     'Memory' => [
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
@@ -144,6 +145,8 @@ function pretty_label(string $flatName): string
         'SHORTER_NEARBY_ITEM_LIST' => 'Shorter Nearby Item List',
         'BGL_TRIGGER_DAYS' => 'Background Life Days Cooldown',
         'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
+        'CHIM_AI_QUEST_PROGRESSION' => 'CHIM AI Quest Progression',
+        'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
     ];
     if (isset($customLabels[$flatName])) {
         return $customLabels[$flatName];
@@ -257,6 +260,18 @@ function current_description(string $flatName, array $rowMap): string
         return $description;
     }
     return chimGetSchemaDescription($flatName);
+}
+
+function render_provider_help(string $flatName, string $help, string $webRoot): string
+{
+    if ($flatName === 'CHIM_AI_QUEST_PROGRESSION') {
+        $prefix = 'Enable CHIM AI quest progression. Allows you to progress regular Skyrim quests with AI dialogue. Most vanilla non radiant quests are supported.';
+        $url = rtrim($webRoot, '/') . '/ui/immersion.php?tab=questgen';
+        return htmlspecialchars($prefix, ENT_QUOTES, 'UTF-8')
+            . ' <a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Open AI Quest Manager in Immersion</a> for more info.';
+    }
+
+    return htmlspecialchars($help, ENT_QUOTES, 'UTF-8');
 }
 
 function normalize_posted_value(string $type, $posted)
@@ -621,6 +636,17 @@ h1.gs-title {
     font-size: 12px;
     line-height: 1.45;
     min-width: 0;
+}
+
+.provider-help a {
+    color: #8fb8ff;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.provider-help a:hover {
+    color: #bdd4ff;
+    text-decoration: underline;
 }
 
 .prompt-context-wrap {
@@ -1324,7 +1350,7 @@ h1.gs-title {
                                     <?php endif; ?>
                                 </div>
                                 <?php if ($help !== ''): ?>
-                                    <div class="provider-help"><?php echo htmlspecialchars($help); ?></div>
+                                    <div class="provider-help"><?php echo render_provider_help($fieldName, $help, $webRoot); ?></div>
                                 <?php endif; ?>
                             </div>
                         <?php endforeach; ?>

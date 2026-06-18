@@ -171,6 +171,7 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'DISABLE_REANIMATION_TRACKING',
             'TRANSFORMATION_DETECTION',
             'CHIM_AI_QUEST_PROGRESSION',
+            'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT',
             'PROMPT_TIMESTAMP',
             'PROMPT_CONTEXT_OPTIONS',
             'RECHAT_MODE',
@@ -273,6 +274,7 @@ if (!function_exists('chimPrettySettingLabel')) {
             'GLOBAL_STT_CONNECTOR_ID' => 'Speech To Text Connector',
             'GLOBAL_ITT_CONNECTOR_ID' => 'Image To Text Connector',
             'CHIM_AI_QUEST_PROGRESSION' => 'AI Quest Progression',
+            'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
         ];
         if (isset($customLabels[$flatName])) {
             return $customLabels[$flatName];
@@ -301,7 +303,7 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
             return 'Rechat';
         }
 
-        if ($flatId === 'CHIM_AI_QUEST_PROGRESSION') {
+        if (in_array($flatId, ['CHIM_AI_QUEST_PROGRESSION', 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT'], true)) {
             return 'Quests';
         }
 

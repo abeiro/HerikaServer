@@ -1956,6 +1956,7 @@ function herikaShouldExcludeEventFromPromptContext(array $row): bool
         'dynamic_oghma_import',
         'description_import',
         'custom_action_import',
+        'traditional_quest_import',
         'item_import',
         'npcvoice_refresh',
     ];
