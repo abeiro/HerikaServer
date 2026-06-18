@@ -4230,7 +4230,7 @@ if ($checkTableExists("skyrim_quest_definitions") != -1) {
     require_once(__DIR__ . "/../lib/chim_quest_engine.php");
     try {
         $questDefinitionCount = $db->fetchOne("SELECT COUNT(*) AS n FROM public.skyrim_quest_definitions");
-        $questDefinitionSeedVersion = 20260615007;
+        $questDefinitionSeedVersion = 20260616004;
         if (intval($questDefinitionCount["n"] ?? 0) === 0 || $checkVersion("skyrim_quest_definitions") < $questDefinitionSeedVersion) {
             $questImportResults = chimQuestEngineImportBundledDefinitions();
             $questImportSuccessCount = 0;
@@ -4248,6 +4248,163 @@ if ($checkTableExists("skyrim_quest_definitions") != -1) {
         }
     } catch (Exception $e) {
         Logger::warn(__FILE__ . " could not import bundled skyrim quest definitions: " . $e->getMessage());
+    }
+
+    if ($checkVersion("skyrim_quest_runtime_fixups") < 20260616001) {
+        try {
+            $questKeyEscaped = $db->escape("favor204_amren_family_sword_start");
+            $defaultQuestState = $db->escape(chimQuestEngineJsonEncode(chimQuestEngineDefaultState()));
+
+            $db->execQuery("
+                UPDATE public.skyrim_quest_action_outbox
+                   SET status = 'failed',
+                       result_json = '{\"error\":\"superseded wrong actor-dialogue story event for Favor204\"}'::jsonb,
+                       applied_at = NULL,
+                       updated_at = now()
+                 WHERE quest_key = '{$questKeyEscaped}'
+                   AND action_type = 'actor_dialogue_start_quest_stage_objective'
+                   AND status = 'applied'
+            ");
+
+            $db->execQuery("
+                UPDATE public.skyrim_quest_beat_state
+                   SET fired = false,
+                       fired_order = NULL,
+                       fired_gamets = NULL,
+                       evidence_json = '{}'::jsonb,
+                       updated_at = now()
+                 WHERE quest_key = '{$questKeyEscaped}'
+                   AND beat_id = 'QUEST_ACCEPTED'
+            ");
+
+            $db->execQuery("
+                UPDATE public.skyrim_quest_instances
+                   SET run_state = 'inactive',
+                       current_stage = NULL,
+                       last_gamets = NULL,
+                       state_json = '{$defaultQuestState}'::jsonb,
+                       updated_at = now()
+                 WHERE quest_key = '{$questKeyEscaped}'
+            ");
+
+            $updateVersion("skyrim_quest_runtime_fixups", 20260616001);
+            Logger::info("Applied patch skyrim_quest_runtime_fixups 20260616001 - reset Favor204 false-positive actor-dialogue runtime state");
+        } catch (Exception $e) {
+            Logger::warn(__FILE__ . " could not apply skyrim quest runtime fixups: " . $e->getMessage());
+        }
+    }
+
+    if ($checkVersion("skyrim_quest_runtime_fixups") < 20260616003) {
+        try {
+            $amrenStartKey = $db->escape("favor204_amren_family_sword_start");
+            $defaultQuestState = $db->escape(chimQuestEngineJsonEncode(chimQuestEngineDefaultState()));
+
+            $db->execQuery("
+                UPDATE public.skyrim_quest_beat_state
+                   SET fired = false,
+                       fired_order = NULL,
+                       fired_gamets = NULL,
+                       evidence_json = '{}'::jsonb,
+                       updated_at = now()
+                 WHERE quest_key = '{$amrenStartKey}'
+                   AND beat_id = 'QUEST_ACCEPTED'
+            ");
+
+            $db->execQuery("
+                UPDATE public.skyrim_quest_instances
+                   SET run_state = 'inactive',
+                       current_stage = NULL,
+                       last_gamets = NULL,
+                       state_json = '{$defaultQuestState}'::jsonb,
+                       updated_at = now()
+                 WHERE quest_key = '{$amrenStartKey}'
+            ");
+
+            $db->execQuery("
+                DELETE FROM public.skyrim_quest_instances
+                 WHERE quest_key LIKE 'favor204_dungeon_delving_bandits_template_%'
+                   AND COALESCE(current_stage, 0) < 10
+            ");
+
+            $db->execQuery("
+                DELETE FROM public.skyrim_quest_beat_state
+                 WHERE quest_key LIKE 'favor204_dungeon_delving_bandits_template_%'
+                   AND NOT EXISTS (
+                       SELECT 1
+                         FROM public.skyrim_quest_instances i
+                        WHERE i.quest_key = public.skyrim_quest_beat_state.quest_key
+                   )
+            ");
+
+            $updateVersion("skyrim_quest_runtime_fixups", 20260616003);
+            Logger::info("Applied patch skyrim_quest_runtime_fixups 20260616003 - reset failed Favor204 CLOC/runtime stage-0 state");
+        } catch (Exception $e) {
+            Logger::warn(__FILE__ . " could not apply skyrim quest runtime fixups 20260616003: " . $e->getMessage());
+        }
+    }
+
+    if ($checkVersion("skyrim_quest_runtime_fixups") < 20260616004) {
+        try {
+            $amrenStartKey = $db->escape("favor204_amren_family_sword_start");
+            $defaultQuestState = $db->escape(chimQuestEngineJsonEncode(chimQuestEngineDefaultState()));
+
+            $db->execQuery("
+                UPDATE public.skyrim_quest_action_outbox
+                   SET status = 'failed',
+                       result_json = '{\"error\":\"superseded by actor-dialogue actor-name startup fix for Favor204\"}'::jsonb,
+                       applied_at = NULL,
+                       updated_at = now()
+                 WHERE quest_key = '{$amrenStartKey}'
+                   AND action_type IN (
+                       'start_quest_stage_objective',
+                       'actor_dialogue_start_quest_stage_objective',
+                       'change_location_start_quest_stage_objective'
+                   )
+                   AND status IN ('pending', 'applied')
+            ");
+
+            $db->execQuery("
+                UPDATE public.skyrim_quest_beat_state
+                   SET fired = false,
+                       fired_order = NULL,
+                       fired_gamets = NULL,
+                       evidence_json = '{}'::jsonb,
+                       updated_at = now()
+                 WHERE quest_key = '{$amrenStartKey}'
+                   AND beat_id = 'QUEST_ACCEPTED'
+            ");
+
+            $db->execQuery("
+                UPDATE public.skyrim_quest_instances
+                   SET run_state = 'inactive',
+                       current_stage = NULL,
+                       last_gamets = NULL,
+                       state_json = '{$defaultQuestState}'::jsonb,
+                       updated_at = now()
+                 WHERE quest_key = '{$amrenStartKey}'
+            ");
+
+            $db->execQuery("
+                DELETE FROM public.skyrim_quest_instances
+                 WHERE quest_key LIKE 'favor204_dungeon_delving_bandits_template_%'
+                   AND COALESCE(current_stage, 0) < 10
+            ");
+
+            $db->execQuery("
+                DELETE FROM public.skyrim_quest_beat_state
+                 WHERE quest_key LIKE 'favor204_dungeon_delving_bandits_template_%'
+                   AND NOT EXISTS (
+                       SELECT 1
+                         FROM public.skyrim_quest_instances i
+                        WHERE i.quest_key = public.skyrim_quest_beat_state.quest_key
+                   )
+            ");
+
+            $updateVersion("skyrim_quest_runtime_fixups", 20260616004);
+            Logger::info("Applied patch skyrim_quest_runtime_fixups 20260616004 - reset Favor204 for actor-dialogue actor-name startup fix");
+        } catch (Exception $e) {
+            Logger::warn(__FILE__ . " could not apply skyrim quest runtime fixups 20260616004: " . $e->getMessage());
+        }
     }
 }
 

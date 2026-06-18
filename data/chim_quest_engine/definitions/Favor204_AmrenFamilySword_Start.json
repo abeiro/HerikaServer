@@ -38,11 +38,14 @@
       "comment": "The player clearly agrees to recover Amren's family sword.",
       "intent_summary": "Player commits to recovering Amren's father's sword.",
       "action": {
-        "type": "start_quest_stage_objective",
+        "type": "actor_dialogue_start_quest_stage_objective",
         "quest_plugin": "Skyrim.esm",
         "quest_form_id": "0x0007105B",
+        "actor_name": "Amren",
         "stage": 10,
-        "objective_index": 10
+        "objective_index": 10,
+        "story_event_wait_ms": 2500,
+        "verify_wait_ms": 3000
       },
       "downstream": [],
       "triggers": [

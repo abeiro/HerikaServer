@@ -740,6 +740,33 @@ if (!function_exists('chimQuestEngineRadiantAliasesSatisfyTemplate')) {
     }
 }
 
+if (!function_exists('chimQuestEngineRadiantMinimumQuestStage')) {
+    function chimQuestEngineRadiantMinimumQuestStage(array $definition)
+    {
+        $minimumStage = null;
+        foreach ($definition['beats'] ?? array() as $beat) {
+            if (!is_array($beat)) {
+                continue;
+            }
+            foreach ($beat['triggers'] ?? array() as $trigger) {
+                if (!is_array($trigger)) {
+                    continue;
+                }
+                if (strtolower(trim((string)($trigger['type'] ?? ''))) !== 'quest_stage') {
+                    continue;
+                }
+                $stage = intval($trigger['min_stage'] ?? $trigger['stage'] ?? -1);
+                if ($stage < 0) {
+                    continue;
+                }
+                $minimumStage = ($minimumStage === null) ? $stage : min($minimumStage, $stage);
+            }
+        }
+
+        return $minimumStage;
+    }
+}
+
 if (!function_exists('chimQuestEngineReplaceRadiantPlaceholders')) {
     function chimQuestEngineReplaceRadiantPlaceholders($value, array $aliasMap)
     {
@@ -861,6 +888,14 @@ if (!function_exists('chimQuestEngineInstantiateRadiantDefinition')) {
         }
         if (!chimQuestEngineQuestMatchesPayload($definition, $payload)) {
             return null;
+        }
+
+        $minimumStage = chimQuestEngineRadiantMinimumQuestStage($definition);
+        if ($minimumStage !== null) {
+            $payloadStage = intval($payload['stage'] ?? -1);
+            if ($payloadStage < $minimumStage) {
+                return null;
+            }
         }
 
         $aliasMap = chimQuestEnginePayloadAliasMap($definition, $payload);
@@ -2425,11 +2460,28 @@ if (!function_exists('chimQuestEngineMutateStateForAction')) {
             chimQuestEngineAdjustItemCount($state, $action['plugin'] ?? '', $action['item_form_id'] ?? '', -intval($action['count'] ?? 1));
         } elseif ($type === 'add_item') {
             chimQuestEngineAdjustItemCount($state, $action['plugin'] ?? '', $action['item_form_id'] ?? '', intval($action['count'] ?? 1));
+        } elseif ($type === 'start_quest_stage_objective' || $type === 'actor_dialogue_start_quest_stage_objective' || $type === 'change_location_start_quest_stage_objective') {
+            $stage = intval($action['stage'] ?? -1);
+            if ($stage >= 0) {
+                $state['current_stage'] = $stage;
+            }
         } elseif ($type === 'stop_quest') {
             $state['run_state'] = 'completed';
         } elseif ($type === 'fail_all_objectives') {
             $state['run_state'] = 'failed';
         }
+    }
+}
+
+if (!function_exists('chimQuestEngineActionRequiresAppliedAckForState')) {
+    function chimQuestEngineActionRequiresAppliedAckForState($actionType)
+    {
+        $type = strtolower(trim((string)$actionType));
+        return in_array($type, array(
+            'start_quest_stage_objective',
+            'actor_dialogue_start_quest_stage_objective',
+            'change_location_start_quest_stage_objective',
+        ), true);
     }
 }
 
@@ -2441,7 +2493,9 @@ if (!function_exists('chimQuestEngineQueueResolvedAction')) {
             return;
         }
 
-        chimQuestEngineMutateStateForAction($state, $action);
+        if (!chimQuestEngineActionRequiresAppliedAckForState($actionType)) {
+            chimQuestEngineMutateStateForAction($state, $action);
+        }
         $payload = $action;
         $payload['quest_key'] = $questKey;
         $payload['quest_editor_id'] = $definition['quest_editor_id'] ?? $questKey;
@@ -2786,6 +2840,7 @@ if (!function_exists('chimQuestEngineRebuildInstanceStateAtGamets')) {
             SELECT action_type, action_gamets, payload_json
             FROM public.skyrim_quest_action_outbox
             WHERE quest_key = '{$questKeyEscaped}'
+              AND status = 'applied'
               AND action_gamets IS NOT NULL
               AND action_gamets <= " . intval($targetGamets) . "
             ORDER BY action_gamets ASC, id ASC
@@ -3172,6 +3227,102 @@ if (!function_exists('chimQuestEngineFetchPendingActions')) {
     }
 }
 
+if (!function_exists('chimQuestEngineApplyAcknowledgedActionState')) {
+    function chimQuestEngineApplyAcknowledgedActionState(array $row, array $result)
+    {
+        $actionPayload = chimQuestEngineJsonDecode($row['payload_json'] ?? '{}', array());
+        if (!is_array($actionPayload)) {
+            $actionPayload = array();
+        }
+        $actionType = strtolower(trim((string)($actionPayload['type'] ?? $row['action_type'] ?? '')));
+        if (!chimQuestEngineActionRequiresAppliedAckForState($actionType)) {
+            return;
+        }
+        if (empty($result['verified'])) {
+            return;
+        }
+
+        $stage = intval($result['stage'] ?? ($actionPayload['stage'] ?? -1));
+        if ($stage < 0) {
+            return;
+        }
+
+        $questKey = chimQuestEngineNormalizeQuestKey($row['quest_key'] ?? '');
+        if ($questKey === '') {
+            return;
+        }
+
+        $ackGamets = chimQuestEngineNormalizeGamets($result['gamets'] ?? ($actionPayload['gamets'] ?? ($row['action_gamets'] ?? null)));
+        $lastGametsSql = ($ackGamets === null)
+            ? 'last_gamets'
+            : 'GREATEST(COALESCE(last_gamets, 0), ' . intval($ackGamets) . ')';
+        $questKeyEscaped = $GLOBALS["db"]->escape($questKey);
+
+        $GLOBALS["db"]->execQuery("
+            UPDATE public.skyrim_quest_instances
+            SET run_state = 'running',
+                current_stage = {$stage},
+                last_gamets = {$lastGametsSql},
+                state_json = jsonb_set(COALESCE(state_json, '{}'::jsonb), '{current_stage}', to_jsonb({$stage}), true),
+                updated_at = now()
+            WHERE quest_key = '{$questKeyEscaped}'
+        ");
+    }
+}
+
+if (!function_exists('chimQuestEngineResetFailedAcknowledgedActionBeat')) {
+    function chimQuestEngineResetFailedAcknowledgedActionBeat(array $row)
+    {
+        $actionPayload = chimQuestEngineJsonDecode($row['payload_json'] ?? '{}', array());
+        if (!is_array($actionPayload)) {
+            $actionPayload = array();
+        }
+        $actionType = strtolower(trim((string)($actionPayload['type'] ?? $row['action_type'] ?? '')));
+        if (!chimQuestEngineActionRequiresAppliedAckForState($actionType)) {
+            return;
+        }
+
+        $questKey = chimQuestEngineNormalizeQuestKey($row['quest_key'] ?? '');
+        $beatId = trim((string)($row['beat_id'] ?? ($actionPayload['beat_id'] ?? '')));
+        if ($questKey === '' || $beatId === '') {
+            return;
+        }
+
+        $questKeyEscaped = $GLOBALS["db"]->escape($questKey);
+        $beatIdEscaped = $GLOBALS["db"]->escape($beatId);
+        $GLOBALS["db"]->execQuery("
+            UPDATE public.skyrim_quest_beat_state
+               SET fired = false,
+                   fired_order = NULL,
+                   fired_gamets = NULL,
+                   evidence_json = '{}'::jsonb,
+                   updated_at = now()
+             WHERE quest_key = '{$questKeyEscaped}'
+               AND beat_id = '{$beatIdEscaped}'
+        ");
+
+        $activeBeatRow = $GLOBALS["db"]->fetchOne("
+            SELECT COUNT(*) AS n
+            FROM public.skyrim_quest_beat_state
+            WHERE quest_key = '{$questKeyEscaped}'
+              AND fired = true
+        ");
+        if (intval($activeBeatRow['n'] ?? 0) > 0) {
+            return;
+        }
+
+        $GLOBALS["db"]->execQuery("
+            UPDATE public.skyrim_quest_instances
+               SET run_state = 'inactive',
+                   current_stage = NULL,
+                   state_json = jsonb_set(COALESCE(state_json, '{}'::jsonb) - 'run_state', '{current_stage}', 'null'::jsonb, true),
+                   updated_at = now()
+             WHERE quest_key = '{$questKeyEscaped}'
+               AND current_stage IS NULL
+        ");
+    }
+}
+
 if (!function_exists('chimQuestEngineAcknowledgeAction')) {
     function chimQuestEngineAcknowledgeAction($actionId, $status = 'applied', array $result = array())
     {
@@ -3185,7 +3336,7 @@ if (!function_exists('chimQuestEngineAcknowledgeAction')) {
         }
 
         $row = $GLOBALS["db"]->fetchOne("
-            SELECT id, quest_key, action_type, payload_json
+            SELECT id, quest_key, beat_id, action_type, action_gamets, payload_json
             FROM public.skyrim_quest_action_outbox
             WHERE id = {$actionIdCn}
             LIMIT 1
@@ -3210,6 +3361,12 @@ if (!function_exists('chimQuestEngineAcknowledgeAction')) {
                 updated_at = now()
             WHERE id = {$actionIdCn}
         ");
+
+        if ($statusCn === 'applied') {
+            chimQuestEngineApplyAcknowledgedActionState($row, $result);
+        } else {
+            chimQuestEngineResetFailedAcknowledgedActionBeat($row);
+        }
 
         return array('success' => true, 'id' => $actionIdCn, 'status' => $statusCn);
     }
@@ -3340,6 +3497,12 @@ if (!function_exists('chimQuestEngineBuildPromptContext')) {
                 continue;
             }
             $instance['state_json'] = chimQuestEngineNormalizeState($instance['state_json'] ?? array());
+            if (!empty($definition['radiant_instance'])) {
+                $minimumStage = chimQuestEngineRadiantMinimumQuestStage($definition);
+                if ($minimumStage !== null && ($instance['current_stage'] === null || intval($instance['current_stage']) < $minimumStage)) {
+                    continue;
+                }
+            }
             $beatStateMap = chimQuestEngineLoadBeatStateMap($definition['quest_key']);
 
             $facts = array();
