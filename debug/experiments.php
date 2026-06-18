@@ -55,6 +55,22 @@ if ($argv[1] == "0") {
     );
 }
 
+// Track Adrianne vene if not in BgL
+if ($argv[1] == "2") {
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x0001A67C@Track",
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+}
+
+//
 // Courier delivery test
 if ($argv[1] == "1") {
 
