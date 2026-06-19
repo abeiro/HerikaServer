@@ -11,6 +11,7 @@ require_once(__DIR__."/core/activity_status.php");
 require_once(__DIR__."/core/transformation_state.php");
 require_once(__DIR__."/core/game_plugins.php");
 require_once(__DIR__."/core/npc_master.class.php");
+require_once(__DIR__."/prompt_injections.php");
 
 
 function ChangeHerikaName($new_name="") {
@@ -687,6 +688,13 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                             $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
                         }
                     }
+
+                    $profileExtra = chimBuildActorProfileEnrichmentText($actor, "player", [
+                        "source" => "nearby_actors",
+                    ]);
+                    if ($profileExtra !== "") {
+                        $profileString .= ". " . $profileExtra;
+                    }
                     
                     // Power Awareness: Add relative power assessment for player
                     if (isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
@@ -812,6 +820,15 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         if ($npcRace && in_array($npcRace, $humanoidRaces) && empty($metaData["equipment"]["armor"])) {
                             $profileString .= ". Naked (no body armor/clothing worn)";
                         }
+                    }
+
+                    $profileExtra = chimBuildActorProfileEnrichmentText($npcName, "npc", [
+                        "source" => "nearby_actors",
+                        "metadata" => $metaData,
+                        "npc_data" => $currentNpcData,
+                    ]);
+                    if ($profileExtra !== "") {
+                        $profileString .= ". " . $profileExtra;
                     }
                     
                     // Add faction information after equipment
