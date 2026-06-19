@@ -26,6 +26,10 @@
         ],
         "ACCEPT_DELIVERY": [
           "I have given the player my letter to deliver to Captain Aldis."
+        ],
+        "DELIVER_LETTER": [
+          "My private letter to Captain Aldis has been successfully delivered.",
+          "I am grateful to the courier for their help and discretion in handling the matter."
         ]
       }
     },
@@ -36,10 +40,9 @@
       ],
       "beat_facts": {
         "DELIVER_LETTER": [
-          "Gorm's request to remove Jarl Idgrod is impossible during wartime. I will take the matter under advisement.",
-          "Player delivers Gorm's letter to Captain Aldis at Castle Dour, completing the quest.",
-          "Unlike many quest items, reading or obtaining Gorm’s letter by looting or pickpocketing will not allow the quest to begin.",
-          "If siding with the Stormcloaks, this quest needs to be started before The Battle for Fort Hraggstad and finished before the Battle for Solitude to avoid issues."
+          "I have read Gorm's letter requesting the removal of Jarl Idgrod, but acting on it during wartime is impossible due to the questions and accusations it would cause.",
+          "I had hoped Gorm had given up on his scheme since we last discussed it before the war broke out.",
+          "I paid the courier 20 gold for the delivery and will take the matter under advisement."
         ]
       }
     }
