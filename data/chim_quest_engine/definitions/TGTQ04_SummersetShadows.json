@@ -26,9 +26,9 @@
           "His daughter Fjotli was killed and her silver locket stolen. He wants the locket returned and revenge on the Summerset Shadows."
         ],
         "RETURN_LOCKET": [
-          "Player returns the locket to Torsten, completing the quest.",
-          "There is a hidden panel to the rear of the eastern room, which leads to the basement.",
-          "The door leads to a circular tower room; at the bottom there is an alchemy lab , and a random potion."
+          "Has received Fjotli's silver locket back from the player.",
+          "Rewarded the player with a leveled item for returning the locket.",
+          "Pledged his influential support to the Thieves Guild in Windhelm."
         ]
       }
     },
@@ -39,6 +39,10 @@
       "beat_facts": {
         "TALK_TO_NIRANYE": [
           "Revealed that the Summerset Shadows only looted Fjotli's body and did not kill her. Their hideout is in Uttering Hills Cave."
+        ],
+        "RETURN_LOCKET": [
+          "Now serves as a fence for the Thieves Guild in Windhelm, provided she was spared during the investigation.",
+          "Her ties to the Summerset Shadows are effectively severed following the elimination of their leadership."
         ]
       }
     },

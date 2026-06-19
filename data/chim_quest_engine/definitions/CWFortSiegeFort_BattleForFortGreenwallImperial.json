@@ -17,10 +17,10 @@
           "I have sent the soldier to rendezvous with Imperial troops and assist in taking Fort Greenwall from the Stormcloaks."
         ],
         "FORT_CAPTURED": [
-          "Fort Greenwall has fallen to the Empire. Maven Black-Briar will be installed as Jarl of the Rift.",
-          "Fort Greenwall is taken from the Stormcloaks. The Rift falls to Imperial control. Quest completes.",
-          "Return to Legate Rikke to receive the leveled gold reward only when you want to start the next quest in the series and skip the reward when the game doesn't prompt you to return to her.",
-          "When you do so she will reward you with a leveled amount of gold and automatically start the next quest in the series, Battle for Windhelm ."
+          "Fort Greenwall has been taken from the Stormcloaks, securing the Rift for Imperial control.",
+          "Maven Black-Briar will be installed as Jarl of Riften, replacing Laila Law-Giver as the Empire consolidates its hold on the Rift.",
+          "Legate Rikke offers a leveled gold reward for the successful capture of the fort.",
+          "The Reunification of Skyrim campaign continues; Rikke will assign the next Imperial military objective upon the soldier's return."
         ]
       }
     }

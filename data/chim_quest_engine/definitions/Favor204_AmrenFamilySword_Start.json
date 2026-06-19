@@ -26,9 +26,10 @@
       ],
       "beat_facts": {
         "QUEST_ACCEPTED": [
-          "The player agreed to recover my father's sword.",
-          "The player clearly agrees to recover Amren's family sword.",
-          "Amren asks the player to recover his father's sword from thieves."
+          "The player has explicitly committed to recovering my father's sword from the thieves who stole it.",
+          "I have entrusted the recovery of my family heirloom to this person.",
+          "I am now waiting for the player to return with my father's sword.",
+          "Recovering the sword would restore a treasured family heirloom that was taken from me."
         ]
       }
     }

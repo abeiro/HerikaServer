@@ -18,10 +18,10 @@
           "I've asked the traveler to bring me 10 stalhrim and 15 ebony ingots."
         ],
         "QUEST_COMPLETE": [
-          "The traveler brought me the materials I needed. Now I can forge proper armor again.",
-          "Quest completion observation beat.",
-          "The Reward [ edit ] When you have gathered all the items, return to Thirsk Mead Hall and Halbarn.",
-          "Help each other out.\" This starts the quest and adds an objective to your journal."
+          "The traveler delivered the 10 stalhrim and 15 ebony ingots I needed to resume my forge work.",
+          "I paid them a fair amount of gold for their trouble.",
+          "Just in time too—Kuvar was starting to give me grief about his new armor, but these materials will do the trick nicely.",
+          "I told the traveler to come back if they ever want some fancier armor for themselves."
         ]
       }
     }

@@ -18,10 +18,10 @@
           "An outsider has agreed to speak with Nikulas about staying."
         ],
         "RETURN_TO_EDLA": [
-          "Nikulas has agreed to stay. May the All-Maker bless this outsider.",
-          "Player returns to Edla and reports that Nikulas will stay. She rewards the player with herbs.",
-          "Detailed Walkthrough [ edit ] Return to Skaal Village after the quest The Fate of the Skaal and you can find Edla wandering around the village.",
-          "If you are willing to talk to him, she will be quite happy."
+          "Nikulas has agreed to stay in the village. Calls the outsider a true friend of the Skaal and blesses them in the All-Maker's name.",
+          "Rewarded the outsider with five Ashen Grass Pod, five Emperor Parasol Moss, and five Scathecraw, herbs unique to Solstheim's lands.",
+          "Feels the joy in her heart at Nikulas staying far outweighs any reward she could give.",
+          "Her disposition toward the player has increased for reuniting her family."
         ]
       }
     },
@@ -34,6 +34,10 @@
       "beat_facts": {
         "CONVINCE_NIKULAS": [
           "I have been reminded of my duties as a son and as a Skaal. I will stay in the village."
+        ],
+        "RETURN_TO_EDLA": [
+          "Has chosen to remain in Skaal Village, accepting his duties as a son and as a Skaal over his eagerness for adventure.",
+          "Thanked the outsider for their wisdom in reminding him what truly matters."
         ]
       }
     }

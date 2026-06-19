@@ -20,9 +20,9 @@
           "The Golden Claw has been returned! I rewarded the hero generously."
         ],
         "VALERIUS_DEAD": [
-          "Both Lucan and Camilla are dead; the quest reward is no longer available.",
-          "In the shape of a dragon's claw.\" If you offer to help him get the claw back, he will offer a gold reward and will then continue debating with Camilla.",
-          "Follow her outside and she will point out Bleak Falls Barrow , barely visible in the distance behind Alvor and Sigrid's House , and lead you to the bridge northeast of town."
+          "Lucan Valerius is dead; the gold reward he promised for the Golden Claw is permanently unavailable.",
+          "The Riverwood Trader has lost its proprietor; no one remains there to accept the claw's return.",
+          "With both Valerius siblings dead, the bounty for retrieving the Golden Claw can never be collected."
         ]
       }
     },
@@ -37,6 +37,11 @@
         ],
         "CLAW_RETURNED": [
           "The Golden Claw has been returned! I gave them a reward for their effort."
+        ],
+        "VALERIUS_DEAD": [
+          "Camilla Valerius is dead; she can no longer guide anyone toward Bleak Falls Barrow.",
+          "The Riverwood Trader has lost both its owners.",
+          "The gold reward for returning the Golden Claw cannot be claimed from either sibling."
         ]
       }
     },

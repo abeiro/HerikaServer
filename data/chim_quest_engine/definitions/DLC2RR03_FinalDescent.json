@@ -26,10 +26,10 @@
           "They found Gratian's journal deep in the mine."
         ],
         "COMPLETE_QUEST": [
-          "The truth about Gratian's death has finally been uncovered.",
-          "Player returns to Crescius with the evidence and the quest is completed.",
-          "The tunnel leads to a dead end with yet another angry spider, so proceed down the woodworks and find the tunnel to the northwest, past several crates and barrels with the East Empire Company logo, as well as some.",
-          "Locate the narrow passageway next to the pressure plate and follow it as it twists and turns, then uncover the second huge secret of the mine: Gratian Caerellius [ edit ] \"I'm afraid this tomb will become my resting."
+          "My great-grandfather Gratian died fighting draugr deep inside Bloodskal Barrow, not in a rockfall as the East Empire Company claimed for almost two centuries.",
+          "The adventurer returned Gratian's journal and remains, finally proving the Company covered up his true cause of death.",
+          "Gratian's Bloodskal Blade was recovered from his resting place alongside his journal.",
+          "After years of obsession, I finally have closure about my great-grandfather's fate."
         ]
       }
     },
@@ -41,6 +41,11 @@
       "beat_facts": {
         "SPEAK_TO_CRESCIUS": [
           "Someone is asking about our argument over the mine."
+        ],
+        "COMPLETE_QUEST": [
+          "Crescius finally has the answers he sought about Gratian's death—the East Empire Company lied about the rockfall.",
+          "The mine held far worse dangers than we imagined, including ancient draugr and sealed puzzles guarding Gratian's tomb.",
+          "I can stop worrying about Crescius risking his life in the depths now that the truth has been uncovered."
         ]
       }
     }

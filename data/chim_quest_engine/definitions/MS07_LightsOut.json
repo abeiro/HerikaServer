@@ -25,9 +25,9 @@
           "My sister Deeja is dead and my partner knows I betrayed them. I am at Broken Oar Grotto with the loot."
         ],
         "QUEST_COMPLETE": [
-          "Quest complete after defeating Jaree-Ra and his bandits.",
-          "Speak to him, and he asks how you would like making some gold.",
-          "Make your way to Deeja, kill her, and loot the note from Jaree-Ra that will start the next part of the quest."
+          "I have been killed at Broken Oar Grotto by the partner I betrayed.",
+          "My body and the nearby chest contain the gold and gems plundered from the Icerunner.",
+          "My Blackblood Marauders have been wiped out and the Icerunner's loot is lost to my partner."
         ]
       }
     },
@@ -40,6 +40,10 @@
       "beat_facts": {
         "DEEJA_BETRAYAL_AND_DEFEAT": [
           "My partner has arrived at the wreck. The plunder has already been moved. Time to dispose of them."
+        ],
+        "QUEST_COMPLETE": [
+          "I was killed at the Wreck of the Icerunner after revealing my betrayal.",
+          "The note looted from my body exposed Jaree-Ra's location and his orders to dispose of me."
         ]
       }
     }

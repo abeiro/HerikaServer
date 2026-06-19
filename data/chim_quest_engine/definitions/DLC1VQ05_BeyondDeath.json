@@ -22,6 +22,10 @@
         ],
         "RETRIEVE_SCROLL": [
           "I will not return to Tamriel until Harkon and the Tyranny of the Sun are dealt with."
+        ],
+        "QUEST_COMPLETE": [
+          "I have remained behind in the Soul Cairn while Serana and the player return to Tamriel with the Blood Elder Scroll.",
+          "I refuse to set foot in Tamriel again until Harkon is defeated and the Tyranny of the Sun prophecy is thwarted."
         ]
       }
     },
@@ -35,10 +39,9 @@
           "I have reconciled with my mother after centuries apart."
         ],
         "QUEST_COMPLETE": [
-          "We have the Elder Scroll and have left the Soul Cairn, but my mother refuses to return until Harkon is dealt with.",
-          "Player exits the Soul Cairn with the Elder Scroll. Valerica stays behind until Harkon is dealt with.",
-          "Sometimes after you retrieve your fragmented soul, the stairs leading back to Volkihar Castle on the return trip will be unusable and be part pixelated and you will walk right through them.",
-          "The invisible barrier has now been removed, allowing her to lead you into the Boneyard itself."
+          "I have exited the Soul Cairn with the Blood Elder Scroll in hand.",
+          "My mother Valerica refused to return to Tamriel with us, choosing to remain in the Soul Cairn until Harkon and the Tyranny of the Sun are dealt with.",
+          "With the Elder Scroll retrieved, our focus must now shift to stopping my father Harkon's plans."
         ]
       }
     },
@@ -50,6 +53,10 @@
       "beat_facts": {
         "DEFEAT_DURNEHVIIR": [
           "I have been defeated in battle and wish to speak with the Dovahkiin."
+        ],
+        "QUEST_COMPLETE": [
+          "I have shared my name with the Dovahkiin, granting them the shout to summon me to Tamriel.",
+          "I remain bound to the Soul Cairn by my pact with the Ideal Masters, unable to leave permanently."
         ]
       }
     }

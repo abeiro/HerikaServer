@@ -21,9 +21,10 @@
           "I have given the new Guild Master the Tribute Chest Key and the Amulet of Articulation."
         ],
         "QUEST_COMPLETE": [
-          "Quest complete. Player is now Guild Master with all rewards received.",
-          "The four \"reputation\" quests are activated when the quota is reached for jobs in a given hold: Ceremony [ edit ] Once you have completed all of the reputation quests and Darkness Returns , you will be told to talk to.",
-          "If you leave the area before talking to Brynjolf, the quest may become blocked making it impossible to complete."
+          "I have presided over the ceremony confirming the player as the new Guild Master of the Thieves Guild, with the agreement of Delvin, Vex, and Karliah.",
+          "I have given the new Guild Master the Tribute Chest Key and the Amulet of Articulation as symbols of their new position.",
+          "The Tribute Chest near the Guild Master's desk will be periodically stocked with loot as the guild's tribute to its master.",
+          "I have directed the new Guild Master to speak with Tonilia to receive their Guild Master's Armor set."
         ]
       }
     },
@@ -35,6 +36,10 @@
       "beat_facts": {
         "RETRIEVE_ARMOR": [
           "I have given the new Guild Master their Guild Master's Armor set."
+        ],
+        "QUEST_COMPLETE": [
+          "I have given the new Guild Master their Guild Master's Armor set, a superior recolored variant of the standard Thieves Guild Armor.",
+          "The Guild Master's Armor is similar in appearance to the set Mercer Frey once wore."
         ]
       }
     }

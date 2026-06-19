@@ -27,10 +27,10 @@
           "The tower is healing. I paid the helper with some potions of well-being."
         ],
         "QUEST_COMPLETE": [
-          "The withered tower has been repaired thanks to the taproot treatment.",
-          "Quest is complete. The withered tower has been healed.",
-          "If you get some taproots, I'll pay you to dip them in the headwaters and bring them to me.\" Hunting for Taproot [ edit ] A map marker for the Headwaters of Harstrad will be added once you talk to Elynea, but two.",
-          "Return to Elynea Mothren for a reaction and a small reward: \"Good."
+          "The withered tower has been healed. Neloth has already built a new room in it—a spriggan testing area with two caged spriggans.",
+          "I paid the helper with two potions of well-being and let them take ingredients from my shop for free. I'll sell them more potions if they come back.",
+          "I kept two soaked taproots for myself without telling Neloth. Maybe now he will finally stop pestering me about the tower.",
+          "I have another task ready for anyone willing to help an old woman again."
         ]
       }
     }

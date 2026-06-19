@@ -20,10 +20,9 @@
           "The contract on Deekus has been fulfilled. I await confirmation."
         ],
         "BEAT_QUEST_COMPLETE": [
-          "I have paid the reward for completing the Deekus contract.",
-          "Player reports back to Nazir and collects the leveled gold reward.",
-          "After the kill, report back to Nazir for some leveled gold as a reward.",
-          "Report back to Nazir to collect your reward."
+          "I have paid the leveled gold reward for the Deekus contract, ranging from 250 to 750 gold depending on the assassin's experience.",
+          "The Deekus contract is closed and the Sanctuary's obligation to the client is fulfilled.",
+          "The Brotherhood's business at Hela's Folly is concluded."
         ]
       }
     },

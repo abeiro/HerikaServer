@@ -21,10 +21,9 @@
           "The player has discovered that my spell reduces health when they are submerged in water or caught in rain."
         ],
         "REPORT_TO_NELOTH": [
-          "The player reported the side effects. I removed the spell and paid them 250 gold.",
-          "Player reports the side effect to Neloth. He removes the spell and rewards 250 gold. Sets , quest completes.",
-          "Return to Neloth to report the side effects of his spell.",
-          "Returning to Neloth and reporting the negative effects will result in him removing the spell, which will set you back to normal."
+          "The player reported the side effects of my experimental health spell. I have dispelled it and restored them to normal.",
+          "I rewarded the player 250 gold for serving as my test subject.",
+          "My spell boosted health by 25 points but proved unstable—deep water and rain triggered a 25-point health reduction."
         ],
         "REFUSE_EXPERIMENT": [
           "The player refused to participate in my experiment. Disappointing."

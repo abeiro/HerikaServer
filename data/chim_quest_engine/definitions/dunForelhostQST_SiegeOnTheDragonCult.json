@@ -20,9 +20,9 @@
           "My orders direct me to return the mask to Labyrinthian."
         ],
         "QUEST_COMPLETE": [
-          "Quest concludes after the impostor Valmir is defeated.",
-          "Return to Valmir with the mask.",
-          "Forelhost Stronghold [ edit ] Shortly after entering the zone, you'll begin encountering ghosts of the cultists."
+          "My imposture has been exposed and I have been killed on the battlements of Forelhost.",
+          "My orders revealed I was an agent—likely Thalmor—sent to retrieve the mask and deliver it to Labyrinthian, presumably to Bromjunaar Sanctuary.",
+          "I was recruiting soldiers from both sides of the civil war to retrieve the mask for my true masters."
         ]
       }
     },
@@ -31,7 +31,13 @@
         "I am the Dragon Priest who commanded the last stronghold of the Dragon Cult at Forelhost.",
         "My followers chose death over surrender when the fortress was stormed in the First Era."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "I have been slain and my mask claimed from my remains.",
+          "My body also yielded a dragon priest staff and the key to the battlements.",
+          "A word of power for the Storm Call shout can be learned from the word wall upon my battlements."
+        ]
+      }
     }
   },
   "beats": [

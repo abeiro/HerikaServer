@@ -17,10 +17,9 @@
           "I have assigned the contract to kill the vampire Hern at Half-Moon Mill."
         ],
         "QUEST_FINISHED": [
-          "The contract on Hern is fulfilled and I have paid the reward.",
-          "Quest completion observed; Hern is dead and reward collected.",
-          "They can both be killed with any weapons—as long as Hern dies, the mission completes.",
-          "You can sneak into a shack next to the bridge and attack him safely with a ranged attack from an open window."
+          "The contract on Hern is fulfilled and I have paid the leveled gold reward to the assassin.",
+          "Hern the vampire at Half-Moon Mill is confirmed dead by Brotherhood hands.",
+          "I am satisfied with another successful side contract completed for the Sanctuary."
         ]
       }
     },
@@ -29,7 +28,12 @@
         "I am a vampire living at Half-Moon Mill with my wife Hert.",
         "I pretend to be a simple lumberjack to hide my true nature."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_FINISHED": [
+          "I have been assassinated on a Dark Brotherhood contract at Half-Moon Mill.",
+          "My disguise as a simple lumberjack could not protect me from the Brotherhood's reach."
+        ]
+      }
     }
   },
   "beats": [

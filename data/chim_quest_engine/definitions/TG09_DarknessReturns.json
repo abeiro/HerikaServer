@@ -21,9 +21,10 @@
           "The new recruit must choose which Nightingale ability to receive from Nocturnal."
         ],
         "QUEST_COMPLETE": [
-          "Quest complete. Player has become a true Nightingale Agent with Nocturnal's blessing.",
-          "The Fourth Test [ edit ] The two paths in the room of the fourth test The corridor that lies ahead has a path leading directly through to a door.",
-          "This will cause a hidden passage to open from behind the statue, leading to a corridor and your fourth test."
+          "The Ebonmere has been restored and Nocturnal's conduit to Evergloam flows once more.",
+          "The new recruit has become a true Nightingale Agent imbued with Nocturnal's blessing.",
+          "Mercer Frey is dead and Gallus's murder has been avenged at last.",
+          "With Nocturnal's favor restored, the Thieves Guild's fortunes will improve."
         ]
       }
     },
@@ -40,6 +41,12 @@
         ],
         "FOLLOW_PILGRIMS_PATH": [
           "The recruit must follow the Pilgrim's Path alone to restore the Key to the Ebonmere."
+        ],
+        "QUEST_COMPLETE": [
+          "The Key has been returned to the Ebonmere — my long vigil can finally end.",
+          "Mercer Frey is dead and my murder has been avenged.",
+          "The Sepulcher is no longer vulnerable and Nocturnal's conduit is restored.",
+          "Karliah still lives and continues to serve as a Nightingale."
         ]
       }
     },
@@ -55,6 +62,12 @@
         ],
         "CHOOSE_NIGHTINGALE_ROLE": [
           "I will grant this Nightingale a blessing befitting their chosen role."
+        ],
+        "QUEST_COMPLETE": [
+          "The Skeleton Key has been returned and the Ebonmere restored as my conduit to Evergloam.",
+          "I have granted this Nightingale a blessing befitting their chosen station.",
+          "The Nightingales have fulfilled their agreement as expected; their actions were nothing more than duty.",
+          "My presence in this world flows freely through the Ebonmere once more."
         ]
       }
     }

@@ -18,10 +18,10 @@
           "Hilund has asked me to collect 50 Riekling spears from across Solstheim."
         ],
         "QUEST_COMPLETE": [
-          "Hilund has received the spears and is decorating Thirsk Mead Hall with them.",
-          "Quest finishes - Hilund decorates the hall with the spears as a warning to Rieklings.",
-          "Return to Hilund for your reward.",
-          "Give them here, and I'll get to work soon!\" She will then hand you a leveled amount of gold as reward."
+          "Hilund received all 50 Riekling spears and is placing them around Thirsk Mead Hall as a warning to Rieklings to stay away.",
+          "Hilund rewarded the player with a leveled amount of gold for collecting the spears.",
+          "Hilund's disposition toward the player increased after the successful delivery.",
+          "The spears now ring the hall as a constant reminder to the Nords of past Riekling attacks and a deterrent against future ones."
         ]
       }
     }

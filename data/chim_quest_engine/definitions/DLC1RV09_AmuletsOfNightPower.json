@@ -21,10 +21,9 @@
           "The vampire has retrieved both amulets and should return them to me."
         ],
         "QUEST_COMPLETE": [
-          "I have rewarded the vampire with the amulets and potions of blood for completing the task.",
-          "Quest finishes; Feran rewards the player with the amulets and potions of blood.",
-          "Head to the two dungeons shown on your map, retrieve the amulets, and return to Feran, who will give you several potions of blood as a reward.",
-          "Detailed Walkthrough [ edit ] Talk to Feran Sadri in Volkihar Keep and he will tell you of two amulets which will augment your powers as a Vampire Lord ."
+          "I have given the vampire the Amulet of Bats and the Amulet of The Gargoyle, plus three potions of blood, as reward for retrieving both artifacts.",
+          "The vampire has successfully recovered both amulets from the radiant locations I directed them to, proving their usefulness to Volkihar.",
+          "Both amulets now belong to the vampire and will augment their Vampire Lord powers when equipped."
         ]
       }
     }

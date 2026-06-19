@@ -31,10 +31,10 @@
           "The player found my bow in the Ratway."
         ],
         "RETURN_BOW": [
-          "The player returned my bow. I rewarded them with five leveled gems.",
-          "Player returns the bow to Dravin and receives five leveled gems.",
-          "Loading a previous save will change the gems rewarded thus allowing you to choose, as long as you meet the level requirement for gems.",
-          "Talk to him and he will tell you about his stolen family heirloom, a bow."
+          "The player returned my family heirloom bow to me. I rewarded them with five leveled gems.",
+          "I am overjoyed to have my bow back—I don't care how the player got it, I'm just glad to see it again.",
+          "My disposition toward the player has improved now that they've helped me recover what was stolen.",
+          "Since the thieves also took all of our coin, the gems are what I could afford to pay for the bow's return."
         ]
       }
     }

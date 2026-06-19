@@ -21,10 +21,9 @@
           "The contract on Ennodius Papius has been fulfilled. I await the killer's return to the Sanctuary."
         ],
         "QUEST_COMPLETE": [
-          "I have paid the reward for the Ennodius Papius contract. The deed is done.",
-          "Player reports back to Nazir and collects the leveled gold reward. finishes the quest.",
-          "Reward [ edit ] Return to the sanctuary and speak with Nazir, who will comment, \"How went your meeting with Ennodius Papius?",
-          "Alternatively, like most other assassination targets, you have the option to talk to Ennodius which gives you three dialogue choices, all of which will either turn Ennodius hostile (allowing you to kill him without fear."
+          "I have paid the leveled gold reward for the completed contract on Ennodius Papius.",
+          "I remarked that the killer proved the ex-miller's paranoia legitimate.",
+          "The contract on Ennodius Papius is closed and the Sanctuary's cut is secured."
         ]
       }
     },
@@ -36,6 +35,9 @@
       "beat_facts": {
         "CONTRACT_GIVEN": [
           "Someone is coming for me. My paranoia was justified."
+        ],
+        "QUEST_COMPLETE": [
+          "I am dead, my paranoia about someone coming for me proven legitimate."
         ]
       }
     }

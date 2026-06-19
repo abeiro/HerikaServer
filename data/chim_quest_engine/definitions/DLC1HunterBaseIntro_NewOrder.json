@@ -25,10 +25,10 @@
           "Sorine and Gunmar have arrived at Fort Dawnguard. I tested them with sunlight to confirm they are not vampires."
         ],
         "QUEST_COMPLETE": [
-          "The Dawnguard is growing stronger. We must now question the vampire who came here looking for the Dragonborn.",
-          "Isran finishes his speech, the Dawnguard is reinforced, and the Prophet quest begins.",
-          "He will then lead you to a cave near his initial starting point: Possible locations : Bonechill Passage • Bronze Water Cave • Brood Cavern • Clearspring Tarn • Cronvangr Cave • Crystaldrift Cave • Fallowstone Cave •.",
-          "Let's go have a little chat with it, shall we?\" Once Isran has removed the barrier, the quest will end and the next quest, Prophet , will initiate."
+          "Sorine and Gunmar both passed my sunlight test. They are not vampires, and the Dawnguard is stronger for having them.",
+          "I have given Sorine room to tinker with her crossbow design and Gunmar an area to pen and armor trolls for our use.",
+          "A vampire came to Fort Dawnguard looking for the Dragonborn. I intend to question it at once.",
+          "With the recruits settled, I am heading to interrogate the vampire. The Prophet quest begins immediately after."
         ]
       }
     },
@@ -41,6 +41,11 @@
       "beat_facts": {
         "HELP_GUNMAR_BEAR": [
           "The Dragonborn helped me kill the bear I had been tracking for two weeks. I agreed to rejoin the Dawnguard."
+        ],
+        "QUEST_COMPLETE": [
+          "I have taken up residence at Fort Dawnguard and been given space to pen and armor trolls for battle.",
+          "I now serve as a master trainer in Smithing for the Dawnguard.",
+          "I sell weapons and armor, and can provide armored trolls to aid in the fight against the vampires."
         ]
       }
     },
@@ -53,6 +58,11 @@
       "beat_facts": {
         "RECRUIT_SORINE": [
           "The Dragonborn brought me a Dwemer gyro and convinced me to rejoin the Dawnguard."
+        ],
+        "QUEST_COMPLETE": [
+          "I have taken up residence at Fort Dawnguard and been given room to work on my crossbow designs.",
+          "I now serve as a master trainer in Marksman for the Dawnguard.",
+          "I sell and buy items, and will offer various assignments to members of the order."
         ]
       }
     }

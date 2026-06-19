@@ -18,10 +18,10 @@
           "I have revealed the location of my hidden gold to my captor."
         ],
         "CLAIM_HIDDEN_TREASURE": [
-          "My hidden treasure has been taken from its hiding place.",
-          "Player finds and claims the hidden treasure from its location in the wilderness.",
-          "The rewards will, in most cases, easily cover your expenses for the torture room, and even net a maximum profit of 3000 gold.",
-          "As the torture victims are completely restrained, they can easily be used to train skills on, as long as they are healed."
+          "My hidden gold has been claimed from its hiding place in the wilderness — I have nothing left to bargain with for my freedom.",
+          "I remain completely restrained in the Dawnstar Sanctuary torture room with no prospect of release despite having revealed my secret.",
+          "The hollowed-out rock or tree stump where I stashed my gold is now empty; the treasure will never refill.",
+          "Whatever the gold was meant for — an inheritance, a wedding fund, or a desperate reserve — it is gone, taken by my captor."
         ]
       }
     }

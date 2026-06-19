@@ -32,10 +32,10 @@
           "The outsider is too strong. Maybe they want to be chief. I must fight them."
         ],
         "QUEST_COMPLETE": [
-          "The old chief is dead. The outsider is the new chief of tribe-kin.",
-          "Chief defeated. Player becomes the new chief of the Riekling tribe.",
-          "The tribe-kin way.\" With the soldiers prepped for fight, the chief will lead them in an eastern direction towards the hiding place of the mead hall's former inhabitants, Bujold's Retreat .",
-          "If the other rieklings are nearby, they will attack the chief, or if they have returned to the mead hall, you can lead the chief back to them and they will attack him."
+          "The chief is dead. He turned on the outsider because he feared they were too strong and would take his place.",
+          "The rest of the tribe-kin welcomed the outsider and made them the new chief.",
+          "A riekling from the tribe can now be recruited as a follower by the new chief.",
+          "Up to three riekling warriors may appear to aid the new chief in random fights across Solstheim and Skyrim."
         ]
       }
     }

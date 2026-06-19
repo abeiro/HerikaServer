@@ -27,10 +27,10 @@
           "This person agreed to bring me ten bear pelts to help thin out the bears."
         ],
         "RETURN_WITH_BEAR_PELTS": [
-          "This person brought me ten bear pelts! I rewarded them with an enchanted war axe.",
-          "Player returns with 10 bear pelts and completes the quest.",
-          "She is sorely in need of help with the bear problem and offers payment if you bring her ten bear pelts, thus thinning out the bear population.",
-          "There are two bear dens in the vicinity of Ivarstead: Honeystrand Cave to the south past the river, and Pinepeak Cavern to the north near the steps leading up to High Hrothgar ."
+          "This person actually brought me ten bear pelts—I'm genuinely surprised anyone came through for me.",
+          "I rewarded them with a leveled enchanted war axe for thinning out the bear population.",
+          "My disposition toward this person has improved—they helped my lumber business when no one else would.",
+          "With fewer bears scratching up the tree trunks, my mill might finally turn a profit."
         ]
       }
     }

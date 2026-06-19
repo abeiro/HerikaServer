@@ -25,9 +25,10 @@
           "I am compiling all the evidence my investigator has uncovered about the Forsworn conspiracy."
         ],
         "QUEST_COMPLETION": [
-          "Eltrys is found dead and the player is framed for his murder, leading to imprisonment in Cidhna Mine.",
-          "You can report back to Eltrys with your information about Margret for a leveled gold reward, or continue researching Weylin and Thonar before going back to Eltrys.",
-          "You can follow the smelter lead to the Smelter Overseer's House to speak with Mulush gro-Shugurz ."
+          "I was murdered at the Shrine of Talos after the player returned with the evidence.",
+          "Markarth guards are waiting at the shrine and frame the player for my murder to silence the investigation.",
+          "My death leads to the player's arrest and imprisonment in Cidhna Mine, starting the quest 'No One Escapes Cidhna Mine'.",
+          "The player must now locate Madanach, the King in Rags, inside Cidhna Mine to clear their name."
         ]
       }
     },

@@ -17,10 +17,10 @@
           "I sent the soldier to take Fort Kastav and free our imprisoned Legionnaires."
         ],
         "QUEST_COMPLETE": [
-          "Fort Kastav has been retaken and our prisoners rescued.",
-          "Quest completes; player is directed to report to General Tullius under Reunification of Skyrim.",
-          "Return to Legate Rikke to receive the leveled gold reward only when you want to start the next quest in the series and skip the reward when the game doesn't prompt you to return to her.",
-          "This allows all location cells to refresh, and the next time you travel to the Winterhold Imperial Camp, Legate Rikke will offer the \"Reporting for Duty\" dialogue option."
+          "Fort Kastav has been retaken and the imprisoned Legionnaires rescued under my orders.",
+          "The soldier is to report to General Tullius at Castle Dour in Solitude for promotion and next assignment under Reunification of Skyrim.",
+          "General Tullius will promote the soldier to Legate rank and award leveled armor as reward for this operation.",
+          "This victory installs Kraldar as the new Jarl of Winterhold and exiles Korir and his family to Brunwulf Free-Winter's House."
         ]
       }
     },
@@ -41,6 +41,11 @@
         ],
         "REPORT_HADVAR": [
           "I told the soldier to report our success to General Tullius."
+        ],
+        "QUEST_COMPLETE": [
+          "I am garrisoning Fort Kastav after the successful assault and prisoner rescue.",
+          "If none of the freed prisoners survived the battle, I lament their loss.",
+          "I directed the soldier to report our success to General Tullius at Castle Dour."
         ]
       }
     }

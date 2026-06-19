@@ -24,9 +24,10 @@
           "The court accepted our performance of King Olaf's Verse. The player should speak to me about joining the College."
         ],
         "COMPLETION": [
-          "Player is inducted into the Bards College after the festival.",
-          "It soon becomes clear that the ghost shows you the correct path, so follow it and pull the chain at the dead end.",
-          "Return to the Bards College and pay a visit to the Blue Palace ."
+          "The Burning of King Olaf festival has been successfully restored and held in Solitude.",
+          "The player has been formally inducted into the Bards College as a new member.",
+          "Viarmo rewarded the player with leveled gold for their service to the College.",
+          "Viarmo's disposition toward the player has increased for saving the festival."
         ]
       }
     },
@@ -40,6 +41,10 @@
         ],
         "FESTIVAL": [
           "The player brought the coat. The effigy is ready and the festival can begin after dusk."
+        ],
+        "COMPLETION": [
+          "The effigy of King Olaf was successfully burned at the festival.",
+          "Jorn's disposition toward the player has increased for helping complete the effigy and restore the festival."
         ]
       }
     },
@@ -48,7 +53,12 @@
         "I am the Dean of History at the Bards College.",
         "I believe King Olaf's Verse can be found in Dead Men's Respite, which may also be King Olaf's burial tomb."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "COMPLETION": [
+          "Giraud's disposition toward the player has increased following the festival's success.",
+          "The player's retrieval of King Olaf's Verse from Dead Men's Respite vindicated Giraud's theory about the tomb."
+        ]
+      }
     }
   },
   "beats": [

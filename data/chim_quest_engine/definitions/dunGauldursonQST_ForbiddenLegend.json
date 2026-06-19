@@ -15,9 +15,10 @@
       ],
       "beat_facts": {
         "QUEST_COMPLETE": [
-          "Forbidden Legend quest is finished. The Gauldur Amulet has been reclaimed.",
-          "Return to the first room and pull the chain, which will now remove the grate leading downstairs.",
-          "However, a few other items scattered around Skyrim will start the quest as well."
+          "My lifelong research into the Gauldur legend has been fulfilled — the three brothers have been defeated and their father's amulet reforged at Reachwater Rock.",
+          "The ivory dragon claw I carried proved essential for reaching Mikrul Gauldurson's tomb deep within Folgunthur.",
+          "My notes revealed the full truth: Archmage Gauldur was murdered by his three sons, who divided his amulet and were hunted down by Lord Geirmund under King Harald's orders.",
+          "Though I perished in Folgunthur before completing my quest, my research and the claw I carried enabled the Gauldur Amulet to be reclaimed and restored."
         ]
       }
     }

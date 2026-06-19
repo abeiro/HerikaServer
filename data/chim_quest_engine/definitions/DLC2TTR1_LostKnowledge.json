@@ -21,10 +21,10 @@
           "The traveler has found the Black Book and should return it to me."
         ],
         "QUEST_COMPLETE": [
-          "I have made a copy of the Black Book and rewarded the traveler for their efforts.",
-          "Neloth makes a copy of the Black Book, rewards the player with gold, and the quest concludes.",
-          "Once you have the book in your possession, find the door leading back to Benkongerike and return to Neloth for your reward and your next task, a trip through Raven Rock Mine .",
-          "Once you return from the realm of Hermaeus Mora , head back to the chamber with the caged and deceased Servos Rendas and follow the path leading northeast from the cage."
+          "I have made a copy of the retrieved Black Book for my research and allowed the traveler to keep the original.",
+          "I paid the traveler gold for their service in retrieving the Black Book.",
+          "I consider this particular matter closed, though I may know of other Black Books still hidden on Solstheim.",
+          "I maintain that carrying the real Black Books is far too dangerous, which is why I only keep copies for myself."
         ]
       }
     }

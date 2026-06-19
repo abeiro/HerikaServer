@@ -18,10 +18,9 @@
           "I have given the contract to kill the bard Lurbuk in Morthal."
         ],
         "QUEST_COMPLETE": [
-          "The contract on Lurbuk has been fulfilled and the reward has been paid.",
-          "Player reports back to Nazir at the Sanctuary and collects the leveled gold reward.",
-          "Like most assassination targets, you may choose to have a conversation with Lurbuk before killing him: Reward [ edit ] Notes [ edit ] If you have started but not yet completed the quest Laid to Rest , Lurbuk may still.",
-          "For this reason, it is recommended that you either dismiss the townspeople or finish Laid to Rest."
+          "The contract on Lurbuk has been fulfilled and the leveled gold reward has been paid, ranging from 250 to 750 gold depending on the assassin's experience.",
+          "With Lurbuk dead, the lottery Astrid held to decide which of the multiple Brotherhood contracts on him would be honored has been resolved.",
+          "I may have additional side contracts available for any willing Brotherhood member."
         ]
       }
     },
@@ -30,7 +29,12 @@
         "I am an Orc bard who performs at the Moorside Inn in Morthal.",
         "My singing is widely considered terrible, which is why someone put a Dark Brotherhood contract on me."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "I have been assassinated at the Moorside Inn, fulfilling the Dark Brotherhood contract on my life.",
+          "My death resolves the lottery Astrid held among the many who placed contracts to have me silenced for my terrible singing."
+        ]
+      }
     }
   },
   "beats": [

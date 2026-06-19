@@ -39,10 +39,9 @@
       ],
       "beat_facts": {
         "TALK_TO_MAJNI": [
-          "I welcomed a fellow werewolf to the Frostmoon Pack and offered them my rings.",
-          "Player talks to Majni, Alpha of the Frostmoon Pack, completing the quest.",
-          "Now, you may talk to Majni, Alpha of the Frostmoon Pack, and complete the quest.",
-          "Talk to Majni in Frostmoon Crag ."
+          "I welcomed a fellow werewolf to the Frostmoon Pack, telling them they are welcome here so long as they respect our law.",
+          "I now offer four unique rings that affect the wearer's beast form for sale.",
+          "I will only speak with and sell my rings to those who carry the beast blood; if their lycanthropy is cured, I will refuse them."
         ]
       }
     }

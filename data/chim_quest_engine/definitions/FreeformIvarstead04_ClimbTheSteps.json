@@ -27,10 +27,9 @@
           "I have given my supplies to someone willing to deliver them to the Greybeards."
         ],
         "QUEST_COMPLETE": [
-          "My supplies were delivered to High Hrothgar. I am grateful for the help.",
-          "Quest finishes after player returns to Klimmek following delivery.",
-          "They can be taken and returned at any time, however doing so will not grant you any further reward.",
-          "Return to Klimmek for your reward."
+          "I have compensated the traveler with gold for delivering my supplies to High Hrothgar.",
+          "My respect for the traveler has grown for making the arduous climb in my stead.",
+          "My supplies now rest in the chest outside the monastery, where they will remain indefinitely."
         ]
       }
     }

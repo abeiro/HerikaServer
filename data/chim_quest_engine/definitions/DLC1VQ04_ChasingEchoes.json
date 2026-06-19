@@ -31,10 +31,10 @@
           "To enter the Soul Cairn you must be dead. I can turn you into a Vampire Lord, or partially soul trap you which will weaken you inside the Cairn."
         ],
         "QUEST_COMPLETE": [
-          "We have entered the Soul Cairn. My mother Valerica must be somewhere in this place with the Elder Scroll.",
-          "Player has entered the Soul Cairn; quest completes and transitions to Beyond Death.",
-          "Choosing to become a Vampire Lord and then returning to Fort Dawnguard will prompt Florentius , Sorine , or Gunmar to direct you to Falion , thus beginning the quest Rising at Dawn .",
-          "This leads to the Castle Volkihar Balcony , a small outside area from which you can fast-travel and then return to the Soul Cairn without having to traverse the castle ruins and courtyard again."
+          "We have stepped through the portal into the Soul Cairn. My mother Valerica must be somewhere in this plane of Oblivion, likely still possessing the Elder Scroll she took from Castle Volkihar.",
+          "Finding Valerica is our immediate goal now. She should be able to tell us the location of one of the Elder Scrolls needed to unravel the Tyranny of the Sun prophecy.",
+          "The portal in my mother's laboratory remains open, sustained by my blood. A balcony exit from the laboratory leads outside the castle walls, allowing a shortcut back to the portal without traversing the ruins.",
+          "If my companion chose partial soul trapping over vampirism to enter the Soul Cairn, they are weakened here — their health, stamina, and magicka are reduced while in this realm."
         ]
       }
     },

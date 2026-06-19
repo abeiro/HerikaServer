@@ -22,10 +22,10 @@
           "The player has examined a Briarheart and seen how the heart was implanted. I await their return."
         ],
         "REPORT_TO_NELOTH": [
-          "I have extracted the player's memories of the Briarheart examination and paid them 250 gold for their efforts.",
-          "Player returns to Neloth at Tel Mithryn; he extracts memories and pays 250 gold.",
-          "Return to Neloth for your reward.",
-          "It puts their lifesparks in direct connection to the natural forces."
+          "I have extracted the player's memories of the Briarheart examination and reviewed them for useful findings about heart replacement.",
+          "I paid the player 250 gold as compensation for the lengthy journey to The Reach and back to Solstheim.",
+          "I promised to keep any unrelated memories I encountered during the extraction in the strictest confidence.",
+          "The player's observations of how a Briarheart's heart was implanted will advance my heart stone experiments."
         ]
       }
     }

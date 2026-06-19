@@ -21,10 +21,9 @@
           "The player has found both rings and should return to me in Volkihar Keep."
         ],
         "QUEST_COMPLETE": [
-          "The player has returned the Rings of Blood Magic. I have let them keep the rings and given them potions of blood.",
-          "Quest finishes; player keeps the rings and receives potions of blood.",
-          "After retrieving the rings, return to the castle to receive your reward (you get to keep the rings).",
-          "Detailed Walkthrough [ edit ] Speak with Feran Sadri in Volkihar Keep , who sends you to retrieve two ancient vampiric rings, the Ring of the Erudite and the Ring of The Beast ."
+          "I have given the player the Ring of the Erudite, the Ring of The Beast, and three potions of blood as their reward for retrieving the rings.",
+          "The ancient vampiric rings have been recovered from their bearers and returned to Volkihar Keep; I permitted the player to keep both relics.",
+          "My task to retrieve the Rings of Blood Magic is fulfilled—the relics are no longer scattered across distant locations."
         ]
       }
     }

@@ -19,6 +19,12 @@
         ],
         "MALACATHS_JUDGMENT": [
           "Malacath has spoken through the ritual and demands Yamarz reclaim the shrine."
+        ],
+        "QUEST_COMPLETE": [
+          "The curse on Largashbur has been lifted by Malacath's intervention.",
+          "Gularzob has been named the new chief of our tribe in Yamarz's place.",
+          "The outsider who aided us has been named Malacath's Champion.",
+          "Our tribe is free to leave the stronghold again without fear of the giants."
         ]
       }
     },
@@ -33,6 +39,11 @@
         ],
         "DEFEAT_GIANT": [
           "The giant at the shrine has been defeated."
+        ],
+        "QUEST_COMPLETE": [
+          "Malacath judged me a weakling unfit to lead and stripped me of my title as chief.",
+          "I fell at Giant's Grove after my cowardice was exposed.",
+          "Gularzob has replaced me as chief of Largashbur."
         ]
       }
     },
@@ -42,10 +53,10 @@
       ],
       "beat_facts": {
         "QUEST_COMPLETE": [
-          "Malacath has named me the new chief of Largashbur.",
-          "Quest complete. Malacath names Gularzob the new chief. The hammer transforms into Volendrung.",
-          "Meet Yamarz at Fallowstone Cave .",
-          "Malacath's Ritual [ edit ] \"Now, we begin the ritual...\" After you bring the ingredients to Atub, she will enter Largashbur Longhouse and speak with Chief Yamarz about performing the ritual."
+          "Malacath has named me the new chief of Largashbur, replacing the weakling Yamarz.",
+          "The curse on our tribe has been lifted by Malacath's judgment.",
+          "The outsider who aided us has been named Malacath's Champion for restoring the shrine.",
+          "Shagrol's Hammer transformed into Volendrung when placed on the shrine."
         ]
       }
     }

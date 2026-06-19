@@ -33,10 +33,10 @@
           "Wyndelius faked the haunting to scare people away while he searched for the sapphire dragon claw."
         ],
         "QUEST_COMPLETE": [
-          "The mystery of the haunting is solved. I gave the adventurer the sapphire dragon claw as a reward.",
-          "Quest completes after returning journal to Wilhelm at .",
-          "Alternatively, you can go directly to the barrow without speaking to Wilhelm beforehand.",
-          "After you finish the quest, Wilhelm will occasionally say \"Now that our \"ghost\" has been unmasked, I hope we see more visitors in town than just the occasional pilgrim.\" when you talk to him."
+          "The haunting is solved — Wyndelius was never a ghost, only an adventurer driven mad by his obsession with the sapphire dragon claw.",
+          "I gave the adventurer the sapphire dragon claw as a reward, the very item Wyndelius gave his sanity and life trying to possess.",
+          "Now that the ghost has been unmasked, I hope to see more visitors in Ivarstead than just the occasional pilgrim.",
+          "My regard for the adventurer has grown for solving the mystery that plagued my inn."
         ]
       }
     }

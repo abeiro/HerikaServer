@@ -21,10 +21,10 @@
           "The Silver Hand at Driftshade Refuge have been defeated and the Wuuthrad fragments recovered."
         ],
         "QUEST_COMPLETE": [
-          "Vilkas says you should meet at the Skyforge to pay respects to Kodlak.",
-          "Quest completes; Vilkas directs player to the Skyforge for Kodlak's funeral.",
-          "Do this before talking to Vilkas, and when you do speak to him the next quest may start.",
-          "Load a game right after accepting Blood's Honor from Kodlak, and while standing in any interior cell, type setstage c04 200 , then setstage c05 200 , and finally setstage c06 00 to start the next quest and attend the."
+          "Vilkas considers Kodlak's death avenged after the Silver Hand at Driftshade Refuge were wiped out.",
+          "The fragments of Wuuthrad have been recovered and returned to Jorrvaskr.",
+          "Vilkas directs the player to meet at the Skyforge to pay respects to the now-avenged Kodlak Whitemane.",
+          "Kodlak's funeral at the Skyforge begins immediately, starting the next quest Glory of the Dead."
         ]
       }
     }

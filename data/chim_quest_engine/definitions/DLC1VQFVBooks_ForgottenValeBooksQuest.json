@@ -25,10 +25,10 @@
           "I have purchased an Ancient Falmer Tome and provided a translated copy."
         ],
         "ALL_TOMES_DELIVERED": [
-          "All four Ancient Falmer Tomes have been recovered and translated.",
-          "All four Ancient Falmer Tomes have been delivered and the quest is complete.",
-          "One on the right, that leads up along the mountain side and one on the left that goes over the river.",
-          "You will reach a fork, to the left is a Falmer bridge (made of chitin ) and to the right is a rocky pathway leading up into the mountains."
+          "I have purchased all four Ancient Falmer Tomes from the finder, paying 1000 gold each for a total of 4000 gold.",
+          "I have provided translated copies of all four tomes to the finder as compensation beyond the gold.",
+          "The complete set of Ancient Falmer Tomes is now preserved in the Arcanaeum's collection.",
+          "These translations reveal the history and culture of the Falmer who once inhabited the Forgotten Vale."
         ]
       }
     }

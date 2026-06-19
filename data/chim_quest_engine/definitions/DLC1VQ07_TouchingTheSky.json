@@ -19,10 +19,10 @@
           "He needed my blood to corrupt Auri-El's influence on Nirn."
         ],
         "QUEST_COMPLETE": [
-          "We now possess Auriel's Bow, the final piece of the Tyranny of the Sun.",
-          "Quest complete; player possesses Auriel's Bow and knows the truth of the Tyranny of the Sun prophecy.",
-          "Head north through the chambers, placing the Ewer on any pedestals to open the gates nearby, until you reach an icy tunnel leading to Auriel's Chapel .",
-          "This tunnel branches to the left and doubles back leading to another chest and some more loose items."
+          "Vyrthur's prophecy was designed to use my blood to corrupt Auri-El's influence on Nirn — I was the essential ingredient he needed.",
+          "The Tyranny of the Sun was never divine will; it was a vampire's revenge against a god who forsook him.",
+          "Auriel's Bow is ours now, but Harkon still believes he can fulfill the prophecy. He must be confronted before he takes the bow or my blood by force.",
+          "With Vyrthur destroyed, I am no longer in danger of being sacrificed for his ritual — but Harkon remains a threat to me and to Nirn."
         ]
       }
     },
@@ -39,6 +39,10 @@
         "CLAIM_BOW": [
           "You have proven worthy to carry Auriel's Bow.",
           "I am surprised Vyrthur's corruption was vampirism, not the Falmer."
+        ],
+        "QUEST_COMPLETE": [
+          "I have proclaimed the player worthy to carry Auriel's Bow and will continue to tend the Chantry of Auri-El alone.",
+          "Vyrthur's corruption was vampirism, not the Falmer — I must reconsider everything I believed about my brother's fall."
         ]
       }
     },

@@ -23,10 +23,9 @@
           "Someone has agreed to bring me juniper berries from Skyrim."
         ],
         "RETURN_BERRIES": [
-          "I received the juniper berries and gave them Ashfire Mead and gold as a reward.",
-          "Player returns with juniper berries. Sets , completes objective, finishes quest.",
-          "Once you have retrieved a sample of the ingredient, return to Elmus at Thirsk Mead Hall for your reward: ten bottles of Ashfire Mead and a leveled amount of gold: I've got some juniper berries.",
-          "Detailed Walkthrough [ edit ] After the Nords from Bujold's Retreat have retaken Thirsk Mead Hall , speak to Elmus there to learn that he is in need of some juniper berries to make some mead: How is the mead?"
+          "I received the juniper berries and rewarded the player with ten bottles of Ashfire Mead and leveled gold.",
+          "I am pleased with the ripeness of the berries and can now add them to flavor the new batch of mead.",
+          "My disposition towards the player has increased from 0 to 1, and I called them a friend for their help."
         ]
       }
     }

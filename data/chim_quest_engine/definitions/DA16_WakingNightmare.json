@@ -33,10 +33,10 @@
           "I had to kill Veren and Thorek, my former friends. Now I will destroy the Skull."
         ],
         "QUEST_COMPLETE": [
-          "The Skull of Corruption is destroyed. I offer myself as a companion to the traveler.",
-          "Final choice: spare Erandur and destroy the Skull, or kill Erandur and claim the Skull of Corruption.",
-          "Follow him down the stairs, where you will meet two Orcish invaders at the bottom.",
-          "Words of Power [ edit ] Follow Erandur back up the stairs and allow him to unlock the door to the library."
+          "If spared, I have destroyed the Skull of Corruption and ended Dawnstar's nightmares forever.",
+          "If spared, I offer myself as a follower to the traveler out of gratitude and devotion to Mara.",
+          "If spared, my disposition toward the traveler is 3, and Jarl Skald's disposition toward the traveler is 1 if he still rules Dawnstar.",
+          "If killed, the traveler claims the Skull of Corruption and I die atop the inner sanctum."
         ]
       }
     }

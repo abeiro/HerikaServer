@@ -22,10 +22,9 @@
           "The traveler has found all ten of my lost pages!"
         ],
         "RETURN_TO_JIUB": [
-          "I gave the traveler my Locket and a copy of my Opus in gratitude for their help.",
-          "Player returns all pages to Jiub and receives the Locket and completed Opus.",
-          "Talk to Jiub at any time to receive the quest, and return all ten pages to him when you have them.",
-          "In return, he will give you the Locket of Saint Jiub and a complete copy of Saint Jiub's Opus ."
+          "I gave the traveler the Locket of Saint Jiub and a pristine copy of my first volume, Saint Jiub's Opus, in gratitude for their efforts.",
+          "With all ten pages returned, my Opus is finally complete.",
+          "I am deeply grateful to the traveler for reuniting me with my scattered writings."
         ]
       }
     }

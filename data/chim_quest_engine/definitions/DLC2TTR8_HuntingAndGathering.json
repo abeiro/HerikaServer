@@ -22,10 +22,10 @@
           "The traveler brought me the ingredient I needed."
         ],
         "QUEST_COMPLETE": [
-          "The traveler delivered the ingredient and I paid them. Good help is hard to find.",
-          "Observational beat: quest finishes at after ingredient delivery.",
-          "Once you have collected the ingredient, return to Elynea for your reward.",
-          "Detailed Walkthrough [ edit ] After completing the quest Healing a House , speak to Elynea Mothren in the Tel Mithryn Apothecary and she'll request that you bring her a particular rare alchemy ingredient ."
+          "The traveler delivered the rare ingredient I requested. I paid them a variable gold reward depending on which ingredient they brought.",
+          "I pay extra for giant toes, hagraven claws, vampire dust, and void salts. Briar hearts and daedra hearts earn a standard price.",
+          "My apothecary supplies are restocked for now with an ingredient I cannot grow in my garden.",
+          "If the traveler already had the ingredient on hand, I accepted it immediately without making them leave and come back."
         ]
       }
     }

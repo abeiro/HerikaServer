@@ -16,6 +16,10 @@
       "beat_facts": {
         "NAZIR_DIRECTS_TO_DELVIN": [
           "Nazir has sent the player to speak with Delvin Mallory about restoring the Dawnstar Sanctuary."
+        ],
+        "SANCTUARY_FULLY_RESTORED": [
+          "Nazir's Dawnstar Sanctuary has been fully refitted and restored, marking a new era for the Dark Brotherhood.",
+          "Nazir now oversees a fully renovated sanctuary complete with an alchemy lab, torture chamber, secret entrance, and master bedroom."
         ]
       }
     },
@@ -30,10 +34,9 @@
           "Delvin has discussed the available sanctuary upgrades with the player."
         ],
         "SANCTUARY_FULLY_RESTORED": [
-          "Delvin has completed all possible renovations to the Dawnstar Sanctuary.",
-          "All upgrades purchased; Delvin confirms nothing more he can do. Quest completes at .",
-          "You will have just 1,000 gold left of your previous reward after purchasing all of the upgrades.",
-          "After buying all the upgrades, talking to Delvin Mallory once more about the Dawnstar Sanctuary will complete the quest."
+          "Delvin confirms all renovations to the Dawnstar Sanctuary are complete; he has nothing more he can offer for it.",
+          "All sanctuary upgrades have been purchased from Delvin at a total cost of 19,000 gold.",
+          "Delvin has installed every available upgrade: new banners, the Poisoner's Nook with its alchemy lab and regrowing ingredient garden, a torture chamber, a secret entrance, and a master bedroom."
         ]
       }
     }

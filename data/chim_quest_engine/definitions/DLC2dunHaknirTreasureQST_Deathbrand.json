@@ -16,10 +16,9 @@
       ],
       "beat_facts": {
         "HAKNIR_DEFEATED": [
-          "My ghost has been vanquished and my treasure claimed by a worthy soul.",
-          "Player defeats Haknir Death-Brand's ghost and his crew, claiming Bloodscythe and Soulrender.",
-          "Behind it is a narrow tunnel leading further into the ruin.",
-          "Take a good look at the treasure map , and it becomes clear that Haknir's crew followed orders and placed them as far apart as possible."
+          "My ghost has been vanquished and my cursed scimitars, Bloodscythe and Soulrender, have been claimed by a worthy soul.",
+          "The portcullis that sealed my tomb has been raised, allowing the victor to leave Gyldenhul Barrow with my hoard.",
+          "My curse is broken; the one who defeated me has proven themselves worthy to succeed me and wield my blades."
         ]
       }
     },
@@ -39,7 +38,12 @@
         "I was a crewman of Haknir Death-Brand who helped bury his armor across Solstheim.",
         "I gave in to greed and put on the Deathbrand Helm the same night we buried it, and it drove me mad."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "HAKNIR_DEFEATED": [
+          "My ghost was summoned to defend Haknir's tomb in Gyldenhul Barrow, but I have been laid to rest once more.",
+          "I fought alongside Haknir Death-Brand and the rest of his crew against the intruder who claimed the treasure."
+        ]
+      }
     }
   },
   "beats": [

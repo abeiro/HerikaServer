@@ -21,10 +21,9 @@
           "The Dragonborn has accepted my challenge to fight at Last Vigil."
         ],
         "DEFEAT_EBONY_WARRIOR": [
-          "I have been defeated by the Dragonborn. May my soul find rest in Sovngarde.",
-          "The player defeats the Ebony Warrior in combat at Last Vigil, completing the quest.",
-          "The Ebony Warrior will not attack you when approached, and will not speak.",
-          "You must initiate the attack for the battle to begin."
+          "I have been defeated by the Dragonborn, and my soul will now find rest in Sovngarde.",
+          "My fully enchanted ebony equipment and other treasures can be looted from my body.",
+          "My death at Last Vigil concludes my lifelong search for an honorable end in combat."
         ]
       }
     }

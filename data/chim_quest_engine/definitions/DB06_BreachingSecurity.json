@@ -17,10 +17,10 @@
           "I have sent the listener to Gabriella for the next contract details."
         ],
         "BREACHING_SECURITY_COMPLETE": [
-          "Gaius Maro is dead and the letter planted. Commander Maro's security plan is in ruins.",
-          "Quest complete: Gaius Maro is dead and the letter planted, crippling the Emperor's security and ruining Commander Maro.",
-          "Detailed Walkthrough [ edit ] Sins of the Father [ edit ] When you return from your fateful visit to Vittoria Vici's wedding , you will find a gleeful Astrid ready to move onto the next phase of the plan.",
-          "This is the schedule as it appears in game that you steal from the Penitus Oculatus Outpost : The Stalker [ edit ] Don't be afraid to simply wait for a day and follow Gaius around."
+          "Gaius Maro is dead and the incriminating letter has been planted, just as Astrid planned.",
+          "Commander Maro is emotionally ruined and the Emperor's security plan for his visit is disrupted.",
+          "The Emperor will believe the only plot against him has been foiled, leaving him vulnerable to the true assassination attempt.",
+          "Astrid pays leveled gold for the completed contract."
         ]
       }
     },
@@ -34,6 +34,11 @@
           "Kill Gaius Maro and plant the incriminating letter on his body to frame him.",
           "Killing Gaius in a city rather than Dragon Bridge or the road earns a bonusâ€”Olava's Token for a reading of your future.",
           "Gaius Maro's travel schedule can be stolen from the Penitus Oculatus Outpost in Dragon Bridge."
+        ],
+        "BREACHING_SECURITY_COMPLETE": [
+          "Gabriella's plan to cripple the Penitus Oculatus by killing Commander Maro's son has succeeded.",
+          "If Gaius was killed in a major city, Gabriella rewards the player with Olava's Token for a reading of their future.",
+          "The planted letter will make it appear Gaius was part of a plot against the Emperor."
         ]
       }
     }

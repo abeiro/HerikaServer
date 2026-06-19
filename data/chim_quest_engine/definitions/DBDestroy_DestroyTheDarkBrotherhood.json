@@ -28,10 +28,10 @@
           "Commander Maro has given me the passphrase 'Silence, my brother' to enter the Dark Brotherhood Sanctuary and ordered me to kill everyone inside."
         ],
         "QUEST_COMPLETE": [
-          "Commander Maro rewarded me with 3,000 gold for destroying the Dark Brotherhood Sanctuary. He will ensure the Emperor hears of my deeds.",
-          "Player reports success to Commander Maro and receives 3,000 gold reward. Quest finishes.",
-          "Inform them that you killed the Dark Brotherhood's leader, and you will be directed to speak to Commander Maro in Dragon Bridge southwest of Solitude .",
-          "Rewards and consequences [ edit ] Return to Commander Maro in Dragon Bridge, and he will be overjoyed and reward you with 3,000 gold, regardless of your level."
+          "Commander Maro is overjoyed by the player's success and rewards them with 3,000 gold for wiping out the Dark Brotherhood.",
+          "Commander Maro promises to ensure the Emperor himself hears of the player's accomplishments in destroying the Sanctuary.",
+          "Commander Maro holds the player in high regard for their service to the Emperor, increasing his disposition by 3.",
+          "Commander Maro considers the Dark Brotherhood eliminated, securing the Emperor's safety and making it impossible for the player to ever join the organization."
         ]
       }
     }

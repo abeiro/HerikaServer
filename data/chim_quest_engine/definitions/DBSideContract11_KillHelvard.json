@@ -18,10 +18,10 @@
           "I have given the contract to kill Helvard to a fellow Brotherhood member."
         ],
         "QUEST_COMPLETE": [
-          "The contract on Helvard has been fulfilled and the reward has been paid.",
-          "Player reports back to Nazir and collects the leveled gold reward, finishing the quest.",
-          "If you approach Helvard before attacking him, you will be given 3 dialogue options, you can only pick one as you won't be able to speak to him again.",
-          "A relationship rank of 3 or better will allow you to purchase property."
+          "The contract on Helvard is fulfilled and I have paid the killer their leveled gold reward.",
+          "Helvard's assassination has lowered Jarl Siddgeir's disposition toward the killer by two ranks, making him a foe.",
+          "This side contract is closed; the Brotherhood's client is satisfied.",
+          "The loss of Falkreath's Housecarl is a bold strike that may complicate the killer's standing in that hold."
         ]
       }
     },
@@ -30,7 +30,13 @@
         "I am the Housecarl to the Jarl of Falkreath.",
         "I can be found in the Jarl's Longhouse in Falkreath."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "I have been assassinated on a Dark Brotherhood contract.",
+          "My death has caused Jarl Siddgeir's disposition toward my killer to drop by two ranks.",
+          "My assassination may prevent the killer from purchasing Lakeview Manor from Jarl Siddgeir."
+        ]
+      }
     }
   },
   "beats": [

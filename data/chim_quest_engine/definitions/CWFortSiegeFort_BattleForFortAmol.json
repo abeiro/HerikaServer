@@ -17,10 +17,10 @@
           "I have dispatched the player to assist in the assault on Fort Amol."
         ],
         "FORT_TAKEN": [
-          "Fort Amol has fallen to Imperial forces. The player should return to me for their gold reward.",
-          "Fort Amol is secured from Stormcloak control. Quest completes and player should report to Rikke for a gold reward.",
-          "Return to Legate Rikke to receive the leveled gold reward only when you want to start the next quest in the series and skip the reward when the game doesn't prompt you to return to her.",
-          "When you do so she will reward you with a leveled amount of gold and automatically start the next quest in the series, Battle for Windhelm ."
+          "Fort Amol has been cleared of Stormcloak rebels and is now under Imperial control.",
+          "I will provide a leveled gold reward to the soldier who assisted in the assault once they report back.",
+          "Upon receiving the report, I will immediately issue orders for the Battle for Windhelm, the final operation of the Reunification of Skyrim campaign.",
+          "The Stormcloak grip on Eastmarch is crumbling; Windhelm itself is the next and final target."
         ]
       }
     }

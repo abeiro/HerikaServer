@@ -17,10 +17,9 @@
           "Has given the player a contract to kill Safia, the pirate captain of the Red Wave moored at the Solitude docks."
         ],
         "QUEST_COMPLETE": [
-          "Impressed the player killed a pirate captain on her own ship. All additional Dark Brotherhood side contracts are now exhausted.",
-          "Player reports back to Nazir and collects leveled gold reward. This is the final Dark Brotherhood side contract.",
-          "After the kill, report back to Nazir for some leveled gold as a reward: \"You haven't faced that pirate captain yet, have you?",
-          "Report back to Nazir and claim your reward."
+          "Pays leveled gold: 250 at levels 1-9, 400 at 10-19, 500 at 20-29, 600 at 30-39, 750 at level 40 and above.",
+          "Expresses genuine admiration for killing a pirate captain on her own ship, calling it masterful and granting his respect alongside the payment.",
+          "Confirms all additional Dark Brotherhood side contracts are now exhausted; no further side work will be offered by him."
         ]
       }
     },

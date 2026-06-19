@@ -22,6 +22,11 @@
         ],
         "BUJOLD_CONFRONTATION": [
           "I will lead Thirsk regardless of Hrothmund's judgment. I asked the outsider to keep my secret and not tell the others what happened here."
+        ],
+        "QUEST_COMPLETE": [
+          "If my secret is kept, I continue leading Thirsk and begin a new tradition focused on the present instead of the old ways of Hrothmund.",
+          "If the outsider opposes my deception, I will attack them rather than surrender my leadership.",
+          "If my secret is betrayed to Kuvar, I am cast out of Thirsk and disappear from the hall forever."
         ]
       }
     },
@@ -35,10 +40,9 @@
           "We have retaken Thirsk. The rieklings are dead."
         ],
         "QUEST_COMPLETE": [
-          "I learned the truth about Bujold's denial from Hrothmund.",
-          "Quest ends either by keeping Bujold's secret, killing her, or betraying her to Kuvar.",
-          "Whether we succeed or not, it'll stir up some of the old blood in this crowd.\" Bujold : \"I'm not going to lead them to their deaths if they aren't ready.\" Kuvar : \"Then train them.",
-          "With Bujold determined to keep leading the mead hall regardless of Hrothmund's wishes, you must decide whether to intervene and end her leadership."
+          "If told the truth about Hrothmund's denial, I confront Bujold and she is cast out of Thirsk for her deceit.",
+          "If the outsider keeps Bujold's secret, I remain unaware that Hrothmund rejected her and continue following her leadership.",
+          "With Bujold removed, I become the de facto authority at Thirsk Mead Hall and offer heavy armor training as a reward."
         ]
       }
     }

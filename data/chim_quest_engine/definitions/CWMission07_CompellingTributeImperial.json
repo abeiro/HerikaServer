@@ -20,10 +20,10 @@
           "I have sent the player to meet our scouts and capture the shipment."
         ],
         "QUEST_COMPLETE": [
-          "The player successfully captured the Stormcloak shipment. I will send men to collect the prize and forward the coin to Solitude.",
-          "Player reports to Hadvar after the battle; quest completes with the shipment captured.",
-          "Return to Legate Rikke to receive the leveled gold reward only when you want to start the next quest in the series and skip the reward when the game doesn't prompt you to return to her.",
-          "Leaving the area and waiting for a few in-game days before trying to talk to him again can allow you to finally report to him."
+          "The player has successfully blackmailed Anuriel and captured the Stormcloak shipment of weapons and coin.",
+          "I will send men to collect the prize; the weapons will be used here in the Rift and the coin sent to Solitude.",
+          "I will offer the player a leveled gold reward when they report back to me at the Rift Imperial Camp.",
+          "Reporting to me also triggers the next mission in the Reunification of Skyrim campaign to regain the Rift."
         ]
       }
     },
@@ -48,6 +48,12 @@
         "AMBUSH_CARAVAN": [
           "The player and I ambushed the Stormcloak caravan together.",
           "We took out the sentry and overpowered the rebel guards to seize the shipment."
+        ],
+        "QUEST_COMPLETE": [
+          "The player reported to me after the ambush; I acknowledged that we make quite a team.",
+          "The Stormcloak caravan has been seized and the rebel guards eliminated.",
+          "The captured weapons and gold from the wagon are to be collected by Imperial forces for the war effort.",
+          "The player can loot the wagon chest now, though its contents are meant to support the Imperial campaign."
         ]
       }
     }

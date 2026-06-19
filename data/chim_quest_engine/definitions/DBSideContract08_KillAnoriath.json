@@ -17,10 +17,10 @@
           "I have assigned the contract to kill Anoriath, a hunter in Whiterun."
         ],
         "REWARD_COLLECTED": [
-          "Anoriath is dead. The hunter came to know the fear of the hunted. The contract is fulfilled.",
-          "Player reports back to Nazir at the Sanctuary and collects the leveled gold reward. Quest is complete.",
-          "Alternatively, like most other assassination targets, you have the option to talk to Anoriath, which gives you three dialogue choices, one of which will turn Anoriath hostile, allowing you to kill him anywhere without.",
-          "Upon rewarding you with leveled gold, Nazir will remark \"Ah, so the hunter came to know the fear of the hunted, hmm?\" ."
+          "I have paid the leveled gold for Anoriath's death: 250 at early skill, up to 750 for a seasoned killer.",
+          "I remarked that the hunter came to know the fear of the hunted upon confirming the kill.",
+          "The Anoriath contract is closed; I may offer another side contract from the Sanctuary.",
+          "Killing Anoriath directly lowered his brother Elrindir's disposition, regardless of whether the deed was witnessed."
         ]
       }
     },

@@ -18,10 +18,10 @@
           "The player has agreed to bring me stalhrim equipment in exchange for gold."
         ],
         "SELL_STALHRIM_EQUIPMENT": [
-          "The player has delivered stalhrim equipment as promised.",
-          "Player returns with stalhrim equipment and sells it to Ancarion, completing the arrangement.",
-          "You can choose to fight the entire crew or you can ask to talk to the leader.",
-          "Ancarion will be angry from the start but willing to talk."
+          "The player has delivered stalhrim equipment as promised; I paid them a fair price in gold for each piece.",
+          "I will continue purchasing stalhrim weapons and armor from the player whenever they return with more.",
+          "With the Merchant perk, I will also buy other items beyond stalhrim equipment from the player.",
+          "Due to a technical oversight with my merchant chest ownership, I may have no gold available for transactions."
         ]
       }
     }

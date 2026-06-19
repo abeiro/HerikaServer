@@ -90,7 +90,11 @@
       "focus_npc": "Sven",
       "comment": "Player agrees to help Sven by delivering his fake letter to Camilla.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00074A83",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "FreeformRiverwood01",
+        "stage": 10
       },
       "downstream": [],
       "triggers": [
@@ -102,12 +106,28 @@
             "deliver for Sven"
           ],
           "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player explicitly agrees to help Sven by delivering his fake letter to Camilla.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I'll deliver your letter to Camilla.",
+            "I'll help you with Camilla.",
+            "Give me the letter and I'll take it to her.",
+            "I will make sure Camilla sees the letter."
+          ],
+          "examples_no": [
+            "Why are you fighting with Faendal?",
+            "Tell me about Camilla.",
+            "I don't want to get involved.",
+            "Maybe you should talk to her yourself."
+          ]
         }
       ],
       "trigger_mode": "any",
-      "prerequisites": [
-        "HEAR_OF_RIVALRY"
-      ],
+      "prerequisites": [],
       "allow_natural_start": true,
       "start_conditions": []
     },
@@ -116,7 +136,11 @@
       "focus_npc": "Faendal",
       "comment": "Player agrees to help Faendal by delivering his fake letter to Camilla.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00074A83",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "FreeformRiverwood01",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -128,12 +152,28 @@
             "deliver for Faendal"
           ],
           "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player explicitly agrees to help Faendal by delivering his fake letter to Camilla.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I'll deliver your letter to Camilla.",
+            "I'll help you with Camilla.",
+            "Give me the letter and I'll take it to her.",
+            "I will make sure Camilla sees the letter."
+          ],
+          "examples_no": [
+            "Why are you fighting with Sven?",
+            "Tell me about Camilla.",
+            "I don't want to get involved.",
+            "Maybe you should talk to her yourself."
+          ]
         }
       ],
       "trigger_mode": "any",
-      "prerequisites": [
-        "HEAR_OF_RIVALRY"
-      ],
+      "prerequisites": [],
       "allow_natural_start": true,
       "start_conditions": []
     },

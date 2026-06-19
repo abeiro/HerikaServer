@@ -19,10 +19,10 @@
           "Miraak has been defeated and absorbed back into Apocrypha by Hermaeus Mora."
         ],
         "QUEST_COMPLETE": [
-          "Miraak is gone and will never threaten Solstheim again.",
-          "Quest finishes. Miraak is defeated, his equipment is left behind, and Solstheim is freed.",
-          "Follow it to the next room.",
-          "In this next room, follow the path until you reach a scrye."
+          "Miraak was slain by Hermaeus Mora's tentacles after the Dragonborn defeated him in combat at the summit of his temple.",
+          "Miraak's soul was reclaimed by Hermaeus Mora and dragged back into the depths of Apocrypha, ending his ages-long defiance.",
+          "Miraak's equipment—his mask, robes, boots, gloves, sword, and staff—was left behind at the summit for the Dragonborn to claim.",
+          "With Miraak's death, his domination over Solstheim and its standing stones is broken forever."
         ]
       }
     },
@@ -32,7 +32,13 @@
         "I granted the final Word of Power for Bend Will, at the cost of Storn Crag-Strider's life.",
         "Miraak has served his purpose. His time in Apocrypha is done."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "Hermaeus Mora personally intervened to kill Miraak, impaling him with tentacles and absorbing his soul back into Apocrypha.",
+          "With Miraak's soul reclaimed, Hermaeus Mora has regained all the knowledge and power his servant accumulated over eras.",
+          "Hermaeus Mora's hold over Apocrypha and its secrets is now uncontested; no rival Dragonborn remains to challenge him."
+        ]
+      }
     },
     "Sahrotaar": {
       "base_facts": [
@@ -42,6 +48,10 @@
       "beat_facts": {
         "TAME_SAHROTAAR": [
           "Sahrotaar has been tamed by the Dragonborn's Bend Will shout and will carry them to Miraak's tower."
+        ],
+        "QUEST_COMPLETE": [
+          "Sahrotaar was freed from Miraak's control by the Dragonborn's Bend Will shout and carried them to the summit.",
+          "Miraak chided Sahrotaar for being so easily swayed by another's thu'um before the final battle began."
         ]
       }
     }

@@ -17,10 +17,10 @@
           "I have sent the player to assist in taking Fort Hraggstad from the Imperials."
         ],
         "FORT_CAPTURED": [
-          "Fort Hraggstad has fallen to the Stormcloaks. The path to Solitude is open for the final assault.",
-          "Fort Hraggstad is taken; the way to Solitude is clear for the final battle.",
-          "Return to Legate Rikke to receive the leveled gold reward only when you want to start the next quest in the series and skip the reward when the game doesn't prompt you to return to her.",
-          "When you do so she will reward you with a leveled amount of gold and automatically start the next quest in the series, Battle for Windhelm ."
+          "Fort Hraggstad has fallen to Stormcloak forces, eliminating the last Imperial stronghold in Haafingar.",
+          "The path to Solitude is now open for the final assault against the Empire.",
+          "The player should report back for a leveled gold reward; the next quest will begin automatically upon doing so.",
+          "The next quest in the Stormcloak campaign is the Battle for Solitude."
         ]
       }
     }

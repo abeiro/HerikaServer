@@ -22,9 +22,10 @@
           "Adelaisa Vendicci has arrived from the Company to oversee the operation."
         ],
         "COMPLETE_QUEST": [
-          "Player reports to Adelaisa, returns to Windhelm, and speaks to Orthus to complete the quest.",
-          "He/She should be returning any moment.\" Adelaisa : \"This must be him/her, then.\" If you talk to Orthus, he will briefly introduce Adelaisa and point you towards her; when you approach, she will be grateful to finally.",
-          "Proceed up the western slope to a door, leading to Japhet Folly's Tower."
+          "The Blood Horker base at Japhet's Folly has been destroyed and the Windhelm office can finally reopen.",
+          "He paid the player leveled gold for eliminating the pirate threat to East Empire Company operations.",
+          "His disposition toward the player has improved from 0 to 1.",
+          "East Empire Company shipping can now resume from Windhelm without pirate interference."
         ]
       }
     },
@@ -40,6 +41,12 @@
         ],
         "KILL_HALDYN": [
           "With Haldyn dead the fog has lifted and our ships can attack."
+        ],
+        "COMPLETE_QUEST": [
+          "She survived the assault on Japhet's Folly and returned safely to Windhelm.",
+          "She now offers to travel with and aid the player as a follower.",
+          "Her disposition toward the player has improved from 0 to 1.",
+          "She credits the player with destroying the Blood Horkers and saving the Company's Windhelm operations."
         ]
       }
     },

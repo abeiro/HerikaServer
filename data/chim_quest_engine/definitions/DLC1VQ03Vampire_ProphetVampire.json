@@ -21,10 +21,10 @@
           "The Moth Priest has been captured and brought to Castle Volkihar. Now the prophecy can be read."
         ],
         "QUEST_COMPLETE": [
-          "The Moth Priest's reading revealed Auriel's Bow, but two more Elder Scrolls are needed to unravel the full prophecy.",
-          "The Moth Priest's reading reveals Auriel's Bow but two more Elder Scrolls are needed. Quest finishes.",
-          "Speak to innkeepers, carriage drivers, anyone who would meet a traveler.",
-          "Once you have arrived in Dragon Bridge, ask people \"Know anything about a Moth Priest visiting Dragon Bridge?\" , seven people have the asking dialogue option, two of them can lead you the direction, all are listed in."
+          "The Moth Priest's reading revealed only a vision of Auriel's Bow; the full Tyranny of the Sun prophecy cannot be unraveled without two more Elder Scrolls.",
+          "The partial reading has left more questions than answers about how to fulfill the prophecy and end the sun's dominion.",
+          "The enthralled Moth Priest Dexion Evicus remains at Castle Volkihar, available for future Elder Scroll readings once the remaining scrolls are recovered.",
+          "Two new pursuits now follow: Chasing Echoes and Seeking Disclosure, to locate the remaining Elder Scrolls needed to complete the prophecy."
         ]
       }
     },

@@ -30,10 +30,10 @@
           "I have asked someone to destroy my vampire ancestor Vighar at Bloodlet Throne."
         ],
         "QUEST_COMPLETE": [
-          "My vampire ancestor Vighar has been destroyed. My family's secret is safe.",
-          "Player returns to Dengeir and reports Vighar's death. Quest completes at .",
-          "Climb the woodworks and use the Arcane Enchanter and, in the next tunnel, the Alchemy Lab , then investigate the sleeping area for a bit of loot and a door leading to a room with the Illusion skill book Incident at.",
-          "Travel to Helgen and leave through the east gate, taking the path leading southeast."
+          "My vampire ancestor Vighar has been destroyed. My family's secret shame is safe from discovery.",
+          "I paid the player 200 gold for destroying Vighar and protecting my family's honor.",
+          "My disposition toward the player has increased by one rank; they have proven trustworthy with my family's darkest secret.",
+          "The open grave in Falkreath's graveyard will no longer threaten my family's reputation among the townsfolk."
         ]
       }
     },
@@ -43,7 +43,12 @@
         "I was imprisoned in my grave by a wardstone until someone stole it.",
         "I now reside at Bloodlet Throne in the mountains southwest of Helgen."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "I was destroyed by the player in my arena at Bloodlet Throne after releasing wolves and attacking alongside my vampire companions.",
+          "My death means Dengeir's family secret is safe; no one in Falkreath will learn that his ancestor was a vampire."
+        ]
+      }
     }
   },
   "beats": [

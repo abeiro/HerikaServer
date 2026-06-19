@@ -26,9 +26,10 @@
           "I restored the crown to its original condition as a paragon for the Guild."
         ],
         "QUEST_COMPLETE": [
-          "Quest finishes. Vex restores the crown, player receives Prowler's Profit. trigger.",
-          "You'll need to complete some other tasks before you have access to all locations where the gems are to be found: Begin the Dark Brotherhood questline or start the Destroy the Dark Brotherhood!",
-          "(25,000 gold) Join the College of Winterhold by completing First Lessons ."
+          "I have restored the Crown of Barenziah to its original condition with all twenty-four stones returned to their rightful places.",
+          "The restored crown now serves as a paragon for the Thieves Guild, as it was always meant to.",
+          "The player has been granted Prowler's Profit, a permanent effect that significantly increases the chance of finding gems in randomized containers throughout Skyrim.",
+          "The long task of recovering the Stones of Barenziah and the Crown from Tolvald's Cave is finally complete."
         ]
       }
     },

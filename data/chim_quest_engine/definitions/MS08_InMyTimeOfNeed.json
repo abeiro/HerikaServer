@@ -25,9 +25,9 @@
           "The player betrayed me and led me into Kematu's trap at the stables."
         ],
         "QUEST_COMPLETE": [
-          "Quest ends either by helping Saadia kill Kematu or delivering her to Kematu for justice.",
-          "Once the Alik'r are dead, loot Kematu's corpse for bonus gold, then return to Saadia in the Bannered Mare for your reward.",
-          "After paying 100 gold to a guard, the prisoner will tell you that the leader of the Alik'r is in a cave west of Whiterun called Swindler's Den ."
+          "If the player killed Kematu, I rewarded them with 500 gold and believe the remaining Alik'r will scatter, affording me some safety for now.",
+          "If the player betrayed me to Kematu, I was paralyzed at the Whiterun Stables and will be taken back to Hammerfell alive to face trial for treason.",
+          "I remain at the Bannered Mare if Kematu is dead; if handed over, I am gone from Whiterun entirely and no urn appears in the Hall of the Dead."
         ]
       }
     },
@@ -44,6 +44,11 @@
         ],
         "DELIVER_SAADIA": [
           "The player delivered Saadia to me. I will take her back to Hammerfell alive."
+        ],
+        "QUEST_COMPLETE": [
+          "If the player delivered Saadia to me, I paralyzed her at the Whiterun Stables and will escort her back to Hammerfell alive to face justice, though her fate after that is no longer in my hands.",
+          "I paid the player 500 gold for their assistance in capturing Saadia, and my disposition toward them increased.",
+          "If the player chose to fight, I am dead in Swindler's Den and my corpse carries 100 gold, two scimitars, and Hammerfell garb."
         ]
       }
     }

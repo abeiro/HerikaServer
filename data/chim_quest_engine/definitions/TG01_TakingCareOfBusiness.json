@@ -21,9 +21,10 @@
           "The player has collected all three debts. I am impressed and ready to offer them a permanent place in the Guild."
         ],
         "QUEST_COMPLETE": [
-          "Quest finishes; player is welcomed into the Thieves Guild.",
-          "If you return to Brynjolf after receiving Keerava's payment, but before finishing all three debtors, you can offer him Keerava's payment on its own, to which he will respond \"She was the toughest of the bunch.",
-          "The south door leads onward to a room with five bear traps scattered near the entrance."
+          "I have welcomed the player as a permanent member of the Thieves Guild — they collected every debt from Keerava, Bersi, and Haelga as I instructed.",
+          "I rewarded the player with three leveled potions from the collected coin as their cut of the job.",
+          "The player has proven themselves capable and reliable; I will have more lucrative work for them soon.",
+          "This new recruit gives me hope for the Guild's future at a time when Vekel and the others claim we are a dying breed."
         ]
       }
     },

@@ -22,10 +22,10 @@
           "The Emberbrand Wine stash has been found. I am awaiting a report on its location."
         ],
         "QUEST_COMPLETE": [
-          "The wine stash has been dealt with. This will help keep my soldiers from falling asleep on duty.",
-          "Player reports the stash location to Captain Veleth and receives leveled gold reward.",
-          "Talk to Second Councilor Arano if you're willing to help us.\" Speaking to Arano to advance Served Cold will allow you to converse with Veleth and turn in this quest.",
-          "Return to Captain Veleth for your reward: I found the Emberbrand Wine stash."
+          "The hidden Emberbrand Wine stash has been found and its location reported to me — between the foundations of two destroyed houses on the outskirts of Raven Rock.",
+          "I paid a leveled gold reward to the one who tracked the stash down for me.",
+          "With the stash location known, I can finally address the problem and keep my soldiers from falling asleep on duty.",
+          "I am grateful for the help — I simply did not have the time to track it down myself."
         ]
       }
     }

@@ -21,10 +21,10 @@
           "The player has returned after dealing with the vampire advisor."
         ],
         "QUEST_COMPLETE": [
-          "The vampire threat in the Jarl's court has been eliminated.",
-          "Quest completed - vampire threat eliminated or Jarl deposed.",
-          "Note that if your pickpocket attempt fails he will attack you, often leading to confrontation with nearby NPCs and likely death.",
-          "Return to the jarl with the note and they will grant you leave to kill the vampire with no retaliation from the hold's guards."
+          "The vampire infiltrating the Jarl's court has been dealt with — either destroyed directly or rendered harmless after the Jarl was deposed.",
+          "I rewarded the player with an enchanted item for their service to the Dawnguard.",
+          "Another vampire threat to Skyrim's holds has been neutralized under my orders.",
+          "I can assign another court-infiltration mission in the future, though such opportunities arise infrequently."
         ]
       }
     }

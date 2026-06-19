@@ -18,22 +18,33 @@
           "The reader has been transported to Apocrypha and must uncover the hidden knowledge."
         ],
         "COMPLETED_QUEST": [
-          "The hidden knowledge has been learned and a reward power chosen.",
-          "Player learned the hidden knowledge and chose a reward. Quest is complete.",
-          "Once any side areas have been dealt with, the corridor should return to its original position, leading to the Black Book : Untold Legends .",
-          "Detailed Walkthrough [ edit ] There are five chapters: Chapter I is basically a corridor that leads to Chapter II, containing no enemies and only three soul gems in the way of loot."
+          "The hidden knowledge of Untold Legends has been claimed and one of three lesser powers selected as a reward: Bardic Knowledge, Black Market, or Secret Servant.",
+          "The reward choice can be changed at any time by returning to Solstheim and re-reading the book, which transports the reader back to Apocrypha near the reward selection.",
+          "Completing this Black Book quest contributes to the Hidden Knowledge achievement."
         ]
       }
     },
     "Dremora Merchant": {
       "base_facts": [
         "A Dremora merchant can be summoned using the Black Market power to trade items for 15 seconds."
-      ]
+      ],
+      "beat_facts": {
+        "COMPLETED_QUEST": [
+          "If the Black Market power was chosen, the Dremora merchant can now be summoned to trade with the player for 15 seconds per use.",
+          "The Dremora merchant remains available as long as the Black Market power is active; swapping to a different reward via re-reading the book removes access."
+        ]
+      }
     },
     "Dremora Butler": {
       "base_facts": [
         "A Dremora butler can be summoned using the Secret Servant power to carry up to 148 weight in items for 15 seconds."
-      ]
+      ],
+      "beat_facts": {
+        "COMPLETED_QUEST": [
+          "If the Secret Servant power was chosen, the Dremora butler can now be summoned to carry up to 148 weight in items for 15 seconds per use.",
+          "The Dremora butler remains available as long as the Secret Servant power is active; swapping to a different reward via re-reading the book removes access."
+        ]
+      }
     }
   },
   "beats": [

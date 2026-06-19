@@ -18,10 +18,9 @@
           "I have assigned the contract to kill Ma'randru-jo."
         ],
         "QUEST_COMPLETE": [
-          "The contract on Ma'randru-jo has been fulfilled and the reward paid.",
-          "Player reports back to Nazir and collects the leveled gold reward.",
-          "Return to the sanctuary and speak with Nazir to complete the quest and receive a reward of leveled Gold.",
-          "Return to Nazir and receive your reward."
+          "I have paid the assassin a leveled gold reward for successfully eliminating Ma'randru-jo.",
+          "I consider the contract on the Khajiit merchant closed and the client satisfied.",
+          "If the assassin is a Khajiit, I will remark on how much I enjoyed watching two cats rip each other to shreds back in Hammerfell."
         ]
       }
     },
@@ -30,7 +29,11 @@
         "I am a Khajiit merchant who travels with Ri'saad's caravan.",
         "My caravan travels the route between Markarth and Whiterun, spending two days camped outside each city."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "QUEST_COMPLETE": [
+          "I have been assassinated, fulfilling the Dark Brotherhood's contract on my life."
+        ]
+      }
     }
   },
   "beats": [

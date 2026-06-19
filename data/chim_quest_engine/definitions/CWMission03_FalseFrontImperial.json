@@ -18,10 +18,9 @@
           "Rikke has forged the stolen documents with false intelligence about Fort Dunstad reinforcements and Imperial troop movements."
         ],
         "QUEST_COMPLETE": [
-          "The forged documents were successfully delivered to the enemy commander. Rikke rewarded the player with gold.",
-          "Quest complete. Forged documents delivered successfully, player rewarded with gold by Rikke.",
-          "Return to Legate Rikke to receive the leveled gold reward only when you want to start the next quest in the series and skip the reward when the game doesn't prompt you to return to her.",
-          "As an alternative to meeting the courier and getting the map marker by chance, you can follow Rikke's advice and ask the innkeepers."
+          "Rikke rewarded the player with leveled gold for the successful delivery of the forged documents.",
+          "With the Stormcloaks misled about Imperial troop movements, Rikke can now maneuver more freely in the Pale.",
+          "She will brief the player on their next assignment: The Battle for Fort Dunstad."
         ]
       }
     },
@@ -41,6 +40,10 @@
       "beat_facts": {
         "DELIVER_FORGERY": [
           "Frorkmar accepted the forged documents, believing reinforcements are coming to Fort Dunstad."
+        ],
+        "QUEST_COMPLETE": [
+          "Frorkmar accepted the forged documents as genuine and believes Fort Dunstad will receive the reinforcements it needs.",
+          "He gave the player 5 gold as a small token of appreciation for delivering the message."
         ]
       }
     }

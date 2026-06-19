@@ -19,10 +19,10 @@
           "Knows Vittoria Vici is dead. Awaiting the player's return to the Sanctuary."
         ],
         "QUEST_COMPLETE": [
-          "Rewarded the player with the Summon Spectral Assassin spell and leveled gold. The Emperor will now be forced to visit Skyrim. Directing the player to speak with Gabriella about the next contract.",
-          "Player reports to Astrid, receives reward, and quest completes.",
-          "it does involve everyone.\" The next quest, Breaching Security , will now begin.",
-          "Assassinate her while she speaks to earn the bonus reward."
+          "Rewarded the player with the Summon Spectral Assassin spell, and leveled gold if Vittoria was killed during her speech.",
+          "Believes Vittoria's murder has set the Brotherhood on a path toward the assassination of an Emperor, a path not traveled in centuries.",
+          "Knows the Emperor will now be forced to visit Skyrim to deal with the aftermath, paving the way for his assassination.",
+          "Directing the player to speak with Gabriella to proceed to the next stage of the plan, starting the quest Breaching Security."
         ]
       }
     },
@@ -53,6 +53,10 @@
       "beat_facts": {
         "MISSION_BRIEFING": [
           "Surveyed the wedding site and left Firiniel's End bow and arrows on a parapet opposite the balcony for a long-range kill."
+        ],
+        "QUEST_COMPLETE": [
+          "Has been assisting Astrid with arranging the player's next contract regarding the Emperor's visit to Skyrim.",
+          "Ready to brief the player on the next stage of the plan, starting the quest Breaching Security."
         ]
       }
     }

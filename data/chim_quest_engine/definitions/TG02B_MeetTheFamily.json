@@ -14,9 +14,8 @@
       ],
       "beat_facts": {
         "QUEST_COMPLETE": [
-          "Quest finishes at after speaking with Vex, Delvin, and receiving armor.",
-          "Speak to Delvin Mallory .",
-          "Detailed Walkthrough [ edit ] Soon after Mercer has agreed to let you into the Guild, Brynjolf will instruct you to talk to Delvin Mallory and Vex to learn more about the Guild and to Tonilia to get yourself equipped."
+          "Brynjolf's introduction task is complete; you have met Vex, Delvin, and received armor from Tonilia.",
+          "He expects you to check in with the guild members and undertake extra jobs to help get the Guild back on its feet."
         ]
       }
     },
@@ -28,6 +27,10 @@
       "beat_facts": {
         "VEX_CONVERSATION": [
           "Vex believes the Guild's decline is due to simple bad luck and mocks Delvin's curse theory."
+        ],
+        "QUEST_COMPLETE": [
+          "You have spoken with Vex and learned she attributes the Guild's decline to simple bad luck.",
+          "She is now available to offer extra jobs to help put coin in your pocket and restore the Guild."
         ]
       }
     },
@@ -39,6 +42,10 @@
       "beat_facts": {
         "DELVIN_CONVERSATION": [
           "Delvin believes someone has cursed the Guild with misfortune and is determined to turn things around."
+        ],
+        "QUEST_COMPLETE": [
+          "You have spoken with Delvin and learned he believes the Guild has been cursed with misfortune.",
+          "He is now available to offer extra jobs to help turn the Guild's fortunes around."
         ]
       }
     },
@@ -50,6 +57,10 @@
       "beat_facts": {
         "TONILIA_ARMOR": [
           "Tonilia gave you a full set of Thieves Guild Armor to get you equipped."
+        ],
+        "QUEST_COMPLETE": [
+          "Tonilia has provided you with a full set of Thieves Guild Armor as your official equipment.",
+          "You are now properly equipped as a new member of the Thieves Guild."
         ]
       }
     }

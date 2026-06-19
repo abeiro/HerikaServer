@@ -18,9 +18,9 @@
           "The Dragonborn has proven their worth in combat and earned the right to enter the Hall of Valor."
         ],
         "HEROES_JOIN_BATTLE": [
-          "The three heroes join the Dragonborn to clear the mist and face Alduin. Quest completes and transitions to Dragonslayer.",
-          "When you meet with the three heroes that you are directed towards, they decide to join Shouts with you to clear the mist from Sovngarde.",
-          "The quest ends with you running out to join them near the misty valley."
+          "The Dragonborn and the three ancient heroes combine their Thu'um to clear the soul-snaring mist from the valley.",
+          "I have fulfilled my duty as gate guardian by allowing the Dragonborn to enter and join the battle.",
+          "The warriors now march out to the misty valley to confront Alduin, leading into the Dragonslayer conflict."
         ]
       }
     },
@@ -29,7 +29,13 @@
         "I am the founder of the Companions and harbinger of men.",
         "I welcome worthy warriors who have proven themselves to Tsun into the Hall of Valor."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "HEROES_JOIN_BATTLE": [
+          "I directed the Dragonborn to the three ancient heroes, and they have agreed to join the fight.",
+          "The heroes of old now leave the Hall of Valor and march out to the misty valley.",
+          "They will combine their Shouts with the Dragonborn to dispel Alduin's mist and face the World-Eater."
+        ]
+      }
     },
     "Gormlaith Golden-Hilt": {
       "base_facts": [
@@ -39,6 +45,11 @@
       "beat_facts": {
         "TALK_TO_HEROES": [
           "The Dragonborn has come to Sovngarde to defeat Alduin. We will join our Shouts with theirs to clear the mist and face the World-Eater again."
+        ],
+        "HEROES_JOIN_BATTLE": [
+          "I will join my Thu'um with the Dragonborn's and my fellow heroes' to clear the soul-snaring mist.",
+          "Shor has permitted us to leave the Hall of Valor and join the battle against Alduin.",
+          "We now march out to the misty valley to confront the World-Eater and free the trapped souls."
         ]
       }
     },
@@ -50,6 +61,11 @@
       "beat_facts": {
         "TALK_TO_HEROES": [
           "The Dragonborn has come to Sovngarde to defeat Alduin. We will join our Shouts with theirs to clear the mist and face the World-Eater again."
+        ],
+        "HEROES_JOIN_BATTLE": [
+          "I will combine my Shout with the Dragonborn and my companions to dispel Alduin's mist.",
+          "By Shor's leave, we are permitted to join the Dragonborn in the final battle against the World-Eater.",
+          "We head out to the valley to fight Alduin and put an end to his soul devouring."
         ]
       }
     },
@@ -61,6 +77,11 @@
       "beat_facts": {
         "TALK_TO_HEROES": [
           "The Dragonborn has come to Sovngarde to defeat Alduin. We will join our Shouts with theirs to clear the mist and face the World-Eater again."
+        ],
+        "HEROES_JOIN_BATTLE": [
+          "I will add my voice to the Dragonborn's and my fellow heroes' to clear the mist from Sovngarde.",
+          "Shor has granted us leave to join the Dragonborn in battle against Alduin.",
+          "We march to the misty valley to face the World-Eater and destroy him once and for all."
         ]
       }
     }

@@ -21,10 +21,9 @@
           "The player has killed Narfi and should report back to me for payment."
         ],
         "QUEST_COMPLETED": [
-          "I have paid the player for killing Narfi. Another contract fulfilled.",
-          "Player reports back to Nazir and collects the leveled gold reward. Quest finishes at .",
-          "Reward [ edit ] Once Narfi is dead, travel back to the sanctuary and receive your reward of leveled gold from Nazir , who will also comment, \"Congratulations.",
-          "Report back to Nazir to collect your reward."
+          "I have paid the player a leveled gold reward for assassinating Narfi, ranging from 250 to 750 septims depending on their level.",
+          "I sarcastically remarked to the player, 'Congratulations. You slaughtered an emaciated beggar in cold blood. You are truly an opponent to be feared.'",
+          "The player has successfully completed one of the three initial side contracts I provided."
         ]
       }
     },

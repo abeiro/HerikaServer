@@ -34,10 +34,10 @@
           "Miraak is alive in Apocrypha and plans to return. We must warn my father Storn at the Skaal Village."
         ],
         "QUEST_COMPLETE": [
-          "We must take what we learned to my village. My father Storn Crag-Strider will know what to do.",
-          "Quest completes. Frea suggests returning to Skaal Village to speak with Storn Crag-Strider, leading to The Fate of the Skaal.",
-          "To the right is a passage leading to a room with several potions, coin purses, and two spell tomes: an apprentice level Alteration and an apprentice level Conjuration spell tome.",
-          "The path ahead is quite narrow and leads onto a bridge where you will encounter at least six skeletons ."
+          "Miraak revealed he is alive in Apocrypha and plans to reclaim Solstheim. We must warn my father Storn Crag-Strider at Skaal Village—he may know how to counter this threat.",
+          "The Dragonborn carries the Black Book Waking Dreams and has learned a word of the Dragon Aspect shout from the temple's word wall.",
+          "I am bringing the Dragonborn to Skaal Village to consult Storn about breaking Miraak's control over my people.",
+          "The fate of the Skaal hangs in the balance. Storn must help us find a way to free my people from Miraak's enslavement."
         ]
       }
     },
@@ -53,6 +53,11 @@
         ],
         "TALK_AFTER_VISION": [
           "I revealed myself to this so-called Dragonborn. They have no power in my realm. Solstheim will be mine again soon."
+        ],
+        "QUEST_COMPLETE": [
+          "I sent the Dragonborn back from Apocrypha. They have no true power compared to what a Dragonborn can wield.",
+          "My enslaved workers on Solstheim continue building my temple. Once it is finished, I will return and claim the island.",
+          "I demonstrated the Dragon Aspect shout to show this pretender the true power of a Dragonborn."
         ]
       }
     }

@@ -34,10 +34,10 @@
           "The ancient guardians of the Forge, including the Forgemaster, have been defeated."
         ],
         "FORGE_ARTIFACT": [
-          "My discovery is complete. The Aetherium Forge has been used to craft a powerful artifact. I can finally rest.",
-          "Player uses the Aetherium Forge to craft the Aetherial Crown, Shield, or Staff. Quest completes.",
-          "The northern doors will swing open and reveal a staircase leading up.",
-          "At one Falmer camp you can take a detour for a bit of extra loot by heading left through a gate to the southwestern passage that leads to the top of the waterfall and a chest to its left - beware of a Falmer that drops."
+          "The Aetherium Forge has been activated and an Aetherial artifact crafted, proving my life's work was real.",
+          "My discovery is vindicated; the Forge's existence overshadows Taron Dreth's theft of my research.",
+          "I can finally find peace and rest, my purpose fulfilled and my legacy secured.",
+          "My companion has earned the forged Aetherial Crown, Shield, or Staff as their rightful reward."
         ]
       }
     }

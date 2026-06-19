@@ -21,10 +21,10 @@
           "The contract on Beitild has been fulfilled. I await the killer's return."
         ],
         "QUEST_COMPLETE": [
-          "I have paid the reward for completing the Beitild contract.",
-          "Player reports back to Nazir and collects the leveled gold reward. finishes the quest.",
-          "Can't say I miss that old sabre cat.\" Reward [ edit ] Return to Nazir in the sanctuary for a leveled gold reward.",
-          "When Beitild is disposed of, you can pay a visit to her husband for an emotionless reaction: \"My wife Beitild is dead."
+          "I have paid the leveled gold reward for the Beitild contract; the amount scales with the player's level.",
+          "I remarked on Beitild's death with a quip about the mining business being cutthroat and the hours being murder.",
+          "The first batch of side contracts I handed out, including Beitild's, is now concluded.",
+          "I am ready to offer the next side contract from the remaining pool once the player asks."
         ]
       }
     },
@@ -44,6 +44,10 @@
       "beat_facts": {
         "BEITILD_KILLED": [
           "My wife Beitild is dead. Can't say I miss that old sabre cat."
+        ],
+        "QUEST_COMPLETE": [
+          "My wife Beitild is dead. I reacted without emotion, saying I can't say I miss that old sabre cat.",
+          "With Beitild gone, Iron-Breaker Mine in Dawnstar no longer has its angry and desperate boss."
         ]
       }
     }

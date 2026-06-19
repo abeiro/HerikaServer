@@ -24,10 +24,10 @@
           "More draugr attacked and miners went missing. My partner found their bodies but the work must continue."
         ],
         "THIRD_EXCAVATION": [
-          "Yet more draugr killed the mercenaries I hired. I need more gold for increasingly reluctant workers.",
-          "Player returns a third time, clears more draugr after mercenaries are killed.",
-          "Speak to Ralis, fund 3,000 gold to his excavation, and await another message.",
-          "Speak to Ralis, fund 5,000 gold to his excavation, and await another message."
+          "Draugr attacked the site again, killing all the mercenaries I hired for the third excavation.",
+          "My partner returned and slew the draugr so the work could proceed.",
+          "I need 5,000 gold from my partner to hire increasingly reluctant miners and guards for the next phase.",
+          "I will send my partner one last note when the time comes, telling them only that they are needed."
         ],
         "BETRAYAL_REVEALED": [
           "I was under Ahzidal's spell, compelled to use the miners as blood sacrifices for the ritual to release him."

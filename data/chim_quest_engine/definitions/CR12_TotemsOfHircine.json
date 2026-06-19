@@ -24,10 +24,10 @@
           "The totem has been placed in the Underforge, granting a new Beast Form power."
         ],
         "QUEST_COMPLETED": [
-          "The Totems of Hircine quest is complete. Aela prays at the new totem.",
-          "Quest completion observed.",
-          "As you and Aela recover each totem, once she tells you to return the totem to the Underforge, speaking to her will only cause her to say \"This is not the time for talk.",
-          "Return to the Underforge , then use one of the totem receptacles to complete the quest and receive your reward."
+          "Aela prays at the newly placed totem in the Underforge upon quest completion and will remain there for some time.",
+          "Aela awarded the player a leveled amount of gold for recovering the totem.",
+          "While praying at the totem, Aela initially only offers Animal Extermination work; she may offer the next totem quest after the player leaves and returns to the Underforge.",
+          "Aela can offer this quest up to three times total, one for each of the three Totems of Hircine still to be recovered."
         ]
       }
     }

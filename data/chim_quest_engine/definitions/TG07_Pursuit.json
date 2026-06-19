@@ -18,6 +18,10 @@
         ],
         "CONVINCE_BRYNJOLF": [
           "Led the Guild to the empty vault, proving Mercer drained it."
+        ],
+        "QUEST_COMPLETE": [
+          "Her innocence has been accepted by the Guild; she is no longer treated as Gallus's murderer.",
+          "Stands vindicated and ready to assist in the next phase against Mercer."
         ]
       }
     },
@@ -35,9 +39,10 @@
           "Believes Mercer intends to steal the Eyes of the Falmer before fleeing Skyrim."
         ],
         "QUEST_COMPLETE": [
-          "Quest complete. Mercer is after the Eyes of the Falmer and must be intercepted.",
-          "Meet Karliah after entering through the door to the Ragged Flagon and follow her as she leads you to the Cistern, where Brynjolf , Delvin and Vex are waiting with knives drawn.",
-          "As soon as the doors open, Brynjolf will let out a cry of horror at seeing the place completely empty; not a single gold coin is left."
+          "Received Mercer's plans from the player confirming Mercer intends to steal the Eyes of the Falmer before fleeing Skyrim for good.",
+          "Convinced the Guild must proceed to the gems' location immediately to intercept Mercer.",
+          "Disposition toward the player has increased from 0 to 1.",
+          "The pursuit of Mercer continues; Trinity Restored follows."
         ]
       }
     },

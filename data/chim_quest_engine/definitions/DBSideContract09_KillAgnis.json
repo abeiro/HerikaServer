@@ -18,10 +18,9 @@
           "I have given the contract to kill Agnis at Fort Greymoor."
         ],
         "QUEST_COMPLETE": [
-          "The contract on Agnis is fulfilled. I have paid the reward for infiltrating the occupied fort.",
-          "Player reports back to Nazir at the Sanctuary and collects the leveled gold reward.",
-          "After the kill, report back to Nazir for a leveled gold as a reward.",
-          "Reward [ edit ] Notes [ edit ] When receiving payment for the finished job, Nazir will say \"Infiltrating an occupied fort and making it out in one piece is nothing to joke about."
+          "The contract on Agnis is fulfilled. I paid the leveled gold reward for the assassination at Fort Greymoor.",
+          "I commended the kill, remarking that infiltrating an occupied military fort and making it out alive is nothing to joke about. Well done.",
+          "The payment scales with the killer's level: 250 gold at levels 1-9, 400 at 10-19, 500 at 20-29, 600 at 30-39, and 750 at level 40 and above."
         ]
       }
     },

@@ -27,10 +27,9 @@
           "The Master Vampire in Pinemoon Cave has been slain."
         ],
         "BEAT_REPORT_COMPLETE": [
-          "The player killed the vampire and I rewarded them. I am grateful.",
-          "Player returns to Sybille Stentor and reports the vampire is dead, receiving jewelry and Illusion training.",
-          "Return to Sybille Stentor for your reward.",
-          "Reward [ edit ] Exit the way you came in and return to Sybille Stentor for your reward, which is jewelry and a single free skill boost in Illusion."
+          "I have rewarded the player with jewelry and a free Illusion skill boost for killing the Master Vampire in Pinemoon Cave.",
+          "My disposition towards the player has increased for completing this favor.",
+          "The player's assistance counts towards the 'Help the People' requirement for the Thane of Haafingar quest."
         ]
       }
     }
