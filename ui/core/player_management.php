@@ -780,6 +780,20 @@ if (!$isEmbed) {
         margin: 0 auto;
     }
 
+    .equipment-group {
+        border: 1px solid #3d4654;
+        border-radius: 8px;
+        background: #20242b;
+        padding: 12px;
+        margin: 12px 0;
+    }
+
+    .equipment-group-title {
+        color: #f27c11;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
     .equipment-slot { 
         padding: 12px;
         background: linear-gradient(135deg, rgba(26, 26, 26, 0.9), rgba(20, 20, 20, 0.95));
@@ -1369,20 +1383,22 @@ if (!$isEmbed) {
             <?php if (!empty($equipment)): ?>
                 <?php if ($hasEquipment): ?>
                     <?php foreach ($equipmentGroups as $groupLabel => $equipmentSlots): ?>
-                        <div class="section-subtitle" style="margin-top:12px;"><?php echo htmlspecialchars($groupLabel); ?></div>
-                        <div class="equipment-grid">
-                            <?php foreach ($equipmentSlots as $slot => $label):
-                                $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
-                            ?>
-                            <div class="equipment-slot">
-                                <div class="equipment-slot-name"><?php echo htmlspecialchars($label); ?></div>
-                                <?php if ($itemName): ?>
-                                    <div class="equipment-item-name"><?php echo htmlspecialchars($itemName); ?></div>
-                                <?php else: ?>
-                                    <div class="equipment-empty">Empty</div>
-                                <?php endif; ?>
+                        <div class="equipment-group">
+                            <div class="equipment-group-title"><?php echo htmlspecialchars($groupLabel); ?></div>
+                            <div class="equipment-grid">
+                                <?php foreach ($equipmentSlots as $slot => $label):
+                                    $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
+                                ?>
+                                <div class="equipment-slot">
+                                    <div class="equipment-slot-name"><?php echo htmlspecialchars($label); ?></div>
+                                    <?php if ($itemName): ?>
+                                        <div class="equipment-item-name"><?php echo htmlspecialchars($itemName); ?></div>
+                                    <?php else: ?>
+                                        <div class="equipment-empty">Empty</div>
+                                    <?php endif; ?>
+                                </div>
+                                <?php endforeach; ?>
                             </div>
-                            <?php endforeach; ?>
                         </div>
                     <?php endforeach; ?>
                 <?php else: ?>

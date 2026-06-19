@@ -2226,17 +2226,19 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         ];
                         ?>
                         <?php foreach ($equipmentGroups as $groupLabel => $equipmentSlots): ?>
-                            <div style="margin:10px 0 6px; color:#f27c11; font-weight:700;"><?= htmlspecialchars($groupLabel) ?></div>
-                            <div style="display:grid; grid-template-columns: 180px 1fr; gap:8px;">
-                                <?php foreach ($equipmentSlots as $slot => $label):
-                                    $item = isset($metadataEquipment[$slot]) ? trim((string)$metadataEquipment[$slot]) : '';
-                                    $display = ($item !== '') ? htmlspecialchars($item) : '<span style="color:#666">None</span>';
-                                ?>
-                                    <div style="color:rgb(242, 124, 17); font-weight:600;"><?= htmlspecialchars($label) ?></div>
-                                    <div style="border:1px solid #4a4a4a; border-radius:6px; padding:4px 8px;"><?= $display ?></div>
-                                <?php endforeach; ?>
+                            <div style="border:1px solid #3d4654; border-radius:8px; background:#20242b; padding:10px; margin:10px 0;">
+                                <div style="color:#f27c11; font-weight:700; margin-bottom:8px;"><?= htmlspecialchars($groupLabel) ?></div>
+                                <div style="display:grid; grid-template-columns: 180px 1fr; gap:8px;">
+                                    <?php foreach ($equipmentSlots as $slot => $label):
+                                        $item = isset($metadataEquipment[$slot]) ? trim((string)$metadataEquipment[$slot]) : '';
+                                        $display = ($item !== '') ? htmlspecialchars($item) : '<span style="color:#666">None</span>';
+                                    ?>
+                                        <div style="color:rgb(242, 124, 17); font-weight:600;"><?= htmlspecialchars($label) ?></div>
+                                        <div style="border:1px solid #4a4a4a; border-radius:6px; padding:4px 8px; background:#262626;"><?= $display ?></div>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
-                            <?php endforeach; ?>
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <div style="color:#9fb1c9;">No equipment data found in metadata.</div>
                     <?php endif; ?>
