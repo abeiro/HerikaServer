@@ -362,6 +362,90 @@ function chimLookupItemDescriptionForContext(string $itemName, ?string $baseid =
     return null;
 }
 
+function chimEquipmentVanillaSlotLabels(): array
+{
+    return [
+        'helmet' => 'Helmet',
+        'armor' => 'Armor',
+        'boots' => 'Boots',
+        'gloves' => 'Gloves',
+        'amulet' => 'Amulet',
+        'ring' => 'Ring',
+        'left_hand' => 'Left Hand',
+        'right_hand' => 'Right Hand',
+    ];
+}
+
+function chimEquipmentModdedSlotLabels(): array
+{
+    return [
+        'mod_mouth' => 'Face/Mouth',
+        'mod_neck' => 'Neck',
+        'cape' => 'Cape/Chest Outer',
+        'backpack' => 'Back/Backpack',
+        'mod_misc1' => 'Misc Slot 48',
+        'mod_pelvis_primary' => 'Pelvis Outer',
+        'mod_pelvis_secondary' => 'Pelvis Secondary',
+        'mod_leg_right' => 'Right Leg',
+        'mod_leg_left' => 'Left Leg',
+        'mod_face_jewelry' => 'Face Jewelry',
+        'shirt' => 'Chest Under',
+        'mod_shoulder' => 'Shoulder',
+        'mod_arm_left' => 'Left Arm',
+        'mod_arm_right' => 'Right Arm',
+        'mod_misc2' => 'Misc Slot 60',
+    ];
+}
+
+function chimEquipmentAllSlotLabels(): array
+{
+    return chimEquipmentVanillaSlotLabels() + chimEquipmentModdedSlotLabels();
+}
+
+function chimEquipmentProfileSlotKeys(): array
+{
+    return array_keys(chimEquipmentAllSlotLabels());
+}
+
+function chimFormatEquipmentPromptLines(array $equipmentData, array $slotLabels, callable $getItemDescription = null, array &$describedBaseids = []): array
+{
+    $equipmentParts = [];
+
+    foreach ($slotLabels as $slot => $label) {
+        if (empty($equipmentData[$slot])) {
+            continue;
+        }
+
+        $itemName = trim((string) $equipmentData[$slot]);
+        if ($itemName === '' || isItemBlacklisted($itemName) || stripos($itemName, 'Missing Name') !== false) {
+            continue;
+        }
+
+        $baseid = isset($equipmentData[$slot . '_baseid']) ? trim((string) $equipmentData[$slot . '_baseid']) : '';
+        $itemLine = "  - {$label}: {$itemName}";
+
+        if ($getItemDescription !== null) {
+            $baseidKey = $baseid !== '' ? strtoupper($baseid) : '';
+            if ($baseidKey !== '' && in_array($baseidKey, $describedBaseids, true)) {
+                $equipmentParts[] = $itemLine;
+                continue;
+            }
+
+            $description = $getItemDescription($itemName, $baseid !== '' ? $baseid : null);
+            if ($description) {
+                $itemLine .= " - {$description}";
+                if ($baseidKey !== '') {
+                    $describedBaseids[] = $baseidKey;
+                }
+            }
+        }
+
+        $equipmentParts[] = $itemLine;
+    }
+
+    return $equipmentParts;
+}
+
 function chimFormatProfileEquipmentParts(array $equipmentData, array $slots): array {
     $equipmentParts = [];
     $describedBaseids = [];
@@ -681,7 +765,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     // Add equipment if available
                     $equipmentData = $player->getJson('equipment');
                     if (is_array($equipmentData) && !empty($equipmentData)) {
-                        $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
+                        $slots = chimEquipmentProfileSlotKeys();
                         $equipmentParts = chimFormatProfileEquipmentParts($equipmentData, $slots);
                         if (!empty($equipmentParts)) {
                             $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
@@ -797,7 +881,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     
                     // Add equipment if available
                     if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
-                        $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
+                        $slots = chimEquipmentProfileSlotKeys();
                         $equipmentParts = chimFormatProfileEquipmentParts($metaData["equipment"], $slots);
                         if (!empty($equipmentParts)) {
                             $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
@@ -6704,55 +6788,21 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
     
     // Add NPC's own equipment (skip for The Narrator - they don't need equipment context)
     if ($FOLLOWER_CONF["HERIKA_NAME"] !== "The Narrator" && isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
-        $equipmentParts = [];
         $describedBaseids = []; // Track which baseids we've already described
-        $slots = [
-            'helmet' => 'Helmet',
-            'armor' => 'Armor', 
-            'boots' => 'Boots',
-            'gloves' => 'Gloves',
-            'amulet' => 'Amulet',
-            'ring' => 'Ring',
-            'cape' => 'Cape',
-            'backpack' => 'Backpack',
-            'left_hand' => 'Left Hand',
-            'right_hand' => 'Right Hand'
-        ];
-        
-        foreach ($slots as $slot => $label) {
-            if (!empty($metaData["equipment"][$slot])) {
-                $itemName = $metaData["equipment"][$slot];
-                
-                // Skip blacklisted items
-                if (isItemBlacklisted($itemName)) {
-                    continue;
-                }
-                
-                $baseid = isset($metaData["equipment"][$slot . '_baseid']) ? $metaData["equipment"][$slot . '_baseid'] : null;
-                
-                $itemLine = "  • {$label}: {$itemName}";
-                
-                // Try to add item description only if we haven't described this baseid yet
-                if (!empty($baseid) && !in_array($baseid, $describedBaseids)) {
-                    $description = $getItemDescription($itemName, $baseid);
-                    if ($description) {
-                        $itemLine .= " - {$description}";
-                        $describedBaseids[] = $baseid; // Mark this baseid as described
-                    }
-                } elseif (empty($baseid)) {
-                    // No baseid, try name-based (won't dedupe without baseid)
-                    $description = $getItemDescription($itemName, null);
-                    if ($description) {
-                        $itemLine .= " - {$description}";
-                    }
-                }
-                
-                $equipmentParts[] = $itemLine;
-            }
+        $vanillaEquipmentParts = chimFormatEquipmentPromptLines($metaData["equipment"], chimEquipmentVanillaSlotLabels(), $getItemDescription, $describedBaseids);
+        $moddedEquipmentParts = chimFormatEquipmentPromptLines($metaData["equipment"], chimEquipmentModdedSlotLabels(), $getItemDescription, $describedBaseids);
+        $equipmentSections = [];
+
+        if (!empty($vanillaEquipmentParts)) {
+            $equipmentSections[] = "Vanilla Slots:\n" . implode("\n", $vanillaEquipmentParts);
+        }
+
+        if (!empty($moddedEquipmentParts)) {
+            $equipmentSections[] = "Modded Slots:\n" . implode("\n", $moddedEquipmentParts);
         }
         
-        if (!empty($equipmentParts)) {
-            $EQUIPMENT_ADD = "\n<equipment>\n#Current Equipment\nYou are currently wearing/wielding:\n" . implode("\n", $equipmentParts);
+        if (!empty($equipmentSections)) {
+            $EQUIPMENT_ADD = "\n<equipment>\n#Current Equipment\nYou are currently wearing/wielding:\n" . implode("\n", $equipmentSections);
             
             // Check if humanoid NPC has no body armor - if so, note they're naked
             $humanoidRaces = ['nord', 'imperial', 'breton', 'redguard', 'orc', 'orsimer', 
@@ -6947,26 +6997,20 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
             $targetMetaData = $npcMaster->getMetaData($targetNpcData);
             
             if (isset($targetMetaData["equipment"]) && is_array($targetMetaData["equipment"])) {
-                $targetEquipmentParts = [];
-                $slots = [
-                    'helmet' => 'Helmet',
-                    'armor' => 'Armor',
-                    'boots' => 'Boots', 
-                    'gloves' => 'Gloves',
-                    'amulet' => 'Amulet',
-                    'ring' => 'Ring',
-                    'left_hand' => 'Left Hand',
-                    'right_hand' => 'Right Hand'
-                ];
-                
-                foreach ($slots as $slot => $label) {
-                    if (!empty($targetMetaData["equipment"][$slot])) {
-                        $targetEquipmentParts[] = "  • {$label}: {$targetMetaData["equipment"][$slot]}";
-                    }
+                $targetVanillaEquipmentParts = chimFormatEquipmentPromptLines($targetMetaData["equipment"], chimEquipmentVanillaSlotLabels());
+                $targetModdedEquipmentParts = chimFormatEquipmentPromptLines($targetMetaData["equipment"], chimEquipmentModdedSlotLabels());
+                $targetEquipmentSections = [];
+
+                if (!empty($targetVanillaEquipmentParts)) {
+                    $targetEquipmentSections[] = "Vanilla Slots:\n" . implode("\n", $targetVanillaEquipmentParts);
+                }
+
+                if (!empty($targetModdedEquipmentParts)) {
+                    $targetEquipmentSections[] = "Modded Slots:\n" . implode("\n", $targetModdedEquipmentParts);
                 }
                 
-                if (!empty($targetEquipmentParts)) {
-                    $TARGET_EQUIPMENT_ADD = "\n<target_equipment>\n#{$targetName}'s Equipment\n{$targetName} is currently wearing/wielding:\n" . implode("\n", $targetEquipmentParts);
+                if (!empty($targetEquipmentSections)) {
+                    $TARGET_EQUIPMENT_ADD = "\n<target_equipment>\n#{$targetName}'s Equipment\n{$targetName} is currently wearing/wielding:\n" . implode("\n", $targetEquipmentSections);
                     
                     // Check if humanoid NPC has no body armor - if so, note they're naked
                     $humanoidRaces = ['nord', 'imperial', 'breton', 'redguard', 'orc', 'orsimer', 
