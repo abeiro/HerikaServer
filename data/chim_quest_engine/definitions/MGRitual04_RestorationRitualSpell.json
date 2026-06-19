@@ -16,6 +16,10 @@
       "beat_facts": {
         "COLETTE_DIRECTS_TO_AUGUR": [
           "I have sent this student to seek the Augur of Dunlain in The Midden for further training."
+        ],
+        "PASS_AUGUR_TEST": [
+          "This student has passed the Augur's test and proven their mastery of Restoration.",
+          "This student may now purchase the Guardian Circle spell tome from me."
         ]
       }
     },
@@ -30,10 +34,9 @@
           "This mage has come seeking my test of Restoration mastery."
         ],
         "PASS_AUGUR_TEST": [
-          "This mage has proven worthy and earned the Bane of the Undead spell.",
-          "Player survives the Augur's ghost test and receives Bane of the Undead. Quest completes at .",
-          "Then, before the first ghost notices you, talk to your follower and trade items to retrieve them.",
-          "Unlike other ritual quests, this one grants you the first spell directly rather than as a spell tome."
+          "This mage has proven worthy and been granted the Bane of the Undead spell.",
+          "I have returned this mage's belongings now that the trial is concluded.",
+          "This mage has demonstrated true mastery of Restoration magic."
         ]
       }
     }

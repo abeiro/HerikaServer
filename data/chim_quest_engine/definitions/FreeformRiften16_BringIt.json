@@ -25,10 +25,10 @@
           "I asked someone to fetch my sword from Balimund."
         ],
         "DELIVER_SWORD": [
-          "My sword has been returned to me.",
-          "Player delivers the sword back to Harrald and completes the quest.",
-          "My blade bit right into the stonework next to the keep and needed serious repairs.\" He'd like you to fetch his blade from Balimund .",
-          "Talk to Balimund right outside The Scorched Hammer , \"a stone's throw\" from the keep."
+          "My sword has been returned to me at last.",
+          "I grumbled that the delivery took too long before handing over payment.",
+          "I rewarded the courier with two leveled gems for their trouble.",
+          "This errand counts toward earning the title of Thane in the Rift."
         ]
       }
     },

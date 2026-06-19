@@ -61,10 +61,10 @@
       ],
       "beat_facts": {
         "REPORT_TO_SAVOS": [
-          "I directed the student to Mirabelle Ervine for more information on the Staff of Magnus and rewarded them with the Mage's Circlet.",
-          "Player reports the Augur's message about the Staff of Magnus to Arch-Mage Savos Aren and receives the Mage's Circlet.",
-          "Ancano will interrupt Tolfdir's musings and demand that you follow him to meet a mysterious visitor who has asked to speak with you.",
-          "You may not get the next quest \"Revealing the Unseen\" after completing the quest."
+          "I required some convincing before taking the Augur's warning about the Eye of Magnus seriously, but eventually accepted the student's report.",
+          "I directed the student to Mirabelle Ervine for more information on locating the Staff of Magnus.",
+          "I rewarded the student with the Mage's Circlet, impressed by their initiative and performance thus far.",
+          "The matter of the Eye of Magnus and the need for the Staff of Magnus now falls to Mirabelle Ervine for further investigation."
         ]
       }
     }

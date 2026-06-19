@@ -24,6 +24,10 @@
         ],
         "KILLER_CAUGHT": [
           "The Butcher has been caught and brought to justice."
+        ],
+        "WRONG_ACCUSATION": [
+          "I ordered Wuunferth's arrest based on the evidence presented, believing him to be the Butcher.",
+          "If the killings resume, it will prove Wuunferth was innocent and the true killer still stalks Windhelm."
         ]
       }
     },
@@ -72,10 +76,10 @@
       ],
       "beat_facts": {
         "WRONG_ACCUSATION": [
-          "I have been wrongly accused of being the Butcher and imprisoned.",
-          "Player accuses Wuunferth of being the Butcher based on the evidence, leading to his wrongful arrest. Premature quest finish; the real killer will strike again.",
-          "The remaining evidence seems to be a trail of blood leading from the graveyard.",
-          "(If you chose to follow the bloody trail before speaking to Helgird, the map marker pointing toward her will now be gone.) Hjerim [ edit ] The front door is locked, so either pick the lock or ask Jorleif and/or any."
+          "I have been wrongly accused of being the Butcher and imprisoned in the Palace of the Kings.",
+          "The Wheelstone amulet and suspicions of necromancy were misinterpreted as proof of my guilt.",
+          "With me locked away, the real killer remains free and will murder again in Windhelm.",
+          "I will only be exonerated if the true Butcher is caught while I sit in the dungeons."
         ],
         "KILLER_CAUGHT": [
           "I was wrongly accused; the real killer has finally been caught."

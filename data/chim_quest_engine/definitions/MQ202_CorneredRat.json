@@ -18,7 +18,9 @@
           "I sent the player to Riften to find Esbern before the Thalmor get to him."
         ],
         "QUEST_COMPLETE": [
-          "The player found Esbern and is bringing him back to me at the Sleeping Giant Inn."
+          "The player found Esbern alive in the Ratway Warrens and is bringing him to me at the Sleeping Giant Inn.",
+          "With Esbern's expertise on dragon lore, we can finally make sense of the dragon threat and plan our next move.",
+          "I am eager to reunite with my old colleague after all these years—he may be the key to stopping Alduin."
         ]
       }
     },
@@ -34,9 +36,10 @@
           "I warned the player about Alduin the World-Eater's return and its apocalyptic implications."
         ],
         "QUEST_COMPLETE": [
-          "Esbern agrees to follow the player back to Delphine. Quest ends and Alduin's Wall begins.",
-          "The quest ends here, and the next quest, Alduin's Wall , begins.",
-          "Brynjolf Vekel the Man Dirge If you have already joined the Thieves Guild , the Ratway is accessible and you can locate Esbern directly."
+          "I agreed to follow the player to Delphine's base at the Sleeping Giant Inn in Riverwood.",
+          "I searched my room for any sensitive information the Thalmor could use before leaving the Warrens.",
+          "I gathered what supplies I could from the chest at the foot of my bed before departing.",
+          "The player's arrival gave me the first real hope I have felt since Alduin's return began."
         ]
       }
     },

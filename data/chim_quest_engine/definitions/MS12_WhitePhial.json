@@ -20,6 +20,10 @@
         ],
         "RETURN_TO_NURELION": [
           "The White Phial was cracked and cannot hold liquid. I am devastated and have given up hope."
+        ],
+        "QUEST_COMPLETE": [
+          "I am bedridden and dying; I will not wake or speak to anyone again.",
+          "The cracked Phial has broken my spirit completely and I have given up all hope."
         ]
       }
     },
@@ -30,10 +34,10 @@
       ],
       "beat_facts": {
         "QUEST_COMPLETE": [
-          "I paid the adventurer 500 gold for their help, since my master only gave them 5 gold.",
-          "Quintus thanks the player and pays 500 gold as proper compensation after Nurelion's meager reward.",
-          "Go back to the chamber with the word wall and turn right, where you will find an open set of iron doors leading to a staircase which will return you to Forsaken Cave .",
-          "As you enter the next room, activate the lever which will open the cavern wall and continue forward until you reach the tunnel leading back to Skyrim."
+          "I paid the adventurer 500 gold as proper compensation after my master gave them only 5 gold.",
+          "I am grateful the adventurer tried to help, even though my master was too heartbroken to be fair.",
+          "I have gone upstairs to watch over my master, who has taken to his bed and will not leave it again.",
+          "I may write to the adventurer in a few days if I find a way to repair the cracked Phial."
         ]
       }
     }

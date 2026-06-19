@@ -27,9 +27,9 @@
         ],
         "QUEST_COMPLETE": [
           "My father changed his mind! I'm going to be an adventurer. I'll call myself Erik the Slayer.",
-          "Player returns to Erik with the good news that his father has agreed to let him become an adventurer.",
-          "Maybe we can swap stories about our adventures over a mug of ale at the inn!\" The next time you see him, he will be equipped with a set of iron armor and you can also ask him to be your follower .",
-          "Convince Mralki to allow Erik to become an adventurer."
+          "I hope you'll come back to Rorikstead soon. Maybe we can swap stories about our adventures over a mug of ale at the inn!",
+          "My father and I will be visiting Whiterun soon to get me fitted for iron armor.",
+          "I'm ready to follow you as a companion if you'll have me."
         ]
       }
     },
@@ -43,6 +43,10 @@
       "beat_facts": {
         "CONVINCE_MRALKI": [
           "I've changed my mind about Erik. He can become an adventurer if he wants."
+        ],
+        "QUEST_COMPLETE": [
+          "Erik knows I've changed my mind. He's excited to finally become an adventurer.",
+          "We'll be heading to Whiterun soon to get Erik properly fitted for armor."
         ]
       }
     }

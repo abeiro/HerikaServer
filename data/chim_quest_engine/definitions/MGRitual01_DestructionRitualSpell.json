@@ -17,10 +17,9 @@
           "I have given the student the book Power of the Elements to test their mastery of Destruction."
         ],
         "QUEST_COMPLETE": [
-          "The student has completed the Power of the Elements and proven their worth. I can now sell them other Master-level Destruction spell tomes.",
-          "Player reads the completed book, learns Fire Storm, and finishes the quest at .",
-          "Rewards [ edit ] Reading the completed book grants you the Fire Storm spell.",
-          "After you use the frost spell, the third page leads you to the \"eastern river waters\" instead of \"western river waters\"."
+          "The student has completed Power of the Elements and proven their mastery of Destruction magic.",
+          "I can now sell the student spell tomes for Lightning Storm and Blizzard, the remaining Master-level Destruction spells.",
+          "The student learned Fire Storm from the completed book, having followed Shalidor's clues across the three pedestals."
         ]
       }
     }

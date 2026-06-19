@@ -20,10 +20,9 @@
           "The delegations have arrived at High Hrothgar. The council is ready to begin."
         ],
         "TRUCE_SIGNED": [
-          "The truce has been signed. 'Season unending' is the ancient Nord term for war.",
-          "The peace treaty is signed and the quest is complete.",
-          "Once you are ready to start the council meeting, you will need to talk to Arngeir — although he will forcibly start the discussion if you avoid him for too long.",
-          "If you wish to receive a reward for completing this quest, you must have joined either the Imperial Legion or the Stormcloaks ."
+          "I have reviewed and finalized the terms of the truce, which both delegations have agreed to.",
+          "I expressed my pessimism about the truce's lasting value, noting that 'season unending' is the ancient Nord term for war.",
+          "With the truce signed, the Jarl of Whiterun will now permit Dragonsreach to be used to capture a dragon, advancing the quest The Fallen."
         ]
       }
     },
@@ -34,6 +33,11 @@
       "beat_facts": {
         "LEADERS_CONVINCED": [
           "I have agreed to attend the peace council at High Hrothgar."
+        ],
+        "TRUCE_SIGNED": [
+          "I have signed the truce, agreeing to the negotiated exchange of holds with the Stormcloaks.",
+          "If the treaty favors the Imperials, I am pleased with the outcome and may offer a leveled enchanted weapon to an Imperial ally.",
+          "If the treaty disadvantages the Imperials, I will accuse the Dragonborn of betrayal, though it carries no permanent military repercussions."
         ]
       }
     },
@@ -44,6 +48,11 @@
       "beat_facts": {
         "LEADERS_CONVINCED": [
           "I have agreed to attend the peace council at High Hrothgar."
+        ],
+        "TRUCE_SIGNED": [
+          "I have signed the truce, agreeing to the negotiated exchange of holds with the Imperial Legion.",
+          "If the treaty favors the Stormcloaks, I am satisfied and may offer a leveled enchanted weapon to a Stormcloak ally.",
+          "If the treaty disadvantages the Stormcloaks, I will accuse the Dragonborn of betrayal, though there are no lasting consequences."
         ]
       }
     },
@@ -54,6 +63,11 @@
       "beat_facts": {
         "NEGOTIATE_TRUCE": [
           "I reminded the council that Alduin threatens all of Skyrim, forcing both sides back to the table."
+        ],
+        "TRUCE_SIGNED": [
+          "My speech reminding the council of Alduin's threat prevented the negotiations from collapsing when one side threatened to walk out.",
+          "With the truce signed, the civil war is temporarily halted, allowing both sides to focus on the dragon threat.",
+          "The Blades and the Greybeards managed to put aside their mutual dislike for the duration of the council."
         ]
       }
     }

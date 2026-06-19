@@ -18,10 +18,10 @@
           "The Dragonborn has returned with the Horn and proven worthy of the trial."
         ],
         "QUEST_COMPLETE": [
-          "The Greybeards have formally recognized the Dragonborn. High Hrothgar is now open to them.",
-          "Quest complete. The Dragonborn is formally recognized and High Hrothgar is fully open.",
-          "If you become trapped between gates inside the tunnel, you will find pull chains that will allow you to return to the rocks and try again.",
-          "After speaking with her, you are free to return the Horn to High Hrothgar and complete the quest."
+          "The Dragonborn has returned the Horn of Jurgen Windcaller and completed the final trial I set for them.",
+          "The Greybeards have formally recognized the Dragonborn, speaking our greeting in the dragon language all at once.",
+          "High Hrothgar is now fully open to the Dragonborn; they may freely take what they need from within.",
+          "My disposition toward the Dragonborn has increased for their success in this trial."
         ]
       }
     },
@@ -33,6 +33,10 @@
       "beat_facts": {
         "GREYBEARDS_RECOGNITION": [
           "I have taught the Dragonborn the final word of Unrelenting Force."
+        ],
+        "QUEST_COMPLETE": [
+          "I have taught the Dragonborn the final word of Unrelenting Force, completing their knowledge of the shout.",
+          "I joined my fellow Greybeards in speaking the formal recognition of the Dragonborn in the dragon language."
         ]
       }
     },
@@ -45,6 +49,10 @@
         "MEET_DELPHINE": [
           "I have revealed myself to the Dragonborn and returned the Horn.",
           "My organization has been looking for someone like the Dragonborn."
+        ],
+        "QUEST_COMPLETE": [
+          "I returned the Horn to the Dragonborn and revealed my purpose; my organization has found the one we seek.",
+          "I await the Dragonborn in Riverwood to pursue the matter of A Blade in the Dark."
         ]
       }
     }

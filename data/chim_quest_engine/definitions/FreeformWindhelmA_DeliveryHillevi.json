@@ -27,6 +27,11 @@
         ],
         "QUEST_STARTED": [
           "My delivery request has been accepted."
+        ],
+        "DELIVER_COMPLETE": [
+          "My Nightshade Extract has been successfully delivered to Wuunferth.",
+          "I am grateful to the courier who made the delivery for me.",
+          "My family's Nightshade arrangement with Wuunferth continues as before."
         ]
       }
     },
@@ -38,10 +43,9 @@
       ],
       "beat_facts": {
         "DELIVER_COMPLETE": [
-          "The Nightshade Extract has been delivered to me.",
-          "Player delivers Nightshade Extract to Wuunferth, quest completes at .",
-          "When asked whether she grows the crops all by herself she will mention that her family owns Hollyfrost Farm outside the city, and, on top of that, also receive payment from Wuunferth the Unliving for every portion of.",
-          "Hand over the extract and he will thank you with a leveled amount of gold."
+          "I have received the Nightshade Extract from Hillevi's courier.",
+          "I paid the courier a leveled amount of gold for the delivery.",
+          "The extract is very poisonous, but I will not reveal what I need it for."
         ]
       }
     }

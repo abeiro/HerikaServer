@@ -21,10 +21,10 @@
           "I have informed the suspended member of the fine they must pay to be reinstated. The amount depends on how many past incidents there have been."
         ],
         "QUEST_COMPLETE": [
-          "The suspension has been lifted after the fine was paid.",
-          "Player has paid the fine and their suspension from the College has been lifted.",
-          "Detailed Walkthrough [ edit ] This quest will automatically begin after killing another College member, provided you have already joined the College yourself.",
-          "Therefore, as long as it's your first such incident, you can murder a non-essential member of the College and only have to pay 250 gold, one quarter of the bounty that would be charged in any hold for murder."
+          "I have lifted the suspension and reinstated the member into the College's ranks after they paid the required fine.",
+          "Any future incidents will demand a steeper fine—500 gold for the second offense, 750 for the third, and 1000 for each thereafter.",
+          "I have lectured the member on appropriate conduct; the College will not tolerate further violence against its own.",
+          "The matter is settled for now, but I will not be so lenient if this happens again."
         ]
       }
     }

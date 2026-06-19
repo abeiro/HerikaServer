@@ -4230,7 +4230,7 @@ if ($checkTableExists("skyrim_quest_definitions") != -1) {
     require_once(__DIR__ . "/../lib/chim_quest_engine.php");
     try {
         $questDefinitionCount = $db->fetchOne("SELECT COUNT(*) AS n FROM public.skyrim_quest_definitions");
-        $questDefinitionSeedVersion = 20260618008;
+        $questDefinitionSeedVersion = 20260618009;
         if (intval($questDefinitionCount["n"] ?? 0) === 0 || $checkVersion("skyrim_quest_definitions") < $questDefinitionSeedVersion) {
             $questImportResults = chimQuestEngineImportBundledDefinitions();
             $questImportSuccessCount = 0;

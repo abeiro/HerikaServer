@@ -20,6 +20,10 @@
         ],
         "LEARN_CLEAR_SKIES": [
           "I have taught the Dragonborn all three words of Clear Skies so they may ascend to the Throat of the World."
+        ],
+        "QUEST_COMPLETE": [
+          "The Dragonborn has returned from Paarthurnax seeking an Elder Scroll to look back through the Time-Wound and learn Dragonrend from the ancient Tongues.",
+          "I may be able to help the Dragonborn locate an Elder Scroll, or Esbern of the Blades may have knowledge of its whereabouts."
         ]
       }
     },
@@ -37,10 +41,9 @@
           "I have shared the Word Yolâ€”Fireâ€”with the Dragonborn as a gift of understanding between dov."
         ],
         "QUEST_COMPLETE": [
-          "The Dragonrend Shout can be learned by looking back through the Time-Wound using an Elder Scroll. The ancient Tongues who used it against Alduin can teach it.",
-          "Paarthurnax explains Dragonrend is unknown to him but can be learned through the Time-Wound using an Elder Scroll. Quest finishes; player is directed to Arngeir or Esbern for the Elder Scroll's location.",
-          "If you want to learn this shout, you must speak with Paarthurnax, the leader of their order.",
-          "Arngeir will offer to help you reach Paarthurnax and leads you out into the courtyard where you will be taught all three words of the shout Clear Skies ."
+          "I do not know Dragonrend, but I believe it can be learned by looking back through the Tiid-Ahraan—the Time-Wound—here on the Throat of the World. An Elder Scroll, a Kel, is needed to open the way and witness the ancient.",
+          "I do not know where an Elder Scroll might be found. The Dragonborn must ask Arngeir or Esbern for that knowledge.",
+          "If the Dragonborn already possesses an Elder Scroll, they should bring it to the Time-Wound at once so we may look back to the moment Alduin was first defeated."
         ]
       }
     }

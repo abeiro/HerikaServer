@@ -22,10 +22,10 @@
           "The focal points have been cleansed and the player should return the gloves to me."
         ],
         "QUEST_COMPLETE": [
-          "The player has successfully helped me cleanse the focal points. I appreciate their assistance.",
-          "Player returns to Drevis after cleansing the focal points and the quest completes at .",
-          "Reward [ edit ] Once all three focal points have been purified, return to Drevis.",
-          "Return the gloves to me when you have finished."
+          "The player has returned the Mystic Tuning Gloves after successfully cleansing all three focal points around the College.",
+          "I have rewarded the player with soul gems for their assistance with the purification.",
+          "My disposition toward the player has improved for their help with this task.",
+          "I can feel the difference in the magical energies already—the focal points in the courtyard, Hall of Countenance, and Hall of Attainment are purified."
         ]
       }
     }

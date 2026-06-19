@@ -27,6 +27,10 @@
         ],
         "ACCEPT_QUEST": [
           "Someone agreed to deliver the greatsword to Father."
+        ],
+        "DELIVER_SWORD": [
+          "My greatsword has been delivered to Father at Dragonsreach.",
+          "Father will present it to Jarl Balgruuf when the time is right."
         ]
       }
     },
@@ -37,10 +41,10 @@
       ],
       "beat_facts": {
         "DELIVER_SWORD": [
-          "Adrianne's greatsword for the Jarl has been delivered.",
-          "I'll present it to Balgruuf when his mood is agreeable.",
-          "Player delivers the greatsword to Proventus Avenicci at Dragonsreach.",
-          "agreeable.\" He will then reward you with twenty gold."
+          "Adrianne's greatsword for Jarl Balgruuf has been delivered to me.",
+          "I will present the sword to Balgruuf when his mood is agreeable.",
+          "I rewarded the courier with twenty gold for making the delivery.",
+          "My daughter Adrianne is so eager to prove herself to the Jarl."
         ]
       }
     }

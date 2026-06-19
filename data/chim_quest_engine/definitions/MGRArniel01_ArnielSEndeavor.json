@@ -36,10 +36,10 @@
           "I am waiting for a delivery from Morrowind â€” the dagger Keening â€” via Enthir's courier."
         ],
         "PART4_EXPERIMENT_COMPLETE": [
-          "I struck the warped soul gem with Keening and vanished in a flash of light.",
-          "Arniel strikes the warped soul gem with Keening and vanishes. Player receives Keening and the spell Summon Arniel's Shade. Quest complete.",
-          "Once you have obtained the ten Dwemer cogs, return to Arniel and he will reward you with a small amount of gold .",
-          "He'd like you to speak to Enthir and return to him with the item."
+          "I struck the warped soul gem with Keening three times; the first two attempts produced no result, but on the third strike I vanished in a flash of light.",
+          "I was attempting to replicate Lord Kagrenac's work, using his tools on the charged soul gem to understand the disappearance of the Dwemer.",
+          "I have vanished completely and will never be seen again; whether I succeeded in my experiment or shared the Dwemer's fate remains unknown.",
+          "Keening was left behind on the floor after my disappearance, and the spell to summon my shade was granted to the one who observed the experiment."
         ]
       }
     },
@@ -57,6 +57,10 @@
         ],
         "PART4_KEENING": [
           "I was supposed to arrange transport for an item from Morrowind but the courier never arrived."
+        ],
+        "PART4_EXPERIMENT_COMPLETE": [
+          "Arniel has vanished after conducting his experiment with Keening and the warped soul gem; our business arrangement is effectively concluded.",
+          "I was only ever tasked with providing transport for Arniel's items from Morrowind and never knew the full nature of his project."
         ]
       }
     }

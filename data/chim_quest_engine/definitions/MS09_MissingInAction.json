@@ -18,10 +18,10 @@
           "The player has come to my home to discuss Thorald privately."
         ],
         "RETURN_TO_FRALIA": [
-          "The player delivered Thorald's secret message. I know my son lives and can find peace in that.",
-          "Player returns to Fralia and delivers Thorald's secret message, completing the quest.",
-          "After the argument is over proceed to talk to Fralia; she will say that Thorald isn't dead and when asked how she can be so sure of that fact will comment that it isn't safe to talk there and will ask you to meet her in.",
-          "In the case that Eorlund is dead, she will instead give you 200 gold as a reward."
+          "The player delivered Thorald's secret message—'Suffer the winter's cold wind, for it bears aloft next summer's seeds'—and I completed the phrase, confirming my son truly lives.",
+          "Thorald cannot come home to Whiterun, but knowing he is alive is enough for me. I called the player a dear friend for giving me back my son.",
+          "I rewarded the player with the enchanted weapon Eorlund forged for Thorald—or 200 gold if Eorlund has passed away.",
+          "My disposition toward the player has improved from gratitude for confirming Thorald's survival and delivering his message."
         ]
       }
     },
@@ -37,6 +37,10 @@
         ],
         "RESCUE_THORALD": [
           "The player has gone to Northwatch Keep to rescue Thorald."
+        ],
+        "RETURN_TO_FRALIA": [
+          "If I accompanied the player to Northwatch Keep, I followed Thorald to join the Stormcloaks. If I stayed behind, Thorald urged me to leave Whiterun—and I have already departed by the time the player returns.",
+          "My disposition toward the player has improved for helping rescue my brother from Thalmor custody."
         ]
       }
     },
@@ -48,6 +52,11 @@
       "beat_facts": {
         "RESCUE_THORALD": [
           "The player freed me from Northwatch Keep. I asked them to tell my mother: 'Suffer the winter's cold wind, for it bears aloft next summer's seeds.'"
+        ],
+        "RETURN_TO_FRALIA": [
+          "I have departed to join the Stormcloaks; returning to Whiterun would endanger my family with the Thalmor hunting me.",
+          "I entrusted the player with my secret message to Mother before leaving Northwatch Keep, and the player has now delivered it.",
+          "My disposition toward the player has improved for freeing me and carrying my words home."
         ]
       }
     },

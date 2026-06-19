@@ -27,10 +27,9 @@
           "Someone agreed to help me deal with Braith."
         ],
         "QUEST_COMPLETE": [
-          "Braith has stopped bullying me. I am grateful.",
-          "Observational beat for quest completion.",
-          "You do not have to complete this quest to receive your reward (2 gold pieces).",
-          "Talk to Braith and get her to stop bullying Lars."
+          "Braith has stopped bullying me. I paid my helper two septims - my whole life savings - as I promised.",
+          "Braith keeps her distance from me now. I no longer have to hide from her in my grandmother's house.",
+          "I am grateful to the person who helped me. They are welcome in House Battle-Born and may take what low-value items they need."
         ]
       }
     },
@@ -41,6 +40,11 @@
       "beat_facts": {
         "CONVINCE_BRAITH_STOP": [
           "Someone told me to stop bullying Lars. I only picked on him because I like him and wanted a kiss."
+        ],
+        "QUEST_COMPLETE": [
+          "I stopped bullying Lars. I keep my distance from him now instead of picking on him.",
+          "I admitted to my helper that I only bullied Lars because I like him and wanted him to kiss me.",
+          "I am friendly toward the person who confronted me about Lars. I may give them gifts or invite them to play."
         ]
       }
     }

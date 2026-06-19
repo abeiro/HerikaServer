@@ -68,10 +68,9 @@
       ],
       "beat_facts": {
         "THONAR_PARDON_COMPLETE": [
-          "The prisoner killed Madanach and earned my pardon. Their name is cleared.",
-          "Quest completes after killing Madanach. Thonar Silver-Blood grants a pardon and clears the player's name.",
-          "Once he's dead, return to Madanach, who will declare you an honorary member of the Forsworn and lead the prisoners to the escape tunnel.",
-          "You'll need to do this quickly and/or stealthily, before the city guards can become hostile to you and thereby prevent you from fast traveling; you can still complete the quest later by speaking to Madanach after he."
+          "The prisoner killed Madanach as I demanded. I granted them a full pardon and their name is cleared in the Reach.",
+          "I returned their confiscated equipment and gave them the Silver-Blood Family Ring as reward for eliminating the King in Rags.",
+          "With Madanach dead, the Forsworn leadership inside Cidhna Mine is broken. My control over Markarth and its silver operations remains secure."
         ]
       }
     }

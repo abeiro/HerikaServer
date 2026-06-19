@@ -21,10 +21,10 @@
           "This person has returned with Frost and the lineage papers."
         ],
         "QUEST_COMPLETE": [
-          "I have received Frost and paid for the horse deal, or been persuaded to let them keep the horse.",
-          "Quest completes after Louis rewards the player. Player may keep Frost through persuasion or threats.",
-          "For your completion conversation with Louis, there are multiple options: Let him go with the horse and receive the leveled gold payment.",
-          "It is possible though to receive the payment and then immediately steal the horse; the quest will count as finished without double-crossing Louis."
+          "I have paid leveled gold for the delivery of Frost and the lineage papers, and I intend to ride the horse to Whiterun Stables.",
+          "If I was persuaded or blackmailed with the threat of exposing the theft to Maven, I surrendered both the payment and the horse and fled.",
+          "If I was threatened with death, I may have fought or fled; either way I no longer consider the matter settled.",
+          "I may later send hired thugs after anyone who cheated me out of Frost."
         ]
       }
     },

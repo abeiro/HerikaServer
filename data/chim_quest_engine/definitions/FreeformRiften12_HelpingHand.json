@@ -25,10 +25,10 @@
           "I confessed my skooma addiction and asked for a healing potion to help me recover."
         ],
         "GIVE_HEALING_POTION": [
-          "Someone kindly gave me a healing potion and helped me start to recover. I will never forget their kindness.",
-          "Player gives Wujeeta a standard healing potion, completing the quest.",
-          "Dialogue is closed at this point and the first part of the next quest is immediately added to the miscellaneous quests.",
-          "Talk to her, and she will reveal that she has an addiction to skooma and that she wants to cure herself."
+          "I gave my benefactor a leveled unenchanted ring as thanks for the healing potion. Their kindness will never be forgotten.",
+          "My benefactor may now freely take items from the fish barrels inside the Riften Fishery and around the nearby fishing boats.",
+          "The follow-up investigation into Riften's skooma trade has been set in motion as a miscellaneous objective.",
+          "I have begun to recover from my skooma addiction thanks to the healing potion I was given."
         ]
       }
     }

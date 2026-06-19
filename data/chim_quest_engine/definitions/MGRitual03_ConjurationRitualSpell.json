@@ -20,10 +20,10 @@
           "Is waiting for the player to deliver the Sigil Stone."
         ],
         "QUEST_COMPLETE": [
-          "Has rewarded the player with the Flame Thrall spell tome and can now sell Frost Thrall, Storm Thrall, and Dead Thrall.",
-          "Quest complete. Phinis has given the Flame Thrall spell and unlocked Master Conjuration spells for purchase.",
-          "After he is dead you must summon him in the circle again, and he will speak again: \"I am not your plaything, worm!\" At this point another two dialogue options will appear: At this time he will become hostile and you.",
-          "Talk to Phinis Gestor and receive your reward of the Master Conjuration Spell, Flame Thrall."
+          "Has used the delivered Sigil Stone to inscribe Master Conjuration spells.",
+          "Rewarded the player with the Flame Thrall spell tome as the first of the Master spells.",
+          "Now sells the Frost Thrall, Storm Thrall, and Dead Thrall spell tomes.",
+          "Recognizes the player as a true master of Conjuration for subduing the Unbound Dremora."
         ]
       }
     }

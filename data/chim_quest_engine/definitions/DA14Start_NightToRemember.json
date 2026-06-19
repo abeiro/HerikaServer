@@ -86,7 +86,11 @@
       "focus_npc": "Sam Guevenne",
       "comment": "Player meets Sam Guevenne in a tavern and accepts his drinking contest.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x0003FA17",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "DA14Start",
+        "stage": 20
       },
       "downstream": [],
       "triggers": [
@@ -96,9 +100,29 @@
             "drinking contest",
             "drink with sam",
             "staff",
-            "drinking bet"
+            "drinking bet",
+            "I'll take that bet",
+            "I'll drink with you",
+            "Let's drink",
+            "I accept"
           ],
           "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player explicitly agrees to participate in the drinking contest.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I'll take that bet.",
+            "I'll drink with you.",
+            "Let's have a drinking contest."
+          ],
+          "examples_no": [
+            "No thanks.",
+            "I don't drink.",
+            "Maybe later."
+          ]
         }
       ],
       "trigger_mode": "any",

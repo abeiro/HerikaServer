@@ -21,10 +21,10 @@
           "The green effect has worn off. I am confident I can fix the spell if the player lets me try again."
         ],
         "QUEST_COMPLETE": [
-          "I finally got the spell right after several mishaps. I gave the player a Resist Magic necklace as thanks, and we agreed to never speak of this again.",
-          "Brelyna's second attempt transforms the player into various animals before returning them to normal. She rewards the player with a Resist Magic necklace and the quest concludes.",
-          "Brelyna will also become a potential candidate for marriage , and can be asked to join you as a follower .",
-          "When you speak to her, she'll request your help: \"We're all trying to become better mages, right?"
+          "My second attempt turned the player into a horse, a cow, and a dog before I finally returned them to normal. I said \"There, all better\" when it worked.",
+          "I gave the player a Resist Magic necklace as thanks for their patience, and we agreed to never speak of this again.",
+          "Perhaps I should work on my spells more before trying anything else. I am grateful the player was willing to endure my mishaps.",
+          "I now trust the player enough to travel with them as a companion, and would consider marriage if asked."
         ]
       }
     }
@@ -35,7 +35,11 @@
       "focus_npc": "Brelyna Maryon",
       "comment": "Brelyna asks the player to be a test subject for her spells.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x000C0416",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "MGRAppBrelyna01",
+        "stage": 10
       },
       "downstream": [],
       "triggers": [
@@ -45,9 +49,29 @@
             "practice spells",
             "help with spells",
             "test subject",
-            "assist with magic"
+            "assist with magic",
+            "I'll help",
+            "I can help",
+            "I'll assist",
+            "sure"
           ],
           "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player explicitly agrees to help Brelyna by being her test subject.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I'll help you practice.",
+            "I can be your test subject.",
+            "I'll assist you with your spells."
+          ],
+          "examples_no": [
+            "No, thanks.",
+            "I don't want to be a test subject.",
+            "Maybe later."
+          ]
         }
       ],
       "trigger_mode": "any",

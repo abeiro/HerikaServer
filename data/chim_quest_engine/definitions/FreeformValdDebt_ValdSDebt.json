@@ -19,6 +19,10 @@
         ],
         "RETURN_QUILL": [
           "The Quill has been returned to me. I wrote a note clearing Vald's debt."
+        ],
+        "QUEST_COMPLETE": [
+          "My note clearing Vald's debt has been delivered to him. He owes me nothing more.",
+          "With Vald's debt settled, he has no reason to continue guarding Riftweald Manor for Mercer Frey."
         ]
       }
     },
@@ -29,10 +33,9 @@
       ],
       "beat_facts": {
         "QUEST_COMPLETE": [
-          "My debt to Maven has been cleared. I gave the key to Riftweald Manor and opened the back gate.",
-          "Player gives Vald the note from Maven clearing his debt. Vald provides the key to Riftweald Manor.",
-          "Attempting to erase Vald's debt after he is dead will still earn you leveled gold, but you will be unable to complete the quest by delivering the letter of pardon.",
-          "To do this, talk to Maven to get the quill to spawn, go and obtain the quill, then go to Vald and intimidate/bribe him to let you pass."
+          "My debt to Maven Black-Briar has been cleared by her written note. I am no longer bound to guard Riftweald Manor for Mercer Frey.",
+          "I gave the key to Riftweald Manor and opened the back gate as thanks for erasing my debt.",
+          "I am free of both Maven's leverage and Mercer Frey's extortion."
         ]
       }
     }

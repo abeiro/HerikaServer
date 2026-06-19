@@ -45,10 +45,10 @@
           "I taught the new apprentice about ward spells and gave them Lesser Ward."
         ],
         "QUEST_COMPLETE": [
-          "The apprentice successfully used a ward against my firebolt. I proposed an expedition to Saarthal and consider them a friend.",
-          "Player successfully defends with a ward; Tolfdir announces the Saarthal expedition.",
-          "If one of the three students die by any means, Tolfdir will cancel the ward training and immediately start the next quest.",
-          "Most of the other optional quests do not become available until after the next quest, Under Saarthal , has been completed."
+          "The apprentice successfully defended against my firebolt using a ward spell.",
+          "I have announced an upcoming expedition to Saarthal and the apprentice will be joining.",
+          "I now consider the apprentice a friend due to their successful participation in the lesson.",
+          "The introductory lecture and practical demonstration on the importance of safety and wards is complete."
         ]
       }
     }

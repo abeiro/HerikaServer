@@ -18,10 +18,9 @@
           "I have given the student Vision of the Tenth Eye to find the hidden Master Illusion texts."
         ],
         "QUEST_COMPLETE": [
-          "The student has returned the Master Illusion texts and I have rewarded them with the Hysteria spell tome.",
-          "Quest completes after delivering the texts and receiving the Hysteria spell tome.",
-          "This is usually caused by using a spell near the location before the quest starts.",
-          "Return to Drevis Neloren."
+          "The student has returned the four Master Illusion texts and I have rewarded them with the Hysteria spell tome.",
+          "The student has proven their mastery of Illusion magic and I can now offer them the remaining Master Illusion spell tomes for purchase: Call to Arms, Harmony, and Mayhem.",
+          "The hidden texts have been recovered from the Arcanaeum, Hall of Attainment, Hall of Countenance, and The Midden, and are back in my keeping."
         ]
       }
     }

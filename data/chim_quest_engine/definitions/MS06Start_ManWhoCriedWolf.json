@@ -24,10 +24,10 @@
           "Necromancers tried to summon Potema in Wolfskull Cave! I must hear the player's report immediately."
         ],
         "QUEST_COMPLETE": [
-          "The player stopped the necromancers from resurrecting Potema. Solitude owes them a great debt.",
-          "Player reports back to Falk Firebeard about stopping the necromancers, completing the quest at .",
-          "Speak to Varnius Junius or Elisif the Fair or Sybille Stentor, either will lead you to Falk Firebeard, who will admit he thinks Varnius is overreacting and that he has his hands full dealing with the recent murder of.",
-          "Backtrack a bit and locate the tunnel leading west."
+          "I rewarded the player with a leveled amount of gold for stopping the necromancers.",
+          "I told the player they have done Solitude a larger service than they can imagine.",
+          "I am deeply concerned that Potema is far from defeated despite the interrupted ritual.",
+          "I will soon send a concerned letter via courier to the player, beginning the quest The Wolf Queen Awakened."
         ]
       }
     },

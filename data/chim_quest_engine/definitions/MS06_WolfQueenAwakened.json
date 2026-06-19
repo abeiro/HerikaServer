@@ -19,10 +19,10 @@
           "I have sent the adventurer to speak with Styrr about how to stop Potema."
         ],
         "MS06_COMPLETE": [
-          "Potema has been defeated. I rewarded the adventurer with gold and the Shield of Solitude on behalf of the jarl.",
-          "Quest complete. Falk rewards the player with gold and the Shield of Solitude.",
-          "Reading this letter will trigger the next quest, Let Sleeping Wolves Lie .",
-          "Your reward is gold and the Shield of Solitude ."
+          "Potema has been defeated and her remains sanctified. I spoke on behalf of the jarl to express our gratitude and rewarded the adventurer with gold and the Shield of Solitude.",
+          "The threat of the Wolf Queen's full resurrection has been ended for Solitude and Haafingar.",
+          "The Shield of Solitude carries a unique Resist Magic enchantment not found elsewhere, a worthy gift for one who saved the city.",
+          "A courier may deliver a follow-up letter concerning further Wolf Queen business if circumstances permit."
         ]
       }
     },
@@ -39,6 +39,11 @@
         ],
         "MS06_STAGE_150": [
           "I have received Potema's remains and will bless them to prevent her return."
+        ],
+        "MS06_COMPLETE": [
+          "I have blessed Potema's remains to ensure the Wolf Queen can never return in corporeal form.",
+          "The adventurer who retrieved Potema's skull has earned my gratitude and that of Arkay's faithful.",
+          "By returning Potema's remains for sanctification, the adventurer has done a great service to the people of Haafingar."
         ]
       }
     }

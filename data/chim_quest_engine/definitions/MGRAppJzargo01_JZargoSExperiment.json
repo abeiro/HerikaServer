@@ -26,10 +26,10 @@
           "J'zargo is now available as a follower."
         ],
         "BEAT_QUEST_FAILED": [
-          "The player ran out of J'zargo's scrolls without killing enough undead.",
-          "Player ran out of scrolls without killing enough undead; quest fails.",
-          "A Job \"Well Done\" [ edit ] Return to J'zargo after you have killed three undead to report the unfortunate side-effect.",
-          "However, undead that are killed indirectly by the explosions of other undead do not count."
+          "J'zargo no longer wants the player's help after they exhausted all ten scrolls without killing enough undead.",
+          "The quest has failed; J'zargo does not become available as a follower through this experiment.",
+          "All ten Flame Cloak scrolls were used up without achieving the three required undead kills.",
+          "There is no way to obtain more copies of J'zargo's scrolls to retry the experiment."
         ]
       }
     }

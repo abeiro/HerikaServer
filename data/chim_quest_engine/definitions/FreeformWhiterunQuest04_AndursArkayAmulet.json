@@ -28,10 +28,10 @@
           "The player has agreed to help me retrieve my amulet from the catacombs."
         ],
         "QUEST_COMPLETE": [
-          "The player returned my Amulet of Arkay. I rewarded them with 15 gold and I am very grateful.",
-          "Player returns the amulet to Andurs, completing the quest.",
-          "Amulet of Arkay [ edit ] Follow the stairs down by the second skeleton and go through the door; the amulet lies next to a wreath on the right-hand table.",
-          "and reward you with 15 gold."
+          "The player has returned my Amulet of Arkay to me; I am very grateful for their bravery in facing the restless dead.",
+          "I rewarded the player with 15 gold for retrieving my amulet from the catacombs.",
+          "My disposition toward the player has increased by 3; I regard them more favorably for their service.",
+          "With my amulet restored, I can properly perform my duties as priest of Arkay in the Hall of the Dead once again."
         ]
       }
     }

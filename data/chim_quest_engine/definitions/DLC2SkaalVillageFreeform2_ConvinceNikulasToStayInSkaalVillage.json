@@ -48,7 +48,11 @@
       "focus_npc": "Edla",
       "comment": "Player speaks with Edla about her son and agrees to help convince him to stay.",
       "action": {
-        "type": "gate"
+        "type": "set_stage",
+        "quest_form_id": "0x00031787",
+        "quest_plugin": "Dragonborn.esm",
+        "quest_editor_id": "DLC2SkaalVillageFreeform2",
+        "stage": 20
       },
       "downstream": [
         {
@@ -71,9 +75,29 @@
             "son",
             "Nikulas",
             "help",
-            "convince"
+            "convince",
+            "I'll talk to him",
+            "I can help",
+            "I'll convince him",
+            "I will speak with him"
           ],
           "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player explicitly agrees to help Edla by convincing Nikulas to stay in the village.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I'll talk to him for you.",
+            "I can help with your son.",
+            "I'll convince him to stay."
+          ],
+          "examples_no": [
+            "Tell me more about him first.",
+            "I'm not getting involved.",
+            "That's not my concern."
+          ]
         }
       ],
       "trigger_mode": "any",

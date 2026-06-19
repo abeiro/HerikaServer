@@ -29,10 +29,10 @@
           "Someone has agreed to clear the spiders from Redbelly Mine for me."
         ],
         "SPIDERS_CLEARED": [
-          "The frostbite spiders in Redbelly Mine have been killed.",
-          "Observation that all frostbite spiders in Redbelly Mine have been killed, advancing to .",
-          "If the spiders respawn and you have already completed the quest once, the quest will reset at the point where you have to return to Filnjar after killing some or all of the spiders, allowing you to repeat the quest as.",
-          "Gold for Spiders [ edit ] Return to Filnjar and tell him the good news."
+          "The frostbite spiders in Redbelly Mine have been killed, clearing the way for ebony mining to resume.",
+          "Redbelly Mine can now produce ebony ore again, putting Shor's Stone back on the map.",
+          "Filnjar needs to be informed of the good news and will reward leveled gold for reopening the mine.",
+          "Filnjar's disposition will increase by one once he learns the spiders are gone."
         ],
         "RETURN_TO_FILNJAR": [
           "The mine is clear and Shor's Stone is back on the map. I rewarded my helper with leveled gold."

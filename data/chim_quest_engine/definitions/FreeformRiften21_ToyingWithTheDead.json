@@ -18,10 +18,10 @@
           "The player agreed to retrieve Arondil's journals from Yngvild for a share of the reward."
         ],
         "QUEST_COMPLETE": [
-          "The player returned all four journals. I paid them their share from my client.",
-          "Quest finishes at when player returns journals to Vekel.",
-          "This quest can be started without talking to Vekel; if you go to Yngvild and pick up all four journals, you will receive a quest update telling you to return them to Vekel, even if you never spoke to him before.",
-          "The third journal can be found on a table just before the door leading to Yngvild Throne Room ."
+          "The player returned all four of Arondil's journals. I paid them their share from my client.",
+          "I gave the player a leveled enchanted one-handed weapon as their cut of the reward, obtained through a fair trade with my client.",
+          "My buyer's peculiar taste in Arondil's ravings is now satisfied; the four volumes have been delivered.",
+          "I remarked that I was hoping they hadn't forgotten about the job before honoring my word on the payment."
         ]
       }
     }

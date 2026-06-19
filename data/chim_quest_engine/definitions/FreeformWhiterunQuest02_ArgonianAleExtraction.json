@@ -26,10 +26,9 @@
           "The player has the Argonian Ale. I hope they bring it to me soon."
         ],
         "QUEST_COMPLETE": [
-          "The player brought me the Argonian Ale. I gave them a Potion of Vigorous Healing I found at the Temple of Kynareth.",
-          "Player gave the Argonian Ale to Brenuin and received a Potion of Vigorous Healing.",
-          "Detailed Walkthrough [ edit ] After you give Brenuin a gold coin on the streets of Whiterun , the option to ask him if he is always drunk will become available.",
-          "Return to Brenuin to be rewarded."
+          "The player brought me the Argonian Ale, and I rewarded them with a Potion of Vigorous Healing I 'found' at the Temple of Kynareth.",
+          "My disposition towards the player improved for helping feed my drinking habit.",
+          "I am finally enjoying that special bottle of ale from the Bannered Mare."
         ]
       }
     }

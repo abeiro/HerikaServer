@@ -25,10 +25,10 @@
           "The player has collected thirty Crimson Nirnroot samples from Blackreach."
         ],
         "QUEST_COMPLETE": [
-          "The player delivered the Crimson Nirnroot and I pledged to continue Sinderion's research in his memory.",
-          "Player delivers thirty Crimson Nirnroot to Avrusa Sarethi, completing the quest.",
-          "In order to get started, begin at the beginning in Sinderion's Field Laboratory .",
-          "To complete the quest even if the quest log does not represent the actual amount of Crimson Nirnroot you have in inventory simply go to Avrusa with thirty in your inventory, and the quest will complete itself without."
+          "I received the thirty Crimson Nirnroot samples and was overjoyed that Sinderion's field work in Blackreach was finally completed.",
+          "I pledged to continue Sinderion's research into the Crimson Nirnroot in his memory.",
+          "I gave the player The Nirnroot Missive and granted them Sinderion's Serendipity, an ability that provides a twenty-five percent chance to mix two potions instead of one.",
+          "With the Crimson Nirnroot delivered, Sinderion's research can now continue at Sarethi Farm."
         ]
       }
     }

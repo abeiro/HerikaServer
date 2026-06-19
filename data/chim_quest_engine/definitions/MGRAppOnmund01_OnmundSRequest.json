@@ -18,10 +18,9 @@
           "I have asked someone to help me get my amulet back from Enthir."
         ],
         "AMULET_RETURNED_TO_ONMUND": [
-          "My amulet has been returned. I am grateful and willing to follow or marry my benefactor.",
-          "Player returns the amulet to Onmund, completing the quest and earning his friendship.",
-          "The only reward for completing the quest is Onmund's friendship; once you return his amulet, he becomes available as a follower , as well as a potential candidate for marriage .",
-          "Picking up the staff will update the quest journal, directing you to return the staff to Enthir."
+          "My family amulet has been returned to me. I am deeply grateful to the one who dealt with Enthir on my behalf.",
+          "I now consider my benefactor a true friend and am willing to follow them as a companion.",
+          "I am open to marriage should my benefactor express interest."
         ]
       }
     },
@@ -37,6 +36,10 @@
         ],
         "STAFF_DELIVERED_TO_ENTHIR": [
           "I have traded Onmund's amulet for the Grand Staff of Charming."
+        ],
+        "AMULET_RETURNED_TO_ONMUND": [
+          "The trade is fully concluded; I have the Grand Staff of Charming and Onmund has his amulet back.",
+          "I upheld my end of the bargain once the staff was delivered. The matter is settled."
         ]
       }
     }

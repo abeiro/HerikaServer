@@ -24,10 +24,10 @@
           "This fool actually bet 100 gold they could beat me in a brawl."
         ],
         "BRAWL_COMPLETE": [
-          "I lost the brawl fair and square. I paid what I owed.",
-          "Player defeats Hofgrir and claims the reward of 200 gold total.",
-          "Claiming your reward [ edit ] After winning the brawl, talk to Hofgrir and he will give you your 100 gold back, as well as another 100 gold for winning the bet.",
-          "Talk to him about the dangers of living outside the walls, which will lead to him boasting about being the strongest brawler in Skyrim."
+          "I lost the brawl fair and square. I handed back the 100 gold stake and paid another 100 gold for losing the bet.",
+          "My pride is wounded, but I respect anyone who can best me with their bare fists.",
+          "I can hardly keep boasting about being the strongest brawler in Skyrim after that beating.",
+          "I will not offer another brawl bet to this person — they have already proven themselves."
         ]
       }
     }
