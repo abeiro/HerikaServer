@@ -470,9 +470,11 @@ tr:hover td {
             if ($isInstalled) {
                 echo '<button class="btn-base" disabled style="opacity: 0.6;">Already Installed</button>';
             } else {
+                $defaultChannelId = (string)($plugin['default_channel'] ?? 'main');
                 foreach ($channels as $channelId => $channel) {
                     $installUrl = buildPluginInstallerUrl($pluginId, $name, $plugin['git_repo'], $channelId, false);
-                    echo ' <button onclick="window.open(\'' . htmlspecialchars($installUrl) . '\', \'_blank\')" class="btn-base btn-save">Install ' . htmlspecialchars($channel['label']) . '</button>';
+                    $installLabel = ($channelId === $defaultChannelId) ? 'Install Plugin' : 'Install ' . ($channel['label'] ?? ucfirst((string)$channelId));
+                    echo ' <button onclick="window.open(\'' . htmlspecialchars($installUrl) . '\', \'_blank\')" class="btn-base btn-save">' . htmlspecialchars($installLabel) . '</button>';
                 }
             }
             if (!empty($githubUrl)) {
