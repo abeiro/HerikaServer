@@ -25,10 +25,9 @@
           "Someone has agreed to find ice wraith teeth for me."
         ],
         "RETURN_WITH_TEETH": [
-          "My preservative supply has been replenished. I rewarded my helper with a spell tome and pheasant breasts.",
-          "Player returns to Marise with 5 ice wraith teeth to complete the quest.",
-          "You can also find them in the following locations: Ancient's Ascent , recommended location, actually in Bonechill Passage Forsaken Cave , the previous part of the first zone Throat of the World , the path to High.",
-          "These should help keep my stock fresh for quite a while.\" She will reward you with an apprentice-level Alteration spell tome and five pheasant breasts ."
+          "My preservative supply has been replenished; these five ice wraith teeth should keep my food stock fresh for quite a while.",
+          "I expressed my gratitude and rewarded the player with an apprentice-level Alteration spell tome and five pheasant breasts.",
+          "My disposition towards the player has increased by one for helping me restock my preservatives."
         ]
       }
     }
