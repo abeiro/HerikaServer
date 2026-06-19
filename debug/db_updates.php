@@ -6770,9 +6770,9 @@ $db->execQuery("
 
 //----------------------------------------------------
 // Refresh base bio template relationship metadata from canonical SQL
-// Version 20260505003
+// Version 20260619001
 //----------------------------------------------------
-$relationshipMetadataNeedsRefresh = $checkVersion("bio_templates_relationship_refresh") < 20260505003;
+$relationshipMetadataNeedsRefresh = $checkVersion("bio_templates_relationship_refresh") < 20260619001;
 if (!$relationshipMetadataNeedsRefresh) {
     try {
         $relationshipSentinel = $db->fetchOne("SELECT relationships FROM public.bio_templates WHERE npc_name = 'corpulus_vinius' LIMIT 1");
@@ -6788,8 +6788,36 @@ if (!$relationshipMetadataNeedsRefresh) {
 }
 
 if ($relationshipMetadataNeedsRefresh) {
-    Logger::debug("Applying bio_templates_relationship_refresh 20260505003");
+    Logger::debug("Applying bio_templates_relationship_refresh 20260619001");
     try {
+        $splitMergedIceMageTemplate = function($tableName) use ($db, $checkTableExists) {
+            if (!in_array($tableName, ["bio_templates", "bio_templates_custom"], true) || $checkTableExists($tableName) == -1) {
+                return;
+            }
+
+            foreach (["ice_mage", "ice_wizard"] as $targetName) {
+                $targetEscaped = $db->escape($targetName);
+                $db->execQuery("
+                    INSERT INTO public.{$tableName} (
+                        npc_name, oghma_knowledge_tags, core, npc_static_bio, appearance, personality,
+                        relationships, occupation, skills, speechstyle, goals, voiceid, gender, race, refid
+                    )
+                    SELECT
+                        '{$targetEscaped}', oghma_knowledge_tags, core, npc_static_bio, appearance, personality,
+                        relationships, occupation, skills, speechstyle, goals, voiceid, gender, race, refid
+                      FROM public.{$tableName}
+                     WHERE npc_name = 'ice_mage ice_wizard'
+                     LIMIT 1
+                    ON CONFLICT (npc_name) DO NOTHING
+                ");
+            }
+
+            $db->execQuery("DELETE FROM public.{$tableName} WHERE npc_name = 'ice_mage ice_wizard'");
+        };
+
+        $splitMergedIceMageTemplate("bio_templates");
+        $splitMergedIceMageTemplate("bio_templates_custom");
+
         $sqlFile = __DIR__ . "/../data/relationship_metadata.sql";
         if (file_exists($sqlFile)) {
             $sqlContent = file_get_contents($sqlFile);
@@ -6798,21 +6826,29 @@ if ($relationshipMetadataNeedsRefresh) {
                 $refreshResult = $db->execQuery($sqlContent);
                 $cleanupResult = false;
                 if ($refreshResult) {
-                    $cleanupResult = $db->execQuery("
+                    $baseCleanupResult = $db->execQuery("
+                        UPDATE public.bio_templates
+                           SET relationships = NULL
+                         WHERE relationships IS NOT NULL
+                           AND btrim(relationships) <> ''
+                           AND left(ltrim(relationships), 1) <> '{'
+                    ");
+                    $customCleanupResult = $db->execQuery("
                         UPDATE public.bio_templates_custom
                            SET relationships = NULL
                          WHERE relationships IS NOT NULL
                            AND btrim(relationships) <> ''
                            AND left(ltrim(relationships), 1) <> '{'
                     ");
+                    $cleanupResult = $baseCleanupResult && $customCleanupResult;
                 } else {
                     $db->execQuery("ROLLBACK");
                 }
                 if ($refreshResult && $cleanupResult) {
-                    $updateVersion("bio_templates_relationship_refresh", 20260505003);
-                    Logger::info("Applied patch bio_templates_relationship_refresh 20260505003");
+                    $updateVersion("bio_templates_relationship_refresh", 20260619001);
+                    Logger::info("Applied patch bio_templates_relationship_refresh 20260619001");
                 } else {
-                    Logger::error("Failed to apply bio_templates_relationship_refresh 20260505003 - canonical relationship metadata refresh did not execute cleanly.");
+                    Logger::error("Failed to apply bio_templates_relationship_refresh 20260619001 - canonical relationship metadata refresh did not execute cleanly.");
                 }
             } else {
                 Logger::warn("relationship metadata file is empty: " . $sqlFile);
