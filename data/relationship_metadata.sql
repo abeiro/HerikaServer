@@ -2827,7 +2827,12 @@ ON CONFLICT (npc_name) DO UPDATE
 SET relationships = EXCLUDED.relationships;
 
 INSERT INTO public.bio_templates (npc_name, relationships)
-VALUES ('ice_mage ice_wizard', '{"College of Winterhold":{"aff":-55,"type":"estranged","relation":"former institution","note":"Broke away after rejecting their teachings to pursue forbidden frost knowledge","worst":"Being cast out or leaving in disgrace after pursuing forbidden research"},"Fellow Ice Mages":{"aff":25,"type":"platonic","relation":"loose associates","note":"Share a bond through mutual obsession with frost magic, though isolation limits closeness"},"Necromancers":{"aff":15,"type":"transactional","relation":"occasional allies","note":"Cooperate tentatively in pursuit of forbidden magical knowledge"},"Apprentices":{"aff":60,"type":"mentor","relation":"mentor","note":"Rare and valued students who share their frost obsession, though few survive the training","best":"Finding a student who truly understands the beauty of frost magic"},"Local Settlements":{"aff":-65,"type":"enemy","relation":"perceived threats","note":"View locals as interruptions to be avoided or eliminated"}}')
+VALUES ('ice_mage', '{"College of Winterhold":{"aff":-55,"type":"estranged","relation":"former institution","note":"Broke away after rejecting their teachings to pursue forbidden frost knowledge","worst":"Being cast out or leaving in disgrace after pursuing forbidden research"},"Fellow Ice Mages":{"aff":25,"type":"platonic","relation":"loose associates","note":"Share a bond through mutual obsession with frost magic, though isolation limits closeness"},"Necromancers":{"aff":15,"type":"transactional","relation":"occasional allies","note":"Cooperate tentatively in pursuit of forbidden magical knowledge"},"Apprentices":{"aff":60,"type":"mentor","relation":"mentor","note":"Rare and valued students who share their frost obsession, though few survive the training","best":"Finding a student who truly understands the beauty of frost magic"},"Local Settlements":{"aff":-65,"type":"enemy","relation":"perceived threats","note":"View locals as interruptions to be avoided or eliminated"}}')
+ON CONFLICT (npc_name) DO UPDATE
+SET relationships = EXCLUDED.relationships;
+
+INSERT INTO public.bio_templates (npc_name, relationships)
+VALUES ('ice_wizard', '{"College of Winterhold":{"aff":-55,"type":"estranged","relation":"former institution","note":"Broke away after rejecting their teachings to pursue forbidden frost knowledge","worst":"Being cast out or leaving in disgrace after pursuing forbidden research"},"Fellow Ice Mages":{"aff":25,"type":"platonic","relation":"loose associates","note":"Share a bond through mutual obsession with frost magic, though isolation limits closeness"},"Necromancers":{"aff":15,"type":"transactional","relation":"occasional allies","note":"Cooperate tentatively in pursuit of forbidden magical knowledge"},"Apprentices":{"aff":60,"type":"mentor","relation":"mentor","note":"Rare and valued students who share their frost obsession, though few survive the training","best":"Finding a student who truly understands the beauty of frost magic"},"Local Settlements":{"aff":-65,"type":"enemy","relation":"perceived threats","note":"View locals as interruptions to be avoided or eliminated"}}')
 ON CONFLICT (npc_name) DO UPDATE
 SET relationships = EXCLUDED.relationships;
 
@@ -6431,5 +6436,34 @@ VALUES ('zaynabi', '{"Ahkari":{"aff":65,"type":"professional","relation":"employ
 ON CONFLICT (npc_name) DO UPDATE
 SET relationships = EXCLUDED.relationships;
 
-COMMIT;
+INSERT INTO public.bio_templates (npc_name, relationships)
+VALUES ('angeline_morrard', '{"Vivienne Onis":{"aff":85,"type":"familial","relation":"beloved niece and assistant","note":"Assists in Angeline''s Aromatics and is treated as a daughter figure while learning the business."},"Fura Morrard":{"aff":95,"type":"familial","relation":"deceased daughter","note":"Joined the Imperial Army and died in service, leaving Angeline grieving and searching for closure.","worst":"Learning that Fura died while serving in the Imperial Army."},"Captain Aldis":{"aff":25,"type":"professional","relation":"Imperial contact","note":"Knew of Fura''s fate and represents Angeline''s tenuous connection to the Imperial military."},"Regular customers":{"aff":45,"type":"client","relation":"customers","note":"Maintains warm relationships with civilian and military clientele who rely on her herbal goods."}}')
+ON CONFLICT (npc_name) DO UPDATE
+SET relationships = EXCLUDED.relationships;
 
+INSERT INTO public.bio_templates (npc_name, relationships)
+VALUES ('brill', '{"Vignar Gray-Mane":{"aff":90,"type":"familial","relation":"mentor and father figure","note":"Saved Brill from alcoholism and gave him purpose as aide and later steward.","best":"Being trusted by Vignar to help guide Whiterun after the Stormcloak victory."},"The Companions":{"aff":65,"type":"respect","relation":"respected warriors","note":"Deeply respects the Companions despite not being a member himself."},"Proventus Avenicci":{"aff":20,"type":"professional","relation":"predecessor as steward","note":"Relies on Proventus'' detailed records after replacing him as steward of Dragonsreach."},"Citizens of Whiterun":{"aff":55,"type":"protective","relation":"people he serves","note":"Serves them dutifully as steward under Vignar''s administration."},"Various merchants":{"aff":30,"type":"professional","relation":"supply contacts","note":"Maintains working relationships needed for city supplies and property administration."}}')
+ON CONFLICT (npc_name) DO UPDATE
+SET relationships = EXCLUDED.relationships;
+
+INSERT INTO public.bio_templates (npc_name, relationships)
+VALUES ('esbern', '{"Delphine":{"aff":90,"type":"platonic","relation":"fellow Blade survivor","note":"Longtime ally in the fight against dragons and the Thalmor, sharing the burden of rebuilding the Blades."},"The Last Dragonborn":{"aff":85,"type":"mentor","relation":"student and prophesied hero","note":"Serves as mentor and advisor in the quest to defeat Alduin and restore the Blades'' purpose.","best":"Guiding the Dragonborn to Alduin''s Wall and seeing prophecy become action."},"Paarthurnax":{"aff":-65,"type":"enemy","relation":"untrusted dragon","note":"Views him as a dangerous threat that must be eliminated despite his apparent reformation."},"The Thalmor":{"aff":-100,"type":"nemesis","relation":"hunters and enemies","note":"Mortal enemies who have hunted him relentlessly since the Great War.","worst":"Years spent hiding in the Ratway to evade Thalmor capture."},"Former Blades":{"aff":90,"type":"protective","relation":"fallen comrades","note":"Maintains deep reverence for their legacy and seeks to preserve their knowledge."}}')
+ON CONFLICT (npc_name) DO UPDATE
+SET relationships = EXCLUDED.relationships;
+
+INSERT INTO public.bio_templates (npc_name, relationships)
+VALUES ('melaran', '{"Erikur":{"aff":15,"type":"professional","relation":"employer","note":"Serves the Thane of Solitude with professional dedication but personal disdain."},"Sybille Stentor":{"aff":55,"type":"respect","relation":"fellow mage","note":"Respects her magical prowess despite her being human and fears her temperament."},"Solitude Court":{"aff":25,"type":"professional","relation":"court contacts","note":"Maintains useful professional relationships with members of the court."},"Blue Palace Staff":{"aff":20,"type":"professional","relation":"coworkers","note":"Keeps a cordial but distant relationship with other palace workers."}}')
+ON CONFLICT (npc_name) DO UPDATE
+SET relationships = EXCLUDED.relationships;
+
+INSERT INTO public.bio_templates (npc_name, relationships)
+VALUES ('modhna', '{"Lord Harkon":{"aff":25,"type":"servant","relation":"court lord","note":"Serves him out of necessity rather than loyalty, valuing access to Volkihar Keep more than court politics."},"Fellow Volkihar Vampires":{"aff":-5,"type":"professional","relation":"court members","note":"Maintains only the minimum required interaction with other vampires in the court."},"Human Cattle":{"aff":-80,"type":"predatory","relation":"food sources","note":"Views them purely as sustenance rather than people."},"Other Court Members":{"aff":-25,"type":"avoidant","relation":"unwanted company","note":"Shows a clear preference for avoiding social contact or political entanglements."}}')
+ON CONFLICT (npc_name) DO UPDATE
+SET relationships = EXCLUDED.relationships;
+
+INSERT INTO public.bio_templates (npc_name, relationships)
+VALUES ('snow_fox', '{"Spriggans":{"aff":35,"type":"servant","relation":"mystic guardians","note":"Mysterious natural connection that can turn snow foxes from peaceful creatures into aggressive guardians."},"Children":{"aff":45,"type":"companion","relation":"potential adopters","note":"Can become companions when adopted through Hearthfire."},"Rabbits":{"aff":-70,"type":"predatory","relation":"primary prey","note":"Primary natural quarry in Skyrim''s snowy wilderness."},"Red Foxes":{"aff":15,"type":"kinship","relation":"distant cousins","note":"Share hunting grounds while generally maintaining separate territories."}}')
+ON CONFLICT (npc_name) DO UPDATE
+SET relationships = EXCLUDED.relationships;
+
+COMMIT;
