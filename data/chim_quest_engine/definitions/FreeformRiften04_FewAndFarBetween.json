@@ -32,10 +32,10 @@
           "The player has gathered the ingredients and returned to speak with me."
         ],
         "DELIVER_ALL_INGREDIENTS": [
-          "I have given the player my supply chest key and gold as thanks for restoring Master Elgrim's ingredients.",
-          "Player delivers the last of the ingredients and receives the supply chest key and gold.",
-          "Reward [ edit ] Ingun will reward you with leveled amount of gold (listed in the table below) for each set of ingredients brought to her.",
-          "The quality of her experiments seem to indicate a dark nature in this well-to-do girl, as she will allude to when speaking to her."
+          "I have given the player my supply chest key and leveled gold; Master Elgrim will be pleased I've restored his stock of rare ingredients used for powerful poisons.",
+          "The player is welcome to take what they need from my supply chest at the back of Elgrim's Elixirs; I will restock it with 2-5 random leveled potions every few days.",
+          "The key I provided will be needed each time the chest resets; I will remind the player to check the supply chest whenever we part ways.",
+          "My disposition toward the player has increased for their diligence in gathering the rare ingredients I needed."
         ]
       }
     }
