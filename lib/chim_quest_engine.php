@@ -418,6 +418,7 @@ if (!function_exists('chimQuestEngineBundledDefinitionFiles')) {
     function chimQuestEngineBundledDefinitionFiles()
     {
         $patterns = array(
+            __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'chim_quest_engine' . DIRECTORY_SEPARATOR . 'skyrim_quest_definitions.json',
             __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'chim_quest_engine' . DIRECTORY_SEPARATOR . 'definitions' . DIRECTORY_SEPARATOR . '*.json',
             __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'CHIM QUEST TRIGGERS' . DIRECTORY_SEPARATOR . '02_GCH_SkyrimMod_POC' . DIRECTORY_SEPARATOR . 'GCH - POC TEST' . DIRECTORY_SEPARATOR . 'SKSE' . DIRECTORY_SEPARATOR . 'Plugins' . DIRECTORY_SEPARATOR . 'GCH_Skeletons' . DIRECTORY_SEPARATOR . 'quests' . DIRECTORY_SEPARATOR . '*.json',
         );
@@ -432,6 +433,17 @@ if (!function_exists('chimQuestEngineBundledDefinitionFiles')) {
         }
 
         return array_keys($files);
+    }
+}
+
+if (!function_exists('chimQuestEngineIsListArray')) {
+    function chimQuestEngineIsListArray(array $value)
+    {
+        if (count($value) === 0) {
+            return true;
+        }
+
+        return array_keys($value) === range(0, count($value) - 1);
     }
 }
 
@@ -460,27 +472,14 @@ if (!function_exists('chimQuestEngineEnsureInstanceRow')) {
     }
 }
 
-if (!function_exists('chimQuestEngineImportDefinitionFile')) {
-    function chimQuestEngineImportDefinitionFile($filePath)
+if (!function_exists('chimQuestEngineImportDefinitionData')) {
+    function chimQuestEngineImportDefinitionData(array $definition, $sourcePath)
     {
         if (!chimQuestEngineReady()) {
             return array('success' => false, 'error' => 'quest engine tables not ready');
         }
-        if (!is_string($filePath) || !is_file($filePath)) {
-            return array('success' => false, 'error' => 'definition file not found');
-        }
 
-        $raw = file_get_contents($filePath);
-        if ($raw === false) {
-            return array('success' => false, 'error' => 'could not read definition file');
-        }
-
-        $definition = json_decode($raw, true);
-        if (!is_array($definition)) {
-            return array('success' => false, 'error' => 'definition json is invalid');
-        }
-
-        $questKey = chimQuestEngineNormalizeQuestKey($definition['quest_key'] ?? $definition['quest_editor_id'] ?? pathinfo($filePath, PATHINFO_FILENAME));
+        $questKey = chimQuestEngineNormalizeQuestKey($definition['quest_key'] ?? $definition['quest_editor_id'] ?? '');
         if ($questKey === '') {
             return array('success' => false, 'error' => 'definition missing quest key');
         }
@@ -494,7 +493,7 @@ if (!function_exists('chimQuestEngineImportDefinitionFile')) {
         $title = $GLOBALS["db"]->escape((string)($definition['title'] ?? $definition['quest_editor_id']));
         $sourcePlugin = $GLOBALS["db"]->escape((string)($definition['quest_plugin'] ?? ''));
         $sourceFormId = $GLOBALS["db"]->escape((string)($definition['quest_form_id'] ?? ''));
-        $sourcePath = $GLOBALS["db"]->escape((string)$filePath);
+        $sourcePath = $GLOBALS["db"]->escape((string)$sourcePath);
         $skeletonJson = $GLOBALS["db"]->escape(chimQuestEngineJsonEncode($definition));
         $questKeyEscaped = $GLOBALS["db"]->escape($questKey);
 
@@ -521,8 +520,49 @@ if (!function_exists('chimQuestEngineImportDefinitionFile')) {
             'quest_key' => $questKey,
             'quest_editor_id' => $definition['quest_editor_id'],
             'title' => $definition['title'] ?? $definition['quest_editor_id'],
-            'source_path' => $filePath,
+            'source_path' => $sourcePath,
         );
+    }
+}
+
+if (!function_exists('chimQuestEngineImportDefinitionFile')) {
+    function chimQuestEngineImportDefinitionFile($filePath)
+    {
+        if (!chimQuestEngineReady()) {
+            return array('success' => false, 'error' => 'quest engine tables not ready');
+        }
+        if (!is_string($filePath) || !is_file($filePath)) {
+            return array('success' => false, 'error' => 'definition file not found');
+        }
+
+        $raw = file_get_contents($filePath);
+        if ($raw === false) {
+            return array('success' => false, 'error' => 'could not read definition file');
+        }
+
+        $definition = json_decode($raw, true);
+        if (!is_array($definition)) {
+            return array('success' => false, 'error' => 'definition json is invalid');
+        }
+
+        if (chimQuestEngineIsListArray($definition)) {
+            $results = array();
+            foreach ($definition as $index => $bundledDefinition) {
+                if (!is_array($bundledDefinition)) {
+                    $results[] = array('success' => false, 'error' => 'bundled definition is invalid', 'source_path' => $filePath . '#' . $index);
+                    continue;
+                }
+                $questKey = chimQuestEngineNormalizeQuestKey($bundledDefinition['quest_key'] ?? $bundledDefinition['quest_editor_id'] ?? '');
+                $results[] = chimQuestEngineImportDefinitionData($bundledDefinition, $filePath . ($questKey !== '' ? '#' . $questKey : '#' . $index));
+            }
+            return $results;
+        }
+
+        if (empty($definition['quest_key']) && empty($definition['quest_editor_id'])) {
+            $definition['quest_key'] = pathinfo($filePath, PATHINFO_FILENAME);
+        }
+
+        return chimQuestEngineImportDefinitionData($definition, $filePath);
     }
 }
 
@@ -531,7 +571,14 @@ if (!function_exists('chimQuestEngineImportBundledDefinitions')) {
     {
         $results = array();
         foreach (chimQuestEngineBundledDefinitionFiles() as $filePath) {
-            $results[] = chimQuestEngineImportDefinitionFile($filePath);
+            $importResult = chimQuestEngineImportDefinitionFile($filePath);
+            if (isset($importResult[0]) && is_array($importResult[0])) {
+                foreach ($importResult as $result) {
+                    $results[] = $result;
+                }
+            } else {
+                $results[] = $importResult;
+            }
         }
 
         return $results;
