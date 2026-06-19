@@ -2226,8 +2226,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         ];
                         ?>
                         <?php foreach ($equipmentGroups as $groupLabel => $equipmentSlots): ?>
-                            <div style="border:1px solid #3d4654; border-radius:8px; background:#20242b; padding:10px; margin:10px 0;">
-                                <div style="color:#f27c11; font-weight:700; margin-bottom:8px;"><?= htmlspecialchars($groupLabel) ?></div>
+                            <div style="color:#f27c11; font-weight:700; margin:10px 0 6px;"><?= htmlspecialchars($groupLabel) ?></div>
+                            <div style="border:1px solid #3d4654; border-radius:8px; background:#20242b; padding:10px; margin-bottom:10px;">
                                 <div style="display:grid; grid-template-columns: 180px 1fr; gap:8px;">
                                     <?php foreach ($equipmentSlots as $slot => $label):
                                         $item = isset($metadataEquipment[$slot]) ? trim((string)$metadataEquipment[$slot]) : '';
