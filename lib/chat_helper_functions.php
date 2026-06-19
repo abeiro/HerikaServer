@@ -2810,6 +2810,22 @@ function isWhisperExecutionMode()
     return ($mode === "WHISPER");
 }
 
+function buildWhisperPrivatePeople($listenerName = "")
+{
+    $participants = [];
+
+    if (!empty($GLOBALS["PLAYER_NAME"])) {
+        appendUniqueActorName($participants, $GLOBALS["PLAYER_NAME"]);
+    }
+
+    $listenerName = trim((string)$listenerName);
+    if ($listenerName !== "") {
+        appendUniqueActorName($participants, $listenerName);
+    }
+
+    return normalizePeoplePipeList($participants);
+}
+
 function buildDialogueTargetSuffix($listenerName, $isSpeakingLoudly = false)
 {
     $listenerName = trim((string)$listenerName);

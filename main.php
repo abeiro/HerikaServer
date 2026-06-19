@@ -1049,6 +1049,12 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 
 
 if (in_array($gameRequest[0],["rechat","narration"]) ) {
+    $configuredChimMode = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
+    $configuredChimMode = strtoupper(trim((string)($configuredChimMode["value"] ?? "")));
+    if ($configuredChimMode === "WHISPER") {
+        Logger::info("[RECHAT_SELECT] WHISPER mode is active; terminating private rechat/narration request");
+        terminate();
+    }
     
     //RECHAT. Must choose if we continue conversation or no.
     // Note: narration is part of rechat system (random narrator interjections count as rechat rounds)
@@ -1679,6 +1685,15 @@ $authoritativePeople = $hasAuthoritativeRequestAudience ? $requestAudienceSnapsh
 $directiveFallbackPeople = "";
 if ($authoritativePeople === "" && in_array($gameRequest[0] ?? "", $directiveDialogueEventTypes, true)) {
     $directiveFallbackPeople = DataBeingsInCloseRange(true);
+}
+
+if (isWhisperExecutionMode() && in_array($gameRequest[0] ?? "", $playerInputEventTypes, true)) {
+    $whisperPrivatePeople = buildWhisperPrivatePeople($GLOBALS["HERIKA_NAME"] ?? "");
+    if ($whisperPrivatePeople !== "") {
+        $authoritativePeople = $whisperPrivatePeople;
+        $directiveFallbackPeople = "";
+        Logger::info("Scoped CACHE_PEOPLE for WHISPER {$gameRequest[0]}: " . $whisperPrivatePeople);
+    }
 }
 
 if ($authoritativePeople !== "") {
