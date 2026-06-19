@@ -96,7 +96,16 @@
         "quest_editor_id": "FreeformRiverwood01",
         "stage": 10
       },
-      "downstream": [],
+      "downstream": [
+        {
+          "type": "add_item",
+          "target": "player",
+          "plugin": "Skyrim.esm",
+          "item_form_id": "0x0005C847",
+          "count": 1,
+          "silent": false
+        }
+      ],
       "triggers": [
         {
           "type": "dialogue",
@@ -142,7 +151,16 @@
         "quest_editor_id": "FreeformRiverwood01",
         "stage": 20
       },
-      "downstream": [],
+      "downstream": [
+        {
+          "type": "add_item",
+          "target": "player",
+          "plugin": "Skyrim.esm",
+          "item_form_id": "0x0005C846",
+          "count": 1,
+          "silent": false
+        }
+      ],
       "triggers": [
         {
           "type": "dialogue",
