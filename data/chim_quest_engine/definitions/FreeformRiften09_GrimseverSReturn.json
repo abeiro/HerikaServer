@@ -29,10 +29,10 @@
           "Someone has offered to retrieve Grimsever for me, though it may be a fool's errand."
         ],
         "COMPLETE_QUEST": [
-          "My blade Grimsever has been returned to me. I am grateful and will accompany this person as a follower.",
-          "Player returns Grimsever to Mjoll; she becomes available as a follower.",
-          "Detailed Walkthrough [ edit ] Mjoll the Lioness [ edit ] Mjoll the Lioness lives in Riften where she spends her time speaking out against the Thieves Guild and talking to her faithful follower Aerin about the evils in.",
-          "If you are already level 14 or above when you first interact with Mjoll, you must also gain another level after your initial conversation and return to her before the dialogue option to begin this quest becomes."
+          "Grimsever is back in my hands. I am astonished someone actually reached it and survived — their skill rivals any I've encountered in my travels.",
+          "I have offered to accompany this person as a follower, honored by their prowess and admitting I still have much to learn.",
+          "If this person spoke of joining the Thieves Guild, I have reconsidered my hasty opinion of them — they returned my blade when they could have easily sold or kept it.",
+          "I am now willing to travel with this person as a companion and would consider marriage as well."
         ]
       }
     }
