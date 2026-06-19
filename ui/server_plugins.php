@@ -412,7 +412,7 @@ tr:hover td {
                         }
                     }
                     if (!empty($modDownloadUrl)) {
-                        echo ' <button onclick="window.open(\'' . htmlspecialchars($modDownloadUrl) . '\', \'_blank\')" class="btn-base btn-save">Skyrim MOD</button>';
+                        echo ' <button onclick="window.open(\'' . htmlspecialchars($modDownloadUrl) . '\', \'_blank\')" class="btn-base btn-save">Download Skyrim Modfile</button>';
                     }
 
                 } else {
