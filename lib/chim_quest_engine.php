@@ -418,8 +418,7 @@ if (!function_exists('chimQuestEngineBundledDefinitionFiles')) {
     function chimQuestEngineBundledDefinitionFiles()
     {
         $patterns = array(
-            __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'chim_quest_engine' . DIRECTORY_SEPARATOR . 'skyrim_quest_definitions.json',
-            __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'chim_quest_engine' . DIRECTORY_SEPARATOR . 'definitions' . DIRECTORY_SEPARATOR . '*.json',
+            __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'skyrim_quest_definitions.json',
             __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'CHIM QUEST TRIGGERS' . DIRECTORY_SEPARATOR . '02_GCH_SkyrimMod_POC' . DIRECTORY_SEPARATOR . 'GCH - POC TEST' . DIRECTORY_SEPARATOR . 'SKSE' . DIRECTORY_SEPARATOR . 'Plugins' . DIRECTORY_SEPARATOR . 'GCH_Skeletons' . DIRECTORY_SEPARATOR . 'quests' . DIRECTORY_SEPARATOR . '*.json',
         );
 
