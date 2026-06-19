@@ -249,7 +249,16 @@
         "quest_plugin": "Skyrim.esm",
         "stage": 100
       },
-      "downstream": [],
+      "downstream": [
+        {
+          "type": "remove_item",
+          "target": "player",
+          "plugin": "Skyrim.esm",
+          "item_form_id": "0x000813B6",
+          "count": 1,
+          "silent": false
+        }
+      ],
       "triggers": [
         {
           "type": "quest_stage",

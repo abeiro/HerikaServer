@@ -30,6 +30,14 @@
         ],
         "QUEST_COMPLETE": [
           "The matter with Camilla has been settled and I am grateful for the help."
+        ],
+        "DELIVER_SVEN_LETTER_TO_CAMILLA": [
+          "The fake letter has been delivered to Camilla and she has turned against Faendal.",
+          "The player should return to me for thanks and a reward."
+        ],
+        "RETURN_TO_SVEN": [
+          "The player returned after delivering the fake letter to Camilla.",
+          "I rewarded the player for helping me with Camilla."
         ]
       }
     },
@@ -48,6 +56,14 @@
         ],
         "QUEST_COMPLETE": [
           "The matter with Camilla has been settled and I am grateful for the help."
+        ],
+        "DELIVER_FAENDAL_LETTER_TO_CAMILLA": [
+          "The fake letter has been delivered to Camilla and she has turned against Sven.",
+          "The player should return to me for thanks and a reward."
+        ],
+        "RETURN_TO_FAENDAL": [
+          "The player returned after delivering the fake letter to Camilla.",
+          "I rewarded the player for helping me with Camilla."
         ]
       }
     },
@@ -56,7 +72,16 @@
         "I run the Riverwood Trader with my brother Lucan.",
         "Both Sven and Faendal are interested in me and their rivalry is tiresome."
       ],
-      "beat_facts": {}
+      "beat_facts": {
+        "DELIVER_SVEN_LETTER_TO_CAMILLA": [
+          "The player showed me a fake letter meant to make Faendal look cruel.",
+          "Sven seems to be the wronged party in this rivalry."
+        ],
+        "DELIVER_FAENDAL_LETTER_TO_CAMILLA": [
+          "The player showed me a fake letter meant to make Sven look selfish.",
+          "Faendal seems to be the wronged party in this rivalry."
+        ]
+      }
     }
   },
   "beats": [
@@ -138,7 +163,13 @@
       "trigger_mode": "any",
       "prerequisites": [],
       "allow_natural_start": true,
-      "start_conditions": []
+      "start_conditions": [],
+      "conditions": [
+        {
+          "type": "stage_not_done",
+          "stage": 20
+        }
+      ]
     },
     {
       "id": "AGREE_HELP_FAENDAL",
@@ -193,6 +224,334 @@
       "trigger_mode": "any",
       "prerequisites": [],
       "allow_natural_start": true,
+      "start_conditions": [],
+      "conditions": [
+        {
+          "type": "stage_not_done",
+          "stage": 210
+        }
+      ]
+    },
+    {
+      "id": "DELIVER_SVEN_LETTER_TO_CAMILLA",
+      "focus_npc": "Camilla Valerius",
+      "comment": "Player delivers Sven's fake letter from Faendal to Camilla, making Faendal look bad and sending the player back to Sven.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00074A83",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "FreeformRiverwood01",
+        "stage": 220
+      },
+      "downstream": [
+        {
+          "type": "remove_item",
+          "target": "player",
+          "plugin": "Skyrim.esm",
+          "item_form_id": "0x0005C847",
+          "count": 1,
+          "silent": false
+        },
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00074A83",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 110,
+          "completed": true
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00074A83",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 220,
+          "displayed": true
+        }
+      ],
+      "required_item": {
+        "name": "Sven's Fake Letter from Faendal",
+        "plugin": "Skyrim.esm",
+        "form_id": "0x0005C847"
+      },
+      "conditions": [
+        {
+          "type": "stage_done",
+          "stage": 10
+        },
+        {
+          "type": "stage_not_done",
+          "stage": 210
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "here is the letter",
+            "i have a letter for you",
+            "letter from faendal",
+            "faendal's letter",
+            "sven wanted you to see this"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player clearly gives Camilla the forged letter carried for Sven.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "Camilla, here is the letter Sven asked me to bring you.",
+            "I have a letter from Faendal that Sven wanted you to read.",
+            "Here is the letter about Faendal.",
+            "Take this letter; Sven said you should see it."
+          ],
+          "examples_no": [
+            "Do you know Sven?",
+            "What do you think of Faendal?",
+            "I heard there is a rivalry.",
+            "Tell me about Riverwood."
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "DELIVER_FAENDAL_LETTER_TO_CAMILLA",
+      "focus_npc": "Camilla Valerius",
+      "comment": "Player delivers Faendal's fake letter from Sven to Camilla, making Sven look bad and sending the player back to Faendal.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00074A83",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "FreeformRiverwood01",
+        "stage": 210
+      },
+      "downstream": [
+        {
+          "type": "remove_item",
+          "target": "player",
+          "plugin": "Skyrim.esm",
+          "item_form_id": "0x0005C846",
+          "count": 1,
+          "silent": false
+        },
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00074A83",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10,
+          "completed": true
+        },
+        {
+          "type": "set_objective_displayed",
+          "quest_form_id": "0x00074A83",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 210,
+          "displayed": true
+        }
+      ],
+      "required_item": {
+        "name": "Faendal's Fake Letter from Sven",
+        "plugin": "Skyrim.esm",
+        "form_id": "0x0005C846"
+      },
+      "conditions": [
+        {
+          "type": "stage_done",
+          "stage": 20
+        },
+        {
+          "type": "stage_not_done",
+          "stage": 210
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "here is the letter",
+            "i have a letter for you",
+            "letter from sven",
+            "sven's letter",
+            "faendal wanted you to see this"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player clearly gives Camilla the forged letter carried for Faendal.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "Camilla, here is the letter Faendal asked me to bring you.",
+            "I have a letter from Sven that Faendal wanted you to read.",
+            "Here is the letter about Sven.",
+            "Take this letter; Faendal said you should see it."
+          ],
+          "examples_no": [
+            "Do you know Faendal?",
+            "What do you think of Sven?",
+            "I heard there is a rivalry.",
+            "Tell me about Riverwood."
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "RETURN_TO_FAENDAL",
+      "focus_npc": "Faendal",
+      "comment": "Player returns to Faendal after Camilla received the fake letter, completing Faendal's branch of the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00074A83",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "FreeformRiverwood01",
+        "stage": 310
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00074A83",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 10,
+          "completed": true
+        },
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00074A83",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 210,
+          "completed": true
+        }
+      ],
+      "conditions": [
+        {
+          "type": "stage_done",
+          "stage": 210
+        },
+        {
+          "type": "stage_not_done",
+          "stage": 310
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "i gave her the letter",
+            "camilla has the letter",
+            "she has the letter",
+            "i delivered the letter",
+            "it is done"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player clearly reports to Faendal that Camilla received the fake letter and the job is done.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I gave Camilla the letter.",
+            "Camilla has the letter now.",
+            "I delivered the letter to Camilla.",
+            "It is done; she read it."
+          ],
+          "examples_no": [
+            "I still need to talk to Camilla.",
+            "Where is Camilla?",
+            "Tell me about Sven.",
+            "Do you have work?"
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DELIVER_FAENDAL_LETTER_TO_CAMILLA"
+      ],
+      "allow_natural_start": false,
+      "start_conditions": []
+    },
+    {
+      "id": "RETURN_TO_SVEN",
+      "focus_npc": "Sven",
+      "comment": "Player returns to Sven after Camilla received the fake letter, completing Sven's branch of the quest.",
+      "action": {
+        "type": "set_stage",
+        "quest_form_id": "0x00074A83",
+        "quest_plugin": "Skyrim.esm",
+        "quest_editor_id": "FreeformRiverwood01",
+        "stage": 320
+      },
+      "downstream": [
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00074A83",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 110,
+          "completed": true
+        },
+        {
+          "type": "set_objective_completed",
+          "quest_form_id": "0x00074A83",
+          "quest_plugin": "Skyrim.esm",
+          "objective_index": 220,
+          "completed": true
+        }
+      ],
+      "conditions": [
+        {
+          "type": "stage_done",
+          "stage": 220
+        },
+        {
+          "type": "stage_not_done",
+          "stage": 320
+        }
+      ],
+      "triggers": [
+        {
+          "type": "dialogue",
+          "keywords": [
+            "i gave her the letter",
+            "camilla has the letter",
+            "she has the letter",
+            "i delivered the letter",
+            "it is done"
+          ],
+          "min_matches": 1
+        },
+        {
+          "type": "dialogue_intent",
+          "intent": "Player clearly reports to Sven that Camilla received the fake letter and the job is done.",
+          "requires_explicit_commitment": true,
+          "min_confidence": 0.82,
+          "examples_yes": [
+            "I gave Camilla the letter.",
+            "Camilla has the letter now.",
+            "I delivered the letter to Camilla.",
+            "It is done; she read it."
+          ],
+          "examples_no": [
+            "I still need to talk to Camilla.",
+            "Where is Camilla?",
+            "Tell me about Faendal.",
+            "Do you have work?"
+          ]
+        }
+      ],
+      "trigger_mode": "any",
+      "prerequisites": [
+        "DELIVER_SVEN_LETTER_TO_CAMILLA"
+      ],
+      "allow_natural_start": false,
       "start_conditions": []
     },
     {
@@ -209,7 +568,7 @@
           "quest_form_id": "0x00074A83",
           "quest_plugin": "Skyrim.esm",
           "quest_editor_id": "FreeformRiverwood01",
-          "min_stage": 210
+          "min_stage": 310
         }
       ],
       "trigger_mode": "any",

@@ -118,6 +118,14 @@
           "quest_form_id": "0x0001D8D1",
           "quest_plugin": "Dragonborn.esm",
           "objective_index": 200
+        },
+        {
+          "type": "remove_item",
+          "target": "player",
+          "plugin": "Skyrim.esm",
+          "item_form_id": "0x0001D8D0",
+          "count": 1,
+          "silent": false
         }
       ],
       "triggers": [

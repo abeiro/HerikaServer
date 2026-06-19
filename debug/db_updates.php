@@ -4230,7 +4230,7 @@ if ($checkTableExists("skyrim_quest_definitions") != -1) {
     require_once(__DIR__ . "/../lib/chim_quest_engine.php");
     try {
         $questDefinitionCount = $db->fetchOne("SELECT COUNT(*) AS n FROM public.skyrim_quest_definitions");
-        $questDefinitionSeedVersion = 20260618010;
+        $questDefinitionSeedVersion = 20260618014;
         if (intval($questDefinitionCount["n"] ?? 0) === 0 || $checkVersion("skyrim_quest_definitions") < $questDefinitionSeedVersion) {
             $questImportResults = chimQuestEngineImportBundledDefinitions();
             $questImportSuccessCount = 0;
@@ -4404,6 +4404,49 @@ if ($checkTableExists("skyrim_quest_definitions") != -1) {
             Logger::info("Applied patch skyrim_quest_runtime_fixups 20260616004 - reset Favor204 for actor-dialogue actor-name startup fix");
         } catch (Exception $e) {
             Logger::warn(__FILE__ . " could not apply skyrim quest runtime fixups 20260616004: " . $e->getMessage());
+        }
+    }
+
+    if ($checkVersion("skyrim_quest_runtime_fixups") < 20260618012) {
+        try {
+            $riverwoodKey = $db->escape("freeformriverwood01_lovelyletter");
+
+            $db->execQuery("
+                UPDATE public.skyrim_quest_beat_state bs
+                   SET fired = false,
+                       fired_order = NULL,
+                       fired_gamets = NULL,
+                       evidence_json = '{}'::jsonb,
+                       updated_at = now()
+                  FROM public.skyrim_quest_instances i
+                 WHERE bs.quest_key = '{$riverwoodKey}'
+                   AND i.quest_key = bs.quest_key
+                   AND bs.beat_id = 'AGREE_HELP_SVEN'
+                   AND COALESCE(i.current_stage, 0) >= 20
+                   AND COALESCE(i.current_stage, 0) < 210
+                   AND COALESCE(i.state_json, '{}'::jsonb) #>> '{has_items,skyrim.esm:0x0005c846}' IS NOT NULL
+            ");
+
+            $db->execQuery("
+                UPDATE public.skyrim_quest_beat_state bs
+                   SET fired = false,
+                       fired_order = NULL,
+                       fired_gamets = NULL,
+                       evidence_json = '{}'::jsonb,
+                       updated_at = now()
+                  FROM public.skyrim_quest_instances i
+                 WHERE bs.quest_key = '{$riverwoodKey}'
+                   AND i.quest_key = bs.quest_key
+                   AND bs.beat_id = 'AGREE_HELP_FAENDAL'
+                   AND COALESCE(i.current_stage, 0) >= 10
+                   AND COALESCE(i.current_stage, 0) < 20
+                   AND COALESCE(i.state_json, '{}'::jsonb) #>> '{has_items,skyrim.esm:0x0005c847}' IS NOT NULL
+            ");
+
+            $updateVersion("skyrim_quest_runtime_fixups", 20260618012);
+            Logger::info("Applied patch skyrim_quest_runtime_fixups 20260618012 - reset incorrect Riverwood Lovely Letter branch backfill state");
+        } catch (Exception $e) {
+            Logger::warn(__FILE__ . " could not apply skyrim quest runtime fixups 20260618012: " . $e->getMessage());
         }
     }
 }

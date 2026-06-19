@@ -145,7 +145,7 @@ function pretty_label(string $flatName): string
         'SHORTER_NEARBY_ITEM_LIST' => 'Shorter Nearby Item List',
         'BGL_TRIGGER_DAYS' => 'Background Life Days Cooldown',
         'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
-        'CHIM_AI_QUEST_PROGRESSION' => 'CHIM AI Quest Progression',
+        'CHIM_AI_QUEST_PROGRESSION' => 'CHIM AI Quest Progression (Beta)',
         'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
     ];
     if (isset($customLabels[$flatName])) {

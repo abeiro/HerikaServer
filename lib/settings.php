@@ -273,7 +273,7 @@ if (!function_exists('chimPrettySettingLabel')) {
             'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
             'GLOBAL_STT_CONNECTOR_ID' => 'Speech To Text Connector',
             'GLOBAL_ITT_CONNECTOR_ID' => 'Image To Text Connector',
-            'CHIM_AI_QUEST_PROGRESSION' => 'AI Quest Progression',
+            'CHIM_AI_QUEST_PROGRESSION' => 'AI Quest Progression (Beta)',
             'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
         ];
         if (isset($customLabels[$flatName])) {

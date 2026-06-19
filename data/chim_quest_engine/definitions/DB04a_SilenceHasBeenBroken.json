@@ -169,7 +169,16 @@
         "quest_plugin": "Skyrim.esm",
         "stage": 20
       },
-      "downstream": [],
+      "downstream": [
+        {
+          "type": "remove_item",
+          "target": "player",
+          "plugin": "Skyrim.esm",
+          "item_form_id": "0x0005BF2E",
+          "count": 1,
+          "silent": false
+        }
+      ],
       "triggers": [
         {
           "type": "quest_stage",
@@ -272,7 +281,16 @@
         "quest_plugin": "Skyrim.esm",
         "stage": 40
       },
-      "downstream": [],
+      "downstream": [
+        {
+          "type": "remove_item",
+          "target": "player",
+          "plugin": "Skyrim.esm",
+          "item_form_id": "0x0005B49E",
+          "count": 1,
+          "silent": false
+        }
+      ],
       "triggers": [
         {
           "type": "quest_stage",
