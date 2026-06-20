@@ -238,7 +238,8 @@ function chimPluginInstallerRunMigrations($targetDir, $packageName) {
 
     try {
         $conn = chimPluginInstallerConnectToDatabase();
-        pg_query($conn, "CREATE TABLE IF NOT EXISTS plugin_migrations (plugin_name VARCHAR(255), migration_name VARCHAR(255), executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (plugin_name, migration_name))");
+        pg_query($conn, "CREATE SCHEMA IF NOT EXISTS plugins");
+        pg_query($conn, "CREATE TABLE IF NOT EXISTS plugins.plugin_migrations (plugin_name VARCHAR(255), migration_name VARCHAR(255), executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (plugin_name, migration_name))");
 
         $migrations = glob($migrationsDir . DIRECTORY_SEPARATOR . "*.sql");
         if (empty($migrations)) {
@@ -250,7 +251,7 @@ function chimPluginInstallerRunMigrations($targetDir, $packageName) {
         sort($migrations);
         foreach ($migrations as $migrationFile) {
             $migrationName = basename($migrationFile);
-            $result = pg_query_params($conn, "SELECT 1 FROM plugin_migrations WHERE plugin_name = $1 AND migration_name = $2", [$packageName, $migrationName]);
+            $result = pg_query_params($conn, "SELECT 1 FROM plugins.plugin_migrations WHERE plugin_name = $1 AND migration_name = $2", [$packageName, $migrationName]);
             if ($result && pg_num_rows($result) > 0) {
                 echo "<p class='log-skipped'>Skipping already executed migration: " . chimPluginInstallerEscape($migrationName) . "</p>\n";
                 continue;
@@ -262,7 +263,7 @@ function chimPluginInstallerRunMigrations($targetDir, $packageName) {
             if ($migrationResult === false) {
                 throw new Exception("Migration failed: " . $migrationName . " - " . pg_last_error($conn));
             }
-            pg_query_params($conn, "INSERT INTO plugin_migrations (plugin_name, migration_name) VALUES ($1, $2)", [$packageName, $migrationName]);
+            pg_query_params($conn, "INSERT INTO plugins.plugin_migrations (plugin_name, migration_name) VALUES ($1, $2)", [$packageName, $migrationName]);
             echo "<p class='log-completed'>Migration completed: " . chimPluginInstallerEscape($migrationName) . "</p>\n";
         }
 

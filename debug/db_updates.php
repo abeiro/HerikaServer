@@ -67,6 +67,7 @@ $updateVersion = function($tablename,$version) {
 
 // Ensure base schema and extensions exist for fresh installs
 $db->execQuery('CREATE SCHEMA IF NOT EXISTS public');
+$db->execQuery('CREATE SCHEMA IF NOT EXISTS plugins');
 $db->execQuery("SET search_path TO public");
 $db->execQuery('CREATE EXTENSION IF NOT EXISTS vector');
 $db->execQuery('CREATE EXTENSION IF NOT EXISTS pg_trgm');
