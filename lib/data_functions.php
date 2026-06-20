@@ -407,6 +407,27 @@ function chimEquipmentProfileSlotKeys(): array
     return array_keys(chimEquipmentAllSlotLabels());
 }
 
+function chimEquipmentSlotHasVisibleItem(array $equipmentData, string $slot): bool
+{
+    if (empty($equipmentData[$slot])) {
+        return false;
+    }
+
+    $itemName = trim((string) $equipmentData[$slot]);
+    return $itemName !== '' && !isItemBlacklisted($itemName) && stripos($itemName, 'Missing Name') === false;
+}
+
+function chimEquipmentHasBodyCoverage(array $equipmentData): bool
+{
+    foreach (['armor', 'shirt', 'cape'] as $slot) {
+        if (chimEquipmentSlotHasVisibleItem($equipmentData, $slot)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function chimFormatEquipmentPromptLines(array $equipmentData, array $slotLabels, callable $getItemDescription = null, array &$describedBaseids = []): array
 {
     $equipmentParts = [];
@@ -893,7 +914,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                                         'argonian', 'khajiit', 'khajit'];
                         $npcRace = isset($currentNpcData["race"]) ? strtolower(trim($currentNpcData["race"])) : '';
                         
-                        if ($npcRace && in_array($npcRace, $humanoidRaces) && empty($metaData["equipment"]["armor"])) {
+                        if ($npcRace && in_array($npcRace, $humanoidRaces) && !chimEquipmentHasBodyCoverage($metaData["equipment"])) {
                             $profileString .= ". Naked (no body armor/clothing worn)";
                         }
                     }
@@ -6810,7 +6831,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                             'argonian', 'khajiit', 'khajit'];
             $npcRace = isset($currentNpcData["race"]) ? strtolower(trim($currentNpcData["race"])) : '';
             
-            if ($npcRace && in_array($npcRace, $humanoidRaces) && empty($metaData["equipment"]["armor"])) {
+            if ($npcRace && in_array($npcRace, $humanoidRaces) && !chimEquipmentHasBodyCoverage($metaData["equipment"])) {
                 $EQUIPMENT_ADD .= "\nNote: You are naked (no body armor/clothing worn).";
             }
             
@@ -7018,7 +7039,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                                     'argonian', 'khajiit', 'khajit'];
                     $targetRace = isset($targetNpcData["race"]) ? strtolower(trim($targetNpcData["race"])) : '';
                     
-                    if ($targetRace && in_array($targetRace, $humanoidRaces) && empty($targetMetaData["equipment"]["armor"])) {
+                    if ($targetRace && in_array($targetRace, $humanoidRaces) && !chimEquipmentHasBodyCoverage($targetMetaData["equipment"])) {
                         $TARGET_EQUIPMENT_ADD .= "\nNote: {$targetName} is naked (no body armor/clothing worn).";
                     }
                     
