@@ -55,6 +55,8 @@ $BOOK_EVENT_ALWAYS_NARRATOR=false; //Only The Narrator summarizes books.
 $NARRATOR_TALKS=true; //Enables the Narrator.
 $NARRATOR_WELCOME=false;
 $QUEST_COMMENT = false;
+$CHIM_AI_QUEST_PROGRESSION=false; //Enable CHIM AI quest progression. Allows you to progress regular Skyrim quests with AI dialogue. Most vanilla non radiant quests are supported. Open the AI Quest Manager in Immersion for more info.
+$CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT=true; //When enabled, only direct player dialogue can fire CHIM AI quest beats and queue quest stage actions. Disable to let NPC responses and game interaction events advance or start quest beats.
 $QUEST_COMMENT_CHANCE= "10%";
 $CURRENT_TASK=false; //Sends current plan/quest to the AI
  //The Narrator will recap previous events after a save is loaded.

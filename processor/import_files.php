@@ -1,6 +1,7 @@
 <?php
 
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."action_catalog.php");
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."chim_quest_engine.php");
 
 /* CSV Import Processor - Called by csv_import.php endpoint
  * Handles CSV imports:
@@ -9,6 +10,7 @@ require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."cor
  * - dynamic_oghma_import: Quest-specific knowledge entries
  * - description_import: Item/entity description data
  * - custom_action_import: DB-backed custom action definitions
+ * - traditional_quest_import: CHIM AI quest definitions
  */
 if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['type'])) {
     $import_type = $_POST['type'];
@@ -44,6 +46,9 @@ if (isset($_POST['csv_import']) && $_POST['csv_import'] == '1' && isset($_POST['
             break;
         case 'custom_action_import':
             handleCustomActionImport($csvData, $timestamp, $game_timestamp, $filename);
+            break;
+        case 'traditional_quest_import':
+            handleTraditionalQuestImport($csvData, $timestamp, $game_timestamp, $filename);
             break;
         default:
             Logger::error("CSV Import: Unknown import type: $import_type");
@@ -765,6 +770,256 @@ function handleDescriptionImport($csvData, $timestamp, $game_timestamp) {
     }
     
     return true;
+}
+
+function traditionalQuestImportCsvGetValue($headerMap, $data, $columnName, $default = '')
+{
+    $columnName = strtolower(trim($columnName));
+    if (!isset($headerMap[$columnName])) {
+        return $default;
+    }
+
+    $index = $headerMap[$columnName];
+    if (!isset($data[$index])) {
+        return $default;
+    }
+
+    return trim(strval($data[$index]));
+}
+
+function traditionalQuestImportCsvToBool($value, $default = true)
+{
+    $text = strtolower(trim(strval($value)));
+    if ($text === '') {
+        return (bool) $default;
+    }
+
+    return in_array($text, ['1', 'true', 't', 'yes', 'y', 'on', 'enabled'], true);
+}
+
+function traditionalQuestImportDecodeJson($rawValue, $fieldName, &$errorMessage)
+{
+    $errorMessage = '';
+    $text = trim(strval($rawValue));
+    if ($text === '') {
+        return null;
+    }
+
+    $decoded = json_decode($text, true);
+    if (!is_array($decoded)) {
+        $errorMessage = "Invalid JSON for {$fieldName}: " . json_last_error_msg();
+        return null;
+    }
+
+    return $decoded;
+}
+
+function traditionalQuestImportApplyTextOverride(&$definition, $fieldName, $value)
+{
+    $text = trim(strval($value));
+    if ($text !== '') {
+        $definition[$fieldName] = $text;
+    }
+}
+
+function traditionalQuestImportFromCsvData($csvData, $filename = '')
+{
+    global $db;
+
+    if (!chimQuestEngineReady()) {
+        throw new Exception("Quest tables are not ready.");
+    }
+
+    $summary = [
+        'processed' => 0,
+        'skipped' => 0,
+        'errors' => 0,
+        'messages' => [],
+    ];
+
+    $tempFile = tempnam(sys_get_temp_dir(), 'traditional_quest_import_');
+    file_put_contents($tempFile, $csvData);
+
+    $handle = fopen($tempFile, 'r');
+    if ($handle === false) {
+        if (file_exists($tempFile)) {
+            unlink($tempFile);
+        }
+        throw new Exception("Could not open temporary CSV file.");
+    }
+
+    $header = fgetcsv($handle, 0, ',');
+    if ($header === false || empty($header)) {
+        fclose($handle);
+        unlink($tempFile);
+        throw new Exception("Invalid CSV header.");
+    }
+
+    $headerMap = [];
+    foreach ($header as $i => $colName) {
+        $headerMap[strtolower(trim($colName))] = $i;
+    }
+
+    $hasSkeletonJson = isset($headerMap['skeleton_json']) || isset($headerMap['definition_json']) || isset($headerMap['raw_json']);
+    $hasBeatsJson = isset($headerMap['beats_json']);
+    if (!$hasSkeletonJson && !$hasBeatsJson) {
+        fclose($handle);
+        unlink($tempFile);
+        throw new Exception("Invalid CSV header. Expected skeleton_json or beats_json.");
+    }
+
+    $line = 1;
+    while (($data = fgetcsv($handle, 0, ',')) !== false) {
+        $line++;
+        if (empty($data)) {
+            continue;
+        }
+
+        $errorMessage = '';
+        $skeletonRaw = traditionalQuestImportCsvGetValue($headerMap, $data, 'skeleton_json', '');
+        if ($skeletonRaw === '') {
+            $skeletonRaw = traditionalQuestImportCsvGetValue($headerMap, $data, 'definition_json', '');
+        }
+        if ($skeletonRaw === '') {
+            $skeletonRaw = traditionalQuestImportCsvGetValue($headerMap, $data, 'raw_json', '');
+        }
+
+        $definition = traditionalQuestImportDecodeJson($skeletonRaw, 'skeleton_json', $errorMessage);
+        if ($definition === null && $skeletonRaw !== '') {
+            Logger::error("Traditional Quest Import: line {$line} - {$errorMessage}");
+            $summary['errors']++;
+            $summary['messages'][] = "Line {$line}: {$errorMessage}";
+            continue;
+        }
+
+        if ($definition === null) {
+            $definition = [];
+        }
+
+        traditionalQuestImportApplyTextOverride($definition, 'quest_key', traditionalQuestImportCsvGetValue($headerMap, $data, 'quest_key', ''));
+        traditionalQuestImportApplyTextOverride($definition, 'quest_editor_id', traditionalQuestImportCsvGetValue($headerMap, $data, 'quest_editor_id', ''));
+        traditionalQuestImportApplyTextOverride($definition, 'title', traditionalQuestImportCsvGetValue($headerMap, $data, 'title', ''));
+        traditionalQuestImportApplyTextOverride($definition, 'quest_plugin', traditionalQuestImportCsvGetValue($headerMap, $data, 'quest_plugin', ''));
+        traditionalQuestImportApplyTextOverride($definition, 'quest_form_id', traditionalQuestImportCsvGetValue($headerMap, $data, 'quest_form_id', ''));
+        traditionalQuestImportApplyTextOverride($definition, 'description', traditionalQuestImportCsvGetValue($headerMap, $data, 'description', ''));
+
+        $beatsRaw = traditionalQuestImportCsvGetValue($headerMap, $data, 'beats_json', '');
+        if ($beatsRaw !== '') {
+            $beats = traditionalQuestImportDecodeJson($beatsRaw, 'beats_json', $errorMessage);
+            if ($beats === null) {
+                Logger::error("Traditional Quest Import: line {$line} - {$errorMessage}");
+                $summary['errors']++;
+                $summary['messages'][] = "Line {$line}: {$errorMessage}";
+                continue;
+            }
+            $definition['beats'] = $beats;
+        }
+
+        $npcFactsRaw = traditionalQuestImportCsvGetValue($headerMap, $data, 'npc_facts_json', '');
+        if ($npcFactsRaw !== '') {
+            $npcFacts = traditionalQuestImportDecodeJson($npcFactsRaw, 'npc_facts_json', $errorMessage);
+            if ($npcFacts === null) {
+                Logger::error("Traditional Quest Import: line {$line} - {$errorMessage}");
+                $summary['errors']++;
+                $summary['messages'][] = "Line {$line}: {$errorMessage}";
+                continue;
+            }
+            $definition['npc_facts'] = $npcFacts;
+        }
+
+        $naturalStartRaw = traditionalQuestImportCsvGetValue($headerMap, $data, 'natural_start_json', '');
+        if ($naturalStartRaw !== '') {
+            $naturalStart = traditionalQuestImportDecodeJson($naturalStartRaw, 'natural_start_json', $errorMessage);
+            if ($naturalStart === null) {
+                Logger::error("Traditional Quest Import: line {$line} - {$errorMessage}");
+                $summary['errors']++;
+                $summary['messages'][] = "Line {$line}: {$errorMessage}";
+                continue;
+            }
+            $definition['natural_start'] = $naturalStart;
+        }
+
+        if (empty($definition['quest_key']) && empty($definition['quest_editor_id'])) {
+            Logger::warn("Traditional Quest Import: line {$line} missing quest_key and quest_editor_id");
+            $summary['errors']++;
+            $summary['messages'][] = "Line {$line}: missing quest_key or quest_editor_id.";
+            continue;
+        }
+
+        if (empty($definition['title'])) {
+            $definition['title'] = $definition['quest_editor_id'] ?? $definition['quest_key'];
+        }
+        if (empty($definition['skeleton_type'])) {
+            $definition['skeleton_type'] = 'quest';
+        }
+        if (!isset($definition['beats']) || !is_array($definition['beats'])) {
+            Logger::warn("Traditional Quest Import: line {$line} missing beats array");
+            $summary['errors']++;
+            $summary['messages'][] = "Line {$line}: missing beats array.";
+            continue;
+        }
+
+        $sourcePath = 'csv:' . ($filename !== '' ? $filename : 'traditional_quest_import') . ':line' . $line;
+        if (!chimQuestEngineUpsertDefinition($definition, $sourcePath)) {
+            $summary['errors']++;
+            $summary['messages'][] = "Line {$line}: failed to upsert quest definition.";
+            continue;
+        }
+
+        $definition['quest_key'] = chimQuestEngineNormalizeQuestKey($definition['quest_key'] ?? $definition['quest_editor_id'] ?? '');
+        chimQuestEngineEnsureInstanceRow($definition);
+
+        $activeRaw = traditionalQuestImportCsvGetValue($headerMap, $data, 'active', '');
+        if ($activeRaw !== '') {
+            $active = traditionalQuestImportCsvToBool($activeRaw, true);
+            $questKeyCn = $db->escape($definition['quest_key']);
+            $activeSql = $active ? 'true' : 'false';
+            $db->execQuery("
+                UPDATE public.skyrim_quest_definitions
+                SET active = {$activeSql},
+                    updated_at = now()
+                WHERE quest_key = '{$questKeyCn}'
+            ");
+        }
+
+        $summary['processed']++;
+    }
+
+    fclose($handle);
+    unlink($tempFile);
+
+    return $summary;
+}
+
+function handleTraditionalQuestImport($csvData, $timestamp, $game_timestamp, $filename = '')
+{
+    Logger::info("Traditional Quest Import: STARTED - Processing CSV data upload");
+
+    try {
+        $summary = traditionalQuestImportFromCsvData($csvData, $filename);
+        Logger::info(
+            "Traditional Quest Import: Processing complete. {$summary['processed']} records processed, {$summary['errors']} errors"
+        );
+
+        $summaryPrefix = ($filename !== '') ? "file={$filename}; " : '';
+        herikaLogCsvImportAuditEvent(
+            'traditional_quest_import',
+            $summaryPrefix . "{$summary['processed']} records processed, {$summary['errors']} errors",
+            $timestamp,
+            $game_timestamp
+        );
+
+        return true;
+    } catch (Exception $e) {
+        Logger::error("Traditional Quest Import: Fatal error processing CSV: " . $e->getMessage());
+        herikaLogCsvImportAuditEvent(
+            'traditional_quest_import',
+            "failed: " . $e->getMessage(),
+            $timestamp,
+            $game_timestamp
+        );
+        return false;
+    }
 }
 
 function customActionImportCsvGetValue($headerMap, $data, $columnName, $default = '')

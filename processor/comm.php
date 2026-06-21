@@ -152,6 +152,9 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     */
     $db->delete("memory_summary", "gamets_truncated>{$gameRequest[2]}  ");
     $db->delete("memory", "gamets>{$gameRequest[2]}  ");
+    if (function_exists('chimQuestEngineResetRuntime')) {
+        chimQuestEngineResetRuntime(true);
+    }
 
     //$db->delete("diarylogv2", "true");
     //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
@@ -306,6 +309,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     }
     $db->delete("memory_summary", " 1=1 ");
     $db->delete("memory", " 1=1 ");
+    if (function_exists('chimQuestEngineResetRuntime')) {
+        chimQuestEngineResetRuntime(true);
+    }
 
     //$db->delete("diarylogv2", "true");
     //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");

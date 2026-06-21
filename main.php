@@ -43,6 +43,7 @@ require_once($path . "lib/memory_helper_vectordb.php");
 require_once($path . "lib/llm_randomizer.php");
 require_once($path . "lib/utils_game_timestamp.php");
 require_once($path . "lib/logger.php"); 
+require_once($path . "lib/chim_quest_engine.php");
 requireFilesRecursively(__DIR__."/ext/","globals.php");
 
 // New profile system
@@ -2347,6 +2348,14 @@ if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
 }
 
 $knowledgeSection = "";
+$questContext = chimQuestEngineBuildPromptContext(
+    $GLOBALS["HERIKA_NAME"] ?? '',
+    $GLOBALS["CACHE_LOCATION"] ?? ''
+);
+if ($questContext !== '') {
+    $dynamicBiography .= $questContext;
+}
+
 if (!empty($GLOBALS["OGHMA_HINT"])) {
     $knowledgeSection = "\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"] . "\n</knowledge>";
 }
