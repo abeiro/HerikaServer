@@ -6861,6 +6861,15 @@ if ($relationshipMetadataNeedsRefresh) {
     }
 }
 
+if ($checkVersion("memory") < 20260617001) {
+    Logger::debug("Applying memory 20260617001 - widen localts to bigint (avoids int4 overflow on long-running games / Y2038)");
+
+    $db->execQuery("ALTER TABLE public.memory ALTER COLUMN localts TYPE bigint");
+
+    $updateVersion("memory", 20260617001);
+    Logger::info("Applied patch memory 20260617001");
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------
