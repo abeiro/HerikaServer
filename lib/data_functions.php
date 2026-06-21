@@ -11,6 +11,7 @@ require_once(__DIR__."/core/activity_status.php");
 require_once(__DIR__."/core/transformation_state.php");
 require_once(__DIR__."/core/game_plugins.php");
 require_once(__DIR__."/core/npc_master.class.php");
+require_once(__DIR__."/vr_items.php");
 
 
 function ChangeHerikaName($new_name="") {
@@ -1047,6 +1048,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
             $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $contextContent;
         }
     }
+
+    $heldItemsContext = HeldItems::getHeldItemsContext();
+    if (!empty($heldItemsContext)) {
+        if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+            $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
+        }
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $heldItemsContext;
+    }
     
     /*
     if (!isset($GLOBALS["IS_NPC"]) || !$GLOBALS["IS_NPC"])
@@ -2030,7 +2039,18 @@ function herikaShouldExcludeEventFromPromptContext(array $row): bool
         'npcvoice_refresh',
     ];
 
+    static $promptOnlyEventTypes = [
+        'ext_held_item_pickup',
+        'ext_held_item_drop',
+    ];
+
     if (in_array($type, $csvImportEventTypes, true)) {
+        return true;
+    }
+
+    // Held item state is injected separately through <held_items>; avoid replaying
+    // every pickup/drop as historic NPC event context.
+    if (in_array($type, $promptOnlyEventTypes, true)) {
         return true;
     }
 
