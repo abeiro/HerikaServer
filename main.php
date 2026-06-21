@@ -43,6 +43,7 @@ require_once($path . "lib/memory_helper_vectordb.php");
 require_once($path . "lib/llm_randomizer.php");
 require_once($path . "lib/utils_game_timestamp.php");
 require_once($path . "lib/logger.php"); 
+require_once($path . "lib/chim_quest_engine.php");
 requireFilesRecursively(__DIR__."/ext/","globals.php");
 
 // New profile system
@@ -884,6 +885,15 @@ if ($gameRequest[0] == "npcspellcast") {
         }
     }
     terminate(); // Always exit, whether logged or not
+}
+
+if (in_array($gameRequest[0], ["ext_held_item_raw", "ext_vr_item_raw"], true)) {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "vr_items.php");
+    $processedHeldItemRequest = HeldItems::processEventRequest($gameRequest);
+    if ($processedHeldItemRequest !== null) {
+        logEvent($processedHeldItemRequest);
+    }
+    terminate();
 }
 
 // Exit if only a event info log.
@@ -2350,6 +2360,14 @@ $promptBottomInjections = function_exists('chimRenderPromptInjections')
     : "";
 
 $knowledgeSection = "";
+$questContext = chimQuestEngineBuildPromptContext(
+    $GLOBALS["HERIKA_NAME"] ?? '',
+    $GLOBALS["CACHE_LOCATION"] ?? ''
+);
+if ($questContext !== '') {
+    $dynamicBiography .= $questContext;
+}
+
 if (!empty($GLOBALS["OGHMA_HINT"])) {
     $knowledgeSection = "\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"] . "\n</knowledge>";
 }

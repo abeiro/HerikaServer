@@ -19,6 +19,7 @@ if (!function_exists('chimGetVisibleEventLogExcludedTypes')) {
             'dynamic_oghma_import',
             'infoitems',
             'description_import',
+            'traditional_quest_import',
             'backgroundaction',
             'innerchat',
             'npc_reanimated',

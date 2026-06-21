@@ -1188,7 +1188,7 @@ CREATE TABLE public.memory (
     session text,
     uid integer NOT NULL,
     listener text,
-    localts integer,
+    localts bigint,
     gamets bigint NOT NULL,
     momentum text,
     rowid bigint NOT NULL,

@@ -1069,16 +1069,16 @@ function herikaActionCatalogGetBuiltinRequirements($codeName)
             ],
         ],
         'AddBounty' => [
-            'npc_factions_any' => ['00086EEE'],
+            'npc_factions_any' => ['00086EEE', '00028848', '00028849'],
         ],
         'PayBounty' => [
-            'npc_factions_any' => ['00086EEE'],
+            'npc_factions_any' => ['00086EEE', '00028848', '00028849'],
         ],
         'ArrestPlayer' => [
-            'npc_factions_any' => ['00086EEE'],
+            'npc_factions_any' => ['00086EEE', '00028848', '00028849'],
         ],
         'ForgiveCrime' => [
-            'npc_factions_any' => ['00086EEE'],
+            'npc_factions_any' => ['00086EEE', '00028848', '00028849'],
         ],
         'ReturnBackHome' => [
             'requires_rolemaster' => true,

@@ -2220,28 +2220,25 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <div style="margin-top:8px; color:#cfd9ea;">
                     <?php if (!empty($metadataEquipment)): ?>
                         <?php 
-                        $equipmentSlots = [
-                            'helmet' => '🪖 Helmet',
-                            'armor' => '🛡️ Armor',
-                            'boots' => '👢 Boots',
-                            'gloves' => '🧤 Gloves',
-                            'amulet' => '📿 Amulet',
-                            'ring' => '💍 Ring',
-                            'cape' => '🧣 Cape',
-                            'backpack' => '🎒 Backpack',
-                            'left_hand' => '🤚 Left Hand',
-                            'right_hand' => '👉 Right Hand'
+                        $equipmentGroups = [
+                            'Vanilla Slots' => chimEquipmentVanillaSlotLabels(),
+                            'Modded Slots' => chimEquipmentModdedSlotLabels(),
                         ];
                         ?>
-                        <div style="display:grid; grid-template-columns: 160px 1fr; gap:8px;">
-                            <?php foreach ($equipmentSlots as $slot => $label): 
-                                $item = isset($metadataEquipment[$slot]) ? trim((string)$metadataEquipment[$slot]) : '';
-                                $display = ($item !== '') ? htmlspecialchars($item) : '<span style="color:#666">None</span>';
-                            ?>
-                                <div style="color:rgb(242, 124, 17); font-weight:600;"><?= $label ?></div>
-                                <div style="border:1px solid #4a4a4a; border-radius:6px; padding:4px 8px;"><?= $display ?></div>
-                            <?php endforeach; ?>
-                        </div>
+                        <?php foreach ($equipmentGroups as $groupLabel => $equipmentSlots): ?>
+                            <div style="color:#f27c11; font-weight:700; margin:10px 0 6px;"><?= htmlspecialchars($groupLabel) ?></div>
+                            <div style="border:1px solid #3d4654; border-radius:8px; background:#20242b; padding:10px; margin-bottom:10px;">
+                                <div style="display:grid; grid-template-columns: 180px 1fr; gap:8px;">
+                                    <?php foreach ($equipmentSlots as $slot => $label):
+                                        $item = isset($metadataEquipment[$slot]) ? trim((string)$metadataEquipment[$slot]) : '';
+                                        $display = ($item !== '') ? htmlspecialchars($item) : '<span style="color:#666">None</span>';
+                                    ?>
+                                        <div style="color:rgb(242, 124, 17); font-weight:600;"><?= htmlspecialchars($label) ?></div>
+                                        <div style="border:1px solid #4a4a4a; border-radius:6px; padding:4px 8px; background:#262626;"><?= $display ?></div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <div style="color:#9fb1c9;">No equipment data found in metadata.</div>
                     <?php endif; ?>
