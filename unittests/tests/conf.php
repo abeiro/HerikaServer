@@ -88,7 +88,7 @@ $GLOBALS["CONNECTOR"]["openrouterjson"]["xtitle"]="Skyrim AI Follower Framework"
 $GLOBALS["CONNECTOR"]["openrouterjson"]["json_schema"]=false; //Enable OpenRouter JSON schema.
 //OpenRouter (Legacy)
 $GLOBALS["CONNECTOR"]["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$GLOBALS["CONNECTOR"]["openrouter"]["model"]="deepseek/deepseek-v3.2"; //LLM model.
+$GLOBALS["CONNECTOR"]["openrouter"]["model"]="deepseek/deepseek-v4-pro"; //LLM model.
 $GLOBALS["CONNECTOR"]["openrouter"]["max_tokens"]=1024; //Maximum tokens to generate.
 $GLOBALS["CONNECTOR"]["openrouter"]["temperature"]=0.9; //LLM parameter temperature.
 $GLOBALS["CONNECTOR"]["openrouter"]["presence_penalty"]=0;	//LLM parameter presence_penalty.

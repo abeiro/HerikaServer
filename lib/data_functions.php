@@ -11,6 +11,7 @@ require_once(__DIR__."/core/activity_status.php");
 require_once(__DIR__."/core/transformation_state.php");
 require_once(__DIR__."/core/game_plugins.php");
 require_once(__DIR__."/core/npc_master.class.php");
+require_once(__DIR__."/vr_items.php");
 
 
 function ChangeHerikaName($new_name="") {
@@ -243,14 +244,25 @@ function lookupDescriptionRecordByCandidates(array $candidateBaseIds, bool $requ
     global $db;
 
     $candidateRows = [];
+    $pushCandidateRow = function (string $plugin, string $baseid) use (&$candidateRows): void {
+        $plugin = trim($plugin);
+        $baseid = trim($baseid);
+        if ($baseid === '') {
+            return;
+        }
+
+        $key = $plugin . '|' . $baseid;
+        if (!isset($candidateRows[$key])) {
+            $candidateRows[$key] = ['plugin' => $plugin, 'baseid' => $baseid];
+        }
+    };
+
     foreach ($candidateBaseIds as $candidateBaseId) {
         $candidateBaseId = trim((string) $candidateBaseId);
         if ($candidateBaseId === '') {
             continue;
         }
 
-        $plugin = '';
-        $baseid = $candidateBaseId;
         if (strpos($candidateBaseId, '|') !== false) {
             $parsedStable = chimParseStableFormReference($candidateBaseId);
             if (!$parsedStable) {
@@ -258,13 +270,19 @@ function lookupDescriptionRecordByCandidates(array $candidateBaseIds, bool $requ
             }
             $plugin = $parsedStable['plugin_name'];
             $baseid = $parsedStable['local_formid'];
-        } else {
-            $baseid = strtoupper($baseid);
-        }
+            $pushCandidateRow($plugin, $baseid);
 
-        $key = $plugin . '|' . $baseid;
-        if (!isset($candidateRows[$key])) {
-            $candidateRows[$key] = ['plugin' => $plugin, 'baseid' => $baseid];
+            $pluginRow = function_exists('chimGetLoadedGamePluginByName')
+                ? chimGetLoadedGamePluginByName($plugin)
+                : null;
+            if ($pluginRow && !empty($pluginRow['formid_prefix']) && function_exists('chimComputeRuntimeFormIdFromPrefix')) {
+                $runtimeBaseid = chimComputeRuntimeFormIdFromPrefix($pluginRow['formid_prefix'], $baseid);
+                if ($runtimeBaseid !== null && $runtimeBaseid !== $baseid) {
+                    $pushCandidateRow($plugin, $runtimeBaseid);
+                }
+            }
+        } else {
+            $pushCandidateRow('', strtoupper($candidateBaseId));
         }
     }
 
@@ -307,6 +325,77 @@ function lookupDescriptionRecordByCandidates(array $candidateBaseIds, bool $requ
  */
 function lookupDescriptionByFormID(string $formId): ?array {
     return lookupDescriptionRecordByCandidates(chimBuildDescriptionBaseIdCandidates($formId));
+}
+
+function chimLookupItemDescriptionForContext(string $itemName, ?string $baseid = null): ?string {
+    global $db;
+
+    if (!isset($db)) {
+        return null;
+    }
+
+    $baseid = trim((string) $baseid);
+    if ($baseid !== '') {
+        $record = lookupDescriptionByFormID($baseid);
+        if (!empty($record['description'])) {
+            return trim((string) $record['description']);
+        }
+    }
+
+    $itemName = trim($itemName);
+    if ($itemName === '' || stripos($itemName, 'Missing Name') !== false) {
+        return null;
+    }
+
+    $escapedName = $db->escape($itemName);
+    $record = $db->fetchOne("
+        SELECT description
+          FROM public.combined_descriptions
+         WHERE LOWER(name) = LOWER('{$escapedName}')
+           AND NULLIF(TRIM(description), '') IS NOT NULL
+         LIMIT 1
+    ");
+
+    if (!empty($record['description'])) {
+        return trim((string) $record['description']);
+    }
+
+    return null;
+}
+
+function chimFormatProfileEquipmentParts(array $equipmentData, array $slots): array {
+    $equipmentParts = [];
+    $describedBaseids = [];
+
+    foreach ($slots as $slot) {
+        if (empty($equipmentData[$slot])) {
+            continue;
+        }
+
+        $itemName = trim((string) $equipmentData[$slot]);
+        if ($itemName === '' || isItemBlacklisted($itemName) || stripos($itemName, 'Missing Name') !== false) {
+            continue;
+        }
+
+        $baseid = isset($equipmentData[$slot . '_baseid'])
+            ? trim((string) $equipmentData[$slot . '_baseid'])
+            : '';
+        $description = null;
+        $baseidKey = $baseid !== '' ? strtoupper($baseid) : '';
+
+        if ($baseidKey === '' || !in_array($baseidKey, $describedBaseids, true)) {
+            $description = chimLookupItemDescriptionForContext($itemName, $baseid);
+            if ($description !== null && $baseidKey !== '') {
+                $describedBaseids[] = $baseidKey;
+            }
+        }
+
+        $equipmentParts[] = $description !== null
+            ? "{$itemName} ({$description})"
+            : $itemName;
+    }
+
+    return $equipmentParts;
 }
 
 /**
@@ -593,17 +682,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     // Add equipment if available
                     $equipmentData = $player->getJson('equipment');
                     if (is_array($equipmentData) && !empty($equipmentData)) {
-                        $equipmentParts = [];
                         $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
-                        foreach ($slots as $slot) {
-                            if (!empty($equipmentData[$slot])) {
-                                $itemName = trim($equipmentData[$slot]);
-                                // Skip blacklisted items, empty names, or placeholder names
-                                if (!isItemBlacklisted($itemName) && !empty($itemName) && stripos($itemName, 'Missing Name') === false) {
-                                    $equipmentParts[] = $itemName;
-                                }
-                            }
-                        }
+                        $equipmentParts = chimFormatProfileEquipmentParts($equipmentData, $slots);
                         if (!empty($equipmentParts)) {
                             $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
                         }
@@ -718,17 +798,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     
                     // Add equipment if available
                     if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
-                        $equipmentParts = [];
                         $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
-                        foreach ($slots as $slot) {
-                            if (!empty($metaData["equipment"][$slot])) {
-                                $itemName = trim($metaData["equipment"][$slot]);
-                                // Skip blacklisted items, empty names, or placeholder names
-                                if (!isItemBlacklisted($itemName) && !empty($itemName) && stripos($itemName, 'Missing Name') === false) {
-                                    $equipmentParts[] = $itemName;
-                                }
-                            }
-                        }
+                        $equipmentParts = chimFormatProfileEquipmentParts($metaData["equipment"], $slots);
                         if (!empty($equipmentParts)) {
                             $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
                         }
@@ -977,6 +1048,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
             $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $contextContent;
         }
     }
+
+    $heldItemsContext = HeldItems::getHeldItemsContext();
+    if (!empty($heldItemsContext)) {
+        if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+            $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
+        }
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $heldItemsContext;
+    }
     
     /*
     if (!isset($GLOBALS["IS_NPC"]) || !$GLOBALS["IS_NPC"])
@@ -1054,14 +1133,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     // This is intended to give info about nearby actors, ALL actors (dead ones included).
 
     $nearbyActors=DataBeingsOrDeathsInRangeExcluding("",true);
-    $nearbyActorsList="";
+    $nearbyActorsList=[];
     if ($nearbyActors) {
         foreach (explode("|",$nearbyActors) as $k=>$v) {
             $nearbyActor=trim($v);
             if (!empty($nearbyActor))
-                $nearbyActorsList.=",$nearbyActor";
+                $nearbyActorsList[]=$nearbyActor;
         }
-        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<actors_nearby>\n$nearbyActorsList</actors_nearby>";
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<actors_nearby>\n" . implode(", ", $nearbyActorsList) . "\n</actors_nearby>";
     }
     
 
@@ -1961,7 +2040,18 @@ function herikaShouldExcludeEventFromPromptContext(array $row): bool
         'npcvoice_refresh',
     ];
 
+    static $promptOnlyEventTypes = [
+        'ext_held_item_pickup',
+        'ext_held_item_drop',
+    ];
+
     if (in_array($type, $csvImportEventTypes, true)) {
+        return true;
+    }
+
+    // Held item state is injected separately through <held_items>; avoid replaying
+    // every pickup/drop as historic NPC event context.
+    if (in_array($type, $promptOnlyEventTypes, true)) {
         return true;
     }
 

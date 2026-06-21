@@ -14,6 +14,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPA
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "player_diary_connector.php");
 
 // Determine web root
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -112,6 +113,10 @@ $playerTtsElevenV3AudioTags = strval($allPlayerData['tts_elevenlabs_v3_audio_tag
 $playerRespeechConnectorId = trim(strval(chimGetGeneralSetting('CORE_CONNECTOR_PLAYER', strval($GLOBALS['CORE_CONNECTOR_PLAYER'] ?? ''))));
 $ttsConnectorRows = $ttsConnector->readAll();
 $llmConnectorRows = $llmConnector->readAll();
+$playerDiaryConnectorInfo = chimResolvePlayerDiaryConnectorFromDefaultProfile();
+$playerDiaryConnectorLabel = trim(strval($playerDiaryConnectorInfo['connector_label'] ?? 'Not configured'));
+$playerDiaryProfileLabel = trim(strval($playerDiaryConnectorInfo['profile_label'] ?? 'Default Profile'));
+$playerDiaryConnectorError = trim(strval($playerDiaryConnectorInfo['error'] ?? ''));
 $ttsConnectorMeta = [];
 foreach ($ttsConnectorRows as $row) {
     $ttsConnectorMeta[strval($row['id'] ?? '')] = [
@@ -456,6 +461,37 @@ if (!$isEmbed) {
         display: block;
         padding-left: 2px;
         line-height: 1.4;
+    }
+
+    .status-field {
+        margin-top: 14px;
+        margin-bottom: 14px;
+    }
+
+    .status-field-label {
+        display: block;
+        font-size: 13px;
+        color: rgb(242, 124, 17);
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .status-field-value {
+        color: #e9efff;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.35;
+    }
+
+    .status-field-value.warning {
+        color: #f1c27d;
+    }
+
+    .status-field-source {
+        color: #999;
+        font-size: 12px;
+        line-height: 1.4;
+        margin-top: 2px;
     }
 
     .toggle-row {
@@ -1244,6 +1280,18 @@ if (!$isEmbed) {
             <div class="content-section">
                 <h2>📙 Player Diary</h2>
                 <input type="hidden" name="diary_enabled" value="0">
+                <div class="status-field">
+                    <span class="status-field-label">Player Diary Connector</span>
+                    <div class="status-field-value <?php echo $playerDiaryConnectorError !== '' ? 'warning' : ''; ?>">
+                        <?php echo htmlspecialchars($playerDiaryConnectorLabel); ?>
+                    </div>
+                    <div class="status-field-source">
+                        Pulled from the Diary connector on the default profile: <?php echo htmlspecialchars($playerDiaryProfileLabel); ?>.
+                        <?php if ($playerDiaryConnectorError !== ''): ?>
+                            <?php echo htmlspecialchars($playerDiaryConnectorError); ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
                 <label class="toggle-row">
                     <div class="toggle-switch">
                         <input
@@ -1258,6 +1306,7 @@ if (!$isEmbed) {
                     <span class="toggle-label">Enable <?php echo htmlspecialchars($playerName); ?>'s Diary</span>
                 </label>
                 <span class="hint">Allows <?php echo htmlspecialchars($playerName); ?> to write diary entries. This can be triggered by the Prisma Actions menu or Auto Diary.</span>
+
             </div>
         </div>
     </form>

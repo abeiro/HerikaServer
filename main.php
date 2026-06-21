@@ -887,11 +887,20 @@ if ($gameRequest[0] == "npcspellcast") {
     terminate(); // Always exit, whether logged or not
 }
 
+if (in_array($gameRequest[0], ["ext_held_item_raw", "ext_vr_item_raw"], true)) {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "vr_items.php");
+    $processedHeldItemRequest = HeldItems::processEventRequest($gameRequest);
+    if ($processedHeldItemRequest !== null) {
+        logEvent($processedHeldItemRequest);
+    }
+    terminate();
+}
+
 // Exit if only a event info log.
 // Optional events
 
 if (in_array($gameRequest[0],["info","infonpc","infonpc_close","infoloc","infoitems","chatme","chat","infoaction","death","itemfound",
-    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction","reanimate","itempickup","npc_reanimated"])) {
+    "travelcancel","infoplayer","status_msg","util_npcname","bleedout","spellcast","backgroundaction","reanimate","itempickup","npc_reanimated","region"])) {
     $gameRequest[3]=isset($gameRequest[3])?$gameRequest[3]:"";
     $lastInfoNpcData=$db->escape($gameRequest[3]);
     if (in_array($gameRequest[0],['infonpc','infoloc','infonpc_close','infoitems'])) {
@@ -1050,6 +1059,12 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 
 
 if (in_array($gameRequest[0],["rechat","narration"]) ) {
+    $configuredChimMode = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
+    $configuredChimMode = strtoupper(trim((string)($configuredChimMode["value"] ?? "")));
+    if ($configuredChimMode === "WHISPER") {
+        Logger::info("[RECHAT_SELECT] WHISPER mode is active; terminating private rechat/narration request");
+        terminate();
+    }
     
     //RECHAT. Must choose if we continue conversation or no.
     // Note: narration is part of rechat system (random narrator interjections count as rechat rounds)
@@ -1662,11 +1677,14 @@ if (($gameRequest[0] ?? "") === "infoloc") {
 }
 
 error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
-// Scope all incoming events through spatial awareness when possible.
+// Scope all incoming dialogue-producing requests before returnLines() logs
+// generated prechat/chat rows.
 $playerInputEventTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
+$directiveDialogueEventTypes = ["instruction", "suggestion"];
+$turnPeopleSnapshotEventTypes = array_merge($playerInputEventTypes, $directiveDialogueEventTypes);
 $requestAudienceSnapshot = chimDecodeAudienceSnapshotField($gameRequest[4] ?? "");
 $hasAuthoritativeRequestAudience = (
-    in_array($gameRequest[0] ?? "", $playerInputEventTypes, true) &&
+    in_array($gameRequest[0] ?? "", $turnPeopleSnapshotEventTypes, true) &&
     $requestAudienceSnapshot !== ""
 );
 $resolvedRechatPeople = "";
@@ -1674,10 +1692,26 @@ if (($gameRequest[0] ?? "") === "rechat" && isset($GLOBALS["RECHAT_RESOLVED_TARG
     $resolvedRechatPeople = (string)($GLOBALS["RECHAT_RESOLVED_TARGET"]["people_pipe"] ?? "");
 }
 $authoritativePeople = $hasAuthoritativeRequestAudience ? $requestAudienceSnapshot : $resolvedRechatPeople;
+$directiveFallbackPeople = "";
+if ($authoritativePeople === "" && in_array($gameRequest[0] ?? "", $directiveDialogueEventTypes, true)) {
+    $directiveFallbackPeople = DataBeingsInCloseRange(true);
+}
+
+if (isWhisperExecutionMode() && in_array($gameRequest[0] ?? "", $playerInputEventTypes, true)) {
+    $whisperPrivatePeople = buildWhisperPrivatePeople($GLOBALS["HERIKA_NAME"] ?? "");
+    if ($whisperPrivatePeople !== "") {
+        $authoritativePeople = $whisperPrivatePeople;
+        $directiveFallbackPeople = "";
+        Logger::info("Scoped CACHE_PEOPLE for WHISPER {$gameRequest[0]}: " . $whisperPrivatePeople);
+    }
+}
 
 if ($authoritativePeople !== "") {
     $GLOBALS["CACHE_PEOPLE"] = $authoritativePeople;
     Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]}: " . $GLOBALS["CACHE_PEOPLE"]);
+} elseif ($directiveFallbackPeople !== "") {
+    $GLOBALS["CACHE_PEOPLE"] = $directiveFallbackPeople;
+    Logger::info("Scoped CACHE_PEOPLE for {$gameRequest[0]} from close range: " . $GLOBALS["CACHE_PEOPLE"]);
 } else {
     $scopedPeople = buildScopedPeopleForEvent(
         $gameRequest[0] ?? "",
@@ -1741,6 +1775,9 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
         if ($authoritativePeople !== "") {
             $eventPeople = $authoritativePeople;
             $GLOBALS["CACHE_PEOPLE"] = $authoritativePeople;
+        } elseif ($directiveFallbackPeople !== "") {
+            $eventPeople = $directiveFallbackPeople;
+            $GLOBALS["CACHE_PEOPLE"] = $directiveFallbackPeople;
         } else {
             $eventPeople = buildScopedPeopleForEvent(
                 $gameRequest[0] ?? "",
@@ -1753,7 +1790,7 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
             }
         }
 
-        if (in_array($gameRequest[0], $playerInputEventTypes, true)) {
+        if (in_array($gameRequest[0], $turnPeopleSnapshotEventTypes, true)) {
             chimSetCurrentTurnPeopleSnapshot($eventPeople);
         }
 

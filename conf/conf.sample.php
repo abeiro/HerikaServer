@@ -202,7 +202,7 @@ $CONNECTOR["openrouterjson"]["get_parms5"] = false; // Utility button for medium
 $CONNECTOR["openrouterjson"]["get_parms9"] = false; // Utility button for high randomness parameters
 //OpenRouter (Legacy)
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$CONNECTOR["openrouter"]["model"]="deepseek/deepseek-v3.2"; //LLM model.
+$CONNECTOR["openrouter"]["model"]="deepseek/deepseek-v4-pro"; //LLM model.
 $CONNECTOR["openrouter"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
 $CONNECTOR["openrouter"]["fallback_models"]=""; //comma separated models.
 $CONNECTOR["openrouter"]["PROVIDER"]=""; //select a list of providers from OpenRouter

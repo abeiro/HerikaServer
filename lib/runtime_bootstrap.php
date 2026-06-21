@@ -56,7 +56,7 @@ if (!function_exists('chimRuntimeNeedsDbUpdates')) {
             'core_stt_connector' => 20260502002,
             'core_itt_connector' => 20260502002,
             'descriptions_defaults' => 20260611005,
-            'prompts' => 20260611001,
+            'prompts' => 20260615001,
             'skyrim_quest_definitions' => 20260619001,
         ];
 

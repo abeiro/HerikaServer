@@ -276,6 +276,8 @@ $nearByLoc
 
 Current Location: $lastLocation
 
+Latest events:
+$history
 
 Ideas for initial NPC name: a character, which name must start with $randomLettersA, and surname/nick by $randomLettersB. Never use \" or ' in the name.
 ";

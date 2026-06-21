@@ -3807,6 +3807,80 @@ if ($checkVersion("bio_templates_custom")<20250913001) {
     Logger::info("Applied patch bio_templates_custom 20250913001");
 }
 
+// Backups created before the bio template primary keys existed can restore the
+// tables without constraints. Repair that shape before migrations use
+// ON CONFLICT (npc_name).
+$repairBioTemplateTable = function($tableName) use ($checkTableExists) {
+    global $db;
+
+    if (!in_array($tableName, ["bio_templates", "bio_templates_custom"], true)) {
+        return;
+    }
+
+    if ($checkTableExists($tableName) == -1) {
+        return;
+    }
+
+    $columns = [
+        "npc_name" => "character varying(128)",
+        "oghma_knowledge_tags" => "text",
+        "core" => "text",
+        "npc_static_bio" => "text",
+        "appearance" => "text",
+        "personality" => "text",
+        "relationships" => "text",
+        "occupation" => "text",
+        "skills" => "text",
+        "speechstyle" => "text",
+        "goals" => "text",
+        "voiceid" => "text",
+        "gender" => "text",
+        "race" => "text",
+        "refid" => "text",
+    ];
+
+    foreach ($columns as $columnName => $columnType) {
+        $db->execQuery("ALTER TABLE public.{$tableName} ADD COLUMN IF NOT EXISTS {$columnName} {$columnType}");
+    }
+
+    $db->execQuery("DELETE FROM public.{$tableName} WHERE npc_name IS NULL OR btrim(npc_name::text) = ''");
+    $db->execQuery("
+        DELETE FROM public.{$tableName} a
+        USING public.{$tableName} b
+        WHERE a.npc_name = b.npc_name
+          AND a.ctid < b.ctid
+    ");
+    $db->execQuery("ALTER TABLE public.{$tableName} ALTER COLUMN npc_name SET NOT NULL");
+
+    $indexName = "idx_{$tableName}_npc_name_unique";
+    $db->execQuery("
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1
+                  FROM pg_index i
+                  JOIN pg_class t ON t.oid = i.indrelid
+                  JOIN pg_namespace n ON n.oid = t.relnamespace
+                  JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(i.indkey)
+                 WHERE n.nspname = 'public'
+                   AND t.relname = '{$tableName}'
+                   AND i.indisunique
+                   AND i.indnatts = 1
+                   AND a.attname = 'npc_name'
+            ) THEN
+                CREATE UNIQUE INDEX {$indexName} ON public.{$tableName} (npc_name);
+            END IF;
+        END $$;
+    ");
+};
+
+try {
+    $repairBioTemplateTable("bio_templates");
+    $repairBioTemplateTable("bio_templates_custom");
+} catch (Throwable $e) {
+    Logger::warn("Bio template schema repair failed: " . $e->getMessage());
+}
+
 // Seed base bio templates from SQL file (run once)
 if ($checkVersion("bio_templates_seed")<20250913001) {
     try {
@@ -5883,6 +5957,32 @@ if ($checkVersion("prompts")<20260611001) {
     Logger::info("Applied patch prompts 20260611001 - Added player respeech prompts");
 }
 
+if ($checkVersion("prompts")<20260615001) {
+    Logger::debug("Applying prompts table 20260615001 - Adding player diary prompt");
+
+    $playerDiaryPrompt = $db->escape(
+        "Write a concise first-person diary entry for {PLAYER_NAME} based on the recent context above. "
+        . "Summarize the most relevant recent dialogue, events, decisions, and observations as {PLAYER_NAME}'s private diary. "
+        . "Start with the current date and time. Do not write as The Narrator or as any NPC."
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'player_diary_prompt',
+            '$playerDiaryPrompt',
+            'Prompt for generating player diary entries. Supports placeholders: {PLAYER_NAME}, #PLAYER_NAME#. Used in: lib/dynamic_update_util.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260615001);
+    Logger::info("Applied patch prompts 20260615001 - Added player_diary_prompt");
+}
+
 //----------------------------------------------------
 
 if ($checkVersion("utterance_delivery") < 20260502001) {
@@ -6743,9 +6843,9 @@ $db->execQuery("
 
 //----------------------------------------------------
 // Refresh base bio template relationship metadata from canonical SQL
-// Version 20260505003
+// Version 20260619001
 //----------------------------------------------------
-$relationshipMetadataNeedsRefresh = $checkVersion("bio_templates_relationship_refresh") < 20260505003;
+$relationshipMetadataNeedsRefresh = $checkVersion("bio_templates_relationship_refresh") < 20260619001;
 if (!$relationshipMetadataNeedsRefresh) {
     try {
         $relationshipSentinel = $db->fetchOne("SELECT relationships FROM public.bio_templates WHERE npc_name = 'corpulus_vinius' LIMIT 1");
@@ -6761,26 +6861,67 @@ if (!$relationshipMetadataNeedsRefresh) {
 }
 
 if ($relationshipMetadataNeedsRefresh) {
-    Logger::debug("Applying bio_templates_relationship_refresh 20260505003");
+    Logger::debug("Applying bio_templates_relationship_refresh 20260619001");
     try {
+        $splitMergedIceMageTemplate = function($tableName) use ($db, $checkTableExists) {
+            if (!in_array($tableName, ["bio_templates", "bio_templates_custom"], true) || $checkTableExists($tableName) == -1) {
+                return;
+            }
+
+            foreach (["ice_mage", "ice_wizard"] as $targetName) {
+                $targetEscaped = $db->escape($targetName);
+                $db->execQuery("
+                    INSERT INTO public.{$tableName} (
+                        npc_name, oghma_knowledge_tags, core, npc_static_bio, appearance, personality,
+                        relationships, occupation, skills, speechstyle, goals, voiceid, gender, race, refid
+                    )
+                    SELECT
+                        '{$targetEscaped}', oghma_knowledge_tags, core, npc_static_bio, appearance, personality,
+                        relationships, occupation, skills, speechstyle, goals, voiceid, gender, race, refid
+                      FROM public.{$tableName}
+                     WHERE npc_name = 'ice_mage ice_wizard'
+                     LIMIT 1
+                    ON CONFLICT (npc_name) DO NOTHING
+                ");
+            }
+
+            $db->execQuery("DELETE FROM public.{$tableName} WHERE npc_name = 'ice_mage ice_wizard'");
+        };
+
+        $splitMergedIceMageTemplate("bio_templates");
+        $splitMergedIceMageTemplate("bio_templates_custom");
+
         $sqlFile = __DIR__ . "/../data/relationship_metadata.sql";
         if (file_exists($sqlFile)) {
             $sqlContent = file_get_contents($sqlFile);
             if ($sqlContent !== false && strlen($sqlContent) > 0) {
                 $sqlContent = preg_replace('/^\xEF\xBB\xBF/', '', $sqlContent);
                 $refreshResult = $db->execQuery($sqlContent);
-                $cleanupResult = $db->execQuery("
-                    UPDATE public.bio_templates_custom
-                       SET relationships = NULL
-                     WHERE relationships IS NOT NULL
-                       AND btrim(relationships) <> ''
-                       AND left(ltrim(relationships), 1) <> '{'
-                ");
-                if ($refreshResult && $cleanupResult) {
-                    $updateVersion("bio_templates_relationship_refresh", 20260505003);
-                    Logger::info("Applied patch bio_templates_relationship_refresh 20260505003");
+                $cleanupResult = false;
+                if ($refreshResult) {
+                    $baseCleanupResult = $db->execQuery("
+                        UPDATE public.bio_templates
+                           SET relationships = NULL
+                         WHERE relationships IS NOT NULL
+                           AND btrim(relationships) <> ''
+                           AND left(ltrim(relationships), 1) <> '{'
+                    ");
+                    $customCleanupResult = $db->execQuery("
+                        UPDATE public.bio_templates_custom
+                           SET relationships = NULL
+                         WHERE relationships IS NOT NULL
+                           AND btrim(relationships) <> ''
+                           AND left(ltrim(relationships), 1) <> '{'
+                    ");
+                    $cleanupResult = $baseCleanupResult && $customCleanupResult;
                 } else {
-                    Logger::error("Failed to apply bio_templates_relationship_refresh 20260505003 - canonical relationship metadata refresh did not execute cleanly.");
+                    $db->execQuery("ROLLBACK");
+                }
+                if ($refreshResult && $cleanupResult) {
+                    $updateVersion("bio_templates_relationship_refresh", 20260619001);
+                    Logger::info("Applied patch bio_templates_relationship_refresh 20260619001");
+                } else {
+                    Logger::error("Failed to apply bio_templates_relationship_refresh 20260619001 - canonical relationship metadata refresh did not execute cleanly.");
                 }
             } else {
                 Logger::warn("relationship metadata file is empty: " . $sqlFile);
@@ -6791,6 +6932,15 @@ if ($relationshipMetadataNeedsRefresh) {
     } catch (Exception $e) {
         Logger::error("Error applying bio_templates relationship refresh: " . $e->getMessage());
     }
+}
+
+if ($checkVersion("memory") < 20260617001) {
+    Logger::debug("Applying memory 20260617001 - widen localts to bigint (avoids int4 overflow on long-running games / Y2038)");
+
+    $db->execQuery("ALTER TABLE public.memory ALTER COLUMN localts TYPE bigint");
+
+    $updateVersion("memory", 20260617001);
+    Logger::info("Applied patch memory 20260617001");
 }
 
 Logger::info(__FILE__." update file processed");

@@ -972,7 +972,7 @@ function loadNarratorVoiceSettings() {
     $narrator = new Narrator();
     $profileId = $narrator->getProfileId();
     if ($profileId) {
-        $profileManager = new CoreProfiles();
+        $profileManager = new CoreProfile();
         $profileData = $profileManager->getById($profileId);
         if (is_array($profileData) && !empty($profileData)) {
             $ttsConnectorId = intval($profileData['tts_connector_id'] ?? 0);
@@ -1674,7 +1674,7 @@ function returnLines($lines,$writeOutput=true)
                 )
             );
             
-            // RECHAT
+            // CHAT LOGGING
             $originalRequest=$GLOBALS["gameRequest"];
             $originalRequest[0]="prechat";
             $originalRequest[1]++;
@@ -2821,6 +2821,22 @@ function isWhisperExecutionMode()
 {
     $mode = isset($GLOBALS["CHIM_EXECUTION_MODE"]) ? strtoupper(trim((string)$GLOBALS["CHIM_EXECUTION_MODE"])) : "";
     return ($mode === "WHISPER");
+}
+
+function buildWhisperPrivatePeople($listenerName = "")
+{
+    $participants = [];
+
+    if (!empty($GLOBALS["PLAYER_NAME"])) {
+        appendUniqueActorName($participants, $GLOBALS["PLAYER_NAME"]);
+    }
+
+    $listenerName = trim((string)$listenerName);
+    if ($listenerName !== "") {
+        appendUniqueActorName($participants, $listenerName);
+    }
+
+    return normalizePeoplePipeList($participants);
 }
 
 function buildDialogueTargetSuffix($listenerName, $isSpeakingLoudly = false)
@@ -4667,18 +4683,22 @@ function logEvent($dataArray,$forcePeople='')
 
         $eventType = strtolower((string)($dataArray[0] ?? ""));
         $defaultPeopleFallback = $GLOBALS["CACHE_PEOPLE_LIMITED"];
+        
         if (in_array($eventType, ["infoaction", "funcret"], true)) {
             $actionPeopleFallback = $GLOBALS["CACHE_PEOPLE"] ?? DataBeingsInCloseRange(false);
             if ($actionPeopleFallback !== "") {
                 $defaultPeopleFallback = $actionPeopleFallback;
             }
         }
+
         if ($eventType === "infoloc") {
             $defaultPeopleFallback = DataBeingsInRange();
             if ($defaultPeopleFallback === "") {
                 $defaultPeopleFallback = DataBeingsInCloseRange(false);
             }
         }
+
+
         if (isSpellcastEventType($dataArray[0] ?? "")) {
             $defaultPeopleFallback = DataBeingsInRange();
         }
@@ -4708,6 +4728,10 @@ function logEvent($dataArray,$forcePeople='')
         //if ($dataArray[0]=="funcret") {
         //    $eventPeople=DataBeingsInCloseRange(true);
         //}
+
+        if ($dataArray[0]=="death") {
+            $eventPeople=DataBeingsInCloseRange(false);
+        }
 
 
         $insertData = array(
