@@ -127,6 +127,23 @@ if (!function_exists('chimRuntimeEnsureDbUpdates')) {
     }
 }
 
+if (!function_exists('chimRuntimeEnsurePluginSchema')) {
+    function chimRuntimeEnsurePluginSchema(): void
+    {
+        $db = $GLOBALS["db"] ?? null;
+        if (!$db) {
+            return;
+        }
+
+        try {
+            $db->execQuery("CREATE SCHEMA IF NOT EXISTS plugins");
+            $db->execQuery("SET search_path TO public");
+        } catch (\Throwable $e) {
+            error_log("[RuntimeBootstrap] Could not ensure plugins schema: " . $e->getMessage());
+        }
+    }
+}
+
 if (!function_exists('chimRuntimeApplyBootstrapOptions')) {
     function chimRuntimeApplyBootstrapOptions(string $enginePath, array $options = []): void
     {
@@ -191,6 +208,7 @@ if (!function_exists('chimRuntimeBootstrap')) {
             $GLOBALS["db"] = new sql();
         }
 
+        chimRuntimeEnsurePluginSchema();
         chimRuntimeApplyBootstrapOptions($enginePath, $options);
     }
 }

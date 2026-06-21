@@ -14,6 +14,31 @@
             "github_url": "https://github.com/Dwemer-Dynamics/CHIM-MindMap",
             "mod_download_url": ""
         },
+        "chim-custom": {
+            "name": "CHIM-Custom",
+            "description": "Optional prompt-aware integrations for third-party Skyrim mods, starting with Dirt and Blood visual state support.",
+            "git_repo": "Dwemer-Dynamics/CHIM-Custom",
+            "github_url": "https://github.com/Dwemer-Dynamics/CHIM-Custom",
+            "mod_download_url": "https://github.com/Dwemer-Dynamics/CHIM-Custom/releases/download/<version>/CHIM-Custom-Skyrim.zip",
+            "default_channel": "main",
+            "channels": {
+                "main": {
+                    "label": "Live",
+                    "branch": "main",
+                    "package_source": "release",
+                    "package_urls": [
+                        "https://github.com/Dwemer-Dynamics/CHIM-Custom/releases/latest/download/CHIM-Custom.tar.gz",
+                        "https://github.com/Dwemer-Dynamics/CHIM-Custom/releases/latest/download/CHIM-Custom.tar"
+                    ]
+                },
+                "dev": {
+                    "label": "Dev",
+                    "branch": "dev",
+                    "package_source": "branch",
+                    "allow_force": true
+                }
+            }
+        },
         "aiagent_nsfw": {
             "name": "aiagent_nsfw",
             "description": "Integration with OSTIM.",

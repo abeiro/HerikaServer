@@ -26,6 +26,15 @@ SET row_security = off;
 ALTER SCHEMA public OWNER TO dwemer;
 
 --
+-- Name: plugins; Type: SCHEMA; Schema: -; Owner: dwemer
+--
+
+CREATE SCHEMA IF NOT EXISTS plugins;
+
+
+ALTER SCHEMA plugins OWNER TO dwemer;
+
+--
 -- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: dwemer
 --
 

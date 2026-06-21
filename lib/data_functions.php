@@ -11,6 +11,7 @@ require_once(__DIR__."/core/activity_status.php");
 require_once(__DIR__."/core/transformation_state.php");
 require_once(__DIR__."/core/game_plugins.php");
 require_once(__DIR__."/core/npc_master.class.php");
+require_once(__DIR__."/prompt_injections.php");
 require_once(__DIR__."/vr_items.php");
 
 
@@ -503,6 +504,124 @@ function chimFormatProfileEquipmentParts(array $equipmentData, array $slots): ar
     return $equipmentParts;
 }
 
+function chimProfileEquipmentSlotsFromData(array $equipmentData, array $preferredSlots): array {
+    $slots = $preferredSlots;
+    foreach ($equipmentData as $key => $value) {
+        $slot = trim((string) $key);
+        if ($slot === '' || substr($slot, -7) === '_baseid') {
+            continue;
+        }
+        if (!in_array($slot, $slots, true)) {
+            $slots[] = $slot;
+        }
+    }
+    return $slots;
+}
+
+function chimNormalizeProfileScalar($value): string {
+    if (is_bool($value)) {
+        return $value ? 'true' : 'false';
+    }
+    if (is_int($value) || is_float($value)) {
+        return (string) $value;
+    }
+    return trim((string) $value);
+}
+
+function chimFirstProfileValue(...$values): string {
+    foreach ($values as $value) {
+        $value = chimNormalizeProfileScalar($value);
+        if ($value !== '') {
+            return $value;
+        }
+    }
+    return '';
+}
+
+function chimParsePlayerInfoEventData(string $data): array {
+    $fields = [];
+    foreach (['level', 'name', 'race', 'gender'] as $key) {
+        if (preg_match('/(?:^|,)\s*' . preg_quote($key, '/') . '\s*:\s*"([^"]*)"/i', $data, $quotedMatch)) {
+            $fields[$key] = trim($quotedMatch[1]);
+            continue;
+        }
+        if (preg_match('/(?:^|,)\s*' . preg_quote($key, '/') . '\s*:\s*([^,]+)/i', $data, $plainMatch)) {
+            $fields[$key] = trim($plainMatch[1], " \t\r\n\"");
+        }
+    }
+    return $fields;
+}
+
+function chimGetLatestPlayerInfoEventData(): array {
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+
+    $cached = [];
+    if (empty($GLOBALS['db'])) {
+        return $cached;
+    }
+
+    try {
+        $row = $GLOBALS['db']->fetchOne("
+            SELECT data
+            FROM eventlog
+            WHERE type IN ('playerinfo', 'infoplayer')
+            ORDER BY localts DESC
+            LIMIT 1
+        ");
+        if (is_array($row) && isset($row['data'])) {
+            $cached = chimParsePlayerInfoEventData((string) $row['data']);
+        }
+    } catch (Throwable $e) {
+        Logger::debug("Could not read latest playerinfo event: " . $e->getMessage());
+    }
+
+    return $cached;
+}
+
+function chimBuildPlayerProfileName(string $actor, $player): string {
+    $eventInfo = chimGetLatestPlayerInfoEventData();
+    $transformData = method_exists($player, 'getJson') ? ($player->getJson('transformation_state') ?? []) : [];
+
+    $gender = chimFirstProfileValue(
+        method_exists($player, 'get') ? $player->get('gender') : '',
+        $eventInfo['gender'] ?? ''
+    );
+    $race = chimFirstProfileValue(
+        method_exists($player, 'get') ? $player->get('race') : '',
+        $transformData['race_name'] ?? '',
+        $eventInfo['race'] ?? ''
+    );
+
+    $profileName = $actor;
+    if ($gender !== '') {
+        $gender = ucfirst(strtolower($gender));
+    }
+    if ($gender !== '' && $race !== '') {
+        $profileName .= " ({$gender} {$race})";
+    } elseif ($race !== '') {
+        $profileName .= " ({$race})";
+    }
+
+    return $profileName;
+}
+
+function chimNormalizePlayerProfileBio(string $bio, string $actor): string {
+    $bio = trim(ReplacePlayerNamePlaceholder($bio));
+    if ($bio === '') {
+        return '';
+    }
+
+    $actorPattern = preg_quote($actor, '/');
+    if (preg_match('/^I(?:\'m| am)\s+' . $actorPattern . '\.?$/i', $bio)) {
+        return '';
+    }
+
+    return $bio;
+}
+
 /**
  * Lookup description only by exact runtime FormID or internal plugin-aware candidate.
  * This deliberately skips legacy wildcard keys and name fallback to avoid
@@ -770,27 +889,53 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 try {
                     require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
                     $player = new Player();
-                    
-                    // Add appearance if available
-                    $appearance = $player->get('appearance');
-                    if (!empty($appearance)) {
-                        $profileString .= ": " . trim($appearance);
-                    }
+                    $profileString = chimBuildPlayerProfileName($actor, $player);
+                    $hasProfileBody = false;
 
-                    $playerBio = ResolvePlayerBackstory($player);
+                    $playerBio = chimNormalizePlayerProfileBio(ResolvePlayerBackstory($player), $actor);
                     $bioKnownByAll = filter_var((string)($player->get('bio_known_by_all') ?? ''), FILTER_VALIDATE_BOOLEAN);
                     $isNarrator = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "The Narrator") === 0;
                     if ($playerBio !== "" && ($bioKnownByAll || $isNarrator)) {
-                        $profileString .= ". Backstory: " . trim($playerBio);
+                        $profileString .= ": " . trim($playerBio);
+                        $hasProfileBody = true;
+                    }
+
+                    // Add appearance if available
+                    $appearance = $player->get('appearance');
+                    if (!empty($appearance)) {
+                        if ($hasProfileBody) {
+                            $profileString .= ". Appearance: " . trim($appearance);
+                        } else {
+                            $profileString .= ": Appearance: " . trim($appearance);
+                            $hasProfileBody = true;
+                        }
                     }
                     
                     // Add equipment if available
                     $equipmentData = $player->getJson('equipment');
                     if (is_array($equipmentData) && !empty($equipmentData)) {
                         $slots = chimEquipmentProfileSlotKeys();
+                        $slots = chimProfileEquipmentSlotsFromData($equipmentData, $slots);
                         $equipmentParts = chimFormatProfileEquipmentParts($equipmentData, $slots);
                         if (!empty($equipmentParts)) {
-                            $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
+                            if ($hasProfileBody) {
+                                $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
+                            } else {
+                                $profileString .= ": Equipment: " . implode(", ", $equipmentParts);
+                                $hasProfileBody = true;
+                            }
+                        }
+                    }
+
+                    $profileExtra = chimBuildActorProfileEnrichmentText($actor, "player", [
+                        "source" => "nearby_actors",
+                    ]);
+                    if ($profileExtra !== "") {
+                        if ($hasProfileBody) {
+                            $profileString .= ". " . $profileExtra;
+                        } else {
+                            $profileString .= ": " . $profileExtra;
+                            $hasProfileBody = true;
                         }
                     }
                     
@@ -918,6 +1063,15 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         if ($npcRace && in_array($npcRace, $humanoidRaces) && !chimEquipmentHasBodyCoverage($metaData["equipment"])) {
                             $profileString .= ". Naked (no body armor/clothing worn)";
                         }
+                    }
+
+                    $profileExtra = chimBuildActorProfileEnrichmentText($npcName, "npc", [
+                        "source" => "nearby_actors",
+                        "metadata" => $metaData,
+                        "npc_data" => $currentNpcData,
+                    ]);
+                    if ($profileExtra !== "") {
+                        $profileString .= ". " . $profileExtra;
                     }
                     
                     // Add faction information after equipment

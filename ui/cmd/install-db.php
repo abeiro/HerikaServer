@@ -19,8 +19,10 @@ if (!$conn) {
 
 // Drop and recreate database
 $Q[]="DROP SCHEMA IF EXISTS $schema CASCADE";
+$Q[]="DROP SCHEMA IF EXISTS plugins CASCADE";
 $Q[]="DROP EXTENSION IF EXISTS vector CASCADE";
 $Q[]="CREATE SCHEMA $schema";
+$Q[]="CREATE SCHEMA plugins";
 $Q[]="CREATE EXTENSION vector";
 
 foreach ($Q as $QS) {

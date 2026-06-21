@@ -2347,6 +2347,18 @@ if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
     $nearbySections = $GLOBALS["PROMPT_NEARBY_SECTIONS"];
 }
 
+$promptInjectionContext = [
+    "game_request" => $gameRequest,
+    "herika_name" => $GLOBALS["HERIKA_NAME"] ?? "",
+    "player_name" => $GLOBALS["PLAYER_NAME"] ?? "",
+];
+$characterBottomInjections = function_exists('chimRenderPromptInjections')
+    ? chimRenderPromptInjections("character_bottom", $promptInjectionContext)
+    : "";
+$promptBottomInjections = function_exists('chimRenderPromptInjections')
+    ? chimRenderPromptInjections("prompt_bottom", $promptInjectionContext)
+    : "";
+
 $knowledgeSection = "";
 $questContext = chimQuestEngineBuildPromptContext(
     $GLOBALS["HERIKA_NAME"] ?? '',
@@ -2362,10 +2374,10 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
 
 $systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
     "\n</roleplay_instructions>" . $worldPrompt .
-    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography .
+    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography . $characterBottomInjections .
     "\n</character>" . $knowledgeSection .
     "\n\n<general_instructions>\n" . $GLOBALS["COMMAND_PROMPT"] .
-    "\n</general_instructions>" . $actionsList . $nearbySections . $paralinguisticTagsPrompt .
+    "\n</general_instructions>" . $actionsList . $nearbySections . $promptBottomInjections . $paralinguisticTagsPrompt .
     "\n" . $rumorsText . "\n";
 
 $systemPrompt = chimFormatPromptXmlSections(
