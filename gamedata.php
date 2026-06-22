@@ -353,9 +353,32 @@ function buildEquipmentMetadataValue(array $equipment): array
     foreach ($equipment as $slot => $item) {
         $equipmentData[$slot] = isset($item['name']) ? $item['name'] : '';
         $equipmentData[$slot . '_baseid'] = isset($item['baseid']) ? $item['baseid'] : '';
+        $equipmentData[$slot . '_keywords'] = isset($item['keywords'])
+            ? sanitizeItemKeywordList($item['keywords'])
+            : [];
     }
 
     return $equipmentData;
+}
+
+function sanitizeItemKeywordList($keywords): array
+{
+    if (!is_array($keywords)) {
+        return [];
+    }
+
+    $clean = [];
+    foreach ($keywords as $keyword) {
+        $keyword = trim((string)$keyword);
+        if ($keyword === '') {
+            continue;
+        }
+        if (!in_array($keyword, $clean, true)) {
+            $clean[] = $keyword;
+        }
+    }
+
+    return $clean;
 }
 
 function buildInventoryMetadataValue(array $items): array
@@ -367,6 +390,7 @@ function buildInventoryMetadataValue(array $items): array
                 'name' => $item['name'],
                 'baseid' => $item['baseid'],
                 'count' => intval($item['count']),
+                'keywords' => isset($item['keywords']) ? sanitizeItemKeywordList($item['keywords']) : [],
             ];
         }
     }
