@@ -1946,19 +1946,25 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         
         if ($currentNpcData) {
             // Get existing metadata
-            $meta = [];
+            $extendedData = [];
             if (!empty($currentNpcData['extended_data'])) {
-                $meta = json_decode($currentNpcData['extended_data'], true);
-                if (!is_array($meta)) {
-                    $meta = [];
+                $extendedData = json_decode($currentNpcData['extended_data'], true);
+                if (!is_array($extendedData)) {
+                    $extendedData = [];
                 }
             }
             $currentNpcData["refid"]=$splitNameBase[1];
             // Update equipment section
-            $meta['background_life_enabled'] = true;
+            $extendedData['background_life_enabled'] = true;
             
+            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extendedData);
+
+            // Metadata
+            $metadata=$npcMaster->getMetadata($currentNpcData);
+            $metadata["low_process_actors"]=[];
+            $currentNpcData=$npcMaster->setMetadata($currentNpcData,$metadata);
+
             // Save back to database
-            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $meta);
             $npcMaster->updateByArray($currentNpcData);
             error_log("Updated background_life_enabled for {$currentNpcData["npc_name"]}");
             Logger::info("Updated background_life_enabled for {$currentNpcData["npc_name"]}");

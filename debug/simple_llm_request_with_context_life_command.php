@@ -89,7 +89,14 @@ if ($cmds[0] == "TrackAll") {
 
     $gameRequest = ["inputtext", "0", $last_gamets, $argv[1]];
 
+    // Check if NPC is around using DataBeingsInRange
 
+    $npcsInRange = DataBeingsInRange();
+    if (strpos($npcsInRange, $GLOBALS["HERIKA_NAME"]) !== false) {
+        logger::info("[BGL] NPC {$argv[1]} is in range, skipping background life processing.");
+        return;
+    }
+    
     //$dynamicBiography = buildDynamicBiography($GLOBALS, true, true);
     $npcMaster = new NpcMaster();
     $currentNpcData = $npcMaster->getByName($argv[1]);

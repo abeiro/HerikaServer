@@ -49,7 +49,7 @@ if ($argv[1] == "0") {
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|BackgroundCmd@0xff0010d8@TravelTo/129133",
+            'action' => "rolecommand|BackgroundCmd@0xff0010d8@TravelTo/100950",
             'tag' => __FILE__ . ":" . __LINE__,
         ]
     );
