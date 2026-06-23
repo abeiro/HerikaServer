@@ -35,17 +35,18 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.htm
 $saveSuccess = isset($_GET['_saved']) && $_GET['_saved'] === '1';
 $clearReanimationResult = null;
 $promptContextSectionTitle = 'Context Selections';
+$promptContextOptionFields = [
+    [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
+    [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
+    [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
+    [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
+];
 
 $gsSections = [
     'Prompt' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
-        [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
-        [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
-        [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
-        [ 'name' => 'SHORTER_NEARBY_ITEM_LIST', 'type' => 'boolean' ],
-        [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
     ],
     'Rechat' => [
         [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
@@ -78,7 +79,7 @@ $gsSections = [
         [ 'name' => 'TRANSFORMATION_DETECTION', 'type' => 'boolean' ],
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
     ],
-    $promptContextSectionTitle => [],
+    $promptContextSectionTitle => $promptContextOptionFields,
     'Misc' => [
         [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
         [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
@@ -142,7 +143,6 @@ function pretty_label(string $flatName): string
         'RELLLM_CONNECTOR' => 'Relationship Management',
         'EMOTEMOODS' => 'Emote Moods',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
-        'SHORTER_NEARBY_ITEM_LIST' => 'Shorter Nearby Item List',
         'BGL_TRIGGER_DAYS' => 'Background Life Days Cooldown',
         'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
         'CHIM_AI_QUEST_PROGRESSION' => 'CHIM AI Quest Progression (Beta)',
@@ -240,6 +240,8 @@ function prompt_context_bucket_title(string $bucket): string
         'enabled_character_subsections' => 'Character Subsections',
         'enabled_appearance_subsections' => 'Appearance / State Subsections',
         'enabled_general_subsections' => 'General Instruction Subsections',
+        'enabled_nearby_actor_subsections' => 'Nearby Actor Details',
+        'enabled_nearby_item_subsections' => 'Nearby Item Details',
     ];
 
     return $labels[$bucket] ?? $bucket;
@@ -367,12 +369,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
         }
     }
 
-    $postedPromptContextOptions = chimNormalizePromptContextOptions([
-        'enabled_sections' => array_values(array_map('strval', $_POST['prompt_context_enabled_sections'] ?? [])),
-        'enabled_character_subsections' => array_values(array_map('strval', $_POST['prompt_context_enabled_character_subsections'] ?? [])),
-        'enabled_appearance_subsections' => array_values(array_map('strval', $_POST['prompt_context_enabled_appearance_subsections'] ?? [])),
-        'enabled_general_subsections' => array_values(array_map('strval', $_POST['prompt_context_enabled_general_subsections'] ?? [])),
-    ]);
+    $postedPromptContextRaw = [];
+    foreach ($promptContextCatalog as $bucket => $_options) {
+        $postedPromptContextRaw[$bucket] = array_values(array_map('strval', $_POST['prompt_context_' . $bucket] ?? []));
+    }
+    $postedPromptContextOptions = chimNormalizePromptContextOptions($postedPromptContextRaw);
     $promptContextDescription = current_description('PROMPT_CONTEXT_OPTIONS', $generalSettingRowMap);
     if (!chimSetGeneralSetting('PROMPT_CONTEXT_OPTIONS', $postedPromptContextOptions, $promptContextDescription)) {
         $didSave = false;
@@ -1231,6 +1232,61 @@ h1.gs-title {
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
+                                <div class="prompt-context-group">
+                                    <h3>Context Options</h3>
+                                    <div class="provider-grid">
+                                        <?php foreach ($fields as $field): ?>
+                                            <?php
+                                            $fieldName = $field['name'];
+                                            $fieldType = strval($field['type']);
+                                            $current = current_value($fieldName);
+                                            $label = pretty_label($fieldName);
+                                            $help = current_description($fieldName, $generalSettingRowMap);
+                                            $schemaDefinition = chimGetSchemaDefinition($fieldName);
+                                            $isReadonly = isset($schemaDefinition['readonly']) && $schemaDefinition['readonly'] === true;
+                                            $readonlyAttr = $isReadonly ? 'readonly' : '';
+                                            ?>
+                                            <div class="provider-card">
+                                                <div class="provider-head">
+                                                    <div class="provider-title">
+                                                        <div class="provider-icon"><?php echo icon_for_field($fieldName); ?></div>
+                                                        <div><?php echo htmlspecialchars($label); ?></div>
+                                                        <?php if ($fieldType === 'boolean'): ?>
+                                                            <div class="provider-toggle">
+                                                                <input type="hidden" name="<?php echo htmlspecialchars($fieldName); ?>" value="false">
+                                                                <input type="checkbox" name="<?php echo htmlspecialchars($fieldName); ?>" value="true" <?php echo ($current ? 'checked' : ''); ?> <?php echo $isReadonly ? 'disabled' : ''; ?>>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                                <div class="provider-body">
+                                                    <?php if ($fieldType === 'longstring'): ?>
+                                                        <?php if (isset($filterBrowseFieldConfigs[$fieldName])): ?>
+                                                            <?php $browseConfig = $filterBrowseFieldConfigs[$fieldName]; ?>
+                                                            <div class="filter-browse-wrap">
+                                                                <textarea name="<?php echo htmlspecialchars($fieldName); ?>" rows="4" <?php echo $readonlyAttr; ?>><?php echo htmlspecialchars(strval($current)); ?></textarea>
+                                                                <?php if (!$isReadonly): ?>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="btn-filter-browse js-filter-browse"
+                                                                        data-field="<?php echo htmlspecialchars($fieldName); ?>"
+                                                                    >
+                                                                        <?php echo htmlspecialchars(strval($browseConfig['button_label'] ?? 'Recent...')); ?>
+                                                                    </button>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        <?php else: ?>
+                                                            <textarea name="<?php echo htmlspecialchars($fieldName); ?>" rows="4" <?php echo $readonlyAttr; ?>><?php echo htmlspecialchars(strval($current)); ?></textarea>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($help)): ?>
+                                                        <p class="provider-help"><?php echo render_provider_help($fieldName, $help, $webRoot); ?></p>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
                             </div>
                             <?php continue; ?>
                         <?php endif; ?>

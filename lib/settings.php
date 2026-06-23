@@ -614,6 +614,51 @@ if (!function_exists('chimGetPromptContextOptionCatalog')) {
                     'description' => 'Current and recent plan/task summary.',
                 ],
             ],
+            'enabled_nearby_actor_subsections' => [
+                'basic_summary' => [
+                    'label' => 'Basic summary',
+                    'description' => 'Nearby actor profile summary or short biography.',
+                ],
+                'appearance' => [
+                    'label' => 'Appearance',
+                    'description' => 'Nearby actor physical appearance and visible traits.',
+                ],
+                'equipment' => [
+                    'label' => 'Equipment',
+                    'description' => 'Nearby actor currently equipped gear and worn items.',
+                ],
+                'equipment_descriptions' => [
+                    'label' => 'Equipment descriptions',
+                    'description' => 'Adds item descriptions to nearby actor equipment when available.',
+                ],
+                'current_activity' => [
+                    'label' => 'Current activity',
+                    'description' => 'What nearby actors are currently doing.',
+                ],
+                'power_awareness' => [
+                    'label' => 'Power awareness',
+                    'description' => 'Relative strength assessment for nearby actors when power awareness is enabled.',
+                ],
+                'factions' => [
+                    'label' => 'Factions',
+                    'description' => 'Faction names and group descriptions for nearby actors.',
+                ],
+                'custom_state' => [
+                    'label' => 'Custom state',
+                    'description' => 'Custom plugin state attached to nearby actor profile lines.',
+                ],
+            ],
+            'enabled_nearby_item_subsections' => [
+                'group_duplicates' => [
+                    'label' => 'Group duplicates',
+                    'description' => 'Groups duplicate nearby ground items into counted entries.',
+                    'default_enabled' => false,
+                ],
+                'item_descriptions' => [
+                    'label' => 'Item descriptions',
+                    'description' => 'Adds item descriptions for nearby ground items when available.',
+                ],
+            ],
         ];
     }
 }
@@ -624,7 +669,12 @@ if (!function_exists('chimGetDefaultPromptContextOptions')) {
         $catalog = chimGetPromptContextOptionCatalog();
         $defaults = [];
         foreach ($catalog as $bucket => $options) {
-            $defaults[$bucket] = array_keys($options);
+            $defaults[$bucket] = [];
+            foreach ($options as $id => $meta) {
+                if (!isset($meta['default_enabled']) || $meta['default_enabled'] !== false) {
+                    $defaults[$bucket][] = $id;
+                }
+            }
         }
 
         return $defaults;
