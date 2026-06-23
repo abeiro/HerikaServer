@@ -188,6 +188,18 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
         ]
     );
 
+    // Insert bgl_history log entry
+    $db->insert(
+        'bgl_history',
+        [
+            'npc' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'data' => "$npcName starts travelling to $resolvedLocation"
+        ]
+    );
+
     return true;
 }
 
@@ -223,6 +235,18 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
         ]
     );
 
+    // Insert bgl_history log entry
+    $db->insert(
+        'bgl_history',
+        [
+            'npc' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'data' => "$npcName stays at current location ($location)"
+        ]
+    );
+    
     return true;
 }
 
@@ -301,6 +325,18 @@ function handleReturnHome($location, $currentNpcData, $npcName, $last_ts, $last_
         'original' => 'backgroundaction',
     ]);
     
+    // Insert bgl_history log entry
+    $db->insert(
+        'bgl_history',
+        [
+            'npc' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'data' => "$npcName returns back to {$GLOBALS['PLAYER_NAME']}"
+        ]
+    );
+
     // Will mark meta PENDING_DIALOGUE. When NPC reaches player, will talk to player. (triggered at addnpc)
     $npcManager = new NpcMaster();
     $npcData = $npcManager->getByName($npcName);
@@ -414,6 +450,18 @@ function handleMoveToAction($targetNpcName, $currentNpcData, $npcName, $last_ts,
         'original' => 'backgroundaction',
     ]);
 
+    // Insert bgl_history log entry
+    $db->insert(
+        'bgl_history',
+        [
+            'npc' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'data' => "$npcName moves towards $resolvedName"
+        ]
+    );
+
     return true;
 }
 
@@ -496,6 +544,19 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
         'original' => 'backgroundaction',
     ]);
 
+    // Insert bgl_history log entry
+    $db->insert(
+        'bgl_history',
+        [
+            'npc' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'data' => "$npcName looks for $resolvedName"
+        ]
+    );
+
+
     sleep(2); // Simulate time taken to find the NPC; in a real implementation, this would be event-driven rather than a fixed sleep
 
     $npcLocation = $db->fetchOne("SELECT *
@@ -563,6 +624,17 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             'original' => 'backgroundaction',
         ]);
 
+        // Insert bgl_history log entry
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets,
+                'localts' => time(),
+                'data' => "$npcName moves toward $resolvedName"
+            ]
+        );
 
 
     } else if ($detectedLocation && $detectedLocation[3] != $lastReportedLocation) {
@@ -743,6 +815,18 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             ]);
         }
         triggerNpcUpdate($npcName);
+
+        // Insert bgl_history log entry
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets+20,
+                'localts' => time(),
+                'data' => "$npcName has a conversation with $resolvedName"
+            ]
+        );
     }
 
     return true;
@@ -834,6 +918,17 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         'original' => 'backgroundaction',
     ]);
 
+    // Insert bgl_history log entry
+    $db->insert(
+        'bgl_history',
+        [
+            'npc' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:$gold)"
+        ]
+    );
 
     triggerNpcUpdate($npcName);
     return true;

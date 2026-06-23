@@ -6944,6 +6944,24 @@ if ($checkVersion("memory") < 20260617001) {
     Logger::info("Applied patch memory 20260617001");
 }
 
+if ($checkVersion("bgl_history") < 20260623001) {
+    Logger::debug("Applying bgl_history 20260623001 - create BgL history table");
+
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.bgl_history (
+            rowid bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            npc varchar,
+            gamets bigint,
+            ts bigint,
+            localts bigint,
+            data varchar
+        )
+    ");
+
+    $updateVersion("bgl_history", 20260623001);
+    Logger::info("Applied patch bgl_history 20260623001");
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------
