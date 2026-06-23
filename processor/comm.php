@@ -1426,7 +1426,10 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $retVal = 2;
     $resolvedByRefId = false;
 
-    if ($incomingRefId !== "") {
+    // This is breaking stuff when using RealNames.
+    // Must fix
+    
+    if ($incomingRefId !== "" && false) {
         $refIdCandidates = array_unique(array_filter([
             $incomingRefId,
             preg_replace('/^0x/i', '', $incomingRefId),
