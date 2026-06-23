@@ -14,6 +14,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPA
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "player_diary_connector.php");
 
 // Determine web root
@@ -779,6 +780,20 @@ if (!$isEmbed) {
         margin: 0 auto;
     }
 
+    .equipment-group {
+        border: 1px solid #3d4654;
+        border-radius: 8px;
+        background: #20242b;
+        padding: 12px;
+        margin: 12px 0;
+    }
+
+    .equipment-group-title {
+        color: #f27c11;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
     .equipment-slot { 
         padding: 12px;
         background: linear-gradient(135deg, rgba(26, 26, 26, 0.9), rgba(20, 20, 20, 0.95));
@@ -1347,25 +1362,19 @@ if (!$isEmbed) {
 
         <!-- Equipment Card -->
         <?php
-        $equipmentSlots = [
-            'helmet' => 'Helmet',
-            'armor' => 'Armor',
-            'boots' => 'Boots',
-            'gloves' => 'Gloves',
-            'amulet' => 'Amulet',
-            'ring' => 'Ring',
-            'cape' => 'Cape',
-            'backpack' => 'Backpack',
-            'left_hand' => 'Left Hand',
-            'right_hand' => 'Right Hand'
+        $equipmentGroups = [
+            'Vanilla Slots' => chimEquipmentVanillaSlotLabels(),
+            'Modded Slots' => chimEquipmentModdedSlotLabels(),
         ];
 
         $hasEquipment = false;
-        foreach ($equipmentSlots as $slot => $label) {
-            $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
-            if ($itemName) {
-                $hasEquipment = true;
-                break;
+        foreach ($equipmentGroups as $equipmentSlots) {
+            foreach ($equipmentSlots as $slot => $label) {
+                $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
+                if ($itemName) {
+                    $hasEquipment = true;
+                    break 2;
+                }
             }
         }
         ?>
@@ -1373,20 +1382,25 @@ if (!$isEmbed) {
             <h2>Equipment</h2>
             <?php if (!empty($equipment)): ?>
                 <?php if ($hasEquipment): ?>
-                    <div class="equipment-grid">
-                        <?php foreach ($equipmentSlots as $slot => $label):
-                            $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
-                        ?>
-                        <div class="equipment-slot">
-                            <div class="equipment-slot-name"><?php echo $label; ?></div>
-                            <?php if ($itemName): ?>
-                                <div class="equipment-item-name"><?php echo htmlspecialchars($itemName); ?></div>
-                            <?php else: ?>
-                                <div class="equipment-empty">Empty</div>
-                            <?php endif; ?>
+                    <?php foreach ($equipmentGroups as $groupLabel => $equipmentSlots): ?>
+                        <div class="equipment-group">
+                            <div class="equipment-group-title"><?php echo htmlspecialchars($groupLabel); ?></div>
+                            <div class="equipment-grid">
+                                <?php foreach ($equipmentSlots as $slot => $label):
+                                    $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
+                                ?>
+                                <div class="equipment-slot">
+                                    <div class="equipment-slot-name"><?php echo htmlspecialchars($label); ?></div>
+                                    <?php if ($itemName): ?>
+                                        <div class="equipment-item-name"><?php echo htmlspecialchars($itemName); ?></div>
+                                    <?php else: ?>
+                                        <div class="equipment-empty">Empty</div>
+                                    <?php endif; ?>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
-                        <?php endforeach; ?>
-                    </div>
+                    <?php endforeach; ?>
                 <?php else: ?>
                     <div class="no-data">
                         <p><strong>No equipment currently equipped.</strong></p>

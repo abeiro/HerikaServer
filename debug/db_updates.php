@@ -67,6 +67,7 @@ $updateVersion = function($tablename,$version) {
 
 // Ensure base schema and extensions exist for fresh installs
 $db->execQuery('CREATE SCHEMA IF NOT EXISTS public');
+$db->execQuery('CREATE SCHEMA IF NOT EXISTS plugins');
 $db->execQuery("SET search_path TO public");
 $db->execQuery('CREATE EXTENSION IF NOT EXISTS vector');
 $db->execQuery('CREATE EXTENSION IF NOT EXISTS pg_trgm');
@@ -4292,7 +4293,39 @@ if ($checkTableExists("sneq_quests_saved") == -1) {
 } else
     Logger::info(__FILE__." sneq_quests_saved exists");
 
+$questEngineSchemaSql = file_get_contents(__DIR__."/../data/chim_quest_engine.sql");
+if ($checkTableExists("skyrim_quest_definitions") == -1 || $checkTableExists("chim_quest_definitions") != -1) {
+    $db->execQuery($questEngineSchemaSql);
+} else {
+    Logger::info(__FILE__." skyrim_quest_definitions exists");
+    $db->execQuery($questEngineSchemaSql);
+}
 
+if ($checkTableExists("skyrim_quest_definitions") != -1) {
+    require_once(__DIR__ . "/../lib/chim_quest_engine.php");
+    try {
+        $questDefinitionCount = $db->fetchOne("SELECT COUNT(*) AS n FROM public.skyrim_quest_definitions");
+        $questDefinitionSeedVersion = 20260619001;
+        if (intval($questDefinitionCount["n"] ?? 0) === 0 || $checkVersion("skyrim_quest_definitions") < $questDefinitionSeedVersion) {
+            $questImportResults = chimQuestEngineImportBundledDefinitions();
+            $questImportSuccessCount = 0;
+            foreach ($questImportResults as $questImportResult) {
+                if (is_array($questImportResult) && !empty($questImportResult["success"])) {
+                    $questImportSuccessCount++;
+                }
+            }
+            Logger::info(__FILE__ . " imported bundled skyrim quest definitions: {$questImportSuccessCount}/" . count($questImportResults));
+            if ($questImportSuccessCount === count($questImportResults) && $questImportSuccessCount > 0) {
+                $updateVersion("skyrim_quest_definitions", $questDefinitionSeedVersion);
+            } else {
+                Logger::warn(__FILE__ . " bundled skyrim quest definitions import incomplete; version not advanced");
+            }
+        }
+    } catch (Exception $e) {
+        Logger::warn(__FILE__ . " could not import bundled skyrim quest definitions: " . $e->getMessage());
+    }
+
+}
 
 // Some imported dump-style SQL files clear search_path; restore it before
 // running unqualified late-stage migrations.
@@ -6487,6 +6520,47 @@ if ($checkVersion("general_settings") < 20260511001) {
 
 //----------------------------------------------------
 
+if ($checkVersion("general_settings") < 20260619001) {
+    Logger::debug("Applying general_settings 20260619001 - add CHIM AI quest progression settings");
+    $b_ok = true;
+
+    try {
+        $questSettingDefaults = [
+            'CHIM_AI_QUEST_PROGRESSION' => false,
+            'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => true,
+        ];
+
+        foreach ($questSettingDefaults as $settingId => $fallbackDefault) {
+            $existingRow = chimGetGeneralSettingRow($settingId);
+            $definition = chimGetSchemaDefinition($settingId);
+            $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+
+            if ($existingRow) {
+                $currentValue = $existingRow['value'] ?? ($definition['default'] ?? $fallbackDefault);
+            } else {
+                $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+                $currentValue = ($hasLegacyValue === "__CHIM_SETTING_MISSING__")
+                    ? ($definition['default'] ?? $fallbackDefault)
+                    : $hasLegacyValue;
+            }
+
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing general setting '{$settingId}'");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error adding CHIM AI quest progression settings: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260619001);
+        Logger::info("Applied patch general_settings 20260619001");
+    }
+}
+
+//----------------------------------------------------
+
 if ($checkVersion("core_action") < 20260502011) {
     Logger::debug("Applying core_action 20260502011 - sync sitting restrictions for Drink, Toast, and StartRitualCeremony");
     $b_ok = true;
@@ -6859,6 +6933,15 @@ if ($relationshipMetadataNeedsRefresh) {
     } catch (Exception $e) {
         Logger::error("Error applying bio_templates relationship refresh: " . $e->getMessage());
     }
+}
+
+if ($checkVersion("memory") < 20260617001) {
+    Logger::debug("Applying memory 20260617001 - widen localts to bigint (avoids int4 overflow on long-running games / Y2038)");
+
+    $db->execQuery("ALTER TABLE public.memory ALTER COLUMN localts TYPE bigint");
+
+    $updateVersion("memory", 20260617001);
+    Logger::info("Applied patch memory 20260617001");
 }
 
 Logger::info(__FILE__." update file processed");
