@@ -154,15 +154,21 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         $mwdata=json_decode($npc["extended_data"],true);
         // Trigger if never updated, or if last update is older than configured threshold
         if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"]<($bglTriggerDaysAgoGamets)) {
-            logger::info("[BGL] Event for {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}");
+            $delta=($mwdata["background_life_last_updated"]-$bglTriggerDaysAgoGamets) * 0.0000024;
+            logger::info("[BGL] Event for {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}");
             $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_v2.php \"{$npc["npc_name"]}\" full forceaction");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }
             break;  // One per iteration - break after processing
         } else {
-            logger::debug("[BGL] Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}");
+            $delta=($mwdata["background_life_last_updated"]-$bglTriggerDaysAgoGamets) * 0.0000024;
+            logger::info("[BGL] Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']} , delta: {$delta}");
         }
+    }
+
+    if (sizeof($allEnabledBgLNpc)===0) {
+        logger::info("[BGL] No NPCs with background life enabled");
     }
     
 
