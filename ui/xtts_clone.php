@@ -1121,6 +1121,24 @@ function getLocalVoices() {
     return $voices;
 }
 
+function resolveLocalVoiceName($voiceName): string {
+    $voiceName = basename(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, trim(strval($voiceName))));
+    if (strtolower(substr($voiceName, -4)) === '.wav') {
+        $voiceName = substr($voiceName, 0, -4);
+    }
+    if ($voiceName === '') {
+        return '';
+    }
+
+    foreach (getLocalVoices() as $localVoice) {
+        if ($localVoice === $voiceName) {
+            return $localVoice;
+        }
+    }
+
+    return '';
+}
+
 function getClonedVoices($provider) {
     global $db;
     if (!isset($GLOBALS["db"]) || !$GLOBALS["db"]) {
@@ -1608,9 +1626,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $cartesiaMessage .= "<p style='color:red;'><strong>" . htmlspecialchars($cartesiaStatus['message']) . "</strong></p>";
         } else {
             chimTtsStudioApplyConnectorGlobals('cartesia');
-            $voice = $_POST['voice'];
+            $voice = resolveLocalVoiceName($_POST['voice']);
             $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
-            if (file_exists($voiceSamplePath)) {
+            if ($voice !== '' && file_exists($voiceSamplePath)) {
                 $result = getOrCreateCartesiaVoice($voice);
                 if ($result !== false && !empty($result)) {
                     // Redirect to refresh the page and show updated status
@@ -1622,7 +1640,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $cartesiaMessage .= "<p style='color:red;'><strong>Failed to generate voice '{$voice}' for Cartesia.{$suffix}</strong></p>";
                 }
             } else {
-                $cartesiaMessage .= "<p style='color:red;'><strong>Voice file not found: {$voice}</strong></p>";
+                $cartesiaMessage .= "<p style='color:red;'><strong>Voice file not found.</strong></p>";
+            }
+        }
+    }
+
+    // Cartesia single voice unsync handler
+    if (isset($_POST['action']) && $_POST['action'] === 'unsync_cartesia_single' && isset($_POST['voice'])) {
+        chimTtsStudioApplyConnectorGlobals('cartesia');
+        $voice = resolveLocalVoiceName($_POST['voice']);
+        if ($voice !== '') {
+            deleteCachedCartesiaVoiceId($voice, null, true);
+            $cartesiaMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Unsynced Cartesia voice cache for " . htmlspecialchars($voice) . ".</strong></p>";
+        } else {
+            $cartesiaMessage .= "<p style='color:red;'><strong>Voice file not found.</strong></p>";
+        }
+    }
+
+    // Cartesia single voice resync handler
+    if (isset($_POST['action']) && $_POST['action'] === 'resync_cartesia_single' && isset($_POST['voice'])) {
+        $cartesiaStatus = getCartesiaConfigurationStatus();
+        if (!$cartesiaStatus['configured']) {
+            $cartesiaMessage .= "<p style='color:red;'><strong>" . htmlspecialchars($cartesiaStatus['message']) . "</strong></p>";
+        } else {
+            chimTtsStudioApplyConnectorGlobals('cartesia');
+            $voice = resolveLocalVoiceName($_POST['voice']);
+            $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
+            if ($voice !== '' && file_exists($voiceSamplePath)) {
+                deleteCachedCartesiaVoiceId($voice, null, true);
+                $result = getOrCreateCartesiaVoice($voice);
+                if ($result !== false && !empty($result)) {
+                    header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=cartesia&synced=' . urlencode($voice));
+                    exit;
+                }
+
+                $detailedError = function_exists('getCartesiaLastError') ? getCartesiaLastError() : '';
+                $suffix = $detailedError !== '' ? ' ' . htmlspecialchars($detailedError) : ' Please check API configuration and logs.';
+                $cartesiaMessage .= "<p style='color:red;'><strong>Failed to resync voice '" . htmlspecialchars($voice) . "' for Cartesia.{$suffix}</strong></p>";
+            } else {
+                $cartesiaMessage .= "<p style='color:red;'><strong>Voice file not found.</strong></p>";
             }
         }
     }
@@ -1767,22 +1823,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $inworldMessage .= "<p style='color:red;'><strong>" . htmlspecialchars($inworldStatus['message']) . "</strong></p>";
         } else {
             chimTtsStudioApplyConnectorGlobals('inworld');
-        $voice = $_POST['voice'];
-        $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
-        if (file_exists($voiceSamplePath)) {
-            $result = getOrCreateInworldVoice($voice);
-            if ($result !== false && !empty($result)) {
-                // Redirect to refresh the page and show updated status
-                header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=inworld&synced=' . urlencode($voice));
-                exit;
+            $voice = resolveLocalVoiceName($_POST['voice']);
+            $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
+            if ($voice !== '' && file_exists($voiceSamplePath)) {
+                $result = getOrCreateInworldVoice($voice);
+                if ($result !== false && !empty($result)) {
+                    // Redirect to refresh the page and show updated status
+                    header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=inworld&synced=' . urlencode($voice));
+                    exit;
+                } else {
+                    $detailedError = function_exists('getInworldLastError') ? getInworldLastError() : '';
+                    $suffix = $detailedError !== '' ? ' ' . htmlspecialchars($detailedError) : ' Please check API configuration and logs.';
+                    $inworldMessage .= "<p style='color:red;'><strong>Failed to generate voice '{$voice}' for Inworld.{$suffix}</strong></p>";
+                }
             } else {
+                $inworldMessage .= "<p style='color:red;'><strong>Voice file not found.</strong></p>";
+            }
+        }
+    }
+
+    // Inworld single voice unsync handler
+    if (isset($_POST['action']) && $_POST['action'] === 'unsync_inworld_single' && isset($_POST['voice'])) {
+        chimTtsStudioApplyConnectorGlobals('inworld');
+        $voice = resolveLocalVoiceName($_POST['voice']);
+        if ($voice !== '') {
+            deleteCachedInworldVoiceId($voice, null, true);
+            $inworldMessage .= "<p style='color:rgb(247, 231, 16);'><strong>Unsynced Inworld voice cache for " . htmlspecialchars($voice) . ".</strong></p>";
+        } else {
+            $inworldMessage .= "<p style='color:red;'><strong>Voice file not found.</strong></p>";
+        }
+    }
+
+    // Inworld single voice resync handler
+    if (isset($_POST['action']) && $_POST['action'] === 'resync_inworld_single' && isset($_POST['voice'])) {
+        $inworldStatus = getInworldConfigurationStatus();
+        if (!$inworldStatus['configured']) {
+            $inworldMessage .= "<p style='color:red;'><strong>" . htmlspecialchars($inworldStatus['message']) . "</strong></p>";
+        } else {
+            chimTtsStudioApplyConnectorGlobals('inworld');
+            $voice = resolveLocalVoiceName($_POST['voice']);
+            $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
+            if ($voice !== '' && file_exists($voiceSamplePath)) {
+                deleteCachedInworldVoiceId($voice, null, true);
+                $result = getOrCreateInworldVoice($voice);
+                if ($result !== false && !empty($result)) {
+                    header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=inworld&synced=' . urlencode($voice));
+                    exit;
+                }
+
                 $detailedError = function_exists('getInworldLastError') ? getInworldLastError() : '';
                 $suffix = $detailedError !== '' ? ' ' . htmlspecialchars($detailedError) : ' Please check API configuration and logs.';
-                $inworldMessage .= "<p style='color:red;'><strong>Failed to generate voice '{$voice}' for Inworld.{$suffix}</strong></p>";
+                $inworldMessage .= "<p style='color:red;'><strong>Failed to resync voice '" . htmlspecialchars($voice) . "' for Inworld.{$suffix}</strong></p>";
+            } else {
+                $inworldMessage .= "<p style='color:red;'><strong>Voice file not found.</strong></p>";
             }
-        } else {
-            $inworldMessage .= "<p style='color:red;'><strong>Voice file not found: {$voice}</strong></p>";
-        }
         }
     }
     
@@ -2282,6 +2376,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         form.submit();
     }
 
+    function manageCloudVoice(provider, voiceName, mode) {
+        const actionTextMap = {
+            unsync: 'Forgetting cached voice ID for ' + provider,
+            resync: 'Regenerating voice for ' + provider
+        };
+        showLoadingMessage((actionTextMap[mode] || 'Processing voice for ' + provider) + ', please wait...');
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = WEB_ROOT + '/ui/xtts_clone.php?tab=' + provider;
+
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = mode + '_' + provider + '_single';
+
+        const voiceInput = document.createElement('input');
+        voiceInput.type = 'hidden';
+        voiceInput.name = 'voice';
+        voiceInput.value = voiceName;
+
+        form.appendChild(actionInput);
+        form.appendChild(voiceInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+
     // Batch upload functionality
     let batchCancelled = false;
     let currentBatchProvider = null;
@@ -2684,7 +2805,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         transform: scale(1.1);
     }
 
-    .sync-btn {
+    .sync-btn,
+    .unsync-btn,
+    .resync-btn {
         opacity: 0.4;
         background: none;
         border: none;
@@ -2695,17 +2818,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         transition: all 0.2s ease;
     }
 
-    .voice-status-item:hover .sync-btn {
+    .voice-status-item:hover .sync-btn,
+    .voice-status-item:hover .unsync-btn,
+    .voice-status-item:hover .resync-btn {
         opacity: 0.8;
     }
 
-    .sync-btn:hover:not(:disabled) {
+    .sync-btn:hover:not(:disabled),
+    .resync-btn:hover:not(:disabled) {
         opacity: 1 !important;
         transform: scale(1.1);
         color: rgb(242, 124, 17);
     }
 
-    .sync-btn:disabled {
+    .unsync-btn:hover:not(:disabled) {
+        opacity: 1 !important;
+        transform: scale(1.1);
+        color: #f44336;
+    }
+
+    .sync-btn:disabled,
+    .resync-btn:disabled {
         opacity: 0.2;
         cursor: not-allowed;
     }
@@ -3513,6 +3646,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <?php if ($isCloned): ?>
                                 <button onclick="event.stopPropagation(); testCartesiaVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
                                         class="play-btn" title="Test voice">▶</button>
+                                <button onclick="event.stopPropagation(); manageCloudVoice('cartesia', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>', 'unsync')"
+                                        class="unsync-btn" title="Forget cached Cartesia voice ID">×</button>
+                                <button onclick="event.stopPropagation(); manageCloudVoice('cartesia', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>', 'resync')"
+                                        class="resync-btn" title="Forget cached ID and generate a new Cartesia voice" <?php echo !$cartesiaConfigured ? 'disabled' : ''; ?>>↻</button>
                             <?php else: ?>
                                 <button onclick="event.stopPropagation(); syncSingleVoice('cartesia', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
                                         class="sync-btn" title="Sync this voice" <?php echo !$cartesiaConfigured ? 'disabled' : ''; ?>>↻</button>
@@ -3633,6 +3770,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <?php if ($isCloned): ?>
                                 <button onclick="event.stopPropagation(); testInworldVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
                                         class="play-btn" title="Test voice">▶</button>
+                                <button onclick="event.stopPropagation(); manageCloudVoice('inworld', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>', 'unsync')"
+                                        class="unsync-btn" title="Forget cached Inworld voice ID">×</button>
+                                <button onclick="event.stopPropagation(); manageCloudVoice('inworld', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>', 'resync')"
+                                        class="resync-btn" title="Forget cached ID and generate a new Inworld voice" <?php echo !$inworldConfigured ? 'disabled' : ''; ?>>↻</button>
                             <?php else: ?>
                                 <button onclick="event.stopPropagation(); syncSingleVoice('inworld', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')" 
                                         class="sync-btn" title="Sync this voice" <?php echo !$inworldConfigured ? 'disabled' : ''; ?>>↻</button>
