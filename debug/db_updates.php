@@ -6960,6 +6960,72 @@ if ($checkVersion("bgl_history") < 20260623001) {
 
     $updateVersion("bgl_history", 20260623001);
     Logger::info("Applied patch bgl_history 20260623001");
+
+}
+
+if ($checkVersion("oghma") < 20260625001) {
+    Logger::debug("Applying oghma 20260625001 - ensure topic has a unique constraint for upserts");
+
+    $db->execQuery("DELETE FROM public.oghma WHERE topic IS NULL");
+
+    $db->execQuery("
+        DELETE FROM public.oghma o
+        USING (
+            SELECT ctid
+            FROM (
+                SELECT
+                    ctid,
+                    row_number() OVER (
+                        PARTITION BY topic
+                        ORDER BY
+                            CASE WHEN topic_desc IS NOT NULL AND btrim(topic_desc) <> '' THEN 1 ELSE 0 END DESC,
+                            CASE WHEN topic_desc_basic IS NOT NULL AND btrim(topic_desc_basic) <> '' THEN 1 ELSE 0 END DESC,
+                            CASE WHEN knowledge_class IS NOT NULL AND btrim(knowledge_class) <> '' THEN 1 ELSE 0 END DESC,
+                            CASE WHEN knowledge_class_basic IS NOT NULL AND btrim(knowledge_class_basic) <> '' THEN 1 ELSE 0 END DESC,
+                            CASE WHEN tags IS NOT NULL AND btrim(tags) <> '' THEN 1 ELSE 0 END DESC,
+                            CASE WHEN category IS NOT NULL AND btrim(category) <> '' THEN 1 ELSE 0 END DESC,
+                            ctid
+                    ) AS rn
+                FROM public.oghma
+            ) ranked
+            WHERE rn > 1
+        ) dupes
+        WHERE o.ctid = dupes.ctid
+    ");
+
+    $db->execQuery("
+        DO $$
+        DECLARE
+            topic_attnum smallint;
+        BEGIN
+            SELECT a.attnum
+              INTO topic_attnum
+              FROM pg_attribute a
+             WHERE a.attrelid = 'public.oghma'::regclass
+               AND a.attname = 'topic'
+               AND a.attnum > 0
+               AND NOT a.attisdropped;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_index i
+                JOIN pg_class t ON t.oid = i.indrelid
+                JOIN pg_namespace n ON n.oid = t.relnamespace
+                WHERE n.nspname = 'public'
+                  AND t.relname = 'oghma'
+                  AND i.indisunique
+                  AND i.indpred IS NULL
+                  AND i.indnkeyatts = 1
+                  AND i.indkey::text = topic_attnum::text
+            ) THEN
+                CREATE UNIQUE INDEX oghma_topic_unique_idx ON public.oghma (topic);
+            END IF;
+        END
+        $$;
+    ");
+
+    $updateVersion("oghma", 20260625001);
+    Logger::info("Applied patch oghma 20260625001");
 }
 
 Logger::info(__FILE__." update file processed");

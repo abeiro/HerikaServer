@@ -469,7 +469,7 @@ function chimFormatEquipmentPromptLines(array $equipmentData, array $slotLabels,
     return $equipmentParts;
 }
 
-function chimFormatProfileEquipmentParts(array $equipmentData, array $slots): array {
+function chimFormatProfileEquipmentParts(array $equipmentData, array $slots, bool $includeDescriptions = true): array {
     $equipmentParts = [];
     $describedBaseids = [];
 
@@ -489,7 +489,7 @@ function chimFormatProfileEquipmentParts(array $equipmentData, array $slots): ar
         $description = null;
         $baseidKey = $baseid !== '' ? strtoupper($baseid) : '';
 
-        if ($baseidKey === '' || !in_array($baseidKey, $describedBaseids, true)) {
+        if ($includeDescriptions && ($baseidKey === '' || !in_array($baseidKey, $describedBaseids, true))) {
             $description = chimLookupItemDescriptionForContext($itemName, $baseid);
             if ($description !== null && $baseidKey !== '') {
                 $describedBaseids[] = $baseidKey;
@@ -846,6 +846,21 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     // Not always the same order
     shuffle($actorDetailedList);
     // error_log("[DataLastInfoFor] $actorsInRangeList");
+
+    $nearbyContextOptionEnabled = function (string $bucket, string $id, bool $default = true): bool {
+        if (function_exists('chimPromptContextOptionEnabled')) {
+            return chimPromptContextOptionEnabled($bucket, $id);
+        }
+        return $default;
+    };
+    $nearbyActorsIncludeBasicSummary = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'basic_summary');
+    $nearbyActorsIncludeAppearance = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'appearance');
+    $nearbyActorsIncludeEquipment = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'equipment');
+    $nearbyActorsEquipmentDescriptions = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'equipment_descriptions');
+    $nearbyActorsIncludeActivity = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'current_activity');
+    $nearbyActorsIncludePower = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'power_awareness');
+    $nearbyActorsIncludeFactions = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'factions');
+    $nearbyActorsIncludeCustomState = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'custom_state');
     
     // Track seen faction descriptions to avoid duplicates
     $seenFactionFormIDs = [];
@@ -895,14 +910,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     $playerBio = chimNormalizePlayerProfileBio(ResolvePlayerBackstory($player), $actor);
                     $bioKnownByAll = filter_var((string)($player->get('bio_known_by_all') ?? ''), FILTER_VALIDATE_BOOLEAN);
                     $isNarrator = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "The Narrator") === 0;
-                    if ($playerBio !== "" && ($bioKnownByAll || $isNarrator)) {
+                    if ($nearbyActorsIncludeBasicSummary && $playerBio !== "" && ($bioKnownByAll || $isNarrator)) {
                         $profileString .= ": " . trim($playerBio);
                         $hasProfileBody = true;
                     }
 
                     // Add appearance if available
                     $appearance = $player->get('appearance');
-                    if (!empty($appearance)) {
+                    if ($nearbyActorsIncludeAppearance && !empty($appearance)) {
                         if ($hasProfileBody) {
                             $profileString .= ". Appearance: " . trim($appearance);
                         } else {
@@ -913,10 +928,10 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     
                     // Add equipment if available
                     $equipmentData = $player->getJson('equipment');
-                    if (is_array($equipmentData) && !empty($equipmentData)) {
+                    if ($nearbyActorsIncludeEquipment && is_array($equipmentData) && !empty($equipmentData)) {
                         $slots = chimEquipmentProfileSlotKeys();
                         $slots = chimProfileEquipmentSlotsFromData($equipmentData, $slots);
-                        $equipmentParts = chimFormatProfileEquipmentParts($equipmentData, $slots);
+                        $equipmentParts = chimFormatProfileEquipmentParts($equipmentData, $slots, $nearbyActorsEquipmentDescriptions);
                         if (!empty($equipmentParts)) {
                             if ($hasProfileBody) {
                                 $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
@@ -927,20 +942,22 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         }
                     }
 
-                    $profileExtra = chimBuildActorProfileEnrichmentText($actor, "player", [
-                        "source" => "nearby_actors",
-                    ]);
-                    if ($profileExtra !== "") {
-                        if ($hasProfileBody) {
-                            $profileString .= ". " . $profileExtra;
-                        } else {
-                            $profileString .= ": " . $profileExtra;
-                            $hasProfileBody = true;
+                    if ($nearbyActorsIncludeCustomState) {
+                        $profileExtra = chimBuildActorProfileEnrichmentText($actor, "player", [
+                            "source" => "nearby_actors",
+                        ]);
+                        if ($profileExtra !== "") {
+                            if ($hasProfileBody) {
+                                $profileString .= ". " . $profileExtra;
+                            } else {
+                                $profileString .= ": " . $profileExtra;
+                                $hasProfileBody = true;
+                            }
                         }
                     }
                     
                     // Power Awareness: Add relative power assessment for player
-                    if (isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
+                    if ($nearbyActorsIncludePower && isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
                         require_once(__DIR__ . DIRECTORY_SEPARATOR . "power_awareness.php");
                         
                         // Get player's level
@@ -995,15 +1012,17 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $reanimationText = " This person has been reanimated from death as a zombie.";
                     }
                     
-                    $profileString = "{$nameWithRaceGender}: " . trim("{$currentNpcData["core"]}{$reanimationText}");
+                    $profileString = $nearbyActorsIncludeBasicSummary
+                        ? "{$nameWithRaceGender}: " . trim("{$currentNpcData["core"]}{$reanimationText}")
+                        : "{$nameWithRaceGender}";
                     
                     // Add appearance if available
-                    if (!empty($currentNpcData["appearance"])) {
+                    if ($nearbyActorsIncludeAppearance && !empty($currentNpcData["appearance"])) {
                         $profileString .= ". Appearance: " . trim($currentNpcData["appearance"]);
                     }
                     
                     // Add zombie appearance if reanimated
-                    if (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
+                    if ($nearbyActorsIncludeAppearance && empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
                         $zombieAppearance = "Their skin has a deathly pale, greyish pallor with a corpse-like appearance. Their eyes are glazed and lifeless, and their movements are stiff and unnatural";
                         if (!empty($currentNpcData["appearance"])) {
                             $profileString .= ". " . $zombieAppearance;
@@ -1024,7 +1043,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     }
                     
                     // Power Awareness: Add relative power assessment
-                    if (isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
+                    if ($nearbyActorsIncludePower && isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
                         require_once(__DIR__ . DIRECTORY_SEPARATOR . "power_awareness.php");
                         
                         // Get current NPC's level
@@ -1042,14 +1061,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     }
 
                     $activityStatus = chimNormalizeActivityStatus($metaData);
-                    if (!empty($activityStatus['fresh']) && !empty($activityStatus['summary'])) {
+                    if ($nearbyActorsIncludeActivity && !empty($activityStatus['fresh']) && !empty($activityStatus['summary'])) {
                         $profileString .= ". Current activity: " . $activityStatus['summary'];
                     }
                     
                     // Add equipment if available
-                    if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
+                    if ($nearbyActorsIncludeEquipment && isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
                         $slots = chimEquipmentProfileSlotKeys();
-                        $equipmentParts = chimFormatProfileEquipmentParts($metaData["equipment"], $slots);
+                        $equipmentParts = chimFormatProfileEquipmentParts($metaData["equipment"], $slots, $nearbyActorsEquipmentDescriptions);
                         if (!empty($equipmentParts)) {
                             $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
                         }
@@ -1065,18 +1084,20 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         }
                     }
 
-                    $profileExtra = chimBuildActorProfileEnrichmentText($npcName, "npc", [
-                        "source" => "nearby_actors",
-                        "metadata" => $metaData,
-                        "npc_data" => $currentNpcData,
-                    ]);
-                    if ($profileExtra !== "") {
-                        $profileString .= ". " . $profileExtra;
+                    if ($nearbyActorsIncludeCustomState) {
+                        $profileExtra = chimBuildActorProfileEnrichmentText($npcName, "npc", [
+                            "source" => "nearby_actors",
+                            "metadata" => $metaData,
+                            "npc_data" => $currentNpcData,
+                        ]);
+                        if ($profileExtra !== "") {
+                            $profileString .= ". " . $profileExtra;
+                        }
                     }
                     
                     // Add faction information after equipment
                     $extendedData = $npcMaster->getExtendedData($currentNpcData);
-                    if (isset($extendedData['factions']) && is_array($extendedData['factions']) && count($extendedData['factions']) > 0) {
+                    if ($nearbyActorsIncludeFactions && isset($extendedData['factions']) && is_array($extendedData['factions']) && count($extendedData['factions']) > 0) {
                         $factionNames = [];
                         foreach ($extendedData['factions'] as $faction) {
                             if (isset($faction['formid'])) {
@@ -1164,6 +1185,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     }
     
     // Add nearby items to context if available
+    $nearbyItemsIncludeDescriptions = $nearbyContextOptionEnabled('enabled_nearby_item_subsections', 'item_descriptions');
+    $nearbyItemsGroupDuplicates = $nearbyContextOptionEnabled('enabled_nearby_item_subsections', 'group_duplicates', false);
     $itemsInRange = DataItemsInCloseRange();
     
     if (!empty($itemsInRange)) {
@@ -1174,7 +1197,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $groupedItems = [];
         $playerName = $GLOBALS["PLAYER_NAME"] ?? "Player";
         $playerLookingTag = " ({$playerName} is looking at this)";
-        $shorterNearbyItemList = !empty($GLOBALS["SHORTER_NEARBY_ITEM_LIST"]);
+        $shorterNearbyItemList = $nearbyItemsGroupDuplicates;
         
         foreach ($itemsList as $item) {
             $trimmedItem = trim($item);
@@ -1207,7 +1230,9 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     
                     if ($descRecord && !empty($descRecord['description'])) {
                         // Store description under clean name (without STEALING tag)
-                        $itemDescriptions[$itemNameClean] = $descRecord['description'];
+                        if ($nearbyItemsIncludeDescriptions) {
+                            $itemDescriptions[$itemNameClean] = $descRecord['description'];
+                        }
                         $hasDescription = true;
                     }
                 }
@@ -1224,11 +1249,11 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                             'count' => 0,
                             'sample_refid' => $refID,
                             'sample_item_name' => $itemName,
-                            'description' => $itemDescriptions[$itemNameClean] ?? '',
+                        'description' => $nearbyItemsIncludeDescriptions ? ($itemDescriptions[$itemNameClean] ?? '') : '',
                         ];
                     }
                     $groupedItems[$groupKey]['count']++;
-                    if (empty($groupedItems[$groupKey]['description']) && !empty($itemDescriptions[$itemNameClean])) {
+                    if ($nearbyItemsIncludeDescriptions && empty($groupedItems[$groupKey]['description']) && !empty($itemDescriptions[$itemNameClean])) {
                         $groupedItems[$groupKey]['description'] = $itemDescriptions[$itemNameClean];
                     }
                 } else {
@@ -1279,7 +1304,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
             
             // Add descriptions for unique items if available
             $descriptionText = "";
-            if ($shorterNearbyItemList) {
+            if ($nearbyItemsIncludeDescriptions && $shorterNearbyItemList) {
                 $descParts = [];
                 foreach ($groupedItems as $group) {
                     if (!empty($group['description'])) {
@@ -1289,7 +1314,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 if (!empty($descParts)) {
                     $descriptionText = "\n\n# ITEM DESCRIPTIONS\n## " . implode("\n## ", $descParts);
                 }
-            } elseif (!empty($itemDescriptions)) {
+            } elseif ($nearbyItemsIncludeDescriptions && !empty($itemDescriptions)) {
                 $descParts = [];
                 foreach ($itemDescriptions as $name => $desc) {
                     $descParts[] = "{$name}: {$desc}";
