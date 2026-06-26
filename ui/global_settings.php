@@ -77,6 +77,7 @@ $gsSections = [
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
         [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
         [ 'name' => 'TRANSFORMATION_DETECTION', 'type' => 'boolean' ],
+        [ 'name' => 'POWER_AWARENESS_ENABLED', 'type' => 'boolean' ],
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
     ],
     $promptContextSectionTitle => $promptContextOptionFields,
