@@ -2007,6 +2007,15 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         
         // MinAI prompts are breaking rechat actor adressing "Respond to #target# as #herika_name#"
         $GLOBALS['action_prompts']=[];
+        $rechatEnabledFunctionSet=array_fill_keys($GLOBALS["ENABLED_FUNCTIONS"] ?? [], true);
+        $rechatActionSourceCodes=[
+            "TradeItems"=>"OpenInventory",
+        ];
+        $rechatActionWasEnabled=function ($functionCode) use ($rechatEnabledFunctionSet, $rechatActionSourceCodes) {
+            $sourceCode=$rechatActionSourceCodes[$functionCode] ?? $functionCode;
+            return isset($rechatEnabledFunctionSet[$sourceCode]);
+        };
+
         // Unset some functions here.
        
         unsetFunction("OpenInventory");
@@ -2021,15 +2030,17 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         // Change name of functions here
         // Function clone and renaming
         // ExchangeItems (trade with player) will be modified to TradeItems (roleplayed trade)
-        $NEWFUNCTION=$GLOBALS["BASE_FUNCTIONS"]["OpenInventory"];
-        $NEWFUNCTION["name"]="TradeItems";
-        $NEWFUNCTION["description"]="{$GLOBALS["HERIKA_NAME"]} trade items with another actor. Amount and item will be infered from dialogue, so no need to specify";
-        $NEWFUNCTION["parameters"]["properties"]["target"]["description"]="Actor name to trade with";
-        $GLOBALS["FUNCTIONS"][]=$NEWFUNCTION;
-        $GLOBALS["ENABLED_FUNCTIONS"][]="TradeItems";
-        $GLOBALS["F_NAMES"]["TradeItems"]="TradeItems";
+        if ($rechatActionWasEnabled("TradeItems") && isset($GLOBALS["BASE_FUNCTIONS"]["OpenInventory"])) {
+            $NEWFUNCTION=$GLOBALS["BASE_FUNCTIONS"]["OpenInventory"];
+            $NEWFUNCTION["name"]="TradeItems";
+            $NEWFUNCTION["description"]="{$GLOBALS["HERIKA_NAME"]} trade items with another actor. Amount and item will be infered from dialogue, so no need to specify";
+            $NEWFUNCTION["parameters"]["properties"]["target"]["description"]="Actor name to trade with";
+            $GLOBALS["FUNCTIONS"][]=$NEWFUNCTION;
+            $GLOBALS["ENABLED_FUNCTIONS"][]="TradeItems";
+            $GLOBALS["F_NAMES"]["TradeItems"]="TradeItems";
+        }
 
-        if ($GLOBALS["IS_NPC"]) {
+        if ($GLOBALS["IS_NPC"] && $rechatActionWasEnabled("TravelTo") && isset($GLOBALS["BASE_FUNCTIONS"]["TravelTo"])) {
             // TravelTo (lead the way to for player) will be modified to TravelTo (TravelTo) if no follower
             $NEWFUNCTION=$GLOBALS["BASE_FUNCTIONS"]["TravelTo"];
             $NEWFUNCTION["name"]="TravelTo";
@@ -2044,7 +2055,23 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
 
         }
 
+        $GLOBALS["ENABLED_FUNCTIONS"]=array_values(array_unique(array_filter(
+            $GLOBALS["ENABLED_FUNCTIONS"] ?? [],
+            function ($functionCode) use ($rechatActionWasEnabled) {
+                return $rechatActionWasEnabled($functionCode);
+            }
+        )));
 
+        $GLOBALS["FUNCTIONS"]=array_values(array_filter(
+            $GLOBALS["FUNCTIONS"] ?? [],
+            function ($functionEntry) use ($rechatActionWasEnabled) {
+                if (!is_array($functionEntry) || empty($functionEntry["name"])) {
+                    return false;
+                }
+                $functionCode=getFunctionCodeName($functionEntry["name"]);
+                return $functionCode !== false && $rechatActionWasEnabled($functionCode);
+            }
+        ));
        
     }
 }
