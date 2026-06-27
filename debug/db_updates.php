@@ -6561,6 +6561,41 @@ if ($checkVersion("general_settings") < 20260619001) {
 
 //----------------------------------------------------
 
+if ($checkVersion("general_settings") < 20260627001) {
+    Logger::debug("Applying general_settings 20260627001 - add player item pickup eventlog threshold");
+    $b_ok = true;
+
+    try {
+        $settingId = 'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE';
+        $existingRow = chimGetGeneralSettingRow($settingId);
+        $definition = chimGetSchemaDefinition($settingId);
+        $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+
+        if ($existingRow) {
+            $currentValue = $existingRow['value'] ?? ($definition['default'] ?? 500);
+        } else {
+            $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+            $currentValue = ($hasLegacyValue === "__CHIM_SETTING_MISSING__")
+                ? ($definition['default'] ?? 500)
+                : $hasLegacyValue;
+        }
+
+        if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+            throw new Exception("Failed writing general setting '{$settingId}'");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error adding player item pickup eventlog threshold setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260627001);
+        Logger::info("Applied patch general_settings 20260627001");
+    }
+}
+
+//----------------------------------------------------
+
 if ($checkVersion("core_action") < 20260502011) {
     Logger::debug("Applying core_action 20260502011 - sync sitting restrictions for Drink, Toast, and StartRitualCeremony");
     $b_ok = true;

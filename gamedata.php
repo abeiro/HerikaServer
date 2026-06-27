@@ -55,7 +55,9 @@ $actorlessTypes = [
     'quest_action_ack',
     'quest_import_bundled',
     'quest_reset_runtime',
-    'quest_status'
+    'quest_status',
+    'player_item_acquired',
+    'player_items_acquired'
 ];
 
 // Validate required fields (skipped for actorless types)
@@ -157,6 +159,12 @@ try {
         case 'quest_status':
             $responseBody = chimQuestEngineJsonEncode(chimQuestEngineStatus());
             $responseIsJson = true;
+            break;
+        case 'player_item_acquired':
+            handlePlayerItemAcquired($data);
+            break;
+        case 'player_items_acquired':
+            handlePlayerItemsAcquired($data);
             break;
         default:
             http_response_code(400);
@@ -495,6 +503,130 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
     
     $itemCount = count($items);
     Logger::debug("[gamedata.php] Updated inventory for {$actorType}: {$actorName} ({$itemCount} items)");
+}
+
+/**
+ * Handle player item pickup telemetry.
+ */
+function handlePlayerItemAcquired(array $data): void {
+    $itemName = trim(strval($data['name'] ?? ''));
+    if ($itemName === '') {
+        Logger::warn("[gamedata.php] player_item_acquired missing item name");
+        return;
+    }
+
+    $count = max(1, intval($data['count'] ?? 1));
+    $goldValue = max(0, intval($data['gold_value'] ?? 0));
+    $totalValue = isset($data['total_value'])
+        ? max(0, intval($data['total_value']))
+        : ($goldValue * $count);
+    $playerName = trim(strval($data['actor_name'] ?? ($GLOBALS['PLAYER_NAME'] ?? 'Player')));
+    if ($playerName === '') {
+        $playerName = 'Player';
+    }
+
+    Logger::debug("[gamedata.php] Received player item pickup: {$playerName} x{$count} {$itemName} (value {$totalValue})");
+
+    if (!empty($data['barter_suppressed']) || !empty($data['crafting_active'])) {
+        return;
+    }
+
+    $minimumValue = 500;
+    if (function_exists('chimGetGeneralSettingInt')) {
+        $minimumValue = max(0, chimGetGeneralSettingInt('CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE', 500));
+    }
+
+    if ($totalValue < $minimumValue) {
+        return;
+    }
+
+    $sourceName = trim(strval($data['source_name'] ?? ''));
+    $sourceOwner = trim(strval($data['source_owner'] ?? ''));
+    $sourceType = strtolower(trim(strval($data['source_type'] ?? '')));
+
+    if ($sourceOwner !== '') {
+        $eventText = "{$playerName} took/traded {$count} {$itemName} from {$sourceOwner}";
+    } elseif ($sourceName !== '' && $sourceType === 'actor') {
+        $eventText = "{$playerName} looted {$count} {$itemName} from {$sourceName}";
+    } elseif ($sourceName !== '') {
+        $eventText = "{$playerName} found {$count} {$itemName} in a {$sourceName}";
+    } else {
+        $eventText = "{$playerName} found {$count} {$itemName}";
+    }
+
+    $gamets = intval($data['gamets'] ?? 0);
+    if ($gamets < 5) {
+        $gamets = 5;
+    }
+
+    $ts = (int)floor(microtime(true) * 1000000);
+    $people = getPlayerItemEventPeopleSnapshot($playerName);
+    $GLOBALS["db"]->insert('eventlog', [
+        'ts' => $ts,
+        'gamets' => $gamets,
+        'type' => 'itemfound',
+        'data' => $eventText,
+        'sess' => 'pending',
+        'localts' => time(),
+        'people' => $people,
+        'location' => '',
+        'party' => '',
+    ]);
+}
+
+function handlePlayerItemsAcquired(array $data): void {
+    $items = $data['items'] ?? [];
+    if (!is_array($items)) {
+        Logger::warn("[gamedata.php] player_items_acquired missing items payload");
+        return;
+    }
+
+    foreach ($items as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        if (empty($item['actor_name']) && !empty($data['actor_name'])) {
+            $item['actor_name'] = $data['actor_name'];
+        }
+        if (empty($item['actor_type']) && !empty($data['actor_type'])) {
+            $item['actor_type'] = $data['actor_type'];
+        }
+
+        handlePlayerItemAcquired($item);
+    }
+}
+
+function getPlayerItemEventPeopleSnapshot(string $playerName): string {
+    $people = '';
+    try {
+        $row = $GLOBALS["db"]->fetchOne("
+            SELECT people
+              FROM public.eventlog
+             WHERE type IN ('infonpc_close', 'infonpc')
+               AND COALESCE(people, '') <> ''
+             ORDER BY gamets DESC, ts DESC
+             LIMIT 1
+        ");
+        if (is_array($row)) {
+            $people = trim(strval($row['people'] ?? ''));
+        } elseif (is_string($row)) {
+            $people = trim($row);
+        }
+    } catch (Exception $e) {
+        Logger::warn("[gamedata.php] Could not read nearby people snapshot for item pickup: " . $e->getMessage());
+    }
+
+    $tokens = array_values(array_filter(array_map('trim', explode('|', $people))));
+    if ($playerName !== '' && !in_array($playerName, $tokens, true)) {
+        array_unshift($tokens, $playerName);
+    }
+
+    if (empty($tokens)) {
+        $tokens[] = ($playerName !== '') ? $playerName : 'Player';
+    }
+
+    return '|' . implode('|', array_values(array_unique($tokens))) . '|';
 }
 
 /**
