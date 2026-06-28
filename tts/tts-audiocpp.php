@@ -32,7 +32,8 @@ $GLOBALS["TTS_IN_USE"] = function ($textString, $mood, $stringforhash) {
 	$data = array(
 		'input' => "$textString",
 		'model' => "pocket-tts",
-		'voice_ref' => "/var/www/html/HerikaServer/data/voices/$voice.wav"
+		'voice_ref' => "/var/www/html/HerikaServer/data/voices/$voice.wav",
+		"max_tokens"=> 96
 	);
 
 
