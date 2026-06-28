@@ -22,6 +22,7 @@ class TTSConnector
         'koboldcpp' => 'koboldcpp',
         'zonos_gradio' => 'ZONOS_GRADIO',
         'deepgram' => 'deepgram',
+        'audiocpp' => 'AUDIOCPP',
     ];
 
     private static $displayNameMap = [
@@ -42,6 +43,7 @@ class TTSConnector
         'koboldcpp' => 'KoboldCPP',
         'zonos_gradio' => 'Zonos',
         'deepgram' => 'Deepgram',
+        'audiocpp' => 'audio.cpp (Experimental)',
     ];
 
     private static $voiceFieldMap = [
@@ -61,6 +63,7 @@ class TTSConnector
         'koboldcpp' => 'voice',
         'zonos_gradio' => 'voiceid',
         'deepgram' => 'model',
+        'audiocpp' => 'voice_ref',
     ];
 
     private static $apiBadgeLabelMap = [
@@ -83,6 +86,7 @@ class TTSConnector
         'kokoro' => 'http://127.0.0.1:8880',
         'koboldcpp' => 'http://127.0.0.1:5001/api/extra/tts',
         'zonos_gradio' => 'http://127.0.0.1:7860',
+        'audiocpp' => 'http://127.0.0.1:8086/v1/audio/speech',
     ];
 
     private static $sharedMetadataDefaultMap = [
@@ -156,6 +160,9 @@ class TTSConnector
             'apply_text_normalization' => 'auto',
             'apply_language_text_normalization' => false,
             'v3_audio_tags' => '',
+        ],
+        'audiocpp' => [
+            'endpoint' => 'http://127.0.0.1:8086/v1/audio/speech'
         ],
     ];
 
