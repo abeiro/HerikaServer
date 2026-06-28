@@ -1057,8 +1057,52 @@ if (!function_exists('chimQuestEngineDefinitionReferencesDialogueNpc')) {
             if (!is_array($beat)) {
                 continue;
             }
-            $focusNpc = trim((string)($beat['focus_npc'] ?? ''));
-            if ($focusNpc !== '' && strcasecmp($focusNpc, $npcNameCn) === 0) {
+            if (chimQuestEngineBeatFocusNpcMatches($beat, $npcNameCn, false)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('chimQuestEngineBeatFocusNpcs')) {
+    function chimQuestEngineBeatFocusNpcs(array $beat)
+    {
+        $focusNpcs = array();
+
+        if (isset($beat['focus_npcs']) && is_array($beat['focus_npcs'])) {
+            foreach ($beat['focus_npcs'] as $focusNpc) {
+                $focusNpcCn = trim((string)$focusNpc);
+                if ($focusNpcCn !== '') {
+                    $focusNpcs[$focusNpcCn] = true;
+                }
+            }
+        }
+
+        $focusNpc = trim((string)($beat['focus_npc'] ?? ''));
+        if ($focusNpc !== '') {
+            $focusNpcs[$focusNpc] = true;
+        }
+
+        return array_keys($focusNpcs);
+    }
+}
+
+if (!function_exists('chimQuestEngineBeatFocusNpcMatches')) {
+    function chimQuestEngineBeatFocusNpcMatches(array $beat, $npcName, $emptyFocusMatches = true)
+    {
+        $npcNameCn = trim((string)$npcName);
+        $focusNpcs = chimQuestEngineBeatFocusNpcs($beat);
+        if (empty($focusNpcs)) {
+            return $emptyFocusMatches;
+        }
+        if ($npcNameCn === '') {
+            return false;
+        }
+
+        foreach ($focusNpcs as $focusNpc) {
+            if (strcasecmp($focusNpc, $npcNameCn) === 0) {
                 return true;
             }
         }
@@ -1915,8 +1959,7 @@ if (!function_exists('chimQuestEngineBuildDialogueIntentCandidates')) {
                 continue;
             }
 
-            $focusNpc = trim((string)($beat['focus_npc'] ?? ''));
-            if ($focusNpc !== '' && $npcNameCn !== '' && strcasecmp($focusNpc, $npcNameCn) !== 0) {
+            if (!chimQuestEngineBeatFocusNpcMatches($beat, $npcNameCn, true)) {
                 continue;
             }
 
@@ -2386,9 +2429,8 @@ if (!function_exists('chimQuestEngineTriggerMatchesEvent')) {
             if ($eventTypeCn !== 'dialogue_turn') {
                 return false;
             }
-            $focusNpc = trim((string)($beat['focus_npc'] ?? ''));
             $npcName = trim((string)($payload['npc_name'] ?? ''));
-            if ($focusNpc !== '' && strcasecmp($focusNpc, $npcName) !== 0) {
+            if (!chimQuestEngineBeatFocusNpcMatches($beat, $npcName, true)) {
                 return false;
             }
             $matchCount = chimQuestEngineKeywordMatchCount($payload['player_text'] ?? '', $trigger['keywords'] ?? array());
@@ -3490,8 +3532,7 @@ if (!function_exists('chimQuestEnginePendingDialogueHint')) {
             if ($beatId === '' || !empty($beatStateMap[$beatId]['fired'])) {
                 continue;
             }
-            $focusNpc = trim((string)($beat['focus_npc'] ?? ''));
-            if ($focusNpc !== '' && strcasecmp($focusNpc, $npcNameCn) !== 0) {
+            if (!chimQuestEngineBeatFocusNpcMatches($beat, $npcNameCn, true)) {
                 continue;
             }
             if (!chimQuestEngineBeatHasDialogueTrigger($beat)) {
@@ -3511,6 +3552,134 @@ if (!function_exists('chimQuestEnginePendingDialogueHint')) {
         }
 
         return false;
+    }
+}
+
+if (!function_exists('chimQuestEngineSuppressedActionsForTurn')) {
+    function chimQuestEngineSuppressedActionsForTurn($npcName, $locationName = '')
+    {
+        if (!chimQuestEngineFeatureEnabled() || !chimQuestEngineReady()) {
+            return array();
+        }
+
+        $npcNameCn = trim((string)$npcName);
+        if ($npcNameCn === '' || strcasecmp($npcNameCn, 'The Narrator') === 0 || strcasecmp($npcNameCn, 'Player') === 0) {
+            return array();
+        }
+
+        chimQuestEngineMaybeBootstrapBundledDefinitions();
+        $suppressed = array();
+        $payload = array(
+            'npc_name' => $npcNameCn,
+            'location_name' => trim((string)$locationName),
+        );
+
+        foreach (chimQuestEngineFetchDefinitions(true) as $definition) {
+            if (chimQuestEngineIsRadiantTemplate($definition)) {
+                continue;
+            }
+
+            $instance = chimQuestEngineGetInstance($definition['quest_key']);
+            if (!$instance) {
+                continue;
+            }
+            $instance['state_json'] = chimQuestEngineNormalizeState($instance['state_json'] ?? array());
+            if (!empty($definition['radiant_instance'])) {
+                $minimumStage = chimQuestEngineRadiantMinimumQuestStage($definition);
+                if ($minimumStage !== null && ($instance['current_stage'] === null || intval($instance['current_stage']) < $minimumStage)) {
+                    continue;
+                }
+            }
+
+            $beatStateMap = chimQuestEngineLoadBeatStateMap($definition['quest_key']);
+            foreach ($definition['beats'] ?? array() as $beat) {
+                if (!is_array($beat)) {
+                    continue;
+                }
+
+                $beatId = (string)($beat['id'] ?? '');
+                if ($beatId === '' || !empty($beatStateMap[$beatId]['fired'])) {
+                    continue;
+                }
+                if (empty($beat['suppress_actions']) || !is_array($beat['suppress_actions'])) {
+                    continue;
+                }
+                if (!chimQuestEngineBeatFocusNpcMatches($beat, $npcNameCn, false)) {
+                    continue;
+                }
+                if (!chimQuestEngineBeatHasDialogueTrigger($beat)) {
+                    continue;
+                }
+                if (!chimQuestEngineBeatAllowedForRuntime($definition, $beat, 'dialogue_turn', $payload, $instance)) {
+                    continue;
+                }
+                if (!chimQuestEngineBeatPrerequisitesMet($beat, $beatStateMap)) {
+                    continue;
+                }
+                if (!chimQuestEngineConditionsMet($beat['conditions'] ?? array(), $instance['state_json'], $definition)) {
+                    continue;
+                }
+                if (!chimQuestEngineRequiredItemMet($beat, $instance['state_json'])) {
+                    continue;
+                }
+
+                $questKey = (string)($definition['quest_key'] ?? '');
+                foreach ($beat['suppress_actions'] as $actionCode) {
+                    $actionCodeCn = trim((string)$actionCode);
+                    if ($actionCodeCn === '') {
+                        continue;
+                    }
+                    if (!isset($suppressed[$actionCodeCn])) {
+                        $suppressed[$actionCodeCn] = array();
+                    }
+                    $suppressed[$actionCodeCn][] = $questKey . '/' . $beatId;
+                }
+            }
+        }
+
+        return $suppressed;
+    }
+}
+
+if (!function_exists('chimQuestEngineIsActionSuppressedForTurn')) {
+    function chimQuestEngineIsActionSuppressedForTurn($actionCodeName)
+    {
+        $actionCodeNameCn = trim((string)$actionCodeName);
+        if ($actionCodeNameCn === '') {
+            return false;
+        }
+
+        $suppressed = $GLOBALS['CHIM_QUEST_SUPPRESSED_ACTIONS'] ?? array();
+        return is_array($suppressed) && in_array($actionCodeNameCn, $suppressed, true);
+    }
+}
+
+if (!function_exists('chimQuestEngineApplyActionSuppressionsForTurn')) {
+    function chimQuestEngineApplyActionSuppressionsForTurn($npcName, $locationName = '')
+    {
+        $suppressed = chimQuestEngineSuppressedActionsForTurn($npcName, $locationName);
+        $GLOBALS['CHIM_QUEST_SUPPRESSED_ACTIONS'] = array_keys($suppressed);
+        $GLOBALS['CHIM_QUEST_SUPPRESSED_ACTION_REASONS'] = $suppressed;
+
+        if (empty($suppressed)) {
+            return array();
+        }
+
+        foreach ($suppressed as $actionCode => $reasons) {
+            if (function_exists('unsetFunction')) {
+                unsetFunction($actionCode);
+            } elseif (isset($GLOBALS["ENABLED_FUNCTIONS"]) && is_array($GLOBALS["ENABLED_FUNCTIONS"])) {
+                $GLOBALS["ENABLED_FUNCTIONS"] = array_values(array_filter(
+                    $GLOBALS["ENABLED_FUNCTIONS"],
+                    function ($enabledAction) use ($actionCode) {
+                        return trim((string)$enabledAction) !== $actionCode;
+                    }
+                ));
+            }
+            error_log("[AI Quest] Suppressed action {$actionCode} for {$npcName}: " . implode(', ', $reasons));
+        }
+
+        return $suppressed;
     }
 }
 

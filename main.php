@@ -2302,6 +2302,13 @@ if ($gameRequest[0] === "vision") {
     $GLOBALS["COMMAND_PROMPT"] = "Respond with atmospheric narration only. Use the Talk action.";
 }
 
+if (function_exists('chimQuestEngineApplyActionSuppressionsForTurn')) {
+    chimQuestEngineApplyActionSuppressionsForTurn(
+        $GLOBALS["HERIKA_NAME"] ?? '',
+        $GLOBALS["CACHE_LOCATION"] ?? ''
+    );
+}
+
 // Ensure actions and nearby sections are added to PROMPT_HEAD before building system prompt
 require_once(__DIR__.DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
 
