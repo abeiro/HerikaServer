@@ -165,6 +165,7 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'LOCATION_BLACKLIST',
             'ITEM_BLACKLIST',
             'EVENT_TYPE_FILTER',
+            'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE',
             'GROUND_ITEMS_DESCRIPTIONS_ONLY',
             'INVENTORY_ITEMS_DESCRIPTIONS_ONLY',
             'HIDE_AMBIENT_COMBAT',
@@ -275,6 +276,7 @@ if (!function_exists('chimPrettySettingLabel')) {
             'GLOBAL_ITT_CONNECTOR_ID' => 'Image To Text Connector',
             'CHIM_AI_QUEST_PROGRESSION' => 'AI Quest Progression (Beta)',
             'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
+            'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 'Item Pickup Detection Value',
         ];
         if (isset($customLabels[$flatName])) {
             return $customLabels[$flatName];
@@ -325,6 +327,7 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
                 'HIDE_AMBIENT_COMBAT',
                 'DISABLE_REANIMATION_TRACKING',
                 'TRANSFORMATION_DETECTION',
+                'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE',
                 'CHIM_AI_QUEST_PROGRESSION',
                 'POWER_AWARENESS_ENABLED',
                 'SCENE_CLASSIFIER_ENABLED',

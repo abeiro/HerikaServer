@@ -77,6 +77,8 @@ $gsSections = [
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
         [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
         [ 'name' => 'TRANSFORMATION_DETECTION', 'type' => 'boolean' ],
+        [ 'name' => 'POWER_AWARENESS_ENABLED', 'type' => 'boolean' ],
+        [ 'name' => 'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE', 'type' => 'integer', 'min' => 0 ],
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
     ],
     $promptContextSectionTitle => $promptContextOptionFields,
@@ -147,6 +149,7 @@ function pretty_label(string $flatName): string
         'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
         'CHIM_AI_QUEST_PROGRESSION' => 'CHIM AI Quest Progression (Beta)',
         'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
+        'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 'Item Pickup Detection Value',
     ];
     if (isset($customLabels[$flatName])) {
         return $customLabels[$flatName];
