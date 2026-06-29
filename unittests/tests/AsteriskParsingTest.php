@@ -27,6 +27,7 @@ final class AsteriskParsingTest extends TestCase
             $GLOBALS['strip_emotes_from_output'],
             $GLOBALS['PATCH_OVERRIDE_VOICE'],
             $GLOBALS['PATCH_OVERRIDE_VOICE_ID'],
+            $GLOBALS['CHIM_EXECUTION_MODE'],
             $GLOBALS['TTS']
         );
     }
@@ -181,6 +182,18 @@ final class AsteriskParsingTest extends TestCase
         $this->assertSame(
             "Keep this quiet",
             formatPlayerSubtitleText("Rangroo: Keep this quiet (Whispering to Corpulus Vinius)")
+        );
+    }
+
+    public function testWhisperPrivatePeopleIncludesOnlyPlayerAndTarget(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+        $GLOBALS['CHIM_EXECUTION_MODE'] = 'WHISPER';
+
+        $this->assertTrue(isWhisperExecutionMode());
+        $this->assertSame(
+            '|Rangroo|Corpulus Vinius|',
+            buildWhisperPrivatePeople('Corpulus Vinius')
         );
     }
 

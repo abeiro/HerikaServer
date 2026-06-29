@@ -842,12 +842,12 @@ class openaijson
                 } else if (!(stripos($this->_model, "qwen3.5-") === false)) { // qwen/qwen3.5-397b-a17b
                     unset($data["reasoning_effort"]);
                     $data["enable_thinking"] = $b_think;
-                } else if (!(stripos($this->_model, "zai-org/glm-4.7") === false)) {//is glm 4.7
+                } else if (!(stripos($this->_model, "zai-org/glm-4.7") === false) || !(stripos($this->_model, "z-ai/glm-4.7") === false)) {//is glm 4.7
                     if ($this->_disable_reasoning)
                         $data["thinking"] = array ('type' => 'disabled'); // "thinking":{"type": "disabled"}
                     else
                         $data["thinking"] = array ('type' => 'enabled'); 
-                } else if (!(stripos($this->_model, "zai-org/glm-5") === false)) {//is glm 4.7
+                } else if (!(stripos($this->_model, "zai-org/glm-5") === false) || !(stripos($this->_model, "z-ai/glm-5") === false)) {//is glm 5
                     if ($this->_disable_reasoning)
                         $data["thinking"] = array ('type' => 'disabled'); // "thinking":{"type": "disabled"}
                     else

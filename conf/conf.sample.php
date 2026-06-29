@@ -55,6 +55,9 @@ $BOOK_EVENT_ALWAYS_NARRATOR=false; //Only The Narrator summarizes books.
 $NARRATOR_TALKS=true; //Enables the Narrator.
 $NARRATOR_WELCOME=false;
 $QUEST_COMMENT = false;
+$CHIM_AI_QUEST_PROGRESSION=false; //Enable CHIM AI quest progression. Allows you to progress regular Skyrim quests with AI dialogue. Most vanilla non radiant quests are supported. Open the AI Quest Manager in Immersion for more info.
+$CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT=true; //When enabled, only direct player dialogue can fire CHIM AI quest beats and queue quest stage actions. Disable to let NPC responses and game interaction events advance or start quest beats.
+$CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE=500; //Minimum total item value for player pickups to be detected in context.
 $QUEST_COMMENT_CHANCE= "10%";
 $CURRENT_TASK=false; //Sends current plan/quest to the AI
  //The Narrator will recap previous events after a save is loaded.
@@ -200,7 +203,7 @@ $CONNECTOR["openrouterjson"]["get_parms5"] = false; // Utility button for medium
 $CONNECTOR["openrouterjson"]["get_parms9"] = false; // Utility button for high randomness parameters
 //OpenRouter (Legacy)
 $CONNECTOR["openrouter"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$CONNECTOR["openrouter"]["model"]="deepseek/deepseek-v3.2"; //LLM model.
+$CONNECTOR["openrouter"]["model"]="deepseek/deepseek-v4-pro"; //LLM model.
 $CONNECTOR["openrouter"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
 $CONNECTOR["openrouter"]["fallback_models"]=""; //comma separated models.
 $CONNECTOR["openrouter"]["PROVIDER"]=""; //select a list of providers from OpenRouter

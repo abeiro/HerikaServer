@@ -1134,6 +1134,7 @@ function returnLines($lines,$writeOutput=true)
     $inlineNarrationMode = getInlineNarrationMode();
     $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
     $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
+    $chimQuestDialogueParts = array();
 
     // If inline narration is enabled, recombine split narration sentences
     if ($inlineNarrationEnabled) {
@@ -1434,6 +1435,10 @@ function returnLines($lines,$writeOutput=true)
         }
 
         if ($shouldEmitNpcLine) {
+            $responseForContextCn = trim((string)$responseForContext);
+            if ($responseForContextCn !== '') {
+                $chimQuestDialogueParts[] = $responseForContextCn;
+            }
             Logger::info("Speech sent for {$GLOBALS["HERIKA_NAME"]}, generator {$GLOBALS["TTSFUNCTION"]}, size: ".strlen($responseText). "  '".substr($responseText,0,10)."'");
         } else {
             Logger::info("[INLINE_NARRATION] Narration-only line emitted; no NPC dialogue to speak.");
@@ -1718,6 +1723,14 @@ function returnLines($lines,$writeOutput=true)
             logEvent($originalRequest);
         }
         
+    }
+
+    if (!empty($chimQuestDialogueParts) && function_exists('chimQuestEngineHandleLiveDialogueTurn')) {
+        chimQuestEngineHandleLiveDialogueTurn(
+            $GLOBALS["HERIKA_NAME"] ?? '',
+            implode(' ', $chimQuestDialogueParts),
+            $GLOBALS["gameRequest"] ?? array()
+        );
     }
 
 }
@@ -2808,6 +2821,22 @@ function isWhisperExecutionMode()
 {
     $mode = isset($GLOBALS["CHIM_EXECUTION_MODE"]) ? strtoupper(trim((string)$GLOBALS["CHIM_EXECUTION_MODE"])) : "";
     return ($mode === "WHISPER");
+}
+
+function buildWhisperPrivatePeople($listenerName = "")
+{
+    $participants = [];
+
+    if (!empty($GLOBALS["PLAYER_NAME"])) {
+        appendUniqueActorName($participants, $GLOBALS["PLAYER_NAME"]);
+    }
+
+    $listenerName = trim((string)$listenerName);
+    if ($listenerName !== "") {
+        appendUniqueActorName($participants, $listenerName);
+    }
+
+    return normalizePeoplePipeList($participants);
 }
 
 function buildDialogueTargetSuffix($listenerName, $isSpeakingLoudly = false)

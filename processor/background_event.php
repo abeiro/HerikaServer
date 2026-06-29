@@ -135,7 +135,7 @@ if (is_array($bgevent)) {
                     ||
                     ($lastAction["action"] == $bgevent["name"] . "Raw") // Handle the TravelToRaw case, where the issued action is TravelToRaw but the event is TravelTo
                     ||
-                    ($lastAction["action"] == "MoveTo" && $bgevent["name"]=="TravelTo") // Handle the TravelToRaw case, where the issued action is TravelToRaw but the event is TravelTo
+                    ($lastAction["action"] == "MoveTo" && $bgevent["name"]=="TravelTo") // Handle the MoveTo/TravelTo case, where the issued action is MoveTo but the event is TravelTo
                     )
                 ) {
                     // NPC finishes? last action issued

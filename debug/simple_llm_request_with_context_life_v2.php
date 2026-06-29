@@ -237,7 +237,8 @@ $contextDataHistoric = filterHistoricContextForNarratorVisibility(
     $GLOBALS['HERIKA_NAME'] ?? ''
 );
 
-$history = "\n<last_dialogue>\n";
+$history = "\n<last_dialogue>
+This represents last dialogue where player ({$GLOBALS['PLAYER_NAME']}) was present. Can be more dialogues with other NPCs from this point.\n";
 foreach ($contextDataHistoric as $entry) {
     $line = trim($entry['content']);
     $history .= ($entry['role'] === 'assistant')
@@ -369,6 +370,25 @@ if (isset($metadata['last_coords_history'])) {
     }
 }
 */
+
+
+if (isset($metadata['low_process_actors'])) {
+    
+    foreach ($metadata['low_process_actors'] as $gamets_lpa_processed=>$actorList) {
+        if ($gamets_lpa_processed <= $lastItGamets) {
+            continue;
+        }
+        $hoursAgo   = number_format(($last_gamets - $gamets_lpa_processed) * GAMETS_TO_HOURS, 2);
+        // actorList in the form of name
+        $bgEvents[] = [
+            'gamets'  => $gamets_lpa_processed,
+            'content' => "Nearby actors {$GLOBALS['HERIKA_NAME']} can see (refid,name): " . json_encode($actorList) . ", ($hoursAgo hours ago)",
+            'type'    => 'nearby_actors',
+        ];
+        
+    }
+}
+
 // ─── Rumors Near Current Location ────────────────────────────────────────────
 
 if ($LAST_REPORTED_LOCATION) {
@@ -480,12 +500,12 @@ in first person.
 At the end of the soliloquy, {$GLOBALS['HERIKA_NAME']} must decide her next step.
 
 She/He  may choose ONE of the following actions:
-* TravelTo(location)
-* FindNPC(NPC). Locate an NPC whose exact location is unknown. Use this before MoveTo or SpeakTo when the character does not know where the target is. 
-* MoveTo(NPC). Move to another NPC whose location is already known. 
-* SpeakTo(NPC). Engage in conversation with another NPC. (should be used before any BuyItems or SellItems action, to reflect the need to interact and agree on a transaction with the trader NPC)
-* BuyItems(NPC,itemid,count,gold_spent) Buy items from another NPC (if character interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)
-* SellItems(NPC,itemid,count,gold_received) Sells items to another NPC (if character interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)
+* TravelTo(<location_name>). Travel to a specific location/city. Use when the character wants to move to a new area.
+* FindNPC(<npc_name>). Locate an NPC whose exact location is unknown. Use this before MoveTo or SpeakTo when the character does not know where the target is. 
+* MoveTo(<npc_name>). Move to another NPC whose location is already known. 
+* SpeakTo(<npc_name>,<refid>). Engage in conversation with another NPC. (should be used before any BuyItems or SellItems action, to reflect the need to interact and agree on a transaction with the trader NPC) (specify the NPC's refid if known, otherwise use 0)
+* BuyItems(<npc_name>,<itemid>,<count>,<gold_spent>) Buy items from another NPC (if character interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)
+* SellItems(<npc_name>,<itemid>,<count>,<gold_received>) Sells items to another NPC (if character interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)
 * ReturnHome. Returns to base location to meet {$GLOBALS['PLAYER_NAME']}. Use when all goals are done.
 * SpreadRumor. Generate or spread a rumor related to the character's current location (e.g., if goal is to boost local trade, rumour about it).
 * StayAtPlace. Remains in current location. If gathering info or spreading rumors, stay ≥24 hours.   
@@ -510,7 +530,7 @@ If an action is chosen:
 
 <Action>
 Type: TravelTo | FindNPC | MoveTo | SpeakTo | BuyItems | SellItems | ReturnHome | SpreadRumor | StayAtPlace
-Target: <location name | NPC name | None>
+Target: <location name | NPC name,refid| NPC name | item id | ... | None>
 Reason: <brief justification>
 </Action>
 
@@ -571,7 +591,7 @@ $step2Content .= "Possible actions:\n"
     . "StayAtPlace — Remains in current location. If gathering info or spreading rumors, stay ≥24 hours.\n"
     . "FindNPC:NPC — Search for an NPC whose exact location is unknown (replace <NPC> with target NPC name). Use this before MoveTo or SpeakTo when the character does not know where the target is. Requires a clear reason.\n"
     . "MoveTo:NPC — Move to another NPC whose location is already known (replace <NPC> with target NPC name). Requires a clear reason.\n"
-    . "SpeakTo:NPC — Engage in conversation with another NPC (replace <NPC> with target NPC name). Requires a clear reason.\n"
+    . "SpeakTo:NPC:refid — Engage in conversation with another NPC (replace <NPC> with target NPC name). Requires a clear reason.\n"
     . "BuyItems:NPC:itemid:count:gold_spent — Buy items from another NPC (replace <NPC> with target NPC name). (if character {$GLOBALS['HERIKA_NAME']} interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)\n"
     . "SellItems:NPC:itemid:count:gold_earned — Sell items to another NPC (replace <NPC> with target NPC name). (if character {$GLOBALS['HERIKA_NAME']} interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)\n"
     . "ReturnHome       — Returns to base location to meet {$GLOBALS['PLAYER_NAME']}. Use when all goals are done.\n"

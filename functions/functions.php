@@ -2811,6 +2811,14 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 $actionCodeNameResolved = $actionParts2[0];
             }
 
+            if (function_exists('chimQuestEngineIsActionSuppressedForTurn') && chimQuestEngineIsActionSuppressedForTurn($actionCodeNameResolved)) {
+                $reasons = $GLOBALS['CHIM_QUEST_SUPPRESSED_ACTION_REASONS'][$actionCodeNameResolved] ?? array();
+                $reasonText = is_array($reasons) && !empty($reasons) ? implode(', ', $reasons) : 'current quest beat';
+                error_log("[AI Quest] Dropping suppressed action {$actionCodeNameResolved}: {$reasonText}");
+                unset($actionsCopy[$n]);
+                continue;
+            }
+
             if (herikaActionCatalogExecuteScriptProxyAction($action)) {
                 unset($actionsCopy[$n]);
                 continue;

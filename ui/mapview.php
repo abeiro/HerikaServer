@@ -29,6 +29,7 @@ if (! $adminConn) {
 }
 
 $rumorFlash = null;
+$bglSettingsFlash = null;
 $rumorFormData = [
     'hold' => '',
     'type' => '',
@@ -59,6 +60,17 @@ function redirectToRumorSection($status, $message, $anchor = 'create-rumor') {
     }
 
     header('Location: ' . $path . '?' . $query . $anchor);
+    exit;
+}
+
+function redirectToBglSettings($status, $message) {
+    $path = getRumorPagePath();
+    $query = http_build_query([
+        'bgl_settings_status' => $status,
+        'bgl_settings_message' => $message,
+    ]);
+
+    header('Location: ' . $path . '?' . $query . '#background-life-settings');
     exit;
 }
 
@@ -158,6 +170,13 @@ if (isset($_GET['rumor_status']) && isset($_GET['rumor_message'])) {
     $rumorFlash = [
         'type' => ($_GET['rumor_status'] === 'success') ? 'success' : 'error',
         'message' => trim((string) $_GET['rumor_message']),
+    ];
+}
+
+if (isset($_GET['bgl_settings_status']) && isset($_GET['bgl_settings_message'])) {
+    $bglSettingsFlash = [
+        'type' => ($_GET['bgl_settings_status'] === 'success') ? 'success' : 'error',
+        'message' => trim((string) $_GET['bgl_settings_message']),
     ];
 }
 
@@ -271,6 +290,8 @@ if (!function_exists('race_icon_web_path')) {
             [$rumorFlash, $rumorFormData, $editingRumorId] = handleUpdateRumor();
         } elseif ($_POST['action'] === 'delete_rumor') {
             $rumorFlash = handleDeleteRumor();
+        } elseif ($_POST['action'] === 'save_bgl_settings') {
+            handleSaveBglSettings();
         }
     }
 
@@ -421,6 +442,18 @@ if (!function_exists('race_icon_web_path')) {
         }
     }
 
+    function handleSaveBglSettings() {
+        $cooldownDays = isset($_POST['bgl_trigger_days']) ? intval($_POST['bgl_trigger_days']) : 5;
+        $cooldownDays = max(1, min(30, $cooldownDays));
+        $description = chimGetSchemaDescription('BGL_TRIGGER_DAYS');
+
+        if (chimSetGeneralSetting('BGL_TRIGGER_DAYS', $cooldownDays, $description)) {
+            redirectToBglSettings('success', "Background Life cooldown saved: {$cooldownDays} in-game days.");
+        }
+
+        redirectToBglSettings('error', 'Could not save Background Life cooldown.');
+    }
+
     // Coordinate translation constants (world bounds)
     // X: west (negative) to east (positive)
     // Y: south (negative) to north (positive)
@@ -464,6 +497,7 @@ if (!function_exists('race_icon_web_path')) {
     $res = pg_fetch_assoc($result);
     $last_gamets = $res["last_gamets"];
     $currentDate=convert_gamets2skyrim_date($last_gamets);
+    $bglTriggerDays = max(1, min(30, intval(chimReadLegacyGlobalValue('BGL_TRIGGER_DAYS', 5))));
 
     // Filter mode: show all NPCs with tracked coords, or only BG-Life enabled ones
     $showAllCoords = isset($_GET['show_all_coords']) && $_GET['show_all_coords'] === '1';
@@ -1343,6 +1377,83 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         appearance: none;
     }
 
+    .bgl-settings-card {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 15px;
+        padding: 12px;
+        background: #2a2a2a;
+        border-radius: 8px;
+        border: 1px solid #4a4a4a;
+    }
+
+    .bgl-settings-card h3 {
+        color: rgb(242, 124, 17);
+        margin: 0;
+        font-size: 14px;
+        font-family: 'MagicCards', serif;
+        word-spacing: 5px;
+    }
+
+    .bgl-settings-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 92px;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .bgl-settings-row label {
+        color: #ddd;
+        font-size: 13px;
+        font-weight: bold;
+    }
+
+    .bgl-settings-row input[type="number"] {
+        width: 100%;
+        box-sizing: border-box;
+        background: #1f1f1f;
+        border: 1px solid #555;
+        border-radius: 6px;
+        color: #fff;
+        padding: 8px 10px;
+        font-size: 14px;
+    }
+
+    .bgl-settings-help {
+        color: #aaa;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
+    .bgl-settings-save {
+        background: rgb(242, 124, 17);
+        color: #111;
+        border: none;
+        padding: 9px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .bgl-settings-save:hover {
+        background: rgb(255, 145, 38);
+    }
+
+    .bgl-settings-message {
+        padding: 8px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        border: 1px solid rgba(68, 255, 68, 0.35);
+        background: rgba(68, 255, 68, 0.1);
+        color: #c8ffc8;
+    }
+
+    .bgl-settings-message.error {
+        border-color: rgba(255, 80, 80, 0.45);
+        background: rgba(255, 80, 80, 0.12);
+        color: #ffb8b8;
+    }
+
     .map-width-slider input[type="range"]::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
@@ -1681,7 +1792,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 <li>You can either:
                                     <ul>
                                         <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
-                                        <li>Wait for the configured trigger period (default: 5 in-game days, configurable in Global Settings) for them to automatically trigger background life.</li>
+                                        <li>Wait for the configured trigger period (Global Settings, default: 5 in-game days) for them to automatically trigger background life.</li>
                                     </ul>
                                 </li>
                                 <li>They shall now travel around Skyrim.</li>
@@ -1691,7 +1802,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         <div class="instruction-section">
                             <strong>NPC Settings:</strong>
                             <ul>
-                                <li><strong>🎮 Auto Actions:</strong> Based on the trigger period (configurable in Global Settings, default: 5 in-game days), NPC generates inner thoughts. When enabled, they can autonomously travel to new locations. When disabled, only thoughts are generated.</li>
+                                <li><strong>🎮 Auto Actions:</strong> Based on the configured trigger period (Global Settings, default: 5 in-game days), NPC generates inner thoughts. When enabled, they can autonomously travel to new locations. When disabled, only thoughts are generated.</li>
                                 <li><strong>📍 Hourly Tracking:</strong> Tracks NPC coordinates every in-game hour (default is daily) for detailed movement history.</li>
                             </ul>
                         </div>
@@ -1711,13 +1822,28 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     </div>
                     <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
                 </div>
-                 <div class="map-width-controls">
+                <div class="map-width-controls">
                     <label>Map Width:</label>
                     <div class="map-width-slider">
                         <input type="range" id="mapWidthSlider" min="30" max="100" value="100" onchange="updateMapWidthFromSlider()" oninput="updateMapWidthFromSlider()">
                         <span class="map-width-value"><span id="widthValue">100</span>%</span>
                     </div>
                 </div>
+                <form id="background-life-settings" class="bgl-settings-card" method="post">
+                    <input type="hidden" name="action" value="save_bgl_settings">
+                    <h3>Background Life Settings</h3>
+                    <?php if ($bglSettingsFlash): ?>
+                        <div class="bgl-settings-message <?php echo $bglSettingsFlash['type'] === 'error' ? 'error' : ''; ?>">
+                            <?php echo htmlspecialchars($bglSettingsFlash['message']); ?>
+                        </div>
+                    <?php endif; ?>
+                    <div class="bgl-settings-row">
+                        <label for="bglTriggerDays">Days Cooldown</label>
+                        <input id="bglTriggerDays" type="number" name="bgl_trigger_days" min="1" max="30" step="1" value="<?php echo htmlspecialchars((string) $bglTriggerDays); ?>">
+                    </div>
+                    <div class="bgl-settings-help">Controls how many in-game days pass before eligible Background Life NPCs automatically run their next update.</div>
+                    <button type="submit" class="bgl-settings-save">Save</button>
+                </form>
                 <div class="npc-list-header">
                         <h3>📍 NPC Markers</h3>
                         <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">

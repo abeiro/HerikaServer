@@ -20,6 +20,94 @@ function triggerNpcUpdate($npcName)
     $npcData = $npcManager->setExtendedData($npcData, $extended);
     $npcManager->updateByArray($npcData);
 }
+
+/**
+ * Build a PostgreSQL point literal from NPC metadata last_coords.
+ *
+ * @param array $currentNpcData
+ * @return string|null Point literal in the form '(x,y)' or null when unavailable
+ */
+function getNpcLastCoordsPoint($currentNpcData)
+{
+    $metadata = $currentNpcData['metadata'] ?? null;
+    if (is_string($metadata)) {
+        $metadata = json_decode($metadata, true);
+    }
+
+    $lastCoords = null;
+    if (is_array($metadata) && isset($metadata['last_coords']) && is_array($metadata['last_coords'])) {
+        $lastCoords = $metadata['last_coords'];
+    } elseif (isset($currentNpcData['last_coords']) && is_array($currentNpcData['last_coords'])) {
+        $lastCoords = $currentNpcData['last_coords'];
+    }
+
+    if (!$lastCoords) {
+        return null;
+    }
+
+    $x = $lastCoords[0] ?? null;
+    $y = $lastCoords[1] ?? null;
+    if (!is_numeric($x) || !is_numeric($y)) {
+        return null;
+    }
+
+    return '(' . floatval($x) . ',' . floatval($y) . ')';
+}
+
+/**
+ * Resolve a TravelTo location using exact + fuzzy matching and optional coord distance.
+ *
+ * @param string $location
+ * @param array $currentNpcData
+ * @param object $db
+ * @return array|null
+ */
+function resolveTravelLocation($location, $currentNpcData, $db)
+{
+    $cnLocation = $db->escape($location);
+
+    if (strcasecmp($cnLocation, 'random') === 0) {
+        return $db->fetchOne(
+            "SELECT name, region, hold, formid, coords
+             FROM locations
+             ORDER BY CASE WHEN name = region THEN 1 ELSE 0 END DESC, random()
+             LIMIT 1"
+        );
+    }
+
+    $npcPoint = getNpcLastCoordsPoint($currentNpcData);
+    $pointSql = '';
+    $orderByDistanceSql = '';
+    if (!empty($npcPoint)) {
+        $npcPointEsc = $db->escape($npcPoint);
+        $pointSql = ", coords <-> '{$npcPointEsc}'::point AS dist";
+        $orderByDistanceSql = ', dist ASC';
+    }
+
+    // Prefer exact matches first, then fuzzy similarity. If we know NPC coords,
+    // nearest matching marker is preferred when names collide.
+    $loc = $db->fetchOne(
+        "SELECT name, region, hold, formid, coords
+                $pointSql,
+                GREATEST(
+                    COALESCE(similarity(name, '$cnLocation'), 0),
+                    COALESCE(similarity(region, '$cnLocation'), 0),
+                    COALESCE(similarity(hold, '$cnLocation'), 0)
+                ) AS sim,
+                CASE
+                    WHEN lower(name) = lower('$cnLocation') THEN 3
+                    WHEN lower(region) = lower('$cnLocation') THEN 2
+                    WHEN lower(hold) = lower('$cnLocation') THEN 1
+                    ELSE 0
+                END AS exact_rank
+         FROM locations
+         WHERE formid IS NOT NULL
+         ORDER BY exact_rank DESC$orderByDistanceSql, sim DESC
+         LIMIT 1"
+    );
+
+    return $loc ?: null;
+}
 /**
  * Handle TravelTo action for NPC background life
  * 
@@ -35,12 +123,18 @@ function triggerNpcUpdate($npcName)
  */
 function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $last_gamets, $momentum, $locationSrc, $db)
 {
-    $cnLocation = $db->escape($location);
-    if ($cnLocation == "random") {
-        $locId = $db->fetchOne("select name,region,hold,formid from locations order by case when name=region then 1 else 0 end desc, random()");
+    $locId = resolveTravelLocation($location, $currentNpcData, $db);
+    $requestedLocation = $db->escape($location);
+    $resolvedLocation = $locId['name'] ?? $requestedLocation;
+
+    if (strcasecmp($requestedLocation, 'random') === 0) {
         error_log("[handleTravelToAction] random picked: " . print_r($locId, true));
-    } else {
-        $locId = $db->fetchOne("select formid from locations where name='$cnLocation' order by case when name=region then 1 else 0 end desc");
+    }
+
+    if (!empty($locId)) {
+        $sim = isset($locId['sim']) ? ', sim=' . $locId['sim'] : '';
+        $dist = isset($locId['dist']) ? ', dist=' . $locId['dist'] : '';
+        error_log("[handleTravelToAction] requested='$requestedLocation' resolved='{$resolvedLocation}' formid='{$locId['formid']}'$sim$dist");
     }
 
     if (!isset($locId["formid"])) {
@@ -71,7 +165,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'ts' => $last_ts,
             'gamets' => $last_gamets + 10,
             'type' => "infoaction",
-            'data' => "The Narrator: $npcName starts travelling to $cnLocation",
+            'data' => "The Narrator: $npcName starts travelling to $resolvedLocation",
             'sess' => $momentum,
             'localts' => time(),
             'people' => $npcName,
@@ -85,12 +179,24 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
         'actions_issued',
         [
             'action' => "TravelTo",
-            'fullcall' => "TravelTo:$cnLocation",
+            'fullcall' => "TravelTo:$resolvedLocation",
             'actorname' => $npcName,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
             'original' => 'backgroundaction',
+        ]
+    );
+
+    // Insert bgl_history log entry
+    $db->insert(
+        'bgl_history',
+        [
+            'npc' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'data' => "$npcName starts travelling to $resolvedLocation"
         ]
     );
 
@@ -129,6 +235,18 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
         ]
     );
 
+    // Insert bgl_history log entry
+    $db->insert(
+        'bgl_history',
+        [
+            'npc' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'data' => "$npcName stays at current location ($location)"
+        ]
+    );
+    
     return true;
 }
 
@@ -207,6 +325,18 @@ function handleReturnHome($location, $currentNpcData, $npcName, $last_ts, $last_
         'original' => 'backgroundaction',
     ]);
     
+    // Insert bgl_history log entry
+    $db->insert(
+        'bgl_history',
+        [
+            'npc' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'data' => "$npcName returns back to {$GLOBALS['PLAYER_NAME']}"
+        ]
+    );
+
     // Will mark meta PENDING_DIALOGUE. When NPC reaches player, will talk to player. (triggered at addnpc)
     $npcManager = new NpcMaster();
     $npcData = $npcManager->getByName($npcName);
@@ -320,6 +450,18 @@ function handleMoveToAction($targetNpcName, $currentNpcData, $npcName, $last_ts,
         'original' => 'backgroundaction',
     ]);
 
+    // Insert bgl_history log entry
+    $db->insert(
+        'bgl_history',
+        [
+            'npc' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'data' => "$npcName moves towards $resolvedName"
+        ]
+    );
+
     return true;
 }
 
@@ -402,6 +544,19 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
         'original' => 'backgroundaction',
     ]);
 
+    // Insert bgl_history log entry
+    $db->insert(
+        'bgl_history',
+        [
+            'npc' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'data' => "$npcName looks for $resolvedName"
+        ]
+    );
+
+
     sleep(2); // Simulate time taken to find the NPC; in a real implementation, this would be event-driven rather than a fixed sleep
 
     $npcLocation = $db->fetchOne("SELECT *
@@ -469,6 +624,17 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             'original' => 'backgroundaction',
         ]);
 
+        // Insert bgl_history log entry
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets,
+                'localts' => time(),
+                'data' => "$npcName moves toward $resolvedName"
+            ]
+        );
 
 
     } else if ($detectedLocation && $detectedLocation[3] != $lastReportedLocation) {
@@ -523,11 +689,33 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
  */
 function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts, $last_gamets, $momentum, $db, $connectionHandler = null, $dynamicBiography = '', $contextHistory = '', $lastEventLocation = null)
 {
+
+    // Check first if name comes in the form of "NPC NAME" or "NPCname:refid);
+    if (strpos($targetNpcName, ':') !== false) {
+        $parts = explode(':', $targetNpcName);
+        $targetNpcName = trim($parts[0]);
+        $targetRefid = trim($parts[1]);
+        error_log("[handleSpeakToAction] Target NPC name and refid provided: $targetNpcName, refid: $targetRefid");
+    } else {
+        error_log("[handleSpeakToAction] Target NPC name provided: $targetNpcName");
+        $targetRefid = "0";
+    }
+
     $targetNpc = resolveNpcByName($targetNpcName, $db);
 
     if ($targetNpc === null) {
+        error_log("[handleSpeakToAction] Target NPC not found: $targetNpcName, trying to create profile.");
+        // This can happen if player didn't visit the NPC yet, so the NPC is not in the core_npc_master table. 
+        // Try to create profile
+        $retVal=createProfile($targetNpcName,[],false,$targetNpcName); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
+        $resolvedName=$targetNpcName;
+        $targetNpc['name']=$resolvedName;
+        $targetNpc['refid']=$targetRefid;
+    }
+
+    if ($targetNpc === null) {
         error_log("[handleSpeakToAction] Target NPC not found: $targetNpcName");
-        return false;
+        return false;        
     }
 
     $resolvedName = $targetNpc['name'];
@@ -627,6 +815,18 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             ]);
         }
         triggerNpcUpdate($npcName);
+
+        // Insert bgl_history log entry
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets+20,
+                'localts' => time(),
+                'data' => "$npcName has a conversation with $resolvedName"
+            ]
+        );
     }
 
     return true;
@@ -718,6 +918,17 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         'original' => 'backgroundaction',
     ]);
 
+    // Insert bgl_history log entry
+    $db->insert(
+        'bgl_history',
+        [
+            'npc' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:$gold)"
+        ]
+    );
 
     triggerNpcUpdate($npcName);
     return true;

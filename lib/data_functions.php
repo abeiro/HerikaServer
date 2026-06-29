@@ -11,6 +11,8 @@ require_once(__DIR__."/core/activity_status.php");
 require_once(__DIR__."/core/transformation_state.php");
 require_once(__DIR__."/core/game_plugins.php");
 require_once(__DIR__."/core/npc_master.class.php");
+require_once(__DIR__."/prompt_injections.php");
+require_once(__DIR__."/vr_items.php");
 
 
 function ChangeHerikaName($new_name="") {
@@ -362,7 +364,112 @@ function chimLookupItemDescriptionForContext(string $itemName, ?string $baseid =
     return null;
 }
 
-function chimFormatProfileEquipmentParts(array $equipmentData, array $slots): array {
+function chimEquipmentVanillaSlotLabels(): array
+{
+    return [
+        'helmet' => 'Helmet',
+        'armor' => 'Armor',
+        'boots' => 'Boots',
+        'gloves' => 'Gloves',
+        'amulet' => 'Amulet',
+        'ring' => 'Ring',
+        'left_hand' => 'Left Hand',
+        'right_hand' => 'Right Hand',
+    ];
+}
+
+function chimEquipmentModdedSlotLabels(): array
+{
+    return [
+        'mod_mouth' => 'Face/Mouth',
+        'mod_neck' => 'Neck',
+        'cape' => 'Cape/Chest Outer',
+        'backpack' => 'Back/Backpack',
+        'mod_misc1' => 'Misc Slot 48',
+        'mod_pelvis_primary' => 'Pelvis Outer',
+        'mod_pelvis_secondary' => 'Pelvis Secondary',
+        'mod_leg_right' => 'Right Leg',
+        'mod_leg_left' => 'Left Leg',
+        'mod_face_jewelry' => 'Face Jewelry',
+        'shirt' => 'Chest Under',
+        'mod_shoulder' => 'Shoulder',
+        'mod_arm_left' => 'Left Arm',
+        'mod_arm_right' => 'Right Arm',
+        'mod_misc2' => 'Misc Slot 60',
+    ];
+}
+
+function chimEquipmentAllSlotLabels(): array
+{
+    return chimEquipmentVanillaSlotLabels() + chimEquipmentModdedSlotLabels();
+}
+
+function chimEquipmentProfileSlotKeys(): array
+{
+    return array_keys(chimEquipmentAllSlotLabels());
+}
+
+function chimEquipmentSlotHasVisibleItem(array $equipmentData, string $slot): bool
+{
+    if (empty($equipmentData[$slot])) {
+        return false;
+    }
+
+    $itemName = trim((string) $equipmentData[$slot]);
+    return $itemName !== '' && !isItemBlacklisted($itemName) && stripos($itemName, 'Missing Name') === false;
+}
+
+function chimEquipmentHasBodyCoverage(array $equipmentData): bool
+{
+    foreach (['armor', 'shirt', 'cape'] as $slot) {
+        if (chimEquipmentSlotHasVisibleItem($equipmentData, $slot)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function chimFormatEquipmentPromptLines(array $equipmentData, array $slotLabels, callable $getItemDescription = null, array &$describedBaseids = []): array
+{
+    $equipmentParts = [];
+
+    foreach ($slotLabels as $slot => $label) {
+        if (empty($equipmentData[$slot])) {
+            continue;
+        }
+
+        $itemName = trim((string) $equipmentData[$slot]);
+        if ($itemName === '' || isItemBlacklisted($itemName) || stripos($itemName, 'Missing Name') !== false) {
+            continue;
+        }
+
+        $baseid = isset($equipmentData[$slot . '_baseid']) ? trim((string) $equipmentData[$slot . '_baseid']) : '';
+        $itemLine = "  - {$label}: {$itemName}";
+
+        if ($getItemDescription !== null) {
+            $baseidKey = $baseid !== '' ? strtoupper($baseid) : '';
+            if ($baseidKey !== '' && in_array($baseidKey, $describedBaseids, true)) {
+                $equipmentParts[] = $itemLine;
+                continue;
+            }
+
+            $description = $getItemDescription($itemName, $baseid !== '' ? $baseid : null);
+            if ($description) {
+                $itemLine .= " - {$description}";
+                if ($baseidKey !== '') {
+                    $describedBaseids[] = $baseidKey;
+                }
+            }
+        }
+
+        $equipmentParts[] = $itemLine;
+    }
+
+    return $equipmentParts;
+}
+
+function chimFormatProfileEquipmentParts(array $equipmentData, array $slots, bool $includeDescriptions = true): array {
     $equipmentParts = [];
     $describedBaseids = [];
 
@@ -382,7 +489,7 @@ function chimFormatProfileEquipmentParts(array $equipmentData, array $slots): ar
         $description = null;
         $baseidKey = $baseid !== '' ? strtoupper($baseid) : '';
 
-        if ($baseidKey === '' || !in_array($baseidKey, $describedBaseids, true)) {
+        if ($includeDescriptions && ($baseidKey === '' || !in_array($baseidKey, $describedBaseids, true))) {
             $description = chimLookupItemDescriptionForContext($itemName, $baseid);
             if ($description !== null && $baseidKey !== '') {
                 $describedBaseids[] = $baseidKey;
@@ -395,6 +502,124 @@ function chimFormatProfileEquipmentParts(array $equipmentData, array $slots): ar
     }
 
     return $equipmentParts;
+}
+
+function chimProfileEquipmentSlotsFromData(array $equipmentData, array $preferredSlots): array {
+    $slots = $preferredSlots;
+    foreach ($equipmentData as $key => $value) {
+        $slot = trim((string) $key);
+        if ($slot === '' || substr($slot, -7) === '_baseid') {
+            continue;
+        }
+        if (!in_array($slot, $slots, true)) {
+            $slots[] = $slot;
+        }
+    }
+    return $slots;
+}
+
+function chimNormalizeProfileScalar($value): string {
+    if (is_bool($value)) {
+        return $value ? 'true' : 'false';
+    }
+    if (is_int($value) || is_float($value)) {
+        return (string) $value;
+    }
+    return trim((string) $value);
+}
+
+function chimFirstProfileValue(...$values): string {
+    foreach ($values as $value) {
+        $value = chimNormalizeProfileScalar($value);
+        if ($value !== '') {
+            return $value;
+        }
+    }
+    return '';
+}
+
+function chimParsePlayerInfoEventData(string $data): array {
+    $fields = [];
+    foreach (['level', 'name', 'race', 'gender'] as $key) {
+        if (preg_match('/(?:^|,)\s*' . preg_quote($key, '/') . '\s*:\s*"([^"]*)"/i', $data, $quotedMatch)) {
+            $fields[$key] = trim($quotedMatch[1]);
+            continue;
+        }
+        if (preg_match('/(?:^|,)\s*' . preg_quote($key, '/') . '\s*:\s*([^,]+)/i', $data, $plainMatch)) {
+            $fields[$key] = trim($plainMatch[1], " \t\r\n\"");
+        }
+    }
+    return $fields;
+}
+
+function chimGetLatestPlayerInfoEventData(): array {
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+
+    $cached = [];
+    if (empty($GLOBALS['db'])) {
+        return $cached;
+    }
+
+    try {
+        $row = $GLOBALS['db']->fetchOne("
+            SELECT data
+            FROM eventlog
+            WHERE type IN ('playerinfo', 'infoplayer')
+            ORDER BY localts DESC
+            LIMIT 1
+        ");
+        if (is_array($row) && isset($row['data'])) {
+            $cached = chimParsePlayerInfoEventData((string) $row['data']);
+        }
+    } catch (Throwable $e) {
+        Logger::debug("Could not read latest playerinfo event: " . $e->getMessage());
+    }
+
+    return $cached;
+}
+
+function chimBuildPlayerProfileName(string $actor, $player): string {
+    $eventInfo = chimGetLatestPlayerInfoEventData();
+    $transformData = method_exists($player, 'getJson') ? ($player->getJson('transformation_state') ?? []) : [];
+
+    $gender = chimFirstProfileValue(
+        method_exists($player, 'get') ? $player->get('gender') : '',
+        $eventInfo['gender'] ?? ''
+    );
+    $race = chimFirstProfileValue(
+        method_exists($player, 'get') ? $player->get('race') : '',
+        $transformData['race_name'] ?? '',
+        $eventInfo['race'] ?? ''
+    );
+
+    $profileName = $actor;
+    if ($gender !== '') {
+        $gender = ucfirst(strtolower($gender));
+    }
+    if ($gender !== '' && $race !== '') {
+        $profileName .= " ({$gender} {$race})";
+    } elseif ($race !== '') {
+        $profileName .= " ({$race})";
+    }
+
+    return $profileName;
+}
+
+function chimNormalizePlayerProfileBio(string $bio, string $actor): string {
+    $bio = trim(ReplacePlayerNamePlaceholder($bio));
+    if ($bio === '') {
+        return '';
+    }
+
+    $actorPattern = preg_quote($actor, '/');
+    if (preg_match('/^I(?:\'m| am)\s+' . $actorPattern . '\.?$/i', $bio)) {
+        return '';
+    }
+
+    return $bio;
 }
 
 /**
@@ -621,6 +846,21 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     // Not always the same order
     shuffle($actorDetailedList);
     // error_log("[DataLastInfoFor] $actorsInRangeList");
+
+    $nearbyContextOptionEnabled = function (string $bucket, string $id, bool $default = true): bool {
+        if (function_exists('chimPromptContextOptionEnabled')) {
+            return chimPromptContextOptionEnabled($bucket, $id);
+        }
+        return $default;
+    };
+    $nearbyActorsIncludeBasicSummary = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'basic_summary');
+    $nearbyActorsIncludeAppearance = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'appearance');
+    $nearbyActorsIncludeEquipment = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'equipment');
+    $nearbyActorsEquipmentDescriptions = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'equipment_descriptions');
+    $nearbyActorsIncludeActivity = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'current_activity');
+    $nearbyActorsIncludePower = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'power_awareness');
+    $nearbyActorsIncludeFactions = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'factions');
+    $nearbyActorsIncludeCustomState = $nearbyContextOptionEnabled('enabled_nearby_actor_subsections', 'custom_state');
     
     // Track seen faction descriptions to avoid duplicates
     $seenFactionFormIDs = [];
@@ -664,32 +904,60 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 try {
                     require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
                     $player = new Player();
-                    
-                    // Add appearance if available
-                    $appearance = $player->get('appearance');
-                    if (!empty($appearance)) {
-                        $profileString .= ": " . trim($appearance);
-                    }
+                    $profileString = chimBuildPlayerProfileName($actor, $player);
+                    $hasProfileBody = false;
 
-                    $playerBio = ResolvePlayerBackstory($player);
+                    $playerBio = chimNormalizePlayerProfileBio(ResolvePlayerBackstory($player), $actor);
                     $bioKnownByAll = filter_var((string)($player->get('bio_known_by_all') ?? ''), FILTER_VALIDATE_BOOLEAN);
                     $isNarrator = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "The Narrator") === 0;
-                    if ($playerBio !== "" && ($bioKnownByAll || $isNarrator)) {
-                        $profileString .= ". Backstory: " . trim($playerBio);
+                    if ($nearbyActorsIncludeBasicSummary && $playerBio !== "" && ($bioKnownByAll || $isNarrator)) {
+                        $profileString .= ": " . trim($playerBio);
+                        $hasProfileBody = true;
+                    }
+
+                    // Add appearance if available
+                    $appearance = $player->get('appearance');
+                    if ($nearbyActorsIncludeAppearance && !empty($appearance)) {
+                        if ($hasProfileBody) {
+                            $profileString .= ". Appearance: " . trim($appearance);
+                        } else {
+                            $profileString .= ": Appearance: " . trim($appearance);
+                            $hasProfileBody = true;
+                        }
                     }
                     
                     // Add equipment if available
                     $equipmentData = $player->getJson('equipment');
-                    if (is_array($equipmentData) && !empty($equipmentData)) {
-                        $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
-                        $equipmentParts = chimFormatProfileEquipmentParts($equipmentData, $slots);
+                    if ($nearbyActorsIncludeEquipment && is_array($equipmentData) && !empty($equipmentData)) {
+                        $slots = chimEquipmentProfileSlotKeys();
+                        $slots = chimProfileEquipmentSlotsFromData($equipmentData, $slots);
+                        $equipmentParts = chimFormatProfileEquipmentParts($equipmentData, $slots, $nearbyActorsEquipmentDescriptions);
                         if (!empty($equipmentParts)) {
-                            $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
+                            if ($hasProfileBody) {
+                                $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
+                            } else {
+                                $profileString .= ": Equipment: " . implode(", ", $equipmentParts);
+                                $hasProfileBody = true;
+                            }
+                        }
+                    }
+
+                    if ($nearbyActorsIncludeCustomState) {
+                        $profileExtra = chimBuildActorProfileEnrichmentText($actor, "player", [
+                            "source" => "nearby_actors",
+                        ]);
+                        if ($profileExtra !== "") {
+                            if ($hasProfileBody) {
+                                $profileString .= ". " . $profileExtra;
+                            } else {
+                                $profileString .= ": " . $profileExtra;
+                                $hasProfileBody = true;
+                            }
                         }
                     }
                     
                     // Power Awareness: Add relative power assessment for player
-                    if (isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
+                    if ($nearbyActorsIncludePower && isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
                         require_once(__DIR__ . DIRECTORY_SEPARATOR . "power_awareness.php");
                         
                         // Get player's level
@@ -744,15 +1012,17 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                         $reanimationText = " This person has been reanimated from death as a zombie.";
                     }
                     
-                    $profileString = "{$nameWithRaceGender}: " . trim("{$currentNpcData["core"]}{$reanimationText}");
+                    $profileString = $nearbyActorsIncludeBasicSummary
+                        ? "{$nameWithRaceGender}: " . trim("{$currentNpcData["core"]}{$reanimationText}")
+                        : "{$nameWithRaceGender}";
                     
                     // Add appearance if available
-                    if (!empty($currentNpcData["appearance"])) {
+                    if ($nearbyActorsIncludeAppearance && !empty($currentNpcData["appearance"])) {
                         $profileString .= ". Appearance: " . trim($currentNpcData["appearance"]);
                     }
                     
                     // Add zombie appearance if reanimated
-                    if (empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
+                    if ($nearbyActorsIncludeAppearance && empty($GLOBALS["DISABLE_REANIMATION_TRACKING"]) && isset($extendedData["reanimated"]) && $extendedData["reanimated"] === true) {
                         $zombieAppearance = "Their skin has a deathly pale, greyish pallor with a corpse-like appearance. Their eyes are glazed and lifeless, and their movements are stiff and unnatural";
                         if (!empty($currentNpcData["appearance"])) {
                             $profileString .= ". " . $zombieAppearance;
@@ -773,7 +1043,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     }
                     
                     // Power Awareness: Add relative power assessment
-                    if (isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
+                    if ($nearbyActorsIncludePower && isset($GLOBALS["POWER_AWARENESS_ENABLED"]) && $GLOBALS["POWER_AWARENESS_ENABLED"]) {
                         require_once(__DIR__ . DIRECTORY_SEPARATOR . "power_awareness.php");
                         
                         // Get current NPC's level
@@ -791,14 +1061,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     }
 
                     $activityStatus = chimNormalizeActivityStatus($metaData);
-                    if (!empty($activityStatus['fresh']) && !empty($activityStatus['summary'])) {
+                    if ($nearbyActorsIncludeActivity && !empty($activityStatus['fresh']) && !empty($activityStatus['summary'])) {
                         $profileString .= ". Current activity: " . $activityStatus['summary'];
                     }
                     
                     // Add equipment if available
-                    if (isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
-                        $slots = ['helmet', 'armor', 'boots', 'gloves', 'amulet', 'ring', 'left_hand', 'right_hand'];
-                        $equipmentParts = chimFormatProfileEquipmentParts($metaData["equipment"], $slots);
+                    if ($nearbyActorsIncludeEquipment && isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
+                        $slots = chimEquipmentProfileSlotKeys();
+                        $equipmentParts = chimFormatProfileEquipmentParts($metaData["equipment"], $slots, $nearbyActorsEquipmentDescriptions);
                         if (!empty($equipmentParts)) {
                             $profileString .= ". Equipment: " . implode(", ", $equipmentParts);
                         }
@@ -809,14 +1079,25 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                                         'argonian', 'khajiit', 'khajit'];
                         $npcRace = isset($currentNpcData["race"]) ? strtolower(trim($currentNpcData["race"])) : '';
                         
-                        if ($npcRace && in_array($npcRace, $humanoidRaces) && empty($metaData["equipment"]["armor"])) {
+                        if ($npcRace && in_array($npcRace, $humanoidRaces) && !chimEquipmentHasBodyCoverage($metaData["equipment"])) {
                             $profileString .= ". Naked (no body armor/clothing worn)";
+                        }
+                    }
+
+                    if ($nearbyActorsIncludeCustomState) {
+                        $profileExtra = chimBuildActorProfileEnrichmentText($npcName, "npc", [
+                            "source" => "nearby_actors",
+                            "metadata" => $metaData,
+                            "npc_data" => $currentNpcData,
+                        ]);
+                        if ($profileExtra !== "") {
+                            $profileString .= ". " . $profileExtra;
                         }
                     }
                     
                     // Add faction information after equipment
                     $extendedData = $npcMaster->getExtendedData($currentNpcData);
-                    if (isset($extendedData['factions']) && is_array($extendedData['factions']) && count($extendedData['factions']) > 0) {
+                    if ($nearbyActorsIncludeFactions && isset($extendedData['factions']) && is_array($extendedData['factions']) && count($extendedData['factions']) > 0) {
                         $factionNames = [];
                         foreach ($extendedData['factions'] as $faction) {
                             if (isset($faction['formid'])) {
@@ -904,6 +1185,8 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     }
     
     // Add nearby items to context if available
+    $nearbyItemsIncludeDescriptions = $nearbyContextOptionEnabled('enabled_nearby_item_subsections', 'item_descriptions');
+    $nearbyItemsGroupDuplicates = $nearbyContextOptionEnabled('enabled_nearby_item_subsections', 'group_duplicates', false);
     $itemsInRange = DataItemsInCloseRange();
     
     if (!empty($itemsInRange)) {
@@ -914,7 +1197,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $groupedItems = [];
         $playerName = $GLOBALS["PLAYER_NAME"] ?? "Player";
         $playerLookingTag = " ({$playerName} is looking at this)";
-        $shorterNearbyItemList = !empty($GLOBALS["SHORTER_NEARBY_ITEM_LIST"]);
+        $shorterNearbyItemList = $nearbyItemsGroupDuplicates;
         
         foreach ($itemsList as $item) {
             $trimmedItem = trim($item);
@@ -947,7 +1230,9 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                     
                     if ($descRecord && !empty($descRecord['description'])) {
                         // Store description under clean name (without STEALING tag)
-                        $itemDescriptions[$itemNameClean] = $descRecord['description'];
+                        if ($nearbyItemsIncludeDescriptions) {
+                            $itemDescriptions[$itemNameClean] = $descRecord['description'];
+                        }
                         $hasDescription = true;
                     }
                 }
@@ -964,11 +1249,11 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                             'count' => 0,
                             'sample_refid' => $refID,
                             'sample_item_name' => $itemName,
-                            'description' => $itemDescriptions[$itemNameClean] ?? '',
+                        'description' => $nearbyItemsIncludeDescriptions ? ($itemDescriptions[$itemNameClean] ?? '') : '',
                         ];
                     }
                     $groupedItems[$groupKey]['count']++;
-                    if (empty($groupedItems[$groupKey]['description']) && !empty($itemDescriptions[$itemNameClean])) {
+                    if ($nearbyItemsIncludeDescriptions && empty($groupedItems[$groupKey]['description']) && !empty($itemDescriptions[$itemNameClean])) {
                         $groupedItems[$groupKey]['description'] = $itemDescriptions[$itemNameClean];
                     }
                 } else {
@@ -1019,7 +1304,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
             
             // Add descriptions for unique items if available
             $descriptionText = "";
-            if ($shorterNearbyItemList) {
+            if ($nearbyItemsIncludeDescriptions && $shorterNearbyItemList) {
                 $descParts = [];
                 foreach ($groupedItems as $group) {
                     if (!empty($group['description'])) {
@@ -1029,7 +1314,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 if (!empty($descParts)) {
                     $descriptionText = "\n\n# ITEM DESCRIPTIONS\n## " . implode("\n## ", $descParts);
                 }
-            } elseif (!empty($itemDescriptions)) {
+            } elseif ($nearbyItemsIncludeDescriptions && !empty($itemDescriptions)) {
                 $descParts = [];
                 foreach ($itemDescriptions as $name => $desc) {
                     $descParts[] = "{$name}: {$desc}";
@@ -1046,6 +1331,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
             }
             $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $contextContent;
         }
+    }
+
+    $heldItemsContext = HeldItems::getHeldItemsContext();
+    if (!empty($heldItemsContext)) {
+        if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+            $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
+        }
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $heldItemsContext;
     }
     
     /*
@@ -2026,11 +2319,23 @@ function herikaShouldExcludeEventFromPromptContext(array $row): bool
         'dynamic_oghma_import',
         'description_import',
         'custom_action_import',
+        'traditional_quest_import',
         'item_import',
         'npcvoice_refresh',
     ];
 
+    static $promptOnlyEventTypes = [
+        'ext_held_item_pickup',
+        'ext_held_item_drop',
+    ];
+
     if (in_array($type, $csvImportEventTypes, true)) {
+        return true;
+    }
+
+    // Held item state is injected separately through <held_items>; avoid replaying
+    // every pickup/drop as historic NPC event context.
+    if (in_array($type, $promptOnlyEventTypes, true)) {
         return true;
     }
 
@@ -6704,55 +7009,21 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
     
     // Add NPC's own equipment (skip for The Narrator - they don't need equipment context)
     if ($FOLLOWER_CONF["HERIKA_NAME"] !== "The Narrator" && isset($metaData["equipment"]) && is_array($metaData["equipment"])) {
-        $equipmentParts = [];
         $describedBaseids = []; // Track which baseids we've already described
-        $slots = [
-            'helmet' => 'Helmet',
-            'armor' => 'Armor', 
-            'boots' => 'Boots',
-            'gloves' => 'Gloves',
-            'amulet' => 'Amulet',
-            'ring' => 'Ring',
-            'cape' => 'Cape',
-            'backpack' => 'Backpack',
-            'left_hand' => 'Left Hand',
-            'right_hand' => 'Right Hand'
-        ];
-        
-        foreach ($slots as $slot => $label) {
-            if (!empty($metaData["equipment"][$slot])) {
-                $itemName = $metaData["equipment"][$slot];
-                
-                // Skip blacklisted items
-                if (isItemBlacklisted($itemName)) {
-                    continue;
-                }
-                
-                $baseid = isset($metaData["equipment"][$slot . '_baseid']) ? $metaData["equipment"][$slot . '_baseid'] : null;
-                
-                $itemLine = "  • {$label}: {$itemName}";
-                
-                // Try to add item description only if we haven't described this baseid yet
-                if (!empty($baseid) && !in_array($baseid, $describedBaseids)) {
-                    $description = $getItemDescription($itemName, $baseid);
-                    if ($description) {
-                        $itemLine .= " - {$description}";
-                        $describedBaseids[] = $baseid; // Mark this baseid as described
-                    }
-                } elseif (empty($baseid)) {
-                    // No baseid, try name-based (won't dedupe without baseid)
-                    $description = $getItemDescription($itemName, null);
-                    if ($description) {
-                        $itemLine .= " - {$description}";
-                    }
-                }
-                
-                $equipmentParts[] = $itemLine;
-            }
+        $vanillaEquipmentParts = chimFormatEquipmentPromptLines($metaData["equipment"], chimEquipmentVanillaSlotLabels(), $getItemDescription, $describedBaseids);
+        $moddedEquipmentParts = chimFormatEquipmentPromptLines($metaData["equipment"], chimEquipmentModdedSlotLabels(), $getItemDescription, $describedBaseids);
+        $equipmentSections = [];
+
+        if (!empty($vanillaEquipmentParts)) {
+            $equipmentSections[] = "Vanilla Slots:\n" . implode("\n", $vanillaEquipmentParts);
+        }
+
+        if (!empty($moddedEquipmentParts)) {
+            $equipmentSections[] = "Modded Slots:\n" . implode("\n", $moddedEquipmentParts);
         }
         
-        if (!empty($equipmentParts)) {
-            $EQUIPMENT_ADD = "\n<equipment>\n#Current Equipment\nYou are currently wearing/wielding:\n" . implode("\n", $equipmentParts);
+        if (!empty($equipmentSections)) {
+            $EQUIPMENT_ADD = "\n<equipment>\n#Current Equipment\nYou are currently wearing/wielding:\n" . implode("\n", $equipmentSections);
             
             // Check if humanoid NPC has no body armor - if so, note they're naked
             $humanoidRaces = ['nord', 'imperial', 'breton', 'redguard', 'orc', 'orsimer', 
@@ -6760,7 +7031,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                             'argonian', 'khajiit', 'khajit'];
             $npcRace = isset($currentNpcData["race"]) ? strtolower(trim($currentNpcData["race"])) : '';
             
-            if ($npcRace && in_array($npcRace, $humanoidRaces) && empty($metaData["equipment"]["armor"])) {
+            if ($npcRace && in_array($npcRace, $humanoidRaces) && !chimEquipmentHasBodyCoverage($metaData["equipment"])) {
                 $EQUIPMENT_ADD .= "\nNote: You are naked (no body armor/clothing worn).";
             }
             
@@ -6947,26 +7218,20 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
             $targetMetaData = $npcMaster->getMetaData($targetNpcData);
             
             if (isset($targetMetaData["equipment"]) && is_array($targetMetaData["equipment"])) {
-                $targetEquipmentParts = [];
-                $slots = [
-                    'helmet' => 'Helmet',
-                    'armor' => 'Armor',
-                    'boots' => 'Boots', 
-                    'gloves' => 'Gloves',
-                    'amulet' => 'Amulet',
-                    'ring' => 'Ring',
-                    'left_hand' => 'Left Hand',
-                    'right_hand' => 'Right Hand'
-                ];
-                
-                foreach ($slots as $slot => $label) {
-                    if (!empty($targetMetaData["equipment"][$slot])) {
-                        $targetEquipmentParts[] = "  • {$label}: {$targetMetaData["equipment"][$slot]}";
-                    }
+                $targetVanillaEquipmentParts = chimFormatEquipmentPromptLines($targetMetaData["equipment"], chimEquipmentVanillaSlotLabels());
+                $targetModdedEquipmentParts = chimFormatEquipmentPromptLines($targetMetaData["equipment"], chimEquipmentModdedSlotLabels());
+                $targetEquipmentSections = [];
+
+                if (!empty($targetVanillaEquipmentParts)) {
+                    $targetEquipmentSections[] = "Vanilla Slots:\n" . implode("\n", $targetVanillaEquipmentParts);
+                }
+
+                if (!empty($targetModdedEquipmentParts)) {
+                    $targetEquipmentSections[] = "Modded Slots:\n" . implode("\n", $targetModdedEquipmentParts);
                 }
                 
-                if (!empty($targetEquipmentParts)) {
-                    $TARGET_EQUIPMENT_ADD = "\n<target_equipment>\n#{$targetName}'s Equipment\n{$targetName} is currently wearing/wielding:\n" . implode("\n", $targetEquipmentParts);
+                if (!empty($targetEquipmentSections)) {
+                    $TARGET_EQUIPMENT_ADD = "\n<target_equipment>\n#{$targetName}'s Equipment\n{$targetName} is currently wearing/wielding:\n" . implode("\n", $targetEquipmentSections);
                     
                     // Check if humanoid NPC has no body armor - if so, note they're naked
                     $humanoidRaces = ['nord', 'imperial', 'breton', 'redguard', 'orc', 'orsimer', 
@@ -6974,7 +7239,7 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                                     'argonian', 'khajiit', 'khajit'];
                     $targetRace = isset($targetNpcData["race"]) ? strtolower(trim($targetNpcData["race"])) : '';
                     
-                    if ($targetRace && in_array($targetRace, $humanoidRaces) && empty($targetMetaData["equipment"]["armor"])) {
+                    if ($targetRace && in_array($targetRace, $humanoidRaces) && !chimEquipmentHasBodyCoverage($targetMetaData["equipment"])) {
                         $TARGET_EQUIPMENT_ADD .= "\nNote: {$targetName} is naked (no body armor/clothing worn).";
                     }
                     

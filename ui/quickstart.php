@@ -814,13 +814,13 @@ echo '<section class="qs-section">
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F4AA; <b>Powerful</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: GLM 5 (z-ai/glm-5)</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.60/M input | $2.08/M output</div>
+                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: GLM 5.2 (z-ai/glm-5.2)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$1.40/M input | $4.40/M output</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F9EA; <b>Experimental</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: DeepSeek Chat V3.2 (deepseek/deepseek-v3.2)</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.252/M input | $0.378/M output</div>
+                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: DeepSeek V4 Pro (deepseek/deepseek-v4-pro)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.435/M input | $0.87/M output</div>
                     </div>
                 </div>
                 <div id="qs_llm_connectors_cards_player2" style="' . $llmCardsPlayer2Style . '">

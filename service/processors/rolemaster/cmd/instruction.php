@@ -266,7 +266,7 @@ user request: actor \"a\" leaves the place
                     'actor' => "rolemaster",
                     'text' => '',
                     'action' => $roleMasterAction,
-                    'tag' => ""
+                    'tag' => __FILE__ . ":" . __LINE__
                 )
             );
 

@@ -141,6 +141,7 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $db->delete("named_cell", "gamets>={$gameRequest[2]}  ");
     $db->delete("named_cell", "gamets<=({$gameRequest[2]} - 30000000) "); //((24 * 3) / 0.0000024)
     $db->delete("sneq_quests_saved", "gamets>={$gameRequest[2]}  ");
+    $db->delete("bgl_history", "gamets>={$gameRequest[2]}  ");
     /* This is obsolete */
     /*
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
@@ -152,6 +153,9 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     */
     $db->delete("memory_summary", "gamets_truncated>{$gameRequest[2]}  ");
     $db->delete("memory", "gamets>{$gameRequest[2]}  ");
+    if (function_exists('chimQuestEngineResetRuntime')) {
+        chimQuestEngineResetRuntime(true);
+    }
 
     //$db->delete("diarylogv2", "true");
     //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
@@ -306,6 +310,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     }
     $db->delete("memory_summary", " 1=1 ");
     $db->delete("memory", " 1=1 ");
+    if (function_exists('chimQuestEngineResetRuntime')) {
+        chimQuestEngineResetRuntime(true);
+    }
 
     //$db->delete("diarylogv2", "true");
     //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
@@ -1401,8 +1408,6 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     
     $splitNameBase=explode("@",$gameRequest[3]);
     $incomingDisplayName = trim($splitNameBase[0] ?? "");
-    $incomingBase = trim($splitNameBase[1] ?? "");
-    $incomingRefId = trim($splitNameBase[4] ?? "");
     if (sizeof($splitNameBase)>1) {
         $localName=$splitNameBase[0];
         $baseProfile=$splitNameBase[1];
@@ -1415,46 +1420,11 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $baseProfile="";
 
     $npcMaster=new NpcMaster();
-    $currentNpcData = null;
-    $retVal = 2;
-    $resolvedByRefId = false;
-
-    if ($incomingRefId !== "") {
-        $refIdCandidates = array_unique(array_filter([
-            $incomingRefId,
-            preg_replace('/^0x/i', '', $incomingRefId),
-            (stripos($incomingRefId, '0x') === 0 ? strtoupper(substr($incomingRefId, 2)) : strtoupper($incomingRefId)),
-            (stripos($incomingRefId, '0x') === 0 ? strtolower(substr($incomingRefId, 2)) : strtolower($incomingRefId)),
-        ], static function ($value) {
-            return $value !== null && $value !== "";
-        }));
-
-        foreach ($refIdCandidates as $refIdCandidate) {
-            $refNpcData = $npcMaster->getByRefId($refIdCandidate);
-            if (!$refNpcData) {
-                continue;
-            }
-
-            $existingBase = trim((string)($refNpcData["base"] ?? ""));
-            $sameBase = ($incomingBase === "" || $existingBase === "" || strcasecmp($incomingBase, $existingBase) === 0);
-            $looksLikeDistributedName = preg_match('/\[[^\]]+\]\s*$/', $incomingDisplayName) === 1;
-
-            if ($sameBase && ($looksLikeDistributedName || strcasecmp((string)$refNpcData["npc_name"], $incomingDisplayName) === 0)) {
-                $currentNpcData = $refNpcData;
-                $resolvedByRefId = true;
-                if (strcasecmp((string)$currentNpcData["npc_name"], $incomingDisplayName) !== 0) {
-                    error_log("[ADDNPC] resolved display name '{$incomingDisplayName}' to existing NPC '{$currentNpcData["npc_name"]}' by refid {$incomingRefId}");
-                }
-                $localName = $currentNpcData["npc_name"];
-                break;
-            }
-        }
-    }
-
-    if (!$currentNpcData) {
-        $retVal=createProfile($localName,[],false,$baseProfile); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
-        $currentNpcData=$npcMaster->getByName($localName);
-    }
+    // Refids are not stable identity for profile creation: spawned actors, recycled refs,
+    // and modlist changes can make a new visible actor collide with an old profile row.
+    // Always create/resolve by the incoming visible name, then store refid as metadata below.
+    $retVal=createProfile($localName,[],false,$baseProfile); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
+    $currentNpcData=$npcMaster->getByName($localName);
     audit_log("comm.php addnpc $localName");
 
      if ($retVal==1)
@@ -1463,7 +1433,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     // Update new data
     
-    if (!$resolvedByRefId && isset($splitNameBase[4]) && $retVal==1) {
+    if (isset($splitNameBase[4]) && $retVal==1) {
         $currentNpcDataAlt=$npcMaster->getByRefId($splitNameBase[4]);
         if ($currentNpcDataAlt && $currentNpcDataAlt["npc_name"]!=$currentNpcData["npc_name"] ) {
             // Seems an NPC has changed name.
@@ -1946,19 +1916,25 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         
         if ($currentNpcData) {
             // Get existing metadata
-            $meta = [];
+            $extendedData = [];
             if (!empty($currentNpcData['extended_data'])) {
-                $meta = json_decode($currentNpcData['extended_data'], true);
-                if (!is_array($meta)) {
-                    $meta = [];
+                $extendedData = json_decode($currentNpcData['extended_data'], true);
+                if (!is_array($extendedData)) {
+                    $extendedData = [];
                 }
             }
             $currentNpcData["refid"]=$splitNameBase[1];
             // Update equipment section
-            $meta['background_life_enabled'] = true;
+            $extendedData['background_life_enabled'] = true;
             
+            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extendedData);
+
+            // Metadata
+            $metadata=$npcMaster->getMetadata($currentNpcData);
+            $metadata["low_process_actors"]=[];
+            $currentNpcData=$npcMaster->setMetadata($currentNpcData,$metadata);
+
             // Save back to database
-            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $meta);
             $npcMaster->updateByArray($currentNpcData);
             error_log("Updated background_life_enabled for {$currentNpcData["npc_name"]}");
             Logger::info("Updated background_life_enabled for {$currentNpcData["npc_name"]}");

@@ -581,6 +581,18 @@ if (is_array($parsed)) {
                 'party' => "",
             ]
         );
+        // Insert bgl_history log entry
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => ${$GLOBALS["HERIKA_NAME"]},
+                'ts' => $last_ts,
+                'gamets' => $last_gamets+1,
+                'localts' => time(),
+                'data' => "{$GLOBALS["HERIKA_NAME"]} sends a letter to {$GLOBALS["PLAYER_NAME"]}",
+            ]
+        );
+        
         $db->insert(
             'diarylog',
             [
