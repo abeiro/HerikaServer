@@ -7068,6 +7068,36 @@ if ($checkVersion("oghma") < 20260625001) {
     Logger::info("Applied patch oghma 20260625001");
 }
 
+if ($checkVersion("core_tts_connector_pockettts_audiocpp") < 20260628001) {
+    Logger::debug("Applying core_tts_connector_pockettts_audiocpp 20260628001 - expose audio.cpp PocketTTS metadata");
+
+    if ($checkTableExists("core_tts_connector") != -1) {
+        $db->execQuery("
+            UPDATE public.core_tts_connector
+               SET metadata = jsonb_set(
+                    jsonb_set(
+                        jsonb_set(
+                            COALESCE(metadata, '{}'::jsonb),
+                            '{endpoint,description}',
+                            to_jsonb('Endpoint URL. DwemerDistro audio.cpp PocketTTS uses port 8086 by default. Legacy Python PocketTTS uses port 8020.'::text),
+                            true
+                        ),
+                        '{api_format}',
+                        '{\"type\":\"select\",\"values\":[\"audio_cpp\",\"legacy\"],\"description\":\"PocketTTS API format. Use audio_cpp for the DwemerDistro C++ runtime or legacy for the older Python bridge.\"}'::jsonb,
+                        true
+                    ),
+                    '{model}',
+                    '{\"type\":\"string\",\"description\":\"audio.cpp model id. Default: pocket-tts.\"}'::jsonb,
+                    true
+                )
+             WHERE driver = 'pockettts'
+        ");
+    }
+
+    $updateVersion("core_tts_connector_pockettts_audiocpp", 20260628001);
+    Logger::info("Applied patch core_tts_connector_pockettts_audiocpp 20260628001");
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------

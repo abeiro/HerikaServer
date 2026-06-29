@@ -336,7 +336,9 @@ $TTS["CHATTERBOX"]["PARALINGUISTIC_TAGS_ENABLED"]=false; //Enable paralinguistic
 $TTS["CHATTERBOX"]["PARALINGUISTIC_TAGS_PROMPT"]=''; //Prompt snippet for instructing LLM to use paralinguistic tags.
 $TTS["CHATTERBOX"]["PARALINGUISTIC_TAGS_LIST"]='[clear throat],[sigh],[shush],[cough],[groan],[sniff],[gasp],[chuckle],[laugh]'; //Comma-separated list of supported tags.
 //PocketTTS
-$TTS["POCKETTTS"]["endpoint"]='http://127.0.0.1:8020'; //API endpoint.
+$TTS["POCKETTTS"]["endpoint"]='http://127.0.0.1:8086'; //API endpoint.
+$TTS["POCKETTTS"]["api_format"]='audio_cpp'; //API format: audio_cpp or legacy.
+$TTS["POCKETTTS"]["model"]='pocket-tts'; //audio.cpp model id.
 $TTS["POCKETTTS"]["language"]='en'; //Language.
 $TTS["POCKETTTS"]["voiceid"]='TheNarrator'; //Generated voice file name.
 $TTS["POCKETTTS"]["voicelogic"]='voicetype';

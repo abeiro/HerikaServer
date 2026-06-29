@@ -157,6 +157,38 @@ if (!function_exists('chimTtsStudioResolveEndpointForDriver')) {
     }
 }
 
+if (!function_exists('chimTtsStudioIsAudioCppPocketTts')) {
+    function chimTtsStudioIsAudioCppPocketTts(string $driver, string $endpoint = ''): bool
+    {
+        $ttsConnector = new TTSConnector();
+        $driver = $ttsConnector->normalizeDriverValue($driver);
+        if ($driver !== 'pockettts') {
+            return false;
+        }
+
+        $metadata = chimTtsStudioResolveConnectorMetadata($driver);
+        $apiFormat = strtolower(trim(strval($metadata['api_format'] ?? '')));
+        if ($apiFormat === 'audio_cpp' || $apiFormat === 'audiocpp') {
+            return true;
+        }
+
+        $endpoint = normalize_endpoint_url(trim($endpoint));
+        return strpos($endpoint, ':8086') !== false || strpos($endpoint, '/v1/audio/speech') !== false;
+    }
+}
+
+if (!function_exists('chimTtsStudioAudioCppBaseEndpoint')) {
+    function chimTtsStudioAudioCppBaseEndpoint(string $endpoint): string
+    {
+        $endpoint = normalize_endpoint_url(trim($endpoint));
+        $suffix = '/v1/audio/speech';
+        if (substr($endpoint, -strlen($suffix)) === $suffix) {
+            return substr($endpoint, 0, -strlen($suffix));
+        }
+        return $endpoint;
+    }
+}
+
 if (!function_exists('chimTtsStudioApplyConnectorGlobals')) {
     function chimTtsStudioApplyConnectorGlobals(string $driver): void
     {
@@ -192,6 +224,10 @@ if (!function_exists('chimTtsStudioFetchSpeakersList')) {
             return [];
         }
 
+        if (chimTtsStudioIsAudioCppPocketTts($driver, $endpoint) && function_exists('getLocalVoices')) {
+            return getLocalVoices();
+        }
+
         $url = $endpoint . '/speakers_list';
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -220,6 +256,11 @@ if (!function_exists('chimTtsStudioFetchSpeakersList')) {
 if (!function_exists('chimTtsStudioGetCachedSpeakersList')) {
     function chimTtsStudioGetCachedSpeakersList(string $driver): array
     {
+        $endpoint = chimTtsStudioResolveEndpointForDriver($driver);
+        if (chimTtsStudioIsAudioCppPocketTts($driver, $endpoint) && function_exists('getLocalVoices')) {
+            return getLocalVoices();
+        }
+
         $cacheKey = chimTtsStudioSpeakerCacheKey($driver);
         $speakers = $_SESSION[$cacheKey] ?? [];
         return is_array($speakers) ? $speakers : [];
@@ -957,6 +998,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'batch_process' && isset($_GET
                 exit;
             }
 
+            if (chimTtsStudioIsAudioCppPocketTts($driver, $endpoint)) {
+                chimTtsStudioStoreSpeakersList($driver, chimTtsStudioFetchSpeakersList($driver));
+                $response['success'] = true;
+                $response['message'] = 'Voice is available locally for audio.cpp PocketTTS';
+                echo json_encode($response);
+                exit;
+            }
+
             $url = $endpoint . '/upload_sample';
             $cfile = new CURLFile($voicePath, $fileType, $fileName);
             $postFields = ['wavFile' => $cfile];
@@ -1346,6 +1395,24 @@ function chimTtsStudioDetectEndpointProvider(string $endpoint): array
         return $cache[$endpoint];
     }
 
+    if (strpos($endpoint, ':8086') !== false || strpos($endpoint, '/v1/audio/speech') !== false) {
+        $audioCppBase = chimTtsStudioAudioCppBaseEndpoint($endpoint);
+        $healthProbe = chimTtsStudioProbeJson($audioCppBase . '/health');
+        $modelsProbe = chimTtsStudioProbeJson($audioCppBase . '/v1/models');
+        if ($healthProbe['response'] !== false
+            && intval($healthProbe['http_code']) >= 200
+            && intval($healthProbe['http_code']) < 300
+            && $modelsProbe['response'] !== false
+            && intval($modelsProbe['http_code']) >= 200
+            && intval($modelsProbe['http_code']) < 300) {
+            return $cache[$endpoint] = [
+                'reachable' => true,
+                'provider' => 'pockettts',
+                'reason' => 'audio.cpp PocketTTS health and models endpoints responded',
+            ];
+        }
+    }
+
     $speakersProbe = chimTtsStudioProbeJson($endpoint . '/speakers_list');
     $speakersReachable = ($speakersProbe['response'] !== false
         && intval($speakersProbe['http_code']) >= 200
@@ -1418,6 +1485,33 @@ function chimTtsStudioProbeEndpointStatus(string $driver, string $endpoint): arr
             'label' => 'Not Connected',
             'class' => 'disconnected',
             'title' => 'No endpoint configured',
+        ];
+    }
+
+    if (chimTtsStudioIsAudioCppPocketTts($driver, $endpoint)) {
+        $audioCppBase = chimTtsStudioAudioCppBaseEndpoint($endpoint);
+        $healthProbe = chimTtsStudioProbeJson($audioCppBase . '/health');
+        $modelsProbe = chimTtsStudioProbeJson($audioCppBase . '/v1/models');
+        if ($healthProbe['response'] !== false
+            && intval($healthProbe['http_code']) >= 200
+            && intval($healthProbe['http_code']) < 300
+            && $modelsProbe['response'] !== false
+            && intval($modelsProbe['http_code']) >= 200
+            && intval($modelsProbe['http_code']) < 300) {
+            return [
+                'label' => 'Connected',
+                'class' => 'connected',
+                'title' => $endpoint . ' - audio.cpp PocketTTS detected',
+            ];
+        }
+
+        $reason = $healthProbe['curl_error'] !== ''
+            ? $healthProbe['curl_error']
+            : ('HTTP ' . (intval($healthProbe['http_code']) > 0 ? strval($healthProbe['http_code']) : 'no response'));
+        return [
+            'label' => 'Not Connected',
+            'class' => 'disconnected',
+            'title' => $endpoint . ' - ' . $reason,
         ];
     }
 
@@ -1968,6 +2062,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $voiceSamplePath = __DIR__ . '/../data/voices/' . $voice . '.wav';
         if ($endpoint !== '' && file_exists($voiceSamplePath)) {
+            if (chimTtsStudioIsAudioCppPocketTts($driver, $endpoint)) {
+                chimTtsStudioStoreSpeakersList($driver, chimTtsStudioFetchSpeakersList($driver));
+                header('Location: ' . $webRoot . '/ui/xtts_clone.php?tab=' . $redirectTab . '&synced=' . urlencode($voice));
+                exit;
+            }
+
             $fileName = $voice . '.wav';
             $fileType = mime_content_type($voiceSamplePath);
             
@@ -2082,6 +2182,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Process uploaded files - upload to XTTS server
         $uploadedCount = 0;
+        if (chimTtsStudioIsAudioCppPocketTts($submitDriver, $submitEndpoint)) {
+            $uploadedCount = count($filesToProcess);
+        } else {
         foreach (($submitEndpoint !== '' ? $filesToProcess : []) as $fileName) {
             $destinationPath = $saveDir . $fileName;
             $fileType = mime_content_type($destinationPath);
@@ -2114,10 +2217,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             curl_close($ch);
         }
+        }
         
         if ($uploadedCount > 0) {
             chimTtsStudioStoreSpeakersList($submitDriver, chimTtsStudioFetchSpeakersList($submitDriver));
-            $message .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully uploaded and cached {$uploadedCount} voice(s) to {$submitProviderLabel} server.</strong></p>";
+            $verb = chimTtsStudioIsAudioCppPocketTts($submitDriver, $submitEndpoint) ? 'saved for' : 'uploaded and cached to';
+            $message .= "<p style='color:rgb(247, 231, 16);'><strong>Successfully {$verb} {$submitProviderLabel}: {$uploadedCount} voice(s).</strong></p>";
         }
     } elseif (isset($_POST["upload_all"])) {
         $uploadAllDriver = chimTtsStudioTabToDriver($activeTab);
@@ -2131,6 +2236,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $numFiles = count($files);
         $numUploaded = 0;
 
+        if (chimTtsStudioIsAudioCppPocketTts($uploadAllDriver, $uploadAllEndpoint)) {
+            $numUploaded = $numFiles;
+        } else {
         foreach (($uploadAllEndpoint !== '' ? $files : []) as $filePath) {
             $fileName = basename($filePath);
             $fileType = mime_content_type($filePath);
@@ -2173,8 +2281,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 curl_close($ch);
             }
         }
+        }
         chimTtsStudioStoreSpeakersList($uploadAllDriver, chimTtsStudioFetchSpeakersList($uploadAllDriver));
-        $message .= "<p><h3 style='color:rgb(247, 231, 16);'>$numUploaded out of $numFiles voice files have been synced.</h3></p>";
+        $verb = chimTtsStudioIsAudioCppPocketTts($uploadAllDriver, $uploadAllEndpoint) ? 'are available locally' : 'have been synced';
+        $message .= "<p><h3 style='color:rgb(247, 231, 16);'>$numUploaded out of $numFiles voice files {$verb}.</h3></p>";
     }
 }
 
@@ -3447,8 +3557,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="tab-content <?php echo $activeTab === 'pockettts' ? 'active' : ''; ?>" data-tab-type="pockettts">
         <div class="content-section full-width-section">
             <h1>Voice Sample Upload</h1>
-            <p>Upload voice samples to <code>data/voices</code>. Files will be cached and uploaded to the PocketTTS server.</p>
-            <p style="color: #4a8ab6;"><strong>PocketTTS Info:</strong> PocketTTS is a CPU-based TTS engine that runs without a GPU. Perfect for AMD systems or CPU-only setups. Shares the same API as XTTS.</p>
+            <p>Upload voice samples to <code>data/voices</code>. audio.cpp PocketTTS uses these local files directly.</p>
+            <p style="color: #4a8ab6;"><strong>PocketTTS Info:</strong> DwemerDistro uses the audio.cpp C++ runtime on port 8086. Python is only needed during model download.</p>
             
             <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=pockettts" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
                 <div style="margin-bottom: 15px;">
@@ -3474,7 +3584,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="content-section full-width-section">
             <h1>PocketTTS Voice Cache</h1>
-            <p>Manage voice samples for PocketTTS. Voices are uploaded from local .wav files in <code>data/voices</code> to the PocketTTS server.</p>
+            <p>Manage voice samples for PocketTTS. audio.cpp mode reads local .wav files from <code>data/voices</code>.</p>
             
             <?php
             $localVoices = getLocalVoices();
@@ -3488,7 +3598,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="button-group" style="margin-top: 20px;">
                 <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=pockettts" method="post" style="display: inline;">
                     <input type="hidden" name="get_speakers" value="1">
-                    <input type="submit" value="Refresh PocketTTS Server Voices" class="action-button download-csv">
+                    <input type="submit" value="Refresh PocketTTS Voices" class="action-button download-csv">
                 </form>
             </div>
 
@@ -3519,7 +3629,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="content-section full-width-section">
             <h1>Batch Process Missing Voices</h1>
-            <p>Upload missing local voices to the PocketTTS server.</p>
+            <p>Make missing local voices available to PocketTTS.</p>
             
             <?php
             $localVoices = getLocalVoices();
@@ -3537,10 +3647,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ?>
             
             <?php if (count($missingXttsVoices) > 0): ?>
-                <p style="color: #4a8ab6;">Found <?php echo count($missingXttsVoices); ?> voice(s) not yet uploaded to PocketTTS server.</p>
+                <p style="color: #4a8ab6;">Found <?php echo count($missingXttsVoices); ?> voice(s) not yet available to PocketTTS.</p>
                 <div class="button-group">
                     <button onclick="startBatchUpload('pockettts', <?php echo htmlspecialchars(json_encode($missingXttsVoices)); ?>)" class="action-button upload-csv">
-                        Batch Upload Missing Voices (<?php echo count($missingXttsVoices); ?>)
+                        Process Missing Voices (<?php echo count($missingXttsVoices); ?>)
                     </button>
                     <button onclick="cancelBatchUpload()" id="cancel-batch-pockettts" class="action-button delete" style="display:none;">Cancel</button>
                 </div>
@@ -3558,14 +3668,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
             <?php else: ?>
-                <p style="color: #4caf50;">✓ All local voices are already uploaded to PocketTTS server.</p>
+                <p style="color: #4caf50;">✓ All local voices are available to PocketTTS.</p>
             <?php endif; ?>
         </div>
 
         <div class="content-section full-width-section">
             <h1>Cloud PocketTTS Sync</h1>
             <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=pockettts" method="post" onsubmit="showLoadingMessage('Syncing voice cache to PocketTTS server, this can take a couple minutes...');">
-                <p><strong>Only required for online PocketTTS instances.</strong></p>
+                <p><strong>Only required for legacy or online PocketTTS instances.</strong></p>
                 <p>Sync just needs to be ran ONE TIME after initial setup of a new instance.</p>
                 <p>Empty voice cache is acceptable - new NPC voices will be cached automatically.</p>
                 <p>For cloud setup instructions, see our <a href="https://dwemerdynamics.com/chim/remote-hosting-guide.html" style="color: yellow;" target="_blank" rel="noopener noreferrer">Cloud XTTS Guide</a>.</p>
