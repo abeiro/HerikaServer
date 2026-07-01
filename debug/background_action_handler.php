@@ -246,7 +246,7 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
             'data' => "$npcName stays at current location ($location)"
         ]
     );
-    
+
     return true;
 }
 
@@ -324,7 +324,7 @@ function handleReturnHome($location, $currentNpcData, $npcName, $last_ts, $last_
         'localts' => time(),
         'original' => 'backgroundaction',
     ]);
-    
+
     // Insert bgl_history log entry
     $db->insert(
         'bgl_history',
@@ -584,7 +584,7 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
 
         error_log("[handleFindNPCAction] Query to obtain vendor faction chest: SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
          formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
-         
+
         if ($vendorFactionsNpcBelongs) {
             $stockString = " $resolvedName seems to be a trader, use action SpeakTo to dialogue and obtain his stock information. ";
 
@@ -707,15 +707,15 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
         error_log("[handleSpeakToAction] Target NPC not found: $targetNpcName, trying to create profile.");
         // This can happen if player didn't visit the NPC yet, so the NPC is not in the core_npc_master table. 
         // Try to create profile
-        $retVal=createProfile($targetNpcName,[],false,$targetNpcName); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
-        $resolvedName=$targetNpcName;
-        $targetNpc['name']=$resolvedName;
-        $targetNpc['refid']=$targetRefid;
+        $retVal = createProfile($targetNpcName, [], false, $targetNpcName); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
+        $resolvedName = $targetNpcName;
+        $targetNpc['name'] = $resolvedName;
+        $targetNpc['refid'] = $targetRefid;
     }
 
     if ($targetNpc === null) {
         error_log("[handleSpeakToAction] Target NPC not found: $targetNpcName");
-        return false;        
+        return false;
     }
 
     $resolvedName = $targetNpc['name'];
@@ -731,13 +731,37 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
     foreach ($factions as $faction) {
         $factionsArray[] = $faction["formid"];
     }
+
+    // Lets check if we have vendor factions for this NPC
+    // If the NPC belongs to any vendor factions, we can assume it's a trader 
+    // We can check and publish stock later
+    $npcMaster = new NpcMaster();
+    $targetNpcData = $npcMaster->getByName($resolvedName);
+    $factions = $npcMaster->getNpcFactions($targetNpcData);
+    $factionsArray = [];
+    foreach ($factions as $faction) {
+        $factionsArray[] = $faction["formid"];
+    }
+    $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
+        formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
+
+    if ($vendorFactionsNpcBelongs) {
+        foreach ($vendorFactionsNpcBelongs as $vendorFaction) {
+            $skyrimCmd = new SkyrimCommandBuilder();
+            $json = $skyrimCmd->Faction->GetVendorFactionContainer("0x{$vendorFaction["formid"]}");
+            $skyrimCmd->send(cmd: $json);
+        }
+        // Give the game a moment to process the vendor container request before proceeding with dialogue.
+        sleep(1 * sizeof($vendorFactionsNpcBelongs));
+    }
+
     $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
         formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
 
     error_log("[handleSpeakToAction] Query to obtain vendor faction chest: SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
-        formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'" );
+        formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
 
-    if ($vendorFactionsNpcBelongs && sizeof($vendorFactionsNpcBelongs) > 0  ) {
+    if ($vendorFactionsNpcBelongs && sizeof($vendorFactionsNpcBelongs) > 0) {
         $stockString = " $resolvedName seems to be a trader, selling: ";
         foreach ($vendorFactionsNpcBelongs as $vendorFaction) {
             $stockString .= " {$vendorFaction['stock']}.";
@@ -822,7 +846,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             [
                 'npc' => $npcName,
                 'ts' => $last_ts,
-                'gamets' => $last_gamets+20,
+                'gamets' => $last_gamets + 20,
                 'localts' => time(),
                 'data' => "$npcName has a conversation with $resolvedName"
             ]
@@ -861,8 +885,9 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
     }
 
     $resolvedName = $targetNpc['name'];
-    $sourceRefHexString = convertSignedToUnsignedHex(hexdec($currentNpcData['refid']));
-    $targetRefHexString = convertSignedToUnsignedHex(hexdec($targetNpc['refid']));
+    $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
+    $targetRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($targetNpc['refid'])));
+    $itemId = strtolower($itemId);
 
     if ($tradeType === 'BuyItems') {
         $skyrimCmd = new SkyrimCommandBuilder();
@@ -870,13 +895,13 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x$itemId", $count, true);
         $skyrimCmd->send(cmd: $json);
         // Gold
-        $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x000000ff", $gold, true);
+        $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x0000000f", $gold, true);
         $skyrimCmd->send(cmd: $json);
 
         $json = $skyrimCmd->ObjectReference->RemoveItem($targetRefHexString, "0x$itemId", $count, true);
         $skyrimCmd->send(cmd: $json);
         // Gold
-        $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x000000ff", $gold, true);
+        $json = $skyrimCmd->ObjectReference->AddItem($targetRefHexString, "0x0000000f", $gold, true);
         $skyrimCmd->send(cmd: $json);
 
     } else {
@@ -885,13 +910,13 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x$itemId", $count, true);
         $skyrimCmd->send(cmd: $json);
         // Gold
-        $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x000000ff", $gold, true);
+        $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x0000000f", $gold, true);
         $skyrimCmd->send(cmd: $json);
 
         $json = $skyrimCmd->ObjectReference->AddItem($targetRefHexString, "0x$itemId", $count, true);
         $skyrimCmd->send(cmd: $json);
         // Gold
-        $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x000000ff", $gold, true);
+        $json = $skyrimCmd->ObjectReference->RemoveItem($targetRefHexString, "0x0000000f", $gold, true);
         $skyrimCmd->send(cmd: $json);
     }
 
@@ -929,6 +954,25 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
             'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:$gold)"
         ]
     );
+
+    sleep(2); // Simulate time taken to process the trade; in a utopic implementation, this would be event-driven rather than a fixed sleep
+    $db->insert('responselog', [
+        'localts' => time(),
+        'sent' => 0,
+        'actor' => 'rolemaster',
+        'text' => '',
+        'action' => "rolecommand|BackgroundCmd@$sourceRefHexString@UpdateInventory",
+        'tag' => '',
+    ]);
+
+    $db->insert('responselog', [
+        'localts' => time(),
+        'sent' => 0,
+        'actor' => 'rolemaster',
+        'text' => '',
+        'action' => "rolecommand|BackgroundCmd@$targetRefHexString@UpdateInventory",
+        'tag' => '',
+    ]);
 
     triggerNpcUpdate($npcName);
     return true;
