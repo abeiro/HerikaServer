@@ -280,19 +280,20 @@ Earn some gold by mining and selling ores to merchants.
     $npcMaster->updateByArray($npc);
     error_log("[DEBUG] Updated NPC profile for {$miner_profile["name"]} in database waiting 10 secs" . PHP_EOL);
     
-    $refid=$npc["refid"];
+    $refid=isset($npc["refid"]) ? $npc["refid"] : null;
 
     if (empty($refid)) {
         error_log("[DEBUG] Waiting to refid to be populated for {$miner_profile["name"]}...".PHP_EOL);
 
-        $maxRetries = 10;
+        $maxRetries = 30;
         $retryCount = 0;
         while (empty($refid) && $retryCount < $maxRetries) {
             sleep(1);
             $retryCount++;
             $npcMaster = new NpcMaster();
             $npc = $npcMaster->getByName($miner_profile["name"]);
-            $refid=$npc["refid"];
+            $refid=isset($npc["refid"]) ? $npc["refid"] : null;
+            error_log("[DEBUG] Waiting to refid to be populated for {$miner_profile["name"]}... $retryCount of $maxRetries".PHP_EOL);
         }
 
         if (empty($refid)) {
