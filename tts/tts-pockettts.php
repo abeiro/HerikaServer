@@ -45,7 +45,45 @@ if (!function_exists('normalize_endpoint_url')) {
     }
 }
 
+function pockettts_is_audio_cpp($endpoint) {
+	$format = strtolower($GLOBALS["TTS"]["POCKETTTS"]["api_format"] ?? '');
+	if ($format === 'audio_cpp' || $format === 'audiocpp') {
+		return true;
+	}
+	return strpos((string)$endpoint, ':8086') !== false || strpos((string)$endpoint, '/v1/audio/speech') !== false;
+}
+
+function pockettts_audio_cpp_url($endpoint) {
+	$endpoint = normalize_endpoint_url($endpoint);
+	if (substr($endpoint, -16) === '/v1/audio/speech') {
+		return $endpoint;
+	}
+	return $endpoint . '/v1/audio/speech';
+}
+
+function pockettts_audio_cpp_voice($voice) {
+	$cleanName = basename((string)$voice, '.wav');
+	$paths = [
+		dirname(__FILE__) . '/../data/voices/' . $cleanName . '.wav',
+		'/home/dwemer/audio.cpp/speakers/' . $cleanName . '.wav',
+		'/home/dwemer/pocket-tts/speakers/' . $cleanName . '.wav',
+	];
+	foreach ($paths as $path) {
+		if (is_readable($path)) {
+			return ['voice_ref' => $path];
+		}
+	}
+
+	$presets = ['alba', 'marius', 'javert', 'jean', 'fantine', 'cosette', 'eponine', 'azelma'];
+	$preset = in_array(strtolower($cleanName), $presets, true) ? strtolower($cleanName) : 'alba';
+	return ['voice' => $preset];
+}
+
 function pockettts_settings($settings,$resetAfter=false) {
+	if (pockettts_is_audio_cpp($GLOBALS["TTS"]["POCKETTTS"]["endpoint"] ?? '')) {
+		return;
+	}
+
 	$url = normalize_endpoint_url($GLOBALS["TTS"]["POCKETTTS"]["endpoint"]).'/set_tts_settings';
 	$data = json_decode('{
 		"stream_chunk_size": 20,
@@ -193,12 +231,21 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		if (empty($voice))
 			$voice = $GLOBALS["TTS"]["POCKETTTS"]["voiceid"] ?? '';
 
-		if ($GLOBALS)	
+		if (pockettts_is_audio_cpp($GLOBALS["TTS"]["POCKETTTS"]["endpoint"] ?? '')) {
+			$url = pockettts_audio_cpp_url($GLOBALS["TTS"]["POCKETTTS"]["endpoint"]);
+			$data = array(
+				'model' => $GLOBALS["TTS"]["POCKETTTS"]["model"] ?? 'pocket-tts',
+				'input' => $newString,
+				'language' => $lang ?? 'en',
+			);
+			$data = array_merge($data, pockettts_audio_cpp_voice($voice));
+		} else {
 			$data = array(
 				'text' => $newString,
 				'speaker_wav' => $voice,
 				'language' => $lang??'en'	//Defaults to english
 			);
+		}
 			
 		$options = array(
 			'http' => array(
@@ -220,11 +267,20 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$codename = str_replace("'", "+", $codename);
 			$codename=preg_replace('/[^a-zA-Z0-9_+]/u', '', $codename);
 			
-			$data = array(
-				'text' => $newString,
-				'speaker_wav' => $codename,
-				'language' => $lang??"en"
-			);
+			if (pockettts_is_audio_cpp($GLOBALS["TTS"]["POCKETTTS"]["endpoint"] ?? '')) {
+				$data = array(
+					'model' => $GLOBALS["TTS"]["POCKETTTS"]["model"] ?? 'pocket-tts',
+					'input' => $newString,
+					'language' => $lang ?? 'en',
+				);
+				$data = array_merge($data, pockettts_audio_cpp_voice($codename));
+			} else {
+				$data = array(
+					'text' => $newString,
+					'speaker_wav' => $codename,
+					'language' => $lang??"en"
+				);
+			}
 			$options = array(
 				'http' => array(
 					'header' => "Content-type: application/json\r\n" .
@@ -262,7 +318,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			file_put_contents($oname, $response); // Save the audio response to a file
 			$startTimeTrans = microtime(true);
 			//shell_exec("ffmpeg -y -i $oname  -af \"adelay=150|150,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-25dB,areverse,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-40dB,areverse,speechnorm=e=3:r=0.0001:l=1:p=0.75\" $fname 2>/dev/null >/dev/null");
-			shell_exec("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname 2>/dev/null >/dev/null");
+			shell_exec("ffmpeg -y -i ".escapeshellarg($oname)."  $FFMPEG_FILTER ".escapeshellarg($fname)." 2>/dev/null >/dev/null");
 			//error_log("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname ".__FILE__." ".__LINE__." ".__FUNCTION__);
 			$endTimeTrans = microtime(true)-$startTimeTrans;
 			

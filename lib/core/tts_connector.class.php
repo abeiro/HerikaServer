@@ -73,7 +73,7 @@ class TTSConnector
     ];
 
     private static $localUrlDefaultMap = [
-        'pockettts' => 'http://127.0.0.1:8020',
+        'pockettts' => 'http://127.0.0.1:8086',
         'chatterbox' => 'http://127.0.0.1:8020',
         'xtts-fastapi' => 'http://127.0.0.1:8020',
         'piper-tts' => 'http://127.0.0.1:5000',
@@ -111,6 +111,8 @@ class TTSConnector
         ],
         'pockettts' => [
             'language' => 'en',
+            'api_format' => 'audio_cpp',
+            'model' => 'pocket-tts',
             'voicelogic' => 'voicetype',
         ],
         'inworld' => [
