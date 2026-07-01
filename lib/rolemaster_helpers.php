@@ -1837,3 +1837,71 @@ Knowledge about the quest – Describe what she/he actually knows about the ques
     $npcmaster->updateByArray($npcProfile);
 
 }
+
+function getLocationsNearNpcCoords($npcName) {
+
+    $npcMaster = new NpcMaster();
+    $npcData = $npcMaster->getByName($npcName);
+    if (empty($npcData)) {
+        return [];
+    }
+
+    $metadata = $npcMaster->getMetadata($npcData);
+    if (is_string($metadata)) {
+        $metadata = json_decode($metadata, true);
+    }
+
+    if (!is_array($metadata)) {
+        return [];
+    }
+
+    $lastCoords = $metadata['last_coords'] ?? null;
+
+    // Fallback to the latest historical coords when last_coords is missing.
+    if (!is_array($lastCoords) && !empty($metadata['last_coords_history']) && is_array($metadata['last_coords_history'])) {
+        $history = $metadata['last_coords_history'];
+        $lastCoords = end($history);
+    }
+
+    if (!is_array($lastCoords)) {
+        return [];
+    }
+
+    $x = $lastCoords[0] ?? null;
+    $y = $lastCoords[1] ?? null;
+
+    if (!is_numeric($x) || !is_numeric($y)) {
+        return [];
+    }
+
+    $x = floatval($x);
+    $y = floatval($y);
+
+    $db = $GLOBALS['db'];
+    $pointLiteral = '(' . $x . ',' . $y . ')';
+    $pointEsc = $db->escape($pointLiteral);
+
+    $closestLocations = $db->fetchAll(
+        "SELECT
+            name,
+            formid,
+            region,
+            hold,
+            coords,
+            coords <-> '{$pointEsc}'::point AS distance
+         FROM locations
+         WHERE coords IS NOT NULL
+         ORDER BY distance ASC
+         LIMIT 10"
+    );
+
+    $closestLocationsNames=[];
+
+    foreach ($closestLocations as &$location) {
+        $closestLocationsNames[] = $location['name'] ?? '';
+    }
+    
+    return is_array($closestLocationsNames) ? $closestLocationsNames : [];
+
+
+}
