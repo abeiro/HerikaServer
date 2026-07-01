@@ -6896,7 +6896,7 @@ function getConfFileFor($npcname) {
     
 }
 
-function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bool $forThought = false,bool $addItemId=false)
+function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bool $forThought = false,bool $addItemId = false)
 {
     /**
      * Build dynamic biography from new HERIKA fields, with fallback to legacy HERIKA_DYNAMIC
@@ -7071,9 +7071,6 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                         $description = $getItemDescription($itemName, $baseid);
                         if ($description) {
                             $itemLine .= " ({$description})";
-                            if ($addItemId) {
-                                $itemLine .= " [BaseID: {$baseid}]";
-                            }
                             $describedBaseids[] = $baseid; // Mark this baseid as described
                             $hasDescription = true;
                         }
@@ -7082,9 +7079,6 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                         $description = $getItemDescription($itemName, null);
                         if ($description) {
                             $itemLine .= " ({$description})";
-                            if ($addItemId && !empty($baseid)) {
-                                $itemLine .= " [BaseID: {$baseid}]";
-                            }
                             $hasDescription = true;
                         }
                     }
@@ -7095,13 +7089,21 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                     continue;
                 }
                 
-                $equipmentParts[] = $itemLine;
+                if ($addItemId) {
+                    $equipmentParts[] = "refid:{$baseid} description:{$itemLine}";
+                    $separator = "\n • ";
+                    $prefixseparator = "\n • ";
+                }
+                else {
+                    $equipmentParts[] = $itemLine;
+                    $prefixseparator = "\n";
+                }
             }
             
         }
         
         if (!empty($equipmentParts)) {
-            $INVENTORY_ADD = "\n<inventory>\n#Inventory\n" . implode(", ", $equipmentParts)."\n</inventory>";
+            $INVENTORY_ADD = "\n<inventory>\n#Inventory{$prefixseparator}" . implode($separator, $equipmentParts)."\n</inventory>";
         }
     }
     
