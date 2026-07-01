@@ -6896,13 +6896,14 @@ function getConfFileFor($npcname) {
     
 }
 
-function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bool $forThought = false)
+function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bool $forThought = false,bool $addItemId=false)
 {
     /**
      * Build dynamic biography from new HERIKA fields, with fallback to legacy HERIKA_DYNAMIC
      * @param array $FOLLOWER_CONF Configuration array containing HERIKA fields
      * @param bool $forLetter If false, removes <letter_guidance> sections from HERIKA_SPEECHSTYLE
      * @param bool $forThought If false, removes <inner_thought_guidance> sections from HERIKA_SPEECHSTYLE
+     * @param bool $addItemId If true, appends item baseid to equipment descriptions
      * @return string The dynamic biography content
      */
     $dynamicBio = '';
@@ -7070,6 +7071,9 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                         $description = $getItemDescription($itemName, $baseid);
                         if ($description) {
                             $itemLine .= " ({$description})";
+                            if ($addItemId) {
+                                $itemLine .= " [BaseID: {$baseid}]";
+                            }
                             $describedBaseids[] = $baseid; // Mark this baseid as described
                             $hasDescription = true;
                         }
@@ -7078,6 +7082,9 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
                         $description = $getItemDescription($itemName, null);
                         if ($description) {
                             $itemLine .= " ({$description})";
+                            if ($addItemId && !empty($baseid)) {
+                                $itemLine .= " [BaseID: {$baseid}]";
+                            }
                             $hasDescription = true;
                         }
                     }
