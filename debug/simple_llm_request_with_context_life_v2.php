@@ -225,7 +225,7 @@ $daysPassed = round(($last_gamets - $lastItGamets) * GAMETS_TO_HOURS / 24, 2);
 
 // ─── Dynamic Biography ────────────────────────────────────────────────────────
 
-$dynamicBiography = buildDynamicBiography($GLOBALS, true, true,true);
+$dynamicBiography = buildDynamicBiography($GLOBALS, true, true, true);
 
 if (isset($extdata['middle_term_memory'])) {
     $middleTermMemory = end($extdata['middle_term_memory']);
@@ -281,11 +281,16 @@ $diaryEntryRows = $db->fetchAll(
 $diaryEntries = [];
 foreach (array_reverse($diaryEntryRows) as $row) {
     $hoursAgo = number_format(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS, 2);
-    $diaryEntries[] = [
-        'gamets' => $row['gamets'],
-        'content' => "$hoursAgo hours ago...\n{$row['content']}",
-        'type' => ($row['topic'] === 'Sent Letter') ? 'sent_letter' : 'diary_entry',
-    ];
+    if ($row['topic'] === 'Sent Letter') {
+        $diaryEntries[] = [
+            'gamets' => $row['gamets'],
+            'content' => "$hoursAgo hours ago...\n{$row['content']}",
+            'type' => ($row['topic'] === 'Sent Letter') ? 'sent_letter' : 'diary_entry',
+        ];
+
+        // Update daysPassed to reflect the latest inner chat entry if it's older than the last interaction
+        $daysPassed = round(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS / 24, 2);
+    }
 }
 
 // ─── Remote dialogues  ──────────────────────────────────────
@@ -308,6 +313,8 @@ foreach (array_reverse($innerChatEntryRows) as $row) {
         'content' => "$hoursAgo hours ago...\n{$row['data']}",
         'type' => 'inner_chat',
     ];
+    // Update daysPassed to reflect the earliest inner chat entry if it's older than the last interaction
+    $daysPassed = round(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS / 24, 2);
 }
 
 // ─── Background Events Since Last Iteration ───────────────────────────────────
@@ -342,14 +349,19 @@ foreach ($backgroundEventRows as $event) {
         'type' => 'event',
     ];
     $lastEventParsed = $eventParsed;   // Keep last matching event for location reference
+
+    // Update daysPassed to reflect the latest background event if it's older than the last interactions
+    $daysPassed = round(($last_gamets - $event['gamets']) * GAMETS_TO_HOURS / 24, 2);
 }
 
 // Append last known speech location
-$bgEvents[] = [
-    'gamets' => $lastLocRow['gamets'],
-    'content' => $lastLocRow['location'],
-    'type' => 'last_known_location',
-];
+if ($lastLocRow['location']) {
+    $bgEvents[] = [
+        'gamets' => $lastLocRow['gamets'],
+        'content' => $lastLocRow['location'],
+        'type' => 'last_known_location',
+    ];
+}
 
 // Append current and historical coordinate data
 $LAST_REPORTED_LOCATION = '';
@@ -442,6 +454,15 @@ foreach ($combinedEvents as $entry) {
 
 echo str_repeat('=', 63) . PHP_EOL;
 
+$closestLocations = getLocationsNearNpcCoords($GLOBALS['HERIKA_NAME']);
+if (is_array($closestLocations) && count($closestLocations) > 0) {
+    $history .= "Hint: Closest locations to {$GLOBALS['HERIKA_NAME']}:\n";
+    foreach ($closestLocations as $loc) {
+        $history .= "\n$loc";
+    }
+    $history .= "\n";
+}
+
 // ─── Language Detection ───────────────────────────────────────────────────────
 
 $npcMetadata = json_decode($currentNpcData['metadata'], true) ?? [];
@@ -518,12 +539,12 @@ in first person.
 At the end of the soliloquy, {$GLOBALS['HERIKA_NAME']} must decide her next step.
 
 She/He  may choose ONE of the following actions:
-* TravelTo(<location_name>). Travel to a specific location/city. Use when the character wants to move to a new area.
-* FindNPC(<npc_name>). Locate an NPC whose exact location is unknown. Use this before MoveTo or SpeakTo when the character does not know where the target is. 
-* MoveTo(<npc_name>). Move to another NPC whose location is already known. 
-* SpeakTo(<npc_name>,<refid>). Engage in conversation with another NPC. (should be used before any BuyItems or SellItems action, to reflect the need to interact and agree on a transaction with the trader NPC) (specify the NPC's refid if known, otherwise use 0)
-* BuyItems(<npc_name>,<itemid>,<count>,<gold_spent>) Buy items from another NPC (if character interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)
-* SellItems(<npc_name>,<itemid>,<count>,<gold_received>) Sells items to another NPC (if character interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)
+* TravelTo:<location_name>. Travel to a specific location/city. Use when the character wants to move to a new area.
+* FindNPC:<npc_name>. Locate an NPC whose exact location is unknown. Use this before MoveTo or SpeakTo when the character does not know where the target is. 
+* MoveTo:<npc_name>. Move to another NPC whose location is already known. 
+* SpeakTo:<npc_name>:<refid>. Engage in conversation with another NPC. (should be used before any BuyItems or SellItems action, to reflect the need to interact and agree on a transaction with the trader NPC) (specify the NPC's refid if known, otherwise use 0)
+* BuyItems:<npc_name>:<itemid>:<count>:<gold_spent> Buy items from another NPC (if character interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)
+* SellItems:<npc_name>:<itemid>:<count>:<gold_received> Sells items to another NPC (if character interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)
 * ReturnHome. Returns to base location to meet {$GLOBALS['PLAYER_NAME']}. Use when all goals are done.
 * SpreadRumor. Generate or spread a rumor related to the character's current location (e.g., if goal is to boost local trade, rumour about it).
 * StayAtPlace. Remains in current location. If gathering info or spreading rumors, stay ≥24 hours.   
@@ -615,7 +636,7 @@ $step2Content .= "Possible actions:\n"
     . "ReturnHome       — Returns to base location to meet {$GLOBALS['PLAYER_NAME']}. Use when all goals are done.\n"
     . "TravelTo:Place   — Travel to a specific location/city (replace <Place> with target location/city name). Requires a clear reason.\n"
     . "SpreadRumor — Character activities generate rumors (e.g., if goal is to boost local trade, rumour about it).\n";
-$actionChoiceDesc = '<action>: chosen action (e.g., StayAtPlace, TravelTo:<Place>, ReturnHome, FindNPC:<NPC>, MoveTo:<NPC>, SpeakTo:<NPC>, BuyItems:<NPC>, SellItems:<NPC>, SpreadRumor). Choose only one action per turn. Single line.';
+$actionChoiceDesc = '<action>: chosen action (e.g., StayAtPlace, TravelTo:<Place>, ReturnHome, FindNPC:<NPC>, MoveTo:<NPC>, SpeakTo:<NPC>:..., BuyItems:<NPC>:..., SellItems:<NPC>:...>, SpreadRumor). Choose only one action per turn. Single line.';
 
 
 $numElements = $lettersEnabled ? 3 : 2;
