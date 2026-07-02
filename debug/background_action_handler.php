@@ -91,6 +91,7 @@ function resolveTravelLocation($location, $currentNpcData, $db)
                 $pointSql,
                 GREATEST(
                     COALESCE(similarity(name, '$cnLocation'), 0),
+                    COALESCE(similarity(name, '$cnLocation (Interior)'), 0),
                     COALESCE(similarity(region, '$cnLocation'), 0),
                     COALESCE(similarity(hold, '$cnLocation'), 0)
                 ) AS sim,
@@ -817,7 +818,11 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                     . "The dialogue must be consistent with the context_history above.\n"
                     . "Format each line exactly as:\n"
                     . "$npcName: ...\n$resolvedName: ...\n"
-                    . 'Keep it to 3–5 exchanges total.',
+                    . 'Keep it to 3–5 exchanges total.'
+                    . "When generating a dialogue that includes a transaction involving items, do not depict the actual exchange. "
+                    . "The dialogue should conclude with Subject A and Subject B mutually agreeing or expressing their intention to "
+                    . "perform the transaction next. Any transfer of items must occur only in the subsequent step, not within the generated dialogue."
+
             ],
         ];
 
