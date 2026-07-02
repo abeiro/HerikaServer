@@ -1888,19 +1888,20 @@ function getLocationsNearNpcCoords($npcName) {
             region,
             hold,
             coords,
+            is_interior,
             coords <-> '{$pointEsc}'::point AS distance
          FROM locations
          WHERE coords IS NOT NULL
          ORDER BY distance ASC
-         LIMIT 10"
+         LIMIT 15"
     );
 
     $closestLocationsNames=[];
 
     foreach ($closestLocations as &$location) {
-        $closestLocationsNames[] = $location['name'] ?? '';
+        $closestLocationsNames[] = ($location['name'] ?? '') . ($location['is_interior'] ? ' (Interior)' : '');
     }
-    
+
     return is_array($closestLocationsNames) ? $closestLocationsNames : [];
 
 
