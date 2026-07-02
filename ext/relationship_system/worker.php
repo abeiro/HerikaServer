@@ -116,6 +116,14 @@ try {
     // Set up minimal globals that LLM connector needs
     $GLOBALS['HERIKA_NAME'] = 'Worker';
     $GLOBALS['PLAYER_NAME'] = 'Player';
+    try {
+        $playerRow = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id='PLAYER_NAME' LIMIT 1");
+        if ($playerRow && !empty($playerRow['value'])) {
+            $GLOBALS['PLAYER_NAME'] = trim((string)$playerRow['value']);
+        }
+    } catch (Exception $e) {
+        @file_put_contents($logFile, date('[Y-m-d H:i:s]') . " WARN: Failed to load PLAYER_NAME: " . $e->getMessage() . "\n", FILE_APPEND);
+    }
 
     Logger::info("[REL-WORKER] Starting relationship worker" . ($daemon ? " in daemon mode" : ""));
 } catch (Exception $e) {

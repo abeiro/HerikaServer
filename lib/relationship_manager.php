@@ -150,6 +150,89 @@ class RelationshipManager {
     ];
 
     /**
+     * Relationship storage uses the canonical key "Player" for the player route.
+     * UI/prompts may surface the actual character name, but reads/writes must not
+     * store that display name as a separate relationship target.
+     */
+    public static function normalizeTargetName($targetName) {
+        $target = trim((string)$targetName);
+        if ($target === '') {
+            return $target;
+        }
+
+        $aliases = [
+            'player',
+            'the player',
+            'player character',
+            'the player character',
+            'dragonborn',
+            'the dragonborn',
+            '#player_name#',
+            '{player_name}'
+        ];
+
+        $playerName = trim((string)($GLOBALS['PLAYER_NAME'] ?? ''));
+        if ($playerName !== '') {
+            $aliases[] = strtolower($playerName);
+        }
+
+        if (in_array(strtolower($target), $aliases, true)) {
+            return 'Player';
+        }
+
+        return $target;
+    }
+
+    public static function normalizeRelationshipMap($relationships) {
+        if (!is_array($relationships)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($relationships as $target => $rel) {
+            if (!is_array($rel)) {
+                continue;
+            }
+
+            $canonicalTarget = self::normalizeTargetName($target);
+            if ($canonicalTarget === '') {
+                continue;
+            }
+
+            if (!isset($normalized[$canonicalTarget])) {
+                $normalized[$canonicalTarget] = $rel;
+                continue;
+            }
+
+            $existing = $normalized[$canonicalTarget];
+            $existingWeight = self::relationshipDataWeight($existing);
+            $incomingWeight = self::relationshipDataWeight($rel);
+            if ($incomingWeight > $existingWeight) {
+                $normalized[$canonicalTarget] = $rel;
+            }
+        }
+
+        return $normalized;
+    }
+
+    private static function relationshipDataWeight($rel) {
+        if (!is_array($rel)) {
+            return 0;
+        }
+
+        $weight = abs((int)($rel['aff'] ?? 0));
+        if (($rel['type'] ?? 'neutral') !== 'neutral') {
+            $weight += 5;
+        }
+        foreach (['relation', 'note', 'best', 'worst'] as $field) {
+            if (!empty($rel[$field])) {
+                $weight += 2;
+            }
+        }
+        return $weight;
+    }
+
+    /**
      * Get tier label from affinity score
      * PHP calculates this - AI never decides the label
      *
@@ -256,7 +339,7 @@ class RelationshipManager {
         }
 
         $extended = json_decode($npcData['extended_data'] ?? '{}', true) ?: [];
-        return $extended['relationships'] ?? [];
+        return self::normalizeRelationshipMap($extended['relationships'] ?? []);
     }
 
     /**
@@ -266,6 +349,7 @@ class RelationshipManager {
      */
     public static function getRelationship($npcName, $targetName) {
         $rels = self::getRelationships($npcName);
+        $targetName = self::normalizeTargetName($targetName);
 
         if (isset($rels[$targetName])) {
             $rel = $rels[$targetName];
@@ -490,13 +574,14 @@ class RelationshipManager {
         }
 
         $extended = json_decode($npcData['extended_data'] ?? '{}', true) ?: [];
-        $rels = $extended['relationships'] ?? [];
+        $rels = self::normalizeRelationshipMap($extended['relationships'] ?? []);
         $changed = false;
 
         // Parse affinity changes: #REL:Target=+5# or #REL:Target=-10#
         if (preg_match_all('/#REL:([^=]+)=([+-]?\d+)#/', $aiResponse, $matches)) {
             foreach ($matches[1] as $i => $target) {
-                $target = trim($target);
+                $target = self::normalizeTargetName($target);
+                if (in_array(strtolower($target), ['the narrator', 'narrator'], true)) continue; // never track the narrator as a relationship
                 $delta = (int)$matches[2][$i];
 
                 // Initialize if doesn't exist
@@ -518,7 +603,8 @@ class RelationshipManager {
         // Accepts both default types AND custom types (any single word)
         if (preg_match_all('/#TYPE:([^=]+)=([a-zA-Z]+)#/', $aiResponse, $matches)) {
             foreach ($matches[1] as $i => $target) {
-                $target = trim($target);
+                $target = self::normalizeTargetName($target);
+                if (in_array(strtolower($target), ['the narrator', 'narrator'], true)) continue; // never track the narrator as a relationship
                 $newType = strtolower(trim($matches[2][$i]));
 
                 // Accept any single-word type (allows custom types like "client", "mentor", etc.)
@@ -538,10 +624,12 @@ class RelationshipManager {
         // Save if changed
         if ($changed) {
             $extended['relationships'] = $rels;
-            $npcMaster->updateByArray([
-                'id' => $npcData['id'],
-                'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-            ]);
+            chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
+                return $npcMaster->updateByArray([
+                    'id' => $npcData['id'],
+                    'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                ]);
+            });
         }
 
         // Strip commands before TTS
@@ -552,6 +640,7 @@ class RelationshipManager {
      * Set relationship directly (for initialization or admin)
      */
     public static function setRelationship($npcName, $targetName, $affinity, $type = null) {
+        $targetName = self::normalizeTargetName($targetName);
         require_once __DIR__ . "/core/npc_master.class.php";
         $npcMaster = new NpcMaster();
         $npcData = $npcMaster->getByName($npcName);
@@ -566,7 +655,7 @@ class RelationshipManager {
         }
 
         $extended = json_decode($npcData['extended_data'] ?? '{}', true) ?: [];
-        $rels = $extended['relationships'] ?? [];
+        $rels = self::normalizeRelationshipMap($extended['relationships'] ?? []);
 
         // Initialize or update
         if (!isset($rels[$targetName])) {
@@ -582,10 +671,12 @@ class RelationshipManager {
         }
 
         $extended['relationships'] = $rels;
-        $npcMaster->updateByArray([
-            'id' => $npcData['id'],
-            'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-        ]);
+        chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
+            return $npcMaster->updateByArray([
+                'id' => $npcData['id'],
+                'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            ]);
+        });
 
         error_log("[REL] Set $npcName -> $targetName: " . $rels[$targetName]['aff'] .
                   " (" . $rels[$targetName]['type'] . ")");
