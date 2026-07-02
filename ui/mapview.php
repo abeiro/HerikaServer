@@ -443,8 +443,8 @@ if (!function_exists('race_icon_web_path')) {
     }
 
     function handleSaveBglSettings() {
-        $cooldownDays = isset($_POST['bgl_trigger_days']) ? intval($_POST['bgl_trigger_days']) : 5;
-        $cooldownDays = max(1, min(30, $cooldownDays));
+        $cooldownDays = isset($_POST['bgl_trigger_days']) ? floatval($_POST['bgl_trigger_days']) : 5;
+        $cooldownDays = max(0.1, min(30, $cooldownDays));
         $description = chimGetSchemaDescription('BGL_TRIGGER_DAYS');
 
         if (chimSetGeneralSetting('BGL_TRIGGER_DAYS', $cooldownDays, $description)) {
