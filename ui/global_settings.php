@@ -372,6 +372,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
         }
     }
 
+    // Worst-memory lifespan: rendered inline on the Relationship Management card (not in $gsSections), so save it here.
+    $worstMemDays = normalize_posted_value('integer', $_POST['PLAYER_WORST_MEMORY_GAME_DAYS'] ?? '');
+    if (!chimSetGeneralSetting('PLAYER_WORST_MEMORY_GAME_DAYS', $worstMemDays, current_description('PLAYER_WORST_MEMORY_GAME_DAYS', $generalSettingRowMap))) {
+        $didSave = false;
+    }
+
     $postedPromptContextRaw = [];
     foreach ($promptContextCatalog as $bucket => $_options) {
         $postedPromptContextRaw[$bucket] = array_values(array_map('strval', $_POST['prompt_context_' . $bucket] ?? []));
@@ -1406,6 +1412,14 @@ h1.gs-title {
                                         </select>
                                     <?php else: ?>
                                         <input type="text" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo $readonlyAttr; ?>>
+                                    <?php endif; ?>
+                                    <?php if ($fieldName === 'RELLLM_CONNECTOR'): ?>
+                                        <?php $worstMemValue = current_value('PLAYER_WORST_MEMORY_GAME_DAYS'); if ($worstMemValue === '' || $worstMemValue === null) { $worstMemValue = 7; } ?>
+                                        <div style="margin-top:12px; border-top:1px solid #4a3d6a; padding-top:10px;">
+                                            <label style="display:block; font-size:12px; color:#bbb; margin-bottom:4px;">💔 Worst Memory Lifespan (in-game days, 0 = never forget)</label>
+                                            <input type="number" name="PLAYER_WORST_MEMORY_GAME_DAYS" value="<?php echo htmlspecialchars(strval($worstMemValue)); ?>" min="0" max="365" step="1">
+                                            <div style="font-size:11px; color:#888; margin-top:4px;">How long the player's worst memory of an NPC lingers before it fades. Default 7 (one game-week). NPC&harr;NPC worst memories are always permanent.</div>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                                 <?php if ($help !== ''): ?>

@@ -483,10 +483,45 @@ if (!function_exists('chimMergeRelationshipSeedIntoExtendedData')) {
     }
 }
 
+if (!function_exists('chimNpcRelationshipSaveNeedsLock')) {
+    function chimNpcRelationshipSaveNeedsLock(): bool
+    {
+        return isset($_POST['relationships_jsonb']) && trim((string)$_POST['relationships_jsonb']) !== '';
+    }
+}
+
+if (!function_exists('chimAcquireNpcRelationshipLock')) {
+    function chimAcquireNpcRelationshipLock($npcId): ?int
+    {
+        $npcId = (int)$npcId;
+        if ($npcId <= 0 || !chimNpcRelationshipSaveNeedsLock()) {
+            return null;
+        }
+
+        $lockId = 1001000000 + $npcId;
+        $GLOBALS['db']->execQuery("SELECT pg_advisory_lock({$lockId})");
+        return $lockId;
+    }
+}
+
+if (!function_exists('chimReleaseNpcRelationshipLock')) {
+    function chimReleaseNpcRelationshipLock($lockId): void
+    {
+        if ($lockId === null) {
+            return;
+        }
+
+        $GLOBALS['db']->execQuery("SELECT pg_advisory_unlock(" . (int)$lockId . ")");
+    }
+}
+
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     if (chimUiAutoLockProfileEnabled()) {
         $_POST['lock_profile'] = 1;
+    }
+    if (file_exists(__DIR__."/../../ext/relationship_system/npc_save_handler.php")) {
+        include(__DIR__."/../../ext/relationship_system/npc_save_handler.php");
     }
     $npc->create($_POST);
     header("Location: npc_master.php");
@@ -495,11 +530,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
 
 // Handle Update
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
-    if (chimUiAutoLockProfileEnabled()) {
-        $_POST['lock_profile'] = 1;
+    $relationshipLockId = chimAcquireNpcRelationshipLock($_POST["id"] ?? 0);
+    try {
+        if (chimUiAutoLockProfileEnabled()) {
+            $_POST['lock_profile'] = 1;
+        }
+        if (file_exists(__DIR__."/../../ext/relationship_system/npc_save_handler.php")) {
+            include(__DIR__."/../../ext/relationship_system/npc_save_handler.php");
+        }
+        $_POST["md5"]=md5($_POST["npc_name"]);
+        $saveNpc = function () use ($npc) {
+            return $npc->update($_POST["id"], $_POST);
+        };
+        if (chimNpcRelationshipSaveNeedsLock()) {
+            chimRunWithRelationshipExtendedDataWrite($saveNpc);
+        } else {
+            $saveNpc();
+        }
+    } finally {
+        chimReleaseNpcRelationshipLock($relationshipLockId);
     }
-    $_POST["md5"]=md5($_POST["npc_name"]);
-    $npc->update($_POST["id"], $_POST);
     header("Location: npc_master.php");
     exit;
 }
@@ -508,13 +558,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"])) {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
     header('Content-Type: application/json');
+    $relationshipLockId = null;
     try {
         $id = intval($_POST['id'] ?? 0);
-
-        // Merge relationship editor data into extended_data BEFORE processing
-        if (file_exists(__DIR__."/../../ext/relationship_system/npc_save_handler.php")) {
-            include(__DIR__."/../../ext/relationship_system/npc_save_handler.php");
-        }
+        $relationshipLockId = chimAcquireNpcRelationshipLock($id);
 
         // Server-side: extended_data already has feature toggles synced by JS, just ensure it's valid JSON
         // The client-side JS only includes values that differ from profile defaults
@@ -574,6 +621,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
         } catch (Throwable $e) {
             $_POST['extended_data'] = '{}';
         }
+
+        // Merge relationship editor data after all other extended_data processing.
+        // The structured relationship editor must be the last writer for relationships.
+        if (file_exists(__DIR__."/../../ext/relationship_system/npc_save_handler.php")) {
+            include(__DIR__."/../../ext/relationship_system/npc_save_handler.php");
+        }
         
         // Handle dynamic_profile: if empty string sent, set to NULL (inherit from profile)
         if (array_key_exists('dynamic_profile', $_POST)) {
@@ -593,7 +646,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
             echo json_encode(["ok"=>true, "id"=>$newId]);
         } else {
             $_POST["md5"]=md5($_POST["npc_name"]);
-            $ok = $npc->update($id, $_POST);
+            $saveNpc = function () use ($npc, $id) {
+                return $npc->update($id, $_POST);
+            };
+            if (chimNpcRelationshipSaveNeedsLock()) {
+                $ok = chimRunWithRelationshipExtendedDataWrite($saveNpc);
+            } else {
+                $ok = $saveNpc();
+            }
             $npc->backupNpcById($id);// We also make a backup of manually edited NPCs, so when loading a save, will load this record
             if ($ok === false) {
                 echo json_encode(["ok"=>false, "error"=>($npc->getLastError() ?? 'Update failed')]);
@@ -603,6 +663,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
         }
     } catch (Throwable $e) {
         echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    } finally {
+        chimReleaseNpcRelationshipLock($relationshipLockId);
     }
     exit;
 }
@@ -1446,6 +1508,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["restore_from_history"
             exit;
         }
         
+        $historyExtendedData = $histRow['extended_data'] ?? '';
+        if (is_string($historyExtendedData) && trim($historyExtendedData) !== '') {
+            $decodedHistoryExtendedData = json_decode($historyExtendedData, true);
+            if (is_array($decodedHistoryExtendedData)) {
+                unset($decodedHistoryExtendedData['_chim_history_source']);
+                $historyExtendedData = json_encode($decodedHistoryExtendedData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            }
+        }
+
         // Prepare data for update (copy relevant fields from history)
         $updateData = [
             'npc_name' => $histRow['npc_name'] ?? '',
@@ -1470,12 +1541,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["restore_from_history"
             'dynamic_profile' => !empty($histRow['dynamic_profile']) ? 1 : 0,
             'tags' => $histRow['tags'] ?? '',
             'metadata' => $histRow['metadata'] ?? '',
-            'extended_data' => $histRow['extended_data'] ?? '',
+            'extended_data' => $historyExtendedData,
             'md5' => $histRow['md5'] ?? md5($histRow['npc_name'] ?? '')
         ];
         
         // Update the NPC
-        $ok = $npc->update($npcId, $updateData);
+        $ok = chimRunWithRelationshipExtendedDataWrite(function () use ($npc, $npcId, $updateData) {
+            return $npc->update($npcId, $updateData);
+        });
         if ($ok === false) {
             echo json_encode(["ok"=>false, "error"=>($npc->getLastError() ?? 'Restore failed')]);
         } else {
@@ -2468,7 +2541,20 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Override global and profile settings for this specific NPC. Changes here take precedence over all other configurations.</small>
             <?php
             // Configure override editor for NPC mode
-            $reservedKeys = [ 'middle_term_enabled', 'individual_memory_enabled', 'auto_diary_enabled', 'auto_diary_wait_enabled', 'chim_core_migrated', 'salutation_after_a_while'];
+            $reservedKeys = [
+                'middle_term_enabled',
+                'individual_memory_enabled',
+                'auto_diary_enabled',
+                'auto_diary_wait_enabled',
+                'chim_core_migrated',
+                'salutation_after_a_while',
+                'relationships',
+                'relationships_updated',
+                'relationships_model',
+                'relationships_inferred',
+                'relationships_last_eval',
+                'relationships_analyzed'
+            ];
             $extendedDataRaw = isset($editItem["extended_data"]) ? $editItem["extended_data"] : '{}';
             $extendedDataObj = json_decode($extendedDataRaw, true) ?: [];
             $npcOverrideCatalog = chimGetOverrideableGeneralSettingsCatalog();
@@ -2623,6 +2709,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                   } catch (idontcare) {}
         
                   // allow empty metadata without confirmation
+                }
+
+                if (typeof syncRelationshipsToHidden === 'function') {
+                  syncRelationshipsToHidden();
                 }
 
                 const fd = new FormData(form);
@@ -5285,6 +5375,3 @@ $title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 ?>
-
-
-
