@@ -497,7 +497,7 @@ if (!function_exists('race_icon_web_path')) {
     $res = pg_fetch_assoc($result);
     $last_gamets = $res["last_gamets"];
     $currentDate=convert_gamets2skyrim_date($last_gamets);
-    $bglTriggerDays = max(1, min(30, intval(chimReadLegacyGlobalValue('BGL_TRIGGER_DAYS', 5))));
+    $bglTriggerDays = max(0.1, min(30, floatval(chimReadLegacyGlobalValue('BGL_TRIGGER_DAYS', 5))));
 
     // Filter mode: show all NPCs with tracked coords, or only BG-Life enabled ones
     $showAllCoords = isset($_GET['show_all_coords']) && $_GET['show_all_coords'] === '1';
@@ -1839,7 +1839,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     <?php endif; ?>
                     <div class="bgl-settings-row">
                         <label for="bglTriggerDays">Days Cooldown</label>
-                        <input id="bglTriggerDays" type="number" name="bgl_trigger_days" min="1" max="30" step="1" value="<?php echo htmlspecialchars((string) $bglTriggerDays); ?>">
+                        <input id="bglTriggerDays" type="number" name="bgl_trigger_days" min="0.1" max="30" step="0.1" value="<?php echo htmlspecialchars((string) $bglTriggerDays); ?>">
                     </div>
                     <div class="bgl-settings-help">Controls how many in-game days pass before eligible Background Life NPCs automatically run their next update.</div>
                     <button type="submit" class="bgl-settings-save">Save</button>

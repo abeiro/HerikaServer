@@ -86,7 +86,7 @@ $gsSections = [
         [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
         [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
         [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
-        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
+        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'float', 'min' => 0.1, 'max' => 30 ],
         [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
         [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
     ],

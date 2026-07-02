@@ -105,7 +105,7 @@
   "RELLLM_CONNECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Relationship Management system. Analyzes and updates NPC relationships. Recommend to use a 🏃‍♀️‍➡️Fast LLM with ❄️low temperature (0.1-0.3) for consistent evaluations.","scope":"global"},
   "POWER_AWARENESS_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"NPCs will be aware of relative power levels (based on character level) and react appropriately to threats.","_title":"Power Awareness System"},
   "CLEAN_CONTEXT_FOCUS_CHAT_HISTORY": {"userlvl":"basic","type": "integer","description": "Context history length with only conversations. Ideally set it to 20-30.","scope":"global"},
-  "BGL_TRIGGER_DAYS": {"userlvl":"basic","type": "integer","description": "RECOMMEND TO NOT GO BELOW 5 DAYS! Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Default: 5 days. Range: 1-30 days.","scope":"global"},
+  "BGL_TRIGGER_DAYS": {"userlvl":"basic","type": "number","description": "RECOMMEND TO NOT GO BELOW 5 DAYS! Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Default: 5 days. Range: 1-30 days.","scope":"global"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
     "openrouterjson": {
