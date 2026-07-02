@@ -85,7 +85,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
     
     // Get BgL trigger period from conf.php (default: 5 days)
     $bglTriggerDays = isset($GLOBALS['BGL_TRIGGER_DAYS']) && is_numeric($GLOBALS['BGL_TRIGGER_DAYS']) 
-        ? max(1, floatval($GLOBALS['BGL_TRIGGER_DAYS'])) 
+        ? max(0.1, floatval($GLOBALS['BGL_TRIGGER_DAYS'])) 
         : 5;
     $bglTriggerDaysAgoGamets=$maxRow - ( (24 * $bglTriggerDays) / 0.0000024);
 
