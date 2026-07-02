@@ -142,6 +142,8 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $db->delete("named_cell", "gamets<=({$gameRequest[2]} - 30000000) "); //((24 * 3) / 0.0000024)
     $db->delete("sneq_quests_saved", "gamets>={$gameRequest[2]}  ");
     $db->delete("bgl_history", "gamets>={$gameRequest[2]}  ");
+    
+    
     /* This is obsolete */
     /*
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
@@ -1775,7 +1777,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         
         if ($splitNameBase[0] && $splitNameBase[1] && !in_array($splitNameBase[1],[241641])) { // Exception for Pellagua Farm) {
             $existingRecord = $db->fetchOne("SELECT * FROM locations WHERE formid = '{$splitNameBase[1]}'");
-            
+            error_log("[UTIL_LOCATION_NAME] Processing location: {$splitNameBase[0]} / {$splitNameBase[1]}");
             if ($existingRecord) {
                 $db->updateRow(
                     'locations',

@@ -111,6 +111,9 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         // This will track every 5 secs
         $oneHourAgoGamets=$maxRow;
     }
+
+    error_log("[BGL] Checking tracked NPCs");
+
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->'gps_track' = 'true' AND metadata->'last_coords'->>'pending' IS NULL AND (metadata->'last_coords'->>'last_updated')::numeric < $oneHourAgoGamets ");
     
     foreach ($allEnabledBgLNpc as $npc) {
@@ -129,16 +132,28 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
 
     // BgL content
     // In-game based on configured days
+    error_log("[BGL] Checking passive events NPCs");
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND (extended_data->>'background_life_commands' = 'false' or extended_data->>'background_life_commands'  IS NULL)");
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata=json_decode($npc["extended_data"],true);
         // Trigger if never updated, or if last update is older than configured threshold
         if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"]<($bglTriggerDaysAgoGamets)) {
             logger::info("[BGL] Passive event for {$npc["npc_name"]}");
+
+            
+            
             $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" ");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }
+
+            $npcManager = new NpcMaster();
+            $npcData = $npcManager->getByName($npc["npc_name"]);
+            $extended = json_decode($npcData["extended_data"], true);
+            $extended["background_life_last_updated"] = $maxRow;
+            $npcData = $npcManager->setExtendedData($npcData, $extended);
+            $npcManager->updateByArray($npcData);
+
             break;  // One per iteration - break after processing
         } else {
             logger::debug("[BGL] (Passive) Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}");
@@ -147,7 +162,8 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
 
     // Process delayed events for BgL NPCs
     processDelayedEvents($GLOBALS["db"], $enginePath);
-
+    
+    error_log("[BGL] Checking active events NPCs");
     // BgL commands
     $allEnabledBgLNpc=$GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' ");
     foreach ($allEnabledBgLNpc as $npc) {
@@ -155,7 +171,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
         // Trigger if never updated, or if last update is older than configured threshold
         if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"]<($bglTriggerDaysAgoGamets)) {
             $delta=($mwdata["background_life_last_updated"]-$bglTriggerDaysAgoGamets) * 0.0000024;
-            logger::info("[BGL] Event for {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}");
+            error_log("[BGL] Event for {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}");
             $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_v2.php \"{$npc["npc_name"]}\" full forceaction");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
@@ -163,12 +179,12 @@ $GLOBALS["TASKS"]["middleterm"]["fn"]=function() {
             break;  // One per iteration - break after processing
         } else {
             $delta=($mwdata["background_life_last_updated"]-$bglTriggerDaysAgoGamets) * 0.0000024;
-            logger::info("[BGL] Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']} , delta: {$delta}");
+            error_log("[BGL] Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']} , delta: {$delta}");
         }
     }
 
     if (sizeof($allEnabledBgLNpc)===0) {
-        logger::info("[BGL] No NPCs with background life enabled");
+        error_log("[BGL] No NPCs with background life enabled");
     }
     
 
