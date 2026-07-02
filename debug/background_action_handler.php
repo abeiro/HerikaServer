@@ -15,7 +15,7 @@ function triggerNpcUpdate($npcName)
 {
     $npcManager = new NpcMaster();
     $npcData = $npcManager->getByName($npcName);
-    $extended = json_decode($npcData["extended_data"], true);
+    $extended = $npcManager->getExtendedData($npcData);
     $extended["background_life_last_updated"] = 0;
     $npcData = $npcManager->setExtendedData($npcData, $extended);
     $npcManager->updateByArray($npcData);
@@ -91,12 +91,13 @@ function resolveTravelLocation($location, $currentNpcData, $db)
                 $pointSql,
                 GREATEST(
                     COALESCE(similarity(name, '$cnLocation'), 0),
-                    COALESCE(similarity(name, '$cnLocation (Interior)'), 0),
+                    COALESCE(similarity(name||' (Interior)', '$cnLocation'), 0),
                     COALESCE(similarity(region, '$cnLocation'), 0),
                     COALESCE(similarity(hold, '$cnLocation'), 0)
                 ) AS sim,
                 CASE
                     WHEN lower(name) = lower('$cnLocation') THEN 3
+                    WHEN lower(name||' (Interior)') = lower('$cnLocation') and is_interior=1 THEN 4
                     WHEN lower(region) = lower('$cnLocation') THEN 2
                     WHEN lower(hold) = lower('$cnLocation') THEN 1
                     ELSE 0
@@ -166,7 +167,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'ts' => $last_ts,
             'gamets' => $last_gamets + 10,
             'type' => "infoaction",
-            'data' => "The Narrator: $npcName starts travelling to $resolvedLocation",
+            'data' => ($location==$resolvedLocation) ? "The Narrator: $npcName starts travelling to $location" : "The Narrator: $npcName starts travelling to $location (resolved as $resolvedLocation)",
             'sess' => $momentum,
             'localts' => time(),
             'people' => $npcName,
@@ -197,7 +198,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName starts travelling to $resolvedLocation"
+            'data' => ($location==$resolvedLocation) ? "$npcName starts travelling to $location" : "$npcName starts travelling to $location (resolved as $resolvedLocation)",
         ]
     );
 
@@ -985,7 +986,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         'action' => "rolecommand|BackgroundCmd@$targetRefHexString@UpdateInventory",
         'tag' => '',
     ]);
-
+    sleep(1); // Allow time for inventory updates to propagate
     triggerNpcUpdate($npcName);
     return true;
 }

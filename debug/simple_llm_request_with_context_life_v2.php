@@ -4,7 +4,7 @@
  *
  * Generates an NPC "background life" cycle when the player is absent:
  *   1. Inner-thought soliloquy (Step 1 LLM call)
- *   2. Action / rumor / optional letter decision (Step 2 LLM call)
+ *   2. Action decision (Step 2 LLM call)
  *
  * Usage:
  *   php simple_llm_request_with_context_life_v2.php <npc_name> [dryrun|forceletter|forceaction|full] [forceaction]
@@ -372,9 +372,18 @@ if (isset($metadata['last_coords']) && !empty($metadata['last_coords'][3])) {
     $bgEvents[] = [
         'gamets' => $coords['last_updated'],
         'content' => "{$coords[3]}, $hoursAgo hours ago",
-        'type' => 'last_reported_location',
+        'type' => 'reported_location',
     ];
     $LAST_REPORTED_LOCATION = $coords[3];
+
+    $richLocation=$db->fetchOne("SELECT name,region,hold,is_interior  FROM locations WHERE formid='{$coords["location_formid"]}'");
+    // error_log("[BACKGROUND LIFE]  Last reported location: " . json_encode($coords) . " => rich location: " . json_encode($richLocation));
+    if ($richLocation && !empty($richLocation['name'])) {
+        $LAST_REPORTED_LOCATION = $richLocation['name'];
+        if ($richLocation['is_interior']) {
+            $LAST_REPORTED_LOCATION .= " (Interior)";
+        }   
+    }
 }
 /*
 if (isset($metadata['last_coords_history'])) {
@@ -415,7 +424,7 @@ if (isset($metadata['low_process_actors'])) {
 // ─── Rumors Near Current Location ────────────────────────────────────────────
 
 if ($LAST_REPORTED_LOCATION) {
-    $locationEsc = $db->escape($LAST_REPORTED_LOCATION);
+    $locationEsc = $db->escape(str_replace(" (Interior)", "", $LAST_REPORTED_LOCATION)  );
     $rumorSinceTs = $gameRequest[2] - ((24 * 7) / GAMETS_TO_HOURS);   // Last 7 in-game days
     $rumorRows = $db->fetchAll(
         "SELECT gamets, content FROM rumors
@@ -462,6 +471,8 @@ if (is_array($closestLocations) && count($closestLocations) > 0) {
     }
     $history .= "\n";
 }
+
+$history.="\nCurrent location: $LAST_REPORTED_LOCATION\n";
 
 // ─── Language Detection ───────────────────────────────────────────────────────
 
@@ -536,54 +547,9 @@ in first person.
 
 ### Decision-Making Extension
 
-At the end of the soliloquy, {$GLOBALS['HERIKA_NAME']} must decide her next step.
-
-She/He  may choose ONE of the following actions:
-* TravelTo:<location_name>. Travel to a specific location/city. Use when the character wants to move to a new area.
-* FindNPC:<npc_name>. Locate an NPC whose exact location is unknown. Use this before MoveTo or SpeakTo when the character does not know where the target is. 
-* MoveTo:<npc_name>. Move to another NPC whose location is already known. 
-* SpeakTo:<npc_name>:<refid>. Engage in conversation with another NPC. (should be used before any BuyItems or SellItems action, to reflect the need to interact and agree on a transaction with the trader NPC) (specify the NPC's refid if known, otherwise use 0)
-* BuyItems:<npc_name>:<itemid>:<count>:<gold_spent> Buy items from another NPC (if character interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)
-* SellItems:<npc_name>:<itemid>:<count>:<gold_received> Sells items to another NPC (if character interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)
-* ReturnHome. Returns to base location to meet {$GLOBALS['PLAYER_NAME']}. Use when all goals are done.
-* SpreadRumor. Generate or spread a rumor related to the character's current location (e.g., if goal is to boost local trade, rumour about it).
-* StayAtPlace. Remains in current location. If gathering info or spreading rumors, stay ≥24 hours.   
-
-Rules:
-- Only ONE action may be chosen per round.
-- The action must be consistent with the context_history, memories, and current location.
-- If no meaningful action is appropriate, she may choose to wait (no action).
-- Previous actions are present at the context_history, prevent repetition, use previous actions on history to figure out if main goal is achieved or not, and decide accordingly.
-For example:
-* To Sell/Buy Items to a trader: SpeakTo:<NPC> ->(next iteration) SellItems:.. 
-* To Sell/Buy Items to a trader that maye is not present: MoveTo:<NPC> ->(next iteration) SpeakTo:<NPC> ->(next iteration) SellItems:.. 
-
-If an action is chosen:
-- The reasoning must be reflected naturally inside the soliloquy.
-- The action itself must be explicitly stated at the end in the required format.
-
----
-
-### Output Format
-
-1. Soliloquy (in first person, as {$GLOBALS['HERIKA_NAME']})
-
-2. Action block:
-
-<Action>
-TravelTo | FindNPC | MoveTo | SpeakTo | BuyItems | SellItems | ReturnHome | SpreadRumor | StayAtPlace (action chosen)
-<location name | NPC name,refid| NPC name | item id | ... | None> (proper action arguments)
-<brief justification>
-</Action>
-
----
-
-### Turn Constraint
-
-If {$GLOBALS['HERIKA_NAME']} initiates an action, she MUST NOT describe the outcome of that action.
-The result will occur in the next round.
-
-She may express intention, expectations, or doubts — but never the resolution of the action.
+This step only generates inner thoughts.
+Do not select or mention any action command.
+Do not output XML, tags, or structured command blocks.
 PROMPT_EN,
 ];
 
@@ -607,16 +573,13 @@ if ($isDryRun && !$forceAction) {
     die();
 }
 
-// ─── Step 2: Action / Rumor / Letter Decision ────────────────────────────────
+// ─── Step 2: Action Decision ─────────────────────────────────────────────────
 
 $lettersEnabled = isset($extdata['background_life_letters']) && $extdata['background_life_letters'] === true;
-$innerThoughtStyle = loadBGLStylePrompt('background_life_innerthought');
-$letterStyle = loadBGLStylePrompt('background_life_letter', [
-    '{HERIKA_NAME}' => $GLOBALS['HERIKA_NAME'],
-    '{PLAYER_NAME}' => $GLOBALS['PLAYER_NAME'],
-]);
 
-$step2Content = "You are responsible for deciding an action, creating a rumor, and writing a letter"
+$innerThoughtStyle = loadBGLStylePrompt('background_life_innerthought');
+
+$step2Content = "You are responsible for deciding a single action"
     . " based on the character's inner thoughts and the provided context.\n"
     . "Character's name is {$GLOBALS['HERIKA_NAME']}.\n"
     . "$dynamicBiography\n\n";
@@ -629,7 +592,7 @@ $step2Content .= "<text>\n$innerThoughtBuffer\n</text>\n\n";
 $step2Content .= $innerThoughtStyle . "\n\n";
 
 
-$step2Content .= "Possible actions (if <text> content is present and has an action suggested, use it):\n"
+$step2Content .= "Possible actions :\n"
     . "StayAtPlace — Remains in current location. If gathering info or spreading rumors, stay ≥24 hours.\n"
     . "FindNPC:NPC — Search for an NPC whose exact location is unknown (replace <NPC> with target NPC name). Use this before MoveTo or SpeakTo when the character does not know where the target is. Requires a clear reason.\n"
     . "MoveTo:NPC — Move to another NPC whose location is already known (replace <NPC> with target NPC name). Requires a clear reason.\n"
@@ -637,41 +600,34 @@ $step2Content .= "Possible actions (if <text> content is present and has an acti
     . "BuyItems:NPC:itemid:count:gold_spent — Buy items from another NPC (replace <NPC> with target NPC name). (if character {$GLOBALS['HERIKA_NAME']} interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)\n"
     . "SellItems:NPC:itemid:count:gold_earned — Sell items to another NPC (replace <NPC> with target NPC name). (if character {$GLOBALS['HERIKA_NAME']} interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)\n"
     . "ReturnHome       — Returns to base location to meet {$GLOBALS['PLAYER_NAME']}. Use when all goals are done.\n"
-    . "TravelTo:Place   — Travel to a specific location/city (replace <Place> with target location/city name). Requires a clear reason.\n"
-    . "SpreadRumor — Character activities generate rumors (e.g., if goal is to boost local trade, rumour about it).\n";
-$actionChoiceDesc = '<action> chosen action (e.g., StayAtPlace, TravelTo:<Place>, ReturnHome, FindNPC:<NPC>, MoveTo:<NPC>, SpeakTo:<NPC>:..., BuyItems:<NPC>:..., SellItems:<NPC>:...>, SpreadRumor). Choose only one action per turn. Single line.';
+    . "TravelTo:Place   — Travel to a specific location/city (replace <Place> with target location/city name). Requires a clear reason.\n";
+$actionChoiceDesc = '<action> chosen action (e.g., StayAtPlace, TravelTo:<Place>, ReturnHome, FindNPC:<NPC>, MoveTo:<NPC>, SpeakTo:<NPC>:..., BuyItems:<NPC>:..., SellItems:<NPC>:...). Choose only one action per turn. Single line.';
 
-
-$numElements = $lettersEnabled ? 3 : 2;
 $step2Content .= "\nElement Definitions:\n```\n"
     . "$actionChoiceDesc\n"
-    . "<rumor>: rumor created or spread, related to character's current location ($LAST_REPORTED_LOCATION).\n";
-
-if ($lettersEnabled) {
-    $step2Content .= "<notification>: $letterStyle\n";
-}
-
-$step2Content .= "```\n\n"
-    . "- Your answer must use XML format, containing exactly $numElements elements.\n"
+    . "```\n\n"
+    . "- Your answer must use XML format, containing exactly 1 element.\n"
     . "- NEVER include commentary inside or outside the element tags or ANY content beyond the defined format.\n\n"
     . "Use only this exact Response Format:\n```\n"
     . "<action> ... </action>\n"
-    . "<rumor> ... </rumor>\n";
-
-if ($lettersEnabled) {
-    $step2Content .= "<notification> ... </notification>\n";
-}
-$step2Content .= "```";
+    . "```";
 
 $step2Content .= "Example: ```\n\n"
-    . "<action>FindNPC:Lydia</action>\n"
-    . "<rumor>{$GLOBALS["HERIKA_NAME"]} has been seen in the marketplace looking for Lydia.</rumor>\n```";
+    . "<action>FindNPC:Lydia</action>\n```";
 
 $step2Content .= "Examples ```\n\n"
-    . "<action>SpeakTo:Lydia:000A2C94</action>\n"
-    . "<rumor>{$GLOBALS["HERIKA_NAME"]} has been seen in the marketplace speaking to Lydia.</rumor>\n```";
+    . "<action>SpeakTo:Lydia:000A2C94</action>\n```";
 
-
+$step2Content .= "
+Rules:
+- Only ONE action may be chosen per round.
+- The action must be consistent with the context_history, memories, and current location.
+- If no meaningful action is appropriate, she may choose to wait (no action).
+- Previous actions are present at the context_history, prevent repetition, use previous actions on history to figure out if main goal is achieved or not, and decide accordingly.
+For example:
+* To Sell/Buy Items to a trader: SpeakTo:<NPC> ->(next iteration) SellItems:.. 
+* To Sell/Buy Items to a trader that maye is not present: MoveTo:<NPC> ->(next iteration) SpeakTo:<NPC> ->(next iteration) SellItems:.. 
+";
 
 $step2Prompt = [['role' => 'system', 'content' => $step2Content]];
 $decisionBuffer = $connectionHandler->fast_request($step2Prompt, ['MAX_TOKENS' => 2048], 'backgroundlife');
@@ -688,8 +644,8 @@ $npcMaster->updateByArray($currentNpcData);
 
 $parsed = [
     'action' => manual_get_tag_content($decisionBuffer, 'action'),
-    'notification' => manual_get_tag_content($decisionBuffer, 'notification'),
-    'rumor' => manual_get_tag_content($decisionBuffer, 'rumor'),
+    'notification' => '',
+    'rumor' => '',
 ];
 
 print_r($parsed);
@@ -763,115 +719,21 @@ if (!empty($parsed['action'])) {
     }
 }
 
-// ─── Dispatch: Letter / Notification ─────────────────────────────────────────
+// ─── Dispatch: Letter / Notification (disabled) ─────────────────────────────
 
+/*
 if (!empty($parsed['notification']) && $lettersEnabled) {
-    $dateStringSK = convert_gamets2skyrim_long_date(DataLastKnownGameTS());
-    $fullTitle = "A letter from {$GLOBALS['HERIKA_NAME']} ($dateStringSK)";
-
-    // Generate a picture with the letter content
-    createLetter($fullTitle, $parsed['notification']);
-
-    // Instruct plugin to download and store the letter image
-    $db->insert('responselog', [
-        'localts' => time(),
-        'sent' => 0,
-        'actor' => 'rolemaster',
-        'text' => '',
-        'action' => "rolecommand|generateLetter@$fullTitle",
-        'tag' => '',
-    ]);
-
-    // Instruct plugin to send via in-game courier
-    $db->insert('responselog', [
-        'localts' => time(),
-        'sent' => 0,
-        'actor' => 'rolemaster',
-        'text' => '',
-        'action' => "rolecommand|BackgroundCmd@$refHexString@SendNote/$fullTitle",
-        'tag' => '',
-    ]);
-
-    // Log letter dispatch in eventlog
-    $db->insert('eventlog', [
-        'ts' => $last_ts,
-        'gamets' => $last_gamets + 1,
-        'type' => 'innerchat',
-        'data' => "The Narrator:{$GLOBALS['HERIKA_NAME']} sent this letter to {$GLOBALS['PLAYER_NAME']}"
-            . "\n<letter_content>\n{$parsed['notification']}\n</letter_content>",
-        'sess' => $momentum,
-        'localts' => time(),
-        'people' => $GLOBALS['HERIKA_NAME'],
-        'location' => $lastEventParsed['location'] ?? null,
-        'party' => '',
-    ]);
-
-    // Log letter content in diarylog
-    $db->insert('diarylog', [
-        'ts' => $last_ts,
-        'gamets' => $last_gamets + 5,
-        'topic' => 'Sent Letter',
-        'content' => $parsed['notification'],
-        'tags' => 'backgroundlife',
-        'people' => $GLOBALS['HERIKA_NAME'],
-        'location' => $LAST_REPORTED_LOCATION ?? null,
-        'sess' => $momentum,
-        'localts' => time(),
-    ]);
-
-    // Immediately notify the narrator to announce the letter
-    $narratorInstantLetter = true;   // TODO: make globally configurable
-
-    if ($narratorInstantLetter) {
-        $taskId = uniqid();
-        $instructionText = "hey narrator, {$GLOBALS['HERIKA_NAME']} has sent a letter to {$GLOBALS['PLAYER_NAME']},"
-            . " announce it, and you MUST include the content of <letter_content> verbatim in your response."
-            . " (listener MUST be {$GLOBALS['PLAYER_NAME']})";
-
-        $roleMasterAction = make_replacements("rolecommand|Instruction@The Narrator@{$instructionText}@$taskId");
-
-        // Queue a delayed event — posted by middleterm processor after ≥15 s of speech idle
-        $extdata['pending_delayed_event'] = [
-            'localts' => time(),
-            'sent' => 0,
-            'actor' => 'rolemaster',
-            'text' => '',
-            'action' => $roleMasterAction,
-            'tag' => '',
-        ];
-        $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
-        $npcMaster->updateByArray($currentNpcData);
-
-        error_log("[DELAYED-EVENT] Letter announcement queued for {$GLOBALS['HERIKA_NAME']} — posts after 15 s speech idle.");
-
-        $db->insert('responselog', [
-            'localts' => time(),
-            'sent' => 0,
-            'actor' => 'rolemaster',
-            'text' => '',
-            'action' => "rolecommand|DebugNotification@Letter from {$GLOBALS['HERIKA_NAME']}",
-            'tag' => '',
-        ]);
-    }
-
-    // Store the letter in the books table for in-game reading
-    $db->insert('books', [
-        'ts' => 0,
-        'gamets' => 0,
-        'content' => $parsed['notification'],
-        'sess' => 'generated',
-        'localts' => time(),
-        'title' => $fullTitle,
-    ]);
+    // Disabled in v2 flow: Step 2 now decides action only.
 }
+*/
 
-// ─── Dispatch: Rumor ──────────────────────────────────────────────────────────
+// ─── Dispatch: Rumor (disabled) ──────────────────────────────────────────────
 
+/*
 if (!empty($parsed['rumor'])) {
-    $rumorContext = "Location: $LAST_REPORTED_LOCATION, {$parsed['rumor']}"
-        . " (Contextual information about reasons of this rumor: {$parsed['notification']})";
-    shell_exec("php {$enginePath}debug/simple_llm_request_with_context_rumors_custom.php " . escapeshellarg($rumorContext));
+    // Disabled in v2 flow: Step 2 now decides action only.
 }
+*/
 
 // ─── Persist Inner Thought to Event & Diary Logs ──────────────────────────────
 

@@ -308,6 +308,7 @@ Earn some gold by mining and selling ores to merchants.
     }
 
     // Add to BgL (plugin side)
+    sleep(1);
     $GLOBALS["db"]->insert(
         'responselog',
         [
@@ -319,6 +320,8 @@ Earn some gold by mining and selling ores to merchants.
             'tag'     => '',
         ]
     );
+    
+    sleep(1);
 
     $extended_data = $npcMaster->getExtendedData($npc);
     $extended_data["background_life_commands"] = true;

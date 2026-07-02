@@ -1878,6 +1878,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 $splitNameBase[3] ?? '',
                 $splitNameBase[4] ?? '',
                 "last_updated"=>$gameRequest[2],
+                "location_formid"=>$splitNameBase[5] ?hexdec($splitNameBase[5]):null,
             ];
 
             if (isset($splitNameBase[5], $splitNameBase[6]) && $splitNameBase[5] !== '' && $splitNameBase[6] !== '') {
