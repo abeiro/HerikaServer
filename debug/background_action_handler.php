@@ -921,11 +921,18 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
     }
 
 
+    $itemName = $db->fetchOne("SELECT * FROM \"public\".\"combined_descriptions\" where baseid='".strtoupper($itemId)."'");
+    if ($itemName) {
+        $itemNameResolved = "($count {$itemName["name"]})";
+    } else {
+        $itemNameResolved = "";
+    }
+
     $db->insert('eventlog', [
         'ts' => $last_ts,
         'gamets' => $last_gamets + 10,
         'type' => 'innerchat',
-        'data' => "The Narrator: $npcName " . ($tradeType === 'BuyItems' ? "buys items from" : "sells items to") . " $resolvedName. Inventories updated!",
+        'data' => "The Narrator: $npcName " . ($tradeType === 'BuyItems' ? "buys items from" : "sells items to") . " $resolvedName $itemNameResolved. Inventories updated!",
         'sess' => $momentum,
         'localts' => time(),
         'people' => "|$npcName|$resolvedName|",

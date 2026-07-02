@@ -456,7 +456,7 @@ echo str_repeat('=', 63) . PHP_EOL;
 
 $closestLocations = getLocationsNearNpcCoords($GLOBALS['HERIKA_NAME']);
 if (is_array($closestLocations) && count($closestLocations) > 0) {
-    $history .= "Hint: Closest locations to {$GLOBALS['HERIKA_NAME']}:\n";
+    $history .= "Hint: Closest locations to {$GLOBALS['HERIKA_NAME']} (Use TravelTo to move to one of this locations if needed):\n";
     foreach ($closestLocations as $loc) {
         $history .= "\n$loc";
     }
@@ -480,7 +480,7 @@ $systemPrompts = [
 ];
 
 $noteAboutPlayer = $extdata['background_life_player_unattached']
-    ? ""
+    ? "Character should stick to its own goals. A miner will mine, a trader will trade,...."
     : "Important note: {$GLOBALS['PLAYER_NAME']} and {$GLOBALS['HERIKA_NAME']} are NOT in the same place after the <context_history> events.";
 
 
@@ -554,6 +554,9 @@ Rules:
 - The action must be consistent with the context_history, memories, and current location.
 - If no meaningful action is appropriate, she may choose to wait (no action).
 - Previous actions are present at the context_history, prevent repetition, use previous actions on history to figure out if main goal is achieved or not, and decide accordingly.
+For example:
+* To Sell/Buy Items to a trader: SpeakTo:<NPC> ->(next iteration) SellItems:.. 
+* To Sell/Buy Items to a trader that maye is not present: MoveTo:<NPC> ->(next iteration) SpeakTo:<NPC> ->(next iteration) SellItems:.. 
 
 If an action is chosen:
 - The reasoning must be reflected naturally inside the soliloquy.
@@ -568,9 +571,9 @@ If an action is chosen:
 2. Action block:
 
 <Action>
-Type: TravelTo | FindNPC | MoveTo | SpeakTo | BuyItems | SellItems | ReturnHome | SpreadRumor | StayAtPlace
-Target: <location name | NPC name,refid| NPC name | item id | ... | None>
-Reason: <brief justification>
+TravelTo | FindNPC | MoveTo | SpeakTo | BuyItems | SellItems | ReturnHome | SpreadRumor | StayAtPlace (action chosen)
+<location name | NPC name,refid| NPC name | item id | ... | None> (proper action arguments)
+<brief justification>
 </Action>
 
 ---
@@ -626,7 +629,7 @@ $step2Content .= "<text>\n$innerThoughtBuffer\n</text>\n\n";
 $step2Content .= $innerThoughtStyle . "\n\n";
 
 
-$step2Content .= "Possible actions:\n"
+$step2Content .= "Possible actions (if <text> content is present and has an action suggested, use it):\n"
     . "StayAtPlace — Remains in current location. If gathering info or spreading rumors, stay ≥24 hours.\n"
     . "FindNPC:NPC — Search for an NPC whose exact location is unknown (replace <NPC> with target NPC name). Use this before MoveTo or SpeakTo when the character does not know where the target is. Requires a clear reason.\n"
     . "MoveTo:NPC — Move to another NPC whose location is already known (replace <NPC> with target NPC name). Requires a clear reason.\n"
@@ -636,7 +639,7 @@ $step2Content .= "Possible actions:\n"
     . "ReturnHome       — Returns to base location to meet {$GLOBALS['PLAYER_NAME']}. Use when all goals are done.\n"
     . "TravelTo:Place   — Travel to a specific location/city (replace <Place> with target location/city name). Requires a clear reason.\n"
     . "SpreadRumor — Character activities generate rumors (e.g., if goal is to boost local trade, rumour about it).\n";
-$actionChoiceDesc = '<action>: chosen action (e.g., StayAtPlace, TravelTo:<Place>, ReturnHome, FindNPC:<NPC>, MoveTo:<NPC>, SpeakTo:<NPC>:..., BuyItems:<NPC>:..., SellItems:<NPC>:...>, SpreadRumor). Choose only one action per turn. Single line.';
+$actionChoiceDesc = '<action> chosen action (e.g., StayAtPlace, TravelTo:<Place>, ReturnHome, FindNPC:<NPC>, MoveTo:<NPC>, SpeakTo:<NPC>:..., BuyItems:<NPC>:..., SellItems:<NPC>:...>, SpreadRumor). Choose only one action per turn. Single line.';
 
 
 $numElements = $lettersEnabled ? 3 : 2;
@@ -659,6 +662,16 @@ if ($lettersEnabled) {
     $step2Content .= "<notification> ... </notification>\n";
 }
 $step2Content .= "```";
+
+$step2Content .= "Example: ```\n\n"
+    . "<action>FindNPC:Lydia</action>\n"
+    . "<rumor>{$GLOBALS["HERIKA_NAME"]} has been seen in the marketplace looking for Lydia.</rumor>\n```";
+
+$step2Content .= "Examples ```\n\n"
+    . "<action>SpeakTo:Lydia:000A2C94</action>\n"
+    . "<rumor>{$GLOBALS["HERIKA_NAME"]} has been seen in the marketplace speaking to Lydia.</rumor>\n```";
+
+
 
 $step2Prompt = [['role' => 'system', 'content' => $step2Content]];
 $decisionBuffer = $connectionHandler->fast_request($step2Prompt, ['MAX_TOKENS' => 2048], 'backgroundlife');

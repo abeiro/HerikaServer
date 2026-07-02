@@ -64,7 +64,7 @@ if ($argv[1] == "2") {
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|BackgroundCmd@0x0001A67C@Track",
+            'action' => "rolecommand|BackgroundCmd@0x0001E7D6@Track",
             'tag' => __FILE__ . ":" . __LINE__,
         ]
     );
@@ -349,7 +349,11 @@ Earn some gold by mining and selling ores to merchants.
             'tag' => __FILE__ . ":" . __LINE__,
         ]
     );
-    // Need to register the action to bgevent recognize it as valid
+    // Need to register the action to bgevent recognize it as valid, so it triggers the bgevent when the NPC reaches the mine.
+
+    $res = $GLOBALS["db"]->fetchOne("select max(gamets) as gamets,max(ts) as ts from eventlog order by gamets desc,ts desc limit 1");
+    $last_gamets = $res["gamets"];
+    $last_ts = $res["ts"];
 
     $GLOBALS["db"]->insert('actions_issued', [
         'action' => 'TravelTo',
