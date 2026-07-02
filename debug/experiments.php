@@ -230,7 +230,7 @@ if ($argv[1] == "3") {
         "disposition" => "friendly",      // "defiant"|"submissive"|"friendly"|"serious"|"sad"|"aggressive"|"cheerful"|"distrustful"|"furious"|"drunk"|"high"|"dead" (optional)
         "goal" => "
 Earn some gold by mining and selling ores to merchants. 
-* He must work in the mine 'Whistling Mine' for the day , can rest at the camp outside the same mine. 
+* He must work in the mine 'Whistling Mine (Interior)' for the day , can rest at the camp outside the same mine ('Whistling Mine'). 
 * He sells irons to Thorgar, who is at the same location. (check inventory to know if he has ores to sell or must keep mining)
 * Some evenings, travels to Winterhold to have some drinks at the inn 'The Frozen Hearth' ",          // NPC's main goal (optional)
     ];
