@@ -150,6 +150,89 @@ class RelationshipManager {
     ];
 
     /**
+     * Relationship storage uses the canonical key "Player" for the player route.
+     * UI/prompts may surface the actual character name, but reads/writes must not
+     * store that display name as a separate relationship target.
+     */
+    public static function normalizeTargetName($targetName) {
+        $target = trim((string)$targetName);
+        if ($target === '') {
+            return $target;
+        }
+
+        $aliases = [
+            'player',
+            'the player',
+            'player character',
+            'the player character',
+            'dragonborn',
+            'the dragonborn',
+            '#player_name#',
+            '{player_name}'
+        ];
+
+        $playerName = trim((string)($GLOBALS['PLAYER_NAME'] ?? ''));
+        if ($playerName !== '') {
+            $aliases[] = strtolower($playerName);
+        }
+
+        if (in_array(strtolower($target), $aliases, true)) {
+            return 'Player';
+        }
+
+        return $target;
+    }
+
+    public static function normalizeRelationshipMap($relationships) {
+        if (!is_array($relationships)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($relationships as $target => $rel) {
+            if (!is_array($rel)) {
+                continue;
+            }
+
+            $canonicalTarget = self::normalizeTargetName($target);
+            if ($canonicalTarget === '') {
+                continue;
+            }
+
+            if (!isset($normalized[$canonicalTarget])) {
+                $normalized[$canonicalTarget] = $rel;
+                continue;
+            }
+
+            $existing = $normalized[$canonicalTarget];
+            $existingWeight = self::relationshipDataWeight($existing);
+            $incomingWeight = self::relationshipDataWeight($rel);
+            if ($incomingWeight > $existingWeight) {
+                $normalized[$canonicalTarget] = $rel;
+            }
+        }
+
+        return $normalized;
+    }
+
+    private static function relationshipDataWeight($rel) {
+        if (!is_array($rel)) {
+            return 0;
+        }
+
+        $weight = abs((int)($rel['aff'] ?? 0));
+        if (($rel['type'] ?? 'neutral') !== 'neutral') {
+            $weight += 5;
+        }
+        foreach (['relation', 'note', 'best', 'worst'] as $field) {
+            if (!empty($rel[$field])) {
+                $weight += 2;
+            }
+        }
+        return $weight;
+    }
+
+    /**
      * Get tier label from affinity score
      * PHP calculates this - AI never decides the label
      *
@@ -240,23 +323,93 @@ class RelationshipManager {
     }
 
     /**
+     * Resolve an NPC row by display name: exact -> suffix-stripped -> case-insensitive ->
+     * in-range actor bridge. Dialogue-parsed names can drift from the spelling that created
+     * the row (rename mods). Never similarity-guesses; logs closest names on a miss.
+     */
+    public static function resolveNpcByName($npcName) {
+        require_once __DIR__ . "/core/npc_master.class.php";
+        $npcMaster = new NpcMaster();
+
+        $raw = trim((string)$npcName);
+        if ($raw === '' || strcasecmp($raw, 'The Narrator') === 0) {
+            return null;
+        }
+
+        $npcData = $npcMaster->getByName($raw);
+        if ($npcData) { return $npcData; }
+
+        $clean = preg_replace('/\s*\((?:far away|too far away|busy|hostile|in combat|dead|disabled|unavailable)\)\s*$/iu', '', $raw);
+        $clean = trim(preg_replace('/\s+/u', ' ', (string)$clean));
+        if ($clean === '') { $clean = $raw; }
+        if ($clean !== $raw) {
+            $npcData = $npcMaster->getByName($clean);
+            if ($npcData) { return $npcData; }
+        }
+
+        $npcData = $npcMaster->getByName(ucfirst(strtolower($clean)));
+        if ($npcData) { return $npcData; }
+
+        $escaped = $GLOBALS["db"]->escape($clean);
+        $rows = $GLOBALS["db"]->fetchAll(
+            "SELECT * FROM core_npc_master WHERE LOWER(npc_name) = LOWER('{$escaped}') AND npc_name <> 'The Narrator'
+             ORDER BY gamets_last_updated DESC NULLS LAST, id DESC LIMIT 2"
+        );
+        if (!empty($rows)) {
+            if (count($rows) > 1) {
+                error_log("[REL] Name resolve: multiple case-insensitive matches for '{$clean}', using newest row '{$rows[0]['npc_name']}'");
+            }
+            return $rows[0];
+        }
+
+        // Bridge: compare against in-range actors ignoring case/punctuation/spacing drift
+        if (function_exists('DataBeingsInCloseRange')) {
+            try {
+                $squash = function ($s) { return preg_replace('/[^a-z0-9]+/', '', strtolower((string)$s)); };
+                $target = $squash($clean);
+                $inRange = DataBeingsInCloseRange(true);
+                $candidates = is_array($inRange) ? $inRange : explode('|', trim((string)$inRange, '| '));
+                foreach ($candidates as $candidate) {
+                    $candidate = trim((string)preg_replace('/\s*\([^)]*\)\s*$/u', '', (string)$candidate));
+                    if ($candidate === '' || $target === '' || $squash($candidate) !== $target) { continue; }
+                    $npcData = $npcMaster->getByName($candidate);
+                    if ($npcData) {
+                        error_log("[REL] Name resolve: matched '{$clean}' to in-range actor '{$candidate}'");
+                        return $npcData;
+                    }
+                }
+            } catch (Exception $e) {
+                // resolver must never break the turn
+            }
+        }
+
+        try {
+            $all = $GLOBALS["db"]->fetchAll("SELECT npc_name FROM core_npc_master WHERE npc_name <> 'The Narrator'");
+            $scored = [];
+            foreach ($all as $r) {
+                $scored[$r['npc_name']] = levenshtein(strtolower(substr($clean, 0, 60)), strtolower(substr((string)$r['npc_name'], 0, 60)));
+            }
+            asort($scored);
+            $closest = implode("', '", array_slice(array_keys($scored), 0, 3));
+            error_log("[REL] Name resolve FAILED for '{$clean}' - no row matches; closest names: '{$closest}'");
+        } catch (Exception $e) {
+            error_log("[REL] Name resolve FAILED for '{$clean}' - no row matches");
+        }
+        return null;
+    }
+
+    /**
      * Get NPC's relationship data from extended_data
      */
     public static function getRelationships($npcName) {
-        require_once __DIR__ . "/core/npc_master.class.php";
-        $npcMaster = new NpcMaster();
-        $npcData = $npcMaster->getByName($npcName);
-
-        if (!$npcData) {
-            $npcData = $npcMaster->getByName(ucfirst(strtolower($npcName)));
-        }
+        $npcData = self::resolveNpcByName($npcName);
 
         if (!$npcData) {
             return [];
         }
 
         $extended = json_decode($npcData['extended_data'] ?? '{}', true) ?: [];
-        return $extended['relationships'] ?? [];
+        return self::normalizeRelationshipMap($extended['relationships'] ?? []);
     }
 
     /**
@@ -266,6 +419,7 @@ class RelationshipManager {
      */
     public static function getRelationship($npcName, $targetName) {
         $rels = self::getRelationships($npcName);
+        $targetName = self::normalizeTargetName($targetName);
 
         if (isset($rels[$targetName])) {
             $rel = $rels[$targetName];
@@ -478,11 +632,7 @@ class RelationshipManager {
     public static function parseChanges($aiResponse, $npcName) {
         require_once __DIR__ . "/core/npc_master.class.php";
         $npcMaster = new NpcMaster();
-        $npcData = $npcMaster->getByName($npcName);
-
-        if (!$npcData) {
-            $npcData = $npcMaster->getByName(ucfirst(strtolower($npcName)));
-        }
+        $npcData = self::resolveNpcByName($npcName);
 
         if (!$npcData) {
             // Can't update relationships for unknown NPC
@@ -490,13 +640,14 @@ class RelationshipManager {
         }
 
         $extended = json_decode($npcData['extended_data'] ?? '{}', true) ?: [];
-        $rels = $extended['relationships'] ?? [];
+        $rels = self::normalizeRelationshipMap($extended['relationships'] ?? []);
         $changed = false;
 
         // Parse affinity changes: #REL:Target=+5# or #REL:Target=-10#
         if (preg_match_all('/#REL:([^=]+)=([+-]?\d+)#/', $aiResponse, $matches)) {
             foreach ($matches[1] as $i => $target) {
-                $target = trim($target);
+                $target = self::normalizeTargetName($target);
+                if (in_array(strtolower($target), ['the narrator', 'narrator'], true)) continue; // never track the narrator as a relationship
                 $delta = (int)$matches[2][$i];
 
                 // Initialize if doesn't exist
@@ -518,7 +669,8 @@ class RelationshipManager {
         // Accepts both default types AND custom types (any single word)
         if (preg_match_all('/#TYPE:([^=]+)=([a-zA-Z]+)#/', $aiResponse, $matches)) {
             foreach ($matches[1] as $i => $target) {
-                $target = trim($target);
+                $target = self::normalizeTargetName($target);
+                if (in_array(strtolower($target), ['the narrator', 'narrator'], true)) continue; // never track the narrator as a relationship
                 $newType = strtolower(trim($matches[2][$i]));
 
                 // Accept any single-word type (allows custom types like "client", "mentor", etc.)
@@ -538,10 +690,12 @@ class RelationshipManager {
         // Save if changed
         if ($changed) {
             $extended['relationships'] = $rels;
-            $npcMaster->updateByArray([
-                'id' => $npcData['id'],
-                'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-            ]);
+            chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
+                return $npcMaster->updateByArray([
+                    'id' => $npcData['id'],
+                    'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                ]);
+            });
         }
 
         // Strip commands before TTS
@@ -552,13 +706,10 @@ class RelationshipManager {
      * Set relationship directly (for initialization or admin)
      */
     public static function setRelationship($npcName, $targetName, $affinity, $type = null) {
+        $targetName = self::normalizeTargetName($targetName);
         require_once __DIR__ . "/core/npc_master.class.php";
         $npcMaster = new NpcMaster();
-        $npcData = $npcMaster->getByName($npcName);
-
-        if (!$npcData) {
-            $npcData = $npcMaster->getByName(ucfirst(strtolower($npcName)));
-        }
+        $npcData = self::resolveNpcByName($npcName);
 
         if (!$npcData) {
             error_log("[REL] Cannot set relationship - NPC not found: $npcName");
@@ -566,7 +717,7 @@ class RelationshipManager {
         }
 
         $extended = json_decode($npcData['extended_data'] ?? '{}', true) ?: [];
-        $rels = $extended['relationships'] ?? [];
+        $rels = self::normalizeRelationshipMap($extended['relationships'] ?? []);
 
         // Initialize or update
         if (!isset($rels[$targetName])) {
@@ -582,10 +733,12 @@ class RelationshipManager {
         }
 
         $extended['relationships'] = $rels;
-        $npcMaster->updateByArray([
-            'id' => $npcData['id'],
-            'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-        ]);
+        chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
+            return $npcMaster->updateByArray([
+                'id' => $npcData['id'],
+                'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+            ]);
+        });
 
         error_log("[REL] Set $npcName -> $targetName: " . $rels[$targetName]['aff'] .
                   " (" . $rels[$targetName]['type'] . ")");

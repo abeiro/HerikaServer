@@ -85,10 +85,9 @@ function _relIsValidNpcTarget($name) {
  * Helper: Get NPC ID by name
  */
 function _relGetNpcIdByName($npcName) {
-    $escapedName = $GLOBALS["db"]->escape($npcName);
-    $npcRow = $GLOBALS["db"]->fetchOne(
-        "SELECT id FROM core_npc_master WHERE npc_name = '" . $escapedName . "' LIMIT 1"
-    );
+    // Full ladder: dialogue-parsed names can drift from the row's spelling (rename mods).
+    require_once $GLOBALS["ENGINE_PATH"] . "lib/relationship_manager.php";
+    $npcRow = RelationshipManager::resolveNpcByName($npcName);
     return $npcRow ? intval($npcRow['id']) : null;
 }
 
@@ -210,6 +209,20 @@ if (!empty($GLOBALS["HERIKA_ID"])) {
     }
 }
 
+// RELATIONSHIP LOCK: if this NPC's relationships are locked in the editor, the model must
+// NOT re-evaluate or overwrite them - manual edits are authoritative. This is why hand-edited relationships kept
+// reverting: the model re-classified them every interaction. Locked NPCs are skipped entirely.
+if ($npcId) {
+    $relLockRow = $GLOBALS["db"]->fetchOne("SELECT extended_data FROM core_npc_master WHERE id = " . (int)$npcId . " LIMIT 1");
+    if ($relLockRow && !empty($relLockRow['extended_data'])) {
+        $relLockExt = json_decode((string)$relLockRow['extended_data'], true);
+        if (is_array($relLockExt) && !empty($relLockExt['relationships_locked'])) {
+            Logger::info("[REL] {$npcName} relationships are LOCKED in the editor - skipping AI re-evaluation (manual edits preserved)");
+            return;
+        }
+    }
+}
+
 // Check if RelationshipLLM is configured
 $useRelLLM = !empty($GLOBALS['RELLLM_CONNECTOR']) && $GLOBALS['RELLLM_CONNECTOR'] > 0;
 
@@ -241,7 +254,7 @@ if ($useRelLLM && $npcId) {
     $playerInputTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s"];
     if (isset($gameRequest[0]) && in_array($gameRequest[0], $playerInputTypes) && !empty($gameRequest[3])) {
         $playerAction = $gameRequest[3];
-        // Remove "PlayerName:" prefix if present (e.g., "Bannon:Hello" -> "Hello")
+        // Remove "PlayerName:" prefix if present (e.g., "PlayerName:Hello" -> "Hello")
         $playerAction = preg_replace('/^[A-Za-z]+:\s*/', '', $playerAction);
         // Also remove "(Talking to everyone)" or similar tags
         $playerAction = preg_replace('/\s*\(Talking to [^)]+\)\s*$/i', '', $playerAction);
