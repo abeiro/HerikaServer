@@ -33,6 +33,17 @@ if (($lastEvent[0]["n"] - $lastChat[0]["m"]) > 20) { // 20 seconds of silence
     $GLOBALS["NPCS_ARE_NOT_TALKING"] = 0;
 }
 
+// An active sex scene reads as "silence" here (scene events are not chat/prechat/rechat), so the
+// quest agent would keep pushing story instructions into NPCs who must stay on the SexLab/OStim.
+$sceneActiveFile = sys_get_temp_dir() . "/nsfw_scene_active.txt";
+$sceneEndedFile  = sys_get_temp_dir() . "/nsfw_scene_ended.txt";
+$sceneActiveTs = is_file($sceneActiveFile) ? (int)(file_get_contents($sceneActiveFile) ?: 0) : 0;
+$sceneEndedTs  = is_file($sceneEndedFile) ? (int)(file_get_contents($sceneEndedFile) ?: 0) : 0;
+if ($sceneActiveTs > 0 && (time() - $sceneActiveTs) < 300 && $sceneActiveTs >= $sceneEndedTs) {
+    error_log("[SNQE MAIN] Active scene - holding quest instruction generation");
+    return;
+}
+
 $quests = $GLOBALS["db"]->fetchAll("select * from sneq_quests where quest_run_state IN ('not_running','not started','running')");
 
 foreach ($quests as $questRow) {
