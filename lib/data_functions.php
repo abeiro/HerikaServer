@@ -2435,6 +2435,16 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
      or people like '%|$actorEscaped (in combat)|%'
      or people like '%|$actorEscaped (restrained)|%'
      or type='info_timeforward'
+    )
+    AND (
+     -- Cross-NPC bleed fix: 'people' is proximity-stamped (every nearby NPC), so without this an NPC's
+     -- context pulled in every bystander's verbatim dialogue and they echoed each other. For actual NPC
+     -- dialogue (chat/prechat) keep ONLY this NPC's own lines or lines addressed TO it; non-dialogue rows
+     -- (infoaction/itemfound/etc.) stay broad so situational awareness is preserved. Player input is its
+     -- own type and is unaffected.
+     type not in ('chat','prechat')
+     or data ilike '$actorEscaped:%'
+     or data ilike '%(talking to $actorEscaped)%'
     )" : " ").
     //((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
     " {$ext_sqlfilter2} 
@@ -2549,7 +2559,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         } else if ($row["subtype"]=="MEMORY") {
             $speaker = "memory";
             
-        } else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") !== false) && (strpos($rowData, "The Narrator:") === false)) {
+        } else if ((strpos($rowData, "{$GLOBALS["HERIKA_NAME"]}:") === 0) && (strpos($rowData, "The Narrator:") === false)) {
+            // Only a line that STARTS with "<thisNPC>:" is this NPC's own turn (assistant). Using !== false
+            // here matched the name ANYWHERE, so another NPC's line that merely contained "<thisNPC>:" was
+            // mis-claimed as this NPC's own line -> cross-NPC identity bleed. Mirrors the player/narrator checks below.
             $speaker = "assistant";
             
         } else if ((strpos($rowData, "{$GLOBALS["PLAYER_NAME"]}:") === 0)) {

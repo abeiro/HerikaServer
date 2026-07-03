@@ -223,6 +223,16 @@ if (in_array($gameRequest[0],["addnpc"])) {
 
 if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
     sleep(1);   // Give time to populate data
+
+    // Load/newgame is a hard scene boundary. Rolemaster scene notes are transient
+    // director state; do not let them bleed across save/load into normal chat.
+    try {
+        $db->delete("rolemaster", "type='scenenote'");
+        $db->delete("responselog", "sent=0 and actor='rolemaster' and (action like 'rolecommand|Instruction@%' or action like 'rolecommand|Suggestion@%')");
+        Logger::info("[main] Cleared transient rolemaster scene state on {$gameRequest[0]}");
+    } catch (Exception $e) {
+        Logger::warn("[main] Failed to clear transient rolemaster scene state on {$gameRequest[0]}: " . $e->getMessage());
+    }
 }
 
 // Misc events, some of them can terminate the request
