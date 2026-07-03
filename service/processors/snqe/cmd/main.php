@@ -34,9 +34,7 @@ if (($lastEvent[0]["n"] - $lastChat[0]["m"]) > 20) { // 20 seconds of silence
 }
 
 // An active sex scene reads as "silence" here (scene events are not chat/prechat/rechat), so the
-// quest agent would keep pushing story instructions into NPCs who must stay on the SexLab/OStim
-// cue. Hold quest progression while the scene marker is fresh; it resumes on the next tick after
-// the scene ends.
+// quest agent would keep pushing story instructions into NPCs who must stay on the SexLab/OStim.
 $sceneActiveFile = sys_get_temp_dir() . "/nsfw_scene_active.txt";
 $sceneEndedFile  = sys_get_temp_dir() . "/nsfw_scene_ended.txt";
 $sceneActiveTs = is_file($sceneActiveFile) ? (int)(file_get_contents($sceneActiveFile) ?: 0) : 0;
