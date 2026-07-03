@@ -323,16 +323,86 @@ class RelationshipManager {
     }
 
     /**
+     * Resolve an NPC row by display name: exact -> suffix-stripped -> case-insensitive ->
+     * in-range actor bridge. Dialogue-parsed names can drift from the spelling that created
+     * the row (rename mods). Never similarity-guesses; logs closest names on a miss.
+     */
+    public static function resolveNpcByName($npcName) {
+        require_once __DIR__ . "/core/npc_master.class.php";
+        $npcMaster = new NpcMaster();
+
+        $raw = trim((string)$npcName);
+        if ($raw === '' || strcasecmp($raw, 'The Narrator') === 0) {
+            return null;
+        }
+
+        $npcData = $npcMaster->getByName($raw);
+        if ($npcData) { return $npcData; }
+
+        $clean = preg_replace('/\s*\((?:far away|too far away|busy|hostile|in combat|dead|disabled|unavailable)\)\s*$/iu', '', $raw);
+        $clean = trim(preg_replace('/\s+/u', ' ', (string)$clean));
+        if ($clean === '') { $clean = $raw; }
+        if ($clean !== $raw) {
+            $npcData = $npcMaster->getByName($clean);
+            if ($npcData) { return $npcData; }
+        }
+
+        $npcData = $npcMaster->getByName(ucfirst(strtolower($clean)));
+        if ($npcData) { return $npcData; }
+
+        $escaped = $GLOBALS["db"]->escape($clean);
+        $rows = $GLOBALS["db"]->fetchAll(
+            "SELECT * FROM core_npc_master WHERE LOWER(npc_name) = LOWER('{$escaped}') AND npc_name <> 'The Narrator'
+             ORDER BY gamets_last_updated DESC NULLS LAST, id DESC LIMIT 2"
+        );
+        if (!empty($rows)) {
+            if (count($rows) > 1) {
+                error_log("[REL] Name resolve: multiple case-insensitive matches for '{$clean}', using newest row '{$rows[0]['npc_name']}'");
+            }
+            return $rows[0];
+        }
+
+        // Bridge: compare against in-range actors ignoring case/punctuation/spacing drift
+        if (function_exists('DataBeingsInCloseRange')) {
+            try {
+                $squash = function ($s) { return preg_replace('/[^a-z0-9]+/', '', strtolower((string)$s)); };
+                $target = $squash($clean);
+                $inRange = DataBeingsInCloseRange(true);
+                $candidates = is_array($inRange) ? $inRange : explode('|', trim((string)$inRange, '| '));
+                foreach ($candidates as $candidate) {
+                    $candidate = trim((string)preg_replace('/\s*\([^)]*\)\s*$/u', '', (string)$candidate));
+                    if ($candidate === '' || $target === '' || $squash($candidate) !== $target) { continue; }
+                    $npcData = $npcMaster->getByName($candidate);
+                    if ($npcData) {
+                        error_log("[REL] Name resolve: matched '{$clean}' to in-range actor '{$candidate}'");
+                        return $npcData;
+                    }
+                }
+            } catch (Exception $e) {
+                // resolver must never break the turn
+            }
+        }
+
+        try {
+            $all = $GLOBALS["db"]->fetchAll("SELECT npc_name FROM core_npc_master WHERE npc_name <> 'The Narrator'");
+            $scored = [];
+            foreach ($all as $r) {
+                $scored[$r['npc_name']] = levenshtein(strtolower(substr($clean, 0, 60)), strtolower(substr((string)$r['npc_name'], 0, 60)));
+            }
+            asort($scored);
+            $closest = implode("', '", array_slice(array_keys($scored), 0, 3));
+            error_log("[REL] Name resolve FAILED for '{$clean}' - no row matches; closest names: '{$closest}'");
+        } catch (Exception $e) {
+            error_log("[REL] Name resolve FAILED for '{$clean}' - no row matches");
+        }
+        return null;
+    }
+
+    /**
      * Get NPC's relationship data from extended_data
      */
     public static function getRelationships($npcName) {
-        require_once __DIR__ . "/core/npc_master.class.php";
-        $npcMaster = new NpcMaster();
-        $npcData = $npcMaster->getByName($npcName);
-
-        if (!$npcData) {
-            $npcData = $npcMaster->getByName(ucfirst(strtolower($npcName)));
-        }
+        $npcData = self::resolveNpcByName($npcName);
 
         if (!$npcData) {
             return [];
@@ -562,11 +632,7 @@ class RelationshipManager {
     public static function parseChanges($aiResponse, $npcName) {
         require_once __DIR__ . "/core/npc_master.class.php";
         $npcMaster = new NpcMaster();
-        $npcData = $npcMaster->getByName($npcName);
-
-        if (!$npcData) {
-            $npcData = $npcMaster->getByName(ucfirst(strtolower($npcName)));
-        }
+        $npcData = self::resolveNpcByName($npcName);
 
         if (!$npcData) {
             // Can't update relationships for unknown NPC
@@ -643,11 +709,7 @@ class RelationshipManager {
         $targetName = self::normalizeTargetName($targetName);
         require_once __DIR__ . "/core/npc_master.class.php";
         $npcMaster = new NpcMaster();
-        $npcData = $npcMaster->getByName($npcName);
-
-        if (!$npcData) {
-            $npcData = $npcMaster->getByName(ucfirst(strtolower($npcName)));
-        }
+        $npcData = self::resolveNpcByName($npcName);
 
         if (!$npcData) {
             error_log("[REL] Cannot set relationship - NPC not found: $npcName");

@@ -85,10 +85,9 @@ function _relIsValidNpcTarget($name) {
  * Helper: Get NPC ID by name
  */
 function _relGetNpcIdByName($npcName) {
-    $escapedName = $GLOBALS["db"]->escape($npcName);
-    $npcRow = $GLOBALS["db"]->fetchOne(
-        "SELECT id FROM core_npc_master WHERE npc_name = '" . $escapedName . "' LIMIT 1"
-    );
+    // Full ladder: dialogue-parsed names can drift from the row's spelling (rename mods).
+    require_once $GLOBALS["ENGINE_PATH"] . "lib/relationship_manager.php";
+    $npcRow = RelationshipManager::resolveNpcByName($npcName);
     return $npcRow ? intval($npcRow['id']) : null;
 }
 
