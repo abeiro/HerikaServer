@@ -266,13 +266,23 @@ class RelationshipLLM {
         $connectorLabel = $this->connector['label'] ?? 'RelationshipLLM';
         $model = $this->modelName ?? 'unknown';
 
+        // The audit viewer infers status from the result text: "OK|" prefix = success.
+        $resultText = is_string($response) ? $response : json_encode($response);
+        $ok = is_string($response) && trim($response) !== '';
+        if ($ok) {
+            $decoded = json_decode(trim($response), true);
+            if (is_array($decoded) && isset($decoded['error'])) {
+                $ok = false;
+            }
+        }
+
         $this->db->insert('audit_request', [
             'request' => json_encode([
                 'type' => $callType,
                 'model' => $model,
                 'messages' => $request
             ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'result' => is_string($response) ? substr($response, 0, 2000) : json_encode($response),
+            'result' => ($ok ? 'OK|' : '') . substr((string)$resultText, 0, 2000),
             'connector' => "RelationshipLLM ({$connectorLabel})",
             'url' => "ext/relationship_system/{$callType}"
         ]);
