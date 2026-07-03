@@ -69,6 +69,7 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'PLAYER_WORST_MEMORY_GAME_DAYS', 'type' => 'integer', 'min' => 0, 'max' => 365, 'default' => 7, 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.' ],
         [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
     'Context' => [
@@ -143,6 +144,7 @@ function pretty_label(string $flatName): string
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
         'RELLLM_CONNECTOR' => 'Relationship Management',
+        'PLAYER_WORST_MEMORY_GAME_DAYS' => 'Worst Memory Lifespan',
         'EMOTEMOODS' => 'Emote Moods',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
         'BGL_TRIGGER_DAYS' => 'Background Life Days Cooldown',
@@ -166,6 +168,7 @@ function pretty_label(string $flatName): string
 function icon_for_field(string $flatName): string
 {
     $u = strtoupper($flatName);
+    if ($u === 'PLAYER_WORST_MEMORY_GAME_DAYS') return '💔';
     if (strpos($u, 'FEATURES@MEMORY_EMBEDDING@') === 0 || strpos($u, 'MEMORY_') !== false) return '💭';
     if ($u === 'PLAYER_NAME') return '🏷️';
     if ($u === 'PROMPT_HEAD') return '🔝';
@@ -370,12 +373,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
         if (!chimSetGeneralSetting($name, $value, $description)) {
             $didSave = false;
         }
-    }
-
-    // Worst-memory lifespan: rendered inline on the Relationship Management card (not in $gsSections), so save it here.
-    $worstMemDays = normalize_posted_value('integer', $_POST['PLAYER_WORST_MEMORY_GAME_DAYS'] ?? '');
-    if (!chimSetGeneralSetting('PLAYER_WORST_MEMORY_GAME_DAYS', $worstMemDays, current_description('PLAYER_WORST_MEMORY_GAME_DAYS', $generalSettingRowMap))) {
-        $didSave = false;
     }
 
     $postedPromptContextRaw = [];
@@ -1317,8 +1314,14 @@ h1.gs-title {
 
                             $fieldType = strval($field['type']);
                             $current = current_value($fieldName);
+                            if (($current === '' || $current === null) && isset($field['default'])) {
+                                $current = $field['default'];
+                            }
                             $label = pretty_label($fieldName);
                             $help = current_description($fieldName, $generalSettingRowMap);
+                            if ($help === '' && isset($field['help'])) {
+                                $help = strval($field['help']);
+                            }
                             $schemaDefinition = chimGetSchemaDefinition($fieldName);
                             $isReadonly = isset($schemaDefinition['readonly']) && $schemaDefinition['readonly'] === true;
                             $readonlyAttr = $isReadonly ? 'readonly' : '';
@@ -1412,14 +1415,6 @@ h1.gs-title {
                                         </select>
                                     <?php else: ?>
                                         <input type="text" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo $readonlyAttr; ?>>
-                                    <?php endif; ?>
-                                    <?php if ($fieldName === 'RELLLM_CONNECTOR'): ?>
-                                        <?php $worstMemValue = current_value('PLAYER_WORST_MEMORY_GAME_DAYS'); if ($worstMemValue === '' || $worstMemValue === null) { $worstMemValue = 7; } ?>
-                                        <div style="margin-top:12px; border-top:1px solid #4a3d6a; padding-top:10px;">
-                                            <label style="display:block; font-size:12px; color:#bbb; margin-bottom:4px;">💔 Worst Memory Lifespan (in-game days, 0 = never forget)</label>
-                                            <input type="number" name="PLAYER_WORST_MEMORY_GAME_DAYS" value="<?php echo htmlspecialchars(strval($worstMemValue)); ?>" min="0" max="365" step="1">
-                                            <div style="font-size:11px; color:#888; margin-top:4px;">How long the player's worst memory of an NPC lingers before it fades. Default 7 (one game-week). NPC&harr;NPC worst memories are always permanent.</div>
-                                        </div>
                                     <?php endif; ?>
                                 </div>
                                 <?php if ($help !== ''): ?>
