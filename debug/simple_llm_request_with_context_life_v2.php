@@ -178,6 +178,24 @@ $momentum = time();
 $gameRequest = ['inputtext', '0', $last_gamets, $npcName];
 $npcNameEsc = $db->escape($npcName);
 
+// Last action issued by the NPC (if any) in the last 24 in-game hours
+
+$lastIssuedEvent = $db->fetchOne(
+    "SELECT gamets, data FROM actions_issued
+     WHERE actorname='$npcNameEsc' 
+     ORDER BY gamets DESC, ts ASC"
+);
+
+if ($lastIssuedEvent["gamets"] && $lastIssuedEvent["action"] == "TravelTo") {
+    $npcIsTravelling = true;
+    $npcIsTravellingStarted = $lastIssuedEvent["gamets"];
+} else {
+    $npcIsTravelling = false;
+    $npcIsTravellingStarted = 0;
+}
+
+
+
 // ─── Guard: Require at Least One Prior Interaction ───────────────────────────
 
 $lastInteractionRow = $db->fetchOne(
@@ -221,6 +239,7 @@ if (($last_gamets - $lastItGamets) < $minDeltaForRerun) {
     }
 }
 
+
 $daysPassed = round(($last_gamets - $lastItGamets) * GAMETS_TO_HOURS / 24, 2);
 
 // ─── Dynamic Biography ────────────────────────────────────────────────────────
@@ -238,7 +257,7 @@ if ($extdata["background_life_player_unattached"] === true) {
 
     $sqlFilter = " AND gamets < $lastItGamets"
         . " AND type NOT IN ('prechat','itemfound','npcspellcast')";
-        
+
 } else {
     $sqlFilter = " AND gamets < $lastItGamets"
         . " AND type NOT IN ('prechat','itemfound','infoaction','npcspellcast','innerchat')"
@@ -253,7 +272,7 @@ $contextDataHistoric = filterHistoricContextForNarratorVisibility(
 
 if ($extdata['background_life_player_unattached']) {
     // NPC unattached, so maybe does not nothing about player
-     foreach ($contextDataHistoric as $entry) {
+    foreach ($contextDataHistoric as $entry) {
         $line = trim($entry['content']);
         $history .= ($entry['role'] === 'assistant')
             ? "{$GLOBALS['HERIKA_NAME']}: $line\n\n"
@@ -329,6 +348,28 @@ foreach (array_reverse($innerChatEntryRows) as $row) {
     // Update daysPassed to reflect the earliest inner chat entry if it's older than the last interaction
     $daysPassed = round(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS / 24, 2);
 }
+
+$actionsRows = $db->fetchAll(
+    "SELECT action,actorname,gamets,fullcall FROM actions_issued
+     WHERE actorname='$npcNameEscDb' and action in ('TravelTo','MoveTo')
+       AND gamets > $lastItGamets
+     ORDER BY gamets DESC, ts DESC
+     LIMIT 16 OFFSET 0"
+);
+$actions = [];
+foreach (array_reverse($actionsRows) as $row) {
+    $hoursAgo = number_format(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS, 2);
+    $actions[] = [
+        'gamets' => $row['gamets'],
+        'content' => "$hoursAgo hours ago... ".($row["action"]=="TravelTo" ? "{$row['actorname']} starts journey: {$row['fullcall']}" :
+             "{$row['actorname']} moves to: {$row['fullcall']}"),
+        'type' => 'travel_action',
+
+    ];
+    // Update daysPassed to reflect the earliest action entry if it's older than the last interaction
+    $daysPassed = round(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS / 24, 2);
+}
+
 
 // ─── Background Events Since Last Iteration ───────────────────────────────────
 
@@ -455,7 +496,7 @@ if ($LAST_REPORTED_LOCATION) {
 
 // ─── Merge & Sort Events; Append to History ───────────────────────────────────
 
-$combinedEvents = array_merge($bgEvents, $diaryEntries, $innerChats);
+$combinedEvents = array_merge($bgEvents, $diaryEntries, $innerChats, $actions);
 usort($combinedEvents, fn($a, $b) => $a['gamets'] <=> $b['gamets']);
 
 if (empty($combinedEvents)) {
@@ -534,6 +575,7 @@ Tis character has been idle for the last $idleHours hours. We need to know:
     1) If NPC was on a relaxing scenario (inn..home..), if any item was consumed from inventory (food, drink, potion, etc)
     2) If NPC was on a working (scenario), if any good was produced. (iron ore, leather, etc)  IN THE LAST $idleHours HOURS.. 
        Subsection production at <goals> specifies what is produced and how much per hour. We must check if we have produced any good IN THE LAST $idleHours HOURS.
+    3) Optionally, action can be just DoNothing if no consumption or production happened. In this case, reasoning can be empty.   
 
     "
         ],
@@ -546,7 +588,8 @@ Format:
 {
   \"action\": [
     \"Consume:itemid:qty\",
-    \"Produced:itemid:qty\"
+    \"Produced:itemid:qty\",
+    \"DoNothing\"
   ],
   \"reasoning\": \"optional short explanation\"
 }
@@ -556,6 +599,7 @@ Rules:
 - Only include valid actions in this exact string format:
   Consume:itemid:qty
   Produced:itemid:qty
+  DoNothing
 - itemid must match in-game inventory identifiers.
 - qty must be an integer.
 - You may include multiple actions if needed.
@@ -573,7 +617,7 @@ Rules:
     $parsedResponse = __jpd_decode_lazy($preResponse);
 
     if (isset($parsedResponse['action']) && is_array($parsedResponse['action'])) {
-        $action = current($parsedResponse['action']);
+        $action = ($parsedResponse['action']);
     } else {
         $action = '';
     }
@@ -585,22 +629,27 @@ Rules:
 
 
     if ($action) {
-        error_log("[BACKGROUND LIFE] $npcNameEsc — Idle production/consumption detected: $action");
+        foreach ($action as $singleAction) {
+            error_log("[BACKGROUND LIFE] $npcNameEsc — Idle production/consumption detected: $singleAction. Reasoning: $reasoning");
 
-        $skyrimCmd = new SkyrimCommandBuilder();
-        $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
-        // Parse action string
-        list($actionType, $itemId, $count) = explode(':', $action);
-        $count = (int) $count;
-        if ($actionType === 'Consume') {
-            $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x$itemId", $count, true);
-            $skyrimCmd->send(cmd: $json);
-        } elseif ($actionType === 'Produced') {
-            $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x$itemId", $count, true);
-            $skyrimCmd->send(cmd: $json);
+            $skyrimCmd = new SkyrimCommandBuilder();
+            $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
+            // Parse action string
+            list($actionType, $itemId, $count) = explode(':', $singleAction);
+            $count = (int) $count;
+            if ($actionType === 'Consume') {
+                $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x$itemId", $count, true);
+                $skyrimCmd->send(cmd: $json);
+            } elseif ($actionType === 'Produced') {
+                $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x$itemId", $count, true);
+                $skyrimCmd->send(cmd: $json);
+            }
+            $actionText[] = $singleAction;
         }
 
-        sleep(1);   // Allow time for the command to be processed
+        $actionTextFinal = implode(', ', $actionText);
+
+        sleep(sizeof($action));   // Allow time for the command to be processed
         // Send signal to update inventory
         $db->insert('responselog', [
             'localts' => time(),
@@ -617,7 +666,7 @@ Rules:
             'ts' => $last_ts,
             'gamets' => $last_gamets - 10,
             'type' => 'innerchat',
-            'data' => "The Narrator: $npcName produced/consumed items while idle: $action. Reasoning: $reasoning",
+            'data' => "The Narrator: $npcName produced/consumed items while idle: $actionTextFinal. Reasoning: $reasoning",
             'sess' => $momentum,
             'localts' => time(),
             'people' => "|$npcName|",
@@ -633,7 +682,7 @@ Rules:
                 'ts' => $last_ts,
                 'gamets' => $last_gamets - 10,
                 'localts' => time(),
-                'data' => "$npcName produced/consumed items while idle: $action. Reasoning: $reasoning",
+                'data' => "$npcName produced/consumed items while idle: $actionTextFinal. Reasoning: $reasoning",
             ]
         );
 
@@ -792,13 +841,17 @@ $step2Content .= "Possible actions :\n"
     . "StayAtPlace:Place — Remains in current location. If gathering info or spreading rumors, stay ≥24 hours.\n"
     . "FindNPC:<NPC name> — Search for an NPC whose exact location is unknown (replace <NPC> with target NPC name). Use this before MoveTo or SpeakTo when the character does not know where the target is. Requires a clear reason.\n"
     . "MoveTo:<NPC name> — Move to another NPC whose location is already known (replace <NPC> with target NPC name). Requires a clear reason.\n"
-    . "SpeakTo:<NPC name>:<npc refid> — Engage in conversation with another NPC (replace <NPC> with target NPC name). Requires a clear reason.\n"
+    . "SpeakTo:<NPC name>:<npc refid> — Engage in conversation with another NPC (replace <NPC> with target NPC name). \n"
     . "BuyItems:<NPC name>:itemid:count:gold_spent — Buy items from another NPC (replace <NPC> with target NPC name). (if character {$GLOBALS['HERIKA_NAME']} interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)\n"
     . "SellItems:<NPC name>:itemid:count:gold_earned — Sell items to another NPC (replace <NPC> with target NPC name). (if character {$GLOBALS['HERIKA_NAME']} interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)\n"
     . "ReturnHome       — Returns to base location to meet {$GLOBALS['PLAYER_NAME']}. Use when all goals are done.\n"
-    . "TravelTo:Place   — Travel to a specific location/city (replace <Place> with target location/city name). Requires a clear reason.\n";
+    . "TravelTo:Place   — Travel to a specific location/city (replace <Place> with target location/city name). Requires a clear reason.\n"
+    . "Continue   — Just keep last issued action (For example, if the character is already on a journey, continue the current TravelTo action).\n";
 $actionChoiceDesc = '<action> chosen action (e.g., StayAtPlace:Place, TravelTo:Place, ReturnHome, FindNPC:<NPC>, MoveTo:<NPC>, SpeakTo:<NPC>:..., BuyItems:<NPC>:..., SellItems:<NPC>:...). Choose only one action per turn. Single line.';
 
+if ($npcIsTravelling) {
+    $step2Content .= "Note: {$GLOBALS['HERIKA_NAME']} is currently traveling. If the character is already on a journey, avoid choosing another TravelTo action unless there is a compelling reason to change the destination.\n";
+}
 $step2Content .= "\nElement Definitions:\n```\n"
     . "$actionChoiceDesc\n"
     . "```\n\n"
@@ -934,33 +987,35 @@ if (!empty($parsed['rumor'])) {
 
 // ─── Persist Inner Thought to Event & Diary Logs ──────────────────────────────
 
-$db->insert('eventlog', [
-    'ts' => $last_ts,
-    'gamets' => $last_gamets,
-    'type' => 'innerchat',
-    'data' => "{$GLOBALS['HERIKA_NAME']}'s inner thoughts: " . $innerThoughtBuffer . ' )',
-    'sess' => $momentum,
-    'localts' => time(),
-    'people' => $GLOBALS['HERIKA_NAME'],
-    'location' => $lastEventParsed['location'] ?? null,
-    'party' => '',
-]);
-if ($recordDiaryEntry) {
-    $db->insert('diarylog', [
+if ($innerThoughtBuffer) {
+    $db->insert('eventlog', [
         'ts' => $last_ts,
         'gamets' => $last_gamets,
-        'topic' => 'Journal Note',
-        'content' => convert_gamets2skyrim_long_date($last_gamets) . "\n" . trim($innerThoughtBuffer),
-        'tags' => 'Auto-diary, backgroundlife',
-        'people' => $GLOBALS['HERIKA_NAME'],
-        'location' => $lastEventParsed['location'] ?? null,
+        'type' => 'innerchat',
+        'data' => "{$GLOBALS['HERIKA_NAME']}'s inner thoughts: " . $innerThoughtBuffer . ' )',
         'sess' => $momentum,
         'localts' => time(),
+        'people' => $GLOBALS['HERIKA_NAME'],
+        'location' => $lastEventParsed['location'] ?? null,
+        'party' => '',
     ]);
+    if ($recordDiaryEntry) {
+        $db->insert('diarylog', [
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'topic' => 'Journal Note',
+            'content' => convert_gamets2skyrim_long_date($last_gamets) . "\n" . trim($innerThoughtBuffer),
+            'tags' => 'Auto-diary, backgroundlife',
+            'people' => $GLOBALS['HERIKA_NAME'],
+            'location' => $lastEventParsed['location'] ?? null,
+            'sess' => $momentum,
+            'localts' => time(),
+        ]);
+    }
+
+    logMemory($GLOBALS['HERIKA_NAME'], $GLOBALS['HERIKA_NAME'], trim($innerThoughtBuffer), $momentum, $last_gamets, 'backgroundlife_diary', $last_ts);
+
 }
-
-logMemory($GLOBALS['HERIKA_NAME'], $GLOBALS['HERIKA_NAME'], trim($innerThoughtBuffer), $momentum, $last_gamets, 'backgroundlife_diary', $last_ts);
-
 // ─── Mark NPC as Background-Life Enabled ─────────────────────────────────────
 
 $currentNpcData = $npcMaster->getByName($npcName);
