@@ -532,7 +532,7 @@ if (!function_exists('race_icon_web_path')) {
     ) B ON (B.people=A.npc_name)
     order by A.npc_name asc
 ";
-    error_log($query);
+    //error_log($query);
     $result = pg_query($adminConn, $query);
 
     // Generate random colors for markers
@@ -2362,7 +2362,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     // Query Background Life history entries
-    $bglHistoryQuery = "SELECT rowid,npc,gamets,ts,localts,data FROM \"public\".\"bgl_history\"";
+    $bglHistoryQuery = "SELECT rowid,npc,gamets,ts,localts,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 100";
     $bglHistoryResult = pg_query($adminConn, $bglHistoryQuery);
     $bglHistoryRows = [];
     if ($bglHistoryResult) {
@@ -2372,6 +2372,41 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
     ?>
     
+     <!-- Background Life History -->
+    <div class="info-panel" style="margin-top: 30px;">
+        <h3>📚 Background Life History</h3>
+        <?php if (empty($bglHistoryRows)): ?>
+            <p style="color: #888; font-style: italic;">No history rows found</p>
+        <?php else: ?>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                    <thead>
+                        <tr style="background: #1a1a1a; border-bottom: 2px solid rgb(242, 124, 17);">
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">rowid</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">npc</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">gamets</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">ts</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">localts</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($bglHistoryRows as $historyRow): ?>
+                            <tr style="border-bottom: 1px solid #333;">
+                                <td style="padding: 12px; color: #ddd; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['rowid'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #ddd; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['npc'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['gamets'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['ts'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['localts'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #fff;"><?php echo htmlspecialchars((string) ($historyRow['data'] ?? '')); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+
     <div id="rumors-section" style="margin-top: 40px;">
         <div class="page-header" style="margin-bottom: 20px;">
             <h1>📰 Rumors</h1>
@@ -2485,40 +2520,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             <?php endif; ?>
         </div>
 
-        <!-- Background Life History -->
-        <div class="info-panel" style="margin-top: 30px;">
-            <h3>📚 Background Life History</h3>
-            <?php if (empty($bglHistoryRows)): ?>
-                <p style="color: #888; font-style: italic;">No history rows found</p>
-            <?php else: ?>
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                        <thead>
-                            <tr style="background: #1a1a1a; border-bottom: 2px solid rgb(242, 124, 17);">
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">rowid</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">npc</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">gamets</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">ts</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">localts</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">data</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($bglHistoryRows as $historyRow): ?>
-                                <tr style="border-bottom: 1px solid #333;">
-                                    <td style="padding: 12px; color: #ddd; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['rowid'] ?? '')); ?></td>
-                                    <td style="padding: 12px; color: #ddd; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['npc'] ?? '')); ?></td>
-                                    <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['gamets'] ?? '')); ?></td>
-                                    <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['ts'] ?? '')); ?></td>
-                                    <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['localts'] ?? '')); ?></td>
-                                    <td style="padding: 12px; color: #fff;"><?php echo htmlspecialchars((string) ($historyRow['data'] ?? '')); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
-        </div>
+       
 
         <div class="info-panel" id="create-rumor" style="margin-top: 30px;">
             <h3><?php echo ($editingRumorId > 0) ? 'Edit Rumor' : 'Create Rumor'; ?></h3>

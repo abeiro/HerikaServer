@@ -77,7 +77,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
 
     foreach ($allEnabledMtNpc as $npc) {
         $mwdata = json_decode($npc["extended_data"]);
-        //echo "[MIDDLETERM] {$npc["npc_name"]} has middleterm memory enabled".PHP_EOL;
+        echo "[MIDDLETERM] {$npc["npc_name"]} has middleterm memory enabled".PHP_EOL;
         $GLOBALS["SELECTED_NPC"] = $npc["npc_name"];
         require("cmd" . DIRECTORY_SEPARATOR . "generate.php");
     }
