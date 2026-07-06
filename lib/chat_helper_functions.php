@@ -4733,6 +4733,10 @@ function logEvent($dataArray,$forcePeople='')
             $eventPeople=DataBeingsInCloseRange(false);
         }
 
+        if ($dataArray[0]=="itemfound") {
+            $eventPeople=DataBeingsInCloseRange(false);
+        }
+
 
         $insertData = array(
             'ts' => $dataArray[1],
