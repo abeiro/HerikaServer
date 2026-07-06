@@ -128,6 +128,7 @@ if (is_array($bgevent)) {
             $npcData = $npcManager->getByName($bgevent["actor"]);
             $cn = $GLOBALS["db"]->escape($npcData["npc_name"]);
             $extended = json_decode($npcData["extended_data"], true);
+            $bgevent["server_processed"] = false;
             if (isset($extended["background_life_enabled"]) && $extended["background_life_enabled"] == true) {
                 $lastAction = $GLOBALS["db"]->fetchOne("select * from actions_issued where actorname='$cn' order by gamets desc,ts desc,localts desc limit 1 offset 0");
                 if (isset($lastAction) && isset($lastAction["action"]) && ( 
@@ -142,6 +143,7 @@ if (is_array($bgevent)) {
                     if ($bgevent["event"] == "end") {
                         error_log("[BGL] {$npcData["npc_name"]} has finished ISSUED action {$bgevent["name"]} <{$lastAction["action"]}>");
                         $extended["background_life_last_updated"] = 0; // Force trigger on next middleterm BgL check, NPC will request a new action.
+                        $bgevent["server_processed"] = true;
                     }
 
                 } else 

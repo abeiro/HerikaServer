@@ -219,10 +219,27 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
  */
 function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts, $last_gamets, $momentum, $db)
 {
-    $cnLocation = $db->escape($location);
-    $locId = $db->fetchOne("select formid from locations where name='$cnLocation'");
+    $locId = resolveTravelLocation($location, $currentNpcData, $db);
+    $requestedLocation = $db->escape($location);
+    $resolvedLocation = $locId['name'] ?? $requestedLocation;
+
+    if (strcasecmp($requestedLocation, 'random') === 0) {
+        error_log("[handleTravelToAction] random picked: " . print_r($locId, true));
+    }
+
+    if (!empty($locId)) {
+        $sim = isset($locId['sim']) ? ', sim=' . $locId['sim'] : '';
+        $dist = isset($locId['dist']) ? ', dist=' . $locId['dist'] : '';
+        error_log("[handleTravelToAction] requested='$requestedLocation' resolved='{$resolvedLocation}' formid='{$locId['formid']}'$sim$dist");
+    }
+
+    if (!isset($locId["formid"])) {
+        return false;
+    }
 
     $refHexString = convertSignedToUnsignedHex(hexdec($currentNpcData["refid"]));
+    $locHexString = (convertHex($locId["formid"]));
+
 
     // Insert response log entry with return home command
     $db->insert(
@@ -232,7 +249,7 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|BackgroundCmd@$refHexString@StayAtPlace/",
+            'action' => "rolecommand|BackgroundCmd@$refHexString@StayAtPlace/{$locId["formid"]}",
             'tag' => '',
         ]
     );
@@ -245,7 +262,21 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName stays at current location ($location)"
+            'data' => "$npcName stays at current location ($requestedLocation, resolved as $resolvedLocation)",
+        ]
+    );
+
+      // Insert actions_issued log entry
+    $db->insert(
+        'actions_issued',
+        [
+            'action' => "Idle",
+            'fullcall' => "StayAtPlace:$resolvedLocation",
+            'actorname' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'original' => 'backgroundaction',
         ]
     );
 
@@ -964,7 +995,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:$gold)"
+            'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:$gold), item description:$itemNameResolved"
         ]
     );
 
