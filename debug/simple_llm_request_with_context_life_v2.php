@@ -482,7 +482,8 @@ if ($LAST_REPORTED_LOCATION) {
     $rumorSinceTs = $gameRequest[2] - ((24 * 7) / GAMETS_TO_HOURS);   // Last 7 in-game days
     $rumorRows = $db->fetchAll(
         "SELECT gamets, content FROM rumors
-         WHERE hold LIKE '%{$locationEsc}%' AND gamets > $rumorSinceTs"
+         WHERE (hold LIKE '%{$locationEsc}%' or hold IN (SELECT distinct(hold) FROM locations where name='$locationEsc'))
+         AND gamets > $rumorSinceTs"
     );
     error_log("[BACKGROUND LIFE] LAST_REPORTED_LOCATION " . count($rumorRows) . " rumors near $LAST_REPORTED_LOCATION since gamets $rumorSinceTs");
     foreach ($rumorRows as $rumor) {
@@ -731,7 +732,6 @@ $lang = (($npcMetadata['CORE_LANG'] ?? '') === 'es' || ($profileMetadata['CORE_L
 // ─── Step 1: Inner-Thought Soliloquy ─────────────────────────────────────────
 
 $systemPrompts = [
-    'es' => [['role' => 'system', 'content' => 'Eres un asistente de escritor. Examina este texto con hechos ocurridos en el universo ficticio de Skyrim (The Elder Scrolls).']],
     'en' => [['role' => 'system', 'content' => 'You are a writing assistant. Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls).']],
 ];
 
@@ -741,26 +741,6 @@ $noteAboutPlayer = $extdata['background_life_player_unattached']
 
 
 $userPrompts = [
-    'es' => <<<PROMPT_ES
-El personaje principal en este cuaderno de bitácora es {$GLOBALS['HERIKA_NAME']}.
-Lee el historial de contexto (context_history) y las memorias recientes (middle_term_memory),
-prestando atención a los eventos notables y a los nombres de personajes relevantes.
-
-Basándote en toda esta información, genera un soliloquio de {$GLOBALS['HERIKA_NAME']}.
-Ten en cuenta la sección <speech_style> para el estilo de redacción.
-
-Este soliloquio debería contener lo que el personaje podría haber hecho en estos últimos {$daysPassed} día(s):
-* Qué actividades ha desarrollado.
-* Qué posibles sucesos/encuentros podrían haber sucedido.
-* Pensamientos íntimos.
-
-$noteAboutPlayer
-Escribe en español, en un par de párrafos, un monólogo como si fueses {$GLOBALS['HERIKA_NAME']}
-en primera persona hablándose a sí misma/mismo.
-
-IMPORTANTE: Mantén este pensamiento interno breve y conciso — máximo 2-3 párrafos cortos.
-PROMPT_ES,
-
     'en' => <<<PROMPT_EN
 The main character in this logbook is {$GLOBALS['HERIKA_NAME']}.
 Read the context history (context_history) and the recent memories (middle_term_memory),
@@ -840,15 +820,20 @@ $step2Content .= $innerThoughtStyle . "\n\n";
 $step2Content .= "Possible actions :\n"
     . "StayAtPlace:Place — Remains in current location. If gathering info or spreading rumors, stay ≥24 hours.\n"
     . "FindNPC:<NPC name> — Search for an NPC whose exact location is unknown (replace <NPC> with target NPC name). Use this before MoveTo or SpeakTo when the character does not know where the target is. Requires a clear reason.\n"
-    . "MoveTo:<NPC name> — Move to another NPC whose location is already known (replace <NPC> with target NPC name). Requires a clear reason.\n"
-    . "SpeakTo:<NPC name>:<npc refid> — Engage in conversation with another NPC (replace <NPC> with target NPC name). \n"
-    . "BuyItems:<NPC name>:itemid:count:gold_spent — Buy items from another NPC (replace <NPC> with target NPC name). (if character {$GLOBALS['HERIKA_NAME']} interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)\n"
-    . "SellItems:<NPC name>:itemid:count:gold_earned — Sell items to another NPC (replace <NPC> with target NPC name). (if character {$GLOBALS['HERIKA_NAME']} interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)\n"
+    . "MoveTo:<NPC name> — Move to another NPC whose location is already known (replace <NPC> with target NPC name). Requires a clear reason.\n";
+
+// Avoid too consecutive SpeakTo actions, as they may be redundant. If the last action was SpeakTo, we skip this option to prevent repetitive interactions.
+
+if (!$isSpeakAction)
+    $step2Content.="SpeakTo:<NPC name>:<npc refid> — Engage in conversation with another NPC (replace <NPC> with target NPC name). \n";
+
+$step2Content.="BuyItem:<NPC name>:itemid:count:gold_spent — Buy item from another NPC (replace <NPC> with target NPC name). (if character {$GLOBALS['HERIKA_NAME']} interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)\n"
+    . "SellItem:<NPC name>:itemid:count:gold_earned — Sell item to another NPC (replace <NPC> with target NPC name). (if character {$GLOBALS['HERIKA_NAME']} interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)\n"
     . "ReturnHome       — Returns to base location to meet {$GLOBALS['PLAYER_NAME']}. Use when all goals are done.\n"
     . "TravelTo:Place   — Travel to a specific location/city (replace <Place> with target location/city name). Requires a clear reason.\n"
     . "Continue   — Just keep last issued action (For example, if the character is already on a journey, continue the current TravelTo action).\n";
-$actionChoiceDesc = '<action> chosen action (e.g., StayAtPlace:Place, TravelTo:Place, ReturnHome, FindNPC:<NPC>, MoveTo:<NPC>, SpeakTo:<NPC>:..., BuyItems:<NPC>:..., SellItems:<NPC>:...). Choose only one action per turn. Single line.';
-
+$actionChoiceDesc = '<action> chosen action (e.g., StayAtPlace:Place, TravelTo:Place, ReturnHome, FindNPC:<NPC>, MoveTo:<NPC>, SpeakTo:<NPC>:..., BuyItem:<NPC>:..., SellItem:<NPC>:...). Choose only one action per turn. Single line.';
+    
 if ($npcIsTravelling) {
     $step2Content .= "Note: {$GLOBALS['HERIKA_NAME']} is currently traveling. If the character is already on a journey, avoid choosing another TravelTo action unless there is a compelling reason to change the destination.\n";
 }
@@ -874,8 +859,8 @@ Rules:
 - If no meaningful action is appropriate, she may choose to wait (no action).
 - Previous actions are present at the context_history, prevent repetition, use previous actions on history to figure out if main goal is achieved or not, and decide accordingly.
 For example:
-* To Sell/Buy Items to a trader: SpeakTo:<NPC> ->(next iteration) SellItems:.. 
-* To Sell/Buy Items to a trader that maye is not present: MoveTo:<NPC> ->(next iteration) SpeakTo:<NPC> ->(next iteration) SellItems:.. 
+* To Sell/Buy Item to a trader: SpeakTo:<NPC> ->(next iteration) SellItem:.. 
+* To Sell/Buy Item to a trader that maye is not present: MoveTo:<NPC> ->(next iteration) SpeakTo:<NPC> ->(next iteration) SellItem:.. 
 ";
 
 $step2Prompt = [['role' => 'system', 'content' => $step2Content]];
@@ -947,10 +932,10 @@ if (!empty($parsed['action'])) {
             //unset($parsed['rumor']);   // Prevent rumor dispatch if SpeakTo action is chosen
             $recordDiaryEntry = false;
             break;
-        case 'BuyItems':
-        case 'SellItems':
+        case 'BuyItem':
+        case 'SellItem':
             // Support semicolon-separated multi-item trades, e.g.:
-            // BuyItems:NPC:itemid1:count1:gold1;BuyItems:NPC:itemid2:count2:gold2
+            // BuyItem:NPC:itemid1:count1:gold1;BuyItem:NPC:itemid2:count2:gold2
             $tradeEntries = explode(';', $parsed['action']);
             foreach ($tradeEntries as $tradeEntry) {
                 $tradeEntry = trim($tradeEntry);
@@ -958,7 +943,7 @@ if (!empty($parsed['action'])) {
                     continue;
                 [$tradeCmd, $tradeArg] = array_pad(explode(':', $tradeEntry, 2), 2, null);
                 $tradeCmd = trim($tradeCmd);
-                if ($tradeCmd !== 'BuyItems' && $tradeCmd !== 'SellItems')
+                if ($tradeCmd !== 'BuyItem' && $tradeCmd !== 'SellItem')
                     continue;
                 handleTradeItemsAction($tradeCmd, $tradeArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db);
             }
