@@ -565,6 +565,7 @@ PROMPT;
                     'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
                 ]);
             });
+            if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcId); }
 
             $this->releaseNpcLock($npcId);
             return $result;
@@ -738,6 +739,7 @@ PROMPT;
                         'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
                     ]);
                 });
+                if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcId); }
 
                 $this->releaseNpcLock($npcId);
                 Logger::info("[REL-LLM] Inferred " . count($inferred) . " relationships for " . $npc['npc_name']);
@@ -930,6 +932,12 @@ Only suggest changes for SIGNIFICANT moments - not every interaction needs a cha
 {$outputKeyInstruction}
 
 Return JSON: {"changes": {"{$listenerKey}": {"delta": X, "reason": "brief"}}}
+If (and ONLY if) this exchange changed the relationship's NATURE - romance, betrayal,
+marriage, becoming enemies - also include "type", e.g.
+{"changes": {"{$listenerKey}": {"delta": X, "type": "crush", "reason": "brief"}}}
+Be conservative: one passing line never flips a type. The change must be backed by sustained
+energy or real/implied history, and it must come from {$npcName}'s own expressed feelings -
+{$listenerKey} pushing or flirting is not grounds for it.
 Or if no changes: {"changes": {}}
 PROMPT;
 
@@ -1214,17 +1222,30 @@ REASON FORMAT - Keep it SHORT (under 15 words):
 ✓ "Protective action builds trust"
 ✗ NOT: Long clinical explanations
 
-TYPE CHANGES (rare - only for defining moments):
-- Only change type for: romance confession, betrayal, violence, marriage, family reveal
-- Most interactions just adjust affinity, not type
+TYPE CHANGES (rare - only for DEFINING moments):
+- Add "type" ONLY when this exchange visibly changed the NATURE of the relationship:
+  romance, betrayal, marriage, family reveal, becoming enemies.
+- Be conservative. One passing compliment, joke, or flirty line NEVER flips a type.
+  A type change must be backed by sustained energy in this exchange or by the history
+  between them - repeated warmth, declarations, a shared past, stated or clearly implied.
+- The evidence must come from the SPEAKER's own expressed feelings. The other party
+  flirting, pushing, or asking is never grounds to flip a type.
+- When in doubt, omit "type". Most interactions only adjust affinity.
 
 OUTPUT (JSON only):
 {"changes": {"Player": {"delta": 1, "reason": "brief insight"}}}
+Defining type change: {"changes": {"Player": {"delta": 5, "type": "crush", "reason": "confessed her crush"}}}
 
 No changes? Return: {"changes": {}}
 PROMPT;
 
-        return $this->loadPrompt('rel_llm_evaluation', $fallback);
+        $prompt = $this->loadPrompt('rel_llm_evaluation', $fallback);
+        // Seeded defaults from before the type-change syntax existed teach a delta-only output;
+        // upgrade them in place. Custom prompts that already know "type" are left alone.
+        if (strpos($prompt, 'only for defining moments') !== false && strpos($prompt, '"type"') === false) {
+            return $fallback;
+        }
+        return $prompt;
     }
 
     /**
@@ -1335,10 +1356,9 @@ PROMPT;
             $typeChanged = false;
             $finalType = $oldType;
 
-            // ROMANTIC AUTO-PROMOTION GUARD (user directive): the relationship model must NOT unilaterally promote a
-            // non-romantic relationship INTO a romantic-leaning type (e.g. professional -> crush in one interaction,
-            //). Romantic types are earned / player-set in the relationship editor, never
-            // auto-assigned by the model. Affinity + notes still update; only the romantic TYPE jump is blocked.
+            // EARNED-ROMANCE GATE: promotion INTO a romantic-leaning type requires Fond-tier
+            // affinity (56+, matches getAffinityTierName) and an explicit reason from the model.
+            // Below that, blocked - one flirty exchange must not flip a stranger to romantic.
             // Downgrades OUT of romantic and moves between non-romantic types are unaffected.
             $romanticTypes = ['romantic', 'crush', 'admirer', 'obsessed', 'infatuated', 'lover'];
             $oldIsRomantic = in_array(strtolower((string)$oldType), $romanticTypes, true);
@@ -1346,8 +1366,9 @@ PROMPT;
             if ($newType) {
                 // LLM explicitly set a type
                 $newTypeLower = strtolower($newType);
-                if (in_array($newTypeLower, $romanticTypes, true) && !$oldIsRomantic) {
-                    Logger::info("[REL-LLM] BLOCKED romantic auto-promotion: {$npc['npc_name']} -> {$target}: {$oldType} => {$newTypeLower} (kept '{$oldType}'; romantic types are player-set in the UI)");
+                $promotesToRomantic = in_array($newTypeLower, $romanticTypes, true) && !$oldIsRomantic;
+                if ($promotesToRomantic && ($newAff < 56 || trim((string)$reason) === '')) {
+                    Logger::info("[REL-LLM] BLOCKED romantic promotion: {$npc['npc_name']} -> {$target}: {$oldType} => {$newTypeLower} (aff {$newAff} below fond tier or no reason; kept '{$oldType}')");
                 } else {
                     if ($oldType !== $newTypeLower) {
                         Logger::info("[REL-LLM] TYPE CHANGE: {$npc['npc_name']} -> {$target}: {$oldType} => {$newTypeLower}");
@@ -1489,6 +1510,7 @@ PROMPT;
                         'extended_data' => $jsonData
                     ]);
                 });
+                if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcId); }
 
                 $this->releaseNpcLock($npcId);
                 Logger::debug("[REL-LLM] Database update for NPC {$npcId}: " . ($result === false ? "FAILED" : "OK") . " - relationships: " . json_encode($existingRels));
