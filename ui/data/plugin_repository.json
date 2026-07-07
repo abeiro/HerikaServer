@@ -39,12 +39,24 @@
                 }
             }
         },
-        "aiagent_nsfw": {
+        "sharmat": {
             "name": "aiagent_nsfw",
-            "description": "Integration with OSTIM.",
-            "git_repo": "maister-sk/aiagent_nsfw",
-            "github_url": "https://github.com/maister-sk/aiagent_nsfw",
-            "mod_download_url": "https://github.com/maister-sk/aiagent_nsfw/releases/download/<version>/AIAgentNSFW.zip"
+            "display_name": "SHARMAT",
+            "featured": true,
+            "icon": "https://raw.githubusercontent.com/Wondernuttz/Sharmat-Alpha/main/images/ChimNSFWLogoTransparent.png",
+            "description": "The official NSFW framework for CHIM. Consent-driven intimacy and scenes (OStim + SexLab), arousal and relationship-aware behavior, VR touch reactions.",
+            "git_repo": "Wondernuttz/Sharmat-Alpha",
+            "github_url": "https://github.com/Wondernuttz/Sharmat-Alpha",
+            "mod_download_url": "https://github.com/Wondernuttz/Sharmat-Alpha/tree/main/mod",
+            "default_channel": "main",
+            "channels": {
+                "main": {
+                    "label": "Live",
+                    "branch": "main",
+                    "package_source": "branch",
+                    "allow_force": true
+                }
+            }
         }
     }
 } 
