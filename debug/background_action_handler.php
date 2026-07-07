@@ -894,9 +894,9 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
 }
 
 /**
- * Handle BuyItems / SellItems action — instruct the NPC to buy from or sell to another NPC.
+ * Handle BuyItem / SellItem action — instruct the NPC to buy from or sell to another NPC.
  *
- * @param string $tradeType      'BuyItems' or 'SellItems'
+ * @param string $tradeType      'BuyItem' or 'SellItem'
  * @param string $targetNpcName  The name of the target NPC
  * @param array  $currentNpcData The acting NPC's data (must contain refid)
  * @param string $npcName        The acting NPC's display name
@@ -926,7 +926,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
     $targetRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($targetNpc['refid'])));
     $itemId = strtolower($itemId);
 
-    if ($tradeType === 'BuyItems') {
+    if ($tradeType === 'BuyItem') {
         $skyrimCmd = new SkyrimCommandBuilder();
         // Item
         $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x$itemId", $count, true);
@@ -969,7 +969,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         'ts' => $last_ts,
         'gamets' => $last_gamets + 10,
         'type' => 'innerchat',
-        'data' => "The Narrator: $npcName " . ($tradeType === 'BuyItems' ? "buys items from" : "sells items to") . " $resolvedName $itemNameResolved. Inventories updated!",
+        'data' => "The Narrator: $npcName " . ($tradeType === 'BuyItem' ? "buys items from" : "sells items to") . " $resolvedName $itemNameResolved. Inventories updated!",
         'sess' => $momentum,
         'localts' => time(),
         'people' => "|$npcName|$resolvedName|",
