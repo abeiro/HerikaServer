@@ -150,6 +150,53 @@ if (!function_exists('herikaResolveNpcRolemasterState')) {
     }
 }
 
+if (!function_exists('chimRelationshipTimelineStamp')) {
+    // Timeline safety for relationship writes (re-applied 2026-07-06; this is the USEFUL half of the
+    // reverted 110e0b84 - the paradox-clear NULL bucket below stays exactly as designed). Relationship
+    // progress previously lived ONLY in the live row between infosave backups: rows were never
+    // gamets-stamped (so the restore paradox-clear treated them as unsaved data and a mere server
+    // reconnect wiped them) and never snapshotted (so a load restored pre-grind state).
+    // 1) stamp gamets_last_updated with the current game time so the row sits on the timeline;
+    // 2) drop a THROTTLED history snapshot (once per NPC per 30 real minutes, cross-process via
+    //    the history table itself) so the progress is restorable like any other profile state.
+    // A genuine Dragon Break (loading an older save) still clears these rows correctly: their stamp
+    // is provably in that save's future.
+    function chimRelationshipTimelineStamp($npcId)
+    {
+        try {
+            $npcId = (int) $npcId;
+            if ($npcId <= 0 || !isset($GLOBALS['db'])) {
+                return;
+            }
+            $g = 0;
+            if (isset($GLOBALS['gameRequest'][2]) && is_numeric($GLOBALS['gameRequest'][2])) {
+                $g = (float) $GLOBALS['gameRequest'][2];
+            } elseif (function_exists('DataLastKnownGameTS')) {
+                $g = (float) DataLastKnownGameTS();
+            }
+            if ($g > 0) {
+                $GLOBALS['db']->execQuery("UPDATE core_npc_master SET gamets_last_updated = {$g} WHERE id = {$npcId}");
+            }
+            static $lastSnap = [];
+            $now = time();
+            if (($lastSnap[$npcId] ?? 0) > $now - 1800) {
+                return;
+            }
+            $row = $GLOBALS['db']->fetchOne("SELECT extract(epoch from created) AS e FROM core_npc_master_history WHERE npc_id = {$npcId} ORDER BY created DESC LIMIT 1");
+            if ($row && (float) ($row['e'] ?? 0) > $now - 1800) {
+                $lastSnap[$npcId] = $now;
+                return;
+            }
+            $nm = new NpcMaster();
+            $nm->backupNpcById($npcId);
+            $lastSnap[$npcId] = $now;
+            error_log("[REL] Timeline snapshot for npc_id {$npcId} (relationship progress persisted to history)");
+        } catch (Exception $e) {
+            error_log("[REL] Timeline stamp failed for npc_id " . (int) $npcId . ": " . $e->getMessage());
+        }
+    }
+}
+
 if (!function_exists('chimRunWithRelationshipExtendedDataWrite')) {
     function chimRunWithRelationshipExtendedDataWrite($callback)
     {

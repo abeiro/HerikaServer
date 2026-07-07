@@ -696,6 +696,7 @@ class RelationshipManager {
                     'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
                 ]);
             });
+            if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcData['id']); }
         }
 
         // Strip commands before TTS
@@ -739,6 +740,7 @@ class RelationshipManager {
                 'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             ]);
         });
+        if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcData['id']); }
 
         error_log("[REL] Set $npcName -> $targetName: " . $rels[$targetName]['aff'] .
                   " (" . $rels[$targetName]['type'] . ")");
