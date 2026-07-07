@@ -218,7 +218,7 @@ if ($argv[1] == "1") {
 // Miner creation test
 if ($argv[1] == "3") {
 
-    $miner_profile = [
+    $npc_profile = [
         "name" => "Karl the Miner",         // Name of the NPC
         "gender" => "male",                 // male or female
         "class" => "farmer",                  // "beggar"|"warrior"|"assassin"|"mage"|"farmer"|"soldier"|"merchant"|"noble"|"creature"|"forsworn"
@@ -241,22 +241,22 @@ When at a working scenario, he produces iron ore (item refid:0x00071cf3) at a ra
 
     // This will spawn the NPC in the game world, but won't set up its profile in the database
     npcProfileBase(
-        $miner_profile["name"],
-        $miner_profile["class"],
-        $miner_profile["race"],
-        $miner_profile["gender"],
-        $miner_profile["location"],
+        $npc_profile["name"],
+        $npc_profile["class"],
+        $npc_profile["race"],
+        $npc_profile["gender"],
+        $npc_profile["location"],
         "0",
-        $miner_profile["additional_data"] ?? [],
+        $npc_profile["additional_data"] ?? [],
     );
 
     $spawned = false;
-    $cnName = $GLOBALS["db"]->escape($miner_profile["name"]);
+    $cnName = $GLOBALS["db"]->escape($npc_profile["name"]);
     $last_gamets = null;
     $last_ts=null;
     while (!$spawned) {
         sleep(1);
-        error_log("[DEBUG] Checking if " . $miner_profile["name"] . " spawned: " . time() . PHP_EOL);
+        error_log("[DEBUG] Checking if " . $npc_profile["name"] . " spawned: " . time() . PHP_EOL);
         $res = $GLOBALS["db"]->fetchOne("select count(*) as n, max(gamets) as gamets,max(ts) as ts from eventlog where type='status_msg' and data like '%spawned@$cnName@%'");
         $spawned = $res["n"] > 0;
         $last_gamets = $res["gamets"];
@@ -265,13 +265,13 @@ When at a working scenario, he produces iron ore (item refid:0x00071cf3) at a ra
 
     // We spawned the NPC, addnpc should have beeen trigered, so we can now update the NPC profile in the database
     $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName($miner_profile["name"]);
+    $npc = $npcMaster->getByName($npc_profile["name"]);
     
     
-    $npc["core"] = "{$miner_profile["name"]}. {$miner_profile["gender"]} {$miner_profile["class"]} {$miner_profile["race"]}";
-    $npc["npc_static_bio"] = "{$miner_profile["name"]}. {$miner_profile["background"]}";
-    $npc["speechstyle"] = $miner_profile["speechStyle"];
-    $npc["goals"] = $miner_profile["goal"];
+    $npc["core"] = "{$npc_profile["name"]}. {$npc_profile["gender"]} {$npc_profile["class"]} {$npc_profile["race"]}";
+    $npc["npc_static_bio"] = "{$npc_profile["name"]}. {$npc_profile["background"]}";
+    $npc["speechstyle"] = $npc_profile["speechStyle"];
+    $npc["goals"] = $npc_profile["goal"];
     $npc["lock_profile"] = null;
     
   
@@ -281,12 +281,12 @@ When at a working scenario, he produces iron ore (item refid:0x00071cf3) at a ra
 
     $npc=$npcMaster->setMetadata($npc, $metadata);
     $npcMaster->updateByArray($npc);
-    error_log("[DEBUG] Updated NPC profile for {$miner_profile["name"]} in database waiting 10 secs" . PHP_EOL);
+    error_log("[DEBUG] Updated NPC profile for {$npc_profile["name"]} in database waiting 10 secs" . PHP_EOL);
     
     $refid=isset($npc["refid"]) ? $npc["refid"] : null;
 
     if (empty($refid)) {
-        error_log("[DEBUG] Waiting to refid to be populated for {$miner_profile["name"]}...".PHP_EOL);
+        error_log("[DEBUG] Waiting to refid to be populated for {$npc_profile["name"]}...".PHP_EOL);
 
         $maxRetries = 30;
         $retryCount = 0;
@@ -294,19 +294,19 @@ When at a working scenario, he produces iron ore (item refid:0x00071cf3) at a ra
             sleep(1);
             $retryCount++;
             $npcMaster = new NpcMaster();
-            $npc = $npcMaster->getByName($miner_profile["name"]);
+            $npc = $npcMaster->getByName($npc_profile["name"]);
             $refid=isset($npc["refid"]) ? $npc["refid"] : null;
-            error_log("[DEBUG] Waiting to refid to be populated for {$miner_profile["name"]}... $retryCount of $maxRetries".PHP_EOL);
+            error_log("[DEBUG] Waiting to refid to be populated for {$npc_profile["name"]}... $retryCount of $maxRetries".PHP_EOL);
         }
 
         if (empty($refid)) {
-            error_log("[ERROR] Refid was not populated for {$miner_profile["name"]} after {$maxRetries} retries. Exiting." . PHP_EOL);
+            error_log("[ERROR] Refid was not populated for {$npc_profile["name"]} after {$maxRetries} retries. Exiting." . PHP_EOL);
             exit(1);
         }
 
-        error_log("[DEBUG] Refid populated for {$miner_profile["name"]}: $refid" . PHP_EOL);
+        error_log("[DEBUG] Refid populated for {$npc_profile["name"]}: $refid" . PHP_EOL);
         $npcMaster = new NpcMaster();
-        $npc = $npcMaster->getByName($miner_profile["name"]);
+        $npc = $npcMaster->getByName($npc_profile["name"]);
 
     }
 
@@ -327,17 +327,17 @@ When at a working scenario, he produces iron ore (item refid:0x00071cf3) at a ra
     sleep(1);
 
     $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName($miner_profile["name"]);
+    $npc = $npcMaster->getByName($npc_profile["name"]);
     $extended_data = $npcMaster->getExtendedData($npc);
     $extended_data["background_life_commands"] = true;
     $extended_data["background_life_enabled"] = true;
     $extended_data["background_life_last_updated"] = $last_gamets;
     $extended_data["background_life_player_unattached"] = true;// This NPC is not attached to a player, it is a purely background life NPC. A follower should be attached.
 
-    $npc["core"] = "{$miner_profile["name"]}. {$miner_profile["gender"]} {$miner_profile["class"]} {$miner_profile["race"]}";
-    $npc["npc_static_bio"] = "{$miner_profile["name"]}. {$miner_profile["background"]}";
-    $npc["speechstyle"] = $miner_profile["speechStyle"];
-    $npc["goals"] = $miner_profile["goal"];
+    $npc["core"] = "{$npc_profile["name"]}. {$npc_profile["gender"]} {$npc_profile["class"]} {$npc_profile["race"]}";
+    $npc["npc_static_bio"] = "{$npc_profile["name"]}. {$npc_profile["background"]}";
+    $npc["speechstyle"] = $npc_profile["speechStyle"];
+    $npc["goals"] = $npc_profile["goal"];
     $npc["lock_profile"] = null;
     $metadata = $npcMaster->getExtendedData($npc);
     $metadata["gps_track"] = true;
@@ -390,7 +390,7 @@ When at a working scenario, he produces iron ore (item refid:0x00071cf3) at a ra
 
 if ($argv[1] == "4") {
 
-    $miner_profile = [
+    $npc_profile = [
         "name" => "Ingesh the Miner",         // Name of the NPC
         "gender" => "female",                 // male or female
         "class" => "farmer",                  // "beggar"|"warrior"|"assassin"|"mage"|"farmer"|"soldier"|"merchant"|"noble"|"creature"|"forsworn"
@@ -413,22 +413,22 @@ When at a working scenario, she produces iron ore (item refid:0x00071cf3) at a r
     // Note, changed Beiltild for Gjak. Beiltild has her wn schedule and sometimes locks herself at home.
     // This will spawn the NPC in the game world, but won't set up its profile in the database
     npcProfileBase(
-        $miner_profile["name"],
-        $miner_profile["class"],
-        $miner_profile["race"],
-        $miner_profile["gender"],
-        $miner_profile["location"],
+        $npc_profile["name"],
+        $npc_profile["class"],
+        $npc_profile["race"],
+        $npc_profile["gender"],
+        $npc_profile["location"],
         "0",
-        $miner_profile["additional_data"] ?? [],
+        $npc_profile["additional_data"] ?? [],
     );
 
     $spawned = false;
-    $cnName = $GLOBALS["db"]->escape($miner_profile["name"]);
+    $cnName = $GLOBALS["db"]->escape($npc_profile["name"]);
     $last_gamets = null;
     $last_ts=null;
     while (!$spawned) {
         sleep(1);
-        error_log("[DEBUG] Checking if " . $miner_profile["name"] . " spawned: " . time() . PHP_EOL);
+        error_log("[DEBUG] Checking if " . $npc_profile["name"] . " spawned: " . time() . PHP_EOL);
         $res = $GLOBALS["db"]->fetchOne("select count(*) as n, max(gamets) as gamets,max(ts) as ts from eventlog where type='status_msg' and data like '%spawned@$cnName@%'");
         $spawned = $res["n"] > 0;
         $last_gamets = $res["gamets"];
@@ -437,11 +437,11 @@ When at a working scenario, she produces iron ore (item refid:0x00071cf3) at a r
 
     // We spawned the NPC, addnpc should have beeen trigered, so we can now update the NPC profile in the database
     $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName($miner_profile["name"]);
-    $npc["core"] = "{$miner_profile["name"]}. {$miner_profile["gender"]} {$miner_profile["class"]} {$miner_profile["race"]}";
-    $npc["npc_static_bio"] = "{$miner_profile["name"]}. {$miner_profile["background"]}";
-    $npc["speechstyle"] = $miner_profile["speechStyle"];
-    $npc["goals"] = $miner_profile["goal"];
+    $npc = $npcMaster->getByName($npc_profile["name"]);
+    $npc["core"] = "{$npc_profile["name"]}. {$npc_profile["gender"]} {$npc_profile["class"]} {$npc_profile["race"]}";
+    $npc["npc_static_bio"] = "{$npc_profile["name"]}. {$npc_profile["background"]}";
+    $npc["speechstyle"] = $npc_profile["speechStyle"];
+    $npc["goals"] = $npc_profile["goal"];
     $npc["lock_profile"] = null;
     $metadata = $npcMaster->getExtendedData($npc);
     $metadata["gps_track"] = true;
@@ -449,12 +449,12 @@ When at a working scenario, she produces iron ore (item refid:0x00071cf3) at a r
 
     $npc=$npcMaster->setMetadata($npc, $metadata);
     $npcMaster->updateByArray($npc);
-    error_log("[DEBUG] Updated NPC profile for {$miner_profile["name"]} in database waiting 10 secs" . PHP_EOL);
+    error_log("[DEBUG] Updated NPC profile for {$npc_profile["name"]} in database waiting 10 secs" . PHP_EOL);
     
     $refid=isset($npc["refid"]) ? $npc["refid"] : null;
 
     if (empty($refid)) {
-        error_log("[DEBUG] Waiting to refid to be populated for {$miner_profile["name"]}...".PHP_EOL);
+        error_log("[DEBUG] Waiting to refid to be populated for {$npc_profile["name"]}...".PHP_EOL);
 
         $maxRetries = 30;
         $retryCount = 0;
@@ -462,19 +462,19 @@ When at a working scenario, she produces iron ore (item refid:0x00071cf3) at a r
             sleep(1);
             $retryCount++;
             $npcMaster = new NpcMaster();
-            $npc = $npcMaster->getByName($miner_profile["name"]);
+            $npc = $npcMaster->getByName($npc_profile["name"]);
             $refid=isset($npc["refid"]) ? $npc["refid"] : null;
-            error_log("[DEBUG] Waiting to refid to be populated for {$miner_profile["name"]}... $retryCount of $maxRetries".PHP_EOL);
+            error_log("[DEBUG] Waiting to refid to be populated for {$npc_profile["name"]}... $retryCount of $maxRetries".PHP_EOL);
         }
 
         if (empty($refid)) {
-            error_log("[ERROR] Refid was not populated for {$miner_profile["name"]} after {$maxRetries} retries. Exiting." . PHP_EOL);
+            error_log("[ERROR] Refid was not populated for {$npc_profile["name"]} after {$maxRetries} retries. Exiting." . PHP_EOL);
             exit(1);
         }
 
-        error_log("[DEBUG] Refid populated for {$miner_profile["name"]}: $refid" . PHP_EOL);
+        error_log("[DEBUG] Refid populated for {$npc_profile["name"]}: $refid" . PHP_EOL);
         $npcMaster = new NpcMaster();
-        $npc = $npcMaster->getByName($miner_profile["name"]);
+        $npc = $npcMaster->getByName($npc_profile["name"]);
 
     }
 
@@ -495,17 +495,17 @@ When at a working scenario, she produces iron ore (item refid:0x00071cf3) at a r
     sleep(1);
 
     $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName($miner_profile["name"]);
+    $npc = $npcMaster->getByName($npc_profile["name"]);
     $extended_data = $npcMaster->getExtendedData($npc);
     $extended_data["background_life_commands"] = true;
     $extended_data["background_life_enabled"] = true;
     $extended_data["background_life_last_updated"] = $last_gamets;
     $extended_data["background_life_player_unattached"] = true;// This NPC is not attached to a player, it is a purely background life NPC. A follower should be attached.
 
-    $npc["core"] = "{$miner_profile["name"]}. {$miner_profile["gender"]} {$miner_profile["class"]} {$miner_profile["race"]}";
-    $npc["npc_static_bio"] = "{$miner_profile["name"]}. {$miner_profile["background"]}";
-    $npc["speechstyle"] = $miner_profile["speechStyle"];
-    $npc["goals"] = $miner_profile["goal"];
+    $npc["core"] = "{$npc_profile["name"]}. {$npc_profile["gender"]} {$npc_profile["class"]} {$npc_profile["race"]}";
+    $npc["npc_static_bio"] = "{$npc_profile["name"]}. {$npc_profile["background"]}";
+    $npc["speechstyle"] = $npc_profile["speechStyle"];
+    $npc["goals"] = $npc_profile["goal"];
     $npc["lock_profile"] = null;
     $metadata = $npcMaster->getExtendedData($npc);
     $metadata["gps_track"] = true;
@@ -557,7 +557,7 @@ When at a working scenario, she produces iron ore (item refid:0x00071cf3) at a r
 
 if ($argv[1] == "5") {
 
-    $miner_profile = [
+    $npc_profile = [
         "name" => "Anne Rimbaunn",         // Name of the NPC
         "gender" => "female",                 // male or female
         "class" => "mage",                  // "beggar"|"warrior"|"assassin"|"mage"|"farmer"|"soldier"|"merchant"|"noble"|"creature"|"forsworn"
@@ -581,22 +581,22 @@ It's a service, so no items are produced, but gold is earned by enchanting weapo
     // Note, changed Beiltild for Gjak. Beiltild has her wn schedule and sometimes locks herself at home.
     // This will spawn the NPC in the game world, but won't set up its profile in the database
     npcProfileBase(
-        $miner_profile["name"],
-        $miner_profile["class"],
-        $miner_profile["race"],
-        $miner_profile["gender"],
-        $miner_profile["location"],
+        $npc_profile["name"],
+        $npc_profile["class"],
+        $npc_profile["race"],
+        $npc_profile["gender"],
+        $npc_profile["location"],
         "0",
-        $miner_profile["additional_data"] ?? [],
+        $npc_profile["additional_data"] ?? [],
     );
 
     $spawned = false;
-    $cnName = $GLOBALS["db"]->escape($miner_profile["name"]);
+    $cnName = $GLOBALS["db"]->escape($npc_profile["name"]);
     $last_gamets = null;
     $last_ts=null;
     while (!$spawned) {
         sleep(1);
-        error_log("[DEBUG] Checking if " . $miner_profile["name"] . " spawned: " . time() . PHP_EOL);
+        error_log("[DEBUG] Checking if " . $npc_profile["name"] . " spawned: " . time() . PHP_EOL);
         $res = $GLOBALS["db"]->fetchOne("select count(*) as n, max(gamets) as gamets,max(ts) as ts from eventlog where type='status_msg' and data like '%spawned@$cnName@%'");
         $spawned = $res["n"] > 0;
         $last_gamets = $res["gamets"];
@@ -605,11 +605,11 @@ It's a service, so no items are produced, but gold is earned by enchanting weapo
 
     // We spawned the NPC, addnpc should have beeen trigered, so we can now update the NPC profile in the database
     $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName($miner_profile["name"]);
-    $npc["core"] = "{$miner_profile["name"]}. {$miner_profile["gender"]} {$miner_profile["class"]} {$miner_profile["race"]}";
-    $npc["npc_static_bio"] = "{$miner_profile["name"]}. {$miner_profile["background"]}";
-    $npc["speechstyle"] = $miner_profile["speechStyle"];
-    $npc["goals"] = $miner_profile["goal"];
+    $npc = $npcMaster->getByName($npc_profile["name"]);
+    $npc["core"] = "{$npc_profile["name"]}. {$npc_profile["gender"]} {$npc_profile["class"]} {$npc_profile["race"]}";
+    $npc["npc_static_bio"] = "{$npc_profile["name"]}. {$npc_profile["background"]}";
+    $npc["speechstyle"] = $npc_profile["speechStyle"];
+    $npc["goals"] = $npc_profile["goal"];
     $npc["lock_profile"] = null;
     $metadata = $npcMaster->getExtendedData($npc);
     $metadata["gps_track"] = true;
@@ -617,12 +617,12 @@ It's a service, so no items are produced, but gold is earned by enchanting weapo
 
     $npc=$npcMaster->setMetadata($npc, $metadata);
     $npcMaster->updateByArray($npc);
-    error_log("[DEBUG] Updated NPC profile for {$miner_profile["name"]} in database waiting 10 secs" . PHP_EOL);
+    error_log("[DEBUG] Updated NPC profile for {$npc_profile["name"]} in database waiting 10 secs" . PHP_EOL);
     
     $refid=isset($npc["refid"]) ? $npc["refid"] : null;
 
     if (empty($refid)) {
-        error_log("[DEBUG] Waiting to refid to be populated for {$miner_profile["name"]}...".PHP_EOL);
+        error_log("[DEBUG] Waiting to refid to be populated for {$npc_profile["name"]}...".PHP_EOL);
 
         $maxRetries = 30;
         $retryCount = 0;
@@ -630,19 +630,19 @@ It's a service, so no items are produced, but gold is earned by enchanting weapo
             sleep(1);
             $retryCount++;
             $npcMaster = new NpcMaster();
-            $npc = $npcMaster->getByName($miner_profile["name"]);
+            $npc = $npcMaster->getByName($npc_profile["name"]);
             $refid=isset($npc["refid"]) ? $npc["refid"] : null;
-            error_log("[DEBUG] Waiting to refid to be populated for {$miner_profile["name"]}... $retryCount of $maxRetries".PHP_EOL);
+            error_log("[DEBUG] Waiting to refid to be populated for {$npc_profile["name"]}... $retryCount of $maxRetries".PHP_EOL);
         }
 
         if (empty($refid)) {
-            error_log("[ERROR] Refid was not populated for {$miner_profile["name"]} after {$maxRetries} retries. Exiting." . PHP_EOL);
+            error_log("[ERROR] Refid was not populated for {$npc_profile["name"]} after {$maxRetries} retries. Exiting." . PHP_EOL);
             exit(1);
         }
 
-        error_log("[DEBUG] Refid populated for {$miner_profile["name"]}: $refid" . PHP_EOL);
+        error_log("[DEBUG] Refid populated for {$npc_profile["name"]}: $refid" . PHP_EOL);
         $npcMaster = new NpcMaster();
-        $npc = $npcMaster->getByName($miner_profile["name"]);
+        $npc = $npcMaster->getByName($npc_profile["name"]);
 
     }
 
@@ -663,17 +663,197 @@ It's a service, so no items are produced, but gold is earned by enchanting weapo
     sleep(1);
 
     $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName($miner_profile["name"]);
+    $npc = $npcMaster->getByName($npc_profile["name"]);
     $extended_data = $npcMaster->getExtendedData($npc);
     $extended_data["background_life_commands"] = true;
     $extended_data["background_life_enabled"] = true;
     $extended_data["background_life_last_updated"] = $last_gamets;
     $extended_data["background_life_player_unattached"] = true;// This NPC is not attached to a player, it is a purely background life NPC. A follower should be attached.
 
-    $npc["core"] = "{$miner_profile["name"]}. {$miner_profile["gender"]} {$miner_profile["class"]} {$miner_profile["race"]}";
-    $npc["npc_static_bio"] = "{$miner_profile["name"]}. {$miner_profile["background"]}";
-    $npc["speechstyle"] = $miner_profile["speechStyle"];
-    $npc["goals"] = $miner_profile["goal"];
+    $npc["core"] = "{$npc_profile["name"]}. {$npc_profile["gender"]} {$npc_profile["class"]} {$npc_profile["race"]}";
+    $npc["npc_static_bio"] = "{$npc_profile["name"]}. {$npc_profile["background"]}";
+    $npc["speechstyle"] = $npc_profile["speechStyle"];
+    $npc["goals"] = $npc_profile["goal"];
+    $npc["lock_profile"] = null;
+    $metadata = $npcMaster->getExtendedData($npc);
+    $metadata["gps_track"] = true;
+
+    $npc=$npcMaster->setExtendedData($npc, $extended_data);
+    $npcMaster->updateByArray($npc);
+
+    $skyrimCmd = new SkyrimCommandBuilder();
+    $json = $skyrimCmd->ObjectReference->AddItem("0x{$npc["refid"]}", "0x0000000F", 100, true); // Add a gold coin to the NPC's inventory
+    $skyrimCmd->send(cmd: $json);
+
+    
+    
+     // Send her to the starting point (interior), when in, should trigger an bgevent.
+    $startingPoint=0x0004deb7;
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@$refid@TravelTo/".((int)$startingPoint),
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+    // Need to register the action to bgevent recognize it as valid, so it triggers the bgevent when the NPC reaches the mine.
+
+    $res = $GLOBALS["db"]->fetchOne("select max(gamets) as gamets,max(ts) as ts from eventlog order by gamets desc,ts desc limit 1");
+    $last_gamets = $res["gamets"];
+    $last_ts = $res["ts"];
+
+    $GLOBALS["db"]->insert('actions_issued', [
+        'action' => 'TravelTo',
+        'fullcall' => "TravelTo",
+        'actorname' => $npc["npc_name"],
+        'ts' => $last_ts,
+        'gamets' => $last_gamets,
+        'localts' => time(),
+        'original' => 'backgroundaction',
+    ]);
+
+
+    // NPC created and added to background life. He is free now to roam the world and do his thing.
+    
+}
+
+if ($argv[1] == "6") {
+
+   $npc_profile = [
+    "name" => "Cassia Valerius",         // Name of the NPC
+    "gender" => "female",                 
+    "class" => "merchant",                // She trades information rather than goods
+    "race" => "imperial",
+    "location" => "Solitude",
+    "appearance" => "an elegant imperial journalist",
+    "background" => "Born in Cyrodiil to a family of historians, Cassia Valerius became fascinated by the stories of ordinary people living through extraordinary events. She travelled to Skyrim after the Civil War began, determined to document the truth beyond the official speeches of jarls and generals. She believes every citizen, from a miner to a noble, has a story worth recording.",
+    "speechStyle" => "professional, inquisitive and diplomatic. She asks precise questions, listens carefully, and often references history, politics and local rumors. She is polite but persistent when seeking the truth.",
+    "disposition" => "friendly",
+    "goal" => "[Life goals]
+Become the most respected chronicler in Skyrim by collecting stories, rumors and testimonies from every corner of the province.
+
+* She must travel regularly between the main cities of Skyrim: Solitude, Whiterun, Windhelm, Riften, Markarth and Dawnstar.
+* In each city, she visits inns, markets, temples and important locations to speak with citizens.
+* She interviews merchants, guards, workers and travelers about local events, conflicts, strange occurrences and rumors.
+* She records interesting stories in her journal.
+* She spends evenings at inns, discussing politics and recent events with locals.
+* She sometimes investigates abandoned places, ruins or battlefields to gather first-hand accounts.
+* She must eat/drink at least once a day.
+
+[Journalism]
+When visiting a city, she collects information from citizens:
+- Local gossip
+- Political tensions
+- Crimes and mysteries
+- Strange sightings
+- Heroic deeds
+- Problems affecting common people
+
+[Production]
+When at a city, tavern or social scenario, she generates gold (item refid:0x0000000f) at a rate of 1 each hour by selling written chronicles, reports and stories to publishers and nobles.
+"
+];
+
+    // Note, changed Beiltild for Gjak. Beiltild has her wn schedule and sometimes locks herself at home.
+    // This will spawn the NPC in the game world, but won't set up its profile in the database
+    npcProfileBase(
+        $npc_profile["name"],
+        $npc_profile["class"],
+        $npc_profile["race"],
+        $npc_profile["gender"],
+        $npc_profile["location"],
+        "0",
+        $npc_profile["additional_data"] ?? [],
+    );
+
+    $spawned = false;
+    $cnName = $GLOBALS["db"]->escape($npc_profile["name"]);
+    $last_gamets = null;
+    $last_ts=null;
+    while (!$spawned) {
+        sleep(1);
+        error_log("[DEBUG] Checking if " . $npc_profile["name"] . " spawned: " . time() . PHP_EOL);
+        $res = $GLOBALS["db"]->fetchOne("select count(*) as n, max(gamets) as gamets,max(ts) as ts from eventlog where type='status_msg' and data like '%spawned@$cnName@%'");
+        $spawned = $res["n"] > 0;
+        $last_gamets = $res["gamets"];
+        $last_ts = $res["ts"];
+    }
+
+    // We spawned the NPC, addnpc should have beeen trigered, so we can now update the NPC profile in the database
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName($npc_profile["name"]);
+    $npc["core"] = "{$npc_profile["name"]}. {$npc_profile["gender"]} {$npc_profile["class"]} {$npc_profile["race"]}";
+    $npc["npc_static_bio"] = "{$npc_profile["name"]}. {$npc_profile["background"]}";
+    $npc["speechstyle"] = $npc_profile["speechStyle"];
+    $npc["goals"] = $npc_profile["goal"];
+    $npc["lock_profile"] = null;
+    $metadata = $npcMaster->getExtendedData($npc);
+    $metadata["gps_track"] = true;
+    
+
+    $npc=$npcMaster->setMetadata($npc, $metadata);
+    $npcMaster->updateByArray($npc);
+    error_log("[DEBUG] Updated NPC profile for {$npc_profile["name"]} in database waiting 10 secs" . PHP_EOL);
+    
+    $refid=isset($npc["refid"]) ? $npc["refid"] : null;
+
+    if (empty($refid)) {
+        error_log("[DEBUG] Waiting to refid to be populated for {$npc_profile["name"]}...".PHP_EOL);
+
+        $maxRetries = 30;
+        $retryCount = 0;
+        while (empty($refid) && $retryCount < $maxRetries) {
+            sleep(1);
+            $retryCount++;
+            $npcMaster = new NpcMaster();
+            $npc = $npcMaster->getByName($npc_profile["name"]);
+            $refid=isset($npc["refid"]) ? $npc["refid"] : null;
+            error_log("[DEBUG] Waiting to refid to be populated for {$npc_profile["name"]}... $retryCount of $maxRetries".PHP_EOL);
+        }
+
+        if (empty($refid)) {
+            error_log("[ERROR] Refid was not populated for {$npc_profile["name"]} after {$maxRetries} retries. Exiting." . PHP_EOL);
+            exit(1);
+        }
+
+        error_log("[DEBUG] Refid populated for {$npc_profile["name"]}: $refid" . PHP_EOL);
+        $npcMaster = new NpcMaster();
+        $npc = $npcMaster->getByName($npc_profile["name"]);
+
+    }
+
+    // Add to BgL (plugin side)
+    sleep(1);
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent'    => 0,
+            'actor'   => "rolemaster",
+            'text'    => "",
+            'action'  => "rolecommand|RenameNPC@0x$refid@$cnName",
+            'tag'     => '',
+        ]
+    );
+    
+    sleep(1);
+
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName($npc_profile["name"]);
+    $extended_data = $npcMaster->getExtendedData($npc);
+    $extended_data["background_life_commands"] = true;
+    $extended_data["background_life_enabled"] = true;
+    $extended_data["background_life_last_updated"] = $last_gamets;
+    $extended_data["background_life_player_unattached"] = true;// This NPC is not attached to a player, it is a purely background life NPC. A follower should be attached.
+
+    $npc["core"] = "{$npc_profile["name"]}. {$npc_profile["gender"]} {$npc_profile["class"]} {$npc_profile["race"]}";
+    $npc["npc_static_bio"] = "{$npc_profile["name"]}. {$npc_profile["background"]}";
+    $npc["speechstyle"] = $npc_profile["speechStyle"];
+    $npc["goals"] = $npc_profile["goal"];
     $npc["lock_profile"] = null;
     $metadata = $npcMaster->getExtendedData($npc);
     $metadata["gps_track"] = true;
