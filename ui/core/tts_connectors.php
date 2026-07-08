@@ -64,7 +64,7 @@ function ttsVisibleDriverOptions(TTSConnector $ttsConnector): array
 
 function ttsGroupedDriverOptions(TTSConnector $ttsConnector, array $driverOptions): array
 {
-    $recommendedOrder = ['pockettts', 'chatterbox', 'xtts-fastapi', 'inworld', 'cartesia'];
+    $recommendedOrder = ['omnivoice', 'pockettts', 'chatterbox', 'xtts-fastapi', 'inworld', 'cartesia'];
     $available = [];
     foreach ($driverOptions as $driverOption) {
         $normalized = $ttsConnector->normalizeDriverValue($driverOption);
@@ -99,8 +99,12 @@ function ttsShouldRenderField(string $fieldName, $definition, TTSConnector $ttsC
     if ($ttsConnector->isDriverVoiceMetadataField($driver, $fieldName)) {
         return false;
     }
-    if (in_array($ttsConnector->normalizeDriverValue($driver), ['xtts-fastapi', 'chatterbox', 'pockettts'], true)
+    $normalizedDriver = $ttsConnector->normalizeDriverValue($driver);
+    if (in_array($normalizedDriver, ['xtts-fastapi', 'chatterbox', 'pockettts'], true)
         && in_array($fieldName, ['language', 'voicelogic'], true)) {
+        return false;
+    }
+    if ($normalizedDriver === 'omnivoice' && $fieldName === 'voicelogic') {
         return false;
     }
     return true;

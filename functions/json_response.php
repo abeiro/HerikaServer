@@ -294,6 +294,8 @@
         if (!isset($GLOBALS["LLM_LANG"]) && isset($GLOBALS["LANG_LLM_XTTS"]) && $GLOBALS["LANG_LLM_XTTS"]) {
             if (isset($GLOBALS["TTS"]["XTTSFASTAPI"]["language"])) {
                 $GLOBALS["LLM_LANG"] = $GLOBALS["TTS"]["XTTSFASTAPI"]["language"];
+            } elseif (isset($GLOBALS["TTS"]["OMNIVOICE"]["language"])) {
+                $GLOBALS["LLM_LANG"] = $GLOBALS["TTS"]["OMNIVOICE"]["language"];
             } elseif (isset($GLOBALS["TTS"]["CHATTERBOX"]["language"])) {
                 $GLOBALS["LLM_LANG"] = $GLOBALS["TTS"]["CHATTERBOX"]["language"];
             } elseif (isset($GLOBALS["TTS"]["POCKETTTS"]["language"])) {

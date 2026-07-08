@@ -7119,6 +7119,46 @@ if ($checkVersion("core_tts_connector_pockettts_audiocpp") < 20260628001) {
     Logger::info("Applied patch core_tts_connector_pockettts_audiocpp 20260628001");
 }
 
+if ($checkVersion("core_tts_connector_omnivoice") < 20260708001) {
+    Logger::debug("Applying core_tts_connector_omnivoice 20260708001 - add OmniVoice default connector");
+
+    $b_ok = true;
+    try {
+        $db->execQuery("
+            INSERT INTO public.core_tts_connector (driver, label, metadata, api_badge_id, url, voice_field)
+            SELECT
+                'omnivoice',
+                'OmniVoice Default',
+                '{\"language\":\"en\",\"voicelogic\":\"voicetype\",\"fallback_male\":\"malenord\",\"fallback_female\":\"femalenord\"}'::jsonb,
+                NULL,
+                'http://127.0.0.1:8021',
+                'voiceid'
+            WHERE NOT EXISTS (
+                SELECT 1
+                  FROM public.core_tts_connector
+                 WHERE lower(coalesce(label, '')) = 'omnivoice default'
+            )
+        ");
+
+        $db->execQuery("
+            UPDATE public.core_tts_connector
+               SET driver = 'omnivoice',
+                   url = 'http://127.0.0.1:8021',
+                   voice_field = 'voiceid',
+                   metadata = COALESCE(metadata, '{}'::jsonb) || '{\"language\":\"en\",\"voicelogic\":\"voicetype\",\"fallback_male\":\"malenord\",\"fallback_female\":\"femalenord\"}'::jsonb
+             WHERE lower(coalesce(label, '')) = 'omnivoice default'
+        ");
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error adding OmniVoice default TTS connector: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_tts_connector_omnivoice", 20260708001);
+        Logger::info("Applied patch core_tts_connector_omnivoice 20260708001");
+    }
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------

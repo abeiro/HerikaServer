@@ -9,6 +9,7 @@ class TTSConnector
         'pockettts' => 'POCKETTTS',
         'chatterbox' => 'CHATTERBOX',
         'xtts-fastapi' => 'XTTSFASTAPI',
+        'omnivoice' => 'OMNIVOICE',
         'inworld' => 'INWORLD',
         'cartesia' => 'CARTESIA',
         'piper-tts' => 'PIPERTTS',
@@ -29,6 +30,7 @@ class TTSConnector
         'pockettts' => 'PocketTTS',
         'chatterbox' => 'Chatterbox',
         'xtts-fastapi' => 'XTTS',
+        'omnivoice' => 'OmniVoice',
         'inworld' => 'Inworld',
         'cartesia' => 'Cartesia',
         'piper-tts' => 'Piper TTS',
@@ -48,6 +50,7 @@ class TTSConnector
         'pockettts' => 'voiceid',
         'chatterbox' => 'voiceid',
         'xtts-fastapi' => 'voiceid',
+        'omnivoice' => 'voiceid',
         'inworld' => 'voiceid',
         'cartesia' => 'voiceid',
         'piper-tts' => 'voiceid',
@@ -76,6 +79,7 @@ class TTSConnector
         'pockettts' => 'http://127.0.0.1:8086',
         'chatterbox' => 'http://127.0.0.1:8020',
         'xtts-fastapi' => 'http://127.0.0.1:8020',
+        'omnivoice' => 'http://127.0.0.1:8021',
         'piper-tts' => 'http://127.0.0.1:5000',
         'xvasynth' => 'http://192.168.0.1:8008',
         'melotts' => 'http://127.0.0.1:8084',
@@ -84,9 +88,6 @@ class TTSConnector
         'koboldcpp' => 'http://127.0.0.1:5001/api/extra/tts',
         'zonos_gradio' => 'http://127.0.0.1:7860',
     ];
-
-    private static $omniVoiceUrl = 'http://127.0.0.1:8021';
-    private static $omniVoiceCompatibleDrivers = ['xtts-fastapi', 'chatterbox', 'pockettts'];
 
     private static $sharedMetadataDefaultMap = [
         'fallback_male' => 'malenord',
@@ -100,7 +101,6 @@ class TTSConnector
         ],
         'xtts-fastapi' => [
             'language' => 'en',
-            'use_omnivoice' => false,
             'voicelogic' => 'voicetype',
             'PARALINGUISTIC_TAGS_ENABLED' => false,
             'PARALINGUISTIC_TAGS_PROMPT' => '',
@@ -108,16 +108,18 @@ class TTSConnector
         ],
         'chatterbox' => [
             'language' => 'en',
-            'use_omnivoice' => false,
             'voicelogic' => 'voicetype',
             'PARALINGUISTIC_TAGS_ENABLED' => false,
             'PARALINGUISTIC_TAGS_PROMPT' => '',
             'PARALINGUISTIC_TAGS_LIST' => '[clear throat],[sigh],[shush],[cough],[groan],[sniff],[gasp],[chuckle],[laugh]',
         ],
+        'omnivoice' => [
+            'language' => 'en',
+            'voicelogic' => 'voicetype',
+        ],
         'pockettts' => [
             'language' => 'en',
             'model' => 'pocket-tts',
-            'use_omnivoice' => false,
             'voicelogic' => 'voicetype',
         ],
         'inworld' => [
@@ -376,7 +378,7 @@ class TTSConnector
         $driver = $this->normalizeDriver($driver);
         $metadata = $this->mergeMissingMetadataDefaults($metadata, self::$sharedMetadataDefaultMap);
         $metadata = $this->mergeMissingMetadataDefaults($metadata, self::$metadataDefaultMap[$driver] ?? []);
-        if (in_array($driver, ['xtts-fastapi', 'chatterbox', 'pockettts'], true)) {
+        if (in_array($driver, ['xtts-fastapi', 'chatterbox', 'pockettts', 'omnivoice'], true)) {
             $metadata['voicelogic'] = 'voicetype';
         }
 
@@ -428,7 +430,7 @@ class TTSConnector
     public function driverSupportsLanguageOverride($driver): bool
     {
         $driver = $this->normalizeDriver($driver);
-        return in_array($driver, ['pockettts', 'chatterbox', 'xtts-fastapi', 'inworld', 'cartesia', 'piper-tts', 'xvasynth', 'melotts', 'zonos_gradio'], true);
+        return in_array($driver, ['pockettts', 'chatterbox', 'xtts-fastapi', 'omnivoice', 'inworld', 'cartesia', 'piper-tts', 'xvasynth', 'melotts', 'zonos_gradio'], true);
     }
 
     public function getProviderFieldSchema($driver): array
@@ -909,21 +911,6 @@ class TTSConnector
         return 0;
     }
 
-    private function isOmniVoiceEnabled($driver, array $metadata): bool
-    {
-        $driver = $this->normalizeDriver($driver);
-        if (!in_array($driver, self::$omniVoiceCompatibleDrivers, true)) {
-            return false;
-        }
-
-        $value = $metadata['use_omnivoice'] ?? false;
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        return in_array(strtolower(trim(strval($value))), ['1', 'true', 'yes', 'on'], true);
-    }
-
     private function normalizeUrlForDriver($driver, $url, array $metadata = []): ?string
     {
         $driver = $this->normalizeDriver($driver);
@@ -944,11 +931,6 @@ class TTSConnector
 
     private function resolveRuntimeUrlForDriver($driver, $url, array $metadata = []): ?string
     {
-        $driver = $this->normalizeDriver($driver);
-        if ($this->isOmniVoiceEnabled($driver, $metadata)) {
-            return self::$omniVoiceUrl;
-        }
-
         return $this->normalizeUrlForDriver($driver, $url, $metadata);
     }
 

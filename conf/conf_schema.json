@@ -247,7 +247,7 @@
        "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the URL. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.com/chim/llm.html#Player2Service"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","deepgram"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["omnivoice","pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","deepgram"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -261,7 +261,6 @@
     "XTTSFASTAPI": {
       "_title":"CHIM XTTS",
        "endpoint":{"type":"url","description":"Leave as is if using CHIM XTTS. If you want to use Mantella XTTS then click[HOST PC IP]. [WSL IP] will set it back to point to CHIM XTTS.", "helpurl":"https://dwemerdynamics.com/chim/tts.html#Xtts"},
-      "use_omnivoice":{"type":"boolean","description":"Route this connector through local OmniVoice on http://127.0.0.1:8021 while keeping the same XTTS-compatible VoiceID/language payload.","scope":"global"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to XTTS management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS XTTSFASTAPI voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"},
@@ -272,7 +271,6 @@
     "CHATTERBOX": {
       "_title":"Chatterbox",
        "endpoint":{"type":"url","description":"Chatterbox endpoint. Uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.com/chim/tts.html#Chatterbox"},
-      "use_omnivoice":{"type":"boolean","description":"Route this connector through local OmniVoice on http://127.0.0.1:8021 while keeping the same XTTS-compatible VoiceID/language payload.","scope":"global"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS CHATTERBOX voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"},
@@ -280,10 +278,16 @@
       "PARALINGUISTIC_TAGS_PROMPT":{"type":"longstring","description":"Prompt snippet instructing the LLM to use paralinguistic tags. Added to system prompt when enabled.","scope":"global"},
       "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
     },
+    "OMNIVOICE": {
+      "_title":"OmniVoice",
+      "endpoint":{"type":"url","description":"OmniVoice endpoint. DwemerDistro default is 8021. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://github.com/Dwemer-Dynamics/omnivoice-tts"},
+      "language":{"type":"string","description":"Active OmniVoice language profile id, for example en, es, cs or sk."},
+      "voiceid":{"type":"string","description":"Generated voice file name. Use a VoiceID from the installed OmniVoice language library."},
+      "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS OMNIVOICE voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
+    },
     "POCKETTTS": {
       "_title":"PocketTTS",
        "endpoint":{"type":"url","description":"PocketTTS endpoint. DwemerDistro audio.cpp PocketTTS uses port 8086 by default. Legacy Python PocketTTS uses port 8020. The connector detects the API automatically from the endpoint.", "helpurl":"https://dwemerdynamics.com/chim/tts.html#PocketTts"},
-      "use_omnivoice":{"type":"boolean","description":"Route this connector through local OmniVoice on http://127.0.0.1:8021 while keeping the same XTTS-compatible VoiceID/language payload.","scope":"global"},
       "model":{"type":"string","description":"audio.cpp model id. Default: pocket-tts."},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
@@ -416,7 +420,7 @@
       "speed": {"type":"number","description":"Speaking rate/speed (0.5-1.5). Default: 1.0"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["omnivoice","pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "TTSFUNCTION_PLAYER_VOICE_ID": {"type":"integer","userlvl":"pro","scope":"global","description":"Speaker ID to select a voice from multi-voice model."},
   "TTSFUNCTION_PLAYER_LANGUAGE": {"type":"string","userlvl":"basic","scope":"global","description":"Overrides the TTS language for the player character."},
