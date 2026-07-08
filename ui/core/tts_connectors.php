@@ -213,52 +213,64 @@ function ttsOmniVoiceLanguageLabel(string $languageId): string
 
 function ttsOmniVoicePreparedLanguages(): array
 {
+    $profilesPath = '/home/dwemer/omnivoice-tts/languages';
     $voicesPath = '/home/dwemer/omnivoice-tts/voices';
-    if (!is_dir($voicesPath) || !is_readable($voicesPath)) {
+    if (!is_dir($profilesPath) || !is_readable($profilesPath)) {
         return [];
     }
 
-    $entries = @scandir($voicesPath);
+    $entries = @scandir($profilesPath);
     if (!is_array($entries)) {
         return [];
     }
 
     $options = [];
     foreach ($entries as $entry) {
-        if ($entry === '.' || $entry === '..') {
+        if ($entry === '.' || $entry === '..' || substr($entry, -5) !== '.json') {
             continue;
         }
-        $languageId = strtolower(trim($entry));
+        $profilePath = $profilesPath . DIRECTORY_SEPARATOR . $entry;
+        if (!is_file($profilePath) || !is_readable($profilePath)) {
+            continue;
+        }
+        $rawProfile = strval(@file_get_contents($profilePath));
+        if ($rawProfile === '' || stripos($rawProfile, 'REPLACE THIS') !== false) {
+            continue;
+        }
+        $profile = json_decode($rawProfile, true);
+        if (!is_array($profile)) {
+            continue;
+        }
+        $languageId = strtolower(trim(strval($profile['id'] ?? basename($entry, '.json'))));
         if ($languageId === '' || !preg_match('/^[a-z][a-z0-9-]*$/', $languageId)) {
             continue;
         }
 
-        $languagePath = $voicesPath . DIRECTORY_SEPARATOR . $entry;
-        if (!is_dir($languagePath) || !is_readable($languagePath)) {
-            continue;
-        }
-
         $voiceCount = 0;
+        $totalVoiceFolders = 0;
+        $languagePath = $voicesPath . DIRECTORY_SEPARATOR . $languageId;
         $voiceEntries = @scandir($languagePath);
         if (is_array($voiceEntries)) {
             foreach ($voiceEntries as $voiceEntry) {
                 if ($voiceEntry === '.' || $voiceEntry === '..') {
                     continue;
                 }
-                if (is_dir($languagePath . DIRECTORY_SEPARATOR . $voiceEntry)) {
-                    $voiceCount++;
+                $voicePath = $languagePath . DIRECTORY_SEPARATOR . $voiceEntry;
+                if (is_dir($voicePath)) {
+                    $totalVoiceFolders++;
+                    if (is_file($voicePath . DIRECTORY_SEPARATOR . 'reference.wav')
+                        && is_file($voicePath . DIRECTORY_SEPARATOR . 'reference.txt')) {
+                        $voiceCount++;
+                    }
                 }
             }
         }
 
-        if ($voiceCount < 1) {
-            continue;
-        }
-
         $options[$languageId] = [
             'id' => $languageId,
-            'label' => ttsOmniVoiceLanguageLabel($languageId),
+            'label' => trim(strval($profile['display_name'] ?? $profile['omnivoice_language'] ?? '')) ?: ttsOmniVoiceLanguageLabel($languageId),
             'voice_count' => $voiceCount,
+            'total_voice_folders' => $totalVoiceFolders,
         ];
     }
 
@@ -831,9 +843,8 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
                                                             <?php foreach ($omniLanguages as $languageOption): ?>
                                                                 <?php
                                                                     $languageId = strval($languageOption['id'] ?? '');
-                                                                    $voiceCount = intval($languageOption['voice_count'] ?? 0);
                                                                     $languageLabel = strval($languageOption['label'] ?? strtoupper($languageId));
-                                                                    $optionLabel = $languageLabel . ' (' . $languageId . ', ' . $voiceCount . ' voice' . ($voiceCount === 1 ? '' : 's') . ')';
+                                                                    $optionLabel = $languageLabel . ' (' . $languageId . ')';
                                                                 ?>
                                                                 <option value="<?php echo h($languageId); ?>" <?php echo $selectedOmniLanguage === $languageId ? 'selected' : ''; ?>>
                                                                     <?php echo h($optionLabel); ?>
@@ -841,13 +852,13 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
                                                             <?php endforeach; ?>
                                                         </select>
                                                         <?php if ($currentOmniLanguage !== '' && !$currentLanguagePrepared): ?>
-                                                            <div class="field-help">Saved language <?php echo h($currentOmniLanguage); ?> has no prepared voices. Save this connector to switch to an installed language.</div>
+                                                            <div class="field-help">Saved language <?php echo h($currentOmniLanguage); ?> is not available as an OmniVoice profile.</div>
                                                         <?php elseif (!empty($definition['description'])): ?>
-                                                            <div class="field-help"><?php echo $definition['description']; ?></div>
+                                                            <div class="field-help">Saving this connector will prepare the selected language automatically if needed.</div>
                                                         <?php endif; ?>
                                                     <?php else: ?>
                                                         <input type="text" id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>" value="<?php echo h($fieldValue); ?>">
-                                                        <div class="field-help">No prepared OmniVoice voice libraries were found in /home/dwemer/omnivoice-tts/voices.</div>
+                                                        <div class="field-help">No OmniVoice language profiles were found in /home/dwemer/omnivoice-tts/languages.</div>
                                                     <?php endif; ?>
                                                 <?php elseif ($fieldType === 'boolean'): ?>
                                                     <input type="hidden" name="<?php echo h($fieldKey); ?>" value="false">

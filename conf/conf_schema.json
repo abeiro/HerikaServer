@@ -281,7 +281,7 @@
     "OMNIVOICE": {
       "_title":"OmniVoice",
       "endpoint":{"type":"url","description":"OmniVoice endpoint. DwemerDistro default is 8021. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://github.com/Dwemer-Dynamics/omnivoice-tts"},
-      "language":{"type":"string","description":"Active OmniVoice language profile id, for example en, es, cs or sk."},
+      "language":{"type":"select","values":["cs","de","en","es","fr","hu","it","ja","ko","pl","pt","pt-br","ro","ru","sk","uk","yue","zh"],"description":"Active OmniVoice language profile."},
       "voiceid":{"type":"string","description":"Generated voice file name. Use a VoiceID from the installed OmniVoice language library."},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS OMNIVOICE voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
     },

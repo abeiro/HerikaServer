@@ -4101,15 +4101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="omnivoice-language" style="display: block; margin-bottom: 8px;">Language library:</label>
                 <select id="omnivoice-language" name="language" onchange="changeOmniVoiceLanguage(this.value)" style="width: 100%; max-width: 360px; padding: 8px;">
                     <?php foreach ($omnivoiceLanguageOptions as $languageId => $languageData): ?>
-                        <?php
-                        $countLabel = intval($languageData['voice_count']) . ' ready';
-                        $totalFolders = intval($languageData['total_voice_folders']);
-                        if ($totalFolders > intval($languageData['voice_count'])) {
-                            $countLabel .= ', ' . $totalFolders . ' total';
-                        }
-                        ?>
                         <option value="<?php echo htmlspecialchars($languageId); ?>" <?php echo $languageId === $activeOmniVoiceLanguage ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($languageData['label'] . ' (' . $languageId . ', ' . $countLabel . ')'); ?>
+                            <?php echo htmlspecialchars($languageData['label'] . ' (' . $languageId . ')'); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
