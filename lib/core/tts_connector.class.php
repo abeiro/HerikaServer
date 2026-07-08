@@ -716,7 +716,7 @@ class TTSConnector
             $this->stripVoiceMetadataForDriver($driver, $metadata)
         );
 
-        $resolvedUrl = $this->normalizeUrlForDriver($driver, $currentTTSData["url"] ?? null, $metadata);
+        $resolvedUrl = $this->resolveRuntimeUrlForDriver($driver, $currentTTSData["url"] ?? null, $metadata);
         if ($resolvedUrl !== null && $resolvedUrl !== '') {
             $metadata['endpoint'] = $resolvedUrl;
             $metadata['url'] = $resolvedUrl;
@@ -930,9 +930,6 @@ class TTSConnector
         if (!$this->driverSupportsEditableUrl($driver)) {
             return null;
         }
-        if ($this->isOmniVoiceEnabled($driver, $metadata)) {
-            return self::$omniVoiceUrl;
-        }
 
         $candidate = trim(strval($url ?? ''));
         if ($candidate === '') {
@@ -943,6 +940,16 @@ class TTSConnector
         }
 
         return $candidate !== '' ? $candidate : null;
+    }
+
+    private function resolveRuntimeUrlForDriver($driver, $url, array $metadata = []): ?string
+    {
+        $driver = $this->normalizeDriver($driver);
+        if ($this->isOmniVoiceEnabled($driver, $metadata)) {
+            return self::$omniVoiceUrl;
+        }
+
+        return $this->normalizeUrlForDriver($driver, $url, $metadata);
     }
 
     private function normalizeApiBadgeIdForDriver($driver, $apiBadgeId): ?int
