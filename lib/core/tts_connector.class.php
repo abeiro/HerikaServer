@@ -85,6 +85,9 @@ class TTSConnector
         'zonos_gradio' => 'http://127.0.0.1:7860',
     ];
 
+    private static $omniVoiceUrl = 'http://127.0.0.1:8021';
+    private static $omniVoiceCompatibleDrivers = ['xtts-fastapi', 'chatterbox', 'pockettts'];
+
     private static $sharedMetadataDefaultMap = [
         'fallback_male' => 'malenord',
         'fallback_female' => 'femalenord',
@@ -97,6 +100,7 @@ class TTSConnector
         ],
         'xtts-fastapi' => [
             'language' => 'en',
+            'use_omnivoice' => false,
             'voicelogic' => 'voicetype',
             'PARALINGUISTIC_TAGS_ENABLED' => false,
             'PARALINGUISTIC_TAGS_PROMPT' => '',
@@ -104,6 +108,7 @@ class TTSConnector
         ],
         'chatterbox' => [
             'language' => 'en',
+            'use_omnivoice' => false,
             'voicelogic' => 'voicetype',
             'PARALINGUISTIC_TAGS_ENABLED' => false,
             'PARALINGUISTIC_TAGS_PROMPT' => '',
@@ -112,6 +117,7 @@ class TTSConnector
         'pockettts' => [
             'language' => 'en',
             'model' => 'pocket-tts',
+            'use_omnivoice' => false,
             'voicelogic' => 'voicetype',
         ],
         'inworld' => [
@@ -903,11 +909,29 @@ class TTSConnector
         return 0;
     }
 
+    private function isOmniVoiceEnabled($driver, array $metadata): bool
+    {
+        $driver = $this->normalizeDriver($driver);
+        if (!in_array($driver, self::$omniVoiceCompatibleDrivers, true)) {
+            return false;
+        }
+
+        $value = $metadata['use_omnivoice'] ?? false;
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        return in_array(strtolower(trim(strval($value))), ['1', 'true', 'yes', 'on'], true);
+    }
+
     private function normalizeUrlForDriver($driver, $url, array $metadata = []): ?string
     {
         $driver = $this->normalizeDriver($driver);
         if (!$this->driverSupportsEditableUrl($driver)) {
             return null;
+        }
+        if ($this->isOmniVoiceEnabled($driver, $metadata)) {
+            return self::$omniVoiceUrl;
         }
 
         $candidate = trim(strval($url ?? ''));
