@@ -846,6 +846,28 @@ function handleMarketStockUpdate(array $data): void {
                 $gold=intval($item['count']);
             } 
 
+            // Insert or update the item description in the descriptions_custom table, if a matching plugin can be found
+            $baseid="00".substr($item['itemid'],2);
+            $modIndex=substr($item['itemid'],0,4);
+            $candidateMod=$db->fetchOne("select * from plugin_name where formid_prefix='{$modIndex}'");
+            if (!$candidateMod) {
+                $modIndex=substr($item['itemid'],0,2);
+                $candidateMod=$db->fetchOne("select * from plugin_name where formid_prefix='{$modIndex}'");
+            }
+
+            if ($candidateMod) {
+                $pluginName=$candidateMod['plugin_name'];
+                // Insert. if exists, will throw error.
+                $candidateMod=$db->fetchOne("select * from combined_descriptions where baseid='{$baseid}' and plugin='{$pluginName}'");
+                $db->insert("descriptions_custom", [
+                    'baseid' => $baseid,
+                    'plugin' => $pluginName,
+                    'name' => trim($item['name'])
+                ] );
+
+            }
+
+            
         }
     }
 
@@ -886,7 +908,7 @@ function handleLowProcessActorsUpdate(array $data,NpcMaster $npcMaster): void {
         // Store current nearby actors snapshot keyed by game timestamp.
         if ($actorSanitizedList === []) {
             error_log("[gamedata.php] Received empty low_process_actors list for {$data['actor_name']}");
-            return;
+            //return; // Not an error, just an empty list. We'll still store it.
         } else {
             Logger::debug("[gamedata.php] Received low_process_actors list for {$data['actor_name']}: " . count($actorSanitizedList) . " actor(s)");
         }
