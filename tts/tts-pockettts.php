@@ -328,7 +328,10 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$textString.=PHP_EOL.print_r($http_response_header,true);
 			
             file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n$FFMPEG_FILTER\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rffmpeg transcoding: $endTimeTrans secs\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
-			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in pockettts call";
+			
+			$GLOBALS["DEBUG_DATA"][]=($startTimeTrans - $starTime)." secs in pockettts call";
+			$GLOBALS["DEBUG_DATA"][]=($endTimeTrans)." secs in ffmpeg transcoding";
+			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in full TTS call";
 
 			if (isset($GLOBALS["DEVELOP_STORE_AUDIO_FOR_TRANING"]) && $GLOBALS["DEVELOP_STORE_AUDIO_FOR_TRANING"]) {
 				$rootPath=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" ;
