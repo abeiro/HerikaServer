@@ -2362,7 +2362,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     // Query Background Life history entries
-    $bglHistoryQuery = "SELECT rowid,npc,gamets,ts,localts,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 100";
+    $bglHistoryQuery = "SELECT rowid,npc,gamets,ts,localts,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 25";
     $bglHistoryResult = pg_query($adminConn, $bglHistoryQuery);
     $bglHistoryRows = [];
     if ($bglHistoryResult) {
@@ -2398,7 +2398,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['gamets'] ?? '')); ?></td>
                                 <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['ts'] ?? '')); ?></td>
                                 <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['localts'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #fff;"><?php echo htmlspecialchars((string) ($historyRow['data'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #fff;"><?php echo nl2br(htmlspecialchars((string) ($historyRow['data'] ?? ''))); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
