@@ -9,7 +9,7 @@ if (!function_exists('omnivoice_normalize_endpoint_url')) {
 if (!function_exists('omnivoice_sanitize_language')) {
     function omnivoice_sanitize_language($language): string {
         $language = preg_replace('/[^a-z\-]/i', '', strtolower(trim(strval($language ?? ''))));
-        return $language !== '' ? $language : 'en';
+        return $language !== '' ? $language : '';
     }
 }
 
@@ -42,8 +42,10 @@ if (!function_exists('omnivoice_post_tts')) {
         $data = [
             'text' => $text,
             'speaker_wav' => $voice,
-            'language' => $language,
         ];
+        if ($language !== '') {
+            $data['language'] = $language;
+        }
 
         $options = [
             'http' => [
@@ -156,10 +158,12 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
         $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"] ?? '',
         (!empty($GLOBALS["LANG_LLM_XTTS"]) ? ($GLOBALS["LLM_LANG"] ?? '') : ''),
         $GLOBALS["TTS"]["FORCED_LANG_DEV"] ?? '',
-        $GLOBALS["TTS"]["OMNIVOICE"]["language"] ?? 'en'
+        $GLOBALS["TTS"]["OMNIVOICE"]["language"] ?? ''
     );
     $lang = omnivoice_sanitize_language($lang);
-    omnivoice_switch_language($endpoint, $lang);
+    if ($lang !== '') {
+        omnivoice_switch_language($endpoint, $lang);
+    }
 
     $voice = omnivoice_first_non_empty(
         $GLOBALS["PATCH_OVERRIDE_VOICE"] ?? '',

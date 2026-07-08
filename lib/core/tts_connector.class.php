@@ -114,7 +114,7 @@ class TTSConnector
             'PARALINGUISTIC_TAGS_LIST' => '[clear throat],[sigh],[shush],[cough],[groan],[sniff],[gasp],[chuckle],[laugh]',
         ],
         'omnivoice' => [
-            'language' => 'en',
+            'language' => '',
             'voicelogic' => 'voicetype',
         ],
         'pockettts' => [
