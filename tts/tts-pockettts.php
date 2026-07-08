@@ -47,7 +47,8 @@ if (!function_exists('normalize_endpoint_url')) {
 }
 
 function pockettts_is_audio_cpp($endpoint) {
-	$format = strtolower($GLOBALS["TTS"]["POCKETTTS"]["api_format"] ?? '');
+	$rawFormat = $GLOBALS["TTS"]["POCKETTTS"]["api_format"] ?? '';
+	$format = is_scalar($rawFormat) ? strtolower(trim(strval($rawFormat))) : '';
 	if ($format === 'audio_cpp' || $format === 'audiocpp') {
 		return true;
 	}
@@ -63,6 +64,11 @@ function pockettts_audio_cpp_url($endpoint) {
 }
 
 function pockettts_audio_cpp_voice($voice) {
+	$configuredVoice = $GLOBALS["TTS"]["POCKETTTS"]["audio_cpp_voice"] ?? '';
+	if (is_scalar($configuredVoice) && trim(strval($configuredVoice)) !== '') {
+		return ['voice' => trim(strval($configuredVoice))];
+	}
+
 	$cleanName = basename((string)$voice, '.wav');
 	$paths = [
 		dirname(__FILE__) . '/../data/voices/' . $cleanName . '.wav',
@@ -75,9 +81,19 @@ function pockettts_audio_cpp_voice($voice) {
 		}
 	}
 
-	$presets = ['alba', 'marius', 'javert', 'jean', 'fantine', 'cosette', 'eponine', 'azelma'];
+	$presets = [
+		'alba', 'marius', 'javert', 'cosette', 'jean', 'anna', 'vera', 'fantine',
+		'charles', 'paul', 'eponine', 'azelma', 'george', 'mary', 'jane',
+		'michael', 'eve', 'bill_boerst', 'peter_yearsley', 'stuart_bell',
+		'caro_davy', 'juergen', 'estelle', 'lola', 'giovanni', 'rafael',
+	];
 	$preset = in_array(strtolower($cleanName), $presets, true) ? strtolower($cleanName) : 'alba';
 	return ['voice' => $preset];
+}
+
+function pockettts_audio_cpp_model() {
+	$model = $GLOBALS["TTS"]["POCKETTTS"]["model"] ?? 'pocket-tts';
+	return is_scalar($model) && trim(strval($model)) !== '' ? trim(strval($model)) : 'pocket-tts';
 }
 
 function pockettts_settings($settings,$resetAfter=false) {
@@ -235,7 +251,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		if (pockettts_is_audio_cpp($GLOBALS["TTS"]["POCKETTTS"]["endpoint"] ?? '')) {
 			$url = pockettts_audio_cpp_url($GLOBALS["TTS"]["POCKETTTS"]["endpoint"]);
 			$data = array(
-				'model' => $GLOBALS["TTS"]["POCKETTTS"]["model"] ?? 'pocket-tts',
+				'model' => pockettts_audio_cpp_model(),
 				'input' => $newString,
 				'language' => $lang ?? 'en',
 			);
@@ -270,7 +286,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			
 			if (pockettts_is_audio_cpp($GLOBALS["TTS"]["POCKETTTS"]["endpoint"] ?? '')) {
 				$data = array(
-					'model' => $GLOBALS["TTS"]["POCKETTTS"]["model"] ?? 'pocket-tts',
+					'model' => pockettts_audio_cpp_model(),
 					'input' => $newString,
 					'language' => $lang ?? 'en',
 				);
