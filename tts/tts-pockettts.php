@@ -58,7 +58,21 @@ function pockettts_audio_cpp_url($endpoint) {
 	return $endpoint . '/v1/audio/speech';
 }
 
-function pockettts_backend_voice_payload() {
+function pockettts_backend_voice_payload($voice) {
+	$cleanName = basename((string)$voice, '.wav');
+	if ($cleanName !== '') {
+		$paths = [
+			dirname(__FILE__) . '/../data/voices/' . $cleanName . '.wav',
+			'/home/dwemer/pocket-tts/speakers/' . $cleanName . '.wav',
+			'/home/dwemer/audio.cpp/speakers/' . $cleanName . '.wav',
+		];
+		foreach ($paths as $path) {
+			if (is_readable($path)) {
+				return ['voice_ref' => $path];
+			}
+		}
+	}
+
 	return ['voice' => 'alba'];
 }
 
@@ -226,7 +240,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 				'input' => $newString,
 				'language' => $lang ?? 'en',
 			);
-			$data = array_merge($data, pockettts_backend_voice_payload());
+			$data = array_merge($data, pockettts_backend_voice_payload($voice));
 		} else {
 			$data = array(
 				'text' => $newString,
@@ -261,7 +275,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 					'input' => $newString,
 					'language' => $lang ?? 'en',
 				);
-				$data = array_merge($data, pockettts_backend_voice_payload());
+				$data = array_merge($data, pockettts_backend_voice_payload($codename));
 			} else {
 				$data = array(
 					'text' => $newString,
