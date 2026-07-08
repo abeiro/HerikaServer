@@ -4920,6 +4920,27 @@ if ($checkVersion("core_player")<20241128001) {
     Logger::info("Applied patch core_player 20241128001 - Migrated player data from conf_opts");
 }
 
+
+//----------------------------------------------------
+// PLAYER AUTO DIARY FEATURE - Add auto diary toggles
+// Version 20260707001
+//----------------------------------------------------
+
+if ($checkVersion("core_player")<20260707001) {
+    Logger::debug("Applying core_player migration 20260707001 - Adding player auto diary toggles");
+
+    $db->execQuery("
+        INSERT INTO public.core_player (id, value)
+        VALUES
+            ('auto_diary_enabled', '0'),
+            ('auto_diary_wait_enabled', '0')
+        ON CONFLICT (id) DO NOTHING
+    ");
+
+    $updateVersion("core_player", 20260707001);
+    Logger::info("Applied patch core_player 20260707001 - Added player auto diary toggles");
+}
+
 //----------------------------------------------------
 // CORE_NARRATOR DATA MIGRATION
 //----------------------------------------------------

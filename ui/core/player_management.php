@@ -62,6 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_player'])) {
             );
         }
         $player->set('diary_enabled', isset($_POST['diary_enabled']) && $_POST['diary_enabled'] === '1' ? '1' : '0');
+        $player->set('auto_diary_enabled', isset($_POST['auto_diary_enabled']) && $_POST['auto_diary_enabled'] === '1' ? '1' : '0');
+        $player->set('auto_diary_wait_enabled', isset($_POST['auto_diary_wait_enabled']) && $_POST['auto_diary_wait_enabled'] === '1' ? '1' : '0');
         $player->set('tts_connector_id', trim(strval($_POST['tts_connector_id'] ?? '')));
         $player->set('tts_voice_override', trim(strval($_POST['tts_voice_override'] ?? '')));
         $player->set('tts_voice_id_override', trim(strval($_POST['tts_voice_id_override'] ?? '')));
@@ -100,6 +102,8 @@ $bio = $allPlayerData['bio'] ?? '';
 $bioKnownByAll = ($allPlayerData['bio_known_by_all'] ?? 'false') === 'true';
 $speechStyle = $allPlayerData['speech_style'] ?? '';
 $playerDiaryEnabled = $player->getBool('diary_enabled', false);
+$playerAutoDiaryEnabled = $player->getBool('auto_diary_enabled', false);
+$playerAutoDiaryWaitEnabled = $player->getBool('auto_diary_wait_enabled', false);
 $playerTtsConnectorId = trim(strval($allPlayerData['tts_connector_id'] ?? ''));
 $playerTtsVoiceId = strval($allPlayerData['tts_voice_override'] ?? '');
 $playerTtsVoiceIdOverride = strval($allPlayerData['tts_voice_id_override'] ?? '');
@@ -1295,6 +1299,8 @@ if (!$isEmbed) {
             <div class="content-section">
                 <h2>📙 Player Diary</h2>
                 <input type="hidden" name="diary_enabled" value="0">
+                <input type="hidden" name="auto_diary_enabled" value="0">
+                <input type="hidden" name="auto_diary_wait_enabled" value="0">
                 <div class="status-field">
                     <span class="status-field-label">Player Diary Connector</span>
                     <div class="status-field-value <?php echo $playerDiaryConnectorError !== '' ? 'warning' : ''; ?>">
@@ -1321,6 +1327,36 @@ if (!$isEmbed) {
                     <span class="toggle-label">Enable <?php echo htmlspecialchars($playerName); ?>'s Diary</span>
                 </label>
                 <span class="hint">Allows <?php echo htmlspecialchars($playerName); ?> to write diary entries. This can be triggered by the Prisma Actions menu or Auto Diary.</span>
+
+                <label class="toggle-row">
+                    <div class="toggle-switch">
+                        <input
+                            type="checkbox"
+                            id="auto_diary_enabled"
+                            name="auto_diary_enabled"
+                            value="1"
+                            <?php echo $playerAutoDiaryEnabled ? 'checked' : ''; ?>
+                        >
+                        <span class="toggle-slider"></span>
+                    </div>
+                    <span class="toggle-label">Player Auto Diary</span>
+                </label>
+                <span class="hint">Automatically writes <?php echo htmlspecialchars($playerName); ?>'s diary when sleeping. Requires Player Diary to be enabled.</span>
+
+                <label class="toggle-row">
+                    <div class="toggle-switch">
+                        <input
+                            type="checkbox"
+                            id="auto_diary_wait_enabled"
+                            name="auto_diary_wait_enabled"
+                            value="1"
+                            <?php echo $playerAutoDiaryWaitEnabled ? 'checked' : ''; ?>
+                        >
+                        <span class="toggle-slider"></span>
+                    </div>
+                    <span class="toggle-label">Player Auto Diary Wait</span>
+                </label>
+                <span class="hint">Also writes <?php echo htmlspecialchars($playerName); ?>'s diary when waiting. Requires Player Diary and Player Auto Diary to be enabled.</span>
 
             </div>
         </div>
