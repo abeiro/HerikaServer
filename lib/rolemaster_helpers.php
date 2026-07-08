@@ -1893,13 +1893,15 @@ function getLocationsNearNpcCoords($npcName) {
          FROM locations
          WHERE coords IS NOT NULL
          ORDER BY distance ASC
-         LIMIT 15"
+         LIMIT 25"
     );
 
     $closestLocationsNames=[];
 
     foreach ($closestLocations as &$location) {
-        $closestLocationsNames[] = ($location['name'] ?? '') . ($location['is_interior'] ? ' (Interior)' : '');
+        $key=($location['name'] ?? '') . ($location['is_interior'] ? ' (Interior)' : '');
+        $label=" $key ";
+        $closestLocationsNames[$key] = $label;
     }
 
     return is_array($closestLocationsNames) ? $closestLocationsNames : [];

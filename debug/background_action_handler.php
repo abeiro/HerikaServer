@@ -198,7 +198,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => ($location==$resolvedLocation) ? "$npcName starts travelling to $location" : "$npcName starts travelling to $location (resolved as $resolvedLocation)",
+            'data' => ($location==$resolvedLocation) ? "$npcName starts travelling to $location" : "$npcName starts travelling to $location (resolved as $resolvedLocation). Reason: {$GLOBALS["LAST_REASON"]}",
         ]
     );
 
@@ -224,13 +224,13 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
     $resolvedLocation = $locId['name'] ?? $requestedLocation;
 
     if (strcasecmp($requestedLocation, 'random') === 0) {
-        error_log("[handleTravelToAction] random picked: " . print_r($locId, true));
+        error_log("[handleStayAtPlaceAction] random picked: " . print_r($locId, true));
     }
 
     if (!empty($locId)) {
         $sim = isset($locId['sim']) ? ', sim=' . $locId['sim'] : '';
         $dist = isset($locId['dist']) ? ', dist=' . $locId['dist'] : '';
-        error_log("[handleTravelToAction] requested='$requestedLocation' resolved='{$resolvedLocation}' formid='{$locId['formid']}'$sim$dist");
+        error_log("[handleStayAtPlaceAction] requested='$requestedLocation' resolved='{$resolvedLocation}' formid='{$locId['formid']}'$sim$dist");
     }
 
     if (!isset($locId["formid"])) {
@@ -262,7 +262,7 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName stays at current location ($requestedLocation, resolved as $resolvedLocation)",
+            'data' => "$npcName stays at current location ($requestedLocation, resolved as $resolvedLocation). Reason: {$GLOBALS["LAST_REASON"]}",
         ]
     );
 
@@ -366,7 +366,7 @@ function handleReturnHome($location, $currentNpcData, $npcName, $last_ts, $last_
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName returns back to {$GLOBALS['PLAYER_NAME']}"
+            'data' => "$npcName returns back to {$GLOBALS['PLAYER_NAME']}. Reason: {$GLOBALS['LAST_REASON']}"
         ]
     );
 
@@ -491,7 +491,7 @@ function handleMoveToAction($targetNpcName, $currentNpcData, $npcName, $last_ts,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName moves towards $resolvedName"
+            'data' => "$npcName moves towards $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
         ]
     );
 
@@ -585,7 +585,7 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName looks for $resolvedName"
+            'data' => "$npcName looks for $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
         ]
     );
 
@@ -665,7 +665,7 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                 'ts' => $last_ts,
                 'gamets' => $last_gamets,
                 'localts' => time(),
-                'data' => "$npcName moves toward $resolvedName"
+                'data' => "$npcName moves toward $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
             ]
         );
 
@@ -885,7 +885,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                 'ts' => $last_ts,
                 'gamets' => $last_gamets + 20,
                 'localts' => time(),
-                'data' => "$npcName has a conversation with $resolvedName"
+                'data' => "$npcName has a conversation with $resolvedName\nDialogue: $dialogueBuffer"
             ]
         );
     }
@@ -999,9 +999,9 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         ]
     );
 
-    sleep(2); // Simulate time taken to process the trade; in a utopic implementation, this would be event-driven rather than a fixed sleep
+    // Schedule inventory updates for both NPCs after the trade
     $db->insert('responselog', [
-        'localts' => time(),
+        'localts' => time()+10,
         'sent' => 0,
         'actor' => 'rolemaster',
         'text' => '',
@@ -1010,14 +1010,14 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
     ]);
 
     $db->insert('responselog', [
-        'localts' => time(),
+        'localts' => time()+10,
         'sent' => 0,
         'actor' => 'rolemaster',
         'text' => '',
         'action' => "rolecommand|BackgroundCmd@$targetRefHexString@UpdateInventory",
         'tag' => '',
     ]);
-    sleep(1); // Allow time for inventory updates to propagate
+    
     triggerNpcUpdate($npcName);
     return true;
 }

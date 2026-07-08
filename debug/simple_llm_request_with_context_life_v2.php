@@ -181,7 +181,7 @@ $npcNameEsc = $db->escape($npcName);
 // Last action issued by the NPC (if any) in the last 24 in-game hours
 
 $lastIssuedEvent = $db->fetchOne(
-    "SELECT gamets, data FROM actions_issued
+    "SELECT gamets, action FROM actions_issued
      WHERE actorname='$npcNameEsc' 
      ORDER BY gamets DESC, ts ASC"
 );
@@ -241,6 +241,8 @@ if (($last_gamets - $lastItGamets) < $minDeltaForRerun) {
 
 
 $daysPassed = round(($last_gamets - $lastItGamets) * GAMETS_TO_HOURS / 24, 2);
+
+$history = "";
 
 // ─── Dynamic Biography ────────────────────────────────────────────────────────
 
@@ -466,6 +468,10 @@ if (isset($metadata['low_process_actors'])) {
         }
         $hoursAgo = number_format(($last_gamets - $gamets_lpa_processed) * GAMETS_TO_HOURS, 2);
         // actorList in the form of name
+        if ($actorList === []) {
+            $actorList = ["No visible characters nearby"];
+        } 
+
         $bgEvents[] = [
             'gamets' => $gamets_lpa_processed,
             'content' => "Nearby actors {$GLOBALS['HERIKA_NAME']} can see (refid,name): " . json_encode($actorList) . ", ($hoursAgo hours ago)",
@@ -479,13 +485,17 @@ if (isset($metadata['low_process_actors'])) {
 
 if ($LAST_REPORTED_LOCATION) {
     $locationEsc = $db->escape(str_replace(" (Interior)", "", $LAST_REPORTED_LOCATION));
-    $rumorSinceTs = $gameRequest[2] - ((24 * 7) / GAMETS_TO_HOURS);   // Last 7 in-game days
+    $rumorSinceTs = $last_gamets - ((24 * 7) / GAMETS_TO_HOURS);   // Last 7 in-game days
     $rumorRows = $db->fetchAll(
         "SELECT gamets, content FROM rumors
-         WHERE (hold LIKE '%{$locationEsc}%' or hold IN (SELECT distinct(hold) FROM locations where name='$locationEsc'))
-         AND gamets > $rumorSinceTs"
+         WHERE (
+            hold LIKE '%{$locationEsc}%' 
+            or hold IN (SELECT distinct(hold) FROM locations where name='$locationEsc')
+            or hold IN (SELECT distinct(region) FROM locations where name in (SELECT distinct(hold) FROM locations where name='$locationEsc'))
+            )
+         AND gamets > $rumorSinceTs order by gamets desc, ts desc LIMIT 2 OFFSET 0"
     );
-    error_log("[BACKGROUND LIFE] LAST_REPORTED_LOCATION " . count($rumorRows) . " rumors near $LAST_REPORTED_LOCATION since gamets $rumorSinceTs");
+    error_log("[BACKGROUND LIFE] LAST_REPORTED_LOCATION " . count($rumorRows) . " rumors near <$LAST_REPORTED_LOCATION> since gamets $rumorSinceTs");
     foreach ($rumorRows as $rumor) {
         $bgEvents[] = [
             'gamets' => $rumor['gamets'],
@@ -520,7 +530,7 @@ echo str_repeat('=', 63) . PHP_EOL;
 
 $closestLocations = getLocationsNearNpcCoords($GLOBALS['HERIKA_NAME']);
 if (is_array($closestLocations) && count($closestLocations) > 0) {
-    $history .= "Hint: Closest locations to {$GLOBALS['HERIKA_NAME']} (Use TravelTo to move to one of this locations if needed):\n";
+    $history .= "Hint: Closest locations to {$GLOBALS['HERIKA_NAME']} ordered by distance. (Use TravelTo to move to one of this locations if needed):\n";
     foreach ($closestLocations as $loc) {
         $history .= "\n$loc";
     }
@@ -696,7 +706,7 @@ Rules:
             $middleTermMemory = end($extdata['middle_term_memory']);
             $dynamicBiography .= "\n\n<middle_term_memory>\nPast events\n{$middleTermMemory}\n</middle_term_memory>";
         }
-        $history .= "\nThe Narrator: $npcName produced/consumed items while idle: $action. Reasoning: $reasoning";
+        $history .= "\nThe Narrator: $npcName produced/consumed items while idle: $actionTextFinal. Reasoning: $reasoning";
 
 
     } else {
@@ -786,7 +796,7 @@ if (!$isSpeakAction) {
     $innerThoughtBuffer = $connectionHandler->fast_request($step1Prompt, ['MAX_TOKENS' => 2048], 'backgroundlife');
 
 } else {
-    $innerThoughtBuffer = "";
+    $innerThoughtBuffer = "({$GLOBALS['HERIKA_NAME']} thinks about the last conversation )";
 }
 
 Logger::debug(__LINE__ . ' ' . (microtime(true) - $startTime));
@@ -840,17 +850,22 @@ if ($npcIsTravelling) {
 $step2Content .= "\nElement Definitions:\n```\n"
     . "$actionChoiceDesc\n"
     . "```\n\n"
-    . "- Your answer must use XML format, containing exactly 1 element.\n"
+    . "- Your answer must use XML format, containing exactly 2 elements.\n"
     . "- NEVER include commentary inside or outside the element tags or ANY content beyond the defined format.\n\n"
     . "Use only this exact Response Format:\n```\n"
     . "<action> ... </action>\n"
+    . "<reason> ... </reason>\n"
     . "```";
 
 $step2Content .= "Example: ```\n\n"
-    . "<action>FindNPC:Lydia</action>\n```";
+    . "<action>FindNPC:Lydia</action>\n"
+    . "<reason>I need to find Lydia to speak to her</reason>\n"
+    ."```";
 
 $step2Content .= "Examples ```\n\n"
-    . "<action>SpeakTo:Lydia:000A2C94</action>\n```";
+    . "<action>SpeakTo:Lydia:000A2C94</action>\n"
+    . "<reason>I need to speak to Lydia to progress in my current objectives.</reason>\n"
+    ."```";
 
 $step2Content .= "
 Rules:
@@ -869,6 +884,13 @@ $decisionBuffer = $connectionHandler->fast_request($step2Prompt, ['MAX_TOKENS' =
 
 echo $decisionBuffer . PHP_EOL;
 
+// Refresh NPC data to ensure we have the latest information before executing any actions
+// This is important because the NPC's state may have changed during the decision-making process
+
+$currentNpcData = $npcMaster->getByName($npcName);
+$extdata = $npcMaster->getExtendedData($currentNpcData);
+$metadata = $npcMaster->getMetadata($currentNpcData);
+
 // ─── Update Background-Life Timestamp ────────────────────────────────────────
 
 $extdata['background_life_last_updated'] = $last_gamets;
@@ -881,6 +903,7 @@ $parsed = [
     'action' => manual_get_tag_content($decisionBuffer, 'action'),
     'notification' => '',
     'rumor' => '',
+    'reason' => manual_get_tag_content($decisionBuffer, 'reason')
 ];
 
 print_r($parsed);
@@ -899,7 +922,8 @@ $refHexString = convertSignedToUnsignedHex(hexdec($currentNpcData['refid']));
 $recordDiaryEntry = true;
 if (!empty($parsed['action'])) {
     [$actionCmd, $actionArg] = array_pad(explode(':', $parsed['action'], 2), 2, null);
-    error_log("[BGL] Chosen action: $actionCmd, argument: $actionArg");
+    error_log("[BGL] Chosen action: $actionCmd, argument: $actionArg, reason: {$parsed['reason']}");
+    $GLOBALS["LAST_REASON"] = $parsed['reason'];
     switch ($actionCmd) {
         case 'TravelTo':
             handleTravelToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $lastEventParsed, $db);
@@ -1005,8 +1029,10 @@ if ($innerThoughtBuffer) {
 
 $currentNpcData = $npcMaster->getByName($npcName);
 $extdata = $npcMaster->getExtendedData($currentNpcData);
-$extdata['background_life_enabled'] = true;
-$currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
-$npcMaster->updateByArray($currentNpcData);
+if (!$extdata['background_life_enabled']) {
+    $extdata['background_life_enabled'] = true;
+    $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
+    $npcMaster->updateByArray($currentNpcData);
+}   
 
 die();

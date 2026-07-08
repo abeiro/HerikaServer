@@ -144,6 +144,23 @@ if (is_array($bgevent)) {
                         error_log("[BGL] {$npcData["npc_name"]} has finished ISSUED action {$bgevent["name"]} <{$lastAction["action"]}>");
                         $extended["background_life_last_updated"] = 0; // Force trigger on next middleterm BgL check, NPC will request a new action.
                         $bgevent["server_processed"] = true;
+
+                        if ($bgevent["name"] == "TravelTo" || $bgevent["name"] == "MoveTo") {
+                            $message="{$npcData["npc_name"]} reaches destination";
+                        } else {
+                            $message="{$npcData["npc_name"]} {$bgevent["event"]} {$bgevent["name"]}";
+                        }
+
+                        $GLOBALS["db"]->insert(
+                            'bgl_history',
+                            [
+                                'npc' => $npcData["npc_name"],
+                                'ts' => $gameRequest[1],
+                                'gamets' => $gameRequest[2],
+                                'localts' => time(),
+                                'data' => $message
+                            ]
+                        );
                     }
 
                 } else 
@@ -153,6 +170,8 @@ if (is_array($bgevent)) {
                 $extended["background_life_last"] = $bgevent;
                 $npcData = $npcManager->setExtendedData($npcData, $extended);
                 $npcManager->updateByArray($npcData);
+
+                
             }
             // Also, lets track coords.
             if ($npcData["refid"]) {
@@ -164,7 +183,7 @@ if (is_array($bgevent)) {
                         'actor' => "rolemaster",
                         'text' => "",
                         'action' => "rolecommand|BackgroundCmd@0x{$npcData['refid']}@Track/",
-                        'tag' => '',
+                        'tag' => "requested after background event {$bgevent["name"]}",
                     ]
                 );
             }
