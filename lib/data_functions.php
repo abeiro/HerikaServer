@@ -11,6 +11,7 @@ require_once(__DIR__."/core/activity_status.php");
 require_once(__DIR__."/core/transformation_state.php");
 require_once(__DIR__."/core/game_plugins.php");
 require_once(__DIR__."/core/npc_master.class.php");
+require_once(__DIR__."/core/core_profiles.class.php");
 require_once(__DIR__."/prompt_injections.php");
 require_once(__DIR__."/vr_items.php");
 
@@ -6884,7 +6885,18 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         }
         $existingExtendedData['chim_core_migrated'] = 2;
         $currentData['extended_data'] = json_encode($existingExtendedData, JSON_UNESCAPED_UNICODE);
-        $currentData['profile_id'] = 1; // Default profile
+        $defaultProfileId = 1;
+        try {
+            $coreProfile = new CoreProfile();
+            $defaultProfile = $coreProfile->getDefaultNpc();
+            if (is_array($defaultProfile) && !empty($defaultProfile['id'])) {
+                $defaultProfileId = (int)$defaultProfile['id'];
+            }
+        } catch (Throwable $e) {
+            error_log("[CREATEPROFILE] Could not resolve default NPC profile, falling back to profile #1: " . $e->getMessage());
+        }
+
+        $currentData['profile_id'] = $defaultProfileId;
         $currentData['md5'] = md5($currentData["npc_name"]);
         $currentData['gamets_last_updated'] = $GLOBALS["gameRequest"][2];
 

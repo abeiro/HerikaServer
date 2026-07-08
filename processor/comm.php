@@ -1613,10 +1613,10 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             SELECT *
             FROM import_rules r
             WHERE r.enabled = TRUE
-            AND (r.match_name IS NULL OR '$npcName' ~ r.match_name)
-            AND (r.match_race IS NULL OR '$npcRace' ~ r.match_race)
-            AND (r.match_gender IS NULL OR '$npcGender' ~ r.match_gender)
-            AND (r.match_base IS NULL OR '$npcBase' ~ r.match_base)
+            AND (NULLIF(BTRIM(r.match_name), '') IS NULL OR '$npcName' ~ r.match_name)
+            AND (NULLIF(BTRIM(r.match_race), '') IS NULL OR '$npcRace' ~ r.match_race)
+            AND (NULLIF(BTRIM(r.match_gender), '') IS NULL OR '$npcGender' ~ r.match_gender)
+            AND (NULLIF(BTRIM(r.match_base), '') IS NULL OR '$npcBase' ~ r.match_base)
             AND (r.match_mods IS NULL OR r.match_mods <@ $modsArray)
             ORDER BY r.priority DESC
         ";

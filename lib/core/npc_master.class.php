@@ -837,7 +837,21 @@ class NpcMaster
                 $currentNpcData['core'] = $OLD_GLOBALS_ARRAY['HERIKA_NAME'];
             }
         }
-        $currentNpcData['profile_id'] = 1;                                // Default profile
+        $defaultProfileId = 1;
+        try {
+            if (!class_exists('CoreProfile')) {
+                require_once __DIR__ . DIRECTORY_SEPARATOR . 'core_profiles.class.php';
+            }
+            $coreProfile = new CoreProfile();
+            $defaultProfile = $coreProfile->getDefaultNpc();
+            if (is_array($defaultProfile) && !empty($defaultProfile['id'])) {
+                $defaultProfileId = (int)$defaultProfile['id'];
+            }
+        } catch (Throwable $e) {
+            error_log("[NPCMASTER] Could not resolve default NPC profile, falling back to profile #1: " . $e->getMessage());
+        }
+
+        $currentNpcData['profile_id'] = $defaultProfileId;
         $currentNpcData['md5']        = md5($currentNpcData["npc_name"]); // Default profile
 
         return $currentNpcData;
