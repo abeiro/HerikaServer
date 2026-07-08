@@ -111,9 +111,7 @@ class TTSConnector
         ],
         'pockettts' => [
             'language' => 'en',
-            'api_format' => 'audio_cpp',
             'model' => 'pocket-tts',
-            'audio_cpp_voice' => 'alba',
             'voicelogic' => 'voicetype',
         ],
         'inworld' => [
@@ -718,12 +716,8 @@ class TTSConnector
             $metadata['url'] = $resolvedUrl;
             $metadata['URL'] = $resolvedUrl;
             if ($driver === 'pockettts' && preg_match('/\:8086(?:\/|$)/', $resolvedUrl)) {
-                $metadata['api_format'] = 'audio_cpp';
                 if (!is_scalar($metadata['model'] ?? null) || trim(strval($metadata['model'] ?? '')) === '') {
                     $metadata['model'] = 'pocket-tts';
-                }
-                if (!is_scalar($metadata['audio_cpp_voice'] ?? null) || trim(strval($metadata['audio_cpp_voice'] ?? '')) === '') {
-                    $metadata['audio_cpp_voice'] = 'alba';
                 }
             }
         }

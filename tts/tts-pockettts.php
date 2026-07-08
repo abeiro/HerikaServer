@@ -47,11 +47,6 @@ if (!function_exists('normalize_endpoint_url')) {
 }
 
 function pockettts_is_audio_cpp($endpoint) {
-	$rawFormat = $GLOBALS["TTS"]["POCKETTTS"]["api_format"] ?? '';
-	$format = is_scalar($rawFormat) ? strtolower(trim(strval($rawFormat))) : '';
-	if ($format === 'audio_cpp' || $format === 'audiocpp') {
-		return true;
-	}
 	return strpos((string)$endpoint, ':8086') !== false || strpos((string)$endpoint, '/v1/audio/speech') !== false;
 }
 
@@ -63,32 +58,8 @@ function pockettts_audio_cpp_url($endpoint) {
 	return $endpoint . '/v1/audio/speech';
 }
 
-function pockettts_audio_cpp_voice($voice) {
-	$configuredVoice = $GLOBALS["TTS"]["POCKETTTS"]["audio_cpp_voice"] ?? '';
-	if (is_scalar($configuredVoice) && trim(strval($configuredVoice)) !== '') {
-		return ['voice' => trim(strval($configuredVoice))];
-	}
-
-	$cleanName = basename((string)$voice, '.wav');
-	$paths = [
-		dirname(__FILE__) . '/../data/voices/' . $cleanName . '.wav',
-		'/home/dwemer/audio.cpp/speakers/' . $cleanName . '.wav',
-		'/home/dwemer/pocket-tts/speakers/' . $cleanName . '.wav',
-	];
-	foreach ($paths as $path) {
-		if (is_readable($path)) {
-			return ['voice_ref' => $path];
-		}
-	}
-
-	$presets = [
-		'alba', 'marius', 'javert', 'cosette', 'jean', 'anna', 'vera', 'fantine',
-		'charles', 'paul', 'eponine', 'azelma', 'george', 'mary', 'jane',
-		'michael', 'eve', 'bill_boerst', 'peter_yearsley', 'stuart_bell',
-		'caro_davy', 'juergen', 'estelle', 'lola', 'giovanni', 'rafael',
-	];
-	$preset = in_array(strtolower($cleanName), $presets, true) ? strtolower($cleanName) : 'alba';
-	return ['voice' => $preset];
+function pockettts_backend_voice_payload() {
+	return ['voice' => 'alba'];
 }
 
 function pockettts_audio_cpp_model() {
@@ -255,7 +226,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 				'input' => $newString,
 				'language' => $lang ?? 'en',
 			);
-			$data = array_merge($data, pockettts_audio_cpp_voice($voice));
+			$data = array_merge($data, pockettts_backend_voice_payload());
 		} else {
 			$data = array(
 				'text' => $newString,
@@ -290,7 +261,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 					'input' => $newString,
 					'language' => $lang ?? 'en',
 				);
-				$data = array_merge($data, pockettts_audio_cpp_voice($codename));
+				$data = array_merge($data, pockettts_backend_voice_payload());
 			} else {
 				$data = array(
 					'text' => $newString,
