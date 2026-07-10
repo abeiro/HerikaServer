@@ -19,7 +19,7 @@ require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTOR
 */
 function isEmotionCapable() {
     // inworld-tts-1 is not yet capable to handle emotions consistently, max is
-    $modelId = $GLOBALS["TTS"]["INWORLD"]["model_id"] ?? 'inworld-tts-1';
+    $modelId = $GLOBALS["TTS"]["INWORLD"]["model_id"] ?? 'inworld-tts-2';
     if ($modelId == 'inworld-tts-1')
         return false;
     else 
@@ -32,7 +32,7 @@ function isEmotionCapable() {
 */
 function isNonVerbalVocalizationCapable() {
     // inworld-tts-1 is not yet capable to handle non-verbal vocalization consistently, max is
-    $modelId = $GLOBALS["TTS"]["INWORLD"]["model_id"] ?? 'inworld-tts-1';
+    $modelId = $GLOBALS["TTS"]["INWORLD"]["model_id"] ?? 'inworld-tts-2';
     if ($modelId == 'inworld-tts-1')
         return false;
     else 
@@ -817,7 +817,7 @@ function generateInworldTTS($text, $voiceId, $mood = 'normal', $outputFile = nul
     $url = "https://api.inworld.ai/tts/v1/voice:stream";
     
     // Get model ID
-    $modelId = $GLOBALS["TTS"]["INWORLD"]["model_id"] ?? 'inworld-tts-1';
+    $modelId = $GLOBALS["TTS"]["INWORLD"]["model_id"] ?? 'inworld-tts-2';
     
     // Get speed setting (speakingRate: 0.5-1.5, default 1.0)
     $speed = $GLOBALS["TTS"]["INWORLD"]["speed"] ?? 1.0;

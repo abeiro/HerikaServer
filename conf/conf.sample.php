@@ -461,7 +461,7 @@ $TTS["CARTESIA"]["speed"]='normal'; //Speed (slowest, slow, normal, fast, fastes
 $TTS["INWORLD"]["workspace"]=''; //Workspace ID (required for voice cloning). Format: workspaces/{workspace} or just the workspace ID.
 $TTS["INWORLD"]["voiceid"]=''; //Voice file name. Works like XTTS voiceid. Voice will be automatically cloned to Inworld when first used.
 $TTS["INWORLD"]["language"]='en-US'; //Language code (en-US, zh-CN, ko-KR, ja-JP, ru-RU, it-IT, es-ES, pt-BR, de-DE, fr-FR, ar-SA, pl-PL, nl-NL, hi-IN, he-IL).
-$TTS["INWORLD"]["model_id"]='inworld-tts-1'; //Model (inworld-tts-1, inworld-tts-1-max).
+$TTS["INWORLD"]["model_id"]='inworld-tts-2'; //Model (inworld-tts-1.5, inworld-tts-2).
 $TTS["INWORLD"]["temperature"]=1.1; //Sampling temperature (0-2). Higher values make output more random. Default: 1.1.
 $TTS["INWORLD"]["speed"]=1.0; //Speaking rate/speed (0.5-1.5). Default: 1.0.
 

@@ -124,7 +124,7 @@ class TTSConnector
         ],
         'inworld' => [
             'language' => 'en-US',
-            'model_id' => 'inworld-tts-1',
+            'model_id' => 'inworld-tts-2',
             'temperature' => 1.0,
             'speed' => 1.0,
         ],
