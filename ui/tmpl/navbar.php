@@ -542,7 +542,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Prepare profile options
     $OPTIONS = [];
     $i = 0;
-    foreach ($GLOBALS["PROFILES"] as $lProfkey => $lProfile) {
+    $profiles = is_array($GLOBALS["PROFILES"] ?? null) ? $GLOBALS["PROFILES"] : [];
+    foreach ($profiles as $lProfkey => $lProfile) {
         $pattern = "/conf_([a-fA-F0-9]+)\.php/";
         if (preg_match($pattern, $lProfile, $matches)) {
             $hash = $matches[1];
