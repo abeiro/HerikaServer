@@ -697,7 +697,7 @@ function stripPlayerAsteriskActions($text) {
 
 function getInlineNarrationMode() {
     $mode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? "")));
-    if (in_array($mode, ['disabled', 'narrator', 'npc'], true)) {
+    if (in_array($mode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
         return $mode;
     }
 
@@ -909,6 +909,16 @@ function formatInlineNarrationDialogueSubtitleText($text) {
 function formatNarrationSubtitleText($text) {
     $narrationText = trim((string)$text, " \t\n\r\0\x0B*");
     return "*{$narrationText}*";
+}
+
+function formatTextOnlyInlineNarrationSubtitleText($text) {
+    return cleanupDisplayText($text, $GLOBALS["HERIKA_NAME"] ?? null);
+}
+
+function formatTextOnlyInlineNarrationSpeechText($text, $narrationParts = null) {
+    $narrationParts = $narrationParts ?? extractNarrationAndDialogue($text);
+    $speechText = $narrationParts['has_narration'] ? $narrationParts['dialogue'] : $text;
+    return unmoodSentence($speechText);
 }
 
 function shouldStripAsterisksFromCleanContextBuffer() {
@@ -1203,10 +1213,12 @@ function returnLines($lines,$writeOutput=true)
 
         // Check if we should split narration to The Narrator BEFORE unmoodSentence strips asterisks
         $splitNarration = false;
+        $textOnlyNarration = false;
         $narrationParts = null;
         if ($inlineNarrationEnabled && !$isPlayerSpeech) {
             $narrationParts = extractNarrationAndDialogue($sentenceForSubtitles);
             $splitNarration = shouldSplitInlineNarration() && $narrationParts['has_narration'];
+            $textOnlyNarration = $inlineNarrationMode === 'text_only' && $narrationParts['has_narration'];
 
             // Debug logging
             Logger::info("[INLINE_NARRATION] Mode: " . $inlineNarrationMode);
@@ -1275,6 +1287,11 @@ function returnLines($lines,$writeOutput=true)
         // Set up subtitles based on whether inline narration is enabled
         if ($isPlayerSpeech) {
             $responseForSubtitles = formatPlayerSubtitleText($sentenceForSubtitles);
+        } elseif ($textOnlyNarration) {
+            $responseForSubtitles = formatTextOnlyInlineNarrationSubtitleText($sentenceForSubtitles);
+            if (strlen($responseForSubtitles) > _MAX_SUBTITLE_LENGTH) {
+                $responseForSubtitles = substr($responseForSubtitles, 0, _MAX_SUBTITLE_LENGTH);
+            }
         } elseif (!$splitNarration) {
             $responseForSubtitles = formatNpcSubtitleText($sentenceForSubtitles);
             if (strlen($responseForSubtitles) > _MAX_SUBTITLE_LENGTH) {
@@ -1329,13 +1346,34 @@ function returnLines($lines,$writeOutput=true)
         }
 
         $hasNarrationBlocks = $splitNarration && $narrationParts && !empty($narrationParts['narrations']);
+        $hasTextOnlyNarration = $textOnlyNarration && $narrationParts && !empty($narrationParts['narrations']);
         $shouldEmitNpcLine = false;
 
-        if ($responseTextUnmooded || $hasNarrationBlocks) {
+        if ($responseTextUnmooded || $hasNarrationBlocks || $hasTextOnlyNarration) {
             $shouldEmitNpcLine = true;
 
+            if ($hasTextOnlyNarration) {
+                $responseForSubtitles = formatTextOnlyInlineNarrationSubtitleText($sentenceForSubtitles);
+                if (strlen($responseForSubtitles) > _MAX_SUBTITLE_LENGTH) {
+                    $responseForSubtitles = substr($responseForSubtitles, 0, _MAX_SUBTITLE_LENGTH);
+                }
+
+                if (!empty($narrationParts['dialogue'])) {
+                    $responseForTTS = formatTextOnlyInlineNarrationSpeechText($sentenceForSubtitles, $narrationParts);
+                    $responseText = $responseForTTS;
+                    $responseTextUnmooded = $responseForTTS;
+                    if (!$preserveAsterisksInContext) {
+                        $responseForContext = $responseForTTS;
+                    }
+                } else {
+                    // Do not queue a speech line when there is no audio file to download.
+                    $shouldEmitNpcLine = false;
+                    $responseForTTS = "";
+                    $responseText = "";
+                    $responseTextUnmooded = "";
+                }
             // Check if we need to split narration to The Narrator
-            if ($hasNarrationBlocks) {
+            } elseif ($hasNarrationBlocks) {
                 Logger::info("[INLINE_NARRATION] Splitting narration - processing " . count($narrationParts['narrations']) . " blocks");
 
                 // Save the current NPC voice settings
@@ -1443,7 +1481,7 @@ function returnLines($lines,$writeOutput=true)
             }
             Logger::info("Speech sent for {$GLOBALS["HERIKA_NAME"]}, generator {$GLOBALS["TTSFUNCTION"]}, size: ".strlen($responseText). "  '".substr($responseText,0,10)."'");
         } else {
-            Logger::info("[INLINE_NARRATION] Narration-only line emitted; no NPC dialogue to speak.");
+            Logger::info("[INLINE_NARRATION] No NPC dialogue line queued.");
         }
         $elapsedTimeTTS=microtime(true) - $startTime;
 

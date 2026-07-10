@@ -98,6 +98,15 @@ final class AsteriskParsingTest extends TestCase
         $this->assertTrue(isInlineNarrationEnabled());
     }
 
+    public function testInlineNarrationModeSupportsTextOnlyMode(): void
+    {
+        $GLOBALS['INLINE_NARRATION_MODE'] = 'text_only';
+
+        $this->assertSame('text_only', getInlineNarrationMode());
+        $this->assertFalse(shouldSplitInlineNarration());
+        $this->assertTrue(isInlineNarrationEnabled());
+    }
+
     public function testPlayerSpeechStripsAsteriskActionBlocksWhenPlayerFilterEnabled(): void
     {
         $GLOBALS['REMOVE_ASTERISKS_FROM_PLAYER_INPUT'] = true;
@@ -329,6 +338,26 @@ final class AsteriskParsingTest extends TestCase
         $GLOBALS['HERIKA_NAME'] = 'Carlotta Valentia';
 
         $this->assertSame('*smiles* Hello there', formatNpcSubtitleText('*smiles* Hello there'));
+    }
+
+    public function testTextOnlyNarrationKeepsSubtitleAndSpeaksOnlyDialogue(): void
+    {
+        $GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] = true;
+        $GLOBALS['HERIKA_NAME'] = 'Carlotta Valentia';
+        $line = '*She smiles softly* Hello *my* friend';
+
+        $this->assertSame($line, formatTextOnlyInlineNarrationSubtitleText($line));
+        $this->assertSame('Hello my friend', formatTextOnlyInlineNarrationSpeechText($line));
+    }
+
+    public function testTextOnlyNarrationOnlyLineProducesNoSpeech(): void
+    {
+        $GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] = true;
+        $GLOBALS['HERIKA_NAME'] = 'Carlotta Valentia';
+        $line = '*She looks toward the door*';
+
+        $this->assertSame($line, formatTextOnlyInlineNarrationSubtitleText($line));
+        $this->assertSame('', formatTextOnlyInlineNarrationSpeechText($line));
     }
 
     public function testInlineNarrationDialogueSubtitleRespectsNpcOutputFilter(): void

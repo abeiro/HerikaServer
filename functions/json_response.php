@@ -324,7 +324,7 @@
     
         // Determine message description based on inline narration mode.
         $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
-        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
             $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
         }
         if (chimIsDirectNarratorDialogue()) {
@@ -429,7 +429,7 @@
 
         // Determine message description based on inline narration mode.
         $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
-        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
             $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
         }
         if (chimIsDirectNarratorDialogue()) {

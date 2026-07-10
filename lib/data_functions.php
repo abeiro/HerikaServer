@@ -5400,7 +5400,7 @@ function call_llm_internal() {
         snapshot_response_prompt_debug_data($currentConnectorData);
         $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
         $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
-        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
             $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
         }
         if ($inlineNarrationMode === 'disabled' && !$preserveAsterisksInContext) {

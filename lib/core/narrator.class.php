@@ -208,7 +208,7 @@ class Narrator
         if (!isset($allSettings['inline_narration_mode'])) {
             $legacyInlineNarrationMode = null;
             $currentGlobalMode = strtolower(trim((string)($GLOBALS['INLINE_NARRATION_MODE'] ?? '')));
-            if (in_array($currentGlobalMode, ['disabled', 'narrator', 'npc'], true)) {
+            if (in_array($currentGlobalMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
                 $legacyInlineNarrationMode = $currentGlobalMode;
             } else {
                 $legacyInlineNarrationEnabled = null;
@@ -348,7 +348,7 @@ class Narrator
         }
 
         $inlineNarrationMode = strtolower(trim((string)($GLOBALS['INLINE_NARRATION_MODE'] ?? 'disabled')));
-        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
             $inlineNarrationMode = 'disabled';
         }
         $GLOBALS['INLINE_NARRATION_MODE'] = $inlineNarrationMode;

@@ -87,7 +87,7 @@ $EMOTEMOODS="sassy,"
     . "shy,"
     . "surprised"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 
-$INLINE_NARRATION_MODE="disabled"; // disabled|narrator|npc
+$INLINE_NARRATION_MODE="disabled"; // disabled|narrator|npc|text_only
 $REMOVE_PLAYER_AUTOCHAT_ASTERISKS=true; // keep AUTOCHAT / PLAYER_RESPEECH rewritten player text spoken-only by stripping leading narration / *asterisks*
 $REMOVE_ASTERISKS_FROM_PLAYER_INPUT=true; // filters *asterisked* player input from player TTS only
 $REMOVE_ASTERISKS_FROM_NPC_OUTPUT=true;
