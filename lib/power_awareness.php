@@ -50,7 +50,7 @@ function getNpcLevel(string $npcName): ?int {
         $db = $GLOBALS["db"];
         $escapedName = $db->escape($npcName);
         
-        $npcData = $db->fetchOne("SELECT metadata FROM core_npc WHERE npc_name = '{$escapedName}' LIMIT 1");
+        $npcData = $db->fetchOne("SELECT metadata FROM core_npc_master WHERE npc_name = '{$escapedName}' LIMIT 1");
         
         if (!$npcData || empty($npcData['metadata'])) {
             return null;
