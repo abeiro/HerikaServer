@@ -415,7 +415,7 @@
       "workspace": {"type":"string","description":"Inworld workspace ID (required for voice cloning). Format: workspaces/{workspace} or just the workspace ID.","helpurl":"https://docs.inworld.ai/"},
       "voiceid": {"type":"string","description":"Voice file name. Works the same as CHIM-XTTS voiceid. Will only work with voices in your Voice Cache. Voice will be automatically cloned to Inworld when first used.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "language": {"type":"select","values":["en-US","zh-CN","ko-KR","ja-JP","ru-RU","it-IT","es-ES","pt-BR","de-DE","fr-FR","ar-SA","pl-PL","nl-NL","hi-IN","he-IL"],"description":"Language to use for TTS generation. Uses BCP-47 regional language codes."},
-      "model_id": {"type":"select","values":["inworld-tts-1","inworld-tts-1-max","inworld-tts-1.5-mini","inworld-tts-1.5-max"],"description":"Inworld model to use. inworld-tts-1 is the standard model, inworld-tts-1.5-max is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
+      "model_id": {"type":"select","values":["inworld-tts-1 (deprecated)","inworld-tts-1-max (deprecated)","inworld-tts-1.5-mini","inworld-tts-1.5-max","inworld-tts-2"],"description":"Inworld model to use. inworld-tts-2 is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
       "temperature": {"type":"number","description":"Sampling temperature (0-2). Higher values make output more random. Default: 1.0"},
       "speed": {"type":"number","description":"Speaking rate/speed (0.5-1.5). Default: 1.0"}
     }
