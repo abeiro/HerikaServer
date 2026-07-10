@@ -1072,6 +1072,8 @@ foreach (($profileRows ?? []) as $pr) {
 }
 // Build profile metadata lookup for inherited settings
 $profileMetaById = [];
+$profilePromptHeadsById = [];
+$globalPromptHead = (string)($GLOBALS['PROMPT_HEAD'] ?? '');
 foreach (($profileConnRows ?? []) as $prow) {
     $pid = (string)($prow['id'] ?? '');
     if ($pid === '') continue;
@@ -1090,6 +1092,10 @@ foreach (($profileConnRows ?? []) as $prow) {
     $salVal = isset($pmeta['SALUTATION_AFTER_A_WHILE']) ? $pmeta['SALUTATION_AFTER_A_WHILE'] : null;
     $blcVal = isset($pmeta['BACKGROUND_LIFE_COMMANDS']) ? $pmeta['BACKGROUND_LIFE_COMMANDS'] : null;
     $gpsVal = isset($pmeta['GPS_TRACK']) ? $pmeta['GPS_TRACK'] : null;
+    $profilePromptHead = isset($pmeta['PROMPT_HEAD']) && is_scalar($pmeta['PROMPT_HEAD'])
+        ? (string)$pmeta['PROMPT_HEAD']
+        : '';
+    $profilePromptHeadsById[$pid] = $profilePromptHead !== '' ? $profilePromptHead : $globalPromptHead;
     
     $profileMetaById[$pid] = [
         'dyn' => ($dynVal === '1' || $dynVal === 1 || $dynVal === true),
@@ -1706,6 +1712,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         min-height: 134px; /* 96px * 1.4 ≈ 134 */
     }
     .form-item input[type="text"], .form-item textarea, .form-item select { background:#2a2a2a; color:#e9efff; border:1px solid #4a4a4a; border-radius:6px; padding:8px 10px; }
+    .prompt-head-label-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .prompt-head-copy-btn { padding:4px 9px; border:1px solid #4a4a4a; border-radius:5px; background:#242424; color:#cfd9ea; cursor:pointer; font-size:11px; font-weight:600; }
+    .prompt-head-copy-btn:hover { border-color:rgb(242,124,17); color:rgb(242,124,17); }
     /* Header-style checkbox next to label title */
     .label-with-toggle { display:flex; align-items:center; gap:10px; }
     .label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
@@ -2125,9 +2134,34 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
         <div class="form-item span-2">
-            <label for="prompt_head">Prompt Head Override</label>
+            <div class="prompt-head-label-row">
+                <label for="prompt_head">Prompt Head Override</label>
+                <button type="button" id="copy_current_prompt_head" class="prompt-head-copy-btn" title="Copy the Prompt Head inherited from the selected profile or Global Settings into this override">Copy Current</button>
+            </div>
             <textarea id="prompt_head" name="prompt_head" placeholder="High-level system instructions injected before the core."><?= htmlspecialchars($editItem["prompt_head"] ?? "") ?></textarea>
-            <small class="hint">System preamble inserted before other sections. Do not worry if it is empty, as will pull from global settings prompt head.</small>
+            <small class="hint">System preamble inserted before other sections. Leave empty to inherit it from the selected profile or Global Settings.</small>
+            <script>
+            (function(){
+                const promptHeadsByProfile = <?= json_encode($profilePromptHeadsById, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
+                const globalPromptHead = <?= json_encode($globalPromptHead, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
+                const button = document.getElementById('copy_current_prompt_head');
+                const textarea = document.getElementById('prompt_head');
+                const profileSelect = document.getElementById('profile_id');
+                if (!button || !textarea) return;
+
+                button.addEventListener('click', function(){
+                    const profileId = profileSelect ? String(profileSelect.value || '') : '';
+                    const inheritedPromptHead = Object.prototype.hasOwnProperty.call(promptHeadsByProfile, profileId)
+                        ? String(promptHeadsByProfile[profileId] || '')
+                        : String(globalPromptHead || '');
+                    textarea.value = inheritedPromptHead;
+                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+                    button.textContent = 'Copied';
+                    window.setTimeout(function(){ button.textContent = 'Copy Current'; }, 1200);
+                });
+            })();
+            </script>
         </div>
 
         <div class="form-item span-2">
