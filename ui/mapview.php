@@ -1793,9 +1793,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <ul>
                                         <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
                                         <li>Wait for the configured trigger period (Global Settings, default: 5 in-game days) for them to automatically trigger background life.</li>
+                                        <li>Define a [Life Goals] Section at NPC's profile goals, and let them wander according to their objectives.</li>
                                     </ul>
                                 </li>
                                 <li>They shall now travel around Skyrim.</li>
+                                <li>LLM used for BgL is the one defined as CORE_CONNECTOR_DIRECTOR</li>
                             </ol>
                         </div>
                         

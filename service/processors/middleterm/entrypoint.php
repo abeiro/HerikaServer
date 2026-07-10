@@ -150,10 +150,12 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
             $localDelta = ($npcIsNearToPlayer["n"] - $oneHourAgoGamets) * 0.0000024;
             error_log("[BGL] Skipping Passive event for {$npc["npc_name"]}, is NEAR TO PLAYER, delta: {$localDelta}");
             continue;
+           
         }
 
         $mwdata = json_decode($npc["extended_data"], true);
         // Trigger if never updated, or if last update is older than configured threshold
+        $mustInstructBypassBgl=false;
         if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < ($bglTriggerDaysAgoGamets)) {
             logger::info("[BGL] Passive event for {$npc["npc_name"]}");
 
@@ -181,25 +183,77 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     processDelayedEvents($GLOBALS["db"], $enginePath);
 
     error_log("[BGL] Checking active events NPCs");
+    
     // BgL commands
     $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' ");
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata = json_decode($npc["extended_data"], true);
-
+        $mustInstructBypassBgl=false;
         $npcIsNearToPlayer = $GLOBALS["db"]->fetchOne("SELECT max(gamets) as n from eventlog where 
             type='infonpc' and data like '%" . ($GLOBALS["db"]->escape($npc["npc_name"])) . "%' and gamets > $oneHourAgoGamets");
 
         if (isset($npcIsNearToPlayer) && $npcIsNearToPlayer["n"] > 0) {
             $localDelta = ($npcIsNearToPlayer["n"] - $oneHourAgoGamets) * 0.0000024;
-            error_log("[BGL] Skipping Passive event for {$npc["npc_name"]}, is NEAR TO PLAYER, delta: {$localDelta}");
-            continue;
+
+            $npcManager = new NpcMaster();
+            $npcData = $npcManager->getByName($npc["npc_name"]);
+            $extended = json_decode($npcData["extended_data"], true);
+            if (isset($extended["background_life_last_updated_presence_delta"])) {
+                $extended["background_life_last_updated_presence_delta"] += 1;
+            } else {
+                $extended["background_life_last_updated_presence_delta"] = 1;
+            }
+            $npcData = $npcManager->setExtendedData($npcData, $extended);
+
+            if ($extended["background_life_last_updated_presence_delta"] > 10) {
+                error_log("[BGL] {$npc["npc_name"]} has been near a player for more than 10 checks. Issuing instructions if needed");
+                
+                // $extended["background_life_last_updated"] = $maxRow;
+                $mustInstructBypassBgl=true;
+                $npcData = $npcManager->setExtendedData($npcData, $extended);
+                $npcManager->updateByArray($npcData);
+                $mwdata=$extended;
+            } else {
+                $npcData = $npcManager->setExtendedData($npcData, $extended);
+                $npcManager->updateByArray($npcData);
+                error_log("[BGL] Skipping Passive event for {$npc["npc_name"]}, is NEAR TO PLAYER, delta: {$localDelta}, Presence retries: {$extended["background_life_last_updated_presence_delta"]}");
+                continue;
+            }
+
         }
 
         // Trigger if never updated, or if last update is older than configured threshold
         if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < ($bglTriggerDaysAgoGamets)) {
             $delta = ($mwdata["background_life_last_updated"] - $bglTriggerDaysAgoGamets) * 0.0000024;
-            error_log("[BGL] Event for {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}");
-            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_v2.php \"{$npc["npc_name"]}\" full forceaction");
+            error_log("[BGL] Event for {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}, presence delta: {$mwdata["background_life_last_updated_presence_delta"]}");
+
+            if ($mustInstructBypassBgl){
+                error_log("[BGL] {$npc["npc_name"]} has been near a player for more than 10 checks. Issuing INSTRUCTION");
+                 $GLOBALS["db"]->insert(
+                    'responselog',
+                    [
+                        'localts' => time(),
+                        'sent' => 0,
+                        'actor' => "rolemaster",
+                        'text' => "",
+                        'action' => "rolecommand|Instruction@{$npc["npc_name"]}@Should do whatever he came to do@0",
+                        'tag' => "",
+                    ]
+                );
+                // Update timestamp to avoid repeated instructions.
+                // In BgL case, simple_lllm_request_with_context_life.php will update the timestamp after processing the instruction.
+                $npcManager = new NpcMaster();
+                $npcData = $npcManager->getByName($npc["npc_name"]);
+                $extended = json_decode($npcData["extended_data"], true);
+                $extended["background_life_last_updated"] = $maxRow;
+                $extended["background_life_last_updated_presence_delta"] = 0;
+                $npcData = $npcManager->setExtendedData($npcData, $extended);
+                $npcManager->updateByArray($npcData);
+                
+            } else {
+                $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_v2.php \"{$npc["npc_name"]}\" full forceaction");
+            }
+            
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }

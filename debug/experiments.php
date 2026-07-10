@@ -55,6 +55,23 @@ if ($argv[1] == "0") {
     );
 }
 
+//
+if ($argv[1] == "0x") {
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0xFF0010D8@MoveToPlayer",
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+}
+
+
+
 // Track Adrianne even if not in BgL
 if ($argv[1] == "2") {
     $GLOBALS["db"]->insert(
@@ -413,7 +430,7 @@ Sometimes he finds additional Gold Ore (item refid:0x0005acde) at a rate of 0.2 
 
     $startingPoint = 0x0002b0dd;
     $inventoryItems = [
-        ['refid' => '0x0000000F', 'qty' => 10], // 10 gold coins
+        ['refid' => '0x0000000F', 'qty' => 100], // 100 gold coins
         ['refid' => '0x00071cf3', 'qty' => 10], // 10 ores
         ['refid' => '0x0005acde', 'qty' => 5], // 5 gold ores
     ];

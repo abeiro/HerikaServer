@@ -171,21 +171,20 @@ if (is_array($bgevent)) {
                 $npcData = $npcManager->setExtendedData($npcData, $extended);
                 $npcManager->updateByArray($npcData);
 
-                
-            }
-            // Also, lets track coords.
-            if ($npcData["refid"]) {
-                $GLOBALS["db"]->insert(
-                    'responselog',
-                    [
-                        'localts' => time(),
-                        'sent' => 0,
-                        'actor' => "rolemaster",
-                        'text' => "",
-                        'action' => "rolecommand|BackgroundCmd@0x{$npcData['refid']}@Track/",
-                        'tag' => "requested after background event {$bgevent["name"]}",
-                    ]
-                );
+                // Also, lets track coords.
+                if ($npcData["refid"]) {
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        [
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => "",
+                            'action' => "rolecommand|BackgroundCmd@0x{$npcData['refid']}@Track/",
+                            'tag' => "requested after background event {$bgevent["name"]}",
+                        ]
+                    );
+                }
             }
         }
     } else

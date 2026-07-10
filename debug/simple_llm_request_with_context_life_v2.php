@@ -166,6 +166,15 @@ $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 $extdata = $npcMaster->getExtendedData($currentNpcData);
 $metadata = $npcMaster->getMetadata($currentNpcData);
 
+
+// Guardrail, if background_life_last_updated_ec exceeds 2, skip processing to avoid infinite loops or repeated errors
+// background_life_last_updated_ec is incremented each time an error occurs during processing, and reset to 0 on successful completion.
+
+if ($extdata['background_life_last_updated_ec']>2) {
+    error_log("[BGL] $npcName — background_life_last_updated_ec exceeded 2, skipping.");
+    return; 
+}
+
 // ─── Game Timestamps ──────────────────────────────────────────────────────────
 
 $lastGameTsRow = $db->fetchAll('SELECT max(gamets) AS last_gamets FROM eventlog');
@@ -623,7 +632,7 @@ Rules:
     Logger::debug(__LINE__ . ' ' . (microtime(true) - $startTime));
 
     $connectionHandler = $connector->getConnector($currentConnectorData);
-    $preResponse = $connectionHandler->fast_request($preStep1Prompt, ['MAX_TOKENS' => 2048], 'backgroundlife');
+    $preResponse = $connectionHandler->fast_request($preStep1Prompt, ['MAX_TOKENS' => 1024], 'backgroundlife');
 
     $parsedResponse = __jpd_decode_lazy($preResponse);
 
@@ -974,6 +983,19 @@ if (!empty($parsed['action'])) {
             unset($parsed['notification']);
             unset($parsed['rumor']);
             $recordDiaryEntry = false;
+            break;
+        case 'Continue':
+            error_log("[BGL] Chosen action: Continue. No new action will be issued. Reason: {$parsed['reason']}");
+            unset($parsed['notification']);
+            unset($parsed['rumor']);
+            $recordDiaryEntry = false;
+            break;
+        default:
+            error_log("[BGL] ERROR! Chosen action: $actionCmd. No handler implemented for this action. Reason: {$parsed['reason']}");
+            unset($parsed['notification']);
+            unset($parsed['rumor']);
+            $recordDiaryEntry = false;
+            triggerNpcUpdate($GLOBALS['HERIKA_NAME'], ($extdata['background_life_last_updated_ec'] ?? 0) + 1);
             break;
     }
 }
