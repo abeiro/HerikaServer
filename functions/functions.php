@@ -990,7 +990,7 @@ $F_TRANSLATIONS_LOCAL["MakeFollower"] = "#HERIKA_NAME# joins #PLAYER_NAME#, form
 
 $F_TRANSLATIONS_LOCAL["Toast"] = "Raises a glass in celebration or honor.";
 $F_TRANSLATIONS_LOCAL["Drink"] = "Drinks a beverage to quench thirst or enjoy flavor.";
-$F_TRANSLATIONS_LOCAL["Consume"] = "#HERIKA_NAME# consumes a food, drink, or potion from inventory. Use the exact inventory item name in the target field.";
+$F_TRANSLATIONS_LOCAL["Consume"] = "#HERIKA_NAME# consumes a food, drink, or potion from inventory. Use the exact BaseID:ItemName inventory identifier in the target field.";
 $F_TRANSLATIONS_LOCAL["StartRitualCeremony"] = "Participates in a ritual or ceremony, following its customs and practices.";
 $F_TRANSLATIONS_LOCAL["EndRitualCeremony"] = "Concludes a ritual or ceremony, marking its completion.";
     
@@ -1879,7 +1879,7 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "REQUIRED: Exact name of the food, drink, or potion from <inventory> to consume.",
+                    "description" => "REQUIRED: Exact BaseID:ItemName identifier of the food, drink, or potion from <inventory> to consume.",
                 ],
                 "item" => [
                     "type" => "string",
