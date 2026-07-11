@@ -86,11 +86,9 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     $oneDayAgoGamets = $maxRow - ((24) / 0.0000024);
     $oneHourAgoGamets = $maxRow - ((1) / 0.0000024);
 
-    // Get BgL trigger period from conf.php (default: 5 days)
-    $bglTriggerDays = isset($GLOBALS['BGL_TRIGGER_DAYS']) && is_numeric($GLOBALS['BGL_TRIGGER_DAYS'])
-        ? max(0.1, floatval($GLOBALS['BGL_TRIGGER_DAYS']))
-        : 5;
-    $bglTriggerDaysAgoGamets = $maxRow - ((24 * $bglTriggerDays) / 0.0000024);
+    // Get BgL trigger period from general settings (default: 24 in-game hours).
+    $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
+    $bglTriggerHoursAgoGamets = $maxRow - ($bglTriggerHours / 0.0000024);
 
     // BgL tracking coords, in-game daily
 
@@ -154,7 +152,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
 
         $mwdata = json_decode($npc["extended_data"], true);
         // Trigger if never updated, or if last update is older than configured threshold
-        if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < ($bglTriggerDaysAgoGamets)) {
+        if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < $bglTriggerHoursAgoGamets) {
             logger::info("[BGL] Passive event for {$npc["npc_name"]}");
 
 
@@ -173,7 +171,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
 
             break;  // One per iteration - break after processing
         } else {
-            logger::debug("[BGL] (Passive) Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}");
+            logger::debug("[BGL] (Passive) Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours}");
         }
     }
 
@@ -196,17 +194,17 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         }
 
         // Trigger if never updated, or if last update is older than configured threshold
-        if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < ($bglTriggerDaysAgoGamets)) {
-            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerDaysAgoGamets) * 0.0000024;
-            error_log("[BGL] Event for {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}");
+        if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < $bglTriggerHoursAgoGamets) {
+            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerHoursAgoGamets) * 0.0000024;
+            error_log("[BGL] Event for {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours}, delta: {$delta}");
             $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_v2.php \"{$npc["npc_name"]}\" full forceaction");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }
             break;  // One per iteration - break after processing
         } else {
-            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerDaysAgoGamets) * 0.0000024;
-            error_log("[BGL] Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']} , delta: {$delta}");
+            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerHoursAgoGamets) * 0.0000024;
+            error_log("[BGL] Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours}, delta: {$delta}");
         }
     }
 

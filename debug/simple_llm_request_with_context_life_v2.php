@@ -219,21 +219,22 @@ if (empty($lastInteractionRow['gamets'])) {
 
 $lastItGamets = (int) $lastInteractionRow['gamets'];
 
-// ─── Guard: Skip if Last Interaction Was < 3 In-Game Days Ago ────────────────
+// ─── Guard: Skip if Last Interaction Is Within the Configured Cooldown ────────────────
 
-$minDeltaForRerun = (24 * 3) / GAMETS_TO_HOURS;   // 3 in-game days in gamets
+$bglTriggerHours = chimGetBackgroundLifeTriggerHours();
+$minDeltaForRerun = $bglTriggerHours / GAMETS_TO_HOURS;
 
 if (($last_gamets - $lastItGamets) < $minDeltaForRerun) {
-    Logger::info("[BACKGROUND LIFE] $npcNameEsc — last iteration was less than 3 days ago.");
-    error_log("[BACKGROUND LIFE] $npcNameEsc — last iteration was less than 3 days ago.");
+    Logger::info("[BACKGROUND LIFE] $npcNameEsc — last interaction was less than {$bglTriggerHours} hours ago.");
+    error_log("[BACKGROUND LIFE] $npcNameEsc — last interaction was less than {$bglTriggerHours} hours ago.");
 
     $extdata['background_life_last_updated'] = $last_gamets;
     $npcMaster->updateByArray($npcMaster->setExtendedData($currentNpcData, $extdata));
 
     if ($forceLetter) {
-        error_log("[BACKGROUND LIFE] $npcNameEsc — bypassing 3-day guard via forceletter.");
+        error_log("[BACKGROUND LIFE] $npcNameEsc — bypassing interaction cooldown via forceletter.");
     } elseif ($forceAction) {
-        error_log("[BACKGROUND LIFE] $npcNameEsc — bypassing 3-day guard via forceaction.");
+        error_log("[BACKGROUND LIFE] $npcNameEsc — bypassing interaction cooldown via forceaction.");
     } else {
         return;
     }

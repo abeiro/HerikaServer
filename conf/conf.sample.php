@@ -26,7 +26,7 @@ $HERIKA_DYNAMIC=''; //Split Biography for information to be changed dynamically.
 $DIARY_COOLDOWN=120; //Cooldown period in seconds between diary entries to prevent spam. If a diary hotkey is pressed within this time period, the request will be ignored.
 $DYNAMIC_PROFILE=false; //Dynamic profile updates using a timer system.
 // NOTE: AUTO_DIARY and AUTO_DIARY_WAIT have been moved to profile-level settings. Configure them in your profile settings UI instead of here.
-$BGL_TRIGGER_DAYS=5; //Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Range: 1-30 days.
+$BGL_TRIGGER_HOURS=24; //Number of in-game hours between Background Life events. NPCs will generate thoughts and take actions based on this interval. Range: 1-720 hours.
 $POWER_AWARENESS_ENABLED=false; //Enable Power Awareness system. NPCs will be aware of relative power levels and react appropriately to threats.
 $MINIME_T5=false; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory functions.

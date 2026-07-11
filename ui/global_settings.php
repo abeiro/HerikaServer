@@ -52,6 +52,14 @@ $gsSections = [
         [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
         [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
     ],
+    'Misc' => [
+        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
+        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
+        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
+        [ 'name' => 'BGL_TRIGGER_HOURS', 'type' => 'number', 'min' => 1, 'max' => 720, 'step' => 0.1, 'default' => 24 ],
+        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
+        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
+    ],
     'Quests' => [
         [ 'name' => 'CHIM_AI_QUEST_PROGRESSION', 'type' => 'boolean' ],
         [ 'name' => 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT', 'type' => 'boolean' ],
@@ -83,14 +91,6 @@ $gsSections = [
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
     ],
     $promptContextSectionTitle => $promptContextOptionFields,
-    'Misc' => [
-        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
-        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
-        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
-        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'float', 'min' => 0.1, 'max' => 30 ],
-        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
-        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
-    ],
     'Translation' => [
         [ 'name' => 'TRANSLATION_FUNCTION', 'type' => 'select', 'values' => ['none', 'DeepL'] ],
         [ 'name' => 'TRANSLATION@settings@translate_audio', 'type' => 'boolean' ],
@@ -147,7 +147,7 @@ function pretty_label(string $flatName): string
         'PLAYER_WORST_MEMORY_GAME_DAYS' => 'Worst Memory Lifespan',
         'EMOTEMOODS' => 'Emote Moods',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
-        'BGL_TRIGGER_DAYS' => 'Background Life Days Cooldown',
+        'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time',
         'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
         'CHIM_AI_QUEST_PROGRESSION' => 'CHIM AI Quest Progression (Beta)',
         'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
@@ -1374,7 +1374,12 @@ h1.gs-title {
                                         <?php $min = isset($field['min']) ? intval($field['min']) : null; $max = isset($field['max']) ? intval($field['max']) : null; ?>
                                         <input type="number" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo ($min !== null ? 'min="' . $min . '"' : ''); ?> <?php echo ($max !== null ? 'max="' . $max . '"' : ''); ?> step="1" <?php echo $readonlyAttr; ?>>
                                     <?php elseif ($fieldType === 'number'): ?>
-                                        <input type="number" step="0.01" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo $readonlyAttr; ?>>
+                                        <?php
+                                        $min = isset($field['min']) ? floatval($field['min']) : null;
+                                        $max = isset($field['max']) ? floatval($field['max']) : null;
+                                        $step = isset($field['step']) ? floatval($field['step']) : 0.01;
+                                        ?>
+                                        <input type="number" step="<?php echo htmlspecialchars(strval($step)); ?>" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo ($min !== null ? 'min="' . $min . '"' : ''); ?> <?php echo ($max !== null ? 'max="' . $max . '"' : ''); ?> <?php echo $readonlyAttr; ?>>
                                     <?php elseif ($fieldType === 'longstring'): ?>
                                         <?php if (isset($filterBrowseFieldConfigs[$fieldName])): ?>
                                             <?php $browseConfig = $filterBrowseFieldConfigs[$fieldName]; ?>

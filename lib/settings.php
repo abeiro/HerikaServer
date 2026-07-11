@@ -144,6 +144,41 @@ if (!function_exists('chimReadLegacyGlobalValue')) {
     }
 }
 
+if (!function_exists('chimNormalizeBackgroundLifeTriggerHours')) {
+    function chimNormalizeBackgroundLifeTriggerHours($hours, float $default = 24.0): float
+    {
+        $value = is_numeric($hours) ? floatval($hours) : $default;
+        return max(1.0, min(720.0, $value));
+    }
+}
+
+if (!function_exists('chimConvertBackgroundLifeDaysToHours')) {
+    function chimConvertBackgroundLifeDaysToHours($days, float $default = 24.0): float
+    {
+        if (!is_numeric($days)) {
+            return chimNormalizeBackgroundLifeTriggerHours($default, $default);
+        }
+
+        return chimNormalizeBackgroundLifeTriggerHours(floatval($days) * 24.0, $default);
+    }
+}
+
+if (!function_exists('chimGetBackgroundLifeTriggerHours')) {
+    function chimGetBackgroundLifeTriggerHours(float $default = 24.0): float
+    {
+        if (isset($GLOBALS['BGL_TRIGGER_HOURS']) && is_numeric($GLOBALS['BGL_TRIGGER_HOURS'])) {
+            return chimNormalizeBackgroundLifeTriggerHours($GLOBALS['BGL_TRIGGER_HOURS'], $default);
+        }
+
+        // Compatibility for pre-hours configuration files and databases.
+        if (isset($GLOBALS['BGL_TRIGGER_DAYS']) && is_numeric($GLOBALS['BGL_TRIGGER_DAYS'])) {
+            return chimConvertBackgroundLifeDaysToHours($GLOBALS['BGL_TRIGGER_DAYS'], $default);
+        }
+
+        return chimNormalizeBackgroundLifeTriggerHours($default, $default);
+    }
+}
+
 if (!function_exists('chimGetManagedGeneralSettingIds')) {
     function chimGetManagedGeneralSettingIds(): array
     {
@@ -151,7 +186,7 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'AUTO_LOCK_PROFILE',
             'AUTOFILL_CUSTOM_PROFILES',
             'AUTOFILL_CUSTOM_PROFILES_TRIGGER',
-            'BGL_TRIGGER_DAYS',
+            'BGL_TRIGGER_HOURS',
             'END_CONVERSATION_COOLDOWN',
             'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY',
             'FEATURES@MEMORY_EMBEDDING@ENABLED',
@@ -270,7 +305,7 @@ if (!function_exists('chimPrettySettingLabel')) {
             'EMOTEMOODS' => 'Emote Moods',
             'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
             'SHORTER_NEARBY_ITEM_LIST' => 'Shorter Nearby Item List',
-            'BGL_TRIGGER_DAYS' => 'Background Life Days Cooldown',
+            'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time',
             'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
             'GLOBAL_STT_CONNECTOR_ID' => 'Speech To Text Connector',
             'GLOBAL_ITT_CONNECTOR_ID' => 'Image To Text Connector',

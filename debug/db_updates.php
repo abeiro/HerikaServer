@@ -7161,6 +7161,38 @@ if ($checkVersion("core_tts_connector_omnivoice") < 20260708001) {
     }
 }
 
+if ($checkVersion("general_settings") < 20260711001) {
+    Logger::debug("Applying general_settings 20260711001 - convert Background Life cooldown from days to hours");
+
+    $b_ok = true;
+    try {
+        $hoursRow = $db->fetchOne("SELECT value FROM public.general_settings WHERE id = 'BGL_TRIGGER_HOURS' LIMIT 1");
+        if (isset($hoursRow['value']) && is_numeric($hoursRow['value'])) {
+            $cooldownHours = chimNormalizeBackgroundLifeTriggerHours($hoursRow['value']);
+        } else {
+            $daysRow = $db->fetchOne("SELECT value FROM public.general_settings WHERE id = 'BGL_TRIGGER_DAYS' LIMIT 1");
+            $legacyDays = $daysRow['value'] ?? chimReadLegacyGlobalValue('BGL_TRIGGER_DAYS', null);
+            $cooldownHours = is_numeric($legacyDays)
+                ? chimConvertBackgroundLifeDaysToHours($legacyDays)
+                : 24.0;
+        }
+
+        $description = chimGetManagedGeneralSettingDescriptions()['BGL_TRIGGER_HOURS']
+            ?? chimGetSchemaDescription('BGL_TRIGGER_HOURS');
+        if (!chimSetGeneralSetting('BGL_TRIGGER_HOURS', $cooldownHours, $description)) {
+            throw new Exception("Failed writing BGL_TRIGGER_HOURS");
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error converting Background Life cooldown to hours: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260711001);
+        Logger::info("Applied patch general_settings 20260711001");
+    }
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------
