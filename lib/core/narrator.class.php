@@ -208,7 +208,7 @@ class Narrator
         if (!isset($allSettings['inline_narration_mode'])) {
             $legacyInlineNarrationMode = null;
             $currentGlobalMode = strtolower(trim((string)($GLOBALS['INLINE_NARRATION_MODE'] ?? '')));
-            if (in_array($currentGlobalMode, ['disabled', 'narrator', 'npc'], true)) {
+            if (in_array($currentGlobalMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
                 $legacyInlineNarrationMode = $currentGlobalMode;
             } else {
                 $legacyInlineNarrationEnabled = null;
@@ -348,7 +348,7 @@ class Narrator
         }
 
         $inlineNarrationMode = strtolower(trim((string)($GLOBALS['INLINE_NARRATION_MODE'] ?? 'disabled')));
-        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
             $inlineNarrationMode = 'disabled';
         }
         $GLOBALS['INLINE_NARRATION_MODE'] = $inlineNarrationMode;
@@ -414,6 +414,7 @@ class Narrator
             $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']  = $allSettings['voiceid'];
             $GLOBALS['TTS']['CHATTERBOX']['voiceid']   = $allSettings['voiceid'];
             $GLOBALS['TTS']['POCKETTTS']['voiceid']    = $allSettings['voiceid'];
+            $GLOBALS['TTS']['OMNIVOICE']['voiceid']    = $allSettings['voiceid'];
             $GLOBALS['TTS']['MELOTTS']['voiceid']      = $allSettings['voiceid'];
             $GLOBALS['TTS']['MIMIC3']['voice']         = $allSettings['voiceid'];
             $GLOBALS['TTS']['XVASYNTH']['model']       = $allSettings['voiceid'];

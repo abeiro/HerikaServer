@@ -443,12 +443,12 @@ if (!function_exists('race_icon_web_path')) {
     }
 
     function handleSaveBglSettings() {
-        $cooldownDays = isset($_POST['bgl_trigger_days']) ? intval($_POST['bgl_trigger_days']) : 5;
-        $cooldownDays = max(1, min(30, $cooldownDays));
-        $description = chimGetSchemaDescription('BGL_TRIGGER_DAYS');
+        $cooldownHours = isset($_POST['bgl_trigger_hours']) ? floatval($_POST['bgl_trigger_hours']) : 24;
+        $cooldownHours = chimNormalizeBackgroundLifeTriggerHours($cooldownHours);
+        $description = chimGetSchemaDescription('BGL_TRIGGER_HOURS');
 
-        if (chimSetGeneralSetting('BGL_TRIGGER_DAYS', $cooldownDays, $description)) {
-            redirectToBglSettings('success', "Background Life cooldown saved: {$cooldownDays} in-game days.");
+        if (chimSetGeneralSetting('BGL_TRIGGER_HOURS', $cooldownHours, $description)) {
+            redirectToBglSettings('success', "Background Life cooldown saved: {$cooldownHours} in-game hours.");
         }
 
         redirectToBglSettings('error', 'Could not save Background Life cooldown.');
@@ -497,7 +497,7 @@ if (!function_exists('race_icon_web_path')) {
     $res = pg_fetch_assoc($result);
     $last_gamets = $res["last_gamets"];
     $currentDate=convert_gamets2skyrim_date($last_gamets);
-    $bglTriggerDays = max(1, min(30, intval(chimReadLegacyGlobalValue('BGL_TRIGGER_DAYS', 5))));
+$bglTriggerHours = chimGetBackgroundLifeTriggerHours();
 
     // Filter mode: show all NPCs with tracked coords, or only BG-Life enabled ones
     $showAllCoords = isset($_GET['show_all_coords']) && $_GET['show_all_coords'] === '1';
@@ -532,7 +532,7 @@ if (!function_exists('race_icon_web_path')) {
     ) B ON (B.people=A.npc_name)
     order by A.npc_name asc
 ";
-    error_log($query);
+    //error_log($query);
     $result = pg_query($adminConn, $query);
 
     // Generate random colors for markers
@@ -1792,7 +1792,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 <li>You can either:
                                     <ul>
                                         <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
-                                        <li>Wait for the configured trigger period (Global Settings, default: 5 in-game days) for them to automatically trigger background life.</li>
+                                        <li>Wait for the configured trigger period (Global Settings, default: 24 in-game hours) for them to automatically trigger background life.</li>
                                     </ul>
                                 </li>
                                 <li>They shall now travel around Skyrim.</li>
@@ -1802,7 +1802,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         <div class="instruction-section">
                             <strong>NPC Settings:</strong>
                             <ul>
-                                <li><strong>🎮 Auto Actions:</strong> Based on the configured trigger period (Global Settings, default: 5 in-game days), NPC generates inner thoughts. When enabled, they can autonomously travel to new locations. When disabled, only thoughts are generated.</li>
+                                <li><strong>🎮 Auto Actions:</strong> Based on the configured trigger period (Global Settings, default: 24 in-game hours), NPC generates inner thoughts. When enabled, they can autonomously travel to new locations. When disabled, only thoughts are generated.</li>
                                 <li><strong>📍 Hourly Tracking:</strong> Tracks NPC coordinates every in-game hour (default is daily) for detailed movement history.</li>
                             </ul>
                         </div>
@@ -1817,7 +1817,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         </div>
                         
                         <div class="instruction-note">
-                            <strong>💡 Note:</strong> Events are triggered automatically based on the configured trigger period (Global Settings, default: 5 in-game days). The buttons are mainly for testing or forcing immediate updates.
+                            <strong>💡 Note:</strong> Events are triggered automatically based on the configured trigger period (Global Settings, default: 24 in-game hours). The buttons are mainly for testing or forcing immediate updates.
                         </div>
                     </div>
                     <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
@@ -1838,10 +1838,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         </div>
                     <?php endif; ?>
                     <div class="bgl-settings-row">
-                        <label for="bglTriggerDays">Days Cooldown</label>
-                        <input id="bglTriggerDays" type="number" name="bgl_trigger_days" min="1" max="30" step="1" value="<?php echo htmlspecialchars((string) $bglTriggerDays); ?>">
+                        <label for="bglTriggerHours">Hours Cooldown</label>
+                        <input id="bglTriggerHours" type="number" name="bgl_trigger_hours" min="1" max="720" step="0.1" value="<?php echo htmlspecialchars((string) $bglTriggerHours); ?>">
                     </div>
-                    <div class="bgl-settings-help">Controls how many in-game days pass before eligible Background Life NPCs automatically run their next update.</div>
+                    <div class="bgl-settings-help">Controls how many in-game hours pass before eligible Background Life NPCs automatically run their next update.</div>
                     <button type="submit" class="bgl-settings-save">Save</button>
                 </form>
                 <div class="npc-list-header">
@@ -2360,8 +2360,53 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             $outdatedRumors[] = $row;
         }
     }
+
+    // Query Background Life history entries
+    $bglHistoryQuery = "SELECT rowid,npc,gamets,ts,localts,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 25";
+    $bglHistoryResult = pg_query($adminConn, $bglHistoryQuery);
+    $bglHistoryRows = [];
+    if ($bglHistoryResult) {
+        while ($row = pg_fetch_assoc($bglHistoryResult)) {
+            $bglHistoryRows[] = $row;
+        }
+    }
     ?>
     
+     <!-- Background Life History -->
+    <div class="info-panel" style="margin-top: 30px;">
+        <h3>📚 Background Life History</h3>
+        <?php if (empty($bglHistoryRows)): ?>
+            <p style="color: #888; font-style: italic;">No history rows found</p>
+        <?php else: ?>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                    <thead>
+                        <tr style="background: #1a1a1a; border-bottom: 2px solid rgb(242, 124, 17);">
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">rowid</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">npc</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">gamets</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">ts</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">localts</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($bglHistoryRows as $historyRow): ?>
+                            <tr style="border-bottom: 1px solid #333;">
+                                <td style="padding: 12px; color: #ddd; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['rowid'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #ddd; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['npc'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['gamets'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['ts'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['localts'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #fff;"><?php echo nl2br(htmlspecialchars((string) ($historyRow['data'] ?? ''))); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+
     <div id="rumors-section" style="margin-top: 40px;">
         <div class="page-header" style="margin-bottom: 20px;">
             <h1>📰 Rumors</h1>
@@ -2474,6 +2519,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 </div>
             <?php endif; ?>
         </div>
+
+       
 
         <div class="info-panel" id="create-rumor" style="margin-top: 30px;">
             <h3><?php echo ($editingRumorId > 0) ? 'Edit Rumor' : 'Create Rumor'; ?></h3>

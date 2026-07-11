@@ -643,6 +643,7 @@ foreach ($quickstartConf as $pname => $parms) {
     } else if ($parms["type"] == "select") {
         // Display name mappings for UI labels
         $selectDisplayNames = [
+            'omnivoice'    => 'OmniVoice',
             'pockettts'    => 'PocketTTS',
             'chatterbox'   => 'Chatterbox',
             'xtts-fastapi' => 'XTTS',
@@ -657,12 +658,12 @@ foreach ($quickstartConf as $pname => $parms) {
         ];
         $recommendedValues = [];
         if ($pname == "TTSFUNCTION") {
-            $parms["values"] = ["pockettts","chatterbox","xtts-fastapi","inworld"];
+            $parms["values"] = ["omnivoice","pockettts","chatterbox","xtts-fastapi","inworld"];
             if (in_array($quickstartActiveTtsDriver, $parms["values"], true)) {
                 $parms["currentValue"] = $quickstartActiveTtsDriver;
             }
-            $recommendedValues = ["pockettts", "chatterbox"];
-            $parms["description"] = "Select the TTS service you wish to use. Recommended: PocketTTS or Chatterbox. <br>You can install PocketTTS, Chatterbox, XTTS and configure Inworld in CHIM. For provider-specific settings and advanced endpoint editing, use the <a href='" . $webRoot . "/ui/core/tts_connectors.php' target='_blank'>TTS Connectors</a> page.";
+            $recommendedValues = ["omnivoice", "pockettts", "chatterbox"];
+            $parms["description"] = "Select the TTS service you wish to use. Recommended: OmniVoice, PocketTTS or Chatterbox. <br>You can install OmniVoice, PocketTTS, Chatterbox, XTTS and configure Inworld in CHIM. For provider-specific settings and advanced endpoint editing, use the <a href='" . $webRoot . "/ui/core/tts_connectors.php' target='_blank'>TTS Connectors</a> page.";
         } else if ($pname == "STTFUNCTION") {
             $parms["values"] = ["parakeet", "deepgram"];
             if (in_array($quickstartActiveSttDriver, $parms["values"], true)) {

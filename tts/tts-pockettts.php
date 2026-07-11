@@ -1,40 +1,41 @@
 <?php
 
+if (!function_exists('insertNoise')) {
+	function insertNoise($inputString, $noiseArray) {
+		// Split the string into words
+		$words = explode(' ', $inputString);
 
-function insertNoise($inputString, $noiseArray) {
-    // Split the string into words
-    $words = explode(' ', $inputString);
+		if (!is_array($words))
+			return $inputString;
+		// Shuffle the noise array to ensure randomness
+		shuffle($noiseArray);
 
-	if (!is_array($words))
-		return $inputString;
-    // Shuffle the noise array to ensure randomness
-    shuffle($noiseArray);
+		// Calculate the number of insert positions (between words)
+		$numInsertPositions = count($words) - 1;
 
-    // Calculate the number of insert positions (between words)
-    $numInsertPositions = count($words) - 1;
+		// Ensure we don't have more noises than insert positions
+		$numNoises = min(count($noiseArray), $numInsertPositions);
 
-    // Ensure we don't have more noises than insert positions
-    $numNoises = min(count($noiseArray), $numInsertPositions);
+		// Get a random subset of the insert positions
+		$insertPositions = array_rand(array_fill(0, $numInsertPositions, 1), $numNoises);
 
-    // Get a random subset of the insert positions
-    $insertPositions = array_rand(array_fill(0, $numInsertPositions, 1), $numNoises);
+		// Ensure $insertPositions is an array even if there's only one position
+		if (!is_array($insertPositions)) {
+			$insertPositions = array($insertPositions);
+		}
 
-    // Ensure $insertPositions is an array even if there's only one position
-    if (!is_array($insertPositions)) {
-        $insertPositions = array($insertPositions);
-    }
+		// Sort insert positions in descending order to avoid shifting positions
+		rsort($insertPositions);
 
-    // Sort insert positions in descending order to avoid shifting positions
-    rsort($insertPositions);
+		// Insert the noise elements at the chosen positions
+		foreach ($insertPositions as $index => $pos) {
+			array_splice($words, $pos + 1, 0, $noiseArray[$index]);
+			break; //Comment  to more noise
+		}
 
-    // Insert the noise elements at the chosen positions
-    foreach ($insertPositions as $index => $pos) {
-        array_splice($words, $pos + 1, 0, $noiseArray[$index]);
-		break; //Comment  to more noise
-    }
-
-    // Join the words back into a string
-    return implode(' ', $words);
+		// Join the words back into a string
+		return implode(' ', $words);
+	}
 }
 
 if (!function_exists('normalize_endpoint_url')) {
@@ -45,7 +46,46 @@ if (!function_exists('normalize_endpoint_url')) {
     }
 }
 
+function pockettts_is_audio_cpp($endpoint) {
+	return strpos((string)$endpoint, ':8086') !== false || strpos((string)$endpoint, '/v1/audio/speech') !== false;
+}
+
+function pockettts_audio_cpp_url($endpoint) {
+	$endpoint = normalize_endpoint_url($endpoint);
+	if (substr($endpoint, -16) === '/v1/audio/speech') {
+		return $endpoint;
+	}
+	return $endpoint . '/v1/audio/speech';
+}
+
+function pockettts_backend_voice_payload($voice) {
+	$cleanName = basename((string)$voice, '.wav');
+	if ($cleanName !== '') {
+		$paths = [
+			dirname(__FILE__) . '/../data/voices/' . $cleanName . '.wav',
+			'/home/dwemer/pocket-tts/speakers/' . $cleanName . '.wav',
+			'/home/dwemer/audio.cpp/speakers/' . $cleanName . '.wav',
+		];
+		foreach ($paths as $path) {
+			if (is_readable($path)) {
+				return ['voice_ref' => $path];
+			}
+		}
+	}
+
+	return ['voice' => 'alba'];
+}
+
+function pockettts_audio_cpp_model() {
+	$model = $GLOBALS["TTS"]["POCKETTTS"]["model"] ?? 'pocket-tts';
+	return is_scalar($model) && trim(strval($model)) !== '' ? trim(strval($model)) : 'pocket-tts';
+}
+
 function pockettts_settings($settings,$resetAfter=false) {
+	if (pockettts_is_audio_cpp($GLOBALS["TTS"]["POCKETTTS"]["endpoint"] ?? '')) {
+		return;
+	}
+
 	$url = normalize_endpoint_url($GLOBALS["TTS"]["POCKETTTS"]["endpoint"]).'/set_tts_settings';
 	$data = json_decode('{
 		"stream_chunk_size": 20,
@@ -193,12 +233,21 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		if (empty($voice))
 			$voice = $GLOBALS["TTS"]["POCKETTTS"]["voiceid"] ?? '';
 
-		if ($GLOBALS)	
+		if (pockettts_is_audio_cpp($GLOBALS["TTS"]["POCKETTTS"]["endpoint"] ?? '')) {
+			$url = pockettts_audio_cpp_url($GLOBALS["TTS"]["POCKETTTS"]["endpoint"]);
+			$data = array(
+				'model' => pockettts_audio_cpp_model(),
+				'input' => $newString,
+				'language' => $lang ?? 'en',
+			);
+			$data = array_merge($data, pockettts_backend_voice_payload($voice));
+		} else {
 			$data = array(
 				'text' => $newString,
 				'speaker_wav' => $voice,
 				'language' => $lang??'en'	//Defaults to english
 			);
+		}
 			
 		$options = array(
 			'http' => array(
@@ -220,11 +269,20 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$codename = str_replace("'", "+", $codename);
 			$codename=preg_replace('/[^a-zA-Z0-9_+]/u', '', $codename);
 			
-			$data = array(
-				'text' => $newString,
-				'speaker_wav' => $codename,
-				'language' => $lang??"en"
-			);
+			if (pockettts_is_audio_cpp($GLOBALS["TTS"]["POCKETTTS"]["endpoint"] ?? '')) {
+				$data = array(
+					'model' => pockettts_audio_cpp_model(),
+					'input' => $newString,
+					'language' => $lang ?? 'en',
+				);
+				$data = array_merge($data, pockettts_backend_voice_payload($codename));
+			} else {
+				$data = array(
+					'text' => $newString,
+					'speaker_wav' => $codename,
+					'language' => $lang??"en"
+				);
+			}
 			$options = array(
 				'http' => array(
 					'header' => "Content-type: application/json\r\n" .
@@ -262,7 +320,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			file_put_contents($oname, $response); // Save the audio response to a file
 			$startTimeTrans = microtime(true);
 			//shell_exec("ffmpeg -y -i $oname  -af \"adelay=150|150,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-25dB,areverse,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-40dB,areverse,speechnorm=e=3:r=0.0001:l=1:p=0.75\" $fname 2>/dev/null >/dev/null");
-			shell_exec("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname 2>/dev/null >/dev/null");
+			shell_exec("ffmpeg -y -i ".escapeshellarg($oname)."  $FFMPEG_FILTER ".escapeshellarg($fname)." 2>/dev/null >/dev/null");
 			//error_log("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname ".__FILE__." ".__LINE__." ".__FUNCTION__);
 			$endTimeTrans = microtime(true)-$startTimeTrans;
 			
@@ -270,7 +328,10 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$textString.=PHP_EOL.print_r($http_response_header,true);
 			
             file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n$FFMPEG_FILTER\n\rtotal call time:" . (microtime(true) - $starTime) . " ms\n\rffmpeg transcoding: $endTimeTrans secs\n\rsize of wav ($size)\n\rfunction tts($textString,$mood=\"cheerful\",$stringforhash)");
-			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in pockettts call";
+			
+			$GLOBALS["DEBUG_DATA"][]=($startTimeTrans - $starTime)." secs in pockettts call";
+			$GLOBALS["DEBUG_DATA"][]=($endTimeTrans)." secs in ffmpeg transcoding";
+			$GLOBALS["DEBUG_DATA"][]=(microtime(true) - $starTime)." secs in full TTS call";
 
 			if (isset($GLOBALS["DEVELOP_STORE_AUDIO_FOR_TRANING"]) && $GLOBALS["DEVELOP_STORE_AUDIO_FOR_TRANING"]) {
 				$rootPath=dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" ;

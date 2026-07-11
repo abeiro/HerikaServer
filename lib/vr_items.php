@@ -24,26 +24,34 @@ class HeldItems
             return null;
         }
 
-        if ($event['action'] === 'pickup') {
-            self::updateHandState($event['hand'], $event['item']);
-        } else {
-            self::clearHand($event['hand']);
-        }
-
         $playerName = self::playerName();
         $handLabel = self::handLabel($event['hand']);
-        $itemForXml = self::escapeXmlText($event['item']);
+
+        if ($event['action'] === 'pickup') {
+            self::updateHandState($event['hand'], $event['item'], $event['refid']);
+        } else {
+            $heldItem = self::heldItemForHand($event['hand']);
+            if ($event['refid'] === null && $heldItem !== null) {
+                $event['refid'] = $heldItem['refid'];
+            }
+            if (($event['item'] === '' || $event['item'] === 'something') && $heldItem !== null) {
+                $event['item'] = $heldItem['name'];
+            }
+        }
+
+        $itemForPrompt = self::formatHeldIdentifier($event['item'], $event['refid']);
 
         if ($event['action'] === 'pickup') {
             $message = $event['hand'] === 'both'
-                ? "{$playerName} picked up {$itemForXml}."
-                : "{$playerName} picked up {$itemForXml} with their {$handLabel}.";
+                ? "{$playerName} picked up {$itemForPrompt}."
+                : "{$playerName} picked up {$itemForPrompt} with their {$handLabel}.";
             $promptKey = 'ext_held_item_pickup';
         } else {
             $message = $event['hand'] === 'both'
-                ? "{$playerName} stopped holding {$itemForXml}."
-                : "{$playerName} stopped holding {$itemForXml} with their {$handLabel}.";
+                ? "{$playerName} stopped holding {$itemForPrompt}."
+                : "{$playerName} stopped holding {$itemForPrompt} with their {$handLabel}.";
             $promptKey = 'ext_held_item_drop';
+            self::clearHand($event['hand']);
         }
 
         $processedRequest = $gameRequest;
@@ -58,25 +66,25 @@ class HeldItems
     {
         $state = self::getHandState();
         $lines = [];
-        $playerName = self::playerName();
-
         if (!empty($state['both'])) {
-            $lines[] = "{$playerName} is holding " . self::escapeXmlText((string)$state['both']) . ".";
+            $lines[] = "- Both: " . self::formatHeldStateValue($state['both']);
         }
 
         if (!empty($state['left'])) {
-            $lines[] = "{$playerName} is holding " . self::escapeXmlText((string)$state['left']) . " in their left hand.";
+            $lines[] = "- Left: " . self::formatHeldStateValue($state['left']);
         }
 
         if (!empty($state['right'])) {
-            $lines[] = "{$playerName} is holding " . self::escapeXmlText((string)$state['right']) . " in their right hand.";
+            $lines[] = "- Right: " . self::formatHeldStateValue($state['right']);
         }
 
         if (empty($lines)) {
             return '';
         }
 
-        return "<held_items>\n# PLAYER HELD ITEMS\n## " . implode("\n## ", $lines) . "\n</held_items>";
+        return "<held_items>\n# PLAYER HELD ITEMS\nFormat: Hand: RefID:ItemName\n\n"
+            . implode("\n", $lines)
+            . "\n</held_items>";
     }
 
     public static function getHandState(): array
@@ -120,7 +128,7 @@ class HeldItems
 
     private static function parseRawEvent(string $rawData): ?array
     {
-        $parts = explode('^', $rawData, 3);
+        $parts = explode('^', $rawData, 4);
         if (count($parts) < 3) {
             return null;
         }
@@ -128,6 +136,7 @@ class HeldItems
         $item = self::sanitizeItemName($parts[0]);
         $action = strtolower(trim($parts[1]));
         $hand = strtolower(trim($parts[2]));
+        $refid = self::normalizeRefId($parts[3] ?? null);
 
         if ($item === '') {
             $item = 'something';
@@ -145,20 +154,24 @@ class HeldItems
             'item' => $item,
             'action' => $action,
             'hand' => $hand,
+            'refid' => $refid,
         ];
     }
 
-    private static function updateHandState(string $hand, ?string $itemName): void
+    private static function updateHandState(string $hand, ?string $itemName, ?string $refid = null): void
     {
         $state = self::getHandState();
-        $state[$hand] = $itemName;
+        $state[$hand] = $itemName === null ? null : [
+            'name' => $itemName,
+            'refid' => $refid,
+        ];
         $state['updated_at'] = time();
         self::saveState($state);
     }
 
     private static function clearHand(string $hand): void
     {
-        self::updateHandState($hand, null);
+        self::updateHandState($hand, null, null);
     }
 
     private static function saveState(array $state): void
@@ -198,6 +211,68 @@ class HeldItems
 
         $key = $GLOBALS['db']->escape($stateKey);
         return $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id = '{$key}' LIMIT 1");
+    }
+
+    private static function heldItemForHand(string $hand): ?array
+    {
+        $state = self::getHandState();
+        return self::normalizeHeldStateValue($state[$hand] ?? null);
+    }
+
+    private static function normalizeHeldStateValue($value): ?array
+    {
+        if (is_string($value)) {
+            $name = self::sanitizeItemName($value);
+            return $name === '' ? null : ['name' => $name, 'refid' => null];
+        }
+
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $name = self::sanitizeItemName((string) ($value['name'] ?? ''));
+        if ($name === '') {
+            return null;
+        }
+
+        return [
+            'name' => $name,
+            'refid' => self::normalizeRefId($value['refid'] ?? null),
+        ];
+    }
+
+    private static function formatHeldStateValue($value): string
+    {
+        $item = self::normalizeHeldStateValue($value);
+        if ($item === null) {
+            return 'Unknown item';
+        }
+
+        return self::formatHeldIdentifier($item['name'], $item['refid']);
+    }
+
+    private static function formatHeldIdentifier(string $itemName, ?string $refid): string
+    {
+        $safeName = str_replace('`', '&#96;', self::escapeXmlText(self::sanitizeItemName($itemName)));
+        return $refid !== null ? "`{$refid}:{$safeName}`" : $safeName;
+    }
+
+    private static function normalizeRefId($value): ?string
+    {
+        $refid = trim((string) $value);
+        if ($refid === '') {
+            return null;
+        }
+
+        if (stripos($refid, '0x') === 0) {
+            $refid = substr($refid, 2);
+        }
+
+        if (!preg_match('/^[0-9a-f]{1,8}$/i', $refid)) {
+            return null;
+        }
+
+        return '0x' . strtoupper(str_pad($refid, 8, '0', STR_PAD_LEFT));
     }
 
     private static function handLabel(string $hand): string

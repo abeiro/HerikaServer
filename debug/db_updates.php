@@ -3327,6 +3327,8 @@ if ($checkVersion("npc_templates")<20250619001) {
                 npc_goals text
             )");
             $db->execQuery($newDataSql);
+            // pg_dump exports clear search_path; restore it for subsequent unqualified helpers.
+            $db->execQuery("SET search_path TO public");
             
             // Upsert from temp table to main table with explicit column list
             $db->execQuery("INSERT INTO public.npc_templates (
@@ -3483,7 +3485,7 @@ if ($checkVersion("core_llm_connector") < 20260423001) {
                 $insertPayload["api_badge_id"] = $openRouterBadgeId;
             }
 
-            $db->insert("core_llm_connector", $insertPayload);
+            $db->insert("public.core_llm_connector", $insertPayload);
             Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
         } else {
             Logger::info("Dedicated scene classifier connector already exists with ID " . intval($existingSceneClassifier["id"]));
@@ -3537,10 +3539,10 @@ if ($checkVersion("core_llm_connector") < 20260423002) {
         }
 
         if ($sceneClassifierRow && isset($sceneClassifierRow["id"])) {
-            $db->updateRow("core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
+            $db->updateRow("public.core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
             Logger::info("Updated dedicated scene classifier connector ID " . intval($sceneClassifierRow["id"]) . " to Gemma 3N E4B");
         } else {
-            $db->insert("core_llm_connector", $sceneClassifierPayload);
+            $db->insert("public.core_llm_connector", $sceneClassifierPayload);
             Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
         }
 
@@ -3592,10 +3594,10 @@ if ($checkVersion("core_llm_connector") < 20260423003) {
         }
 
         if ($sceneClassifierRow && isset($sceneClassifierRow["id"])) {
-            $db->updateRow("core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
+            $db->updateRow("public.core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
             Logger::info("Renamed scene classifier connector ID " . intval($sceneClassifierRow["id"]) . " to '{$sceneClassifierLabel}'");
         } else {
-            $db->insert("core_llm_connector", $sceneClassifierPayload);
+            $db->insert("public.core_llm_connector", $sceneClassifierPayload);
             Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
         }
 
@@ -4918,6 +4920,27 @@ if ($checkVersion("core_player")<20241128001) {
     
     $updateVersion("core_player", 20241128001);
     Logger::info("Applied patch core_player 20241128001 - Migrated player data from conf_opts");
+}
+
+
+//----------------------------------------------------
+// PLAYER AUTO DIARY FEATURE - Add auto diary toggles
+// Version 20260707001
+//----------------------------------------------------
+
+if ($checkVersion("core_player")<20260707001) {
+    Logger::debug("Applying core_player migration 20260707001 - Adding player auto diary toggles");
+
+    $db->execQuery("
+        INSERT INTO public.core_player (id, value)
+        VALUES
+            ('auto_diary_enabled', '0'),
+            ('auto_diary_wait_enabled', '0')
+        ON CONFLICT (id) DO NOTHING
+    ");
+
+    $updateVersion("core_player", 20260707001);
+    Logger::info("Applied patch core_player 20260707001 - Added player auto diary toggles");
 }
 
 //----------------------------------------------------
@@ -7066,6 +7089,108 @@ if ($checkVersion("oghma") < 20260625001) {
 
     $updateVersion("oghma", 20260625001);
     Logger::info("Applied patch oghma 20260625001");
+}
+
+if ($checkVersion("core_tts_connector_pockettts_audiocpp") < 20260628001) {
+    Logger::debug("Applying core_tts_connector_pockettts_audiocpp 20260628001 - expose audio.cpp PocketTTS metadata");
+
+    if ($checkTableExists("core_tts_connector") != -1) {
+        $db->execQuery("
+            UPDATE public.core_tts_connector
+               SET metadata = jsonb_set(
+                    jsonb_set(
+                        jsonb_set(
+                            COALESCE(metadata, '{}'::jsonb),
+                            '{endpoint,description}',
+                            to_jsonb('Endpoint URL. DwemerDistro audio.cpp PocketTTS uses port 8086 by default. Legacy Python PocketTTS uses port 8020.'::text),
+                            true
+                        ),
+                        '{api_format}',
+                        '{\"type\":\"select\",\"values\":[\"audio_cpp\",\"legacy\"],\"description\":\"PocketTTS API format. Use audio_cpp for the DwemerDistro C++ runtime or legacy for the older Python bridge.\"}'::jsonb,
+                        true
+                    ),
+                    '{model}',
+                    '{\"type\":\"string\",\"description\":\"audio.cpp model id. Default: pocket-tts.\"}'::jsonb,
+                    true
+                )
+             WHERE driver = 'pockettts'
+        ");
+    }
+
+    $updateVersion("core_tts_connector_pockettts_audiocpp", 20260628001);
+    Logger::info("Applied patch core_tts_connector_pockettts_audiocpp 20260628001");
+}
+
+if ($checkVersion("core_tts_connector_omnivoice") < 20260708001) {
+    Logger::debug("Applying core_tts_connector_omnivoice 20260708001 - add OmniVoice default connector");
+
+    $b_ok = true;
+    try {
+        $db->execQuery("
+            INSERT INTO public.core_tts_connector (driver, label, metadata, api_badge_id, url, voice_field)
+            SELECT
+                'omnivoice',
+                'OmniVoice Default',
+                '{\"language\":\"en\",\"voicelogic\":\"voicetype\",\"fallback_male\":\"malenord\",\"fallback_female\":\"femalenord\"}'::jsonb,
+                NULL,
+                'http://127.0.0.1:8021',
+                'voiceid'
+            WHERE NOT EXISTS (
+                SELECT 1
+                  FROM public.core_tts_connector
+                 WHERE lower(coalesce(label, '')) = 'omnivoice default'
+            )
+        ");
+
+        $db->execQuery("
+            UPDATE public.core_tts_connector
+               SET driver = 'omnivoice',
+                   url = 'http://127.0.0.1:8021',
+                   voice_field = 'voiceid',
+                   metadata = COALESCE(metadata, '{}'::jsonb) || '{\"language\":\"en\",\"voicelogic\":\"voicetype\",\"fallback_male\":\"malenord\",\"fallback_female\":\"femalenord\"}'::jsonb
+             WHERE lower(coalesce(label, '')) = 'omnivoice default'
+        ");
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error adding OmniVoice default TTS connector: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_tts_connector_omnivoice", 20260708001);
+        Logger::info("Applied patch core_tts_connector_omnivoice 20260708001");
+    }
+}
+
+if ($checkVersion("general_settings") < 20260711001) {
+    Logger::debug("Applying general_settings 20260711001 - convert Background Life cooldown from days to hours");
+
+    $b_ok = true;
+    try {
+        $hoursRow = $db->fetchOne("SELECT value FROM public.general_settings WHERE id = 'BGL_TRIGGER_HOURS' LIMIT 1");
+        if (isset($hoursRow['value']) && is_numeric($hoursRow['value'])) {
+            $cooldownHours = chimNormalizeBackgroundLifeTriggerHours($hoursRow['value']);
+        } else {
+            $daysRow = $db->fetchOne("SELECT value FROM public.general_settings WHERE id = 'BGL_TRIGGER_DAYS' LIMIT 1");
+            $legacyDays = $daysRow['value'] ?? chimReadLegacyGlobalValue('BGL_TRIGGER_DAYS', null);
+            $cooldownHours = is_numeric($legacyDays)
+                ? chimConvertBackgroundLifeDaysToHours($legacyDays)
+                : 24.0;
+        }
+
+        $description = chimGetManagedGeneralSettingDescriptions()['BGL_TRIGGER_HOURS']
+            ?? chimGetSchemaDescription('BGL_TRIGGER_HOURS');
+        if (!chimSetGeneralSetting('BGL_TRIGGER_HOURS', $cooldownHours, $description)) {
+            throw new Exception("Failed writing BGL_TRIGGER_HOURS");
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error converting Background Life cooldown to hours: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260711001);
+        Logger::info("Applied patch general_settings 20260711001");
+    }
 }
 
 Logger::info(__FILE__." update file processed");

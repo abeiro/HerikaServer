@@ -260,7 +260,7 @@ $SHOW_STATUS_NAV = in_array($currentPageName, ['conf_wizard.php','configuration_
 // Server version and dev-build detection
 // Read version from .version_number.txt
 $versionFile = dirname(__DIR__, 2) . '/.version_number.txt';
-$serverVersionRaw = '3.1.0'; // fallback
+$serverVersionRaw = '3.1.1'; // fallback
 if (file_exists($versionFile)) {
     $versionContent = trim(file_get_contents($versionFile));
     if ($versionContent !== '') {
@@ -542,7 +542,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Prepare profile options
     $OPTIONS = [];
     $i = 0;
-    foreach ($GLOBALS["PROFILES"] as $lProfkey => $lProfile) {
+    $profiles = is_array($GLOBALS["PROFILES"] ?? null) ? $GLOBALS["PROFILES"] : [];
+    foreach ($profiles as $lProfkey => $lProfile) {
         $pattern = "/conf_([a-fA-F0-9]+)\.php/";
         if (preg_match($pattern, $lProfile, $matches)) {
             $hash = $matches[1];

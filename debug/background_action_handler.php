@@ -15,7 +15,7 @@ function triggerNpcUpdate($npcName)
 {
     $npcManager = new NpcMaster();
     $npcData = $npcManager->getByName($npcName);
-    $extended = json_decode($npcData["extended_data"], true);
+    $extended = $npcManager->getExtendedData($npcData);
     $extended["background_life_last_updated"] = 0;
     $npcData = $npcManager->setExtendedData($npcData, $extended);
     $npcManager->updateByArray($npcData);
@@ -91,11 +91,13 @@ function resolveTravelLocation($location, $currentNpcData, $db)
                 $pointSql,
                 GREATEST(
                     COALESCE(similarity(name, '$cnLocation'), 0),
+                    COALESCE(similarity(name||' (Interior)', '$cnLocation'), 0),
                     COALESCE(similarity(region, '$cnLocation'), 0),
                     COALESCE(similarity(hold, '$cnLocation'), 0)
                 ) AS sim,
                 CASE
                     WHEN lower(name) = lower('$cnLocation') THEN 3
+                    WHEN lower(name||' (Interior)') = lower('$cnLocation') and is_interior=1 THEN 4
                     WHEN lower(region) = lower('$cnLocation') THEN 2
                     WHEN lower(hold) = lower('$cnLocation') THEN 1
                     ELSE 0
@@ -165,7 +167,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'ts' => $last_ts,
             'gamets' => $last_gamets + 10,
             'type' => "infoaction",
-            'data' => "The Narrator: $npcName starts travelling to $resolvedLocation",
+            'data' => ($location==$resolvedLocation) ? "The Narrator: $npcName starts travelling to $location" : "The Narrator: $npcName starts travelling to $location (resolved as $resolvedLocation)",
             'sess' => $momentum,
             'localts' => time(),
             'people' => $npcName,
@@ -196,7 +198,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName starts travelling to $resolvedLocation"
+            'data' => ($location==$resolvedLocation) ? "$npcName starts travelling to $location" : "$npcName starts travelling to $location (resolved as $resolvedLocation). Reason: {$GLOBALS["LAST_REASON"]}",
         ]
     );
 
@@ -217,10 +219,27 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
  */
 function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts, $last_gamets, $momentum, $db)
 {
-    $cnLocation = $db->escape($location);
-    $locId = $db->fetchOne("select formid from locations where name='$cnLocation'");
+    $locId = resolveTravelLocation($location, $currentNpcData, $db);
+    $requestedLocation = $db->escape($location);
+    $resolvedLocation = $locId['name'] ?? $requestedLocation;
+
+    if (strcasecmp($requestedLocation, 'random') === 0) {
+        error_log("[handleStayAtPlaceAction] random picked: " . print_r($locId, true));
+    }
+
+    if (!empty($locId)) {
+        $sim = isset($locId['sim']) ? ', sim=' . $locId['sim'] : '';
+        $dist = isset($locId['dist']) ? ', dist=' . $locId['dist'] : '';
+        error_log("[handleStayAtPlaceAction] requested='$requestedLocation' resolved='{$resolvedLocation}' formid='{$locId['formid']}'$sim$dist");
+    }
+
+    if (!isset($locId["formid"])) {
+        return false;
+    }
 
     $refHexString = convertSignedToUnsignedHex(hexdec($currentNpcData["refid"]));
+    $locHexString = (convertHex($locId["formid"]));
+
 
     // Insert response log entry with return home command
     $db->insert(
@@ -230,7 +249,7 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|BackgroundCmd@$refHexString@StayAtPlace/",
+            'action' => "rolecommand|BackgroundCmd@$refHexString@StayAtPlace/{$locId["formid"]}",
             'tag' => '',
         ]
     );
@@ -243,10 +262,24 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName stays at current location ($location)"
+            'data' => "$npcName stays at current location ($requestedLocation, resolved as $resolvedLocation). Reason: {$GLOBALS["LAST_REASON"]}",
         ]
     );
-    
+
+      // Insert actions_issued log entry
+    $db->insert(
+        'actions_issued',
+        [
+            'action' => "Idle",
+            'fullcall' => "StayAtPlace:$resolvedLocation",
+            'actorname' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'original' => 'backgroundaction',
+        ]
+    );
+
     return true;
 }
 
@@ -324,7 +357,7 @@ function handleReturnHome($location, $currentNpcData, $npcName, $last_ts, $last_
         'localts' => time(),
         'original' => 'backgroundaction',
     ]);
-    
+
     // Insert bgl_history log entry
     $db->insert(
         'bgl_history',
@@ -333,7 +366,7 @@ function handleReturnHome($location, $currentNpcData, $npcName, $last_ts, $last_
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName returns back to {$GLOBALS['PLAYER_NAME']}"
+            'data' => "$npcName returns back to {$GLOBALS['PLAYER_NAME']}. Reason: {$GLOBALS['LAST_REASON']}"
         ]
     );
 
@@ -458,7 +491,7 @@ function handleMoveToAction($targetNpcName, $currentNpcData, $npcName, $last_ts,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName moves towards $resolvedName"
+            'data' => "$npcName moves towards $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
         ]
     );
 
@@ -552,7 +585,7 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName looks for $resolvedName"
+            'data' => "$npcName looks for $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
         ]
     );
 
@@ -584,7 +617,7 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
 
         error_log("[handleFindNPCAction] Query to obtain vendor faction chest: SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
          formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
-         
+
         if ($vendorFactionsNpcBelongs) {
             $stockString = " $resolvedName seems to be a trader, use action SpeakTo to dialogue and obtain his stock information. ";
 
@@ -632,7 +665,7 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                 'ts' => $last_ts,
                 'gamets' => $last_gamets,
                 'localts' => time(),
-                'data' => "$npcName moves toward $resolvedName"
+                'data' => "$npcName moves toward $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
             ]
         );
 
@@ -707,15 +740,15 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
         error_log("[handleSpeakToAction] Target NPC not found: $targetNpcName, trying to create profile.");
         // This can happen if player didn't visit the NPC yet, so the NPC is not in the core_npc_master table. 
         // Try to create profile
-        $retVal=createProfile($targetNpcName,[],false,$targetNpcName); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
-        $resolvedName=$targetNpcName;
-        $targetNpc['name']=$resolvedName;
-        $targetNpc['refid']=$targetRefid;
+        $retVal = createProfile($targetNpcName, [], false, $targetNpcName); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
+        $resolvedName = $targetNpcName;
+        $targetNpc['name'] = $resolvedName;
+        $targetNpc['refid'] = $targetRefid;
     }
 
     if ($targetNpc === null) {
         error_log("[handleSpeakToAction] Target NPC not found: $targetNpcName");
-        return false;        
+        return false;
     }
 
     $resolvedName = $targetNpc['name'];
@@ -731,13 +764,37 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
     foreach ($factions as $faction) {
         $factionsArray[] = $faction["formid"];
     }
+
+    // Lets check if we have vendor factions for this NPC
+    // If the NPC belongs to any vendor factions, we can assume it's a trader 
+    // We can check and publish stock later
+    $npcMaster = new NpcMaster();
+    $targetNpcData = $npcMaster->getByName($resolvedName);
+    $factions = $npcMaster->getNpcFactions($targetNpcData);
+    $factionsArray = [];
+    foreach ($factions as $faction) {
+        $factionsArray[] = $faction["formid"];
+    }
+    $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
+        formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
+
+    if ($vendorFactionsNpcBelongs) {
+        foreach ($vendorFactionsNpcBelongs as $vendorFaction) {
+            $skyrimCmd = new SkyrimCommandBuilder();
+            $json = $skyrimCmd->Faction->GetVendorFactionContainer("0x{$vendorFaction["formid"]}");
+            $skyrimCmd->send(cmd: $json);
+        }
+        // Give the game a moment to process the vendor container request before proceeding with dialogue.
+        sleep(1 * sizeof($vendorFactionsNpcBelongs));
+    }
+
     $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
         formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
 
     error_log("[handleSpeakToAction] Query to obtain vendor faction chest: SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
-        formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'" );
+        formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
 
-    if ($vendorFactionsNpcBelongs && sizeof($vendorFactionsNpcBelongs) > 0  ) {
+    if ($vendorFactionsNpcBelongs && sizeof($vendorFactionsNpcBelongs) > 0) {
         $stockString = " $resolvedName seems to be a trader, selling: ";
         foreach ($vendorFactionsNpcBelongs as $vendorFaction) {
             $stockString .= " {$vendorFaction['stock']}.";
@@ -793,7 +850,11 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                     . "The dialogue must be consistent with the context_history above.\n"
                     . "Format each line exactly as:\n"
                     . "$npcName: ...\n$resolvedName: ...\n"
-                    . 'Keep it to 3–5 exchanges total.',
+                    . 'Keep it to 3–5 exchanges total.'
+                    . "When generating a dialogue that includes a transaction involving items, do not depict the actual exchange. "
+                    . "The dialogue should conclude with Subject A and Subject B mutually agreeing or expressing their intention to "
+                    . "perform the transaction next. Any transfer of items must occur only in the subsequent step, not within the generated dialogue."
+
             ],
         ];
 
@@ -822,9 +883,9 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             [
                 'npc' => $npcName,
                 'ts' => $last_ts,
-                'gamets' => $last_gamets+20,
+                'gamets' => $last_gamets + 20,
                 'localts' => time(),
-                'data' => "$npcName has a conversation with $resolvedName"
+                'data' => "$npcName has a conversation with $resolvedName\nDialogue: $dialogueBuffer"
             ]
         );
     }
@@ -833,9 +894,9 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
 }
 
 /**
- * Handle BuyItems / SellItems action — instruct the NPC to buy from or sell to another NPC.
+ * Handle BuyItem / SellItem action — instruct the NPC to buy from or sell to another NPC.
  *
- * @param string $tradeType      'BuyItems' or 'SellItems'
+ * @param string $tradeType      'BuyItem' or 'SellItem'
  * @param string $targetNpcName  The name of the target NPC
  * @param array  $currentNpcData The acting NPC's data (must contain refid)
  * @param string $npcName        The acting NPC's display name
@@ -861,22 +922,23 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
     }
 
     $resolvedName = $targetNpc['name'];
-    $sourceRefHexString = convertSignedToUnsignedHex(hexdec($currentNpcData['refid']));
-    $targetRefHexString = convertSignedToUnsignedHex(hexdec($targetNpc['refid']));
+    $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
+    $targetRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($targetNpc['refid'])));
+    $itemId = strtolower($itemId);
 
-    if ($tradeType === 'BuyItems') {
+    if ($tradeType === 'BuyItem') {
         $skyrimCmd = new SkyrimCommandBuilder();
         // Item
         $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x$itemId", $count, true);
         $skyrimCmd->send(cmd: $json);
         // Gold
-        $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x000000ff", $gold, true);
+        $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x0000000f", $gold, true);
         $skyrimCmd->send(cmd: $json);
 
         $json = $skyrimCmd->ObjectReference->RemoveItem($targetRefHexString, "0x$itemId", $count, true);
         $skyrimCmd->send(cmd: $json);
         // Gold
-        $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x000000ff", $gold, true);
+        $json = $skyrimCmd->ObjectReference->AddItem($targetRefHexString, "0x0000000f", $gold, true);
         $skyrimCmd->send(cmd: $json);
 
     } else {
@@ -885,22 +947,29 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x$itemId", $count, true);
         $skyrimCmd->send(cmd: $json);
         // Gold
-        $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x000000ff", $gold, true);
+        $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x0000000f", $gold, true);
         $skyrimCmd->send(cmd: $json);
 
         $json = $skyrimCmd->ObjectReference->AddItem($targetRefHexString, "0x$itemId", $count, true);
         $skyrimCmd->send(cmd: $json);
         // Gold
-        $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x000000ff", $gold, true);
+        $json = $skyrimCmd->ObjectReference->RemoveItem($targetRefHexString, "0x0000000f", $gold, true);
         $skyrimCmd->send(cmd: $json);
     }
 
+
+    $itemName = $db->fetchOne("SELECT * FROM \"public\".\"combined_descriptions\" where baseid='".strtoupper($itemId)."'");
+    if ($itemName) {
+        $itemNameResolved = "($count {$itemName["name"]})";
+    } else {
+        $itemNameResolved = "";
+    }
 
     $db->insert('eventlog', [
         'ts' => $last_ts,
         'gamets' => $last_gamets + 10,
         'type' => 'innerchat',
-        'data' => "The Narrator: $npcName " . ($tradeType === 'BuyItems' ? "buys items from" : "sells items to") . " $resolvedName. Inventories updated!",
+        'data' => "The Narrator: $npcName " . ($tradeType === 'BuyItem' ? "buys items from" : "sells items to") . " $resolvedName $itemNameResolved. Inventories updated!",
         'sess' => $momentum,
         'localts' => time(),
         'people' => "|$npcName|$resolvedName|",
@@ -926,10 +995,29 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:$gold)"
+            'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:$gold), item description:$itemNameResolved"
         ]
     );
 
+    // Schedule inventory updates for both NPCs after the trade
+    $db->insert('responselog', [
+        'localts' => time()+10,
+        'sent' => 0,
+        'actor' => 'rolemaster',
+        'text' => '',
+        'action' => "rolecommand|BackgroundCmd@$sourceRefHexString@UpdateInventory",
+        'tag' => '',
+    ]);
+
+    $db->insert('responselog', [
+        'localts' => time()+10,
+        'sent' => 0,
+        'actor' => 'rolemaster',
+        'text' => '',
+        'action' => "rolecommand|BackgroundCmd@$targetRefHexString@UpdateInventory",
+        'tag' => '',
+    ]);
+    
     triggerNpcUpdate($npcName);
     return true;
 }

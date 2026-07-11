@@ -190,7 +190,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 }
 
 
-$fast_commands = ["addnpc","updateprofile","updateprofile_narrator","diary","diary_narrator","diary_player","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
+$fast_commands = ["addnpc","addbgnpc","updateprofile","updateprofile_narrator","diary","diary_narrator","diary_player","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
     "util_location_name","util_faction_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark",
     "util_location_npc","enable_bg","region","named_cell","snqe","named_cell_static","player_menu_tts_prefetch","player_menu_tts_play"];
@@ -223,6 +223,16 @@ if (in_array($gameRequest[0],["addnpc"])) {
 
 if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
     sleep(1);   // Give time to populate data
+
+    // Load/newgame is a hard scene boundary. Rolemaster scene notes are transient
+    // director state; do not let them bleed across save/load into normal chat.
+    try {
+        $db->delete("rolemaster", "type='scenenote'");
+        $db->delete("responselog", "sent=0 and actor='rolemaster' and (action like 'rolecommand|Instruction@%' or action like 'rolecommand|Suggestion@%')");
+        Logger::info("[main] Cleared transient rolemaster scene state on {$gameRequest[0]}");
+    } catch (Exception $e) {
+        Logger::warn("[main] Failed to clear transient rolemaster scene state on {$gameRequest[0]}: " . $e->getMessage());
+    }
 }
 
 // Misc events, some of them can terminate the request
@@ -2342,6 +2352,7 @@ if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
     $ttsMap = [
         'melotts' => 'MELOTTS',
         'xtts-fastapi' => 'XTTSFASTAPI',
+        'omnivoice' => 'OMNIVOICE',
         'chatterbox' => 'CHATTERBOX',
         'pockettts' => 'POCKETTTS',
         'mimic3' => 'MIMIC3',

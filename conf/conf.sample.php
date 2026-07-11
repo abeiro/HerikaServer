@@ -26,7 +26,7 @@ $HERIKA_DYNAMIC=''; //Split Biography for information to be changed dynamically.
 $DIARY_COOLDOWN=120; //Cooldown period in seconds between diary entries to prevent spam. If a diary hotkey is pressed within this time period, the request will be ignored.
 $DYNAMIC_PROFILE=false; //Dynamic profile updates using a timer system.
 // NOTE: AUTO_DIARY and AUTO_DIARY_WAIT have been moved to profile-level settings. Configure them in your profile settings UI instead of here.
-$BGL_TRIGGER_DAYS=5; //Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Range: 1-30 days.
+$BGL_TRIGGER_HOURS=24; //Number of in-game hours between Background Life events. NPCs will generate thoughts and take actions based on this interval. Range: 1-720 hours.
 $POWER_AWARENESS_ENABLED=false; //Enable Power Awareness system. NPCs will be aware of relative power levels and react appropriately to threats.
 $MINIME_T5=false; //Assists smaller weight LLMs with action and memory functions.
 $OGHMA_KNOWLEDGE="knowall"; //Assists smaller weight LLMs with action and memory functions.
@@ -87,7 +87,7 @@ $EMOTEMOODS="sassy,"
     . "shy,"
     . "surprised"; //List of moods passed to LLM (comma separated). Triggers animations if enabled.
 
-$INLINE_NARRATION_MODE="disabled"; // disabled|narrator|npc
+$INLINE_NARRATION_MODE="disabled"; // disabled|narrator|npc|text_only
 $REMOVE_PLAYER_AUTOCHAT_ASTERISKS=true; // keep AUTOCHAT / PLAYER_RESPEECH rewritten player text spoken-only by stripping leading narration / *asterisks*
 $REMOVE_ASTERISKS_FROM_PLAYER_INPUT=true; // filters *asterisked* player input from player TTS only
 $REMOVE_ASTERISKS_FROM_NPC_OUTPUT=true;
@@ -335,8 +335,14 @@ $TTS["CHATTERBOX"]["voicelogic"]='voicetype';
 $TTS["CHATTERBOX"]["PARALINGUISTIC_TAGS_ENABLED"]=false; //Enable paralinguistic tags like [laugh], [sigh] for expressive TTS output.
 $TTS["CHATTERBOX"]["PARALINGUISTIC_TAGS_PROMPT"]=''; //Prompt snippet for instructing LLM to use paralinguistic tags.
 $TTS["CHATTERBOX"]["PARALINGUISTIC_TAGS_LIST"]='[clear throat],[sigh],[shush],[cough],[groan],[sniff],[gasp],[chuckle],[laugh]'; //Comma-separated list of supported tags.
+//OmniVoice
+$TTS["OMNIVOICE"]["endpoint"]='http://127.0.0.1:8021'; //API endpoint.
+$TTS["OMNIVOICE"]["language"]='en'; //Active OmniVoice language profile.
+$TTS["OMNIVOICE"]["voiceid"]='TheNarrator'; //Generated voice file name.
+$TTS["OMNIVOICE"]["voicelogic"]='voicetype';
 //PocketTTS
-$TTS["POCKETTTS"]["endpoint"]='http://127.0.0.1:8020'; //API endpoint.
+$TTS["POCKETTTS"]["endpoint"]='http://127.0.0.1:8086'; //API endpoint.
+$TTS["POCKETTTS"]["model"]='pocket-tts'; //audio.cpp model id.
 $TTS["POCKETTTS"]["language"]='en'; //Language.
 $TTS["POCKETTTS"]["voiceid"]='TheNarrator'; //Generated voice file name.
 $TTS["POCKETTTS"]["voicelogic"]='voicetype';
@@ -455,7 +461,7 @@ $TTS["CARTESIA"]["speed"]='normal'; //Speed (slowest, slow, normal, fast, fastes
 $TTS["INWORLD"]["workspace"]=''; //Workspace ID (required for voice cloning). Format: workspaces/{workspace} or just the workspace ID.
 $TTS["INWORLD"]["voiceid"]=''; //Voice file name. Works like XTTS voiceid. Voice will be automatically cloned to Inworld when first used.
 $TTS["INWORLD"]["language"]='en-US'; //Language code (en-US, zh-CN, ko-KR, ja-JP, ru-RU, it-IT, es-ES, pt-BR, de-DE, fr-FR, ar-SA, pl-PL, nl-NL, hi-IN, he-IL).
-$TTS["INWORLD"]["model_id"]='inworld-tts-1'; //Model (inworld-tts-1, inworld-tts-1-max).
+$TTS["INWORLD"]["model_id"]='inworld-tts-2'; //Model (inworld-tts-1.5, inworld-tts-2).
 $TTS["INWORLD"]["temperature"]=1.1; //Sampling temperature (0-2). Higher values make output more random. Default: 1.1.
 $TTS["INWORLD"]["speed"]=1.0; //Speaking rate/speed (0.5-1.5). Default: 1.0.
 

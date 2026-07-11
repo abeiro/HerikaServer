@@ -52,6 +52,14 @@ $gsSections = [
         [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
         [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
     ],
+    'Misc' => [
+        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
+        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
+        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
+        [ 'name' => 'BGL_TRIGGER_HOURS', 'type' => 'number', 'min' => 1, 'max' => 720, 'step' => 0.1, 'default' => 24 ],
+        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
+        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
+    ],
     'Quests' => [
         [ 'name' => 'CHIM_AI_QUEST_PROGRESSION', 'type' => 'boolean' ],
         [ 'name' => 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT', 'type' => 'boolean' ],
@@ -69,6 +77,7 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'PLAYER_WORST_MEMORY_GAME_DAYS', 'type' => 'integer', 'min' => 0, 'max' => 365, 'default' => 7, 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.' ],
         [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
     'Context' => [
@@ -82,14 +91,6 @@ $gsSections = [
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
     ],
     $promptContextSectionTitle => $promptContextOptionFields,
-    'Misc' => [
-        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
-        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
-        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
-        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
-        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
-        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
-    ],
     'Translation' => [
         [ 'name' => 'TRANSLATION_FUNCTION', 'type' => 'select', 'values' => ['none', 'DeepL'] ],
         [ 'name' => 'TRANSLATION@settings@translate_audio', 'type' => 'boolean' ],
@@ -143,9 +144,10 @@ function pretty_label(string $flatName): string
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
         'RELLLM_CONNECTOR' => 'Relationship Management',
+        'PLAYER_WORST_MEMORY_GAME_DAYS' => 'Worst Memory Lifespan',
         'EMOTEMOODS' => 'Emote Moods',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
-        'BGL_TRIGGER_DAYS' => 'Background Life Days Cooldown',
+        'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time',
         'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
         'CHIM_AI_QUEST_PROGRESSION' => 'CHIM AI Quest Progression (Beta)',
         'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
@@ -166,6 +168,7 @@ function pretty_label(string $flatName): string
 function icon_for_field(string $flatName): string
 {
     $u = strtoupper($flatName);
+    if ($u === 'PLAYER_WORST_MEMORY_GAME_DAYS') return '💔';
     if (strpos($u, 'FEATURES@MEMORY_EMBEDDING@') === 0 || strpos($u, 'MEMORY_') !== false) return '💭';
     if ($u === 'PLAYER_NAME') return '🏷️';
     if ($u === 'PROMPT_HEAD') return '🔝';
@@ -1311,8 +1314,14 @@ h1.gs-title {
 
                             $fieldType = strval($field['type']);
                             $current = current_value($fieldName);
+                            if (($current === '' || $current === null) && isset($field['default'])) {
+                                $current = $field['default'];
+                            }
                             $label = pretty_label($fieldName);
                             $help = current_description($fieldName, $generalSettingRowMap);
+                            if ($help === '' && isset($field['help'])) {
+                                $help = strval($field['help']);
+                            }
                             $schemaDefinition = chimGetSchemaDefinition($fieldName);
                             $isReadonly = isset($schemaDefinition['readonly']) && $schemaDefinition['readonly'] === true;
                             $readonlyAttr = $isReadonly ? 'readonly' : '';
@@ -1365,7 +1374,12 @@ h1.gs-title {
                                         <?php $min = isset($field['min']) ? intval($field['min']) : null; $max = isset($field['max']) ? intval($field['max']) : null; ?>
                                         <input type="number" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo ($min !== null ? 'min="' . $min . '"' : ''); ?> <?php echo ($max !== null ? 'max="' . $max . '"' : ''); ?> step="1" <?php echo $readonlyAttr; ?>>
                                     <?php elseif ($fieldType === 'number'): ?>
-                                        <input type="number" step="0.01" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo $readonlyAttr; ?>>
+                                        <?php
+                                        $min = isset($field['min']) ? floatval($field['min']) : null;
+                                        $max = isset($field['max']) ? floatval($field['max']) : null;
+                                        $step = isset($field['step']) ? floatval($field['step']) : 0.01;
+                                        ?>
+                                        <input type="number" step="<?php echo htmlspecialchars(strval($step)); ?>" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo ($min !== null ? 'min="' . $min . '"' : ''); ?> <?php echo ($max !== null ? 'max="' . $max . '"' : ''); ?> <?php echo $readonlyAttr; ?>>
                                     <?php elseif ($fieldType === 'longstring'): ?>
                                         <?php if (isset($filterBrowseFieldConfigs[$fieldName])): ?>
                                             <?php $browseConfig = $filterBrowseFieldConfigs[$fieldName]; ?>

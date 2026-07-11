@@ -272,6 +272,36 @@ function isPlayerDiaryEnabled(): bool
     }
 }
 
+function isPlayerAutoDiaryEnabled(): bool
+{
+    if (!class_exists('Player')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    }
+
+    try {
+        $player = new Player();
+        return $player->getBool('auto_diary_enabled', false);
+    } catch (Throwable $e) {
+        Logger::error("PLAYER_DIARY: Failed to read player auto diary setting: " . $e->getMessage());
+        return false;
+    }
+}
+
+function isPlayerAutoDiaryWaitEnabled(): bool
+{
+    if (!class_exists('Player')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    }
+
+    try {
+        $player = new Player();
+        return $player->getBool('auto_diary_wait_enabled', false);
+    } catch (Throwable $e) {
+        Logger::error("PLAYER_DIARY: Failed to read player auto diary wait setting: " . $e->getMessage());
+        return false;
+    }
+}
+
 function generatePlayerDiary($gameRequest, $eventType)
 {
     global $db;
@@ -501,6 +531,10 @@ function processAutoDiary($gameRequest, $eventType) {
     
     Logger::info("AUTO_DIARY: Function called for event type: $eventType");
     $playerDiaryEnabled = isPlayerDiaryEnabled();
+    $playerAutoDiaryEnabled = isPlayerAutoDiaryEnabled();
+    $playerAutoDiaryWaitEnabled = isPlayerAutoDiaryWaitEnabled();
+    $shouldProcessPlayerDiary = ($eventType === "goodnight" && $playerDiaryEnabled && $playerAutoDiaryEnabled)
+        || ($eventType === "waitstart" && $playerDiaryEnabled && $playerAutoDiaryEnabled && $playerAutoDiaryWaitEnabled);
     
     // Get nearby NPCs
     $nearbyNpcsStr = DataBeingsInCloseRange();
@@ -526,7 +560,7 @@ function processAutoDiary($gameRequest, $eventType) {
         Logger::info("AUTO_DIARY: Added The Narrator to auto diary processing (auto toggle enabled)");
     }
     
-    if (empty($nearbyNpcs) && !$playerDiaryEnabled) {
+    if (empty($nearbyNpcs) && !$shouldProcessPlayerDiary) {
         Logger::info("AUTO_DIARY: No nearby NPCs, narrator, or player diary entries to process");
         return;
     }
@@ -535,7 +569,7 @@ function processAutoDiary($gameRequest, $eventType) {
     $generatedCount = 0;
     $diaryCooldownPeriod = isset($GLOBALS["DIARY_COOLDOWN"]) ? intval($GLOBALS["DIARY_COOLDOWN"]) : 30;
     
-    if ($playerDiaryEnabled) {
+    if ($shouldProcessPlayerDiary) {
         try {
             if (!class_exists('Player')) {
                 require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
