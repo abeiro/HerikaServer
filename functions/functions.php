@@ -2514,7 +2514,17 @@ function queueFunctionExecutionCommand(&$commandBuffer, &$alreadySent, $executio
     }
 
     $actorName = ($actorName !== null && trim(strval($actorName)) !== "") ? strval($actorName) : strval($GLOBALS["HERIKA_NAME"] ?? "Herika");
-    $commandStr = $actorName . "|command|" . strval($executionContext["function_code_name"] ?? "") . "@" . strval($executionContext["parameter_string"] ?? "") . "\r\n";
+    $functionCodeName = strval($executionContext["function_code_name"] ?? "");
+    $commandChannel = "command";
+
+    if (function_exists('herikaGetActionCatalogRow') && function_exists('herikaActionCatalogGetConfirmationCommandChannel')) {
+        $actionRow = herikaGetActionCatalogRow($functionCodeName);
+        if (is_array($actionRow)) {
+            $commandChannel = herikaActionCatalogGetConfirmationCommandChannel($actionRow);
+        }
+    }
+
+    $commandStr = $actorName . "|" . $commandChannel . "|" . $functionCodeName . "@" . strval($executionContext["parameter_string"] ?? "") . "\r\n";
     $commandHash = md5($commandStr);
 
     if (isset($alreadySent[$commandHash])) {
