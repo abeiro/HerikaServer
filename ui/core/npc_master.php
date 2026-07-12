@@ -515,6 +515,22 @@ if (!function_exists('chimReleaseNpcRelationshipLock')) {
     }
 }
 
+// sql::insert() (and therefore NpcMaster::create()) returns nothing, so the new row's id must be
+// recovered by the md5(npc_name) key that create() itself writes.
+if (!function_exists('chimResolveNpcIdAfterCreate')) {
+    function chimResolveNpcIdAfterCreate($npcName): int
+    {
+        try {
+            $row = $GLOBALS['db']->fetchOne(
+                "SELECT id FROM core_npc_master WHERE md5 = '" . md5((string)$npcName) . "' ORDER BY id DESC LIMIT 1"
+            );
+            return (int)($row['id'] ?? 0);
+        } catch (Throwable $e) {
+            return 0;
+        }
+    }
+}
+
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     if (chimUiAutoLockProfileEnabled()) {
@@ -524,6 +540,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
         include(__DIR__."/../../ext/relationship_system/npc_save_handler.php");
     }
     $npc->create($_POST);
+    // Anchor editor-entered relationships to the last known game time. Freshly created rows have
+    // gamets_last_updated NULL ("never saved"), so the init-time Dragon Break clear wiped manual
+    // entries on the next reconnect. The stamp puts them on the timeline: same-save restarts keep
+    // them, loading an OLDER save still clears them correctly (stamp is in that save's future).
+    if (chimNpcRelationshipSaveNeedsLock() && function_exists('chimRelationshipTimelineStamp')) {
+        $createdNpcId = chimResolveNpcIdAfterCreate($_POST["npc_name"] ?? '');
+        if ($createdNpcId > 0) {
+            chimRelationshipTimelineStamp($createdNpcId);
+        }
+    }
     header("Location: npc_master.php");
     exit;
 }
@@ -544,6 +570,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         };
         if (chimNpcRelationshipSaveNeedsLock()) {
             chimRunWithRelationshipExtendedDataWrite($saveNpc);
+            // Anchor editor relationship saves to the last known game time (see Create branch) -
+            // without this a NULL-stamped row loses its manual entries on the next reconnect.
+            if (function_exists('chimRelationshipTimelineStamp')) {
+                chimRelationshipTimelineStamp((int)($_POST["id"] ?? 0));
+            }
         } else {
             $saveNpc();
         }
@@ -641,8 +672,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
             $_POST['lock_profile'] = 1;
         }
         if ($id <= 0) {
-            $newId = $npc->create($_POST);
-            if (!$newId) { echo json_encode(["ok"=>false, "error"=>"Insert failed"]); exit; }
+            $npc->create($_POST);
+            // NpcMaster::create() returns nothing (sql::insert is void), so the old `if (!$newId)`
+            // check reported "Insert failed" on every SUCCESSFUL insert. Recover the real id.
+            $newId = chimResolveNpcIdAfterCreate($_POST["npc_name"] ?? '');
+            if ($newId <= 0) { echo json_encode(["ok"=>false, "error"=>"Insert failed"]); exit; }
+            // Anchor editor relationship saves to the last known game time (see Create branch) -
+            // NULL-stamped rows lose their manual entries to the init-time Dragon Break clear.
+            if (chimNpcRelationshipSaveNeedsLock() && function_exists('chimRelationshipTimelineStamp')) {
+                chimRelationshipTimelineStamp($newId);
+            }
             echo json_encode(["ok"=>true, "id"=>$newId]);
         } else {
             $_POST["md5"]=md5($_POST["npc_name"]);
@@ -651,6 +690,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
             };
             if (chimNpcRelationshipSaveNeedsLock()) {
                 $ok = chimRunWithRelationshipExtendedDataWrite($saveNpc);
+                // Stamp BEFORE the manual backup below so the snapshot captures the anchored row.
+                if (function_exists('chimRelationshipTimelineStamp')) {
+                    chimRelationshipTimelineStamp((int)$id);
+                }
             } else {
                 $ok = $saveNpc();
             }
