@@ -345,6 +345,8 @@ function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
     $extended_data['background_life_enabled'] = true;
     $extended_data['background_life_last_updated'] = $last_gamets;
     $extended_data['background_life_player_unattached'] = true;
+    $extended_data['middle_term_enabled'] = 1;
+    
 
     $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
     $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
