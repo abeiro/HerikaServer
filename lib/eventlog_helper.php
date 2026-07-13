@@ -26,6 +26,7 @@ if (!function_exists('chimGetVisibleEventLogExcludedTypes')) {
             'npcvoice_refresh',
             'status_msg',
             'region',
+            'ext_nsfw_physics_raw',
         ];
     }
 }

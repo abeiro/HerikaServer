@@ -431,6 +431,92 @@ function chimEquipmentHasBodyCoverage(array $equipmentData): bool
     return false;
 }
 
+function chimNormalizePromptFormId($value): ?string
+{
+    $formId = trim((string) $value);
+    if ($formId === '') {
+        return null;
+    }
+
+    if (stripos($formId, '0x') === 0) {
+        $formId = substr($formId, 2);
+    }
+
+    if (!preg_match('/^[0-9a-f]{1,8}$/i', $formId)) {
+        return null;
+    }
+
+    return '0x' . strtoupper(str_pad($formId, 8, '0', STR_PAD_LEFT));
+}
+
+function chimEscapePromptItemText($value): string
+{
+    $value = str_replace(["\r", "\n", "\t"], ' ', (string) $value);
+    $value = trim(preg_replace('/\s+/', ' ', $value) ?? $value);
+    $value = htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    return str_replace('`', '&#96;', $value);
+}
+
+function chimFormatInventoryPromptLines(
+    array $inventory,
+    callable $getItemDescription = null,
+    array &$describedBaseids = [],
+    bool $descriptionsOnly = false
+): array {
+    $lines = [];
+
+    foreach ($inventory as $item) {
+        $itemName = trim((string) ($item['name'] ?? ''));
+        if ($itemName === '' || $itemName === '<Missing Name>' || isItemBlacklisted($itemName)) {
+            continue;
+        }
+
+        $count = max(0, intval($item['count'] ?? 0));
+        $rawBaseId = trim((string) ($item['baseid'] ?? ''));
+        $baseId = chimNormalizePromptFormId($rawBaseId);
+        $baseIdKey = $baseId ?? '';
+        $description = null;
+
+        if ($getItemDescription !== null && $count <= 5 && ($baseIdKey === '' || !in_array($baseIdKey, $describedBaseids, true))) {
+            $description = $getItemDescription($itemName, $rawBaseId !== '' ? $rawBaseId : null);
+            if ($description && $baseIdKey !== '') {
+                $describedBaseids[] = $baseIdKey;
+            }
+        }
+
+        if ($descriptionsOnly && !$description) {
+            continue;
+        }
+
+        $safeName = chimEscapePromptItemText($itemName);
+        $identifier = $baseId !== null ? "`{$baseId}:{$safeName}`" : $safeName;
+        $line = "- {$identifier} ({$count})";
+        if ($description) {
+            $line .= ' - ' . chimEscapePromptItemText($description);
+        }
+
+        $lines[] = $line;
+    }
+
+    return $lines;
+}
+
+function chimBuildInventoryPromptContext(
+    array $inventory,
+    callable $getItemDescription = null,
+    array &$describedBaseids = [],
+    bool $descriptionsOnly = false
+): string {
+    $lines = chimFormatInventoryPromptLines($inventory, $getItemDescription, $describedBaseids, $descriptionsOnly);
+    if (empty($lines)) {
+        return '';
+    }
+
+    return "<inventory>\n# INVENTORY\nFormat: BaseID:ItemName (quantity)\n\n"
+        . implode("\n", $lines)
+        . "\n</inventory>";
+}
+
 function chimFormatEquipmentPromptLines(array $equipmentData, array $slotLabels, callable $getItemDescription = null, array &$describedBaseids = []): array
 {
     $equipmentParts = [];
@@ -449,7 +535,7 @@ function chimFormatEquipmentPromptLines(array $equipmentData, array $slotLabels,
         $itemLine = "  - {$label}: {$itemName}";
 
         if ($getItemDescription !== null) {
-            $baseidKey = $baseid !== '' ? strtoupper($baseid) : '';
+            $baseidKey = chimNormalizePromptFormId($baseid) ?? '';
             if ($baseidKey !== '' && in_array($baseidKey, $describedBaseids, true)) {
                 $equipmentParts[] = $itemLine;
                 continue;
@@ -5400,7 +5486,7 @@ function call_llm_internal() {
         snapshot_response_prompt_debug_data($currentConnectorData);
         $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
         $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
-        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
             $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
         }
         if ($inlineNarrationMode === 'disabled' && !$preserveAsterisksInContext) {
@@ -5426,7 +5512,7 @@ function call_llm_internal() {
         "mood"=>"One of :".implode("|",normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "")),
         "action"=>"One of :".implode("|",$GLOBALS["FUNC_LIST"]),
         "target"=>"action target actor|action destination location name",
-        "item"=>"item name (REQUIRED when action is GiveItemTo or PickupItem - use exact name from inventory or nearby_items)",
+        "item"=>"item identifier (REQUIRED for GiveItemTo: use exact BaseID:ItemName from inventory; for PickupItem: use exact RefID:ItemName from nearby_items)",
         "lang"=>"language used, (es|en|fr|...)"]);
 
 
@@ -7067,71 +7153,22 @@ function buildDynamicBiography(array $FOLLOWER_CONF, bool $forLetter = false, bo
 
      // Add NPC's inventory (skip for The Narrator - they don't need inventory context)
     if ($FOLLOWER_CONF["HERIKA_NAME"] !== "The Narrator" && isset($metaData["inventory"]) && is_array($metaData["inventory"])) {
-       
-        $equipmentParts=[];
-        // Continue using the same $describedBaseids from equipment to dedupe across all items
+        // Continue using the same IDs from equipment to dedupe descriptions across both sections.
         if (!isset($describedBaseids)) {
             $describedBaseids = [];
         }
-        
-        foreach ($metaData["inventory"] as $item) {
-            if ($item["name"]!='<Missing Name>') {
-                $itemName = $item["name"];
-                
-                // Skip blacklisted items
-                if (isItemBlacklisted($itemName)) {
-                    continue;
-                }
-                
-                $itemCount = $item["count"];
-                $baseid = isset($item["baseid"]) ? $item["baseid"] : null;
-                
-                $itemLine = "{$itemCount} {$itemName}";
-                $hasDescription = false;
-                
-                // Try to add item description for notable items (limit descriptions to avoid clutter)
-                // Only if we haven't already described this baseid
-                if ($itemCount <= 5) { // Only add descriptions for items with low counts
-                    if (!empty($baseid) && !in_array($baseid, $describedBaseids)) {
-                        $description = $getItemDescription($itemName, $baseid);
-                        if ($description) {
-                            $itemLine .= " ({$description})";
-                            $describedBaseids[] = $baseid; // Mark this baseid as described
-                            $hasDescription = true;
-                        }
-                    } elseif (empty($baseid)) {
-                        // No baseid, try name-based (won't dedupe without baseid)
-                        $description = $getItemDescription($itemName, null);
-                        if ($description) {
-                            $itemLine .= " ({$description})";
-                            $hasDescription = true;
-                        }
-                    }
-                }
-                
-                // If filter is enabled and item has no description, skip it
-                if (isset($GLOBALS["INVENTORY_ITEMS_DESCRIPTIONS_ONLY"]) && $GLOBALS["INVENTORY_ITEMS_DESCRIPTIONS_ONLY"] && !$hasDescription) {
-                    continue;
-                }
-                
-                if ($addItemId) {
-                    $equipmentParts[] = "refid:{$baseid} description:{$itemLine}";
-                    $separator = "\n • ";
-                    $prefixseparator = "\n • ";
-                }
-                else {
-                    $equipmentParts[] = $itemLine;
-                    $prefixseparator = "\n";
-                }
-            }
-            
-        }
-        
-        if (!empty($equipmentParts)) {
-            $INVENTORY_ADD = "\n<inventory>\n#Inventory{$prefixseparator}" . implode($separator, $equipmentParts)."\n</inventory>";
+
+        $inventoryContext = chimBuildInventoryPromptContext(
+            $metaData["inventory"],
+            $getItemDescription,
+            $describedBaseids,
+            !empty($GLOBALS["INVENTORY_ITEMS_DESCRIPTIONS_ONLY"])
+        );
+
+        if ($inventoryContext !== '') {
+            $INVENTORY_ADD = "\n" . $inventoryContext;
         }
     }
-    
 	// Add current condition (qualitative HP/MP/SP based on percent, with richer descriptors)
 	if (isset($metaData["stats"]) && is_array($metaData["stats"])) {
 		$s = $metaData["stats"];

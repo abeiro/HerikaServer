@@ -52,6 +52,13 @@ $currentMode = isset($modeResult['value']) ? strtoupper(trim($modeResult['value'
 $focusChatResult = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_context_mode'");
 $focusChat = isset($focusChatResult['value']) && $focusChatResult['value'] == '1';
 
+// Get the global server-side rechat responder mode.
+$allowedRechatModes = ['tight', 'conversational', 'group', 'random'];
+$rechatMode = strtolower(trim(chimGetGeneralSetting('RECHAT_MODE', 'random')));
+if (!in_array($rechatMode, $allowedRechatModes, true)) {
+    $rechatMode = 'random';
+}
+
 // Get active model slot
 $modelSlotResult = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_profile_model'");
 $activeModelSlot = isset($modelSlotResult['value']) ? intval($modelSlotResult['value']) : 1;
@@ -183,6 +190,7 @@ $response = [
         'mode' => $currentMode,
         'player_name' => $playerName,
         'focus_chat' => $focusChat,
+        'rechat_mode' => $rechatMode,
         'active_model_slot' => $activeModelSlot,
         'active_model_label' => $activeSlotLabel,
         'active_model_name' => $activeModelName,

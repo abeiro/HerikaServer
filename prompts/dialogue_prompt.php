@@ -271,13 +271,13 @@ if (!function_exists('chimLoadManagedContinueCuePrompts')) {
 
 // Add narration instruction when inline narration mode expects leading asterisk narration blocks.
 $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
-if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
     $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
 }
 $inlineNarrationMode = $directNarratorDialogue ? 'disabled' : $inlineNarrationMode;
 $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
 if ($inlineNarrationEnabled) {
-    if ($inlineNarrationMode === 'npc') {
+    if (in_array($inlineNarrationMode, ['npc', 'text_only'], true)) {
         $inlineDialoguePromptKey = 'dialogue_line_inline_response_npc';
         $inlineDialogueFallback = " Write {HERIKA_NAME}'s next dialogue line."
             . " If needed, you may include one brief third-person narration block in single asterisks before the dialogue."

@@ -73,7 +73,26 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     $results = $GLOBALS["db"]->fetchAll("select max(gamets) as gamets from eventlog"); // faster
     $maxRow = intval($results[0]["gamets"]);
 
-    $allEnabledMtNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->'middle_term_enabled' = '1' ");
+    // Middle-term-memory eligibility is a 3-state setting, not a single per-NPC flag:
+    //   - extended_data.middle_term_enabled = 1/0  -> explicit per-NPC override
+    //   - key absent                               -> inherit the assigned profile's
+    //                                                 core_profiles.metadata.MIDDLE_TERM_MEMORY_ENABLED
+    // The UI writes it this way on purpose (npc_master.php: "delete ... // Remove to inherit
+    // from profile") and the aiview API resolves it this way (chim_aiview.php: explicit npc
+    // value else profile default). The dynamic-profile runtime gate honors the same
+    // inheritance (dynamic_update_util.php). This scheduler query, however, matched ONLY the
+    // explicit `= '1'` key, so every NPC that inherits "on" from an MTM-enabled profile (no
+    // explicit key) was silently skipped and never got middle-term memory generated.
+    // COALESCE(explicit, profile-default) restores inheritance: the per-NPC override wins
+    // (including an explicit '0' force-off), otherwise fall back to the profile default.
+    // (DRY: this explicit-then-profile resolution is currently inlined in several places —
+    //  chim_aiview.php, dynamic_update_util.php, comm.php, and here. A shared helper such as
+    //  NpcMaster::isFeatureEnabled($npc, 'MIDDLE_TERM_MEMORY_ENABLED') would consolidate them.)
+    $allEnabledMtNpc = $GLOBALS["db"]->fetchAll(
+        "SELECT m.* FROM core_npc_master m
+         LEFT JOIN core_profiles p ON p.id = m.profile_id
+         WHERE COALESCE(NULLIF(m.extended_data->>'middle_term_enabled',''),
+                        p.metadata->>'MIDDLE_TERM_MEMORY_ENABLED') = '1' ");
 
     foreach ($allEnabledMtNpc as $npc) {
         $mwdata = json_decode($npc["extended_data"]);
@@ -86,11 +105,9 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     $oneDayAgoGamets = $maxRow - ((24) / 0.0000024);
     $oneHourAgoGamets = $maxRow - ((1) / 0.0000024);
 
-    // Get BgL trigger period from conf.php (default: 5 days)
-    $bglTriggerDays = isset($GLOBALS['BGL_TRIGGER_DAYS']) && is_numeric($GLOBALS['BGL_TRIGGER_DAYS'])
-        ? max(0.1, floatval($GLOBALS['BGL_TRIGGER_DAYS']))
-        : 5;
-    $bglTriggerDaysAgoGamets = $maxRow - ((24 * $bglTriggerDays) / 0.0000024);
+    // Get BgL trigger period from general settings (default: 24 in-game hours).
+    $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
+    $bglTriggerHoursAgoGamets = $maxRow - ($bglTriggerHours / 0.0000024);
 
     // BgL tracking coords, in-game daily
 
@@ -175,7 +192,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
 
             break;  // One per iteration - break after processing
         } else {
-            logger::debug("[BGL] (Passive) Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}");
+            logger::debug("[BGL] (Passive) Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours}");
         }
     }
 
@@ -259,8 +276,8 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
             }
             break;  // One per iteration - break after processing
         } else {
-            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerDaysAgoGamets) * 0.0000024;
-            error_log("[BGL] Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']} , delta: {$delta}");
+            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerHoursAgoGamets) * 0.0000024;
+            error_log("[BGL] Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours}, delta: {$delta}");
         }
     }
 

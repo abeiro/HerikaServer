@@ -3327,6 +3327,8 @@ if ($checkVersion("npc_templates")<20250619001) {
                 npc_goals text
             )");
             $db->execQuery($newDataSql);
+            // pg_dump exports clear search_path; restore it for subsequent unqualified helpers.
+            $db->execQuery("SET search_path TO public");
             
             // Upsert from temp table to main table with explicit column list
             $db->execQuery("INSERT INTO public.npc_templates (
@@ -3483,7 +3485,7 @@ if ($checkVersion("core_llm_connector") < 20260423001) {
                 $insertPayload["api_badge_id"] = $openRouterBadgeId;
             }
 
-            $db->insert("core_llm_connector", $insertPayload);
+            $db->insert("public.core_llm_connector", $insertPayload);
             Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
         } else {
             Logger::info("Dedicated scene classifier connector already exists with ID " . intval($existingSceneClassifier["id"]));
@@ -3537,10 +3539,10 @@ if ($checkVersion("core_llm_connector") < 20260423002) {
         }
 
         if ($sceneClassifierRow && isset($sceneClassifierRow["id"])) {
-            $db->updateRow("core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
+            $db->updateRow("public.core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
             Logger::info("Updated dedicated scene classifier connector ID " . intval($sceneClassifierRow["id"]) . " to Gemma 3N E4B");
         } else {
-            $db->insert("core_llm_connector", $sceneClassifierPayload);
+            $db->insert("public.core_llm_connector", $sceneClassifierPayload);
             Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
         }
 
@@ -3592,10 +3594,10 @@ if ($checkVersion("core_llm_connector") < 20260423003) {
         }
 
         if ($sceneClassifierRow && isset($sceneClassifierRow["id"])) {
-            $db->updateRow("core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
+            $db->updateRow("public.core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
             Logger::info("Renamed scene classifier connector ID " . intval($sceneClassifierRow["id"]) . " to '{$sceneClassifierLabel}'");
         } else {
-            $db->insert("core_llm_connector", $sceneClassifierPayload);
+            $db->insert("public.core_llm_connector", $sceneClassifierPayload);
             Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
         }
 
@@ -7156,6 +7158,38 @@ if ($checkVersion("core_tts_connector_omnivoice") < 20260708001) {
     if ($b_ok) {
         $updateVersion("core_tts_connector_omnivoice", 20260708001);
         Logger::info("Applied patch core_tts_connector_omnivoice 20260708001");
+    }
+}
+
+if ($checkVersion("general_settings") < 20260711001) {
+    Logger::debug("Applying general_settings 20260711001 - convert Background Life cooldown from days to hours");
+
+    $b_ok = true;
+    try {
+        $hoursRow = $db->fetchOne("SELECT value FROM public.general_settings WHERE id = 'BGL_TRIGGER_HOURS' LIMIT 1");
+        if (isset($hoursRow['value']) && is_numeric($hoursRow['value'])) {
+            $cooldownHours = chimNormalizeBackgroundLifeTriggerHours($hoursRow['value']);
+        } else {
+            $daysRow = $db->fetchOne("SELECT value FROM public.general_settings WHERE id = 'BGL_TRIGGER_DAYS' LIMIT 1");
+            $legacyDays = $daysRow['value'] ?? chimReadLegacyGlobalValue('BGL_TRIGGER_DAYS', null);
+            $cooldownHours = is_numeric($legacyDays)
+                ? chimConvertBackgroundLifeDaysToHours($legacyDays)
+                : 24.0;
+        }
+
+        $description = chimGetManagedGeneralSettingDescriptions()['BGL_TRIGGER_HOURS']
+            ?? chimGetSchemaDescription('BGL_TRIGGER_HOURS');
+        if (!chimSetGeneralSetting('BGL_TRIGGER_HOURS', $cooldownHours, $description)) {
+            throw new Exception("Failed writing BGL_TRIGGER_HOURS");
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error converting Background Life cooldown to hours: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260711001);
+        Logger::info("Applied patch general_settings 20260711001");
     }
 }
 

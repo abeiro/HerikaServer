@@ -13,6 +13,64 @@ if (!function_exists('getFunctionCodeName')) {
 
 final class ActionCatalogTest extends TestCase
 {
+    public function testActionConfirmationDefaultsAndEditorSupport(): void
+    {
+        $this->assertSame('ask', herikaActionCatalogGetDefaultConfirmationPolicy('TakeGoldFromPlayer'));
+        $this->assertSame('ask', herikaActionCatalogGetDefaultConfirmationPolicy('ArrestPlayer'));
+        $this->assertSame('automatic', herikaActionCatalogGetDefaultConfirmationPolicy('FollowPlayer'));
+
+        $this->assertTrue(herikaActionCatalogRowSupportsConfirmation([
+            'code_name' => 'FollowPlayer',
+            'game_function' => true,
+        ]));
+        $this->assertFalse(herikaActionCatalogRowSupportsConfirmation([
+            'code_name' => 'Inspect',
+            'game_function' => true,
+        ]));
+        $this->assertFalse(herikaActionCatalogRowSupportsConfirmation([
+            'code_name' => 'DirectorCommand',
+            'game_function' => false,
+        ]));
+
+        $field = herikaActionCatalogGetConfirmationEditorField([
+            'code_name' => 'TakeGoldFromPlayer',
+        ]);
+        $this->assertSame('confirmation_required', $field['key']);
+        $this->assertSame('boolean', $field['type']);
+        $this->assertTrue($field['default']);
+
+        $this->assertSame('confirmcommand', herikaActionCatalogGetConfirmationCommandChannel([
+            'code_name' => 'TakeGoldFromPlayer',
+            'game_function' => true,
+            'metadata' => [],
+        ]));
+        $this->assertSame('approvedcommand', herikaActionCatalogGetConfirmationCommandChannel([
+            'code_name' => 'TakeGoldFromPlayer',
+            'game_function' => true,
+            'metadata' => ['custom_config' => ['confirmation_policy' => 'automatic']],
+        ]));
+        $this->assertSame('confirmcommand', herikaActionCatalogGetConfirmationCommandChannel([
+            'code_name' => 'FollowPlayer',
+            'game_function' => true,
+            'metadata' => ['custom_config' => ['confirmation_policy' => 'ask']],
+        ]));
+        $this->assertSame('confirmcommand', herikaActionCatalogGetConfirmationCommandChannel([
+            'code_name' => 'FollowPlayer',
+            'game_function' => true,
+            'metadata' => ['custom_config' => ['confirmation_required' => true]],
+        ]));
+        $this->assertSame('approvedcommand', herikaActionCatalogGetConfirmationCommandChannel([
+            'code_name' => 'TakeGoldFromPlayer',
+            'game_function' => true,
+            'metadata' => ['custom_config' => ['confirmation_required' => false]],
+        ]));
+        $this->assertSame('command', herikaActionCatalogGetConfirmationCommandChannel([
+            'code_name' => 'Inspect',
+            'game_function' => true,
+            'metadata' => ['custom_config' => ['confirmation_policy' => 'ask']],
+        ]));
+    }
+
     public function testBaseSeedFileDefinesActionAvailabilityAndActivation(): void
     {
         $this->assertNotContains('ReadQuestJournal', herikaGetRetiredActionCodes());

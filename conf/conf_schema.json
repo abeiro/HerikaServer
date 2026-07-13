@@ -78,9 +78,9 @@
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Attempt to enforce a word limit for AI's responses. Leave as 0 to have no limit."},
   "JSON_DIALOGUE_FORMAT_REORDER": {"type":"boolean","userlvl":"pro","description":"Reorders properties in the output JSON schema. AI generates an action first, then a dialogue comment. Some users report this improves actions performance."},
    "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"Default list of moods passed to LLM (comma separated). Can be overridden per-NPC in CHIM NPCs. Some moods will trigger animations if enabled.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#GeneralSettings"},
-   "INLINE_NARRATION_MODE": {"userlvl":"basic","type":"select","values":["disabled","narrator","npc"],"description":"Controls who voices inline *narration* blocks. disabled = no special routing, narrator = The Narrator voices the asterisked section, npc = the NPC keeps the whole line.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
+   "INLINE_NARRATION_MODE": {"userlvl":"basic","type":"select","values":["disabled","narrator","npc","text_only"],"description":"Controls who voices inline *narration* blocks. disabled = no special routing, narrator = The Narrator voices the asterisked section, npc = the NPC keeps the whole line, text_only = narration stays visible but only dialogue is spoken.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
    "REMOVE_ASTERISKS_FROM_PLAYER_INPUT": {"userlvl":"basic","type":"boolean","description":"Filter *asterisked* player input from player TTS only. The in-game player subtitle echo keeps the visible *text*.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
-   "REMOVE_ASTERISKS_FROM_NPC_OUTPUT": {"userlvl":"basic","type":"boolean","description":"Filter *asterisked* NPC narration/emotes from NPC speech and subtitles.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
+   "REMOVE_ASTERISKS_FROM_NPC_OUTPUT": {"userlvl":"basic","type":"boolean","description":"Filter *asterisked* NPC narration/emotes from NPC speech and subtitles. Text Only always keeps leading narration visible.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
   "ENFORCE_ACTIONS_PROMPT": {"userlvl":"basic","type":"boolean","description":"Adds a prompt to enforce use of actions", "helpurl":""},
   "SUMMARY_PROMPT": {"userlvl":"pro","type":"longstring","description":"Custom instructions added when generating summaries for memories. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
   "DYNAMIC_PROMPT": {"userlvl":"basic","type":"longstring","description":"Legacy instructions for updating HERIKA_DYNAMIC. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
@@ -105,7 +105,7 @@
   "RELLLM_CONNECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Relationship Management system. Analyzes and updates NPC relationships. Recommend to use a 🏃‍♀️‍➡️Fast LLM with ❄️low temperature (0.1-0.3) for consistent evaluations.","scope":"global"},
   "POWER_AWARENESS_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"NPCs will be aware of relative power levels (based on character level) and react appropriately to threats.","_title":"Power Awareness System"},
   "CLEAN_CONTEXT_FOCUS_CHAT_HISTORY": {"userlvl":"basic","type": "integer","description": "Context history length with only conversations. Ideally set it to 20-30.","scope":"global"},
-  "BGL_TRIGGER_DAYS": {"userlvl":"basic","type": "number","description": "RECOMMEND TO NOT GO BELOW 5 DAYS! Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Default: 5 days. Range: 1-30 days.","scope":"global"},
+  "BGL_TRIGGER_HOURS": {"userlvl":"basic","type": "number","default": 24,"description": "Number of in-game hours between Background Life events. NPCs will generate thoughts and take actions based on this interval. Default: 24 hours. Range: 1-720 hours.","scope":"global"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
     "openrouterjson": {
@@ -415,7 +415,7 @@
       "workspace": {"type":"string","description":"Inworld workspace ID (required for voice cloning). Format: workspaces/{workspace} or just the workspace ID.","helpurl":"https://docs.inworld.ai/"},
       "voiceid": {"type":"string","description":"Voice file name. Works the same as CHIM-XTTS voiceid. Will only work with voices in your Voice Cache. Voice will be automatically cloned to Inworld when first used.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "language": {"type":"select","values":["en-US","zh-CN","ko-KR","ja-JP","ru-RU","it-IT","es-ES","pt-BR","de-DE","fr-FR","ar-SA","pl-PL","nl-NL","hi-IN","he-IL"],"description":"Language to use for TTS generation. Uses BCP-47 regional language codes."},
-      "model_id": {"type":"select","values":["inworld-tts-1","inworld-tts-1-max","inworld-tts-1.5-mini","inworld-tts-1.5-max"],"description":"Inworld model to use. inworld-tts-1 is the standard model, inworld-tts-1.5-max is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
+      "model_id": {"type":"select","values":["inworld-tts-1 (deprecated)","inworld-tts-1-max (deprecated)","inworld-tts-1.5-mini","inworld-tts-1.5-max","inworld-tts-2"],"description":"Inworld model to use. inworld-tts-2 is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
       "temperature": {"type":"number","description":"Sampling temperature (0-2). Higher values make output more random. Default: 1.0"},
       "speed": {"type":"number","description":"Speaking rate/speed (0.5-1.5). Default: 1.0"}
     }
