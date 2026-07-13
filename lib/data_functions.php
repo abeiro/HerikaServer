@@ -2476,6 +2476,37 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     $visibleChatStateSql = chimBuildChatDeliveryStateSql('delivery_state');
 
+    // Cross-NPC bleed fix, v2 (Lorkhan review 2026-07-10): v1 kept only own/addressed-to lines,
+    // which starved GROUP conversations - in player-led 3-ways and rechat rounds each NPC lost every
+    // co-participant line, and multi-listener stamps "(talking to B, C)" matched NOBODY because the
+    // ilike required a closing paren right after the name. v2 repairs all three while keeping the
+    // original fix (bystanders echoing NPC-to-NPC verbatim lines):
+    //  (a) group rounds (rechat/narration/continue) skip the dialogue filter entirely - every
+    //      participant needs the whole round in history, not just their own lines;
+    //  (b) the addressee match is a word-boundary regex INSIDE the listener list, so comma lists
+    //      and multi-listener lines reach every addressee;
+    //  (c) lines addressed to the PLAYER are public to NPCs present - a bystander plausibly hears
+    //      what you are told; the original bleed case (NPC-to-NPC scene lines ingested verbatim by
+    //      bystanders) stays filtered on normal turns.
+    $isGroupRound = in_array((string)($GLOBALS["gameRequest"][0] ?? ''), ["rechat", "narration", "continue", "continue_group"], true);
+    $dialogScopeSql = "";
+    if ($b_actor && !$isGroupRound) {
+        $actorRegex = $db->escape(preg_quote($actor));
+        $playerArm = "";
+        $playerNameForScope = trim((string)($GLOBALS["PLAYER_NAME"] ?? ''));
+        if ($playerNameForScope !== "" && strcasecmp($playerNameForScope, $actor) !== 0) {
+            $playerRegex = $db->escape(preg_quote($playerNameForScope));
+            $playerArm = "
+     or data ~* '\\(talking to [^)]*\\m{$playerRegex}\\M'";
+        }
+        $dialogScopeSql = "
+    AND (
+     type not in ('chat','prechat')
+     or data ilike '$actorEscaped:%'
+     or data ~* '\\(talking to [^)]*\\m{$actorRegex}\\M'{$playerArm}
+    )";
+    }
+
     $query="select  
     case 
       when type='infoaction' and a.data like '#%MEMORY%' then 'MEMORY'
@@ -2522,17 +2553,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
      or people like '%|$actorEscaped (in combat)|%'
      or people like '%|$actorEscaped (restrained)|%'
      or type='info_timeforward'
-    )
-    AND (
-     -- Cross-NPC bleed fix: 'people' is proximity-stamped (every nearby NPC), so without this an NPC's
-     -- context pulled in every bystander's verbatim dialogue and they echoed each other. For actual NPC
-     -- dialogue (chat/prechat) keep ONLY this NPC's own lines or lines addressed TO it; non-dialogue rows
-     -- (infoaction/itemfound/etc.) stay broad so situational awareness is preserved. Player input is its
-     -- own type and is unaffected.
-     type not in ('chat','prechat')
-     or data ilike '$actorEscaped:%'
-     or data ilike '%(talking to $actorEscaped)%'
-    )" : " ").
+    ){$dialogScopeSql}" : " ").
     //((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
     " {$ext_sqlfilter2} 
     ORDER BY gamets desc, ts desc, rowid desc LIMIT {$nRecordsLimit} OFFSET 0 ";
