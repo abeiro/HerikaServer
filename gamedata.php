@@ -501,6 +501,12 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
         'inventory' => buildInventoryMetadataValue($items),
     ]);
     
+    $npcMaster->updateMetadataKeysByName($actorName, [
+        'last_inventory_update_gamets' => $data['gamets'] ?? null,
+    ]);
+    
+    
+
     $itemCount = count($items);
     Logger::debug("[gamedata.php] Updated inventory for {$actorType}: {$actorName} ({$itemCount} items)");
 }
@@ -852,7 +858,7 @@ function handleMarketStockUpdate(array $data): void {
             $candidateMod=$db->fetchOne("select * from game_plugins where formid_prefix='{$modIndex}'");
             if (!$candidateMod) {
                 $modIndex=substr($item['itemid'],0,2);
-                $candidateMod=$db->fetchOne("select * from plugin_name where formid_prefix='{$modIndex}'");
+                $candidateMod=$db->fetchOne("select * from game_plugins where formid_prefix='{$modIndex}'");
             }
 
             if ($candidateMod) {
