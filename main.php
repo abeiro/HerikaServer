@@ -33,6 +33,9 @@ chimRuntimeBootstrap($path, [
     'load_player_name' => true,
     'load_narrator' => true,
 ]);
+if (!headers_sent() && function_exists('chimGetNarratorDisplayNameHeaderValue')) {
+    header('X-Narrator-Display-Name: ' . chimGetNarratorDisplayNameHeaderValue());
+}
 require_once($path . "lib/auditing.php");
 require_once($path . "lib/model_dynmodel.php");
 require_once($path . "lib/minimet5_service.php");
@@ -1592,7 +1595,7 @@ if (in_array('Training', $GLOBALS["ENABLED_FUNCTIONS"]) && isset($currentNpcData
         $functionName = "Train" . ucfirst($skill);
         $GLOBALS["FUNCTIONS"][] = [
             "name" => $functionName,
-            "description" => "{$GLOBALS["HERIKA_NAME"]} offers {$tier} {$skill} training.",
+            "description" => (function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : $GLOBALS["HERIKA_NAME"]) . " offers {$tier} {$skill} training.",
             "parameters" => [
                 "type" => "object",
                 "properties" => [
@@ -1633,7 +1636,8 @@ if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"]) && $gameRequest[0] == "bored
     }
 
     $PROMPTS["bored"]["cue"] = [strtr($boredPrompt, [
-        '{HERIKA_NAME}' => $GLOBALS["HERIKA_NAME"] ?? 'The Narrator',
+                        '{HERIKA_NAME}' => function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : ($GLOBALS["HERIKA_NAME"] ?? 'The Narrator'),
+                        '{NARRATOR_NAME}' => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
         '{PLAYER_NAME}' => $GLOBALS["PLAYER_NAME"] ?? 'Player',
         '{TEMPLATE_DIALOG}' => $GLOBALS["TEMPLATE_DIALOG"] ?? '',
     ])];
@@ -2044,7 +2048,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         if ($rechatActionWasEnabled("TradeItems") && isset($GLOBALS["BASE_FUNCTIONS"]["OpenInventory"])) {
             $NEWFUNCTION=$GLOBALS["BASE_FUNCTIONS"]["OpenInventory"];
             $NEWFUNCTION["name"]="TradeItems";
-            $NEWFUNCTION["description"]="{$GLOBALS["HERIKA_NAME"]} trade items with another actor. Amount and item will be infered from dialogue, so no need to specify";
+        $NEWFUNCTION["description"]=(function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : $GLOBALS["HERIKA_NAME"]) . " trade items with another actor. Amount and item will be infered from dialogue, so no need to specify";
             $NEWFUNCTION["parameters"]["properties"]["target"]["description"]="Actor name to trade with";
             $GLOBALS["FUNCTIONS"][]=$NEWFUNCTION;
             $GLOBALS["ENABLED_FUNCTIONS"][]="TradeItems";
@@ -2055,7 +2059,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
             // TravelTo (lead the way to for player) will be modified to TravelTo (TravelTo) if no follower
             $NEWFUNCTION=$GLOBALS["BASE_FUNCTIONS"]["TravelTo"];
             $NEWFUNCTION["name"]="TravelTo";
-            $NEWFUNCTION["description"]="{$GLOBALS["HERIKA_NAME"]} travels to location";
+            $NEWFUNCTION["description"]=(function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : $GLOBALS["HERIKA_NAME"]) . " travels to location";
             $NEWFUNCTION["parameters"]["properties"]["location"]["description"]="location name";
             $GLOBALS["FUNCTIONS"][]=$NEWFUNCTION;
             $GLOBALS["ENABLED_FUNCTIONS"][]="TravelTo";
@@ -2395,7 +2399,8 @@ if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
 
 $promptInjectionContext = [
     "game_request" => $gameRequest,
-    "herika_name" => $GLOBALS["HERIKA_NAME"] ?? "",
+    "herika_name" => function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : ($GLOBALS["HERIKA_NAME"] ?? ""),
+    "narrator_name" => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
     "player_name" => $GLOBALS["PLAYER_NAME"] ?? "",
 ];
 $characterBottomInjections = function_exists('chimRenderPromptInjections')
@@ -2429,7 +2434,11 @@ $systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
 $systemPrompt = chimFormatPromptXmlSections(
     strtr(
         $systemPromptRaw,
-        ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"], "#HERIKA_NAME#" => $GLOBALS["HERIKA_NAME"]]
+        [
+            "#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"],
+            "#HERIKA_NAME#" => function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : $GLOBALS["HERIKA_NAME"],
+            "#NARRATOR_NAME#" => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
+        ]
     )
 );
 
@@ -2581,6 +2590,10 @@ if ($gameRequest[0] == "diary") {
     generateFollowerDiary($GLOBALS["HERIKA_NAME"],$gameRequest,"diary");
     Logger::info("Terminated after diary request");
     terminate();
+}
+
+if (isset($contextData) && is_array($contextData) && function_exists('chimApplyNarratorRoleplayNameToContext')) {
+    $contextData = chimApplyNarratorRoleplayNameToContext($contextData);
 }
 
 /**********************

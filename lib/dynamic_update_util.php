@@ -1114,10 +1114,17 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         
     // Use centralized function from data_functions.php
     $dynamicBiography = buildDynamicBiography($GLOBALS);
+    $promptCharacterName = function_exists('chimGetPromptCharacterName')
+        ? chimGetPromptCharacterName()
+        : $GLOBALS["HERIKA_NAME"];
         
     $head[] = array('role' => 'system', 'content' =>  
     strtr($GLOBALS["PROMPT_HEAD"] . "\n\n#Character details\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n\n#General Instructions\n". $GLOBALS["COMMAND_PROMPT"],
-        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
+        [
+            "#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"],
+            "#HERIKA_NAME#" => $promptCharacterName,
+            "#NARRATOR_NAME#" => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
+        ])
     );
         
     // Use diary-specific context history if this is a diary request and CONTEXT_HISTORY_DIARY is set
@@ -1147,7 +1154,11 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
     }
 
-    $diaryPrompt=strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$followerName,'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"],"#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]]);
+    if (function_exists('chimRenderNarratorContextText')) {
+        $historyData = chimRenderNarratorContextText($historyData);
+    }
+
+    $diaryPrompt=strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$promptCharacterName,'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"],"#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$promptCharacterName,"#NARRATOR_NAME#"=>function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator']);
 
     $prompt[] = 
         ["role" => "user", "content" => $diaryPrompt
@@ -1156,6 +1167,9 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
     
 
     $contextData = array_merge($head, $prompt);
+    if (function_exists('chimApplyNarratorRoleplayNameToContext')) {
+        $contextData = chimApplyNarratorRoleplayNameToContext($contextData);
+    }
     
     // Set the request type for diary so connector knows to use diary grammar
     $originalGameRequest = isset($GLOBALS["gameRequest"]) ? $GLOBALS["gameRequest"] : null;
@@ -1302,10 +1316,13 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         require_once(__DIR__ . "/core/narrator.class.php");
         $narrator = new Narrator();
         $npcData = $narrator->getNarratorData();
+        $GLOBALS['NARRATOR_ROLEPLAY_NAME'] = $narrator->getRoleplayName();
+        $promptNpcName = $narrator->getRoleplayName();
     } else {
         require_once(__DIR__ . "/core/npc_master.class.php");
         $npcMaster = new NpcMaster();
         $npcData = $npcMaster->getByName($npcName);
+        $promptNpcName = $npcName;
     }
 
     if (!$npcData) {
@@ -1351,7 +1368,10 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     }
     
     // Replace placeholders in the prompt
-    $updatePrompt = str_replace('{HERIKA_NAME}', $npcName, $updatePrompt);
+    $updatePrompt = strtr($updatePrompt, [
+        '{HERIKA_NAME}' => $promptNpcName,
+        '{NARRATOR_NAME}' => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
+    ]);
     
     try {
         // Collect other profile fields for context (excluding the current field)
@@ -1383,7 +1403,11 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
 
         foreach ($profileFields as $fieldName => $fieldLabel) {
             if (!empty(trim($npcData[$fieldName]))) {
-                $profileContext[] = "**{$fieldLabel}**: " . trim($npcData[$fieldName]);
+                $profileValue = trim($npcData[$fieldName]);
+                if ($isNarrator && function_exists('chimRenderNarratorRoleplayText')) {
+                    $profileValue = chimRenderNarratorRoleplayText($profileValue);
+                }
+                $profileContext[] = "**{$fieldLabel}**: " . $profileValue;
             }
         }
 
@@ -1391,17 +1415,20 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
 
         // Build prompt for this specific field
         $head = [
-            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update ONLY the " . ucfirst($field) . " for the character named '$npcName'. Focus mostly on information about $npcName and mostly ignore details about other characters mentioned in the dialogue."]
+            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update ONLY the " . ucfirst($field) . " for the character named '$promptNpcName'. Focus mostly on information about $promptNpcName and mostly ignore details about other characters mentioned in the dialogue."]
         ];
 
         $GLOBALS["HERIKA_NAME"] = $npcName; //note none of these prompts will contain #HERIKA_NAME, as the dialogue flow doesnt do this replacement (which may be a bug)
         $prompt = [
             ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . ReplacePlayerNamePlaceholder($profileContextString)],
-            ["role" => "user", "content" => "Character name: " . $npcName . "\nCurrent " . ucfirst($field) . ":\n" . ReplacePlayerNamePlaceholder($currentValue)],
+            ["role" => "user", "content" => "Character name: " . $promptNpcName . "\nCurrent " . ucfirst($field) . ":\n" . ReplacePlayerNamePlaceholder($isNarrator && function_exists('chimRenderNarratorRoleplayText') ? chimRenderNarratorRoleplayText($currentValue) : $currentValue)],
             ["role" => "user", "content" => ReplacePlayerNamePlaceholder($updatePrompt)]
         ];
         
         $contextData = array_merge($head, $prompt);
+        if (function_exists('chimApplyNarratorRoleplayNameToContext')) {
+            $contextData = chimApplyNarratorRoleplayNameToContext($contextData);
+        }
         
         $connector=new LLMConnector();
         $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);
