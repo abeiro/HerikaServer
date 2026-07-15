@@ -459,7 +459,7 @@ function chimEscapePromptItemText($value): string
 
 function chimFormatInventoryPromptLines(
     array $inventory,
-    callable $getItemDescription = null,
+    ?callable $getItemDescription = null,
     array &$describedBaseids = [],
     bool $descriptionsOnly = false
 ): array {
@@ -503,7 +503,7 @@ function chimFormatInventoryPromptLines(
 
 function chimBuildInventoryPromptContext(
     array $inventory,
-    callable $getItemDescription = null,
+    ?callable $getItemDescription = null,
     array &$describedBaseids = [],
     bool $descriptionsOnly = false
 ): string {
@@ -517,7 +517,7 @@ function chimBuildInventoryPromptContext(
         . "\n</inventory>";
 }
 
-function chimFormatEquipmentPromptLines(array $equipmentData, array $slotLabels, callable $getItemDescription = null, array &$describedBaseids = []): array
+function chimFormatEquipmentPromptLines(array $equipmentData, array $slotLabels, ?callable $getItemDescription = null, array &$describedBaseids = []): array
 {
     $equipmentParts = [];
 
