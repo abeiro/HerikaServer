@@ -437,6 +437,24 @@ if (!function_exists('chimUiAutoLockProfileEnabled')) {
     }
 }
 
+if (!function_exists('chimUiSaveAutoLockProfileSettingFromPost')) {
+    function chimUiSaveAutoLockProfileSettingFromPost(): void
+    {
+        if (!array_key_exists('auto_lock_profile_present', $_POST)) {
+            return;
+        }
+
+        $raw = $_POST['auto_lock_profile'] ?? '0';
+        $enabled = in_array(strtolower(trim((string)$raw)), ['1', 'true', 'yes', 'on'], true);
+        $description = 'When enabled, saving an NPC profile in CHIM NPC page automatically locks it to prevent history updates from overwriting manual edits.';
+        if (!chimSetGeneralSetting('AUTO_LOCK_PROFILE', $enabled, $description)) {
+            throw new RuntimeException('Failed to save Auto Lock Profile setting.');
+        }
+
+        $GLOBALS['AUTO_LOCK_PROFILE'] = $enabled;
+    }
+}
+
 if (!function_exists('chimDecodeRelationshipSeedValue')) {
     function chimDecodeRelationshipSeedValue($value): ?array
     {
@@ -708,6 +726,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
         echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
     } finally {
         chimReleaseNpcRelationshipLock($relationshipLockId);
+    }
+    exit;
+}
+
+// Save global auto-lock preference (AJAX)
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["set_auto_lock_profile"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $_POST['auto_lock_profile_present'] = '1';
+        chimUiSaveAutoLockProfileSettingFromPost();
+        echo json_encode(["ok"=>true, "enabled"=>chimUiAutoLockProfileEnabled()]);
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
     }
     exit;
 }
@@ -1314,6 +1346,10 @@ if (!function_exists('renderNpcToolbar')) {
           </div>
           <div class="npc-toolbar-letter-row">
             <?php renderNpcLetterFilter($nameLetterFilter); ?>
+            <label class="npc-auto-lock-profile" title="When enabled, saving an NPC profile automatically locks it to prevent history updates from overwriting manual edits.">
+              <input id="npc_auto_lock_profile" type="checkbox" <?= chimUiAutoLockProfileEnabled() ? 'checked' : '' ?>>
+              Auto Lock Profiles on Edit
+            </label>
             <div class="npc-toolbar-summary">
               <div class="npc-filter-dropdown">
                 <button type="button" id="npc_filter_btn<?= $suffix ?>" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action npc-toolbar-filter-btn" title="Filters" aria-label="Filters">▾ Filters</button>
@@ -1763,8 +1799,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .modal-inline-actions .btn-toggle{background:transparent; border:none; padding:6px; color:#e9efff; font-size:22px; line-height:1; text-decoration:none; cursor:pointer;}
 .modal-inline-actions .btn-toggle:hover{color: rgb(242, 124, 17); text-decoration:none;}
 .modal-inline-actions .btn-toggle.active{color:#ffd700; font-weight:700;}
-.modal-inline-actions .btn-toggle[data-lock]{color:#e9efff;}
-.modal-inline-actions .btn-toggle.active[data-lock]{color: rgb(242, 124, 17);}
 </style>
 <form method="post" onsubmit='return false' style='display:block'>
 <?php } else { ?>
@@ -1795,13 +1829,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <input type="hidden" name="id" value="<?= htmlspecialchars($editItem["id"]) ?>">
     <?php endif; ?>
 
-    <?php $isPartial = (isset($_GET['partial']) && $_GET['partial']=='1'); $isFav = !empty($editItem['npc_favorite']); $isLock = !empty($editItem['lock_profile']); ?>
+    <?php $isPartial = (isset($_GET['partial']) && $_GET['partial']=='1'); $isFav = !empty($editItem['npc_favorite']); ?>
     <?php if ($isPartial): ?>
     <div class="modal-inline-actions">
         <p style="margin:0; color:rgb(242, 124, 17) ;">Tags:</p>
         <input type="text" id="modal_tags_input" name="tags" value="<?= htmlspecialchars($editItem['tags'] ?? '') ?>" placeholder="tags" style="max-width:240px; font-size:12px; padding:4px 6px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff;" title="Tags help with searching and grouping" />
         <a id="modal_fav_btn" class="btn btn-toggle<?= $isFav? ' active':'' ?>" href="#" title="Toggle favorite" data-favorite><?= $isFav? '★' : '☆' ?></a>
-        <a id="modal_lock_btn" class="btn btn-toggle<?= $isLock? ' active':'' ?>" href="#" title="Toggle lock - Locked profiles are protected from history pullback when loading saves" data-lock><?= $isLock? '🔒' : '🔓' ?></a>
     </div>
     <?php
     // Render LLM summary container (will live-update via JS)
@@ -1971,8 +2004,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Select which profile the NPC uses.</small>
         </div>
 
-        <div class="form-item" style='<?= (isset($_GET['partial']) && $_GET['partial']=='1')?"display:none":"" ?>'>
-            <label for="lock_profile" class="label-with-toggle">Lock Profile
+        <div class="form-item">
+            <label for="lock_profile" class="label-with-toggle">Lock This NPC
+                <input type="hidden" name="lock_profile" value="0">
                 <input type="checkbox" id="lock_profile" name="lock_profile" value="1" <?= !empty($editItem["lock_profile"]) ? "checked" : "" ?>>
             </label>
             <small class="hint">Prevents dynamic systems from modifying this NPC's profile.</small>
@@ -2841,7 +2875,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <script>
         (function(){
             const favBtn = document.getElementById('modal_fav_btn');
-            const lockBtn = document.getElementById('modal_lock_btn');
             const idVal = <?= json_encode($editItem['id'] ?? '') ?>;
             if (favBtn && idVal){
                 favBtn.addEventListener('click', async function(e){
@@ -2851,17 +2884,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         const res = await fetch('npc_master.php', { method:'POST', body: fd });
                         let json={}; try{ json=await res.json(); }catch(_e){}
                         if (json && json.ok){ const active = Number(json.favorite||0)===1; favBtn.classList.toggle('active', active); favBtn.textContent = active ? '★' : '☆'; }
-                    }catch(_e){}
-                });
-            }
-            if (lockBtn && idVal){
-                lockBtn.addEventListener('click', async function(e){
-                    e.preventDefault();
-                    try{
-                        const fd = new FormData(); fd.append('toggle_lock','1'); fd.append('id', idVal);
-                        const res = await fetch('npc_master.php', { method:'POST', body: fd });
-                        let json={}; try{ json=await res.json(); }catch(_e){}
-                        if (json && json.ok){ const active = Number(json.locked||0)===1; lockBtn.classList.toggle('active', active); lockBtn.textContent = active ? '🔒' : '🔓'; }
                     }catch(_e){}
                 });
             }
@@ -3269,6 +3291,19 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     flex-direction:column;
     align-items:stretch;
     justify-content:flex-start;
+}
+.pagination.npc-toolbar .npc-auto-lock-profile {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:#e9efff;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+}
+.pagination.npc-toolbar .npc-auto-lock-profile input {
+    accent-color:rgb(242,124,17);
+    cursor:pointer;
 }
 .pagination.npc-toolbar .npc-toolbar-pager {
     flex:1 1 auto;
@@ -4890,6 +4925,33 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       });
     });
   }
+  function bindAutoLockProfile(control){
+    if (!control || control.dataset.bound === '1') return;
+    control.dataset.bound = '1';
+    control.addEventListener('change', async function(){
+      const requested = !!control.checked;
+      control.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append('set_auto_lock_profile', '1');
+        fd.append('auto_lock_profile', requested ? '1' : '0');
+        const res = await fetch('npc_master.php', { method:'POST', body:fd });
+        let json = {};
+        try { json = await res.json(); } catch(_e) { json = { ok:false, error:'Invalid response' }; }
+        if (!json || !json.ok) {
+          control.checked = !requested;
+          alert('Failed to save Auto Lock Profile: ' + (json && json.error ? json.error : 'Unknown error'));
+        }
+      } catch(_e) {
+        control.checked = !requested;
+        alert('Failed to save Auto Lock Profile.');
+      } finally {
+        control.disabled = false;
+      }
+    });
+  }
+  bindAutoLockProfile(document.getElementById('npc_auto_lock_profile'));
+
   async function refreshList(page){
     const params = new URLSearchParams(window.location.search);
     const si = document.getElementById('npc_search');
@@ -5003,6 +5065,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       }
       const newProfileSel = document.getElementById('npc_profile_filter');
       if (newProfileSel){ newProfileSel.addEventListener('change', function(){ refreshList(1); }); }
+      bindAutoLockProfile(document.getElementById('npc_auto_lock_profile'));
     }
   }
   // Simple debounce for input
