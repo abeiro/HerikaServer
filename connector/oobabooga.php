@@ -197,7 +197,8 @@ class oobabooga
                 $GLOBALS["DEBUG_DATA"][]="### Instruction: ".$s_msg."";
 
             } else {
-                $s_msg_p = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $s_msg);
+                $narratorContextLabel = preg_quote(chimGetNarratorRoleplayName(), '/');
+                $s_msg_p = preg_replace('/^(' . $narratorContextLabel . ':)(.*)/m', '[Author\'s notes: $2 ]', $s_msg);
                 $history[]="$s_msg_p\n";
                 $context.="$s_msg_p\n";
                 $GLOBALS["DEBUG_DATA"][]=$s_msg_p;

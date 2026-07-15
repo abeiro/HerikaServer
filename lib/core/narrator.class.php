@@ -344,7 +344,7 @@ class Narrator
             'bored_chance' => ['ALLOW_NARRATOR_BORED_EVENTS_CHANCE', 'int', 25],
             'quest_comment_cooldown' => ['QUEST_COMMENT_COOLDOWN', 'int', 3],
             'books_only_narrator' => ['BOOK_EVENT_ALWAYS_NARRATOR', 'bool', false],
-            'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', false],
+            'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', true],
             'dynamic_profile' => ['DYNAMIC_PROFILE', 'bool', false],
             'inline_narration_mode' => ['INLINE_NARRATION_MODE', 'string', isset($GLOBALS['INLINE_NARRATION_MODE']) ? $GLOBALS['INLINE_NARRATION_MODE'] : 'disabled'],
             'remove_player_autochat_asterisks' => [
@@ -604,6 +604,13 @@ if (!function_exists('chimGetNarratorDisplayNameHeaderValue')) {
     }
 }
 
+if (!function_exists('chimBuildNarratorContextLine')) {
+    function chimBuildNarratorContextLine($text): string
+    {
+        return chimGetNarratorRoleplayName() . ': ' . ltrim((string)$text);
+    }
+}
+
 if (!function_exists('chimGetPromptCharacterName')) {
     function chimGetPromptCharacterName(): string
     {
@@ -632,26 +639,7 @@ if (!function_exists('chimRenderNarratorRoleplayText')) {
 if (!function_exists('chimRenderNarratorContextText')) {
     function chimRenderNarratorContextText($text): string
     {
-        $text = (string)$text;
-        $roleplayName = chimGetNarratorRoleplayName();
-        if ($text === '' || strcasecmp($roleplayName, Narrator::CANONICAL_NAME) === 0) {
-            return $text;
-        }
-
-        $quotedName = preg_quote(Narrator::CANONICAL_NAME, '/');
-        $text = preg_replace('/(^|\R)([ \t]*)' . $quotedName . '(?=\s*:)/iu', '$1$2' . $roleplayName, $text);
-        $text = preg_replace(
-            '/(\b(?:Talking|Whispering|Shouting|Speaking loudly)\s+to\s+)' . $quotedName . '\b/iu',
-            '$1' . $roleplayName,
-            $text
-        );
-        $text = preg_replace(
-            '/("(?:character|speaker|listener)"\s*:\s*")' . $quotedName . '("\s*[,}])/iu',
-            '$1' . $roleplayName . '$2',
-            $text
-        );
-
-        return $text;
+        return chimRenderNarratorRoleplayText($text);
     }
 }
 

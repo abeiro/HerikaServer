@@ -326,7 +326,7 @@ $questCommentEnabled = $narrator->getBool('quest_comment_enabled', false);
 $questCommentChance = $narrator->getInt('quest_comment_chance', 10);
 $questCommentCooldown = $narrator->getInt('quest_comment_cooldown', 3);
 $booksOnlyNarrator = $narrator->getBool('books_only_narrator', false);
-$hideFromContext = $narrator->getBool('hide_from_context', false);
+$hideFromContext = $narrator->getBool('hide_from_context', true);
 $inlineNarrationMode = strtolower(trim((string)($narrator->get('inline_narration_mode') ?? '')));
 if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
     if (isset($GLOBALS['INLINE_NARRATION_MODE']) && in_array(strtolower(trim((string)$GLOBALS['INLINE_NARRATION_MODE'])), ['disabled', 'narrator', 'npc', 'text_only'], true)) {
@@ -1351,7 +1351,7 @@ if (!$isEmbed) {
 
                     <label for="roleplay_name">Narrator Name</label>
                     <input type="text" id="roleplay_name" name="roleplay_name" maxlength="64" value="<?php echo htmlspecialchars($roleplayName); ?>" placeholder="The Narrator">
-                    <span class="hint">Changes how the narrator is identified inside prompts and LLM context. Internal routing, profiles, actions, diaries, and TTS continue to use The Narrator.</span>
+                    <span class="hint">Changes how the narrator is identified in prompts, LLM context, subtitles, and history displays. Internal routing, storage, actions, and TTS continue to use The Narrator.</span>
                     
                     <label class="toggle-row">
                         <div class="toggle-switch">

@@ -83,17 +83,18 @@ final class NarratorRoleplayNameTest extends TestCase
         $GLOBALS['NARRATOR_ROLEPLAY_NAME'] = 'The Dude';
 
         $this->assertSame('The Dude', base64_decode(chimGetNarratorDisplayNameHeaderValue(), true));
+        $this->assertSame('The Dude: action completed', chimBuildNarratorContextLine('action completed'));
     }
 
-    public function testContextAliasingChangesStructuralNamesButNotOrdinaryProse(): void
+    public function testContextAliasingChangesEveryNarratorIdentityReference(): void
     {
         $GLOBALS['NARRATOR_ROLEPLAY_NAME'] = 'Mercy';
         $context = "The Narrator: Welcome.\nLydia: They call him The Narrator. (Talking to The Narrator)\n"
             . '{"character":"The Narrator","listener":"The Narrator","message":"Ask The Narrator."}';
 
         $this->assertSame(
-            "Mercy: Welcome.\nLydia: They call him The Narrator. (Talking to Mercy)\n"
-                . '{"character":"Mercy","listener":"Mercy","message":"Ask The Narrator."}',
+            "Mercy: Welcome.\nLydia: They call him Mercy. (Talking to Mercy)\n"
+                . '{"character":"Mercy","listener":"Mercy","message":"Ask Mercy."}',
             chimRenderNarratorContextText($context)
         );
 
@@ -102,6 +103,6 @@ final class NarratorRoleplayNameTest extends TestCase
             ['role' => 'assistant', 'content' => 'Unchanged prose about The Narrator.'],
         ]);
         $this->assertSame('Mercy: Continue.', $messages[0]['content']);
-        $this->assertSame('Unchanged prose about The Narrator.', $messages[1]['content']);
+        $this->assertSame('Unchanged prose about Mercy.', $messages[1]['content']);
     }
 }

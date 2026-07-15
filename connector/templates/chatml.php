@@ -50,7 +50,7 @@
                     
                     } else if ($s_msg["role"]=="tool") {
                         $pb["system"].=$element["content"]."\n";
-                        $contextHistory.="The Narrator:".strtr($lastAction,["#RESULT#"=>$s_msg["content"]]);
+                        $contextHistory.=chimBuildNarratorContextLine(strtr($lastAction,["#RESULT#"=>$s_msg["content"]]));
                         $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$s_msg["content"]]);
                         
                     } else if ($s_msg["role"]=="system") {

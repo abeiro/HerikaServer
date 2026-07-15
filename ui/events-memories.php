@@ -682,6 +682,9 @@ function getTimeColor($time) {
                 $mappedRow['☑'] = '<input type="checkbox" class="event-checkbox" data-rowid="' . htmlspecialchars($row['rowid'] ?? '') . '" style="cursor: pointer; width: 18px; height: 18px;">';
                 
                 foreach ($row as $key => $value) {
+                    if ($key === 'data' && function_exists('chimRenderNarratorRoleplayText')) {
+                        $value = chimRenderNarratorRoleplayText($value);
+                    }
                     if ($key === 'gamets' && !empty($value)) {
                         $value = convert_gamets2skyrim_long_date2($value);
                     }
@@ -717,6 +720,9 @@ function getTimeColor($time) {
                                     $peoplePresent = (string)$j['speaker'];
                                 }
                             }
+                        }
+                        if (function_exists('chimRenderNarratorRoleplayText')) {
+                            $peoplePresent = chimRenderNarratorRoleplayText($peoplePresent);
                         }
                         $mappedRow['People Present'] = htmlspecialchars($peoplePresent);
                     } else if ($key === 'people') {
@@ -1708,17 +1714,20 @@ function getTimeColor($time) {
                             $scope = $scope !== '' ? $scope : 'global';
                             $people = trim((string)($row['companions'] ?? ''));
                             $people = $people !== '' ? $people : '-';
+                            $displayPeople = function_exists('chimRenderNarratorRoleplayText') ? chimRenderNarratorRoleplayText($people) : $people;
+                            $displaySummary = function_exists('chimRenderNarratorRoleplayText') ? chimRenderNarratorRoleplayText($row['summary'] ?? '') : ($row['summary'] ?? '');
+                            $displayPackedMessage = function_exists('chimRenderNarratorRoleplayText') ? chimRenderNarratorRoleplayText($row['packed_message'] ?? '') : ($row['packed_message'] ?? '');
                             $tamrielicTime = !empty($row['gamets_truncated']) ? convert_gamets2skyrim_long_date2($row['gamets_truncated']) : '-';
                             ?>
                             <tr>
                                 <td><?php echo $rowId; ?></td>
                                 <td><?php echo htmlspecialchars($scope); ?></td>
-                                <td><?php echo htmlspecialchars($people); ?></td>
+                                <td><?php echo htmlspecialchars($displayPeople); ?></td>
                                 <td><?php echo htmlspecialchars($tamrielicTime); ?></td>
                                 <td>
                                     <div id="display-<?php echo $rowId; ?>">
                                         <div class="summary-section">
-                                            <span class="summary-content"><?php echo nl2br(htmlspecialchars($row['summary'] ?? '')); ?></span>
+                                            <span class="summary-content"><?php echo nl2br(htmlspecialchars($displaySummary)); ?></span>
                                         </div>
 
                                         <details class="memory-details">
@@ -1733,7 +1742,7 @@ function getTimeColor($time) {
                                             </div>
                                             <div class="subcategory-section">
                                                 <span class="summary-label subcategory-label">Packed Memory Content:</span>
-                                                <textarea readonly class="memory-content"><?php echo htmlspecialchars($row['packed_message'] ?? ''); ?></textarea>
+                                                <textarea readonly class="memory-content"><?php echo htmlspecialchars($displayPackedMessage); ?></textarea>
                                             </div>
                                         </details>
 
