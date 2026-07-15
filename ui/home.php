@@ -31,7 +31,7 @@ if (count($_GET) === 0 && function_exists('herikaEnsureBackgroundProcessorRunnin
     herikaEnsureBackgroundProcessorRunning(true);
 }
 
-$TITLE = "Dwemer Dashboard";
+$TITLE = "CHIM Home";
 
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
@@ -197,7 +197,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 <html>
 <head>
     <link rel="icon" type="image/x-icon" href="<?php echo $webRoot; ?>/ui/images/favicon.ico">
-    <title>Dwemer Dashboard</title>
+    <title>CHIM Home</title>
     <style>
         /* Dashboard specific styles */
         .dashboard-container {
