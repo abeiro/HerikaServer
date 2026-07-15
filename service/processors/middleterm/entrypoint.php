@@ -88,9 +88,11 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     // (DRY: this explicit-then-profile resolution is currently inlined in several places —
     //  chim_aiview.php, dynamic_update_util.php, comm.php, and here. A shared helper such as
     //  NpcMaster::isFeatureEnabled($npc, 'MIDDLE_TERM_MEMORY_ENABLED') would consolidate them.)
+
+    $onlyExplicitProfiles="AND false";
     $allEnabledMtNpc = $GLOBALS["db"]->fetchAll(
         "SELECT m.* FROM core_npc_master m
-         LEFT JOIN core_profiles p ON p.id = m.profile_id
+         LEFT JOIN core_profiles p ON (p.id = m.profile_id $onlyExplicitProfiles)
          WHERE COALESCE(NULLIF(m.extended_data->>'middle_term_enabled',''),
                         p.metadata->>'MIDDLE_TERM_MEMORY_ENABLED') = '1' ");
 
@@ -104,10 +106,15 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     // BgL tracking coords, on NPCs marked with gps_track. in-game hourly
     $oneDayAgoGamets = $maxRow - ((24) / 0.0000024);
     $oneHourAgoGamets = $maxRow - ((1) / 0.0000024);
-
+    
     // Get BgL trigger period from general settings (default: 24 in-game hours).
     $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
     $bglTriggerHoursAgoGamets = $maxRow - ($bglTriggerHours / 0.0000024);
+
+    $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
+    $bglTriggerDays = $bglTriggerHours/24;
+    $bglTriggerDaysAgoGamets=$maxRow - ( (24 * $bglTriggerDays) / 0.0000024);
+
 
     // BgL tracking coords, in-game daily
 
