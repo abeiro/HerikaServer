@@ -51,7 +51,7 @@
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books.","scope":"global"},
   "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
   "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game. Has a 10 minute IRL cooldown so its not annoying.","scope":"global"},
-  "HIDE_NARRATOR_DIALOGUE": {"userlvl":"basic","type":"boolean","description":"Hide Narrator-spoken dialogue lines from NPC context.","scope":"global"},
+  "HIDE_NARRATOR_DIALOGUE": {"userlvl":"basic","type":"boolean","default":true,"description":"Hide Narrator-spoken dialogue lines from NPC context.","scope":"global"},
   "QUEST_COMMENT":{"type":"boolean","userlvl":"basic","description":"Will trigger AI (NPCs and Narrator) to talk about new objectives in your current active quest. Will trigger a lot of events on a new character, so leave disabled until you complete the tutorial!"},
   "CHIM_AI_QUEST_PROGRESSION": {"type":"boolean","userlvl":"basic","scope":"global","default":false,"description":"Enable CHIM AI quest progression. Allows you to progress regular Skyrim quests with AI dialogue. Most vanilla non radiant quests are supported. Open the AI Quest Manager in Immersion for more info."},
   "CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT": {"type":"boolean","userlvl":"basic","scope":"global","default":true,"description":"When enabled, only direct player dialogue can fire CHIM AI quest beats and queue quest stage actions. Disable to let NPC responses and game interaction events advance or start quest beats."},

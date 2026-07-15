@@ -192,6 +192,9 @@
 
     // specify the available actions which will be made available in the context
     Function setActions() {
+        $promptCharacterName = function_exists('chimGetPromptCharacterName')
+            ? chimGetPromptCharacterName()
+            : ($GLOBALS["HERIKA_NAME"] ?? 'The Narrator');
         // Initialize actions list
         $GLOBALS["PROMPT_ACTIONS_LIST"] = "";
         
@@ -256,7 +259,7 @@
                 } else if ($fname == "TeachRightHandSpell") {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Do not put anything in the 'target' or 'item' field. This action automatically teaches whatever spell {$GLOBALS["PLAYER_NAME"]} currently has equipped in the right hand.";
                 } else if ($fname == "Consume") {
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the exact BaseID:ItemName identifier from <inventory> in the 'target' field. Only use this for food, drinks, or potions already in inventory. Leave 'item' blank unless you need it as a fallback copy of the same BaseID:ItemName identifier. The spoken reply for this action happens after the item is consumed, so use it only when {$GLOBALS["HERIKA_NAME"]} is actually going to eat or drink the item.";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the exact BaseID:ItemName identifier from <inventory> in the 'target' field. Only use this for food, drinks, or potions already in inventory. Leave 'item' blank unless you need it as a fallback copy of the same BaseID:ItemName identifier. The spoken reply for this action happens after the item is consumed, so use it only when {$promptCharacterName} is actually going to eat or drink the item.";
                 } else if ($fname == "SpawnItem") {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put the recipient in the 'target' field, the item name in the 'item' field, and the quantity in the 'amount' field. Use '{$GLOBALS["PLAYER_NAME"]}', 'PLAYER', or 'me' to give the item to the player.";
                 } else if ($fname == "SpawnGold") {
@@ -284,6 +287,9 @@
 
     // specify the json object that will be requested from the LLM (via prompt, not enforced)
     Function setResponseTemplate() {
+        $promptCharacterName = function_exists('chimGetPromptCharacterName')
+            ? chimGetPromptCharacterName()
+            : ($GLOBALS["HERIKA_NAME"] ?? 'The Narrator');
         $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
         $moodDescription = empty($moods)
@@ -307,9 +313,9 @@
         }
     
         // Build listener description - for rechat events, encourage addressing the previous speaker
-        $listenerDesc = "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order";
+            $listenerDesc = "specify who {$promptCharacterName} is talking to, comma separated, max two listeners, in addressing order";
         if (chimIsVisionRequest()) {
-            $listenerDesc = "leave blank unless {$GLOBALS["HERIKA_NAME"]} directly addresses someone while explaining the Soulgaze vision";
+            $listenerDesc = "leave blank unless {$promptCharacterName} directly addresses someone while explaining the Soulgaze vision";
         } elseif (
             isset($GLOBALS["gameRequest"]) &&
             (
@@ -319,7 +325,7 @@
         ) {
             $listenerDesc = function_exists('chimLoadManagedRechatListenerPrompt')
                 ? chimLoadManagedRechatListenerPrompt()
-                : "specify who {$GLOBALS["HERIKA_NAME"]} is talking to. Address whoever just spoke - can be any person in the conversation.";
+                : "specify who {$promptCharacterName} is talking to. Address whoever just spoke - can be any person in the conversation.";
         }
     
         // Determine message description based on inline narration mode.
@@ -333,9 +339,9 @@
         $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
         $messageDescription = "lines of dialogue";
         if (chimIsVisionRequest()) {
-            $messageDescription = "{$GLOBALS["HERIKA_NAME"]}'s spoken Soulgaze explanation of the current scene. Describe only what is visibly present right now through {$GLOBALS["PLAYER_NAME"]}'s eyes, focusing on people, environment, objects, and immediate activity. Do not continue unrelated conversation, do not answer stale dialogue, and do not invent unseen details.";
+            $messageDescription = "{$promptCharacterName}'s spoken Soulgaze explanation of the current scene. Describe only what is visibly present right now through {$GLOBALS["PLAYER_NAME"]}'s eyes, focusing on people, environment, objects, and immediate activity. Do not continue unrelated conversation, do not answer stale dialogue, and do not invent unseen details.";
         } elseif ($inlineNarrationEnabled) {
-            $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
+            $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$promptCharacterName}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
         } elseif (chimIsDirectNarratorDialogue()) {
             $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Keep the spoken reply consistent with the chosen narrator action when you use one. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
         }
@@ -420,12 +426,15 @@
     
     // for use with openai and openrouter providers that support structured outputs to enforce a json schema
     Function setStructuredOutputTemplate() {
+        $promptCharacterName = function_exists('chimGetPromptCharacterName')
+            ? chimGetPromptCharacterName()
+            : ($GLOBALS["HERIKA_NAME"] ?? 'The Narrator');
         $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
         $moodDescription = "choose exactly one mood while speaking, never combine moods";
         $listenerDescription = chimIsVisionRequest()
-            ? "leave blank unless {$GLOBALS["HERIKA_NAME"]} directly addresses someone while explaining the Soulgaze vision"
-            : "specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order";
+            ? "leave blank unless {$promptCharacterName} directly addresses someone while explaining the Soulgaze vision"
+            : "specify who {$promptCharacterName} is talking to, comma separated, max two listeners, in addressing order";
 
         // Determine message description based on inline narration mode.
         $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
@@ -436,11 +445,11 @@
             $inlineNarrationMode = 'disabled';
         }
         $inlineNarrationEnabled = $inlineNarrationMode !== 'disabled';
-        $messageDescription = "lines of {$GLOBALS["HERIKA_NAME"]}'s dialogue";
+        $messageDescription = "lines of {$promptCharacterName}'s dialogue";
         if (chimIsVisionRequest()) {
-            $messageDescription = "{$GLOBALS["HERIKA_NAME"]}'s spoken Soulgaze explanation of the current scene. Describe only what is visibly present right now through {$GLOBALS["PLAYER_NAME"]}'s eyes, focusing on people, environment, objects, and immediate activity. Do not continue unrelated conversation, do not answer stale dialogue, and do not invent unseen details.";
+            $messageDescription = "{$promptCharacterName}'s spoken Soulgaze explanation of the current scene. Describe only what is visibly present right now through {$GLOBALS["PLAYER_NAME"]}'s eyes, focusing on people, environment, objects, and immediate activity. Do not continue unrelated conversation, do not answer stale dialogue, and do not invent unseen details.";
         } elseif ($inlineNarrationEnabled) {
-            $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$GLOBALS["HERIKA_NAME"]}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
+            $messageDescription = "If needed, start with one brief third-person narration block in single asterisks, then put {$promptCharacterName}'s spoken text after it. Example: *She smiles* It's good to see you again, my friend! Do not wrap the entire reply in asterisks, and keep spoken dialogue outside the asterisks.";
         } elseif (chimIsDirectNarratorDialogue()) {
             $messageDescription = "plain spoken dialogue addressed directly to {$GLOBALS["PLAYER_NAME"]}. Keep the spoken reply consistent with the chosen narrator action when you use one. Do not include third-person narration, scene description, stage directions, or text in asterisks.";
         }

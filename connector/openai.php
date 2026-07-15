@@ -252,7 +252,7 @@ class openai
                             if (stripos($element["content"],"Error")===false) {
                                 $contextData[$n]=[
                                         "role"=>"user",
-                                        "content"=>"The Narrator:".strtr($lastAction,["#RESULT#"=>$element["content"]]),
+                                        "content"=>chimBuildNarratorContextLine(strtr($lastAction,["#RESULT#"=>$element["content"]])),
                                         
                                     ];
                                     
@@ -261,7 +261,7 @@ class openai
                             } else {
                                 $contextData[$n]=[
                                         "role"=>"user",
-                                        "content"=>"The Narrator: NOTE, cannot go to that place:".herikaExtractActionArgumentTargetValue($localArguments),
+                                        "content"=>chimBuildNarratorContextLine("NOTE, cannot go to that place:".herikaExtractActionArgumentTargetValue($localArguments)),
                                         
                                 ];
                             }

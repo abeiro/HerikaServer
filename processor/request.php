@@ -86,9 +86,12 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	}
 	
 	// Use configurable DIARY_PROMPT or fallback to default
+	$diaryCharacterName = function_exists('chimGetPromptCharacterName')
+		? chimGetPromptCharacterName()
+		: $GLOBALS["HERIKA_NAME"];
 	$diaryPrompt = isset($GLOBALS["DIARY_PROMPT"]) && !empty($GLOBALS["DIARY_PROMPT"]) 
-		? strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$GLOBALS["HERIKA_NAME"],'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"],'#HERIKA_NAME#'=>$GLOBALS["HERIKA_NAME"],'#PLAYER_NAME#'=>$GLOBALS["PLAYER_NAME"]])
-		: "Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$GLOBALS["HERIKA_NAME"]}s last dialogues and events written above into {$GLOBALS["HERIKA_NAME"]}s diary . WRITE AS IF YOU WERE {$GLOBALS["HERIKA_NAME"]}.";
+		? strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$diaryCharacterName,'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"],'#HERIKA_NAME#'=>$diaryCharacterName,'#NARRATOR_NAME#'=>function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator','#PLAYER_NAME#'=>$GLOBALS["PLAYER_NAME"]])
+		: "Please write a short summary of {$GLOBALS["PLAYER_NAME"]} and {$diaryCharacterName}s last dialogues and events written above into {$diaryCharacterName}s diary . WRITE AS IF YOU WERE {$diaryCharacterName}.";
 	
 	// Add current game date/time context to the prompt
 	$diaryPrompt = "Current date and time: {$sk_date}. " . $diaryPrompt;
@@ -128,7 +131,10 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	}
 	
 	// Replace {HERIKA_NAME} placeholder if present
-	$questPromptText = str_replace('{HERIKA_NAME}', $GLOBALS["HERIKA_NAME"], $questPromptText);
+        $questPromptText = strtr($questPromptText, [
+            '{HERIKA_NAME}' => function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : $GLOBALS["HERIKA_NAME"],
+            '{NARRATOR_NAME}' => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
+        ]);
 	
 	// Override the player_request in PROMPTS array
 	$promptKey = $gameRequest[0];

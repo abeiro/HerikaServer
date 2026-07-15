@@ -9,6 +9,12 @@
 
 // Common patterns to use in most functions
 $MAXIMUM_WORDS=($GLOBALS["MAX_WORDS_LIMIT"]>0)?"(Maximum {$GLOBALS["MAX_WORDS_LIMIT"]} words)":"";
+$promptCharacterName = function_exists('chimGetPromptCharacterName')
+    ? chimGetPromptCharacterName()
+    : ($GLOBALS["HERIKA_NAME"] ?? 'The Narrator');
+$narratorRoleplayName = function_exists('chimGetNarratorRoleplayName')
+    ? chimGetNarratorRoleplayName()
+    : 'The Narrator';
 
 $directNarratorDialogue = false;
 if (isset($GLOBALS["DIRECT_NARRATOR_DIALOGUE"])) {
@@ -183,7 +189,8 @@ if (!function_exists('chimLoadManagedRechatCuePrompts')) {
     {
         $previousSpeaker = chimGetRechatPreviousSpeakerName();
         $replacements = [
-            "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
+            "{HERIKA_NAME}" => chimGetPromptCharacterName(),
+            "{NARRATOR_NAME}" => chimGetNarratorRoleplayName(),
             "{TEMPLATE_DIALOG}" => $GLOBALS["TEMPLATE_DIALOG"],
             "{PREVIOUS_SPEAKER}" => $previousSpeaker,
         ];
@@ -226,7 +233,8 @@ if (!function_exists('chimLoadManagedRechatListenerPrompt')) {
     function chimLoadManagedRechatListenerPrompt(): string
     {
         $replacements = [
-            "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
+            "{HERIKA_NAME}" => chimGetPromptCharacterName(),
+            "{NARRATOR_NAME}" => chimGetNarratorRoleplayName(),
             "{PREVIOUS_SPEAKER}" => chimGetRechatPreviousSpeakerName(),
         ];
 
@@ -261,7 +269,8 @@ if (!function_exists('chimLoadManagedContinueCuePrompts')) {
 
         return [
             strtr($fallback, [
-                "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
+                "{HERIKA_NAME}" => chimGetPromptCharacterName(),
+                "{NARRATOR_NAME}" => chimGetNarratorRoleplayName(),
                 "{TEMPLATE_DIALOG}" => $GLOBALS["TEMPLATE_DIALOG"],
             ]),
         ];
@@ -299,7 +308,8 @@ if ($inlineNarrationEnabled) {
         $inlineDialoguePromptKey,
         $inlineDialogueFallback,
         [
-            "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
+            "{HERIKA_NAME}" => $promptCharacterName,
+            "{NARRATOR_NAME}" => $narratorRoleplayName,
             "{MAXIMUM_WORDS}" => $MAXIMUM_WORDS,
         ],
         "DIALOGUE_LINE_INLINE_RESPONSE"
@@ -319,7 +329,8 @@ if ($inlineNarrationEnabled) {
         " Be original, creative, knowledgeable, use your own thoughts. " .
         " Review context history to focus on conversation topic and to avoid repeating sentences and phraseology from previous lines.{MAXIMUM_WORDS}",
         [
-            "{HERIKA_NAME}" => $GLOBALS["HERIKA_NAME"],
+            "{HERIKA_NAME}" => $promptCharacterName,
+            "{NARRATOR_NAME}" => $narratorRoleplayName,
             "{MAXIMUM_WORDS}" => $MAXIMUM_WORDS,
         ],
         "DIALOGUE_LINE_RESPONSE"

@@ -7,7 +7,8 @@ foreach ($normalizedContext as $n=>$s_msg) {
         $GLOBALS["DEBUG_DATA"][]="### Instruction: ".$s_msg."";
 
     } else {
-        $s_msg_p = preg_replace('/^(The Narrator:)(.*)/m', '[Author\'s notes: $2 ]', $s_msg);
+        $narratorContextLabel = preg_quote(chimGetNarratorRoleplayName(), '/');
+        $s_msg_p = preg_replace('/^(' . $narratorContextLabel . ':)(.*)/m', '[Author\'s notes: $2 ]', $s_msg);
         $context.="$s_msg_p\n";
         $GLOBALS["DEBUG_DATA"][]=$s_msg_p;
     }
@@ -95,7 +96,7 @@ foreach ($contextData as $s_role=>$s_msg) {	// Have to mangle context format
                 
         } else if ($s_msg["role"]=="tool") {
             $pb["system"].=$element["content"]."\n";
-            $contextHistory.="The Narrator:".strtr($lastAction,["#RESULT#"=>$s_msg["content"]]);
+            $contextHistory.=chimBuildNarratorContextLine(strtr($lastAction,["#RESULT#"=>$s_msg["content"]]));
             $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$s_msg["content"]]);
             
         } elseif ($s_msg["role"]=="system") {

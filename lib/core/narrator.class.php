@@ -2,6 +2,9 @@
 
 class Narrator
 {
+    public const CANONICAL_NAME = 'The Narrator';
+    public const DEFAULT_ROLEPLAY_NAME = self::CANONICAL_NAME;
+
     private $table = "core_narrator";
     private $db;
 
@@ -158,6 +161,41 @@ class Narrator
     }
 
     /**
+     * Normalize and validate the prompt-facing narrator name.
+     */
+    public static function normalizeRoleplayName($value): string
+    {
+        $name = preg_replace('/\s+/u', ' ', trim((string)$value));
+        if ($name === '') {
+            return self::DEFAULT_ROLEPLAY_NAME;
+        }
+
+        $length = function_exists('mb_strlen') ? mb_strlen($name, 'UTF-8') : strlen($name);
+        if ($length > 64) {
+            throw new \InvalidArgumentException('Narrator roleplay name must be 64 characters or fewer.');
+        }
+
+        if (preg_match("/^[\\p{L}\\p{M}\\p{N} .'’\\-]+$/u", $name) !== 1) {
+            throw new \InvalidArgumentException('Narrator roleplay name may only contain letters, numbers, spaces, apostrophes, periods, and hyphens.');
+        }
+
+        if (in_array(strtolower($name), ['player', 'everyone'], true)) {
+            throw new \InvalidArgumentException("Narrator roleplay name cannot be '{$name}'.");
+        }
+
+        return $name;
+    }
+
+    public function getRoleplayName(): string
+    {
+        try {
+            return self::normalizeRoleplayName($this->get('roleplay_name'));
+        } catch (\InvalidArgumentException $e) {
+            return self::DEFAULT_ROLEPLAY_NAME;
+        }
+    }
+
+    /**
      * Read a legacy boolean value from default narrator profile metadata.
      * Returns null when the key is missing or not parseable as boolean.
      */
@@ -296,6 +334,7 @@ class Narrator
         
         // Map database keys to GLOBALS keys with type conversion
         $keyMapping = [
+            'roleplay_name' => ['NARRATOR_ROLEPLAY_NAME', 'string', self::DEFAULT_ROLEPLAY_NAME],
             'enabled' => ['NARRATOR_TALKS', 'bool', true],
             'welcome_enabled' => ['NARRATOR_WELCOME', 'bool', false],
             'random_enabled' => ['RANDOM_NARATION', 'bool', false],
@@ -305,7 +344,7 @@ class Narrator
             'bored_chance' => ['ALLOW_NARRATOR_BORED_EVENTS_CHANCE', 'int', 25],
             'quest_comment_cooldown' => ['QUEST_COMMENT_COOLDOWN', 'int', 3],
             'books_only_narrator' => ['BOOK_EVENT_ALWAYS_NARRATOR', 'bool', false],
-            'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', false],
+            'hide_from_context' => ['HIDE_NARRATOR_DIALOGUE', 'bool', true],
             'dynamic_profile' => ['DYNAMIC_PROFILE', 'bool', false],
             'inline_narration_mode' => ['INLINE_NARRATION_MODE', 'string', isset($GLOBALS['INLINE_NARRATION_MODE']) ? $GLOBALS['INLINE_NARRATION_MODE'] : 'disabled'],
             'remove_player_autochat_asterisks' => [
@@ -368,31 +407,34 @@ class Narrator
     {
         $allSettings = $this->getAll();
         
-        // Set HERIKA_NAME to The Narrator
-        $GLOBALS['HERIKA_NAME'] = 'The Narrator';
+        // Routing always uses the canonical name; prompts may use the roleplay alias.
+        $GLOBALS['HERIKA_NAME'] = self::CANONICAL_NAME;
+        $GLOBALS['NARRATOR_ROLEPLAY_NAME'] = $this->getRoleplayName();
+        $GLOBALS['HERIKA_ROLEPLAY_NAME'] = $GLOBALS['NARRATOR_ROLEPLAY_NAME'];
+        $promptName = $GLOBALS['NARRATOR_ROLEPLAY_NAME'];
         
         // Map character fields to GLOBALS
         // Set HERIKA_PERS from core field (like NPCs do)
         if (isset($allSettings['core']) && $allSettings['core'] !== null && $allSettings['core'] !== '') {
-            $GLOBALS['HERIKA_PERS'] = "Roleplay as {$GLOBALS['HERIKA_NAME']}.\n{$allSettings['core']}";
+            $GLOBALS['HERIKA_PERS'] = "Roleplay as {$promptName}.\n" . chimRenderNarratorRoleplayText($allSettings['core']);
         } else {
-            $GLOBALS['HERIKA_PERS'] = "Roleplay as {$GLOBALS['HERIKA_NAME']}";
+            $GLOBALS['HERIKA_PERS'] = "Roleplay as {$promptName}";
         }
         
         if (isset($allSettings['background'])) {
-            $GLOBALS['HERIKA_BACKGROUND'] = $allSettings['background'];
+            $GLOBALS['HERIKA_BACKGROUND'] = chimRenderNarratorRoleplayText($allSettings['background']);
         }
         
         if (isset($allSettings['personality'])) {
-            $GLOBALS['HERIKA_PERSONALITY'] = $allSettings['personality'];
+            $GLOBALS['HERIKA_PERSONALITY'] = chimRenderNarratorRoleplayText($allSettings['personality']);
         }
         
         if (isset($allSettings['speechstyle'])) {
-            $GLOBALS['HERIKA_SPEECHSTYLE'] = $allSettings['speechstyle'];
+            $GLOBALS['HERIKA_SPEECHSTYLE'] = chimRenderNarratorRoleplayText($allSettings['speechstyle']);
         }
         
         if (isset($allSettings['goals'])) {
-            $GLOBALS['HERIKA_GOALS'] = $allSettings['goals'];
+            $GLOBALS['HERIKA_GOALS'] = chimRenderNarratorRoleplayText($allSettings['goals']);
         }
         
         if (isset($allSettings['oghma_knowledge'])) {
@@ -405,7 +447,7 @@ class Narrator
 
         // Override PROMPT_HEAD if narrator has a custom prompt_head (like NPCs do)
         if (isset($allSettings['prompt_head']) && $allSettings['prompt_head'] !== null && $allSettings['prompt_head'] !== '') {
-            $GLOBALS['PROMPT_HEAD'] = $allSettings['prompt_head'];
+            $GLOBALS['PROMPT_HEAD'] = chimRenderNarratorRoleplayText($allSettings['prompt_head']);
         }
 
         if (isset($allSettings['voiceid']) && $allSettings['voiceid']) {
@@ -457,7 +499,8 @@ class Narrator
         
         return [
             'id' => 1, // Narrator always has ID 1 conceptually
-            'npc_name' => 'The Narrator',
+            'npc_name' => self::CANONICAL_NAME,
+            'roleplay_name' => $this->getRoleplayName(),
             'profile_id' => $this->getProfileId(),
             'voiceid' => $allSettings['voiceid'] ?? 'TheNarrator',
             'core' => $allSettings['core'] ?? '',
@@ -470,7 +513,7 @@ class Narrator
             'prompt_head' => $allSettings['prompt_head'] ?? '',
             'lock_profile' => 1, // Narrator is always locked
             'npc_favorite' => 1, // Narrator is always favorited
-            'md5' => md5('The Narrator'),
+            'md5' => md5(self::CANONICAL_NAME),
             'dynamic_profile' => $this->getBool('dynamic_profile', false) ? 1 : 0,
         ];
     }
@@ -516,6 +559,7 @@ class Narrator
     {
         $fieldMapping = [
             'profile_id' => 'profile_id',
+            'roleplay_name' => 'roleplay_name',
             'voiceid' => 'voiceid',
             'core' => 'core',
             'npc_static_bio' => 'background',
@@ -539,6 +583,90 @@ class Narrator
         }
         
         return $success;
+    }
+}
+
+if (!function_exists('chimGetNarratorRoleplayName')) {
+    function chimGetNarratorRoleplayName(): string
+    {
+        try {
+            return Narrator::normalizeRoleplayName($GLOBALS['NARRATOR_ROLEPLAY_NAME'] ?? Narrator::DEFAULT_ROLEPLAY_NAME);
+        } catch (\InvalidArgumentException $e) {
+            return Narrator::DEFAULT_ROLEPLAY_NAME;
+        }
+    }
+}
+
+if (!function_exists('chimGetNarratorDisplayNameHeaderValue')) {
+    function chimGetNarratorDisplayNameHeaderValue(): string
+    {
+        return base64_encode(chimGetNarratorRoleplayName());
+    }
+}
+
+if (!function_exists('chimBuildNarratorContextLine')) {
+    function chimBuildNarratorContextLine($text): string
+    {
+        return chimGetNarratorRoleplayName() . ': ' . ltrim((string)$text);
+    }
+}
+
+if (!function_exists('chimGetPromptCharacterName')) {
+    function chimGetPromptCharacterName(): string
+    {
+        $canonicalName = trim((string)($GLOBALS['HERIKA_NAME'] ?? ''));
+        if ($canonicalName !== '' && strcasecmp($canonicalName, Narrator::CANONICAL_NAME) !== 0) {
+            return $canonicalName;
+        }
+
+        return chimGetNarratorRoleplayName();
+    }
+}
+
+if (!function_exists('chimRenderNarratorRoleplayText')) {
+    function chimRenderNarratorRoleplayText($text): string
+    {
+        $text = (string)$text;
+        $roleplayName = chimGetNarratorRoleplayName();
+        if (strcasecmp($roleplayName, Narrator::CANONICAL_NAME) === 0) {
+            return $text;
+        }
+
+        return str_ireplace(Narrator::CANONICAL_NAME, $roleplayName, $text);
+    }
+}
+
+if (!function_exists('chimRenderNarratorContextText')) {
+    function chimRenderNarratorContextText($text): string
+    {
+        return chimRenderNarratorRoleplayText($text);
+    }
+}
+
+if (!function_exists('chimApplyNarratorRoleplayNameToContext')) {
+    function chimApplyNarratorRoleplayNameToContext(array $messages): array
+    {
+        foreach ($messages as &$message) {
+            if (is_array($message) && array_key_exists('content', $message) && is_string($message['content'])) {
+                $message['content'] = chimRenderNarratorContextText($message['content']);
+            }
+        }
+        unset($message);
+
+        return $messages;
+    }
+}
+
+if (!function_exists('chimNormalizeNarratorRoleplayActorName')) {
+    function chimNormalizeNarratorRoleplayActorName($name): string
+    {
+        $name = trim((string)$name);
+        $roleplayName = chimGetNarratorRoleplayName();
+        if ($name !== '' && strcasecmp($name, $roleplayName) === 0) {
+            return Narrator::CANONICAL_NAME;
+        }
+
+        return $name;
     }
 }
 
