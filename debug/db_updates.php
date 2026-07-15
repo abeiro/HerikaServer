@@ -4989,6 +4989,7 @@ if ($checkVersion("core_narrator")<20250101001) {
     if ($count === 0) {
         // Seed with defaults from conf.php if available, otherwise use hardcoded defaults
         $defaults = [
+            'roleplay_name' => 'The Narrator',
             'enabled' => isset($GLOBALS["NARRATOR_TALKS"]) ? ($GLOBALS["NARRATOR_TALKS"] ? '1' : '0') : '1',
             'welcome_enabled' => isset($GLOBALS["NARRATOR_WELCOME"]) ? ($GLOBALS["NARRATOR_WELCOME"] ? '1' : '0') : '0',
             'random_enabled' => isset($GLOBALS["RANDOM_NARATION"]) ? ($GLOBALS["RANDOM_NARATION"] ? '1' : '0') : '0',
@@ -5099,6 +5100,7 @@ if ($checkVersion("core_narrator")<20250101002) {
             
             $defaults = [
                 'profile_id' => $profileId,
+                'roleplay_name' => 'The Narrator',
                 'voiceid' => 'TheNarrator',
                 'core' => "The Narrator is a male voice within the player's mind. His job is to help the player as they navigate the world of Tamriel. Provide unique insight and descriptions of what is going on in the world.",
                 'background' => "A guiding voice that describes the world, events, and transitions. He is not a character, but a voice within the player's mind.",
@@ -7159,6 +7161,24 @@ if ($checkVersion("core_tts_connector_omnivoice") < 20260708001) {
         $updateVersion("core_tts_connector_omnivoice", 20260708001);
         Logger::info("Applied patch core_tts_connector_omnivoice 20260708001");
     }
+}
+
+//----------------------------------------------------
+// NARRATOR ROLEPLAY NAME - Prompt-facing narrator alias
+// Version 20260714001
+//----------------------------------------------------
+
+if ($checkVersion("core_narrator")<20260714001) {
+    Logger::debug("Applying core_narrator migration 20260714001 - Adding narrator roleplay name");
+
+    $db->execQuery("
+        INSERT INTO public.core_narrator (id, value)
+        VALUES ('roleplay_name', 'The Narrator')
+        ON CONFLICT (id) DO NOTHING
+    ");
+
+    $updateVersion("core_narrator", 20260714001);
+    Logger::info("Applied patch core_narrator 20260714001 - Added narrator roleplay name");
 }
 
 if ($checkVersion("general_settings") < 20260711001) {

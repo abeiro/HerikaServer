@@ -65,10 +65,18 @@ function ReplacePlayerNamePlaceholder($s_input) {
     //replace #PLAYER_NAME# with player name
     $s_res = $s_input;
     if ((strlen(trim($s_input))) > 12) {
+        $promptCharacterName = function_exists('chimGetPromptCharacterName')
+            ? chimGetPromptCharacterName()
+            : $GLOBALS["HERIKA_NAME"];
+        $narratorRoleplayName = function_exists('chimGetNarratorRoleplayName')
+            ? chimGetNarratorRoleplayName()
+            : 'The Narrator';
         $s_res = strtr($s_input, [
-            "{HERIKA_NAME}" =>$GLOBALS["HERIKA_NAME"],
+            "{HERIKA_NAME}" =>$promptCharacterName,
+            "{NARRATOR_NAME}" =>$narratorRoleplayName,
             "{PLAYER_NAME}"=>$GLOBALS["PLAYER_NAME"],
-            "#HERIKA_NAME#" =>$GLOBALS["HERIKA_NAME"],
+            "#HERIKA_NAME#" =>$promptCharacterName,
+            "#NARRATOR_NAME#" =>$narratorRoleplayName,
             "#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"]
         ]);
     }

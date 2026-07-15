@@ -187,6 +187,20 @@ if (
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
     try {
+        $roleplayName = Narrator::normalizeRoleplayName($_POST['roleplay_name'] ?? Narrator::DEFAULT_ROLEPLAY_NAME);
+        $playerName = trim((string)($GLOBALS['PLAYER_NAME'] ?? ''));
+        if ($playerName !== '' && strcasecmp($roleplayName, $playerName) === 0) {
+            throw new InvalidArgumentException('Narrator roleplay name cannot match the player name.');
+        }
+        $escapedRoleplayName = $db->escape($roleplayName);
+        $matchingNpc = $db->fetchOne(
+            "SELECT npc_name FROM core_npc_master WHERE LOWER(npc_name) = LOWER('{$escapedRoleplayName}') LIMIT 1"
+        );
+        if ($matchingNpc) {
+            throw new InvalidArgumentException('Narrator roleplay name cannot match an existing NPC name.');
+        }
+        $narrator->set('roleplay_name', $roleplayName);
+
         // Save boolean settings
         $narrator->set('enabled', isset($_POST['enabled']) && $_POST['enabled'] === '1' ? '1' : '0');
         $narrator->set('welcome_enabled', isset($_POST['welcome_enabled']) && $_POST['welcome_enabled'] === '1' ? '1' : '0');
@@ -341,6 +355,7 @@ $dynamicProfileFields = $narrator->getDynamicProfileFields();
 
 // Extract character fields
 $profileId = $narrator->getInt('profile_id', 1);
+$roleplayName = $narrator->getRoleplayName();
 $voiceid = $narrator->get('voiceid') ?? 'TheNarrator';
 $core = $narrator->get('core') ?? '';
 $background = $narrator->get('background') ?? '';
@@ -1333,6 +1348,10 @@ if (!$isEmbed) {
                 <!-- Core Settings Section -->
                 <div class="content-section">
                     <h2>Core Settings</h2>
+
+                    <label for="roleplay_name">Narrator Name</label>
+                    <input type="text" id="roleplay_name" name="roleplay_name" maxlength="64" value="<?php echo htmlspecialchars($roleplayName); ?>" placeholder="The Narrator">
+                    <span class="hint">Changes how the narrator is identified inside prompts and LLM context. Internal routing, profiles, actions, diaries, and TTS continue to use The Narrator.</span>
                     
                     <label class="toggle-row">
                         <div class="toggle-switch">
@@ -1514,7 +1533,7 @@ if (!$isEmbed) {
             <div class="content-grid">
                 <div class="content-section">
                     <h2>Profile & Voice</h2>
-                    
+
                     <label for="profile_id">Profile</label>
                     <select id="profile_id" name="profile_id">
                         <?php foreach ($allProfiles as $profile): ?>
