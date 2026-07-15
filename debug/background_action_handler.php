@@ -11,16 +11,15 @@
  * @param string $npcName The display name of the NPC to trigger
  * @return void
  */
-function triggerNpcUpdate($npcName,$error_count=0)
+function triggerNpcUpdate($npcName, $error_count = 0)
 {
     $npcManager = new NpcMaster();
-    $npcData = $npcManager->getByName($npcName);
-    $extended = $npcManager->getExtendedData($npcData);
     $extended["background_life_last_updated"] = 0;
     $extended["background_life_last_updated_ec"] = $error_count;
-    $extended["background_life_last_updated_presence_delta"]=0;
-    $npcData = $npcManager->setExtendedData($npcData, $extended);
-    $npcManager->updateByArray($npcData);
+    $extended["background_life_last_updated_presence_delta"] = 0;
+    
+
+    $npcManager->updateExtendedKeysByName($npcName, $extended);
 }
 
 /**
@@ -169,7 +168,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'ts' => $last_ts,
             'gamets' => $last_gamets + 10,
             'type' => "infoaction",
-            'data' => ($location==$resolvedLocation) ? "The Narrator: $npcName starts travelling to $location. Reason: {$GLOBALS["LAST_REASON"]}" : "The Narrator: $npcName starts travelling to $location (resolved as $resolvedLocation). Reason: {$GLOBALS["LAST_REASON"]}",
+            'data' => ($location == $resolvedLocation) ? "The Narrator: $npcName starts travelling to $location. Reason: {$GLOBALS["LAST_REASON"]}" : "The Narrator: $npcName starts travelling to $location (resolved as $resolvedLocation). Reason: {$GLOBALS["LAST_REASON"]}",
             'sess' => $momentum,
             'localts' => time(),
             'people' => $npcName,
@@ -200,7 +199,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => ($location==$resolvedLocation) ? "$npcName starts travelling to $location. Reason: {$GLOBALS["LAST_REASON"]}" : "$npcName starts travelling to $location (resolved as $resolvedLocation). Reason: {$GLOBALS["LAST_REASON"]}",
+            'data' => ($location == $resolvedLocation) ? "$npcName starts travelling to $location. Reason: {$GLOBALS["LAST_REASON"]}" : "$npcName starts travelling to $location (resolved as $resolvedLocation). Reason: {$GLOBALS["LAST_REASON"]}",
         ]
     );
 
@@ -268,7 +267,7 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
         ]
     );
 
-      // Insert actions_issued log entry
+    // Insert actions_issued log entry
     $db->insert(
         'actions_issued',
         [
@@ -374,11 +373,8 @@ function handleReturnHome($location, $currentNpcData, $npcName, $last_ts, $last_
 
     // Will mark meta PENDING_DIALOGUE. When NPC reaches player, will talk to player. (triggered at addnpc)
     $npcManager = new NpcMaster();
-    $npcData = $npcManager->getByName($npcName);
-    $meta = $npcManager->getMetadata($npcData);
     $meta["PENDING_DIALOGUE"] = $last_gamets;
-    $npcData = $npcManager->setMetadata($npcData, $meta);
-    $npcManager->updateByArray($npcData);
+    $npcManager->updateExtendedKeysByName($npcName, $meta);
     return true;
 }
 
@@ -447,6 +443,20 @@ function handleMoveToAction($targetNpcName, $currentNpcData, $npcName, $last_ts,
 
     if ($targetNpc === null) {
         error_log("[handleMoveToAction] Target NPC not found: $targetNpcName");
+
+        if (resolveTravelLocation($targetNpcName, $currentNpcData, $db) !== null) {
+            $db->insert('eventlog', [
+                'ts' => $last_ts,
+                'gamets' => $last_gamets + 5,
+                'type' => 'infoaction',
+                'data' => "The Narrator: $npcName cannot move to $targetNpcName because it is a location, not an NPC. Use TravelTo instead.",
+                'sess' => $momentum,
+                'localts' => time(),
+                'people' => $npcName,
+                'location' => null,
+                'party' => '',
+            ]);
+        }
         return false;
     }
 
@@ -602,7 +612,7 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
 
     $detectedLocation = json_decode($npcLocation["metadata"], true)["last_coords"] ?? null;
 
-    error_log("[handleFindNPCAction] <{$targetNpc['refid']}> <{$targetNpc['name']}>, wanted location: $lastReportedLocation" . print_r($detectedLocation, true));
+    error_log("[handleFindNPCAction] <{$targetNpc['refid']}> <{$targetNpc['name']}>, wanted location: $lastReportedLocation. Detected" . print_r($detectedLocation, true));
     if ($detectedLocation && $detectedLocation[3] == $lastReportedLocation) {
 
         // Check if NPC to speak to is a vender/trader. We publish stock.
@@ -926,7 +936,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
     $resolvedName = $targetNpc['name'];
     $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
     $targetRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($targetNpc['refid'])));
-    $itemId = strtolower($itemId);
+    $itemId = strtr(strtolower($itemId), ["0x" => ""]); // Remove 0x prefix if present
 
     if ($tradeType === 'BuyItem') {
         $skyrimCmd = new SkyrimCommandBuilder();
@@ -960,7 +970,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
     }
 
 
-    $itemName = $db->fetchOne("SELECT * FROM \"public\".\"combined_descriptions\" where baseid='".strtoupper($itemId)."'");
+    $itemName = $db->fetchOne("SELECT * FROM \"public\".\"combined_descriptions\" where baseid='" . strtoupper($itemId) . "'");
     if ($itemName) {
         $itemNameResolved = "($count {$itemName["name"]})";
     } else {
@@ -1003,7 +1013,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
 
     // Schedule inventory updates for both NPCs after the trade
     $db->insert('responselog', [
-        'localts' => time()+10,
+        'localts' => time() + 10,
         'sent' => 0,
         'actor' => 'rolemaster',
         'text' => '',
@@ -1012,14 +1022,14 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
     ]);
 
     $db->insert('responselog', [
-        'localts' => time()+10,
+        'localts' => time() + 10,
         'sent' => 0,
         'actor' => 'rolemaster',
         'text' => '',
         'action' => "rolecommand|BackgroundCmd@$targetRefHexString@UpdateInventory",
         'tag' => '',
     ]);
-    
+
     triggerNpcUpdate($npcName);
     return true;
 }
