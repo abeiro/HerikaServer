@@ -1,8 +1,8 @@
 <?php
 /**
- * Background Life Processor (v2 — refactored)
+ * BGL Processor (v2 — refactored)
  *
- * Generates an NPC "background life" cycle when the player is absent:
+ * Generates an NPC "BGL" cycle when the player is absent:
  *   1. Inner-thought soliloquy (Step 1 LLM call)
  *   2. Action decision (Step 2 LLM call)
  *
@@ -135,6 +135,33 @@ $npcName = $argv[1];
 $argMode = $argv[2] ?? '';   // dryrun | forceletter | forceaction | full
 $argMode3 = $argv[3] ?? '';   // optional third arg (forceaction)
 
+// Simple non-blocking process lock to avoid concurrent runs for the same NPC.
+$lockKeyRaw = $npcName ?: 'global';
+$lockKey = preg_replace('/[^a-zA-Z0-9_-]/', '_', (string) $lockKeyRaw);
+$lockPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . "herika_bgl_life_v2_{$lockKey}.lock";
+$lockHandle = @fopen($lockPath, 'c');
+
+if ($lockHandle === false) {
+    error_log("[BGL] $npcName — unable to create lock file at $lockPath");
+    exit(1);
+}
+
+if (!flock($lockHandle, LOCK_EX | LOCK_NB)) {
+    error_log("[BGL] LOCK! $npcName — another background-life run is already in progress, skipping.");
+    exit(0);
+}
+
+ftruncate($lockHandle, 0);
+fwrite($lockHandle, (string) getmypid());
+fflush($lockHandle);
+
+register_shutdown_function(static function () use ($lockHandle): void {
+    if (is_resource($lockHandle)) {
+        flock($lockHandle, LOCK_UN);
+        fclose($lockHandle);
+    }
+});
+
 $isDryRun = ($argMode === 'dryrun');
 $isFullMode = ($argMode === 'full');
 $forceLetter = ($argMode === 'forceletter');
@@ -170,9 +197,10 @@ $metadata = $npcMaster->getMetadata($currentNpcData);
 // Guardrail, if background_life_last_updated_ec exceeds 2, skip processing to avoid infinite loops or repeated errors
 // background_life_last_updated_ec is incremented each time an error occurs during processing, and reset to 0 on successful completion.
 
-if ($extdata['background_life_last_updated_ec']>2) {
+$backgroundLifeErrorCount = (int) ($extdata['background_life_last_updated_ec'] ?? 0);
+if ($backgroundLifeErrorCount > 2) {
     error_log("[BGL] $npcName — background_life_last_updated_ec exceeded 2, skipping.");
-    return; 
+    return;
 }
 
 // ─── Game Timestamps ──────────────────────────────────────────────────────────
@@ -195,7 +223,7 @@ $lastIssuedEvent = $db->fetchOne(
      ORDER BY gamets DESC, ts ASC"
 );
 
-if ($lastIssuedEvent["gamets"] && $lastIssuedEvent["action"] == "TravelTo") {
+if ($lastIssuedEvent["gamets"] && ( $lastIssuedEvent["action"] == "TravelTo" && $lastIssuedEvent["action"] == "MoveTo")) {
     $npcIsTravelling = true;
     $npcIsTravellingStarted = $lastIssuedEvent["gamets"];
 } else {
@@ -214,11 +242,12 @@ $lastInteractionRow = $db->fetchOne(
 
 if (empty($lastInteractionRow['gamets'])) {
     if ($extdata["background_life_player_unattached"]) {
-        error_log('[BACKGROUND LIFE] No prior interaction found but background_life_player_unattached is true');
+        error_log('[BGL] No prior interaction found but background_life_player_unattached is true');
     } else {
-        error_log('[BACKGROUND LIFE] No prior interaction found, but background_life_player_unattached is false — skipping.');
+        error_log('[BGL] No prior interaction found, but background_life_player_unattached is false — skipping.');
         $extdata['background_life_last_updated'] = $last_gamets;
-        $npcMaster->updateByArray($npcMaster->setExtendedData($currentNpcData, $extdata));
+        $npcMaster->updateExtendedKeysByName($npcName, $extdata);
+        
 
         return;
 
@@ -234,16 +263,16 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
 $minDeltaForRerun = $bglTriggerHours / GAMETS_TO_HOURS;
 
 if (($last_gamets - $lastItGamets) < $minDeltaForRerun) {
-    Logger::info("[BACKGROUND LIFE] $npcNameEsc — last interaction was less than {$bglTriggerHours} hours ago.");
-    error_log("[BACKGROUND LIFE] $npcNameEsc — last interaction was less than {$bglTriggerHours} hours ago.");
+    Logger::info("[BGL] $npcNameEsc — last interaction was less than {$bglTriggerHours} hours ago.");
+    error_log("[BGL] $npcNameEsc — last interaction was less than {$bglTriggerHours} hours ago.");
 
-    $extdata['background_life_last_updated'] = $last_gamets;
-    $npcMaster->updateByArray($npcMaster->setExtendedData($currentNpcData, $extdata));
+    $extLocaldata['background_life_last_updated'] = $last_gamets;
+    $npcMaster->updateExtendedKeysByName($npcName, $extLocaldata);
 
     if ($forceLetter) {
-        error_log("[BACKGROUND LIFE] $npcNameEsc — bypassing interaction cooldown via forceletter.");
+        error_log("[BGL] $npcNameEsc — bypassing interaction cooldown via forceletter.");
     } elseif ($forceAction) {
-        error_log("[BACKGROUND LIFE] $npcNameEsc — bypassing interaction cooldown via forceaction.");
+        error_log("[BGL] $npcNameEsc — bypassing interaction cooldown via forceaction.");
     } else {
         return;
     }
@@ -251,7 +280,7 @@ if (($last_gamets - $lastItGamets) < $minDeltaForRerun) {
 
 
 $daysPassed = round(($last_gamets - $lastItGamets) * GAMETS_TO_HOURS / 24, 2);
-
+$hoursPassed = round(($last_gamets - $lastItGamets) * GAMETS_TO_HOURS, 2);
 $history = "";
 
 // ─── Dynamic Biography ────────────────────────────────────────────────────────
@@ -334,6 +363,7 @@ foreach (array_reverse($diaryEntryRows) as $row) {
 
         // Update daysPassed to reflect the latest inner chat entry if it's older than the last interaction
         $daysPassed = round(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS / 24, 2);
+        $hoursPassed = round(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS, 2);
     }
 }
 
@@ -359,6 +389,7 @@ foreach (array_reverse($innerChatEntryRows) as $row) {
     ];
     // Update daysPassed to reflect the earliest inner chat entry if it's older than the last interaction
     $daysPassed = round(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS / 24, 2);
+    $hoursPassed = round(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS, 2);
 }
 
 $actionsRows = $db->fetchAll(
@@ -373,13 +404,14 @@ foreach (array_reverse($actionsRows) as $row) {
     $hoursAgo = number_format(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS, 2);
     $actions[] = [
         'gamets' => $row['gamets'],
-        'content' => "$hoursAgo hours ago... ".($row["action"]=="TravelTo" ? "{$row['actorname']} starts journey: {$row['fullcall']}" :
-             "{$row['actorname']} moves to: {$row['fullcall']}"),
+        'content' => "$hoursAgo hours ago... " . ($row["action"] == "TravelTo" ? "{$row['actorname']} starts journey: {$row['fullcall']}" :
+            "{$row['actorname']} moves to: {$row['fullcall']}"),
         'type' => 'travel_action',
 
     ];
     // Update daysPassed to reflect the earliest action entry if it's older than the last interaction
     $daysPassed = round(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS / 24, 2);
+    $hoursPassed = round(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS, 2);
 }
 
 
@@ -387,6 +419,8 @@ foreach (array_reverse($actionsRows) as $row) {
 
 $bgEvents = [];
 $lastEventParsed = [];   // Tracks the most recent valid background event for location context
+
+$lastLocRow['location'] = $lastLocRow['location'] ?? '';
 
 error_log("Last interaction gamets: $lastItGamets, location: {$lastLocRow['location']}");
 
@@ -418,6 +452,7 @@ foreach ($backgroundEventRows as $event) {
 
     // Update daysPassed to reflect the latest background event if it's older than the last interactions
     $daysPassed = round(($last_gamets - $event['gamets']) * GAMETS_TO_HOURS / 24, 2);
+    $hoursPassed = round(($last_gamets - $event['gamets']) * GAMETS_TO_HOURS, 2);
 }
 
 // Append last known speech location
@@ -443,7 +478,7 @@ if (isset($metadata['last_coords']) && !empty($metadata['last_coords'][3])) {
     $LAST_REPORTED_LOCATION = $coords[3];
 
     $richLocation = $db->fetchOne("SELECT name,region,hold,is_interior  FROM locations WHERE formid='{$coords["location_formid"]}'");
-    // error_log("[BACKGROUND LIFE]  Last reported location: " . json_encode($coords) . " => rich location: " . json_encode($richLocation));
+    // error_log("[BGL]  Last reported location: " . json_encode($coords) . " => rich location: " . json_encode($richLocation));
     if ($richLocation && !empty($richLocation['name'])) {
         $LAST_REPORTED_LOCATION = $richLocation['name'];
         if ($richLocation['is_interior']) {
@@ -480,15 +515,50 @@ if (isset($metadata['low_process_actors'])) {
         // actorList in the form of name
         if ($actorList === []) {
             $actorList = ["No visible characters nearby"];
-        } 
+        }
+
+        $actorListExpanded=[];
+        foreach ($actorList as $key => $actor) {
+            if (is_array($actor)) {
+                
+                $npcMaster = new NpcMaster();
+                $actorRow = $npcMaster->getByName($actor[1]);
+                if ($actorRow && isset($actorRow['oghma_knowledge_tags']) && !empty($actorRow['oghma_knowledge_tags'])) {
+                    $actorListExpanded[$actor[0]] = "{$actor[1]} ({$actorRow['oghma_knowledge_tags']})";
+                } else {
+                    $actorListExpanded[$actor[0]] = "{$actor[1]}";
+                }
+            } else {
+                $actorListExpanded[$key] = $actor;
+                $npcMaster = new NpcMaster();
+                $actorRow = $npcMaster->getByName($actor);
+                if ($actorRow && isset($actorRow['oghma_knowledge_tags']) && !empty($actorRow['oghma_knowledge_tags'])) {
+                    $actorListExpanded[$key] = "{$actor} ({$actorRow['oghma_knowledge_tags']})";
+                } else {
+                    $actorListExpanded[$key] = "{$actor}";
+                }
+                
+            }
+        }
 
         $bgEvents[] = [
             'gamets' => $gamets_lpa_processed,
-            'content' => "Nearby actors {$GLOBALS['HERIKA_NAME']} can see (refid,name): " . json_encode($actorList) . ", ($hoursAgo hours ago)",
-            'type' => 'nearby_actors',
+            'content' => "Nearby actors/npc {$GLOBALS['HERIKA_NAME']} can see (refid,name): \n" . json_encode($actorListExpanded,JSON_PRETTY_PRINT) . "\n, ($hoursAgo hours ago)",
+            'type' => 'nearby_npcs',
         ];
 
     }
+}
+
+
+if (isset($metadata['last_inventory_update_gamets'])) {
+    $bgEvents[] = [
+            'gamets' => $metadata['last_inventory_update_gamets'],
+            'content' => implode("\n", chimFormatInventoryPromptLines($metadata['inventory'] ?? []) ),
+            'type' => 'inventory_at_this_point',
+        ];
+
+    
 }
 
 // ─── Rumors Near Current Location ────────────────────────────────────────────
@@ -505,7 +575,7 @@ if ($LAST_REPORTED_LOCATION) {
             )
          AND gamets > $rumorSinceTs order by gamets desc, ts desc LIMIT 2 OFFSET 0"
     );
-    error_log("[BACKGROUND LIFE] LAST_REPORTED_LOCATION " . count($rumorRows) . " rumors near <$LAST_REPORTED_LOCATION> since gamets $rumorSinceTs");
+    error_log("[BGL] LAST_REPORTED_LOCATION " . count($rumorRows) . " rumors near <$LAST_REPORTED_LOCATION> since gamets $rumorSinceTs");
     foreach ($rumorRows as $rumor) {
         $bgEvents[] = [
             'gamets' => $rumor['gamets'],
@@ -587,18 +657,52 @@ if ($isIdleAction) {
 
     $preStep1Prompt = [
         ['role' => 'system', 'content' => 'Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls).'],
-        ['role' => 'user', 'content' => "<character_sheet>\n{$GLOBALS['HERIKA_NAME']}:\n$dynamicBiography\n</character_sheet>"],
-        ['role' => 'user', 'content' => "<context_history>\nContext History\n$history\n</context_history>"],
         [
             'role' => 'user',
-            'content' => "Your task is:
-Tis character has been idle for the last $idleHours hours. We need to know:
-    1) If NPC was on a relaxing scenario (inn..home..), if any item was consumed from inventory (food, drink, potion, etc)
-    2) If NPC was on a working (scenario), if any good was produced. (iron ore, leather, etc)  IN THE LAST $idleHours HOURS.. 
-       Subsection production at <goals> specifies what is produced and how much per hour. We must check if we have produced any good IN THE LAST $idleHours HOURS.
-    3) Optionally, action can be just DoNothing if no consumption or production happened. In this case, reasoning can be empty.   
+            'content' => "<character_sheet>\n{$GLOBALS['HERIKA_NAME']}:\n$dynamicBiography\n</character_sheet>",
+            "cache_control" => ["type" => "ephemeral"]
+        ],
+        [
+            'role' => 'user',
+            'content' => "<context_history>\nContext History\n$history\n</context_history>",
+            "cache_control" => ["type" => "ephemeral"]
+        ],
+        [
+            'role' => 'user',
+            'content' => "
+The character has been idle for the last `$idleHours` hours.
 
-    "
+Your task is to determine what happened during this idle period and return the single most appropriate action.
+
+Rules:
+
+1. Relaxing scenarios
+   - If the NPC was in a relaxing scenario (e.g. inn, home, tavern, camp, etc.), determine whether any consumable items should have been used during the last `$idleHours` hours.
+   - Consumables include food, drinks, potions, medicine, or any other item intended to be consumed.
+   - Only report items that would actually have been consumed during the idle period.
+
+2. Working scenarios
+   - If the NPC was in a working scenario, determine whether any goods were produced during the last `$idleHours` hours.
+   - Inspect the `[production]` subsection inside `<goals>` to find:
+     - what item(s) are produced
+     - the production rate (units per hour)
+   - Calculate production only for the last `$idleHours` hours.
+   - If production is fractional, follow the game's production rules (or round only if explicitly specified elsewhere).
+
+3. No activity
+   - If neither consumption nor production occurred during the idle period  (e.g. {$GLOBALS["HERIKA_NAME"]} was resting), return the `DoNothing` action.
+   - When returning `DoNothing`, the reasoning field may be empty.
+
+Requirements
+
+- Consider **only** the last `$idleHours` hours.
+- Do not infer events outside this time window.
+- Produce exactly one action.
+- Base your decision solely on the current scenario, inventory, goals, and production rules provided in the context.
+- Do not invent production or consumption that is not supported by the data.
+
+Choose the action that best describes what occurred during the idle period.
+"
         ],
         [
             'role' => 'user',
@@ -612,7 +716,7 @@ Format:
     \"Produced:itemid:qty\",
     \"DoNothing\"
   ],
-  \"reasoning\": \"optional short explanation\"
+  \"reasoning\": \"optional one-sentence explanation\"
 }
 
 Rules:
@@ -624,7 +728,7 @@ Rules:
 - itemid must match in-game inventory identifiers.
 - qty must be an integer.
 - You may include multiple actions if needed.
-- reasoning must be short (max 1–2 sentences) and optional.
+- reasoning must be short (one sentence)
 - Do not add any keys other than 'action' and 'reasoning'.
 "
         ]
@@ -636,6 +740,10 @@ Rules:
     $preResponse = $connectionHandler->fast_request($preStep1Prompt, ['MAX_TOKENS' => 1024], 'backgroundlife');
 
     $parsedResponse = __jpd_decode_lazy($preResponse);
+
+    if (isset($parsedResponse[0]) && is_array($parsedResponse[0])) {
+        $parsedResponse = $parsedResponse[0];
+    }
 
     if (isset($parsedResponse['action']) && is_array($parsedResponse['action'])) {
         $action = ($parsedResponse['action']);
@@ -650,13 +758,16 @@ Rules:
 
 
     if ($action) {
+        $actionTextDescription=[];
         foreach ($action as $singleAction) {
-            error_log("[BACKGROUND LIFE] $npcNameEsc — Idle production/consumption detected: $singleAction. Reasoning: $reasoning");
+            error_log("[BGL] $npcNameEsc — Idle production/consumption detected: $singleAction. Reasoning: $reasoning");
 
             $skyrimCmd = new SkyrimCommandBuilder();
             $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
             // Parse action string
             list($actionType, $itemId, $count) = explode(':', $singleAction);
+            $itemId = strtr(strtolower($itemId), ["0x" => ""]); // Remove 0x prefix if present
+
             $count = (int) $count;
             if ($actionType === 'Consume') {
                 $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x$itemId", $count, true);
@@ -665,10 +776,20 @@ Rules:
                 $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x$itemId", $count, true);
                 $skyrimCmd->send(cmd: $json);
             }
+
+            $itemName = $db->fetchOne("SELECT * FROM \"public\".\"combined_descriptions\" where baseid='" . strtoupper($itemId) . "'");
+            if ($itemName) {
+                $itemNameResolved = "($count {$itemName["name"]})";
+            } else {
+                $itemNameResolved = "";
+            }
+            
             $actionText[] = $singleAction;
+            $actionTextDescription[] = $itemNameResolved;
         }
 
         $actionTextFinal = implode(', ', $actionText);
+        $actionTextDescriptionFinal = sizeof($actionTextDescription)>0 ? implode(', ', $actionTextDescription)  : "";
 
         sleep(sizeof($action));   // Allow time for the command to be processed
         // Send signal to update inventory
@@ -687,7 +808,7 @@ Rules:
             'ts' => $last_ts,
             'gamets' => $last_gamets - 10,
             'type' => 'innerchat',
-            'data' => "The Narrator: $npcName produced/consumed items while idle: $actionTextFinal. Reasoning: $reasoning",
+            'data' => "The Narrator: $npcName produced/consumed items while idle: $actionTextFinal $actionTextDescriptionFinal. Reasoning: $reasoning",
             'sess' => $momentum,
             'localts' => time(),
             'people' => "|$npcName|",
@@ -703,7 +824,7 @@ Rules:
                 'ts' => $last_ts,
                 'gamets' => $last_gamets - 10,
                 'localts' => time(),
-                'data' => "$npcName produced/consumed items while idle: $actionTextFinal. Reasoning: $reasoning",
+                'data' => "$npcName produced/consumed items while idle: $actionTextFinal $actionTextDescriptionFinal. Reasoning: $reasoning",
             ]
         );
 
@@ -720,7 +841,7 @@ Rules:
 
 
     } else {
-        error_log("[BACKGROUND LIFE] $npcNameEsc — Idle production/consumption detected: none");
+        error_log("[BGL] $npcNameEsc — Idle production/consumption detected: none");
     }
 
 }
@@ -770,10 +891,9 @@ Based on all this information, generate an inner-thought soliloquy for {$GLOBALS
 Take into account the <speech_style> section for the writing style, and particularly
 <inner_thought_guidance> if present.
 
-This soliloquy should reflect what the character might have done over the last {$daysPassed} day(s), 
+This soliloquy should reflect what the character might have done over the last {$hoursPassed} hours(s), 
 and after last inner thoughts presented in the <context_history>:
 
-* Details of any set tasks.
 * Intimate thoughts.
 * Evolution of the character's state of mind based on latest inner thoughts (if any) and events.
 * Short (2 paragraphs max), concise, and focused on the character's perspective.
@@ -792,9 +912,9 @@ PROMPT_EN,
 ];
 
 $step1Prompt = array_merge($systemPrompts[$lang], [
-    ['role' => 'user', 'content' => "<character_sheet>\n{$GLOBALS['HERIKA_NAME']}:\n$dynamicBiography\n</character_sheet>"],
-    ['role' => 'user', 'content' => "<context_history>\nContext History\n$history\n</context_history>"],
-    ['role' => 'user', 'content' => $userPrompts[$lang]],
+    ['role' => 'user', 'content' => "<character_sheet>\n{$GLOBALS['HERIKA_NAME']}:\n$dynamicBiography\n</character_sheet>", "cache_control" => ["type" => "ephemeral"]],
+    ['role' => 'user', 'content' => "<context_history>\nContext History\n$history\n</context_history>", "cache_control" => ["type" => "ephemeral"]],
+    ['role' => 'user', 'content' => $userPrompts[$lang], "cache_control" => ["type" => "ephemeral"]],
 ]);
 
 Logger::debug(__LINE__ . ' ' . (microtime(true) - $startTime));
@@ -837,26 +957,82 @@ $step2Content .= "<text>\n$innerThoughtBuffer\n</text>\n\n";
 $step2Content .= $innerThoughtStyle . "\n\n";
 
 
-$step2Content .= "Possible actions :\n"
-    . "StayAtPlace:Place — Remains in current location. If gathering info or spreading rumors, stay ≥24 hours.\n"
-    . "FindNPC:<NPC name> — Search for an NPC whose exact location is unknown (replace <NPC> with target NPC name). Use this before MoveTo or SpeakTo when the character does not know where the target is. Requires a clear reason.\n"
-    . "MoveTo:<NPC name> — Move to another NPC whose location is already known (replace <NPC> with target NPC name). Requires a clear reason.\n";
+$step2Content .= <<<PROMPT
+Choose exactly **one** action for this turn.
 
-// Avoid too consecutive SpeakTo actions, as they may be redundant. If the last action was SpeakTo, we skip this option to prevent repetitive interactions.
+Decision rules (highest priority first):
 
-if (!$isSpeakAction)
-    $step2Content.="SpeakTo:<NPC name>:<npc refid> — Engage in conversation with another NPC (replace <NPC> with target NPC name). \n";
+1. Continue an unfinished action (travel, transaction, meeting, etc.) whenever appropriate.
+2. If the NPC has an active goal, choose the action that makes the most progress toward that goal.
+3. Avoid unnecessary movement or repetitive conversations.
+4. Do not invent information that is not present in the context.
 
-$step2Content.="BuyItem:<NPC name>:itemid:count:gold_spent — Buy item from another NPC (replace <NPC> with target NPC name). (if character {$GLOBALS['HERIKA_NAME']} interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)\n"
-    . "SellItem:<NPC name>:itemid:count:gold_earned — Sell item to another NPC (replace <NPC> with target NPC name). (if character {$GLOBALS['HERIKA_NAME']} interacts with a trader and has agreed a transaction before, this step is *needed* to update inventories)\n"
-    . "ReturnHome       — Returns to base location to meet {$GLOBALS['PLAYER_NAME']}. Use when all goals are done.\n"
-    . "TravelTo:Place   — Travel to a specific location/city (replace <Place> with target location/city name). Requires a clear reason.\n"
-    . "Continue   — Just keep last issued action (For example, if the character is already on a journey, continue the current TravelTo action).\n";
-$actionChoiceDesc = '<action> chosen action (e.g., StayAtPlace:Place, TravelTo:Place, ReturnHome, FindNPC:<NPC>, MoveTo:<NPC>, SpeakTo:<NPC>:..., BuyItem:<NPC>:..., SellItem:<NPC>:...). Choose only one action per turn. Single line.';
-    
-if ($npcIsTravelling) {
-    $step2Content .= "Note: {$GLOBALS['HERIKA_NAME']} is currently traveling. If the character is already on a journey, avoid choosing another TravelTo action unless there is a compelling reason to change the destination.\n";
+Available actions:
+
+StayAtPlace:<Place>
+- Remain at the current location to work, rest, relax, socialize, or perform ongoing activities.
+- This is the default action when the NPC should remain where they are.
+- At an inn: rest, relax, socialize with patrons.
+- At home: rest, relax, socialize with companions.
+- If gathering information or spreading rumors, remain for at least 24 hours.
+- After arriving somewhere, prefer interacting (SpeakTo, BuyItem, SellItem) before choosing StayAtPlace again, unless there is no meaningful interaction available.
+
+FindNPC:<NPC name>
+- Search for an NPC whose current location is unknown.
+- Use before MoveTo or SpeakTo when the target's location is unknown.
+- Requires a clear reason.
+
+MoveTo:<NPC name>
+- Move to an NPC whose current location is already known.
+- Only use for characters, never for places.
+- Requires a clear reason.
+
+PROMPT;
+
+if (!$isSpeakAction) {
+    $step2Content .= <<<PROMPT
+SpeakTo:<NPC name>:<npc_refid>
+- Start a conversation with another NPC.
+- Avoid selecting SpeakTo repeatedly with no new purpose.
+- Prefer conversations that advance goals, exchange information, negotiate, or socialize.
+
+PROMPT;
 }
+
+$step2Content .= <<<PROMPT
+BuyItem:<NPC name>:<itemid>:<count>:<gold_spent>
+- Buy items from another NPC.
+- Required after a previously agreed trade so inventories can be updated.
+
+SellItem:<NPC name>:<itemid>:<count>:<gold_earned>
+- Sell items to another NPC.
+- Required after a previously agreed trade so inventories can be updated.
+
+TravelTo:<Place>
+- Travel to another location.
+- Use only when the destination is different from the current location and travel is necessary.
+
+ReturnHome
+- Return to the base location to meet {$GLOBALS['PLAYER_NAME']}.
+- Use only after all current goals have been completed.
+
+PROMPT;
+
+if ($npcIsTravelling) {
+    $step2Content .= <<<PROMPT
+Continue
+- Continue executing the previously selected action.
+- Prefer this while travelling unless there is a compelling reason to interrupt or change destination.
+
+Note:
+{$GLOBALS['HERIKA_NAME']} is already travelling. Do NOT issue another TravelTo action unless the destination must change.
+
+PROMPT;
+}
+
+$actionChoiceDesc = <<<PROMPT
+PROMPT;
+
 $step2Content .= "\nElement Definitions:\n```\n"
     . "$actionChoiceDesc\n"
     . "```\n\n"
@@ -868,24 +1044,30 @@ $step2Content .= "\nElement Definitions:\n```\n"
     . "```";
 
 $step2Content .= "Example: ```\n\n"
-    . "<action>FindNPC:Lydia</action>\n"
-    . "<reason>I need to find Lydia to speak to her</reason>\n"
-    ."```";
+    . "<action>FindNPC:Adrianne Avenicci</action>\n"
+    . "<reason>I need to find Adrianne to speak to her</reason>\n"
+    . "```";
 
 $step2Content .= "Examples ```\n\n"
-    . "<action>SpeakTo:Lydia:000A2C94</action>\n"
-    . "<reason>I need to speak to Lydia to progress in my current objectives.</reason>\n"
-    ."```";
+    . "<action>SpeakTo:Adrianne Avenicci:0001A67C</action>\n"
+    . "<reason>I need to speak to Adrianne Avenicci to progress in my current objectives.</reason>\n"
+    . "```";
 
 $step2Content .= "
 Rules:
 - Only ONE action may be chosen per round.
 - The action must be consistent with the context_history, memories, and current location.
-- If no meaningful action is appropriate, she may choose to wait (no action).
 - Previous actions are present at the context_history, prevent repetition, use previous actions on history to figure out if main goal is achieved or not, and decide accordingly.
 For example:
-* To Sell/Buy Item to a trader: SpeakTo:<NPC> ->(next iteration) SellItem:.. 
-* To Sell/Buy Item to a trader that maye is not present: MoveTo:<NPC> ->(next iteration) SpeakTo:<NPC> ->(next iteration) SellItem:.. 
+* To Sell/Buy Item to a trader: SpeakTo:<NPC/Actor name> ->(next iteration) SellItem:.. 
+* To Sell/Buy Item to a trader that maybe is not present: MoveTo:<NPC/Actor name> ->(next iteration) SpeakTo:<NPC/Actor name> ->(next iteration) SellItem:.. 
+* Buy food at an inn: SpeakTo:<NPC innkeeper> ->(next iteration),BuyItem:<NPC/Actor name> ->(next iteration) StayAtPlace:Inn 
+* Relax/Socialize at an inn: SpeakTo:<NPC/Actor name> ->(next iteration) ->(next iteration) StayAtPlace:Inn 
+* Relax at home: SpeakTo:<NPC/Actor name> ->(next iteration) StayAtPlace:Home
+* Generally speaking, try to Speak to an NPC before trading with them
+
+
+
 ";
 
 $step2Prompt = [['role' => 'system', 'content' => $step2Content]];
@@ -904,8 +1086,8 @@ $metadata = $npcMaster->getMetadata($currentNpcData);
 // ─── Update Background-Life Timestamp ────────────────────────────────────────
 
 $extdata['background_life_last_updated'] = $last_gamets;
-$currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
-$npcMaster->updateByArray($currentNpcData);
+$npcMaster->updateExtendedKeysByName($npcName, $extdata);
+
 
 // ─── Parse LLM Decision Response ─────────────────────────────────────────────
 
@@ -1019,7 +1201,7 @@ if (!empty($parsed['rumor'])) {
 
 // ─── Persist Inner Thought to Event & Diary Logs ──────────────────────────────
 
-if ($innerThoughtBuffer) {
+if ($innerThoughtBuffer && "({$GLOBALS['HERIKA_NAME']} thinks about the last conversation )" !== $innerThoughtBuffer) {
     $db->insert('eventlog', [
         'ts' => $last_ts,
         'gamets' => $last_gamets,
@@ -1056,6 +1238,10 @@ if (!$extdata['background_life_enabled']) {
     $extdata['background_life_enabled'] = true;
     $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
     $npcMaster->updateByArray($currentNpcData);
-}   
+}
 
+if (is_resource($lockHandle)) {
+    flock($lockHandle, LOCK_UN);
+    fclose($lockHandle);
+}
 die();
