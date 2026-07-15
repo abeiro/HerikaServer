@@ -2364,7 +2364,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     // Query Background Life history entries
-    $bglHistoryQuery = "SELECT rowid,npc,gamets,ts,localts,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 25";
+    $bglHistoryQuery = "SELECT rowid,npc,gamets,ts,localts,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 50";
     $bglHistoryResult = pg_query($adminConn, $bglHistoryQuery);
     $bglHistoryRows = [];
     if ($bglHistoryResult) {
