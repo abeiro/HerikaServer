@@ -2531,6 +2531,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
      -- own type and is unaffected.
      type not in ('chat','prechat')
      or data ilike '$actorEscaped:%'
+     or regexp_replace(data, '^\s*\(Context location:[^)]*\)\s*', '', 'i') ilike '$actorEscaped:%'
      or data ilike '%(talking to $actorEscaped)%'
     )" : " ").
     //((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
