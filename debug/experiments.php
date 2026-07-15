@@ -419,14 +419,14 @@ if ($argv[1] == '3') {
         'disposition' => 'friendly',
         'goal' => "[Life goals]
 Earn some gold by mining and selling ores to merchants.
-* He must work in the mine 'Whistling Mine (Interior)' for the day , can rest at the camp outside the same mine ('Whistling Mine').
+* He must work in the mine 'Whistling Mine (Interior)' for the day , can sleep there too as there are beds available.
 * He sells irons to Thorgar, who is at the same location. (check inventory to know if he has ores to sell or must keep mining)
 * He sells Gold Ores to Jorl Stoneman, who is at Whiterun (it's a long travel, but Jorl is the only one buying gold ores at good price, 100 gold each!)
-* Some evenings, travels to Winterhold to have some drinks at the inn 'The Frozen Hearth', and spend some time flirting and trying to pick up women.
+* Some evenings, travels to Winterhold to have some drinks at the inn 'The Frozen Hearth', buy food and spend some time flirting and trying to pick up women.
 * He must eat/drink at least once a day.
 [Production]
 When at a working scenario, he produces iron ore (item refid:0x00071cf3) at a rate of 2 each hour.
-Sometimes he finds additional Gold Ore (item refid:0x0005acde) at a rate of 0.2 each hour.
+Sometimes he finds additional Gold Ore (item refid:0x0005acde) at a rate of 0.3 each hour.
 ",
     ];
 
