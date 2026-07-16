@@ -1069,6 +1069,23 @@ function restoreVoiceSettings($savedSettings) {
     }
 }
 
+/**
+ * Restore the original speaker after inline narration uses the narrator voice.
+ *
+ * Narrator-originated events can enter this path before their voice override is
+ * loaded. Restoring that stale snapshot would replace the configured narrator
+ * voice with the connector fallback for the dialogue that follows.
+ */
+function restoreInlineNarrationSpeakerVoiceSettings($savedSettings, $speakerName): void {
+    $GLOBALS["HERIKA_NAME"] = $speakerName;
+
+    if (strcasecmp(trim((string)$speakerName), "The Narrator") === 0) {
+        return;
+    }
+
+    restoreVoiceSettings($savedSettings);
+}
+
 
 function unmoodSentence($sentence) {
     global $forceMood;
@@ -1427,9 +1444,9 @@ function returnLines($lines,$writeOutput=true)
                     }
                 }
 
-                // Restore NPC voice settings
-                restoreVoiceSettings($savedVoiceSettings);
-                $GLOBALS["HERIKA_NAME"] = $savedHerikaName;
+                // Restore NPC settings, but keep the narrator settings that were
+                // just loaded when the original speaker is already The Narrator.
+                restoreInlineNarrationSpeakerVoiceSettings($savedVoiceSettings, $savedHerikaName);
 
                 // Now generate TTS for the NPC's dialogue (if any)
                 if (!empty($narrationParts['dialogue'])) {
