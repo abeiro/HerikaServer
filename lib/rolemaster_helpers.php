@@ -1888,6 +1888,7 @@ function getLocationsNearNpcCoords($npcName) {
             region,
             hold,
             coords,
+            tags,
             is_interior,
             coords <-> '{$pointEsc}'::point AS distance
          FROM locations
@@ -1900,7 +1901,10 @@ function getLocationsNearNpcCoords($npcName) {
 
     foreach ($closestLocations as &$location) {
         $key=($location['name'] ?? '') . ($location['is_interior'] ? ' (Interior)' : '');
-        $label=" $key ";
+        if ($location['tags'])
+            $label=" \"$key\" ({$location['tags']})";
+        else
+            $label=" \"$key\"";
         $closestLocationsNames[$key] = $label;
     }
 

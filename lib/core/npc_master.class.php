@@ -1087,6 +1087,70 @@ class NpcMaster
         return $this->db->execQuery($query) !== false;
     }
 
+
+    public function updateExtendedKeysByName(string $npcName, array $setValues = [], array $unsetKeys = []): bool
+    {
+        $npcName = trim($npcName);
+        if ($npcName === '') {
+            return false;
+        }
+
+        $normalizedSetValues = [];
+        foreach ($setValues as $key => $value) {
+            $metadataKey = trim((string) $key);
+            if ($metadataKey === '') {
+                continue;
+            }
+
+            if ($value === null) {
+                $unsetKeys[] = $metadataKey;
+                continue;
+            }
+
+            $normalizedSetValues[$metadataKey] = $value;
+        }
+
+        $normalizedUnsetKeys = [];
+        foreach ($unsetKeys as $key) {
+            $metadataKey = trim((string) $key);
+            if ($metadataKey === '') {
+                continue;
+            }
+            $normalizedUnsetKeys[$metadataKey] = true;
+        }
+
+        if (count($normalizedSetValues) === 0 && count($normalizedUnsetKeys) === 0) {
+            return false;
+        }
+
+        $metadataExpr = "COALESCE(extended_data, '{}'::jsonb)";
+
+        foreach (array_keys($normalizedUnsetKeys) as $metadataKey) {
+            $escapedKey = $this->db->escape($metadataKey);
+            $metadataExpr = "({$metadataExpr} - '{$escapedKey}')";
+        }
+
+        foreach ($normalizedSetValues as $metadataKey => $value) {
+            $escapedKey = $this->db->escape($metadataKey);
+            $encodedValue = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($encodedValue === false) {
+                continue;
+            }
+
+            $escapedValue = $this->db->escape($encodedValue);
+            $metadataExpr = "jsonb_set({$metadataExpr}, '{\"{$escapedKey}\"}', '{$escapedValue}'::jsonb, true)";
+        }
+
+        $escapedNpcName = $this->db->escape($npcName);
+        $query = "
+            UPDATE {$this->table}
+            SET extended_data = {$metadataExpr}
+            WHERE npc_name = '{$escapedNpcName}'
+        ";
+
+        return $this->db->execQuery($query) !== false;
+    }
+
     public function backupNpcById($id)
     {
         $id = (int) $id;

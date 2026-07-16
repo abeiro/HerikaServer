@@ -55,6 +55,23 @@ if ($argv[1] == "0") {
     );
 }
 
+//
+if ($argv[1] == "0x") {
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0xFF0010D8@MoveToPlayer",
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+}
+
+
+
 // Track Adrianne even if not in BgL
 if ($argv[1] == "2") {
     $GLOBALS["db"]->insert(
@@ -328,6 +345,8 @@ function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
     $extended_data['background_life_enabled'] = true;
     $extended_data['background_life_last_updated'] = $last_gamets;
     $extended_data['background_life_player_unattached'] = true;
+    $extended_data['middle_term_enabled'] = 1;
+    
 
     $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
     $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
@@ -400,20 +419,20 @@ if ($argv[1] == '3') {
         'disposition' => 'friendly',
         'goal' => "[Life goals]
 Earn some gold by mining and selling ores to merchants.
-* He must work in the mine 'Whistling Mine (Interior)' for the day , can rest at the camp outside the same mine ('Whistling Mine').
+* He must work in the mine 'Whistling Mine (Interior)' for the day , can sleep there too as there are beds available.
 * He sells irons to Thorgar, who is at the same location. (check inventory to know if he has ores to sell or must keep mining)
 * He sells Gold Ores to Jorl Stoneman, who is at Whiterun (it's a long travel, but Jorl is the only one buying gold ores at good price, 100 gold each!)
-* Some evenings, travels to Winterhold to have some drinks at the inn 'The Frozen Hearth', and spend some time flirting and trying to pick up women.
+* Some evenings, travels to Winterhold to have some drinks at the inn 'The Frozen Hearth', buy food and spend some time flirting and trying to pick up women.
 * He must eat/drink at least once a day.
 [Production]
 When at a working scenario, he produces iron ore (item refid:0x00071cf3) at a rate of 2 each hour.
-Sometimes he finds additional Gold Ore (item refid:0x0005acde) at a rate of 0.2 each hour.
+Sometimes he finds additional Gold Ore (item refid:0x0005acde) at a rate of 0.3 each hour.
 ",
     ];
 
     $startingPoint = 0x0002b0dd;
     $inventoryItems = [
-        ['refid' => '0x0000000F', 'qty' => 10], // 10 gold coins
+        ['refid' => '0x0000000F', 'qty' => 100], // 100 gold coins
         ['refid' => '0x00071cf3', 'qty' => 10], // 10 ores
         ['refid' => '0x0005acde', 'qty' => 5], // 5 gold ores
     ];

@@ -467,7 +467,7 @@ function chimEscapePromptItemText($value): string
 
 function chimFormatInventoryPromptLines(
     array $inventory,
-    callable $getItemDescription = null,
+    ?callable $getItemDescription = null,
     array &$describedBaseids = [],
     bool $descriptionsOnly = false
 ): array {
@@ -511,7 +511,7 @@ function chimFormatInventoryPromptLines(
 
 function chimBuildInventoryPromptContext(
     array $inventory,
-    callable $getItemDescription = null,
+    ?callable $getItemDescription = null,
     array &$describedBaseids = [],
     bool $descriptionsOnly = false
 ): string {
@@ -525,7 +525,7 @@ function chimBuildInventoryPromptContext(
         . "\n</inventory>";
 }
 
-function chimFormatEquipmentPromptLines(array $equipmentData, array $slotLabels, callable $getItemDescription = null, array &$describedBaseids = []): array
+function chimFormatEquipmentPromptLines(array $equipmentData, array $slotLabels, ?callable $getItemDescription = null, array &$describedBaseids = []): array
 {
     $equipmentParts = [];
 
@@ -2531,17 +2531,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
      or people like '%|$actorEscaped (restrained)|%'
      or type='info_timeforward'
     )
-    AND (
-     -- Cross-NPC bleed fix: 'people' is proximity-stamped (every nearby NPC), so without this an NPC's
-     -- context pulled in every bystander's verbatim dialogue and they echoed each other. For actual NPC
-     -- dialogue (chat/prechat) keep ONLY this NPC's own lines or lines addressed TO it; non-dialogue rows
-     -- (infoaction/itemfound/etc.) stay broad so situational awareness is preserved. Player input is its
-     -- own type and is unaffected.
-     type not in ('chat','prechat')
-     or data ilike '$actorEscaped:%'
-     or regexp_replace(data, '^\s*\(Context location:[^)]*\)\s*', '', 'i') ilike '$actorEscaped:%'
-     or data ilike '%(talking to $actorEscaped)%'
-    )" : " ").
+    " : " ").
     //((false)?" and gamets>".($currentGameTs-(60*60*60*60)):"").
     " {$ext_sqlfilter2} 
     ORDER BY gamets desc, ts desc, rowid desc LIMIT {$nRecordsLimit} OFFSET 0 ";

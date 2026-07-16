@@ -1792,10 +1792,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 <li>You can either:
                                     <ul>
                                         <li>Talk to the NPC and give commands like: <em>"Go to Riften and then to Whiterun to do X and Y"</em></li>
-                                        <li>Wait for the configured trigger period (Global Settings, default: 24 in-game hours) for them to automatically trigger background life.</li>
+                                        <li>Wait for the configured trigger period (Global Settings, default: 5 in-game days) for them to automatically trigger background life.</li>
+                                        <li>Define a [Life Goals] Section at NPC's profile goals, and let them wander according to their objectives.</li>
                                     </ul>
                                 </li>
                                 <li>They shall now travel around Skyrim.</li>
+                                <li>LLM used for BgL is the one defined as CORE_CONNECTOR_DIRECTOR</li>
                             </ol>
                         </div>
                         
@@ -2362,7 +2364,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     // Query Background Life history entries
-    $bglHistoryQuery = "SELECT rowid,npc,gamets,ts,localts,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 25";
+    $bglHistoryQuery = "SELECT rowid,npc,gamets,ts,localts,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 50";
     $bglHistoryResult = pg_query($adminConn, $bglHistoryQuery);
     $bglHistoryRows = [];
     if ($bglHistoryResult) {
