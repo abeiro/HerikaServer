@@ -378,15 +378,85 @@ if (!function_exists('chimTtsStudioFetchOmniVoiceVoiceItems')) {
 if (!function_exists('chimTtsStudioVoiceUploadPostFields')) {
     function chimTtsStudioVoiceUploadPostFields(string $driver, string $voicePath, string $fileType, string $fileName, string $language = ''): array
     {
-        $postFields = ['wavFile' => new CURLFile($voicePath, $fileType, $fileName)];
+        $postFields = [
+            'wavFile' => new CURLFile($voicePath, $fileType, $fileName),
+            'force' => 'true',
+        ];
         if ($driver === 'omnivoice') {
             $voiceName = pathinfo($fileName, PATHINFO_FILENAME);
             $postFields['language'] = chimTtsStudioResolveOmniVoiceLanguage($language);
             $postFields['speaker_name'] = $voiceName;
             $postFields['display_name'] = $voiceName;
-            $postFields['force'] = 'true';
         }
         return $postFields;
+    }
+}
+
+if (!function_exists('chimTtsStudioDeleteVoice')) {
+    function chimTtsStudioDeleteVoice(string $driver, string $voice, string $language = ''): array
+    {
+        $endpoint = chimTtsStudioResolveEndpointForDriver($driver);
+        if ($endpoint === '') {
+            return ['success' => false, 'message' => 'No endpoint is configured for this provider.'];
+        }
+        if (chimTtsStudioIsAudioCppPocketTts($driver, $endpoint)) {
+            return [
+                'success' => false,
+                'message' => 'audio.cpp uses the local data/voices sample directly; upload a replacement local WAV instead.',
+            ];
+        }
+
+        $voice = preg_replace('/\.wav$/i', '', trim($voice));
+        if ($voice === '' || !preg_match('/^[A-Za-z0-9][A-Za-z0-9_.-]*$/', $voice)) {
+            return ['success' => false, 'message' => 'Invalid voice ID.'];
+        }
+
+        $url = rtrim($endpoint, '/') . '/voices/' . rawurlencode($voice);
+        if ($driver === 'omnivoice') {
+            $url .= '?language=' . rawurlencode(chimTtsStudioResolveOmniVoiceLanguage($language));
+        }
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['accept: application/json']);
+        $response = curl_exec($ch);
+        $httpCode = intval(curl_getinfo($ch, CURLINFO_HTTP_CODE));
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false) {
+            return ['success' => false, 'message' => 'Delete request failed: ' . $curlError];
+        }
+
+        $decoded = json_decode($response, true);
+        $detailValue = is_array($decoded)
+            ? ($decoded['detail'] ?? $decoded['message'] ?? $decoded['error'] ?? '')
+            : '';
+        if (is_array($detailValue)) {
+            $detailParts = array_filter([
+                trim(strval($detailValue['error'] ?? '')),
+                trim(strval($detailValue['reason'] ?? '')),
+                trim(strval($detailValue['hint'] ?? '')),
+            ]);
+            $detail = implode(': ', $detailParts);
+        } else {
+            $detail = trim(strval($detailValue));
+        }
+        if ($detail === '' && !is_array($decoded)) {
+            $detail = trim($response);
+        }
+        if ($httpCode >= 200 && $httpCode < 300) {
+            return ['success' => true, 'message' => $detail !== '' ? $detail : 'Voice removed from provider.'];
+        }
+
+        if ($httpCode === 404 && $detail === '') {
+            $detail = 'Voice was not found, or this connector version does not support deletion.';
+        }
+        return [
+            'success' => false,
+            'message' => $detail !== '' ? $detail : 'Provider returned HTTP ' . $httpCode . '.',
+        ];
     }
 }
 
@@ -2305,6 +2375,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
 
+    // Remove only the provider-side copy. The local data/voices WAV remains available for re-upload.
+    if (isset($_POST['action'], $_POST['voice']) &&
+        in_array($_POST['action'], ['delete_xtts_single', 'delete_chatterbox_single', 'delete_pockettts_single', 'delete_omnivoice_single'], true)) {
+        $deleteActionTabs = [
+            'delete_xtts_single' => 'xtts',
+            'delete_chatterbox_single' => 'chatterbox',
+            'delete_pockettts_single' => 'pockettts',
+            'delete_omnivoice_single' => 'omnivoice',
+        ];
+        $redirectTab = $deleteActionTabs[$_POST['action']];
+        $driver = chimTtsStudioTabToDriver($redirectTab);
+        $voice = trim(strval($_POST['voice']));
+        $language = $driver === 'omnivoice'
+            ? chimTtsStudioResolveOmniVoiceLanguage($_POST['language'] ?? ($_GET['language'] ?? ''))
+            : '';
+        $deleteResult = chimTtsStudioDeleteVoice($driver, $voice, $language);
+
+        if ($deleteResult['success']) {
+            chimTtsStudioStoreSpeakersList(
+                $driver,
+                chimTtsStudioFetchSpeakersList($driver, $language),
+                $language
+            );
+            $redirect = $webRoot . '/ui/xtts_clone.php?tab=' . rawurlencode($redirectTab) . '&deleted=' . rawurlencode($voice);
+            if ($language !== '') {
+                $redirect .= '&language=' . rawurlencode($language);
+            }
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $message .= '<p style="color:red;">Could not remove voice from provider: '
+            . htmlspecialchars($deleteResult['message']) . '</p>';
+    }
+
     // XTTS/Chatterbox/PocketTTS/OmniVoice single voice sync handler
     if (isset($_POST['action']) && isset($_POST['voice']) &&
         in_array($_POST['action'], ['sync_xtts_single', 'sync_chatterbox_single', 'sync_pockettts_single', 'sync_omnivoice_single'])) {
@@ -2573,9 +2678,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Clean up URL after showing success message
     window.addEventListener('DOMContentLoaded', function() {
         const url = new URL(window.location);
-        if (url.searchParams.has('synced')) {
-            // Remove the 'synced' parameter from URL without refreshing
+        if (url.searchParams.has('synced') || url.searchParams.has('deleted')) {
+            // Remove one-time result parameters from the URL without refreshing.
             url.searchParams.delete('synced');
+            url.searchParams.delete('deleted');
             window.history.replaceState({}, '', url);
         }
     });
@@ -2801,6 +2907,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         actionInput.type = 'hidden';
         actionInput.name = 'action';
         actionInput.value = 'sync_' + provider + '_single';
+
+        const voiceInput = document.createElement('input');
+        voiceInput.type = 'hidden';
+        voiceInput.name = 'voice';
+        voiceInput.value = voiceName;
+
+        form.appendChild(actionInput);
+        form.appendChild(voiceInput);
+        appendProviderLanguageInput(form, provider);
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    function deleteProviderVoice(provider, voiceName) {
+        const providerNames = {
+            xtts: 'XTTS',
+            chatterbox: 'Chatterbox',
+            pockettts: 'PocketTTS',
+            omnivoice: 'OmniVoice'
+        };
+        const providerName = providerNames[provider] || provider;
+        if (!window.confirm('Remove "' + voiceName + '" from ' + providerName + '? The local WAV will be kept for re-upload.')) {
+            return;
+        }
+
+        showLoadingMessage('Removing voice from ' + providerName + ', please wait...');
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = WEB_ROOT + '/ui/xtts_clone.php?tab=' + provider;
+
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'delete_' + provider + '_single';
 
         const voiceInput = document.createElement('input');
         voiceInput.type = 'hidden';
@@ -3252,7 +3392,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     .sync-btn,
     .unsync-btn,
-    .resync-btn {
+    .resync-btn,
+    .delete-provider-btn {
         opacity: 0.4;
         background: none;
         border: none;
@@ -3265,7 +3406,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     .voice-status-item:hover .sync-btn,
     .voice-status-item:hover .unsync-btn,
-    .voice-status-item:hover .resync-btn {
+    .voice-status-item:hover .resync-btn,
+    .voice-status-item:hover .delete-provider-btn {
         opacity: 0.8;
     }
 
@@ -3276,7 +3418,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         color: rgb(242, 124, 17);
     }
 
-    .unsync-btn:hover:not(:disabled) {
+    .unsync-btn:hover:not(:disabled),
+    .delete-provider-btn:hover:not(:disabled) {
         opacity: 1 !important;
         transform: scale(1.1);
         color: #f44336;
@@ -3595,6 +3738,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p style='color:rgb(247, 231, 16);'><strong>Successfully synced voice '<?php echo htmlspecialchars($_GET['synced']); ?>' to server.</strong></p>
         </div>
     <?php endif; ?>
+    <?php if (isset($_GET['deleted']) && in_array($activeTab, ['xtts', 'chatterbox', 'pockettts', 'omnivoice'], true)): ?>
+        <div class="message">
+            <p style='color:rgb(247, 231, 16);'><strong>Removed provider copy of '<?php echo htmlspecialchars($_GET['deleted']); ?>'. The local WAV is still available to re-upload.</strong></p>
+        </div>
+    <?php endif; ?>
     <?php if (isset($_GET['synced']) && $activeTab === 'cartesia'): ?>
         <div class="message">
             <p style='color:rgb(247, 231, 16);'><strong>Successfully generated voice '<?php echo htmlspecialchars($_GET['synced']); ?>' for Cartesia.</strong></p>
@@ -3667,6 +3815,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <?php if ($isOnServer): ?>
                                 <button onclick="event.stopPropagation(); testVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')"
                                         class="play-btn" title="Test voice">▶</button>
+                                <button onclick="event.stopPropagation(); deleteProviderVoice('xtts', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')"
+                                        class="delete-provider-btn" title="Remove from XTTS server">×</button>
                             <?php else: ?>
                                 <button onclick="event.stopPropagation(); syncSingleVoice('xtts', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')"
                                         class="sync-btn" title="Sync this voice to XTTS server">↻</button>
@@ -3817,6 +3967,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <?php if ($isOnServer): ?>
                                 <button onclick="event.stopPropagation(); testVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')"
                                         class="play-btn" title="Test voice">▶</button>
+                                <button onclick="event.stopPropagation(); deleteProviderVoice('chatterbox', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')"
+                                        class="delete-provider-btn" title="Remove from Chatterbox server">×</button>
                             <?php elseif ($hasLocalSample): ?>
                                 <button onclick="event.stopPropagation(); syncSingleVoice('chatterbox', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')"
                                         class="sync-btn" title="Sync this voice to Chatterbox server">↻</button>
@@ -3931,6 +4083,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $displayName = basename($speaker, '.wav');
                     $xttsVoices[$displayName] = true;
             }
+            $pocketTtsEndpoint = chimTtsStudioResolveEndpointForDriver('pockettts');
+            $pocketTtsCanDeleteRemote = !chimTtsStudioIsAudioCppPocketTts('pockettts', $pocketTtsEndpoint);
             ?>
 
             <div class="button-group" style="margin-top: 20px;">
@@ -3952,6 +4106,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <?php if ($isOnServer): ?>
                                 <button onclick="event.stopPropagation(); testVoice('<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')"
                                         class="play-btn" title="Test voice">▶</button>
+                                <?php if ($pocketTtsCanDeleteRemote): ?>
+                                    <button onclick="event.stopPropagation(); deleteProviderVoice('pockettts', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')"
+                                            class="delete-provider-btn" title="Remove from PocketTTS server">×</button>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <button onclick="event.stopPropagation(); syncSingleVoice('pockettts', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')"
                                         class="sync-btn" title="Sync this voice to PocketTTS server">↻</button>
@@ -4151,6 +4309,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $item = $omnivoiceItemMap[$voice] ?? [];
                     $isReady = isset($omnivoiceReadyVoices[$voice]);
                     $hasLocalSample = isset($localVoiceMap[$voice]);
+                    $canDeleteProviderVoice = !empty($item['can_delete']) || !empty($item['custom_voice']);
                     $serverStatus = strtolower(trim(strval($item['status'] ?? ($isReady ? 'ready' : 'local'))));
                     $statusTitle = $serverStatus;
                     if (!$isReady && !empty($item['transcription_error'])) {
@@ -4176,6 +4335,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <?php elseif ($hasLocalSample): ?>
                                 <button onclick="event.stopPropagation(); syncSingleVoice('omnivoice', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')"
                                         class="sync-btn" title="Import this voice into OmniVoice">↻</button>
+                            <?php endif; ?>
+                            <?php if ($canDeleteProviderVoice): ?>
+                                <button onclick="event.stopPropagation(); deleteProviderVoice('omnivoice', '<?php echo htmlspecialchars($voice, ENT_QUOTES); ?>')"
+                                        class="delete-provider-btn" title="Remove custom voice from OmniVoice">×</button>
                             <?php endif; ?>
                         </div>
                     </div>
