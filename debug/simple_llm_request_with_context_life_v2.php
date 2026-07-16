@@ -182,7 +182,7 @@ $npcMaster = new NpcMaster();
 $connector = new LLMConnector();
 
 $currentNpcData = $npcMaster->getByName($npcName);
-$currentConnectorData = $connector->getById($GLOBALS['CORE_CONNECTOR_DIRECTOR']);
+$currentConnectorData = $connector->getById($GLOBALS['CORE_CONNECTOR_BGL']);
 
 $profile = new CoreProfile();
 $currentProfileData = $profile->getById($currentNpcData['profile_id']);
