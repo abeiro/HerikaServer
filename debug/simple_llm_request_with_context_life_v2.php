@@ -661,6 +661,8 @@ Your task is to determine what happened during this idle period and return the s
 
 Rules:
 
+0. Check latest {$GLOBALS["HERIKA_NAME"]}'s intent to know if the NPC was in a relaxing or working scenario. Sometimes place seems a working place but the NPC is relaxing or resting.
+
 1. Relaxing scenarios
    - If the NPC was in a relaxing scenario (e.g. inn, home, tavern, camp, etc.), determine whether any consumable items should have been used during the last `$idleHours` hours.
    - Consumables include food, drinks, potions, medicine, or any other item intended to be consumed.
