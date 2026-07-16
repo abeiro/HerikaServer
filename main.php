@@ -1332,12 +1332,8 @@ if ($gameRequest[0] == "narrator_welcome") {
         
         $connector = new LLMConnector();
         
-        // Get global connector slot (respects in-game mode)
-        $db = $GLOBALS['db'];
-        $result = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_profile_model'");
-        $connectorSlot = (isset($result['value']) && $result['value'] >= 1 && $result['value'] <= 4) 
-            ? (int)$result['value'] 
-            : 1;
+        $npcMaster = new NpcMaster();
+        $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
         
         $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
         
@@ -1418,12 +1414,8 @@ if ($gameRequest[0] == "narrator_quest_comment") {
         
         $connector = new LLMConnector();
         
-        // Get global connector slot (respects in-game mode)
-        $db = $GLOBALS['db'];
-        $result = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_profile_model'");
-        $connectorSlot = (isset($result['value']) && $result['value'] >= 1 && $result['value'] <= 4) 
-            ? (int)$result['value'] 
-            : 1;
+        $npcMaster = new NpcMaster();
+        $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
         
         $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
         

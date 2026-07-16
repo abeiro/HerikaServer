@@ -13,6 +13,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."profile_llm_mode.php");
 
 require_once "{$enginePath}/lib/core/core_profiles.class.php";
 require_once "{$enginePath}/lib/core/llm_connector.class.php";
@@ -1755,17 +1756,17 @@ $ittById = $byId($ittRows);
                 if (!empty($editItem["metadata"])) {
                     $metaData = json_decode($editItem["metadata"], true);
                     if (is_array($metaData)) {
-                        $randomizerEnabled = !empty($metaData['LLM_RANDOMIZER_ENABLED']);
+                        $randomizerEnabled = ProfileLLMMode::isTruthy($metaData['LLM_RANDOMIZER_ENABLED'] ?? false);
                     }
                 }
             } catch (Throwable $e) {}
         ?>
-        <label class="label-with-toggle">LLM Randomizer
-            <input type="hidden" name="meta_vis[LLM_RANDOMIZER_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[LLM_RANDOMIZER_ENABLED]" value="1" <?= $randomizerEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">Randomly switches between the 4 LLM connectors for NPCs using this profile. Will roughly switch ever 2-3 responses per NPC. Is useful to add more variety to NPC responses and make them more dynamic.</small>
+        <label for="llm_selection_mode">LLM Selection Mode</label>
+        <select id="llm_selection_mode" name="meta_vis[LLM_RANDOMIZER_ENABLED]">
+            <option value="0" <?= !$randomizerEnabled ? "selected" : "" ?>>Fixed</option>
+            <option value="1" <?= $randomizerEnabled ? "selected" : "" ?>>Random</option>
+        </select>
+        <small class="hint">Fixed uses the active Standard, Fast, Powerful, or Experimental slot. Random rotates between the connectors configured on this profile. This setting affects every NPC using the profile.</small>
 
         <div style="height:6px;"></div>
         <?php
@@ -1793,7 +1794,7 @@ $ittById = $byId($ittRows);
 
     <script>
     document.addEventListener('DOMContentLoaded', function(){
-        const names = ['default_npc','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]'];
+        const names = ['default_npc','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
