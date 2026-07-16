@@ -7,6 +7,40 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 require_once(__DIR__.DIRECTORY_SEPARATOR."cmd".DIRECTORY_SEPARATOR."rumor_service.php");
+$enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR;
+$GLOBALS['ENGINE_PATH'] = $enginePath;
+
+// ─── Includes ─────────────────────────────────────────────────────────────────
+
+require_once $enginePath . 'lib/runtime_bootstrap.php';
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
+
+require_once $enginePath . 'lib/model_dynmodel.php';
+require_once $enginePath . 'lib/chat_helper_functions.php';
+require_once $enginePath . 'lib/data_functions.php';
+require_once $enginePath . 'lib/logger.php';
+require_once $enginePath . 'lib/utils_game_timestamp.php';
+require_once $enginePath . 'lib/rolemaster_helpers.php';
+require_once $enginePath . 'lib/scriptproxy_papyrus.php';
+require_once $enginePath . 'lib/core/player.class.php';
+require_once $enginePath . 'lib/core/npc_master.class.php';
+require_once $enginePath . 'lib/core/api_badge.class.php';
+require_once $enginePath . 'lib/core/core_profiles.class.php';
+require_once $enginePath . 'lib/core/llm_connector.class.php';
+require_once $enginePath . 'lib/core/tts_connector.class.php';
+require_once $enginePath . 'lib/lazy_xml.php';
+require_once $enginePath . 'debug/background_action_handler.php';
+
+require_once $enginePath . "lib/scriptproxy_papyrus.php";
+require_once $enginePath . "lib/core/activity_status.php";
+
+// ─── Database ─────────────────────────────────────────────────────────────────
+
+$db = $GLOBALS["db"];
 
 $TITLE = "🗺️ Background Life - Map Viewer";
 
@@ -30,11 +64,28 @@ if (! $adminConn) {
 
 $rumorFlash = null;
 $bglSettingsFlash = null;
+$spawnNpcFlash = null;
 $rumorFormData = [
     'hold' => '',
     'type' => '',
     'content' => '',
     'length_days' => '7',
+];
+$spawnNpcFormData = [
+    'name' => '',
+    'gender' => 'male',
+    'class' => 'farmer',
+    'race' => 'Nord',
+    'location' => '',
+    'appearance' => '',
+    'background' => '',
+    'speech_style' => '',
+    'disposition' => 'friendly',
+    'goal' => '',
+    'starting_point' => '0x0002b0dd',
+    'gold_qty' => '100',
+    'iron_ore_qty' => '10',
+    'gold_ore_qty' => '5',
 ];
 $editingRumorId = 0;
 
@@ -71,6 +122,22 @@ function redirectToBglSettings($status, $message) {
     ]);
 
     header('Location: ' . $path . '?' . $query . '#background-life-settings');
+    exit;
+}
+
+function redirectToSpawnNpcSection($status, $message, $anchor = 'create-background-npc') {
+    $path = getRumorPagePath();
+    $query = http_build_query([
+        'spawn_npc_status' => $status,
+        'spawn_npc_message' => $message,
+    ]);
+
+    $anchor = trim((string) $anchor);
+    if ($anchor !== '') {
+        $anchor = '#' . ltrim($anchor, '#');
+    }
+
+    header('Location: ' . $path . '?' . $query . $anchor);
     exit;
 }
 
@@ -166,6 +233,257 @@ function handleDeleteRumor() {
     redirectToRumorSection('success', $result['message'] ?? 'Rumor deleted successfully.', 'rumors-section');
 }
 
+function handleCreateBackgroundNpc() {
+    global $enginePath;
+
+    $name = trim((string) ($_POST['npc_name'] ?? ''));
+    $gender = trim((string) ($_POST['npc_gender'] ?? ''));
+    $class = trim((string) ($_POST['npc_class'] ?? ''));
+    $race = trim((string) ($_POST['npc_race'] ?? ''));
+    $location = trim((string) ($_POST['npc_location'] ?? ''));
+    $appearance = trim((string) ($_POST['npc_appearance'] ?? ''));
+    $background = trim((string) ($_POST['npc_background'] ?? ''));
+    $speechStyle = trim((string) ($_POST['npc_speech_style'] ?? ''));
+    $disposition = trim((string) ($_POST['npc_disposition'] ?? ''));
+    $goal = trim((string) ($_POST['npc_goal'] ?? ''));
+    $startingPoint = trim((string) ($_POST['npc_starting_point'] ?? ''));
+
+    $goldQty = (int) ($_POST['npc_inventory_gold'] ?? 0);
+    $ironOreQty = (int) ($_POST['npc_inventory_iron_ore'] ?? 0);
+    $goldOreQty = (int) ($_POST['npc_inventory_gold_ore'] ?? 0);
+
+    $formData = [
+        'name' => $name,
+        'gender' => $gender,
+        'class' => $class,
+        'race' => $race,
+        'location' => $location,
+        'appearance' => $appearance,
+        'background' => $background,
+        'speech_style' => $speechStyle,
+        'disposition' => $disposition,
+        'goal' => $goal,
+        'starting_point' => $startingPoint,
+        'gold_qty' => (string) $goldQty,
+        'iron_ore_qty' => (string) $ironOreQty,
+        'gold_ore_qty' => (string) $goldOreQty,
+    ];
+
+    if ($name === '' || $gender === '' || $class === '' || $race === '' || $location === '' || $background === '' || $speechStyle === '' || $goal === '' ) {
+        return [[
+            'type' => 'error',
+            'message' => 'Missing required fields for NPC creation.',
+        ], $formData];
+    }
+
+    $locationName = $GLOBALS['db']->fetchOne("select name from locations where formid='$location' limit 1")['name'] ?? '';
+    $npcProfile = [
+        'name' => $name,
+        'gender' => $gender,
+        'class' => $class,
+        'race' => $race,
+        'location' => $locationName,
+        'appearance' => $appearance,
+        'background' => $background,
+        'speechStyle' => $speechStyle,
+        'disposition' => $disposition,
+        'goal' => $goal,
+    ];
+
+    $inventoryItems = [];
+    if ($goldQty > 0) {
+        $inventoryItems[] = ['refid' => '0x0000000F', 'qty' => $goldQty];
+    }
+    if ($ironOreQty > 0) {
+        $inventoryItems[] = ['refid' => '0x00071cf3', 'qty' => $ironOreQty];
+    }
+    if ($goldOreQty > 0) {
+        $inventoryItems[] = ['refid' => '0x0005acde', 'qty' => $goldOreQty];
+    }
+
+    if (!$startingPoint) {
+        $startingPoint = resolveFormIdToDecimal($location);
+    }
+
+    spawnBackgroundLifeNpc($npcProfile, $startingPoint, $inventoryItems);
+
+    redirectToSpawnNpcSection('success', "NPC '$name' spawned successfully.");
+}
+
+function resolveFormIdToDecimal($formId)
+{
+    if (is_int($formId)) {
+        return $formId;
+    }
+
+    $raw = trim((string) $formId);
+    if ($raw === '') {
+        return 0;
+    }
+
+    if (stripos($raw, '0x') === 0) {
+        return (int) hexdec(substr($raw, 2));
+    }
+
+    return (int) $raw;
+}
+
+function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
+{
+    if (!is_array($npc_profile) || empty($npc_profile['name'])) {
+        error_log('[ERROR] Invalid npc profile provided to spawnBackgroundLifeNpc');
+        return false;
+    }
+
+    $startingPointDec = resolveFormIdToDecimal($startingPoint);
+    if ($startingPointDec <= 0) {
+        error_log('[ERROR] Invalid starting point provided for ' . ($npc_profile['name'] ?? 'unknown npc'));
+        return false;
+    }
+
+    npcProfileBase(
+        $npc_profile['name'],
+        $npc_profile['class'],
+        $npc_profile['race'],
+        $npc_profile['gender'],
+        $npc_profile['location'],
+        '0',
+        $npc_profile['additional_data'] ?? []
+    );
+
+    $spawned = false;
+    $cnName = $GLOBALS['db']->escape($npc_profile['name']);
+    $last_gamets = null;
+    $last_ts = null;
+
+    while (!$spawned) {
+        sleep(1);
+        error_log('[DEBUG] Checking if ' . $npc_profile['name'] . ' spawned: ' . time() . PHP_EOL);
+        $res = $GLOBALS['db']->fetchOne("select count(*) as n, max(gamets) as gamets,max(ts) as ts from eventlog where type='status_msg' and data like '%spawned@$cnName@%'");
+        $spawned = $res['n'] > 0;
+        $last_gamets = $res['gamets'];
+        $last_ts = $res['ts'];
+    }
+
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName($npc_profile['name']);
+    $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
+    $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
+    $npc['speechstyle'] = $npc_profile['speechStyle'];
+    $npc['goals'] = $npc_profile['goal'];
+    $npc['lock_profile'] = null;
+
+    $metadata = $npcMaster->getExtendedData($npc);
+    $metadata['gps_track'] = true;
+    $npc = $npcMaster->setMetadata($npc, $metadata);
+    $npcMaster->updateByArray($npc);
+
+    $refid = isset($npc['refid']) ? $npc['refid'] : null;
+    if (empty($refid)) {
+        error_log('[DEBUG] Waiting to refid to be populated for ' . $npc_profile['name'] . '...' . PHP_EOL);
+
+        $maxRetries = 30;
+        $retryCount = 0;
+        while (empty($refid) && $retryCount < $maxRetries) {
+            sleep(1);
+            $retryCount++;
+            $npcMaster = new NpcMaster();
+            $npc = $npcMaster->getByName($npc_profile['name']);
+            $refid = isset($npc['refid']) ? $npc['refid'] : null;
+            error_log('[DEBUG] Waiting to refid to be populated for ' . $npc_profile['name'] . "... $retryCount of $maxRetries" . PHP_EOL);
+        }
+
+        if (empty($refid)) {
+            error_log('[ERROR] Refid was not populated for ' . $npc_profile['name'] . " after {$maxRetries} retries. Exiting." . PHP_EOL);
+            return false;
+        }
+
+        $npcMaster = new NpcMaster();
+        $npc = $npcMaster->getByName($npc_profile['name']);
+    }
+
+    sleep(1);
+    $GLOBALS['db']->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => 'rolemaster',
+            'text' => '',
+            'action' => "rolecommand|RenameNPC@0x$refid@$cnName",
+            'tag' => '',
+        ]
+    );
+
+    sleep(1);
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName($npc_profile['name']);
+    $extended_data = $npcMaster->getExtendedData($npc);
+    $extended_data['background_life_commands'] = true;
+    $extended_data['background_life_enabled'] = true;
+    $extended_data['background_life_last_updated'] = $last_gamets;
+    $extended_data['background_life_player_unattached'] = true;
+    $extended_data['middle_term_enabled'] = 1;
+    
+
+    $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
+    $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
+    $npc['speechstyle'] = $npc_profile['speechStyle'];
+    $npc['goals'] = $npc_profile['goal'];
+    $npc['lock_profile'] = null;
+
+    $metadata = $npcMaster->getExtendedData($npc);
+    $metadata['gps_track'] = true;
+    $npc = $npcMaster->setMetadata($npc, $metadata);
+    $npc = $npcMaster->setExtendedData($npc, $extended_data);
+    $npcMaster->updateByArray($npc);
+
+    $skyrimCmd = new SkyrimCommandBuilder();
+    foreach ($inventoryItems as $itemEntry) {
+        if (!is_array($itemEntry)) {
+            continue;
+        }
+
+        $itemRefId = isset($itemEntry['refid']) ? (string) $itemEntry['refid'] : '';
+        $itemQty = isset($itemEntry['qty']) ? (int) $itemEntry['qty'] : 0;
+        if ($itemRefId === '' || $itemQty <= 0) {
+            continue;
+        }
+
+        $json = $skyrimCmd->ObjectReference->AddItem("0x{$npc['refid']}", $itemRefId, $itemQty, true);
+        $skyrimCmd->send(cmd: $json);
+    }
+
+    $GLOBALS['db']->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => 'rolemaster',
+            'text' => '',
+            'action' => "rolecommand|BackgroundCmd@$refid@TravelTo/$startingPointDec",
+            'tag' => __FILE__ . ':' . __LINE__,
+        ]
+    );
+
+    $res = $GLOBALS['db']->fetchOne('select max(gamets) as gamets,max(ts) as ts from eventlog order by gamets desc,ts desc limit 1');
+    $last_gamets = $res['gamets'];
+    $last_ts = $res['ts'];
+
+    $GLOBALS['db']->insert('actions_issued', [
+        'action' => 'TravelTo',
+        'fullcall' => 'TravelTo',
+        'actorname' => $npc['npc_name'],
+        'ts' => $last_ts,
+        'gamets' => $last_gamets,
+        'localts' => time(),
+        'original' => 'backgroundaction',
+    ]);
+
+    return true;
+}
+
+
 if (isset($_GET['rumor_status']) && isset($_GET['rumor_message'])) {
     $rumorFlash = [
         'type' => ($_GET['rumor_status'] === 'success') ? 'success' : 'error',
@@ -178,6 +496,24 @@ if (isset($_GET['bgl_settings_status']) && isset($_GET['bgl_settings_message']))
         'type' => ($_GET['bgl_settings_status'] === 'success') ? 'success' : 'error',
         'message' => trim((string) $_GET['bgl_settings_message']),
     ];
+}
+
+if (isset($_GET['spawn_npc_status']) && isset($_GET['spawn_npc_message'])) {
+    $spawnNpcFlash = [
+        'type' => ($_GET['spawn_npc_status'] === 'success') ? 'success' : 'error',
+        'message' => trim((string) $_GET['spawn_npc_message']),
+    ];
+}
+
+$npcLocationOptions = [];
+$npcLocationResult = pg_query($adminConn, 'SELECT formid,name,is_interior,region,hold FROM "public"."locations" ORDER BY name ASC');
+if ($npcLocationResult) {
+    while ($locationRow = pg_fetch_assoc($npcLocationResult)) {
+        $locationName = trim((string) ($locationRow['name'] ?? ''));
+        if ($locationName !== '') {
+            $npcLocationOptions[] = [$locationRow['formid'], $locationName, (bool) $locationRow['is_interior'], $locationRow['region'], $locationRow['hold']];
+        }
+    }
 }
 
 // Helper function to resolve NPC portrait path (same as npc_master.php)
@@ -292,6 +628,8 @@ if (!function_exists('race_icon_web_path')) {
             $rumorFlash = handleDeleteRumor();
         } elseif ($_POST['action'] === 'save_bgl_settings') {
             handleSaveBglSettings();
+        } elseif ($_POST['action'] === 'create_background_npc') {
+            [$spawnNpcFlash, $spawnNpcFormData] = handleCreateBackgroundNpc();
         }
     }
 
@@ -861,6 +1199,21 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         transform: scale(1.1);
     }
 
+      .open-new-window-2 {
+        position: absolute;
+        top: 15px;
+        right: 45px;
+        font-size: 24px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        padding: 8px 12px;
+        border-radius: 6px;
+    }
+
+    .page-header .open-new-window-2:hover {
+        background: rgba(242, 124, 17, 0.2);
+        transform: scale(1.1);
+    }
     .container {
         max-width: 100%;
         margin: 0 auto;
@@ -1259,6 +1612,33 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .bgl-instructions-box.collapsed .bgl-instructions-content {
         display: none;
+    }
+
+    .collapsible-panel .collapsible-body {
+        display: block;
+    }
+
+    .collapsible-panel.collapsed .collapsible-body {
+        display: none;
+    }
+
+    .toggle-panel-btn {
+        width: 100%;
+        margin-top: 10px;
+        background: #3a3a3a;
+        color: #ddd;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .toggle-panel-btn:hover {
+        background: #4a4a4a;
+        color: rgb(242, 124, 17);
     }
 
     .toggle-checkbox {
@@ -1928,6 +2308,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         </div>
     </div>
     <span class="open-new-window" onclick="openInNewWindow()" title="Open in new window">↗️</span>
+    <span class="open-new-window-2" onclick="location.href='mapview.php'" title="Refresh">🔄</span>
     <script>
         // NPC Diary Data - embedded directly in page
         const npcDiaryData = <?php echo json_encode(array_combine(
@@ -2148,6 +2529,18 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             } else {
                 box.classList.add('collapsed');
                 btn.textContent = 'Show Instructions';
+            }
+        }
+
+        function togglePanel(panelId, button) {
+            const panel = document.getElementById(panelId);
+            if (!panel) {
+                return;
+            }
+
+            panel.classList.toggle('collapsed');
+            if (button) {
+                button.textContent = panel.classList.contains('collapsed') ? 'Show Form' : 'Hide Form';
             }
         }
 
@@ -2409,6 +2802,117 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         <?php endif; ?>
     </div>
 
+    <div class="info-panel collapsible-panel <?php echo !empty($spawnNpcFlash['message']) ? '' : 'collapsed'; ?>" id="create-background-npc" style="margin-top: 30px;">
+        <h3>🧬 Create Background Life NPC</h3>
+        <button type="button" class="toggle-panel-btn" onclick="togglePanel('create-background-npc', this)"><?php echo !empty($spawnNpcFlash['message']) ? 'Hide Form' : 'Show Form'; ?></button>
+        <div class="collapsible-body">
+        <?php if (!empty($spawnNpcFlash['message'])): ?>
+            <?php
+                $isSpawnSuccess = ($spawnNpcFlash['type'] ?? '') === 'success';
+                $spawnFlashBg = $isSpawnSuccess ? 'rgba(42, 122, 59, 0.22)' : 'rgba(122, 42, 42, 0.24)';
+                $spawnFlashBorder = $isSpawnSuccess ? '#4caf50' : '#d65c5c';
+                $spawnFlashText = $isSpawnSuccess ? '#d6ffd9' : '#ffd6d6';
+            ?>
+            <div class="info-panel" style="margin-bottom: 20px; background: <?php echo $spawnFlashBg; ?>; border: 1px solid <?php echo $spawnFlashBorder; ?>; color: <?php echo $spawnFlashText; ?>;">
+                <?php echo nl2br(htmlspecialchars($spawnNpcFlash['message'])); ?>
+            </div>
+        <?php endif; ?>
+
+        <form method="post" action="">
+            <input type="hidden" name="action" value="create_background_npc">
+            <div style="display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 14px; margin-top: 16px;">
+                <div>
+                    <label for="npc_name" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Name</label>
+                    <input id="npc_name" name="npc_name" type="text" required value="<?php echo htmlspecialchars($spawnNpcFormData['name'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="npc_gender" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Gender</label>
+                    <select id="npc_gender" name="npc_gender" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                        <?php $npcGenderValue = (string) ($spawnNpcFormData['gender'] ?? 'male'); ?>
+                        <option value="male" <?php echo ($npcGenderValue === 'male') ? 'selected' : ''; ?>>male</option>
+                        <option value="female" <?php echo ($npcGenderValue === 'female') ? 'selected' : ''; ?>>female</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="npc_class" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Class</label>
+                    <select id="npc_class" name="npc_class" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                        <?php
+                            $npcClassValue = (string) ($spawnNpcFormData['class'] ?? 'farmer');
+                            $npcClassOptions = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'forsworn'];
+                            foreach ($npcClassOptions as $npcClassOption):
+                        ?>
+                            <option value="<?php echo htmlspecialchars($npcClassOption); ?>" <?php echo ($npcClassValue === $npcClassOption) ? 'selected' : ''; ?>><?php echo htmlspecialchars($npcClassOption); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label for="npc_race" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Race</label>
+                    <select id="npc_race" name="npc_race" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                        <?php
+                            $npcRaceValue = (string) ($spawnNpcFormData['race'] ?? 'Nord');
+                            $npcRaceOptions = ['Nord', 'Imperial', 'Argonian', 'RedGuard', 'Orc', 'Breton'];
+                            foreach ($npcRaceOptions as $npcRaceOption):
+                        ?>
+                            <option value="<?php echo htmlspecialchars($npcRaceOption); ?>" <?php echo ($npcRaceValue === $npcRaceOption) ? 'selected' : ''; ?>><?php echo htmlspecialchars($npcRaceOption); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label for="npc_location" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Location</label>
+                    <input id="npc_location" name="npc_location" type="text" list="npc-location-options" required value="<?php echo htmlspecialchars($spawnNpcFormData['location'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                    <datalist id="npc-location-options">
+                        <?php foreach ($npcLocationOptions as $npcLocationOption): ?>
+                            <option value="<?php echo htmlspecialchars($npcLocationOption[0]); ?>" label="<?php echo htmlspecialchars($npcLocationOption[1] . ' (' . ($npcLocationOption[2] ? 'Interior' : 'Exterior') . ' ' . $npcLocationOption[3] . ', ' . $npcLocationOption[4] . ')'); ?>"></option>
+                        <?php endforeach; ?>
+                    </datalist>
+                </div>
+                <div>
+                    <label for="npc_disposition" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Disposition</label>
+                    <input id="npc_disposition" name="npc_disposition" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['disposition'] ?? 'friendly'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="npc_starting_point" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Starting Point (FormID)</label>
+                    <input id="npc_starting_point" name="npc_starting_point" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['starting_point'] ?? '0x0002b0dd'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="npc_inventory_gold" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Gold Qty (0x0000000F)</label>
+                    <input id="npc_inventory_gold" name="npc_inventory_gold" type="number" min="0" step="1" value="<?php echo htmlspecialchars($spawnNpcFormData['gold_qty'] ?? '100'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label for="npc_inventory_iron_ore" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Iron Ore Qty (0x00071cf3)</label>
+                    <input id="npc_inventory_iron_ore" name="npc_inventory_iron_ore" type="number" min="0" step="1" value="<?php echo htmlspecialchars($spawnNpcFormData['iron_ore_qty'] ?? '10'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div style="margin-top: 16px;">
+                <label for="npc_appearance" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Appearance</label>
+                <input id="npc_appearance" name="npc_appearance" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['appearance'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-top: 16px;">
+                <label for="npc_speech_style" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Speech Style</label>
+                <input id="npc_speech_style" name="npc_speech_style" type="text" required value="<?php echo htmlspecialchars($spawnNpcFormData['speech_style'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-top: 16px;">
+                <label for="npc_background" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Background</label>
+                <textarea id="npc_background" name="npc_background" rows="3" required style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($spawnNpcFormData['background'] ?? ''); ?></textarea>
+            </div>
+
+            <div style="margin-top: 16px;">
+                <label for="npc_goal" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Goals</label>
+                <textarea id="npc_goal" name="npc_goal" rows="12" required style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($spawnNpcFormData['goal'] ?? ''); ?></textarea>
+            </div>
+
+            <div style="margin-top: 18px; display: flex; justify-content: flex-end;">
+                <button type="submit" style="padding: 10px 18px; border-radius: 8px; border: 1px solid rgb(242, 124, 17); background: rgb(242, 124, 17); color: #121212; font-weight: 700; cursor: pointer;">
+                    Spawn Background NPC
+                </button>
+            </div>
+        </form>
+        </div>
+    </div>
+
     <div id="rumors-section" style="margin-top: 40px;">
         <div class="page-header" style="margin-bottom: 20px;">
             <h1>📰 Rumors</h1>
@@ -2524,8 +3028,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
        
 
-        <div class="info-panel" id="create-rumor" style="margin-top: 30px;">
+        <div class="info-panel collapsible-panel <?php echo ($editingRumorId > 0 || (($rumorFlash['type'] ?? '') === 'error')) ? '' : 'collapsed'; ?>" id="create-rumor" style="margin-top: 30px;">
             <h3><?php echo ($editingRumorId > 0) ? 'Edit Rumor' : 'Create Rumor'; ?></h3>
+            <button type="button" class="toggle-panel-btn" onclick="togglePanel('create-rumor', this)"><?php echo ($editingRumorId > 0 || (($rumorFlash['type'] ?? '') === 'error')) ? 'Hide Form' : 'Show Form'; ?></button>
+            <div class="collapsible-body">
             <form method="post" action="">
                 <input type="hidden" name="action" value="<?php echo ($editingRumorId > 0) ? 'update_rumor' : 'create_rumor'; ?>">
                 <?php if ($editingRumorId > 0): ?>
@@ -2587,6 +3093,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     </button>
                 </div>
             </form>
+            </div>
         </div>
     </div>
 </main>
