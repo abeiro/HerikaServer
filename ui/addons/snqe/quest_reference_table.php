@@ -35,11 +35,11 @@ function quest_ref_normalize_key($value)
     return strtolower(trim((string) $value));
 }
 
-function quest_ref_parse_formids_input($rawInput)
+function quest_ref_parse_formids_input($rawInput, $datasetName = '', $keyName = '')
 {
     $raw = trim((string) $rawInput);
     if ($raw === "") {
-        return [[], []];
+        return [[], [], []];
     }
 
     $tokens = [];
@@ -57,6 +57,7 @@ function quest_ref_parse_formids_input($rawInput)
 
     $valid = [];
     $invalid = [];
+    $unresolved = [];
     $seen = [];
     foreach ($tokens as $token) {
         $tokenCn = trim((string) $token, " \t\n\r\0\x0B\"'");
@@ -64,10 +65,18 @@ function quest_ref_parse_formids_input($rawInput)
             continue;
         }
 
-        $canonical = quest_reference_canonicalize_formid_for_text_storage($tokenCn);
+        $classified = quest_reference_classify_dataset_formid_for_text_storage(
+            $datasetName,
+            $keyName,
+            $tokenCn
+        );
+        $canonical = $classified['value'];
         if ($canonical === null || $canonical === '') {
             $invalid[] = $tokenCn;
             continue;
+        }
+        if ($classified['status'] === 'unresolved') {
+            $unresolved[] = $tokenCn;
         }
 
         $dedupeKey = strtolower($canonical);
@@ -78,10 +87,10 @@ function quest_ref_parse_formids_input($rawInput)
         }
     }
 
-    return [$valid, $invalid];
+    return [$valid, $invalid, $unresolved];
 }
 
-function quest_ref_decode_formids_json($value)
+function quest_ref_decode_formids_json($value, $datasetName = '', $keyName = '')
 {
     if (is_array($value)) {
         $arr = $value;
@@ -104,9 +113,13 @@ function quest_ref_decode_formids_json($value)
             continue;
         }
 
-        $canonical = quest_reference_canonicalize_formid_for_text_storage($itemCn);
+        $canonical = quest_reference_canonicalize_dataset_formid_for_text_storage(
+            $datasetName,
+            $keyName,
+            $itemCn
+        );
         if ($canonical === null || $canonical === '') {
-            continue;
+            $canonical = $itemCn;
         }
 
         $dedupeKey = strtolower($canonical);
@@ -146,20 +159,20 @@ function quest_ref_example_rows($datasetName)
 {
     $examples = [
         "item_types" => [
-            ["key_name" => "weapon", "formids" => ["0x0001397e", "0x00013989"], "active" => "true", "note" => "weapons"],
-            ["key_name" => "armor", "formids" => ["0x00012e49", "0x00013952"], "active" => "true", "note" => "armor pieces"],
+            ["key_name" => "weapon", "formids" => ["Skyrim.esm|0001397E", "Skyrim.esm|00013989"], "active" => "true", "note" => "weapons"],
+            ["key_name" => "armor", "formids" => ["Skyrim.esm|00012E49", "Skyrim.esm|00013952"], "active" => "true", "note" => "armor pieces"],
         ],
         "npc_templates" => [
-            ["key_name" => "male_redguard", "formids" => ["0x0006762e", "0x00058b3f", "0x0010f5a1"], "active" => "true", "note" => "grouped template sample"],
-            ["key_name" => "female_nord", "formids" => ["0x00013bbf", "0x00013bbe"], "active" => "true", "note" => "grouped template sample"],
+            ["key_name" => "male_redguard", "formids" => ["Skyrim.esm|0006762E", "Skyrim.esm|00058B3F", "Skyrim.esm|0010F5A1"], "active" => "true", "note" => "grouped template sample"],
+            ["key_name" => "female_nord", "formids" => ["Skyrim.esm|00013BBF", "Skyrim.esm|00013BBE"], "active" => "true", "note" => "grouped template sample"],
         ],
         "npc_own_templates" => [
-            ["key_name" => "balgruuf_the_greater", "formids" => ["0x00013baa"], "active" => "true", "note" => "single NPC override"],
-            ["key_name" => "farengar_secret_fire", "formids" => ["0x00013bbb"], "active" => "false", "note" => "inactive example"],
+            ["key_name" => "balgruuf_the_greater", "formids" => ["Skyrim.esm|00013BAA"], "active" => "true", "note" => "single NPC override"],
+            ["key_name" => "farengar_secret_fire", "formids" => ["Skyrim.esm|00013BBB"], "active" => "false", "note" => "inactive example"],
         ],
         "outfit" => [
-            ["key_name" => "warrior", "formids" => ["0x000d191f", "0x000d1920"], "active" => "true", "note" => "heavy outfit sample"],
-            ["key_name" => "mage", "formids" => ["0x000d1922", "0x000d1923"], "active" => "true", "note" => "robe outfit sample"],
+            ["key_name" => "warrior", "formids" => ["Skyrim.esm|000D191F", "Skyrim.esm|000D1920"], "active" => "true", "note" => "heavy outfit sample"],
+            ["key_name" => "mage", "formids" => ["Skyrim.esm|000D1922", "Skyrim.esm|000D1923"], "active" => "true", "note" => "robe outfit sample"],
         ],
     ];
 
@@ -295,6 +308,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["submit_csv"])) {
                 $imported = 0;
                 $skipped = 0;
                 $warnInvalid = 0;
+                $warnUnresolved = 0;
                 $warnPreview = [];
                 $map = ["key" => 0, "formids" => 1, "active" => 2, "note" => 3];
                 $headerChecked = false;
@@ -325,13 +339,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["submit_csv"])) {
                         continue;
                     }
 
-                    [$formids, $invalidFormids] = quest_ref_parse_formids_input($formidsInput);
+                    [$formids, $invalidFormids, $unresolvedFormids] = quest_ref_parse_formids_input(
+                        $formidsInput,
+                        $datasetName,
+                        $keyName
+                    );
                     if (!empty($invalidFormids)) {
                         $warnInvalid += count($invalidFormids);
                         if (count($warnPreview) < 5) {
                             $warnPreview[] = $keyName . ": " . implode(", ", array_slice($invalidFormids, 0, 3));
                         }
                     }
+                    $warnUnresolved += count($unresolvedFormids);
 
                     $active = ($activeRaw === "") ? true : quest_ref_bool($activeRaw);
 
@@ -352,6 +371,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["submit_csv"])) {
                         $message .= " (" . implode(" | ", $warnPreview) . ")";
                     }
                     $message .= ".";
+                }
+                if ($warnUnresolved > 0) {
+                    $message .= " {$warnUnresolved} raw FormID value(s) could not be matched to the loaded plugin manifest and remain load-order dependent.";
                 }
                 $messageType = "success";
             }
@@ -376,7 +398,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["submit_csv"])) {
                     throw new Exception("Key is required.");
                 }
 
-                [$formids, $invalidFormids] = quest_ref_parse_formids_input($formidsInput);
+                [$formids, $invalidFormids, $unresolvedFormids] = quest_ref_parse_formids_input(
+                    $formidsInput,
+                    $datasetName,
+                    $keyName
+                );
                 if (!empty($invalidFormids)) {
                     $preview = implode(", ", array_slice($invalidFormids, 0, 8));
                     if (count($invalidFormids) > 8) {
@@ -387,6 +413,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["submit_csv"])) {
                 quest_ref_upsert_entry($db, $tableName, $keyColumn, $keyName, $formids, $active, $note);
 
                 $message = "Entry saved for key '{$keyName}' with " . count($formids) . " form IDs.";
+                if (!empty($unresolvedFormids)) {
+                    $message .= " " . count($unresolvedFormids) . " raw FormID value(s) could not be matched to the loaded plugin manifest and remain load-order dependent.";
+                }
                 $messageType = "success";
             } elseif ($action === "delete_entry") {
                 if ($keyName === "") {
@@ -451,7 +480,11 @@ foreach ($rows as $row) {
     }
 
     $active = quest_ref_bool($row["active"] ?? true);
-    $formids = quest_ref_decode_formids_json($row["formids_json"] ?? "[]");
+    $formids = quest_ref_decode_formids_json(
+        $row["formids_json"] ?? "[]",
+        $datasetName,
+        $key
+    );
     $note = trim((string) ($row["note"] ?? ""));
     $updated = trim((string) ($row["updated_at"] ?? ""));
 
@@ -725,7 +758,7 @@ tr:hover {
 <main>
     <div class="page-header">
         <h1><?php echo htmlspecialchars($datasetLabel); ?></h1>
-        <p class="page-subtitle">Manage quest reference entries stored in <code><?php echo htmlspecialchars($tableName); ?></code>. One row per key with all form IDs in <code>formids_json</code>. Supports both raw FormIDs and stable <code>Plugin.esp|LocalFormId</code> references.</p>
+        <p class="page-subtitle">Manage quest reference entries stored in <code><?php echo htmlspecialchars($tableName); ?></code>. Stable <code>Plugin.esp|LocalFormId</code> references survive load-order changes. Raw FormIDs are converted automatically when their loaded plugin can be identified.</p>
     </div>
 
     <?php if ($message !== ""): ?>
@@ -744,8 +777,8 @@ tr:hover {
                 <input type="text" id="entry-key" name="key_name" placeholder="male_redguard" required>
 
                 <label for="entry-formids">Form IDs</label>
-                <textarea id="entry-formids" name="formids_input" placeholder='["0x0006762e", "MyMod.esp|000058B3"]'></textarea>
-                <p class="muted">Accepts JSON array or comma/newline-separated values. Decimal values are converted to canonical hex, and stable <code>Plugin.esp|LocalFormId</code> values are preserved.</p>
+                <textarea id="entry-formids" name="formids_input" placeholder='["Skyrim.esm|0006762E", "MyMod.esp|000058B3"]'></textarea>
+                <p class="muted">Accepts JSON arrays or comma/newline-separated values. Use <code>Plugin.esp|LocalFormId</code> when possible. Raw runtime IDs are matched against the loaded plugin manifest; unresolved values are retained with a warning. Dynamic <code>FFxxxxxx</code> references are not supported.</p>
 
                 <label for="entry-note">Note (optional)</label>
                 <input type="text" id="entry-note" name="note" placeholder="synced from rolemaster hardcode">
@@ -779,7 +812,7 @@ tr:hover {
                 CSV columns: <code><?php echo htmlspecialchars($keyColumn); ?></code>, <code>formids_json</code>, <code>active</code>, <code>note</code>.
             </p>
             <p class="muted">
-                Quote JSON arrays in CSV, for example <code>"[""0x0006762e"",""MyMod.esp|000058B3""]"</code>. Empty <code>active</code> defaults to <code>true</code>.
+                Quote JSON arrays in CSV, for example <code>"[""Skyrim.esm|0006762E"",""MyMod.esp|000058B3""]"</code>. Empty <code>active</code> defaults to <code>true</code>.
             </p>
             <p class="muted">
                 Current rows: <?php echo intval($entryCount); ?> (active: <?php echo intval($activeCount); ?>, form IDs: <?php echo intval($formidCount); ?>).
