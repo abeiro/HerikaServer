@@ -96,7 +96,7 @@ function loadBGLStylePrompt(string $promptKey, array $replacements = []): string
     $promptData = false; // $db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key='$promptKey'");
 
     if (!$promptData) {
-        error_log("[BGL] Style prompt not found: $promptKey — using fallback.");
+        error_log("[BGL RUN] Style prompt not found: $promptKey — using fallback.");
         return getBGLStyleFallback($promptKey);
     }
 
@@ -142,12 +142,12 @@ $lockPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . "herika_bgl_life_v2_{$loc
 $lockHandle = @fopen($lockPath, 'c');
 
 if ($lockHandle === false) {
-    error_log("[BGL] $npcName — unable to create lock file at $lockPath");
+    error_log("[BGL RUN] $npcName — unable to create lock file at $lockPath");
     exit(1);
 }
 
 if (!flock($lockHandle, LOCK_EX | LOCK_NB)) {
-    error_log("[BGL] LOCK! $npcName — another background-life run is already in progress, skipping.");
+    error_log("[BGL RUN] LOCK! $npcName — another background-life run is already in progress, skipping.");
     exit(0);
 }
 
@@ -199,7 +199,7 @@ $metadata = $npcMaster->getMetadata($currentNpcData);
 
 $backgroundLifeErrorCount = (int) ($extdata['background_life_last_updated_ec'] ?? 0);
 if ($backgroundLifeErrorCount > 2) {
-    error_log("[BGL] $npcName — background_life_last_updated_ec exceeded 2, skipping.");
+    error_log("[BGL RUN] $npcName — background_life_last_updated_ec exceeded 2, skipping.");
     return;
 }
 
@@ -217,15 +217,15 @@ $npcNameEsc = $db->escape($npcName);
 
 // Last action issued by the NPC (if any) in the last 24 in-game hours
 
-$lastIssuedEvent = $db->fetchOne(
+$lastIssuedAction = $db->fetchOne(
     "SELECT gamets, action FROM actions_issued
      WHERE actorname='$npcNameEsc' 
      ORDER BY gamets DESC, ts ASC"
 );
 
-if ($lastIssuedEvent["gamets"] && ( $lastIssuedEvent["action"] == "TravelTo" && $lastIssuedEvent["action"] == "MoveTo")) {
+if ($lastIssuedAction["gamets"] && ($lastIssuedAction["action"] == "TravelTo" || $lastIssuedAction["action"] == "MoveTo")) {
     $npcIsTravelling = true;
-    $npcIsTravellingStarted = $lastIssuedEvent["gamets"];
+    $npcIsTravellingStarted = $lastIssuedAction["gamets"];
 } else {
     $npcIsTravelling = false;
     $npcIsTravellingStarted = 0;
@@ -242,12 +242,12 @@ $lastInteractionRow = $db->fetchOne(
 
 if (empty($lastInteractionRow['gamets'])) {
     if ($extdata["background_life_player_unattached"]) {
-        error_log('[BGL] No prior interaction found but background_life_player_unattached is true');
+        error_log('[BGL RUN] No prior interaction found but background_life_player_unattached is true');
     } else {
-        error_log('[BGL] No prior interaction found, but background_life_player_unattached is false — skipping.');
+        error_log('[BGL RUN] No prior interaction found, but background_life_player_unattached is false — skipping.');
         $extdata['background_life_last_updated'] = $last_gamets;
         $npcMaster->updateExtendedKeysByName($npcName, $extdata);
-        
+
 
         return;
 
@@ -263,16 +263,16 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
 $minDeltaForRerun = $bglTriggerHours / GAMETS_TO_HOURS;
 
 if (($last_gamets - $lastItGamets) < $minDeltaForRerun) {
-    Logger::info("[BGL] $npcNameEsc — last interaction was less than {$bglTriggerHours} hours ago.");
-    error_log("[BGL] $npcNameEsc — last interaction was less than {$bglTriggerHours} hours ago.");
+    Logger::info("[BGL RUN] $npcNameEsc — last interaction was less than {$bglTriggerHours} hours ago.");
+    error_log("[BGL RUN] $npcNameEsc — last interaction was less than {$bglTriggerHours} hours ago.");
 
     $extLocaldata['background_life_last_updated'] = $last_gamets;
     $npcMaster->updateExtendedKeysByName($npcName, $extLocaldata);
 
     if ($forceLetter) {
-        error_log("[BGL] $npcNameEsc — bypassing interaction cooldown via forceletter.");
+        error_log("[BGL RUN] $npcNameEsc — bypassing interaction cooldown via forceletter.");
     } elseif ($forceAction) {
-        error_log("[BGL] $npcNameEsc — bypassing interaction cooldown via forceaction.");
+        error_log("[BGL RUN] $npcNameEsc — bypassing interaction cooldown via forceaction.");
     } else {
         return;
     }
@@ -306,10 +306,10 @@ if ($extdata["background_life_player_unattached"] === true) {
 }
 
 $contextDataHistoric = DataLastDataExpandedFor($GLOBALS['HERIKA_NAME'], -50, $sqlFilter);
-$contextDataHistoric = filterHistoricContextForNarratorVisibility(
+/*$contextDataHistoric = filterHistoricContextForNarratorVisibility(
     $contextDataHistoric,
     $GLOBALS['HERIKA_NAME'] ?? ''
-);
+);*/
 
 if ($extdata['background_life_player_unattached']) {
     // NPC unattached, so maybe does not nothing about player
@@ -328,7 +328,7 @@ This represents last dialogue where player ({$GLOBALS['PLAYER_NAME']}) was prese
             ? "{$GLOBALS['HERIKA_NAME']}: $line\n\n"
             : "$line\n\n";
     }
-    $history .= "\nNote: {$GLOBALS['PLAYER_NAME']} leaves and is absent from this point on.\n</last_dialogue>\n";
+    $history .= "\nNote: {$GLOBALS['PLAYER_NAME']} is absent from this point on.\n</last_dialogue>\n";
 }
 
 // ─── Last Known Location ──────────────────────────────────────────────────────
@@ -357,7 +357,7 @@ foreach (array_reverse($diaryEntryRows) as $row) {
     if ($row['topic'] === 'Sent Letter') {
         $diaryEntries[] = [
             'gamets' => $row['gamets'],
-            'content' => "$hoursAgo hours ago...\n{$row['content']}",
+            'content' => "{$row['content']}",
             'type' => ($row['topic'] === 'Sent Letter') ? 'sent_letter' : 'diary_entry',
         ];
 
@@ -384,7 +384,7 @@ foreach (array_reverse($innerChatEntryRows) as $row) {
     $hoursAgo = number_format(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS, 2);
     $innerChats[] = [
         'gamets' => $row['gamets'],
-        'content' => "$hoursAgo hours ago...\n{$row['data']}",
+        'content' => "{$row['data']}",
         'type' => 'inner_chat',
     ];
     // Update daysPassed to reflect the earliest inner chat entry if it's older than the last interaction
@@ -404,7 +404,7 @@ foreach (array_reverse($actionsRows) as $row) {
     $hoursAgo = number_format(($last_gamets - $row['gamets']) * GAMETS_TO_HOURS, 2);
     $actions[] = [
         'gamets' => $row['gamets'],
-        'content' => "$hoursAgo hours ago... " . ($row["action"] == "TravelTo" ? "{$row['actorname']} starts journey: {$row['fullcall']}" :
+        'content' => ($row["action"] == "TravelTo" ? "{$row['actorname']} starts journey: {$row['fullcall']}" :
             "{$row['actorname']} moves to: {$row['fullcall']}"),
         'type' => 'travel_action',
 
@@ -455,6 +455,7 @@ foreach ($backgroundEventRows as $event) {
     $hoursPassed = round(($last_gamets - $event['gamets']) * GAMETS_TO_HOURS, 2);
 }
 
+$lastIssuedBgEvent = $lastEventParsed;
 // Append last known speech location
 if ($lastLocRow['location']) {
     $bgEvents[] = [
@@ -472,13 +473,13 @@ if (isset($metadata['last_coords']) && !empty($metadata['last_coords'][3])) {
     $hoursAgo = number_format(($last_gamets - $coords['last_updated']) * GAMETS_TO_HOURS, 2);
     $bgEvents[] = [
         'gamets' => $coords['last_updated'],
-        'content' => "{$coords[3]}, $hoursAgo hours ago",
+        'content' => "{$coords[3]}",
         'type' => 'reported_location',
     ];
     $LAST_REPORTED_LOCATION = $coords[3];
 
     $richLocation = $db->fetchOne("SELECT name,region,hold,is_interior  FROM locations WHERE formid='{$coords["location_formid"]}'");
-    // error_log("[BGL]  Last reported location: " . json_encode($coords) . " => rich location: " . json_encode($richLocation));
+    // error_log("[BGL RUN]  Last reported location: " . json_encode($coords) . " => rich location: " . json_encode($richLocation));
     if ($richLocation && !empty($richLocation['name'])) {
         $LAST_REPORTED_LOCATION = $richLocation['name'];
         if ($richLocation['is_interior']) {
@@ -486,23 +487,6 @@ if (isset($metadata['last_coords']) && !empty($metadata['last_coords'][3])) {
         }
     }
 }
-/*
-if (isset($metadata['last_coords_history'])) {
-    $lastSeenLocation = '';
-    foreach ($metadata['last_coords_history'] as $historicalCoord) {
-        if (empty($historicalCoord[3]) || $historicalCoord[3] === $lastSeenLocation) {
-            continue;
-        }
-        $hoursAgo   = number_format(($last_gamets - $historicalCoord['last_updated']) * GAMETS_TO_HOURS, 2);
-        $bgEvents[] = [
-            'gamets'  => $historicalCoord['last_updated'],
-            'content' => "{$historicalCoord[3]}, $hoursAgo hours ago",
-            'type'    => 'reported_location',
-        ];
-        $lastSeenLocation = $historicalCoord[3];
-    }
-}
-*/
 
 
 if (isset($metadata['low_process_actors'])) {
@@ -517,33 +501,33 @@ if (isset($metadata['low_process_actors'])) {
             $actorList = ["No visible characters nearby"];
         }
 
-        $actorListExpanded=[];
+        $actorListExpanded = [];
         foreach ($actorList as $key => $actor) {
             if (is_array($actor)) {
-                
+
                 $npcMaster = new NpcMaster();
                 $actorRow = $npcMaster->getByName($actor[1]);
                 if ($actorRow && isset($actorRow['oghma_knowledge_tags']) && !empty($actorRow['oghma_knowledge_tags'])) {
-                    $actorListExpanded[$actor[0]] = "{$actor[1]} ({$actorRow['oghma_knowledge_tags']})";
+                    $actorListExpanded[] = "$key;$actor;{$actorRow['oghma_knowledge_tags']}";
                 } else {
-                    $actorListExpanded[$actor[0]] = "{$actor[1]}";
+                    $actorListExpanded[] = "$key;$actor;;";
                 }
             } else {
-                $actorListExpanded[$key] = $actor;
+                
                 $npcMaster = new NpcMaster();
                 $actorRow = $npcMaster->getByName($actor);
                 if ($actorRow && isset($actorRow['oghma_knowledge_tags']) && !empty($actorRow['oghma_knowledge_tags'])) {
-                    $actorListExpanded[$key] = "{$actor} ({$actorRow['oghma_knowledge_tags']})";
+                    $actorListExpanded[] = "$key;$actor;{$actorRow['oghma_knowledge_tags']}";
                 } else {
-                    $actorListExpanded[$key] = "{$actor}";
+                    $actorListExpanded[] = "$key;$actor;;";
                 }
-                
+
             }
         }
 
         $bgEvents[] = [
             'gamets' => $gamets_lpa_processed,
-            'content' => "Nearby actors/npc {$GLOBALS['HERIKA_NAME']} can see (refid,name): \n" . json_encode($actorListExpanded,JSON_PRETTY_PRINT) . "\n, ($hoursAgo hours ago)",
+            'content' => "Nearby actors/npc {$GLOBALS['HERIKA_NAME']} can see (refid;name;tags): \n" . implode("\n", $actorListExpanded) . "\n",
             'type' => 'nearby_npcs',
         ];
 
@@ -553,12 +537,12 @@ if (isset($metadata['low_process_actors'])) {
 
 if (isset($metadata['last_inventory_update_gamets'])) {
     $bgEvents[] = [
-            'gamets' => $metadata['last_inventory_update_gamets'],
-            'content' => implode("\n", chimFormatInventoryPromptLines($metadata['inventory'] ?? []) ),
-            'type' => 'inventory_at_this_point',
-        ];
+        'gamets' => $metadata['last_inventory_update_gamets'],
+        'content' => implode("\n", chimFormatInventoryPromptLines($metadata['inventory'] ?? [])),
+        'type' => 'inventory_update',
+    ];
 
-    
+
 }
 
 // ─── Rumors Near Current Location ────────────────────────────────────────────
@@ -575,7 +559,7 @@ if ($LAST_REPORTED_LOCATION) {
             )
          AND gamets > $rumorSinceTs order by gamets desc, ts desc LIMIT 2 OFFSET 0"
     );
-    error_log("[BGL] LAST_REPORTED_LOCATION " . count($rumorRows) . " rumors near <$LAST_REPORTED_LOCATION> since gamets $rumorSinceTs");
+    error_log("[BGL RUN] LAST_REPORTED_LOCATION " . count($rumorRows) . " rumors near <$LAST_REPORTED_LOCATION> since gamets $rumorSinceTs");
     foreach ($rumorRows as $rumor) {
         $bgEvents[] = [
             'gamets' => $rumor['gamets'],
@@ -603,7 +587,7 @@ foreach ($combinedEvents as $entry) {
         $content = "* {$hoursSincePrev}h after last entry: {$content}, {$hoursAgo}h ago";
     }
     $previousGamets = $entry['gamets'];
-    $history .= "\n<{$entry['type']}>\n{$content}\n</{$entry['type']}>\n";
+    $history .= "\n<{$entry['type']} date=\"".convert_gamets2skyrim_date($entry['gamets'])."\">\n{$content}\n</{$entry['type']}>\n";
 }
 
 echo str_repeat('=', 63) . PHP_EOL;
@@ -618,6 +602,7 @@ if (is_array($closestLocations) && count($closestLocations) > 0) {
 }
 
 $history .= "\nCurrent location: $LAST_REPORTED_LOCATION\n";
+$history .= "\nCurrent date and hour: ".convert_gamets2skyrim_long_date($last_gamets)."\n";
 
 
 
@@ -664,7 +649,7 @@ if ($isIdleAction) {
         ],
         [
             'role' => 'user',
-            'content' => "<context_history>\nContext History\n$history\n</context_history>",
+            'content' => "<context_history>\nContext History (chronological order)\n$history\n</context_history>",
             "cache_control" => ["type" => "ephemeral"]
         ],
         [
@@ -679,7 +664,7 @@ Rules:
 1. Relaxing scenarios
    - If the NPC was in a relaxing scenario (e.g. inn, home, tavern, camp, etc.), determine whether any consumable items should have been used during the last `$idleHours` hours.
    - Consumables include food, drinks, potions, medicine, or any other item intended to be consumed.
-   - Only report items that would actually have been consumed during the idle period.
+   - Only report items that would actually have been consumed during the idle period and *present on the character's inventory*.
 
 2. Working scenarios
    - If the NPC was in a working scenario, determine whether any goods were produced during the last `$idleHours` hours.
@@ -687,11 +672,11 @@ Rules:
      - what item(s) are produced
      - the production rate (units per hour)
    - Calculate production only for the last `$idleHours` hours.
-   - If production is fractional, follow the game's production rules (or round only if explicitly specified elsewhere).
+   - If production is fractional, round up
+   - Produced goods will be added to the character's inventory in the future, so they will not be present in the current inventory.
 
 3. No activity
-   - If neither consumption nor production occurred during the idle period  (e.g. {$GLOBALS["HERIKA_NAME"]} was resting), return the `DoNothing` action.
-   - When returning `DoNothing`, the reasoning field may be empty.
+   - If neither is a working or relaxing scenario (e.g. {$GLOBALS["HERIKA_NAME"]} was sleeping), return the `DoNothing` action.
 
 Requirements
 
@@ -758,9 +743,9 @@ Rules:
 
 
     if ($action) {
-        $actionTextDescription=[];
+        $actionTextDescription = [];
         foreach ($action as $singleAction) {
-            error_log("[BGL] $npcNameEsc — Idle production/consumption detected: $singleAction. Reasoning: $reasoning");
+            error_log("[BGL RUN] $npcNameEsc — Idle production/consumption detected: $singleAction. Reasoning: $reasoning");
 
             $skyrimCmd = new SkyrimCommandBuilder();
             $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
@@ -783,13 +768,13 @@ Rules:
             } else {
                 $itemNameResolved = "";
             }
-            
+
             $actionText[] = $singleAction;
             $actionTextDescription[] = $itemNameResolved;
         }
 
         $actionTextFinal = implode(', ', $actionText);
-        $actionTextDescriptionFinal = sizeof($actionTextDescription)>0 ? implode(', ', $actionTextDescription)  : "";
+        $actionTextDescriptionFinal = sizeof($actionTextDescription) > 0 ? implode(', ', $actionTextDescription) : "";
 
         sleep(sizeof($action));   // Allow time for the command to be processed
         // Send signal to update inventory
@@ -837,11 +822,11 @@ Rules:
             $middleTermMemory = end($extdata['middle_term_memory']);
             $dynamicBiography .= "\n\n<middle_term_memory>\nPast events\n{$middleTermMemory}\n</middle_term_memory>";
         }
-        $history .= "\nThe Narrator: $npcName produced/consumed items while idle: $actionTextFinal. Reasoning: $reasoning";
+        $history .= "\nThe Narrator: $npcName produced/consumed items while idle: $actionTextFinal $actionTextDescriptionFinal. Reasoning: $reasoning. Inventory will get updated next turn.";
 
 
     } else {
-        error_log("[BGL] $npcNameEsc — Idle production/consumption detected: none");
+        error_log("[BGL RUN] $npcNameEsc — Idle production/consumption detected: " . json_encode($parsedResponse) . ". No action taken.");
     }
 
 }
@@ -865,10 +850,24 @@ $isSpeakAction = !empty($lastBackgroundAction)
         || stripos((string) ($lastBackgroundAction['fullcall'] ?? ''), 'SpeakTo:') === 0
     );
 
-
+// Language detection (for translated prompts in the future (TO-DO))
 $lang = (($npcMetadata['CORE_LANG'] ?? '') === 'es' || ($profileMetadata['CORE_LANG'] ?? '') === 'es')
     ? 'es'
     : 'en';
+
+
+// Hinter
+error_log(date("YMd H:i:s") . " [BGL RUN] HINT $npcNameEsc — last action: {$lastBackgroundAction['action']}, last event: <{$lastIssuedBgEvent['name']}> <{$lastIssuedBgEvent['event']}>, npcIsTravelling: " . ($npcIsTravelling ? 'true' : 'false'));
+if (strtolower($lastIssuedBgEvent["name"]) == "sandbox" && $lastIssuedBgEvent["event"] == "start" && $npcIsTravelling
+|| strtolower($lastIssuedBgEvent["name"]) == "travelto" && $lastIssuedBgEvent["event"] == "end" && $npcIsTravelling) {
+    // Last action was MoveTo or TravelTo.
+    // Last event was a Sandbox event. This means the NPC reached destination
+    // 
+    error_log(date("YMd H:i:s") . " [BGL RUN] HINT bypassInnerThoughts: true");
+    $bypassInnerThoughts = true;
+} else {
+    $bypassInnerThoughts = false;
+}
 
 // ─── Step 1: Inner-Thought Soliloquy ─────────────────────────────────────────
 
@@ -877,7 +876,7 @@ $systemPrompts = [
 ];
 
 $noteAboutPlayer = $extdata['background_life_player_unattached']
-    ? "Character should stick to its own goals. A miner will mine, a trader will trade,...."
+    ? ""
     : "Important note: {$GLOBALS['PLAYER_NAME']} and {$GLOBALS['HERIKA_NAME']} are NOT in the same place after the <context_history> events.";
 
 
@@ -896,12 +895,13 @@ and after last inner thoughts presented in the <context_history>:
 
 * Intimate thoughts.
 * Evolution of the character's state of mind based on latest inner thoughts (if any) and events.
+* Consider the character's goals, desires, and motivations.
 * Short (2 paragraphs max), concise, and focused on the character's perspective.
 
 Always respect the character's last known location. If the character is in a specific place,
 generated content should occur in that area or its surroundings. The character may express the
-intention to travel elsewhere, but such travel should only be described as a future plan,
-not an immediate action.
+intention to travel elsewhere, but such travel should only be described as an immediate plan. (e.g. I'm going to)
+
 
 $noteAboutPlayer
 
@@ -913,20 +913,29 @@ PROMPT_EN,
 
 $step1Prompt = array_merge($systemPrompts[$lang], [
     ['role' => 'user', 'content' => "<character_sheet>\n{$GLOBALS['HERIKA_NAME']}:\n$dynamicBiography\n</character_sheet>", "cache_control" => ["type" => "ephemeral"]],
-    ['role' => 'user', 'content' => "<context_history>\nContext History\n$history\n</context_history>", "cache_control" => ["type" => "ephemeral"]],
+    ['role' => 'user', 'content' => "<context_history>\nContext History (chronological order)\n$history\n</context_history>", "cache_control" => ["type" => "ephemeral"]],
     ['role' => 'user', 'content' => $userPrompts[$lang], "cache_control" => ["type" => "ephemeral"]],
 ]);
 
 Logger::debug(__LINE__ . ' ' . (microtime(true) - $startTime));
 
+$recordInnerThoughts = true;
+
 if (!$isSpeakAction) {
     // If last action was not SpeakTo, we generate inner thoughts. If it was SpeakTo, we skip this step to avoid redundant inner thoughts.
 
-    $connectionHandler = $connector->getConnector($currentConnectorData);
-    $innerThoughtBuffer = $connectionHandler->fast_request($step1Prompt, ['MAX_TOKENS' => 2048], 'backgroundlife');
+    if ($bypassInnerThoughts == false) {
+        $connectionHandler = $connector->getConnector($currentConnectorData);
+        $innerThoughtBuffer = $connectionHandler->fast_request($step1Prompt, ['MAX_TOKENS' => 2048], 'backgroundlife');
+    } else {
+        $innerThoughtBuffer = "{$GLOBALS['HERIKA_NAME']}'s inner thought: I've reached destination, I must figure out my next action";
+        $recordInnerThoughts = false;
+    }
 
 } else {
-    $innerThoughtBuffer = "({$GLOBALS['HERIKA_NAME']} thinks about the last conversation )";
+    //If last action was SpeakTo, we skip this step to avoid redundant inner thoughts.
+    $innerThoughtBuffer = "{$GLOBALS['HERIKA_NAME']}'s inner thought: I must figure out my next action";
+    $recordInnerThoughts = false;
 }
 
 Logger::debug(__LINE__ . ' ' . (microtime(true) - $startTime));
@@ -950,7 +959,7 @@ $step2Content = "You are responsible for deciding a single action"
     . "$dynamicBiography\n\n";
 
 if ($isFullMode) {
-    $step2Content .= "<context_history>\nContext History\n$history\n</context_history>\n\n";
+    $step2Content .= "<context_history>\nContext History (chronological order)\n$history\n</context_history>\n\n";
 }
 
 $step2Content .= "<text>\n$innerThoughtBuffer\n</text>\n\n";
@@ -969,11 +978,11 @@ Decision rules (highest priority first):
 
 Available actions:
 
-StayAtPlace:<Place>
+StayAtPlace:<Place>:<intent>
 - Remain at the current location to work, rest, relax, socialize, or perform ongoing activities.
 - This is the default action when the NPC should remain where they are.
-- At an inn: rest, relax, socialize with patrons.
-- At home: rest, relax, socialize with companions.
+- At an inn: rest, relax, socialize with patrons. E.G StayAtPlace:Inn:Relax
+- At home: rest, relax, socialize with companions,sleep. e.g StayAtPlace:Breezehome:Sleep
 - If gathering information or spreading rumors, remain for at least 24 hours.
 - After arriving somewhere, prefer interacting (SpeakTo, BuyItem, SellItem) before choosing StayAtPlace again, unless there is no meaningful interaction available.
 
@@ -986,25 +995,34 @@ MoveTo:<NPC name>
 - Move to an NPC whose current location is already known.
 - Only use for characters, never for places.
 - Requires a clear reason.
-
 PROMPT;
 
 if (!$isSpeakAction) {
     $step2Content .= <<<PROMPT
+
 SpeakTo:<NPC name>:<npc_refid>
-- Start a conversation with another NPC.
+- Start a conversation with another NPC (should be nearby).
 - Avoid selecting SpeakTo repeatedly with no new purpose.
 - Prefer conversations that advance goals, exchange information, negotiate, or socialize.
-
 PROMPT;
+} else {
+    error_log(date("YMd H:i:s") . " [BGL RUN] HINT $npcNameEsc — last action was SpeakTo, skipping SpeakTo in available actions.");
 }
 
+
+if (!isset($extdata['background_life_player_unattached']) || $extdata['background_life_player_unattached'] == false) {
+    $returnHomeAction = "ReturnHome
+- Return to the base location to meet {$GLOBALS['PLAYER_NAME']}.
+- Use only after all current goals have been completed.";
+} else
+    $returnHomeAction = "";
+
 $step2Content .= <<<PROMPT
-BuyItem:<NPC name>:<itemid>:<count>:<gold_spent>
+BuyItem:<NPC name>:<itemid>:<count>:<total_gold_spent>,<NPC name>:<itemid>:<count>:<total_gold_spent>
 - Buy items from another NPC.
 - Required after a previously agreed trade so inventories can be updated.
 
-SellItem:<NPC name>:<itemid>:<count>:<gold_earned>
+SellItem:<NPC name>:<itemid>:<count>:<total_gold_received>,<NPC name>:<itemid>:<count>:<total_gold_received>,...
 - Sell items to another NPC.
 - Required after a previously agreed trade so inventories can be updated.
 
@@ -1012,10 +1030,7 @@ TravelTo:<Place>
 - Travel to another location.
 - Use only when the destination is different from the current location and travel is necessary.
 
-ReturnHome
-- Return to the base location to meet {$GLOBALS['PLAYER_NAME']}.
-- Use only after all current goals have been completed.
-
+$returnHomeAction
 PROMPT;
 
 if ($npcIsTravelling) {
@@ -1030,11 +1045,32 @@ Note:
 PROMPT;
 }
 
-$actionChoiceDesc = <<<PROMPT
-PROMPT;
 
-$step2Content .= "\nElement Definitions:\n```\n"
-    . "$actionChoiceDesc\n"
+// Hinter
+
+if ((strtolower($lastIssuedBgEvent["name"]) == "sandbox" && $lastIssuedBgEvent["event"] == "start" && $npcIsTravelling)
+|| (strtolower($lastIssuedBgEvent["name"]) == "travelto" && $lastIssuedBgEvent["event"] == "end" && $npcIsTravelling)) {
+     
+    // Last action was MoveTo or TravelTo.
+    // Last event was a Sandbox event. This means the NPC reached destination
+    // 
+    $actionChoiceDesc = "Hint: Character just reached destination. Preferred actions should be:
+    * SpeakTo (talk with another nearby character)
+    * FindNPC (if wanting to talk to a specific character and is not present)
+    * TravelTo (keeps moving if current location is not the final destination)";
+
+} else {
+    if ($isSpeakAction) {
+        $actionChoiceDesc = "Hint: The character has just completed a conversation. Analyze the dialogue outcome first. If there is an unresolved transaction, continue it by choosing the appropriate action: BuyItem or SellItem.
+If no transaction is pending, review the character's active goals and select the action that provides the highest progress toward achieving them.";
+
+    } else {
+        $actionChoiceDesc = "";
+    }
+}
+
+$step2Content .= "$actionChoiceDesc\n"
+    . "\nElement Definitions:\n```\n"
     . "```\n\n"
     . "- Your answer must use XML format, containing exactly 2 elements.\n"
     . "- NEVER include commentary inside or outside the element tags or ANY content beyond the defined format.\n\n"
@@ -1053,6 +1089,11 @@ $step2Content .= "Examples ```\n\n"
     . "<reason>I need to speak to Adrianne Avenicci to progress in my current objectives.</reason>\n"
     . "```";
 
+$step2Content .= "Examples ```\n\n"
+    . "<action>BuyItem:Adrianne Avenicci:000721E8:1:5,Adrianne Avenicci:000721E6:2:16</action>\n"
+    . "<reason>I agreed to buy two items from Adrianne Avenicci</reason>\n"
+    . "```";
+
 $step2Content .= "
 Rules:
 - Only ONE action may be chosen per round.
@@ -1063,8 +1104,8 @@ For example:
 * To Sell/Buy Item to a trader that maybe is not present: MoveTo:<NPC/Actor name> ->(next iteration) SpeakTo:<NPC/Actor name> ->(next iteration) SellItem:.. 
 * Buy food at an inn: SpeakTo:<NPC innkeeper> ->(next iteration),BuyItem:<NPC/Actor name> ->(next iteration) StayAtPlace:Inn 
 * Relax/Socialize at an inn: SpeakTo:<NPC/Actor name> ->(next iteration) ->(next iteration) StayAtPlace:Inn 
-* Relax at home: SpeakTo:<NPC/Actor name> ->(next iteration) StayAtPlace:Home
-* Generally speaking, try to Speak to an NPC before trading with them
+* Relax at home: SpeakTo:<NPC/Actor name> ->(next iteration) StayAtPlace:Home:Sleep
+* Generally speaking, try to Speak to an NPC before trading with him/her, unless the NPC is not present. If the NPC is not present, use MoveTo:<NPC name> to reach him/her first.
 
 
 
@@ -1114,7 +1155,7 @@ $refHexString = convertSignedToUnsignedHex(hexdec($currentNpcData['refid']));
 $recordDiaryEntry = true;
 if (!empty($parsed['action'])) {
     [$actionCmd, $actionArg] = array_pad(explode(':', $parsed['action'], 2), 2, null);
-    error_log("[BGL] Chosen action: $actionCmd, argument: $actionArg, reason: {$parsed['reason']}");
+    error_log("[BGL RUN] Chosen action: $actionCmd, argument: $actionArg, reason: {$parsed['reason']}");
     $GLOBALS["LAST_REASON"] = $parsed['reason'];
     switch ($actionCmd) {
         case 'TravelTo':
@@ -1122,7 +1163,10 @@ if (!empty($parsed['action'])) {
             unset($parsed['rumor']);   // Prevent rumor dispatch if MoveTo action is chosen
             break;
         case 'StayAtPlace':
-            handleStayAtPlaceAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db);
+            [$stayLocation, $stayIntent] = array_pad(explode(':', (string) $actionArg, 2), 2, '');
+            $stayLocation = trim($stayLocation);
+            $stayIntent = trim($stayIntent);
+            handleStayAtPlaceAction($stayLocation, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db, $stayIntent);
             break;
         case 'ReturnHome':
             handleReturnHome($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db);
@@ -1168,13 +1212,13 @@ if (!empty($parsed['action'])) {
             $recordDiaryEntry = false;
             break;
         case 'Continue':
-            error_log("[BGL] Chosen action: Continue. No new action will be issued. Reason: {$parsed['reason']}");
+            error_log("[BGL RUN] Chosen action: Continue. No new action will be issued. Reason: {$parsed['reason']}");
             unset($parsed['notification']);
             unset($parsed['rumor']);
             $recordDiaryEntry = false;
             break;
         default:
-            error_log("[BGL] ERROR! Chosen action: $actionCmd. No handler implemented for this action. Reason: {$parsed['reason']}");
+            error_log("[BGL RUN] ERROR! Chosen action: $actionCmd. No handler implemented for this action. Reason: {$parsed['reason']}");
             unset($parsed['notification']);
             unset($parsed['rumor']);
             $recordDiaryEntry = false;
@@ -1201,12 +1245,12 @@ if (!empty($parsed['rumor'])) {
 
 // ─── Persist Inner Thought to Event & Diary Logs ──────────────────────────────
 
-if ($innerThoughtBuffer && "({$GLOBALS['HERIKA_NAME']} thinks about the last conversation )" !== $innerThoughtBuffer) {
+if ($innerThoughtBuffer && $recordInnerThoughts) {
     $db->insert('eventlog', [
         'ts' => $last_ts,
         'gamets' => $last_gamets,
         'type' => 'innerchat',
-        'data' => "{$GLOBALS['HERIKA_NAME']}'s inner thoughts: " . $innerThoughtBuffer . ' )',
+        'data' => "{$GLOBALS['HERIKA_NAME']}'s inner thoughts: " . $innerThoughtBuffer,
         'sess' => $momentum,
         'localts' => time(),
         'people' => $GLOBALS['HERIKA_NAME'],

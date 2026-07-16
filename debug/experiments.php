@@ -417,16 +417,49 @@ if ($argv[1] == '3') {
         'background' => "He was born in a small village and grew up working in the mine 'Whistling Mine'",
         'speechStyle' => 'rude, mining oriented',
         'disposition' => 'friendly',
-        'goal' => "[Life goals]
-Earn some gold by mining and selling ores to merchants.
-* He must work in the mine 'Whistling Mine (Interior)' for the day , can sleep there too as there are beds available.
-* He sells irons to Thorgar, who is at the same location. (check inventory to know if he has ores to sell or must keep mining)
-* He sells Gold Ores to Jorl Stoneman, who is at Whiterun (it's a long travel, but Jorl is the only one buying gold ores at good price, 100 gold each!)
-* Some evenings, travels to Winterhold to have some drinks at the inn 'The Frozen Hearth', buy food and spend some time flirting and trying to pick up women.
-* He must eat/drink at least once a day.
+        'goal' => "
+[Life Goals]
+The character's primary goal is to make a living by mining ores and selling them for gold.
+
+1. Mining Work
+- The character must work at the mine \"Whistling Mine (Interior)\".
+- The mine contains beds, so the character can sleep there when needed.
+- While at the mine, the character should prioritize mining unless another urgent need requires attention.
+- Can't work all the time, use 8H rule: 8h working,8h resting,8h socializing. If hungry or thirsty, must first address survival needs before working.
+
+2. Selling Iron Ore
+- The character sells Iron Ore to Thorgar, who is located at \"Whistling Mine (Interior)\".
+- Before leaving the mine or changing activities, check the inventory:
+  - If the character has enough Iron Ore to sell, trade with Thorgar (Iron Ore aprox value is 7 gold coins each one).
+  - If there is no ore available, continue mining.
+
+3. Selling Gold Ore
+- Gold Ore is more valuable and should eventually be sold to Jorl Stoneman in Whiterun.
+- Jorl is the preferred buyer because he pays a high price (100 gold per Gold Ore).
+- Traveling to Whiterun is a long journey, so only make the trip when it is worthwhile (for example, when carrying a meaningful amount of Gold Ore).
+
+4. Social Activities
+- On some evenings, the character should travel to Winterhold.
+- At the inn \"The Frozen Hearth\", the character should:
+  - Buy food and drinks.
+  - Spend time socializing, flirting, and attempting to meet potential romantic partners.
+
+5. Survival Needs
+- The character must eat and drink at least once per day.
+- Maintain a supply of food and drinks in the inventory.
+- If supplies are low or missing (check inventory), prioritize traveling to \"The Frozen Hearth\" to purchase provisions.
+- Cannot work in the mine if hungry or thirsty; must first address survival needs.
+
+
 [Production]
-When at a working scenario, he produces iron ore (item refid:0x00071cf3) at a rate of 2 each hour.
-Sometimes he finds additional Gold Ore (item refid:0x0005acde) at a rate of 0.3 each hour.
+When working at the mine, the character produces resources over time:
+
+- Iron Ore (Item RefID: 0x00071cf3)
+  - Production rate: 2 units per hour.
+
+- Gold Ore (Item RefID: 0x0005acde)
+  - Production rate: 0.3 units per hour.
+  - Gold Ore is rare and should be preserved for selling to Jorl Stoneman.
 ",
     ];
 

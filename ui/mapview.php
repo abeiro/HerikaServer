@@ -2364,7 +2364,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     // Query Background Life history entries
-    $bglHistoryQuery = "SELECT rowid,npc,gamets,ts,localts,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 50";
+    $bglHistoryQuery = "SELECT rowid,npc,gamets,convert_gamets2skyrim_date(gamets) as gamedate,to_timestamp(localts) as localdate,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 50";
     $bglHistoryResult = pg_query($adminConn, $bglHistoryQuery);
     $bglHistoryRows = [];
     if ($bglHistoryResult) {
@@ -2387,8 +2387,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">rowid</th>
                             <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">npc</th>
                             <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">gamets</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">ts</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">localts</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">gamedate</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">localdate</th>
                             <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">data</th>
                         </tr>
                     </thead>
@@ -2398,8 +2398,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 <td style="padding: 12px; color: #ddd; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['rowid'] ?? '')); ?></td>
                                 <td style="padding: 12px; color: #ddd; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['npc'] ?? '')); ?></td>
                                 <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['gamets'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['ts'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['localts'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['gamedate'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['localdate'] ?? '')); ?></td>
                                 <td style="padding: 12px; color: #fff;"><?php echo nl2br(htmlspecialchars((string) ($historyRow['data'] ?? ''))); ?></td>
                             </tr>
                         <?php endforeach; ?>

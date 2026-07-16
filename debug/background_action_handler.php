@@ -218,11 +218,14 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
  * @param object $db The database connection object
  * @return bool True if action was successfully processed, false otherwise
  */
-function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts, $last_gamets, $momentum, $db)
+function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts, $last_gamets, $momentum, $db, $intent = '')
 {
     $locId = resolveTravelLocation($location, $currentNpcData, $db);
     $requestedLocation = $db->escape($location);
     $resolvedLocation = $locId['name'] ?? $requestedLocation;
+    $intent = trim((string) $intent);
+    $intentSuffix = $intent !== '' ? ":$intent" : '';
+    $intentText = $intent !== '' ? " with intent '$intent'" : '';
 
     if (strcasecmp($requestedLocation, 'random') === 0) {
         error_log("[handleStayAtPlaceAction] random picked: " . print_r($locId, true));
@@ -263,16 +266,27 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName stays at current location ($requestedLocation, resolved as $resolvedLocation). Reason: {$GLOBALS["LAST_REASON"]}",
+            'data' => "$npcName stays at current location ($requestedLocation, resolved as $resolvedLocation)$intentText. Reason: {$GLOBALS["LAST_REASON"]}",
         ]
     );
 
+    $db->insert('eventlog', [
+                'ts' => $last_ts,
+                'gamets' => $last_gamets + 1,
+                'type' => 'innerchat',
+                'data' => "($npcName's decision: stay at $resolvedLocation $intentText)",
+                'sess' => "processor",
+                'localts' => time(),
+                'people' => $npcName,
+                'location' => null,
+                'party' => '',
+            ]);
     // Insert actions_issued log entry
     $db->insert(
         'actions_issued',
         [
             'action' => "Idle",
-            'fullcall' => "StayAtPlace:$resolvedLocation",
+            'fullcall' => "StayAtPlace:$resolvedLocation$intentSuffix",
             'actorname' => $npcName,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
@@ -920,98 +934,121 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
  */
 function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $npcName, $last_ts, $last_gamets, $momentum, $db)
 {
-    $args = explode(':', $actionArgument);
-    $targetNpcName = $args[0] ?? '';
-    $itemId = $args[1] ?? '';
-    $count = $args[2] ?? '';
-    $gold = $args[3] ?? '';
+    $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
+    $skyrimCmd = new SkyrimCommandBuilder();
 
-    $targetNpc = resolveNpcByName($targetNpcName, $db);
+    $transactions = array_values(array_filter(array_map('trim', explode(',', $actionArgument)), static function ($entry) {
+        return $entry !== '';
+    }));
 
-    if ($targetNpc === null) {
-        error_log("[handleTradeItemsAction] [$tradeType] Target NPC not found: $targetNpcName");
+    if (empty($transactions)) {
+        error_log("[handleTradeItemsAction] [$tradeType] Empty actionArgument: $actionArgument");
         return false;
     }
 
-    $resolvedName = $targetNpc['name'];
-    $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
-    $targetRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($targetNpc['refid'])));
-    $itemId = strtr(strtolower($itemId), ["0x" => ""]); // Remove 0x prefix if present
+    $processed = 0;
+    $targetRefsToRefresh = [];
 
-    if ($tradeType === 'BuyItem') {
-        $skyrimCmd = new SkyrimCommandBuilder();
-        // Item
-        $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x$itemId", $count, true);
-        $skyrimCmd->send(cmd: $json);
-        // Gold
-        $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x0000000f", $gold, true);
-        $skyrimCmd->send(cmd: $json);
+    foreach ($transactions as $transactionRaw) {
+        $args = array_map('trim', explode(':', $transactionRaw));
+        $targetNpcName = $args[0] ?? '';
+        $itemId = $args[1] ?? '';
+        $count = isset($args[2]) ? (int) $args[2] : 0;
+        $gold = isset($args[3]) ? (int) $args[3] : 0;
 
-        $json = $skyrimCmd->ObjectReference->RemoveItem($targetRefHexString, "0x$itemId", $count, true);
-        $skyrimCmd->send(cmd: $json);
-        // Gold
-        $json = $skyrimCmd->ObjectReference->AddItem($targetRefHexString, "0x0000000f", $gold, true);
-        $skyrimCmd->send(cmd: $json);
+        if ($targetNpcName === '' || $itemId === '' || $count <= 0 || $gold < 0) {
+            error_log("[handleTradeItemsAction] [$tradeType] Malformed transaction skipped: $transactionRaw");
+            continue;
+        }
 
-    } else {
-        $skyrimCmd = new SkyrimCommandBuilder();
-        // Item
-        $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x$itemId", $count, true);
-        $skyrimCmd->send(cmd: $json);
-        // Gold
-        $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x0000000f", $gold, true);
-        $skyrimCmd->send(cmd: $json);
+        $targetNpc = resolveNpcByName($targetNpcName, $db);
+        if ($targetNpc === null) {
+            error_log("[handleTradeItemsAction] [$tradeType] Target NPC not found: $targetNpcName");
+            continue;
+        }
 
-        $json = $skyrimCmd->ObjectReference->AddItem($targetRefHexString, "0x$itemId", $count, true);
-        $skyrimCmd->send(cmd: $json);
-        // Gold
-        $json = $skyrimCmd->ObjectReference->RemoveItem($targetRefHexString, "0x0000000f", $gold, true);
-        $skyrimCmd->send(cmd: $json);
-    }
+        $resolvedName = $targetNpc['name'];
+        $targetRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($targetNpc['refid'])));
+        $itemId = preg_replace('/^0x/i', '', strtolower($itemId));
 
+        if ($tradeType === 'BuyItem') {
+            // Buyer receives item and pays gold; seller loses item and receives gold.
+            $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x$itemId", $count, true);
+            $skyrimCmd->send(cmd: $json);
 
-    $itemName = $db->fetchOne("SELECT * FROM \"public\".\"combined_descriptions\" where baseid='" . strtoupper($itemId) . "'");
-    if ($itemName) {
-        $itemNameResolved = "($count {$itemName["name"]})";
-    } else {
-        $itemNameResolved = "";
-    }
+            $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x0000000f", $gold, true);
+            $skyrimCmd->send(cmd: $json);
 
-    $db->insert('eventlog', [
-        'ts' => $last_ts,
-        'gamets' => $last_gamets + 10,
-        'type' => 'innerchat',
-        'data' => "The Narrator: $npcName " . ($tradeType === 'BuyItem' ? "buys items from" : "sells items to") . " $resolvedName $itemNameResolved. Inventories updated!",
-        'sess' => $momentum,
-        'localts' => time(),
-        'people' => "|$npcName|$resolvedName|",
-        'location' => null,
-        'party' => '',
-    ]);
+            $json = $skyrimCmd->ObjectReference->RemoveItem($targetRefHexString, "0x$itemId", $count, true);
+            $skyrimCmd->send(cmd: $json);
 
-    $db->insert('actions_issued', [
-        'action' => $tradeType,
-        'fullcall' => "$tradeType:$resolvedName:$itemId:$count:$gold",
-        'actorname' => $npcName,
-        'ts' => $last_ts,
-        'gamets' => $last_gamets,
-        'localts' => time(),
-        'original' => 'backgroundaction',
-    ]);
+            $json = $skyrimCmd->ObjectReference->AddItem($targetRefHexString, "0x0000000f", $gold, true);
+            $skyrimCmd->send(cmd: $json);
+        } else {
+            // Seller gives item and receives gold; buyer gains item and spends gold.
+            $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x$itemId", $count, true);
+            $skyrimCmd->send(cmd: $json);
 
-    // Insert bgl_history log entry
-    $db->insert(
-        'bgl_history',
-        [
-            'npc' => $npcName,
+            $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x0000000f", $gold, true);
+            $skyrimCmd->send(cmd: $json);
+
+            $json = $skyrimCmd->ObjectReference->AddItem($targetRefHexString, "0x$itemId", $count, true);
+            $skyrimCmd->send(cmd: $json);
+
+            $json = $skyrimCmd->ObjectReference->RemoveItem($targetRefHexString, "0x0000000f", $gold, true);
+            $skyrimCmd->send(cmd: $json);
+        }
+
+        $itemName = $db->fetchOne("SELECT * FROM \"public\".\"combined_descriptions\" where baseid='" . strtoupper($itemId) . "'");
+        if ($itemName) {
+            $itemNameResolved = "($count {$itemName["name"]})";
+        } else {
+            $itemNameResolved = '';
+        }
+
+        $db->insert('eventlog', [
+            'ts' => $last_ts,
+            'gamets' => $last_gamets + 10,
+            'type' => 'innerchat',
+            'data' => "The Narrator: $npcName " . ($tradeType === 'BuyItem' ? 'buys items from' : 'sells items to') . " $resolvedName $itemNameResolved. Inventories updated!",
+            'sess' => $momentum,
+            'localts' => time(),
+            'people' => "|$npcName|$resolvedName|",
+            'location' => null,
+            'party' => '',
+        ]);
+
+        $db->insert('actions_issued', [
+            'action' => $tradeType,
+            'fullcall' => "$tradeType:$resolvedName:$itemId:$count:$gold",
+            'actorname' => $npcName,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:$gold), item description:$itemNameResolved\nReason: {$GLOBALS["LAST_REASON"]}"
-        ]
-    );
+            'original' => 'backgroundaction',
+        ]);
 
-    // Schedule inventory updates for both NPCs after the trade
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets,
+                'localts' => time(),
+                'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:$gold), item description:$itemNameResolved\nReason: {$GLOBALS["LAST_REASON"]}"
+            ]
+        );
+
+        $targetRefsToRefresh[$targetRefHexString] = true;
+        $processed++;
+    }
+
+    if ($processed === 0) {
+        error_log("[handleTradeItemsAction] [$tradeType] No valid transactions processed: $actionArgument");
+        return false;
+    }
+
+    // Schedule inventory updates for source and all unique targets after processing.
     $db->insert('responselog', [
         'localts' => time() + 10,
         'sent' => 0,
@@ -1021,14 +1058,16 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         'tag' => '',
     ]);
 
-    $db->insert('responselog', [
-        'localts' => time() + 10,
-        'sent' => 0,
-        'actor' => 'rolemaster',
-        'text' => '',
-        'action' => "rolecommand|BackgroundCmd@$targetRefHexString@UpdateInventory",
-        'tag' => '',
-    ]);
+    foreach (array_keys($targetRefsToRefresh) as $targetRefHexString) {
+        $db->insert('responselog', [
+            'localts' => time() + 10,
+            'sent' => 0,
+            'actor' => 'rolemaster',
+            'text' => '',
+            'action' => "rolecommand|BackgroundCmd@$targetRefHexString@UpdateInventory",
+            'tag' => '',
+        ]);
+    }
 
     triggerNpcUpdate($npcName);
     return true;
