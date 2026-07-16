@@ -27,6 +27,11 @@ final class AsteriskParsingTest extends TestCase
             $GLOBALS['strip_emotes_from_output'],
             $GLOBALS['PATCH_OVERRIDE_VOICE'],
             $GLOBALS['PATCH_OVERRIDE_VOICE_ID'],
+            $GLOBALS['TTSFUNCTION'],
+            $GLOBALS['TTS_FUNCTION'],
+            $GLOBALS['CHIM_CORE_CURRENT_TTS_CONNECTOR_ID'],
+            $GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE'],
+            $GLOBALS['PATCH_OVERRIDE_TTS_OPTIONS'],
             $GLOBALS['CHIM_EXECUTION_MODE'],
             $GLOBALS['TTS']
         );
@@ -105,6 +110,39 @@ final class AsteriskParsingTest extends TestCase
         $this->assertSame('text_only', getInlineNarrationMode());
         $this->assertFalse(shouldSplitInlineNarration());
         $this->assertTrue(isInlineNarrationEnabled());
+    }
+
+    public function testNarratorInlineNarrationKeepsLoadedNarratorVoice(): void
+    {
+        $savedSettings = [
+            'tts' => ['POCKETTTS' => ['voiceid' => 'alba']],
+            'has_patch_override_voice' => false,
+        ];
+        $GLOBALS['TTS'] = ['POCKETTTS' => ['voiceid' => 'alisenvoice']];
+        $GLOBALS['PATCH_OVERRIDE_VOICE'] = 'alisenvoice';
+
+        restoreInlineNarrationSpeakerVoiceSettings($savedSettings, 'The Narrator');
+
+        $this->assertSame('The Narrator', $GLOBALS['HERIKA_NAME']);
+        $this->assertSame('alisenvoice', $GLOBALS['PATCH_OVERRIDE_VOICE']);
+        $this->assertSame('alisenvoice', $GLOBALS['TTS']['POCKETTTS']['voiceid']);
+    }
+
+    public function testNpcInlineNarrationRestoresOriginalNpcVoice(): void
+    {
+        $savedSettings = [
+            'tts' => ['POCKETTTS' => ['voiceid' => 'lydiavoice']],
+            'has_patch_override_voice' => true,
+            'patch_override_voice' => 'lydiavoice',
+        ];
+        $GLOBALS['TTS'] = ['POCKETTTS' => ['voiceid' => 'alisenvoice']];
+        $GLOBALS['PATCH_OVERRIDE_VOICE'] = 'alisenvoice';
+
+        restoreInlineNarrationSpeakerVoiceSettings($savedSettings, 'Lydia');
+
+        $this->assertSame('Lydia', $GLOBALS['HERIKA_NAME']);
+        $this->assertSame('lydiavoice', $GLOBALS['PATCH_OVERRIDE_VOICE']);
+        $this->assertSame('lydiavoice', $GLOBALS['TTS']['POCKETTTS']['voiceid']);
     }
 
     public function testPlayerSpeechStripsAsteriskActionBlocksWhenPlayerFilterEnabled(): void
