@@ -396,6 +396,63 @@ function deleteCachedInworldVoiceId($voiceName, ?array $config = null, bool $inc
     }
 }
 
+function getInworldVoiceMetadataKey($voiceName, ?array $config = null): string {
+    return 'inworld_voice_meta_' . substr(md5(getInworldVoiceCachePrefix($config)), 0, 12) . '__' . $voiceName;
+}
+
+function getInworldVoiceMetadata($voiceName, ?array $config = null): array {
+    $db = ensureInworldDb();
+    if (!$db) {
+        return [];
+    }
+    $key = $db->escape(getInworldVoiceMetadataKey($voiceName, $config));
+    $row = $db->fetchOne("SELECT value FROM conf_opts WHERE id = '{$key}' LIMIT 1");
+    $decoded = json_decode(strval($row['value'] ?? ''), true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function storeInworldVoiceMetadata($voiceName, $voiceId, $samplePath, bool $managed, ?array $config = null): void {
+    $db = ensureInworldDb();
+    if (!$db) {
+        return;
+    }
+    $metadata = [
+        'voice_id' => trim(strval($voiceId)),
+        'managed' => $managed,
+        'sample_sha256' => is_file($samplePath) ? hash_file('sha256', $samplePath) : '',
+        'created_at' => gmdate('c'),
+    ];
+    $key = $db->escape(getInworldVoiceMetadataKey($voiceName, $config));
+    $value = $db->escape(json_encode($metadata, JSON_UNESCAPED_SLASHES));
+    $db->execQuery(
+        "INSERT INTO conf_opts (id, value) VALUES ('{$key}', '{$value}')
+         ON CONFLICT(id) DO UPDATE SET value = '{$value}'"
+    );
+}
+
+function deleteInworldVoiceMetadata($voiceName, ?array $config = null): void {
+    $db = ensureInworldDb();
+    if (!$db) {
+        return;
+    }
+    $key = $db->escape(getInworldVoiceMetadataKey($voiceName, $config));
+    $db->execQuery("DELETE FROM conf_opts WHERE id = '{$key}'");
+}
+
+function findInworldVoiceSamplePath($voiceName): string {
+    $possiblePaths = [
+        __DIR__ . "/../data/voices/{$voiceName}.wav",
+        "/var/www/html/HerikaServer/data/voices/{$voiceName}.wav",
+    ];
+    foreach ($possiblePaths as $testPath) {
+        $normalized = realpath($testPath);
+        if ($normalized !== false && is_file($normalized)) {
+            return $normalized;
+        }
+    }
+    return '';
+}
+
 function getInworldCachedVoicesMap(bool $includeLegacy = true, ?array $config = null): array {
     $db = ensureInworldDb();
     if (!$db) {
@@ -597,6 +654,7 @@ function getOrCreateInworldVoice($voiceName) {
     if ($existingVoiceId !== '') {
         Logger::info("Found existing Inworld voice for {$voiceName}: {$existingVoiceId}");
         storeCachedInworldVoiceId($voiceName, $existingVoiceId, $config);
+        storeInworldVoiceMetadata($voiceName, $existingVoiceId, '', false, $config);
         return $existingVoiceId;
     }
     
@@ -653,6 +711,7 @@ function getOrCreateInworldVoice($voiceName) {
     }
     
     storeCachedInworldVoiceId($voiceName, $inworldVoiceId, $config);
+    storeInworldVoiceMetadata($voiceName, $inworldVoiceId, $voiceSamplePath, true, $config);
     clearInworldLastError();
     
     Logger::info("Successfully cloned voice {$voiceName} to Inworld with ID: {$inworldVoiceId}");
@@ -794,6 +853,97 @@ function cloneVoiceToInworld($voiceName, $voiceSamplePath, ?array $config = null
     clearInworldLastError();
     
     return $result['voice']['voiceId'];
+}
+
+function deleteInworldRemoteVoice($voiceId, ?array $config = null): bool {
+    $config = is_array($config) ? $config : getInworldActiveConfig();
+    $apiCredential = trim(strval($config['api_key'] ?? ''));
+    $voiceId = trim(strval($voiceId));
+    if ($apiCredential === '' || $voiceId === '') {
+        return false;
+    }
+    $options = [
+        'http' => [
+            'method' => 'DELETE',
+            'header' => "Authorization: Basic {$apiCredential}\r\nAccept: application/json\r\n",
+            'ignore_errors' => true,
+            'timeout' => 30,
+        ],
+    ];
+    $response = @file_get_contents(
+        'https://api.inworld.ai/voices/v1/voices/' . rawurlencode($voiceId),
+        false,
+        stream_context_create($options)
+    );
+    $statusLine = $http_response_header[0] ?? '';
+    $httpCode = preg_match('/\s(\d{3})\s/', $statusLine, $matches) ? intval($matches[1]) : 0;
+    if ($httpCode >= 200 && $httpCode < 300) {
+        unset($GLOBALS['INWORLD_REMOTE_VOICES_CACHE']);
+        return true;
+    }
+    setInworldLastError("Inworld delete API returned HTTP {$httpCode}.");
+    Logger::warn("Failed to delete Inworld voice {$voiceId}: HTTP {$httpCode}; " . substr(strval($response), 0, 500));
+    return false;
+}
+
+function rebuildInworldVoice($voiceName) {
+    clearInworldLastError();
+    $config = getInworldActiveConfig();
+    $samplePath = findInworldVoiceSamplePath($voiceName);
+    if ($samplePath === '') {
+        setInworldLastError("Voice sample not found for {$voiceName}.");
+        return false;
+    }
+
+    $oldVoiceId = getCachedInworldVoiceId($voiceName, $config);
+    $oldMetadata = getInworldVoiceMetadata($voiceName, $config);
+    $newVoiceId = cloneVoiceToInworld($voiceName, $samplePath, $config);
+    if ($newVoiceId === false || $newVoiceId === '') {
+        return false;
+    }
+
+    $validationAudio = generateInworldTTS('Voice synchronization test.', $newVoiceId);
+    if (!is_string($validationAudio) || $validationAudio === '') {
+        $validationError = getInworldLastError();
+        deleteInworldRemoteVoice($newVoiceId, $config);
+        setInworldLastError($validationError !== '' ? $validationError : 'The new Inworld clone failed validation.');
+        return false;
+    }
+
+    storeCachedInworldVoiceId($voiceName, $newVoiceId, $config);
+    storeInworldVoiceMetadata($voiceName, $newVoiceId, $samplePath, true, $config);
+    if (
+        $oldVoiceId !== '' &&
+        $oldVoiceId !== $newVoiceId &&
+        !empty($oldMetadata['managed']) &&
+        trim(strval($oldMetadata['voice_id'] ?? '')) === $oldVoiceId
+    ) {
+        deleteInworldRemoteVoice($oldVoiceId, $config);
+    }
+    clearInworldLastError();
+    return $newVoiceId;
+}
+
+function deleteManagedInworldVoice($voiceName): bool {
+    clearInworldLastError();
+    $config = getInworldActiveConfig();
+    $voiceId = getCachedInworldVoiceId($voiceName, $config);
+    $metadata = getInworldVoiceMetadata($voiceName, $config);
+    if (
+        $voiceId === '' ||
+        empty($metadata['managed']) ||
+        trim(strval($metadata['voice_id'] ?? '')) !== $voiceId
+    ) {
+        setInworldLastError('This Inworld voice is not marked as managed by this installation; only its cached ID can be forgotten.');
+        return false;
+    }
+    if (!deleteInworldRemoteVoice($voiceId, $config)) {
+        return false;
+    }
+    deleteCachedInworldVoiceId($voiceName, $config, true);
+    deleteInworldVoiceMetadata($voiceName, $config);
+    clearInworldLastError();
+    return true;
 }
 
 /**
