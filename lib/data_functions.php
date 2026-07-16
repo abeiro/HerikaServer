@@ -373,6 +373,31 @@ function chimLookupItemDescriptionForContext(string $itemName, ?string $baseid =
     return null;
 }
 
+function getNameForItemReference($refid) {
+    global $db;
+    if (strpos($refid, '0x') === 0) {
+        $refid = substr($refid, 2);
+    }
+    $baseid = "00" . substr($refid, 2);
+    $modIndex = substr($refid, 0, 4);
+    $candidateMod = $db->fetchOne("select * from game_plugins where formid_prefix='{$modIndex}'");
+    // error_log("[DEBUG] getNameForItemReference: refid={$refid}, baseid={$baseid}, modIndex={$modIndex}, candidateMod=" . var_export($candidateMod, true));
+    if (!$candidateMod) {
+        $modIndex = substr($refid, 0, 2);
+        $candidateMod = $db->fetchOne("select * from game_plugins where formid_prefix='{$modIndex}'");
+    }
+
+    // error_log("[DEBUG] getNameForItemReference: refid={$refid}, baseid={$baseid}, modIndex={$modIndex}, candidateMod=" . var_export($candidateMod, true));
+    if ($candidateMod) {
+        $pluginName = $candidateMod['plugin_name'];
+        $existing = $db->fetchOne("select * from combined_descriptions where baseid='{$baseid}' and plugin='{$pluginName}'");
+        // error_log("[DEBUG] getNameForItemReference: refid={$refid}, baseid={$baseid}, pluginName={$pluginName}, existing=" . var_export($existing, true));
+        return $existing['name'] ?? null;
+    }
+
+    return null;
+}
+
 function chimEquipmentVanillaSlotLabels(): array
 {
     return [

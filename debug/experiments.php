@@ -346,7 +346,7 @@ function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
     $extended_data['background_life_last_updated'] = $last_gamets;
     $extended_data['background_life_player_unattached'] = true;
     $extended_data['middle_term_enabled'] = 1;
-    
+
 
     $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
     $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
@@ -575,5 +575,9 @@ When at a city, tavern or social scenario, she generates gold (item refid:0x0000
     ];
 
     spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems);
+}
+
+if ($argv[1] == '7') {
+    echo getNameForItemReference("07000801") . PHP_EOL;
 }
 ?>

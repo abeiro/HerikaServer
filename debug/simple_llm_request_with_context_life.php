@@ -182,27 +182,27 @@ if (!$lastIt["gamets"]) {
     $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
     $npcMaster->updateByArray($currentNpcData);
 
-    error_log("NO LAST ITERATION, SKIPPING");
+    error_log("[BGL RUN] NO LAST ITERATION, SKIPPING $argv[1] - {$GLOBALS["HERIKA_NAME"]} last_gamets: $last_gamets");
     return;
 }
 $lastItNumber = $lastIt["gamets"] ?? 0;
 
 $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
 if (($last_gamets - $lastItNumber) < ($bglTriggerHours / GAMETS_TO_HOURS)) {
-    Logger::info("[BACKGROUND LIFE] $npcNameEsc Last interaction less than {$bglTriggerHours} hours ago");
+    Logger::info("[BGL RUN] $npcNameEsc Last interaction less than {$bglTriggerHours} hours ago");
     $extdata = $npcMaster->getExtendedData($currentNpcData);
     $extdata["background_life_last_updated"] = $last_gamets;
     $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
     $npcMaster->updateByArray($currentNpcData);
-    error_log("[BACKGROUND LIFE] $npcNameEsc Last interaction less than {$bglTriggerHours} hours ago");
+    error_log("[BGL RUN] $npcNameEsc Last interaction less than {$bglTriggerHours} hours ago");
 
     if (isset($argv[2]) && $argv[2] == "forceletter")
-        error_log("[BACKGROUND LIFE] $npcNameEsc Bypassing interaction cooldown via forceletter");
+        error_log("[BGL RUN] $npcNameEsc Bypassing interaction cooldown via forceletter");
     
     else if (isset($argv[3]) && $argv[3] == "forceaction")
-        error_log("[BACKGROUND LIFE] $npcNameEsc Bypassing interaction cooldown via forceaction");
+        error_log("[BGL RUN] $npcNameEsc Bypassing interaction cooldown via forceaction");
     else {
-        error_log("[BACKGROUND LIFE] $npcNameEsc Interaction cooldown active...suspended: ".implode("|",$argv));
+        error_log("[BGL RUN] $npcNameEsc Interaction cooldown active...suspended: ".implode("|",$argv));
         return;
     }
         

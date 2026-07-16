@@ -295,6 +295,11 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
         ]
     );
 
+    if (strtolower($intent) === 'socialize') {
+        if (rand(0,1)) {
+            triggerNpcUpdate($npcName);
+        }
+    }
     return true;
 }
 
@@ -999,9 +1004,9 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
             $skyrimCmd->send(cmd: $json);
         }
 
-        $itemName = $db->fetchOne("SELECT * FROM \"public\".\"combined_descriptions\" where baseid='" . strtoupper($itemId) . "'");
+        $itemName = getNameForItemReference(strtoupper($itemId));
         if ($itemName) {
-            $itemNameResolved = "($count {$itemName["name"]})";
+            $itemNameResolved = "($count {$itemName})";
         } else {
             $itemNameResolved = '';
         }

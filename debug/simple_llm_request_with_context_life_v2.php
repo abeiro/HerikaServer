@@ -509,15 +509,20 @@ if (isset($metadata['low_process_actors'])) {
                 $actorRow = $npcMaster->getByName($actor[1]);
                 if ($actorRow && isset($actorRow['oghma_knowledge_tags']) && !empty($actorRow['oghma_knowledge_tags'])) {
                     $actorListExpanded[] = "$key;$actor;{$actorRow['oghma_knowledge_tags']}";
+                } else if ($actorRow && isset($actorRow['race']) && !empty($actorRow['race'])) {
+                    $actorListExpanded[] = "$key;$actor;{$actorRow['race']} {$actorRow['gender']}";
+
                 } else {
                     $actorListExpanded[] = "$key;$actor;;";
                 }
             } else {
-                
+
                 $npcMaster = new NpcMaster();
                 $actorRow = $npcMaster->getByName($actor);
                 if ($actorRow && isset($actorRow['oghma_knowledge_tags']) && !empty($actorRow['oghma_knowledge_tags'])) {
                     $actorListExpanded[] = "$key;$actor;{$actorRow['oghma_knowledge_tags']}";
+                } else if ($actorRow && isset($actorRow['race']) && !empty($actorRow['race'])) {
+                    $actorListExpanded[] = "$key;$actor;{$actorRow['race']} {$actorRow['gender']}";
                 } else {
                     $actorListExpanded[] = "$key;$actor;;";
                 }
@@ -587,7 +592,7 @@ foreach ($combinedEvents as $entry) {
         $content = "* {$hoursSincePrev}h after last entry: {$content}, {$hoursAgo}h ago";
     }
     $previousGamets = $entry['gamets'];
-    $history .= "\n<{$entry['type']} date=\"".convert_gamets2skyrim_date($entry['gamets'])."\">\n{$content}\n</{$entry['type']}>\n";
+    $history .= "\n<{$entry['type']} date=\"" . convert_gamets2skyrim_date($entry['gamets']) . "\">\n{$content}\n</{$entry['type']}>\n";
 }
 
 echo str_repeat('=', 63) . PHP_EOL;
@@ -602,7 +607,7 @@ if (is_array($closestLocations) && count($closestLocations) > 0) {
 }
 
 $history .= "\nCurrent location: $LAST_REPORTED_LOCATION\n";
-$history .= "\nCurrent date and hour: ".convert_gamets2skyrim_long_date($last_gamets)."\n";
+$history .= "\nCurrent date and hour: " . convert_gamets2skyrim_long_date($last_gamets) . "\n";
 
 
 
@@ -764,9 +769,10 @@ Rules:
                 $skyrimCmd->send(cmd: $json);
             }
 
-            $itemName = $db->fetchOne("SELECT * FROM \"public\".\"combined_descriptions\" where baseid='" . strtoupper($itemId) . "'");
+            $itemName = getNameForItemReference(strtoupper($itemId));
+
             if ($itemName) {
-                $itemNameResolved = "($count {$itemName["name"]})";
+                $itemNameResolved = "($count {$itemName})";
             } else {
                 $itemNameResolved = "";
             }
@@ -852,6 +858,7 @@ $isSpeakAction = !empty($lastBackgroundAction)
         || stripos((string) ($lastBackgroundAction['fullcall'] ?? ''), 'SpeakTo:') === 0
     );
 
+
 // Language detection (for translated prompts in the future (TO-DO))
 $lang = (($npcMetadata['CORE_LANG'] ?? '') === 'es' || ($profileMetadata['CORE_LANG'] ?? '') === 'es')
     ? 'es'
@@ -860,8 +867,10 @@ $lang = (($npcMetadata['CORE_LANG'] ?? '') === 'es' || ($profileMetadata['CORE_L
 
 // Hinter
 error_log(date("YMd H:i:s") . " [BGL RUN] HINT $npcNameEsc — last action: {$lastBackgroundAction['action']}, last event: <{$lastIssuedBgEvent['name']}> <{$lastIssuedBgEvent['event']}>, npcIsTravelling: " . ($npcIsTravelling ? 'true' : 'false'));
-if (strtolower($lastIssuedBgEvent["name"]) == "sandbox" && $lastIssuedBgEvent["event"] == "start" && $npcIsTravelling
-|| strtolower($lastIssuedBgEvent["name"]) == "travelto" && $lastIssuedBgEvent["event"] == "end" && $npcIsTravelling) {
+if (
+    strtolower($lastIssuedBgEvent["name"]) == "sandbox" && $lastIssuedBgEvent["event"] == "start" && $npcIsTravelling
+    || strtolower($lastIssuedBgEvent["name"]) == "travelto" && $lastIssuedBgEvent["event"] == "end" && $npcIsTravelling
+) {
     // Last action was MoveTo or TravelTo.
     // Last event was a Sandbox event. This means the NPC reached destination
     // 
@@ -870,6 +879,31 @@ if (strtolower($lastIssuedBgEvent["name"]) == "sandbox" && $lastIssuedBgEvent["e
 } else {
     $bypassInnerThoughts = false;
 }
+
+$wasSocializeIntentAction = false;
+if (
+    !empty($lastBackgroundAction)
+    && (
+        strcasecmp((string) ($lastBackgroundAction['action'] ?? ''), 'Idle') === 0
+        || stripos((string) ($lastBackgroundAction['fullcall'] ?? ''), 'StayAtPlace:') === 0
+    )
+) {
+    // If NPC selected StayAtPlace and intent Socialize, there is a chance that next turn happens inmediatly after (50%)
+    // If this is the case, we can skip inner thoughts and go directly to action decision suggestion SpeakTo.
+    // If this is the case, $hoursAgo should have a low value.
+
+    $action_parts = explode(":", $lastBackgroundAction['fullcall'] ?? '');
+    if ($action_parts[0] === 'StayAtPlace' && isset($action_parts[2]) && strtolower($action_parts[2]) === 'socialize') {
+        if ($hoursPassed<1) {
+            $wasSocializeIntentAction = true;
+            $bypassInnerThoughts = true;
+            $innerThoughtBufferForced = "{$GLOBALS['HERIKA_NAME']}'s inner thought: I'm socializing, let's see who is around and speak to them.";
+            error_log(date("YMd H:i:s") . " [BGL RUN] HINT bypassInnerThoughts: true (socialize intent)");
+        }
+    }
+
+}
+
 
 // ─── Step 1: Inner-Thought Soliloquy ─────────────────────────────────────────
 
@@ -930,7 +964,7 @@ if (!$isSpeakAction) {
         $connectionHandler = $connector->getConnector($currentConnectorData);
         $innerThoughtBuffer = $connectionHandler->fast_request($step1Prompt, ['MAX_TOKENS' => 2048], 'backgroundlife');
     } else {
-        $innerThoughtBuffer = "{$GLOBALS['HERIKA_NAME']}'s inner thought: I've reached destination, I must figure out my next action";
+        $innerThoughtBuffer = $innerThoughtBufferForced ?? "{$GLOBALS['HERIKA_NAME']}'s inner thought: I've reached destination, I must figure out my next action";
         $recordInnerThoughts = false;
     }
 
@@ -981,6 +1015,7 @@ Decision rules (highest priority first):
 Available actions:
 
 StayAtPlace:<Place>:<intent>
+- intent can be: Work, Rest, Relax, Socialize, Sleep, Study, Guard.
 - Remain at the current location to work, rest, relax, socialize, or perform ongoing activities.
 - This is the default action when the NPC should remain where they are.
 - At an inn: rest, relax, socialize with patrons. E.G StayAtPlace:Inn:Relax
@@ -1050,9 +1085,11 @@ PROMPT;
 
 // Hinter
 
-if ((strtolower($lastIssuedBgEvent["name"]) == "sandbox" && $lastIssuedBgEvent["event"] == "start" && $npcIsTravelling)
-|| (strtolower($lastIssuedBgEvent["name"]) == "travelto" && $lastIssuedBgEvent["event"] == "end" && $npcIsTravelling)) {
-     
+if (
+    (strtolower($lastIssuedBgEvent["name"]) == "sandbox" && $lastIssuedBgEvent["event"] == "start" && $npcIsTravelling)
+    || (strtolower($lastIssuedBgEvent["name"]) == "travelto" && $lastIssuedBgEvent["event"] == "end" && $npcIsTravelling)
+) {
+
     // Last action was MoveTo or TravelTo.
     // Last event was a Sandbox event. This means the NPC reached destination
     // 
