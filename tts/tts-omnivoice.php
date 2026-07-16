@@ -96,6 +96,16 @@ if (!function_exists('omnivoice_first_non_empty')) {
     }
 }
 
+if (!function_exists('omnivoice_resolve_language')) {
+    function omnivoice_resolve_language(): string {
+        return omnivoice_sanitize_language(omnivoice_first_non_empty(
+            $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"] ?? '',
+            $GLOBALS["TTS"]["FORCED_LANG_DEV"] ?? '',
+            $GLOBALS["TTS"]["OMNIVOICE"]["language"] ?? ''
+        ));
+    }
+}
+
 if (!function_exists('omnivoice_fallback_candidates')) {
     function omnivoice_fallback_candidates(string $requestedVoice): array {
         $candidates = [
@@ -154,13 +164,7 @@ $GLOBALS["TTS_IN_USE"] = function($textString, $mood, $stringforhash) {
     $endpoint = omnivoice_normalize_endpoint_url($GLOBALS["TTS"]["OMNIVOICE"]["endpoint"] ?? 'http://127.0.0.1:8021');
     $url = $endpoint . "/tts_to_audio";
 
-    $lang = omnivoice_first_non_empty(
-        $GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"] ?? '',
-        (!empty($GLOBALS["LANG_LLM_XTTS"]) ? ($GLOBALS["LLM_LANG"] ?? '') : ''),
-        $GLOBALS["TTS"]["FORCED_LANG_DEV"] ?? '',
-        $GLOBALS["TTS"]["OMNIVOICE"]["language"] ?? ''
-    );
-    $lang = omnivoice_sanitize_language($lang);
+    $lang = omnivoice_resolve_language();
     if ($lang !== '') {
         omnivoice_switch_language($endpoint, $lang);
     }

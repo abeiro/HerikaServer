@@ -62,9 +62,27 @@ function ttsVisibleDriverOptions(TTSConnector $ttsConnector): array
     ));
 }
 
+function ttsPreferredNewDriver(TTSConnector $ttsConnector, array $driverOptions): string
+{
+    foreach ($driverOptions as $driverOption) {
+        if ($ttsConnector->normalizeDriverValue($driverOption) === 'pockettts') {
+            return 'pockettts';
+        }
+    }
+
+    foreach ($driverOptions as $driverOption) {
+        $candidate = $ttsConnector->normalizeDriverValue($driverOption);
+        if ($candidate !== '') {
+            return $candidate;
+        }
+    }
+
+    return 'pockettts';
+}
+
 function ttsGroupedDriverOptions(TTSConnector $ttsConnector, array $driverOptions): array
 {
-    $recommendedOrder = ['omnivoice', 'pockettts', 'chatterbox', 'xtts-fastapi', 'inworld', 'cartesia'];
+    $recommendedOrder = ['pockettts', 'chatterbox', 'xtts-fastapi', 'inworld', 'cartesia', 'omnivoice'];
     $available = [];
     foreach ($driverOptions as $driverOption) {
         $normalized = $ttsConnector->normalizeDriverValue($driverOption);
@@ -399,7 +417,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
                 $visibleMap[$ttsConnector->normalizeDriverValue($visibleOption)] = true;
             }
             if ($driver === '' || !isset($visibleMap[$driver])) {
-                $driver = $ttsConnector->normalizeDriverValue($visibleOptions[0] ?? 'pockettts');
+                $driver = ttsPreferredNewDriver($ttsConnector, $visibleOptions);
             }
 
             $metadataRaw = trim(strval($dataMap['metadata'] ?? '{}'));
@@ -438,14 +456,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
 
 if (isset($_GET['create_blank'])) {
     $options = ttsVisibleDriverOptions($ttsConnector);
-    $newDriver = 'pockettts';
-    foreach ($options as $option) {
-        $candidate = $ttsConnector->normalizeDriverValue($option);
-        if ($candidate !== '') {
-            $newDriver = $candidate;
-            break;
-        }
-    }
+    $newDriver = ttsPreferredNewDriver($ttsConnector, $options);
 
     $newId = $ttsConnector->create([
         'driver' => $newDriver,
@@ -489,7 +500,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_connector'])) {
         $visibleDriverMap[$ttsConnector->normalizeDriverValue($visibleDriverOption)] = true;
     }
     if ($driver === '' || !isset($visibleDriverMap[$driver])) {
-        $driver = $ttsConnector->normalizeDriverValue($visibleDriverOptions[0] ?? 'pockettts');
+        $driver = ttsPreferredNewDriver($ttsConnector, $visibleDriverOptions);
     }
 
     $existing = $editId > 0 ? $ttsConnector->getById($editId) : null;
@@ -556,7 +567,7 @@ $currentMetadata = $ttsConnector->decodeMetadata($editItem['metadata'] ?? '{}');
 $driverOptions = ttsVisibleDriverOptions($ttsConnector);
 $groupedDriverOptions = ttsGroupedDriverOptions($ttsConnector, $driverOptions);
 if ($currentDriver === '' || $currentDriver === 'none') {
-    $currentDriver = $ttsConnector->normalizeDriverValue($driverOptions[0] ?? 'pockettts');
+    $currentDriver = ttsPreferredNewDriver($ttsConnector, $driverOptions);
 }
 
 if (!$isEmbed) {
