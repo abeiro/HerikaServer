@@ -94,7 +94,47 @@ function chimProfileLlmModePayload(array $resolved): array
 {
     $profile = $resolved['profile'];
     $configuredSlots = ProfileLLMMode::getConfiguredSlots($profile);
+    $configuredConnectors = ProfileLLMMode::getConfiguredConnectors($profile);
     $randomEnabled = ProfileLLMMode::isRandomEnabled($profile);
+
+    $connectorIds = array_map(
+        static fn(array $connector): int => intval($connector['connector_id']),
+        $configuredConnectors
+    );
+    $connectorLabels = [];
+    if ($connectorIds !== []) {
+        $rows = $GLOBALS['db']->fetchAll(
+            'SELECT id, label, model FROM core_llm_connector WHERE id IN (' .
+            implode(',', $connectorIds) . ')'
+        );
+        foreach ($rows ?: [] as $row) {
+            $connectorLabels[intval($row['id'])] = trim((string)($row['label'] ?? '')) !== ''
+                ? (string)$row['label']
+                : (string)($row['model'] ?? ('Connector ' . intval($row['id'])));
+        }
+    }
+
+    foreach ($configuredConnectors as &$connector) {
+        $connector['connector_name'] = $connectorLabels[$connector['connector_id']]
+            ?? ('Connector ' . $connector['connector_id']);
+    }
+    unset($connector);
+
+    $availableProfiles = [];
+    $profileRows = $GLOBALS['db']->fetchAll(
+        'SELECT id, label, slot, metadata, llm_primary_id, llm_secondary_id, ' .
+        'llm_tertiary_id, llm_quaternary_id FROM core_profiles ' .
+        'WHERE slot BETWEEN 1 AND 4 ORDER BY slot ASC'
+    );
+    foreach ($profileRows ?: [] as $profileRow) {
+        $availableProfiles[] = [
+            'slot' => intval($profileRow['slot']),
+            'profile_id' => intval($profileRow['id']),
+            'profile_name' => (string)($profileRow['label'] ?? ('Profile ' . intval($profileRow['id']))),
+            'random_enabled' => ProfileLLMMode::isRandomEnabled($profileRow),
+            'configured_slot_count' => count(ProfileLLMMode::getConfiguredSlots($profileRow)),
+        ];
+    }
 
     return [
         'target_name' => $resolved['target_name'],
@@ -106,6 +146,8 @@ function chimProfileLlmModePayload(array $resolved): array
         'random_enabled' => $randomEnabled,
         'configured_slots' => $configuredSlots,
         'configured_slot_count' => count($configuredSlots),
+        'configured_connectors' => $configuredConnectors,
+        'available_profiles' => $availableProfiles,
     ];
 }
 

@@ -3,6 +3,12 @@
 class ProfileLLMMode
 {
     public const RANDOMIZER_KEY = 'LLM_RANDOMIZER_ENABLED';
+    public const CONNECTOR_SLOTS = [
+        1 => ['key' => 'standard', 'label' => 'Standard', 'field' => 'llm_primary_id'],
+        2 => ['key' => 'fast', 'label' => 'Fast', 'field' => 'llm_secondary_id'],
+        3 => ['key' => 'powerful', 'label' => 'Powerful', 'field' => 'llm_tertiary_id'],
+        4 => ['key' => 'experimental', 'label' => 'Experimental', 'field' => 'llm_quaternary_id'],
+    ];
 
     public static function isTruthy($value): bool
     {
@@ -46,18 +52,31 @@ class ProfileLLMMode
 
     public static function getConfiguredSlots(array $profileData): array
     {
-        $slotFields = [
-            1 => 'llm_primary_id',
-            2 => 'llm_secondary_id',
-            3 => 'llm_tertiary_id',
-            4 => 'llm_quaternary_id',
-        ];
-
         $configured = [];
-        foreach ($slotFields as $slot => $field) {
-            if (intval($profileData[$field] ?? 0) > 0) {
+        foreach (self::CONNECTOR_SLOTS as $slot => $definition) {
+            if (intval($profileData[$definition['field']] ?? 0) > 0) {
                 $configured[] = $slot;
             }
+        }
+
+        return $configured;
+    }
+
+    public static function getConfiguredConnectors(array $profileData): array
+    {
+        $configured = [];
+        foreach (self::CONNECTOR_SLOTS as $slot => $definition) {
+            $connectorId = intval($profileData[$definition['field']] ?? 0);
+            if ($connectorId <= 0) {
+                continue;
+            }
+
+            $configured[] = [
+                'slot' => $slot,
+                'key' => $definition['key'],
+                'label' => $definition['label'],
+                'connector_id' => $connectorId,
+            ];
         }
 
         return $configured;

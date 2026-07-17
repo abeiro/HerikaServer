@@ -30,6 +30,31 @@ final class ProfileLLMModeTest extends TestCase
         $this->assertSame([1, 3], ProfileLLMMode::getConfiguredSlots($profile));
     }
 
+    public function testConfiguredConnectorsIncludeUiLabelsAndIds(): void
+    {
+        $profile = [
+            'llm_primary_id' => 11,
+            'llm_secondary_id' => null,
+            'llm_tertiary_id' => 33,
+            'llm_quaternary_id' => 0,
+        ];
+
+        $this->assertSame([
+            [
+                'slot' => 1,
+                'key' => 'standard',
+                'label' => 'Standard',
+                'connector_id' => 11,
+            ],
+            [
+                'slot' => 3,
+                'key' => 'powerful',
+                'label' => 'Powerful',
+                'connector_id' => 33,
+            ],
+        ], ProfileLLMMode::getConfiguredConnectors($profile));
+    }
+
     public function testRandomModeAcceptsLegacyTruthyValues(): void
     {
         $this->assertTrue(ProfileLLMMode::isRandomEnabled([
