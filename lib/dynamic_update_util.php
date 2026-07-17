@@ -1580,94 +1580,105 @@ function saveDynamicProfileUpdates($npcName, $updatedFields, $db, $updateTimeSta
     }
 }
 
-function triggerImmediateProfileProcessing() {
+function queueDynamicProfileBatch(array $npcNames, array $gameRequest): string {
     global $db;
-    
-    // Ensure required dependencies are loaded
-    if (!function_exists('DataSpeechJournal') || !function_exists('buildDynamicProfileDisplay')) {
-        require_once(__DIR__ . "/../lib/data_functions.php");
+
+    $npcNames = array_values(array_unique(array_filter(array_map('trim', $npcNames), static fn($name) => $name !== '')));
+    if (empty($npcNames)) {
+        throw new InvalidArgumentException('Cannot queue an empty dynamic profile batch');
     }
-    
-    // Check if there are any queue entries to process
-    $queueResults = $db->fetchAll("SELECT id, value FROM conf_opts WHERE id LIKE 'dynamic_profiles_queue_%' ORDER BY id LIMIT 5");
-    
-    if (empty($queueResults)) {
-        Logger::debug("triggerImmediateProfileProcessing: No queue entries found");
-        return;
+
+    $queueData = [
+        'timestamp' => time(),
+        'npcs' => $npcNames,
+        'gameRequest' => $gameRequest,
+    ];
+    $encoded = json_encode($queueData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    $queueId = 'dynamic_profiles_queue_' . time() . '_' . uniqid();
+
+    $db->upsertRowOnConflict('conf_opts', [
+        'id' => $queueId,
+        'value' => $encoded,
+    ], 'id');
+
+    return $queueId;
+}
+
+function chimPostgresBoolean($value): bool {
+    return $value === true || $value === 1 || $value === '1' || $value === 't' || $value === 'true';
+}
+
+function triggerImmediateProfileProcessing(?callable $profileProcessor = null): array {
+    global $db;
+
+    $result = [
+        'locked' => false,
+        'jobs' => 0,
+        'npcs' => 0,
+        'updated' => 0,
+    ];
+
+    $lockRows = $db->fetchAll("SELECT pg_try_advisory_lock(hashtext('herika_dynamic_profile_worker')) AS acquired");
+    if (empty($lockRows) || !chimPostgresBoolean($lockRows[0]['acquired'] ?? false)) {
+        Logger::debug("triggerImmediateProfileProcessing: Another worker owns the queue lock");
+        return $result;
     }
-    
-    Logger::info("triggerImmediateProfileProcessing: Processing " . count($queueResults) . " queue entries immediately");
-    
-    // Check if already processing (lock exists)
-    $lockId = 'dynamic_profiles_lock';
-    $lockResult = $db->fetchAll("SELECT value FROM conf_opts WHERE id = '$lockId'");
-    
-    if (!empty($lockResult)) {
-        $lockTime = intval($lockResult[0]['value']);
-        // If lock is recent (less than 30 seconds), skip immediate processing
-        if (time() - $lockTime < 30) {
-            Logger::debug("triggerImmediateProfileProcessing: Processing already in progress, skipping");
-            return;
-        } else {
-            // Remove stale lock
-            $db->delete("conf_opts", "id = '$lockId'");
-        }
-    }
-    
-    // Create processing lock
-    $db->upsertRowOnConflict('conf_opts', array('id' => $lockId, 'value' => time()), 'id');
-    
+
+    $result['locked'] = true;
+    $profileProcessor = $profileProcessor ?? 'processSingleDynamicProfile';
+
     try {
-        $processedJobs = 0;
-        $totalNPCs = 0;
-        
+        $queueResults = $db->fetchAll("SELECT id, value FROM conf_opts WHERE id LIKE 'dynamic_profiles_queue_%' ORDER BY id LIMIT 5");
+        if (empty($queueResults)) {
+            Logger::debug("triggerImmediateProfileProcessing: No queue entries found");
+            return $result;
+        }
+
+        Logger::info("triggerImmediateProfileProcessing: Processing " . count($queueResults) . " queue entries");
+
         foreach ($queueResults as $queueRow) {
             $queueId = $queueRow['id'];
             $queueJson = $queueRow['value'];
-            
-            // Delete this queue entry immediately
-            $db->delete("conf_opts", "id = '" . $db->escape($queueId) . "'");
-            
             $queueData = json_decode($queueJson, true);
             if (!$queueData || !isset($queueData['npcs']) || !isset($queueData['gameRequest'])) {
                 Logger::error("triggerImmediateProfileProcessing: Invalid queue data for $queueId");
+                $db->delete("conf_opts", "id = '" . $db->escape($queueId) . "'");
                 continue;
             }
 
-            $npcs = $queueData['npcs'];
+            $npcs = is_array($queueData['npcs']) ? $queueData['npcs'] : [];
             $gameRequest = $queueData['gameRequest'];
-            
             Logger::info("triggerImmediateProfileProcessing: Processing " . count($npcs) . " NPCs");
 
             $successCount = 0;
             foreach ($npcs as $npcName) {
                 try {
-                    if (processSingleDynamicProfile($npcName, $gameRequest)) {
+                    if ($profileProcessor($npcName, $gameRequest)) {
                         $successCount++;
                         Logger::debug("triggerImmediateProfileProcessing: Updated profile for $npcName");
                     }
-                } catch (Exception $e) {
+                } catch (Throwable $e) {
                     Logger::error("triggerImmediateProfileProcessing: Error processing $npcName: " . $e->getMessage());
                 }
             }
 
+            // A claimed job is removed only after every NPC has been attempted. If the
+            // worker process dies mid-job, the row remains and the next cycle retries it.
+            $db->delete("conf_opts", "id = '" . $db->escape($queueId) . "'");
             Logger::info("triggerImmediateProfileProcessing: Completed job - updated $successCount of " . count($npcs) . " profiles");
-            $processedJobs++;
-            $totalNPCs += count($npcs);
+            $result['jobs']++;
+            $result['npcs'] += count($npcs);
+            $result['updated'] += $successCount;
         }
 
-        if ($processedJobs > 0) {
-            Logger::info("triggerImmediateProfileProcessing: Total processed: $processedJobs jobs, $totalNPCs NPCs");
-        }
-
-    } catch (Exception $e) {
+        Logger::info("triggerImmediateProfileProcessing: Total processed: {$result['jobs']} jobs, {$result['npcs']} NPCs");
+    } catch (Throwable $e) {
         Logger::error("triggerImmediateProfileProcessing: Fatal error: " . $e->getMessage());
     } finally {
-        // Always remove lock
-        $db->delete("conf_opts", "id = '$lockId'");
+        $db->fetchAll("SELECT pg_advisory_unlock(hashtext('herika_dynamic_profile_worker')) AS released");
     }
 
-
+    return $result;
 }
 ?>
 

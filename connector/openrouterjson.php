@@ -1372,7 +1372,7 @@ class openrouterjson
                 'method' => 'POST',
                 'header' => implode("\r\n", $headers),
                 'content' => json_encode($data),
-                'timeout' => ($GLOBALS["HTTP_TIMEOUT"]) ?: 30
+                'timeout' => ($GLOBALS["HTTP_TIMEOUT"] ?? null) ?: 30
             )
         );
 

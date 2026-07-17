@@ -171,6 +171,12 @@ if (isset($gameRequest[3]) && is_string($gameRequest[3]) &&
 // Call extension's preprocessing files
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"preprocessing.php");
 
+// Raw physics telemetry is opt-in. Extensions may rename it during preprocessing;
+// if none did, acknowledge it here without entering the dialogue/LLM pipeline.
+if ($gameRequest[0] === "physics_raw") {
+    terminate();
+}
+
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","instruction","init"])) {
     // This is just a mark that user has made an input request. We will check later when waiting for LLm response 
     // if user has made input after initial request, so we can abort it.

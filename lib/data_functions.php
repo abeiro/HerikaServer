@@ -598,12 +598,16 @@ function chimFormatProfileEquipmentParts(array $equipmentData, array $slots, boo
             continue;
         }
 
+        if (!is_scalar($equipmentData[$slot])) {
+            continue;
+        }
+
         $itemName = trim((string) $equipmentData[$slot]);
         if ($itemName === '' || isItemBlacklisted($itemName) || stripos($itemName, 'Missing Name') !== false) {
             continue;
         }
 
-        $baseid = isset($equipmentData[$slot . '_baseid'])
+        $baseid = isset($equipmentData[$slot . '_baseid']) && is_scalar($equipmentData[$slot . '_baseid'])
             ? trim((string) $equipmentData[$slot . '_baseid'])
             : '';
         $description = null;
@@ -628,7 +632,7 @@ function chimProfileEquipmentSlotsFromData(array $equipmentData, array $preferre
     $slots = $preferredSlots;
     foreach ($equipmentData as $key => $value) {
         $slot = trim((string) $key);
-        if ($slot === '' || substr($slot, -7) === '_baseid') {
+        if ($slot === '' || substr($slot, -7) === '_baseid' || substr($slot, -9) === '_keywords' || !is_scalar($value)) {
             continue;
         }
         if (!in_array($slot, $slots, true)) {
@@ -4961,6 +4965,22 @@ function DataSearchMemory($rawstring,$npcfilter) {
 }
 
 
+function chimNormalizeTsQueryTerms(string $text): array {
+    if (!preg_match_all('/[\p{L}\p{N}_]+/u', $text, $matches)) {
+        return [];
+    }
+
+    $terms = [];
+    foreach ($matches[0] as $term) {
+        if (mb_strlen($term, 'UTF-8') < 3) {
+            continue;
+        }
+        $terms[] = $term;
+    }
+
+    return array_values(array_unique($terms));
+}
+
 function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$timeThreshold=0) {
     
         $localStartTime=microtime(true);
@@ -5154,17 +5174,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
 
         }
 
-        $result = explode(" ",$contextKeywords);
-
-        $resultNormalized=[];
-        foreach ($result as $word) {
-            if (strlen($word)<3)
-                continue;
-            if (!empty($word))
-                $resultNormalized[]=$word;
-        }
-
-        
+        $resultNormalized = chimNormalizeTsQueryTerms($contextKeywords);
         $kwStringAny=implode(" | ",$resultNormalized);
         $kwStringAll=implode(" & ",$resultNormalized);
         error_log("[DataSearchMemoryByVector] Generated Tags: $kwStringAny" );
@@ -5172,30 +5182,22 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
 
         if (is_array($vector) && isset($vector["embedding"])) {
             $vectorString="'[".implode(",",$vector["embedding"])."]'";
-   
-            $finalQuery="
-                SELECT summary, gamets_truncated,
-                        embedding <-> $vectorString as distance,
-                         ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_any_fts,
-                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts,
-                         (embedding <-> $vectorString) - ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll'))
-                          AS mixed_distance
-                    FROM public.memory_summary 
-                    WHERE embedding IS NOT NULL
-                    and $scopeConditionSql
-                    and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
-                    ORDER BY (embedding <-> $vectorString)
-                    LIMIT 5 OFFSET 0
-                ";
+            $rankAnySql = $kwStringAny !== ''
+                ? "ts_rank(native_vec, to_tsquery('" . $GLOBALS["db"]->escape($kwStringAny) . "'))"
+                : "0::real";
+            $rankAllSql = $kwStringAll !== ''
+                ? "ts_rank(native_vec, to_tsquery('" . $GLOBALS["db"]->escape($kwStringAll) . "'))"
+                : "0::real";
+            $rankCombinedSql = "($rankAnySql + $rankAllSql)";
 
-             $finalQuery="
+            $finalQuery="
                 SELECT rowid,gamets_truncated,
                         embedding <-> $vectorString as distance,
-                         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts_raw,
-                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts_raw,
-                         ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_any_fts,
-                         ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts,
-                         (embedding <-> $vectorString) - (ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) ) AS mixed_distance,
+                         $rankAnySql AS rank_any_fts_raw,
+                         $rankAllSql AS rank_all_fts_raw,
+                         $rankCombinedSql AS rank_any_fts,
+                         $rankCombinedSql AS rank_all_fts,
+                         (embedding <-> $vectorString) - $rankCombinedSql AS mixed_distance,
                          summary
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
@@ -5205,7 +5207,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                     
                     ORDER BY 
                         round((embedding <-> $vectorString)::numeric, 2) ASC,
-                        (ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll'))) DESC
+                        $rankCombinedSql DESC
                     LIMIT 50 OFFSET 0
                 ";    
             $memory=$GLOBALS["db"]->fetchAll($finalQuery);
