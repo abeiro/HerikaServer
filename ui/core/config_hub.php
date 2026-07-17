@@ -25,18 +25,71 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . "../profile_loader.php");
 $TITLE = "Configuration";
+
+$configSections = [
+    'characters' => [
+        'label' => 'Characters',
+        'tabs' => [
+            'npc' => 'CHIM NPCs',
+            'profiles' => 'Profiles',
+            'player' => 'Player',
+            'narrator' => 'Narration',
+            'npcbio' => 'NPC Biographies',
+        ],
+    ],
+    'ai-voice' => [
+        'label' => 'AI & Voice',
+        'tabs' => [
+            'llm' => 'LLM',
+            'ttscfg' => 'TTS',
+            'xtts' => 'TTS Studio',
+            'sttcfg' => 'STT',
+            'ittcfg' => 'ITT',
+            'keys' => 'API Keys',
+        ],
+    ],
+    'world-behavior' => [
+        'label' => 'World & Behavior',
+        'tabs' => [
+            'globals' => 'Global Settings',
+            'oghma' => 'Oghma Infinium',
+            'items' => 'Descriptions',
+            'actions' => 'Action Editor',
+            'prompts' => 'Prompts Manager',
+            'serverplugins' => 'Server Plugins',
+        ],
+    ],
+];
+
+$tabIcons = [
+    'npc' => '&#x1F31F;',
+    'profiles' => '&#x1F5C3;&#xFE0F;',
+    'player' => '&#x1F464;',
+    'narrator' => '&#x1F5E3;&#xFE0F;',
+    'npcbio' => '&#x1F6AA;',
+    'llm' => '&#x1F9E0;',
+    'ttscfg' => '&#x1F50A;',
+    'xtts' => '&#x1F4E2;',
+    'sttcfg' => '&#x1F3A4;',
+    'ittcfg' => '&#x1F5BC;&#xFE0F;',
+    'keys' => '&#x1F511;',
+    'globals' => '&#x1F310;',
+    'oghma' => '&#x1F4DC;',
+    'items' => '&#x1F4D6;',
+    'actions' => '&#x2694;&#xFE0F;',
+    'prompts' => '&#x1F4AC;',
+    'serverplugins' => '&#x1F9E9;',
+];
+
 ob_start();
 include(__DIR__ . DIRECTORY_SEPARATOR . "../tmpl/head.html");
 include(__DIR__ . DIRECTORY_SEPARATOR . "../tmpl/navbar.php");
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/hub-navigation.css">
 <style>
 main { padding: 80px 10px 10px; height: 100vh; }
-.tab-buttons { display: flex; flex-wrap: wrap; margin: 20px 0; border-bottom: 2px solid rgba(242, 124, 17, 0.2); gap: 5px; word-spacing: 5px; }
-.tab-button { background: linear-gradient(180deg, rgba(42, 42, 42, 0.8), rgba(34, 34, 34, 0.9)); border: 2px solid #3a3a3a; border-bottom: none; padding: 12px 18px; color: #f8f9fa; cursor: pointer; border-top-left-radius: 8px; border-top-right-radius: 8px; transition: all 0.3s ease; font-size: 1em; white-space: nowrap; font-family: 'MagicCards', sans-serif; word-spacing: 5px; letter-spacing: 1.5px; margin-bottom: -2px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
-.tab-button:hover { background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1)); color: rgb(242, 124, 17); border-color: rgba(242, 124, 17, 0.3); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
-.tab-button.active { background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); border-color: rgba(242, 124, 17, 0.5); border-bottom: 2px solid rgba(42, 42, 42, 0.95); color: rgb(242, 124, 17); box-shadow: 0 4px 8px rgba(242, 124, 17, 0.2); }
 .tab-content { display: none; background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); border-radius: 8px; border-top-left-radius: 0; border: 1px solid #3a3a3a; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03); }
 .tab-content.active { display: flex; flex-grow: 1; }
 .embed-wrap { height: 100%; width: 100%; border: 1px solid #4a4a4a; border-radius: 8px; overflow: hidden; background: #2a2a2a; }
@@ -50,24 +103,26 @@ main { padding: 80px 10px 10px; height: 100vh; }
     </div>
 
     <div class="top-area">
-        <div class="tab-buttons">
-            <button class="tab-button active" data-tab="npc">🌟 CHIM NPCs</button>
-            <button class="tab-button" data-tab="globals">🌐 Global Settings</button>
-            <button class="tab-button" data-tab="profiles">🗃️ Profiles</button>
-            <button class="tab-button" data-tab="llm">🧠 LLM</button>
-            <button class="tab-button" data-tab="ttscfg">🔊 TTS</button>
-            <button class="tab-button" data-tab="sttcfg">🎤 STT</button>
-            <button class="tab-button" data-tab="ittcfg">🖼️ ITT</button>
-            <button class="tab-button" data-tab="keys">🔑 API Keys</button>
-            <button class="tab-button" data-tab="player">👤 Player</button>
-            <button class="tab-button" data-tab="narrator">🗣️ Narration</button>
-            <button class="tab-button" data-tab="oghma">📜 Oghma Infinium</button>
-            <button class="tab-button" data-tab="npcbio">🪪 NPC Biographies</button>
-            <button class="tab-button" data-tab="items">📜 Descriptions</button>
-            <button class="tab-button" data-tab="actions">⚔️ Action Editor</button>
-            <button class="tab-button" data-tab="prompts">💬 Prompts Manager</button>
-            <button class="tab-button" data-tab="xtts">📢 TTS Studio</button>
-            <button class="tab-button" data-tab="serverplugins">🧩 Server Plugins</button>
+        <div class="config-navigation" aria-label="Configuration sections">
+            <div class="tab-groups">
+                <?php foreach ($configSections as $sectionId => $section): ?>
+                    <section class="tab-group <?php echo $sectionId === 'characters' ? 'active' : ''; ?>" data-category="<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">
+                        <div class="tab-group-label"><?php echo htmlspecialchars($section['label'], ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div class="tab-buttons" role="tablist" aria-label="<?php echo htmlspecialchars($section['label'], ENT_QUOTES, 'UTF-8'); ?> configuration pages">
+                            <?php foreach ($section['tabs'] as $tabId => $tabLabel): ?>
+                                <button
+                                    class="tab-button <?php echo $tabId === 'npc' ? 'active' : ''; ?>"
+                                    type="button"
+                                    data-tab="<?php echo htmlspecialchars($tabId, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-category="<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">
+                                    <span class="tab-icon" aria-hidden="true"><?php echo $tabIcons[$tabId] ?? ''; ?></span>
+                                    <span><?php echo htmlspecialchars($tabLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+                    </section>
+                <?php endforeach; ?>
+            </div>
         </div>
     </div>
 
@@ -173,6 +228,7 @@ main { padding: 80px 10px 10px; height: 100vh; }
 <script>
 (function(){
     const buttons = document.querySelectorAll('.tab-button');
+    const groups = document.querySelectorAll('.tab-group');
     const tabs = document.querySelectorAll('.tab-content');
 
     function reloadIframe(container) {
@@ -186,6 +242,15 @@ main { padding: 80px 10px 10px; height: 100vh; }
     }
 
     function activate(id) {
+        const selectedButton = Array.from(buttons).find(function(button){
+            return button.dataset.tab === id;
+        });
+        if (!selectedButton) return;
+
+        const category = selectedButton.dataset.category;
+        groups.forEach(function(group){
+            group.classList.toggle('active', group.dataset.category === category);
+        });
         buttons.forEach(function(button){
             button.classList.toggle('active', button.dataset.tab === id);
         });
@@ -210,6 +275,8 @@ main { padding: 80px 10px 10px; height: 100vh; }
     const initialTab = new URL(window.location).searchParams.get('tab');
     if (initialTab && document.getElementById(initialTab)) {
         activate(initialTab);
+    } else {
+        activate('npc');
     }
 })();
 </script>

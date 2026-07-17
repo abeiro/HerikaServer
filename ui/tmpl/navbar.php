@@ -289,9 +289,8 @@ $serverLogoFile = $isDevBuild ? 'serverlogodev.png' : 'serverlogo.png';
                     </button>
                     <ul class="dropdown-menu brand-menu">
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/home.php">Home</a></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/events-memories.php">Events & Memories</a></li>
+                                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/events-memories.php">Roleplay</a></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/core/config_hub.php">Configuration</a></li>
-                        <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/immersion.php">Immersion</a></li>
                         <li><a class="dropdown-item" href="<?php echo $webRoot; ?>/ui/control_panel.php">Control Panel</a></li>
                         <li><a class="dropdown-item" href="/Dwemer-Dashboard/index.php">DwemerDistro Home</a></li>
                     </ul>
