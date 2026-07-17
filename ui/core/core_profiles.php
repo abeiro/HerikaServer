@@ -1761,12 +1761,12 @@ $ittById = $byId($ittRows);
                 }
             } catch (Throwable $e) {}
         ?>
-        <label for="llm_selection_mode">LLM Selection Mode</label>
-        <select id="llm_selection_mode" name="meta_vis[LLM_RANDOMIZER_ENABLED]">
-            <option value="0" <?= !$randomizerEnabled ? "selected" : "" ?>>Fixed</option>
-            <option value="1" <?= $randomizerEnabled ? "selected" : "" ?>>Random</option>
-        </select>
-        <small class="hint">Fixed uses the active Standard, Fast, Powerful, or Experimental slot. Random rotates between the connectors configured on this profile. This setting affects every NPC using the profile.</small>
+        <label class="label-with-toggle">LLM Randomizer
+            <input type="hidden" name="meta_vis[LLM_RANDOMIZER_ENABLED]" value="">
+            <input type="checkbox" name="meta_vis[LLM_RANDOMIZER_ENABLED]" value="1" <?= $randomizerEnabled ? "checked" : "" ?>>
+            <span class="toggle-text">Off</span>
+        </label>
+        <small class="hint">Randomly switches between the connectors configured on this profile. This setting affects every NPC using the profile.</small>
 
         <div style="height:6px;"></div>
         <?php
@@ -1794,7 +1794,7 @@ $ittById = $byId($ittRows);
 
     <script>
     document.addEventListener('DOMContentLoaded', function(){
-        const names = ['default_npc','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]'];
+        const names = ['default_npc','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
