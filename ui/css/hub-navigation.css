@@ -1,3 +1,31 @@
+:root {
+    --hub-navbar-offset: 80px;
+    --hub-navigation-gap: 20px;
+}
+
+body.hub-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding-top: var(--hub-navbar-offset);
+}
+
+body.hub-page > main {
+    box-sizing: border-box;
+    width: 100%;
+    height: auto;
+    min-height: calc(100vh - var(--hub-navbar-offset));
+    padding-top: 0 !important;
+}
+
+body.hub-page > main .tab-container {
+    margin-top: 0 !important;
+}
+
+body.hub-page .config-navigation {
+    margin-top: var(--hub-navigation-gap);
+}
+
 .config-navigation {
     margin: 20px 0 8px;
     padding: 9px;
