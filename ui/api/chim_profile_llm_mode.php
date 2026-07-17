@@ -144,6 +144,7 @@ function chimProfileLlmModePayload(array $resolved): array
         'shared_count' => intval($resolved['shared_count']),
         'selection_mode' => $randomEnabled ? 'random' : 'fixed',
         'random_enabled' => $randomEnabled,
+        'profile_defaults' => ProfileLLMMode::getProfileDefaults($profile),
         'configured_slots' => $configuredSlots,
         'configured_slot_count' => count($configuredSlots),
         'configured_connectors' => $configuredConnectors,
@@ -167,11 +168,6 @@ try {
     $resolved = chimProfileLlmModeResolveTarget($targetName, $targetType);
 
     if ($method === 'POST') {
-        $mode = strtolower(trim((string)($input['mode'] ?? '')));
-        if (!in_array($mode, ['fixed', 'random'], true)) {
-            chimProfileLlmModeRespond(400, ['ok' => false, 'message' => 'Mode must be fixed or random.']);
-        }
-
         $expectedProfileId = intval($input['expected_profile_id'] ?? 0);
         $profileId = intval($resolved['profile']['id']);
         if ($expectedProfileId > 0 && $expectedProfileId !== $profileId) {
@@ -181,19 +177,36 @@ try {
             ]);
         }
 
-        $enabled = $mode === 'random';
-        $configuredSlots = ProfileLLMMode::getConfiguredSlots($resolved['profile']);
-        if ($enabled && count($configuredSlots) === 0) {
-            chimProfileLlmModeRespond(409, [
-                'ok' => false,
-                'message' => 'This profile has no configured LLM connectors.',
-            ]);
+        $metadata = $resolved['profile']['metadata'] ?? null;
+        $setting = strtolower(trim((string)($input['setting'] ?? '')));
+        if ($setting !== '') {
+            $enabledInput = trim((string)($input['enabled'] ?? ''));
+            if (!in_array($enabledInput, ['0', '1'], true)) {
+                chimProfileLlmModeRespond(400, ['ok' => false, 'message' => 'Enabled must be 0 or 1.']);
+            }
+
+            $enabled = $enabledInput === '1';
+            $metadata = ProfileLLMMode::updateProfileDefaultMetadata($metadata, $setting, $enabled);
+            $logDescription = 'profile default ' . $setting . ' changed to ' . ($enabled ? 'enabled' : 'disabled');
+        } else {
+            $mode = strtolower(trim((string)($input['mode'] ?? '')));
+            if (!in_array($mode, ['fixed', 'random'], true)) {
+                chimProfileLlmModeRespond(400, ['ok' => false, 'message' => 'Mode must be fixed or random.']);
+            }
+
+            $enabled = $mode === 'random';
+            $configuredSlots = ProfileLLMMode::getConfiguredSlots($resolved['profile']);
+            if ($enabled && count($configuredSlots) === 0) {
+                chimProfileLlmModeRespond(409, [
+                    'ok' => false,
+                    'message' => 'This profile has no configured LLM connectors.',
+                ]);
+            }
+
+            $metadata = ProfileLLMMode::updateRandomEnabledMetadata($metadata, $enabled);
+            $logDescription = 'LLM selection mode changed to ' . ($enabled ? 'random' : 'fixed');
         }
 
-        $metadata = ProfileLLMMode::updateRandomEnabledMetadata(
-            $resolved['profile']['metadata'] ?? null,
-            $enabled
-        );
         $profileManager = new CoreProfile();
         if ($profileManager->update($profileId, ['metadata' => $metadata]) === false) {
             throw new RuntimeException($profileManager->getLastError() ?: 'Profile update failed.');
@@ -201,8 +214,7 @@ try {
 
         $resolved['profile']['metadata'] = $metadata;
         Logger::info(
-            '[CHATBOX] LLM selection mode for profile #' . $profileId .
-            ' changed to ' . ($enabled ? 'random' : 'fixed')
+            '[CHATBOX] Profile #' . $profileId . ' ' . $logDescription
         );
     }
 

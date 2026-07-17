@@ -64,4 +64,36 @@ final class ProfileLLMModeTest extends TestCase
             'metadata' => '{"LLM_RANDOMIZER_ENABLED":"0"}',
         ]));
     }
+
+    public function testProfileDefaultsReadExistingMetadataValues(): void
+    {
+        $this->assertSame([
+            'dynamic_profile' => true,
+            'middle_term_memory' => false,
+            'auto_diary' => true,
+            'auto_diary_wait' => false,
+        ], ProfileLLMMode::getProfileDefaults([
+            'metadata' => '{"DYNAMIC_PROFILE_ENABLED":"on","MIDDLE_TERM_MEMORY_ENABLED":0,' .
+                '"AUTO_DIARY_ENABLED":true,"AUTO_DIARY_WAIT_ENABLED":"false"}',
+        ]));
+    }
+
+    public function testUpdatingProfileDefaultPreservesOtherMetadata(): void
+    {
+        $updated = ProfileLLMMode::updateProfileDefaultMetadata(
+            '{"CORE_LANG":"ja","AUTO_DIARY_ENABLED":false}',
+            'auto_diary',
+            true
+        );
+        $decoded = json_decode($updated, true);
+
+        $this->assertTrue($decoded['AUTO_DIARY_ENABLED']);
+        $this->assertSame('ja', $decoded['CORE_LANG']);
+    }
+
+    public function testUpdatingUnsupportedProfileDefaultFails(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        ProfileLLMMode::updateProfileDefaultMetadata('{}', 'unknown_setting', true);
+    }
 }

@@ -3,6 +3,12 @@
 class ProfileLLMMode
 {
     public const RANDOMIZER_KEY = 'LLM_RANDOMIZER_ENABLED';
+    public const PROFILE_DEFAULTS = [
+        'dynamic_profile' => 'DYNAMIC_PROFILE_ENABLED',
+        'middle_term_memory' => 'MIDDLE_TERM_MEMORY_ENABLED',
+        'auto_diary' => 'AUTO_DIARY_ENABLED',
+        'auto_diary_wait' => 'AUTO_DIARY_WAIT_ENABLED',
+    ];
     public const CONNECTOR_SLOTS = [
         1 => ['key' => 'standard', 'label' => 'Standard', 'field' => 'llm_primary_id'],
         2 => ['key' => 'fast', 'label' => 'Fast', 'field' => 'llm_secondary_id'],
@@ -47,6 +53,29 @@ class ProfileLLMMode
     {
         $decoded = self::decodeMetadata($metadata);
         $decoded[self::RANDOMIZER_KEY] = $enabled;
+        return json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    public static function getProfileDefaults(array $profileData): array
+    {
+        $metadata = self::decodeMetadata($profileData['metadata'] ?? null);
+        $defaults = [];
+        foreach (self::PROFILE_DEFAULTS as $setting => $metadataKey) {
+            $defaults[$setting] = self::isTruthy($metadata[$metadataKey] ?? false);
+        }
+
+        return $defaults;
+    }
+
+    public static function updateProfileDefaultMetadata($metadata, string $setting, bool $enabled): string
+    {
+        $metadataKey = self::PROFILE_DEFAULTS[$setting] ?? null;
+        if ($metadataKey === null) {
+            throw new InvalidArgumentException('Unsupported profile default setting.');
+        }
+
+        $decoded = self::decodeMetadata($metadata);
+        $decoded[$metadataKey] = $enabled;
         return json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
