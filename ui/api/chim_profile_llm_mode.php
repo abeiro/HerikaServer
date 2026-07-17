@@ -141,6 +141,7 @@ function chimProfileLlmModePayload(array $resolved): array
         'target_type' => $resolved['target_type'],
         'profile_id' => intval($profile['id']),
         'profile_name' => (string)($profile['label'] ?? ('Profile ' . intval($profile['id']))),
+        'profile_slot' => intval($profile['slot'] ?? 0),
         'shared_count' => intval($resolved['shared_count']),
         'selection_mode' => $randomEnabled ? 'random' : 'fixed',
         'random_enabled' => $randomEnabled,
