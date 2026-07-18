@@ -8,6 +8,8 @@ final class DwemerPluginPackageException extends RuntimeException
 
 final class DwemerPluginPackageManager
 {
+    private const SUPPORTED_ARCHIVE_EXTENSIONS = ['dwpkg', 'zip'];
+
     public const SCHEMA_VERSION = 4;
     public const MAX_ENTRIES = 5000;
     public const MAX_UNCOMPRESSED_BYTES = 1073741824;
@@ -131,8 +133,9 @@ final class DwemerPluginPackageManager
     ): array {
         $this->validatePluginName($name);
         $this->validateVersion($version);
-        if (strtolower(pathinfo($originalName, PATHINFO_EXTENSION)) !== 'dwpkg') {
-            throw new DwemerPluginPackageException('Server plugin packages must use the .dwpkg extension.');
+        $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        if (!in_array($extension, self::SUPPORTED_ARCHIVE_EXTENSIONS, true)) {
+            throw new DwemerPluginPackageException('Server plugin packages must use the .dwpkg or .zip extension.');
         }
         if ($size < 1 || $size > self::MAX_ARCHIVE_BYTES) {
             throw new DwemerPluginPackageException('Package archive size is invalid or exceeds 512 MB.');

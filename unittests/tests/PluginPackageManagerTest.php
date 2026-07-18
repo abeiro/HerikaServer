@@ -94,7 +94,7 @@ final class PluginPackageManagerTest extends TestCase
         $this->assertIsString($contents);
         $chunks = str_split($contents, 512);
         $manager = $this->manager();
-        $upload = $manager->startChunkedUpload('Chunked Plugin', '2.1.0', '2.1.0.dwpkg', strlen($contents), count($chunks));
+        $upload = $manager->startChunkedUpload('Chunked Plugin', '2.1.0', '2.1.0.zip', strlen($contents), count($chunks));
 
         $result = null;
         foreach ($chunks as $index => $chunk) {
@@ -105,6 +105,23 @@ final class PluginPackageManagerTest extends TestCase
         $this->assertSame('completed', $result['job']['status']);
         $this->assertSame('Chunked Plugin', $result['job']['name']);
         $this->assertFileExists($this->root . '/server/ext/Chunked Plugin/payload.txt');
+    }
+
+    public function testChunkedUploadAcceptsDwpkgAndZipExtensions(): void
+    {
+        $manager = $this->manager();
+
+        foreach (['1.0.0.dwpkg', '1.0.0.zip', '1.0.0.ZIP'] as $archiveName) {
+            $upload = $manager->startChunkedUpload('Extension Plugin', '1.0.0', $archiveName, 1, 1);
+            $this->assertNotEmpty($upload['upload_id']);
+        }
+    }
+
+    public function testChunkedUploadRejectsUnsupportedArchiveExtension(): void
+    {
+        $this->expectException(DwemerPluginPackageException::class);
+        $this->expectExceptionMessage('.dwpkg or .zip');
+        $this->manager()->startChunkedUpload('Extension Plugin', '1.0.0', '1.0.0.7z', 1, 1);
     }
 
     public function testServerActivationPreservesDeclaredMutableFiles(): void
