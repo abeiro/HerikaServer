@@ -2926,7 +2926,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 }
 .npc-title { font-weight:800; color:#e9efff; font-size:18px; text-align:center; letter-spacing:0.3px; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; min-width:0; }
 .npc-title-left { flex:1 1 auto; min-width:0; text-align:left; display:flex; align-items:center; flex-wrap:wrap; column-gap:4px; }
-.npc-title-actions { display:flex; align-items:center; justify-content:flex-end; gap:6px; flex:0 1 auto; max-width:48%; min-width:0; flex-wrap:wrap; }
+.npc-title-actions { display:flex; align-items:center; justify-content:flex-end; gap:6px; flex:0 0 auto; max-width:none; min-width:0; flex-wrap:nowrap; white-space:nowrap; }
+.npc-title-actions > * { flex:0 0 auto; }
 .npc-name { display:-webkit-box; max-width:min(100%, 22ch); overflow:hidden; overflow-wrap:anywhere; white-space:normal; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; line-height:1.25; }
 .npc-gender-icon { margin-left:6px; opacity:0.9; }
 .npc-gender-icon.gender-female { color:#ff72d2; }

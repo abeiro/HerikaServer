@@ -180,6 +180,7 @@ $rangeEnd = min($offset + $perPage, $totalRows);
     <link rel="icon" type="image/x-icon" href="/HerikaServer/ui/images/favicon.ico">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/chim-theme.css?v=<?php echo filemtime(__DIR__ . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'chim-theme.css'); ?>">
     <?php if (!$isEmbed): ?>
         <link rel="stylesheet" href="css/navbar.css">
     <?php endif; ?>
