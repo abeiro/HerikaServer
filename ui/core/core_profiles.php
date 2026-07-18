@@ -13,6 +13,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."profile_llm_mode.php");
 
 require_once "{$enginePath}/lib/core/core_profiles.class.php";
 require_once "{$enginePath}/lib/core/llm_connector.class.php";
