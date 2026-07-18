@@ -52,19 +52,21 @@ if (!function_exists('chimRuntimeNeedsDbUpdates')) {
         }
 
         $requiredVersions = [
-            'general_settings' => 20260511001,
+            'general_settings' => 20260627001,
             'core_stt_connector' => 20260502002,
             'core_itt_connector' => 20260502002,
             'descriptions_defaults' => 20260611005,
             'item_images' => 20260614001,
-            'prompts' => 20260614005,
+            'prompts' => 20260615001,
+            'skyrim_quest_definitions' => 20260628003,
+            'core_tts_connector_omnivoice' => 20260708001,
         ];
 
         try {
             $versionRows = $db->fetchAll(
                 "SELECT tablename, version
                  FROM public.database_versioning
-                 WHERE tablename IN ('general_settings','core_stt_connector','core_itt_connector','descriptions_defaults','item_images','prompts')"
+                 WHERE tablename IN ('general_settings','core_stt_connector','core_itt_connector','descriptions_defaults','item_images','prompts','skyrim_quest_definitions','core_tts_connector_omnivoice')"
             );
         } catch (\Throwable $e) {
             $decision = true;
@@ -123,6 +125,23 @@ if (!function_exists('chimRuntimeEnsureDbUpdates')) {
         $db=$GLOBALS["db"] ?? null;
         if (file_exists($updatesPath)) {
             require_once($updatesPath);
+        }
+    }
+}
+
+if (!function_exists('chimRuntimeEnsurePluginSchema')) {
+    function chimRuntimeEnsurePluginSchema(): void
+    {
+        $db = $GLOBALS["db"] ?? null;
+        if (!$db) {
+            return;
+        }
+
+        try {
+            $db->execQuery("CREATE SCHEMA IF NOT EXISTS plugins");
+            $db->execQuery("SET search_path TO public");
+        } catch (\Throwable $e) {
+            error_log("[RuntimeBootstrap] Could not ensure plugins schema: " . $e->getMessage());
         }
     }
 }
@@ -191,6 +210,7 @@ if (!function_exists('chimRuntimeBootstrap')) {
             $GLOBALS["db"] = new sql();
         }
 
+        chimRuntimeEnsurePluginSchema();
         chimRuntimeApplyBootstrapOptions($enginePath, $options);
     }
 }

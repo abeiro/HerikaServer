@@ -35,21 +35,34 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.htm
 $saveSuccess = isset($_GET['_saved']) && $_GET['_saved'] === '1';
 $clearReanimationResult = null;
 $promptContextSectionTitle = 'Context Selections';
+$promptContextOptionFields = [
+    [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
+    [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
+    [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
+    [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
+];
 
 $gsSections = [
     'Prompt' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
-        [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
-        [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
-        [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
-        [ 'name' => 'SHORTER_NEARBY_ITEM_LIST', 'type' => 'boolean' ],
-        [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
     ],
     'Rechat' => [
         [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
         [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
+    ],
+    'Misc' => [
+        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
+        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
+        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
+        [ 'name' => 'BGL_TRIGGER_HOURS', 'type' => 'number', 'min' => 1, 'max' => 720, 'step' => 0.1, 'default' => 24 ],
+        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
+        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
+    ],
+    'Quests' => [
+        [ 'name' => 'CHIM_AI_QUEST_PROGRESSION', 'type' => 'boolean' ],
+        [ 'name' => 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT', 'type' => 'boolean' ],
     ],
     'Memory' => [
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
@@ -63,7 +76,9 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_SCENECLASSIFIER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'CORE_CONNECTOR_BGL', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
+        [ 'name' => 'PLAYER_WORST_MEMORY_GAME_DAYS', 'type' => 'integer', 'min' => 0, 'max' => 365, 'default' => 7, 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.' ],
         [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
     'Context' => [
@@ -72,17 +87,11 @@ $gsSections = [
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
         [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
         [ 'name' => 'TRANSFORMATION_DETECTION', 'type' => 'boolean' ],
+        [ 'name' => 'POWER_AWARENESS_ENABLED', 'type' => 'boolean' ],
+        [ 'name' => 'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE', 'type' => 'integer', 'min' => 0 ],
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
     ],
-    $promptContextSectionTitle => [],
-    'Misc' => [
-        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
-        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
-        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
-        [ 'name' => 'BGL_TRIGGER_DAYS', 'type' => 'integer', 'min' => 1, 'max' => 30 ],
-        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
-        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
-    ],
+    $promptContextSectionTitle => $promptContextOptionFields,
     'Translation' => [
         [ 'name' => 'TRANSLATION_FUNCTION', 'type' => 'select', 'values' => ['none', 'DeepL'] ],
         [ 'name' => 'TRANSLATION@settings@translate_audio', 'type' => 'boolean' ],
@@ -134,13 +143,17 @@ function pretty_label(string $flatName): string
         'SCENE_CLASSIFIER_ENABLED' => 'Scene Classifier',
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
+        'CORE_CONNECTOR_BGL' => 'Background Life',
         'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
         'RELLLM_CONNECTOR' => 'Relationship Management',
+        'PLAYER_WORST_MEMORY_GAME_DAYS' => 'Worst Memory Lifespan',
         'EMOTEMOODS' => 'Emote Moods',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
-        'SHORTER_NEARBY_ITEM_LIST' => 'Shorter Nearby Item List',
-        'BGL_TRIGGER_DAYS' => 'Background Life Days Cooldown',
+        'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time',
         'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
+        'CHIM_AI_QUEST_PROGRESSION' => 'CHIM AI Quest Progression (Beta)',
+        'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
+        'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 'Item Pickup Detection Value',
     ];
     if (isset($customLabels[$flatName])) {
         return $customLabels[$flatName];
@@ -157,6 +170,7 @@ function pretty_label(string $flatName): string
 function icon_for_field(string $flatName): string
 {
     $u = strtoupper($flatName);
+    if ($u === 'PLAYER_WORST_MEMORY_GAME_DAYS') return '💔';
     if (strpos($u, 'FEATURES@MEMORY_EMBEDDING@') === 0 || strpos($u, 'MEMORY_') !== false) return '💭';
     if ($u === 'PLAYER_NAME') return '🏷️';
     if ($u === 'PROMPT_HEAD') return '🔝';
@@ -169,6 +183,7 @@ function icon_for_field(string $flatName): string
         if ($u === 'CORE_CONNECTOR_SCENECLASSIFIER') return '🎭';
         if ($u === 'CORE_CONNECTOR_PROFILES') return '👥';
         if ($u === 'CORE_CONNECTOR_DIRECTOR') return '🎬';
+        if ($u === 'CORE_CONNECTOR_BGL') return '⏱️';
         if ($u === 'CORE_CONNECTOR_OGHMA_CUSTOM') return '🐙';
         return '🔌';
     }
@@ -234,6 +249,8 @@ function prompt_context_bucket_title(string $bucket): string
         'enabled_character_subsections' => 'Character Subsections',
         'enabled_appearance_subsections' => 'Appearance / State Subsections',
         'enabled_general_subsections' => 'General Instruction Subsections',
+        'enabled_nearby_actor_subsections' => 'Nearby Actor Details',
+        'enabled_nearby_item_subsections' => 'Nearby Item Details',
     ];
 
     return $labels[$bucket] ?? $bucket;
@@ -254,6 +271,18 @@ function current_description(string $flatName, array $rowMap): string
         return $description;
     }
     return chimGetSchemaDescription($flatName);
+}
+
+function render_provider_help(string $flatName, string $help, string $webRoot): string
+{
+    if ($flatName === 'CHIM_AI_QUEST_PROGRESSION') {
+        $prefix = 'Enable CHIM AI quest progression. Allows you to progress regular Skyrim quests with AI dialogue. Most vanilla non radiant quests are supported.';
+        $url = rtrim($webRoot, '/') . '/ui/events-memories.php?tab=questgen';
+        return htmlspecialchars($prefix, ENT_QUOTES, 'UTF-8')
+            . ' <a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Open AI Quest Manager</a> for more info.';
+    }
+
+    return htmlspecialchars($help, ENT_QUOTES, 'UTF-8');
 }
 
 function normalize_posted_value(string $type, $posted)
@@ -349,12 +378,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
         }
     }
 
-    $postedPromptContextOptions = chimNormalizePromptContextOptions([
-        'enabled_sections' => array_values(array_map('strval', $_POST['prompt_context_enabled_sections'] ?? [])),
-        'enabled_character_subsections' => array_values(array_map('strval', $_POST['prompt_context_enabled_character_subsections'] ?? [])),
-        'enabled_appearance_subsections' => array_values(array_map('strval', $_POST['prompt_context_enabled_appearance_subsections'] ?? [])),
-        'enabled_general_subsections' => array_values(array_map('strval', $_POST['prompt_context_enabled_general_subsections'] ?? [])),
-    ]);
+    $postedPromptContextRaw = [];
+    foreach ($promptContextCatalog as $bucket => $_options) {
+        $postedPromptContextRaw[$bucket] = array_values(array_map('strval', $_POST['prompt_context_' . $bucket] ?? []));
+    }
+    $postedPromptContextOptions = chimNormalizePromptContextOptions($postedPromptContextRaw);
     $promptContextDescription = current_description('PROMPT_CONTEXT_OPTIONS', $generalSettingRowMap);
     if (!chimSetGeneralSetting('PROMPT_CONTEXT_OPTIONS', $postedPromptContextOptions, $promptContextDescription)) {
         $didSave = false;
@@ -618,6 +646,17 @@ h1.gs-title {
     font-size: 12px;
     line-height: 1.45;
     min-width: 0;
+}
+
+.provider-help a {
+    color: #8fb8ff;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.provider-help a:hover {
+    color: #bdd4ff;
+    text-decoration: underline;
 }
 
 .prompt-context-wrap {
@@ -1202,6 +1241,61 @@ h1.gs-title {
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
+                                <div class="prompt-context-group">
+                                    <h3>Context Options</h3>
+                                    <div class="provider-grid">
+                                        <?php foreach ($fields as $field): ?>
+                                            <?php
+                                            $fieldName = $field['name'];
+                                            $fieldType = strval($field['type']);
+                                            $current = current_value($fieldName);
+                                            $label = pretty_label($fieldName);
+                                            $help = current_description($fieldName, $generalSettingRowMap);
+                                            $schemaDefinition = chimGetSchemaDefinition($fieldName);
+                                            $isReadonly = isset($schemaDefinition['readonly']) && $schemaDefinition['readonly'] === true;
+                                            $readonlyAttr = $isReadonly ? 'readonly' : '';
+                                            ?>
+                                            <div class="provider-card">
+                                                <div class="provider-head">
+                                                    <div class="provider-title">
+                                                        <div class="provider-icon"><?php echo icon_for_field($fieldName); ?></div>
+                                                        <div><?php echo htmlspecialchars($label); ?></div>
+                                                        <?php if ($fieldType === 'boolean'): ?>
+                                                            <div class="provider-toggle">
+                                                                <input type="hidden" name="<?php echo htmlspecialchars($fieldName); ?>" value="false">
+                                                                <input type="checkbox" name="<?php echo htmlspecialchars($fieldName); ?>" value="true" <?php echo ($current ? 'checked' : ''); ?> <?php echo $isReadonly ? 'disabled' : ''; ?>>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                                <div class="provider-body">
+                                                    <?php if ($fieldType === 'longstring'): ?>
+                                                        <?php if (isset($filterBrowseFieldConfigs[$fieldName])): ?>
+                                                            <?php $browseConfig = $filterBrowseFieldConfigs[$fieldName]; ?>
+                                                            <div class="filter-browse-wrap">
+                                                                <textarea name="<?php echo htmlspecialchars($fieldName); ?>" rows="4" <?php echo $readonlyAttr; ?>><?php echo htmlspecialchars(strval($current)); ?></textarea>
+                                                                <?php if (!$isReadonly): ?>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="btn-filter-browse js-filter-browse"
+                                                                        data-field="<?php echo htmlspecialchars($fieldName); ?>"
+                                                                    >
+                                                                        <?php echo htmlspecialchars(strval($browseConfig['button_label'] ?? 'Recent...')); ?>
+                                                                    </button>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        <?php else: ?>
+                                                            <textarea name="<?php echo htmlspecialchars($fieldName); ?>" rows="4" <?php echo $readonlyAttr; ?>><?php echo htmlspecialchars(strval($current)); ?></textarea>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($help)): ?>
+                                                        <p class="provider-help"><?php echo render_provider_help($fieldName, $help, $webRoot); ?></p>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
                             </div>
                             <?php continue; ?>
                         <?php endif; ?>
@@ -1223,8 +1317,14 @@ h1.gs-title {
 
                             $fieldType = strval($field['type']);
                             $current = current_value($fieldName);
+                            if (($current === '' || $current === null) && isset($field['default'])) {
+                                $current = $field['default'];
+                            }
                             $label = pretty_label($fieldName);
                             $help = current_description($fieldName, $generalSettingRowMap);
+                            if ($help === '' && isset($field['help'])) {
+                                $help = strval($field['help']);
+                            }
                             $schemaDefinition = chimGetSchemaDefinition($fieldName);
                             $isReadonly = isset($schemaDefinition['readonly']) && $schemaDefinition['readonly'] === true;
                             $readonlyAttr = $isReadonly ? 'readonly' : '';
@@ -1277,7 +1377,12 @@ h1.gs-title {
                                         <?php $min = isset($field['min']) ? intval($field['min']) : null; $max = isset($field['max']) ? intval($field['max']) : null; ?>
                                         <input type="number" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo ($min !== null ? 'min="' . $min . '"' : ''); ?> <?php echo ($max !== null ? 'max="' . $max . '"' : ''); ?> step="1" <?php echo $readonlyAttr; ?>>
                                     <?php elseif ($fieldType === 'number'): ?>
-                                        <input type="number" step="0.01" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo $readonlyAttr; ?>>
+                                        <?php
+                                        $min = isset($field['min']) ? floatval($field['min']) : null;
+                                        $max = isset($field['max']) ? floatval($field['max']) : null;
+                                        $step = isset($field['step']) ? floatval($field['step']) : 0.01;
+                                        ?>
+                                        <input type="number" step="<?php echo htmlspecialchars(strval($step)); ?>" name="<?php echo htmlspecialchars($fieldName); ?>" value="<?php echo htmlspecialchars(strval($current)); ?>" <?php echo ($min !== null ? 'min="' . $min . '"' : ''); ?> <?php echo ($max !== null ? 'max="' . $max . '"' : ''); ?> <?php echo $readonlyAttr; ?>>
                                     <?php elseif ($fieldType === 'longstring'): ?>
                                         <?php if (isset($filterBrowseFieldConfigs[$fieldName])): ?>
                                             <?php $browseConfig = $filterBrowseFieldConfigs[$fieldName]; ?>
@@ -1321,7 +1426,7 @@ h1.gs-title {
                                     <?php endif; ?>
                                 </div>
                                 <?php if ($help !== ''): ?>
-                                    <div class="provider-help"><?php echo htmlspecialchars($help); ?></div>
+                                    <div class="provider-help"><?php echo render_provider_help($fieldName, $help, $webRoot); ?></div>
                                 <?php endif; ?>
                             </div>
                         <?php endforeach; ?>

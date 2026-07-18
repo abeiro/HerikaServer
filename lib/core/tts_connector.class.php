@@ -9,6 +9,7 @@ class TTSConnector
         'pockettts' => 'POCKETTTS',
         'chatterbox' => 'CHATTERBOX',
         'xtts-fastapi' => 'XTTSFASTAPI',
+        'omnivoice' => 'OMNIVOICE',
         'inworld' => 'INWORLD',
         'cartesia' => 'CARTESIA',
         'piper-tts' => 'PIPERTTS',
@@ -29,6 +30,7 @@ class TTSConnector
         'pockettts' => 'PocketTTS',
         'chatterbox' => 'Chatterbox',
         'xtts-fastapi' => 'XTTS',
+        'omnivoice' => 'OmniVoice',
         'inworld' => 'Inworld',
         'cartesia' => 'Cartesia',
         'piper-tts' => 'Piper TTS',
@@ -48,6 +50,7 @@ class TTSConnector
         'pockettts' => 'voiceid',
         'chatterbox' => 'voiceid',
         'xtts-fastapi' => 'voiceid',
+        'omnivoice' => 'voiceid',
         'inworld' => 'voiceid',
         'cartesia' => 'voiceid',
         'piper-tts' => 'voiceid',
@@ -73,9 +76,10 @@ class TTSConnector
     ];
 
     private static $localUrlDefaultMap = [
-        'pockettts' => 'http://127.0.0.1:8020',
+        'pockettts' => 'http://127.0.0.1:8086',
         'chatterbox' => 'http://127.0.0.1:8020',
         'xtts-fastapi' => 'http://127.0.0.1:8020',
+        'omnivoice' => 'http://127.0.0.1:8021',
         'piper-tts' => 'http://127.0.0.1:5000',
         'xvasynth' => 'http://192.168.0.1:8008',
         'melotts' => 'http://127.0.0.1:8084',
@@ -109,13 +113,18 @@ class TTSConnector
             'PARALINGUISTIC_TAGS_PROMPT' => '',
             'PARALINGUISTIC_TAGS_LIST' => '[clear throat],[sigh],[shush],[cough],[groan],[sniff],[gasp],[chuckle],[laugh]',
         ],
+        'omnivoice' => [
+            'language' => '',
+            'voicelogic' => 'voicetype',
+        ],
         'pockettts' => [
             'language' => 'en',
+            'model' => 'pocket-tts',
             'voicelogic' => 'voicetype',
         ],
         'inworld' => [
             'language' => 'en-US',
-            'model_id' => 'inworld-tts-1',
+            'model_id' => 'inworld-tts-2',
             'temperature' => 1.0,
             'speed' => 1.0,
         ],
@@ -369,7 +378,7 @@ class TTSConnector
         $driver = $this->normalizeDriver($driver);
         $metadata = $this->mergeMissingMetadataDefaults($metadata, self::$sharedMetadataDefaultMap);
         $metadata = $this->mergeMissingMetadataDefaults($metadata, self::$metadataDefaultMap[$driver] ?? []);
-        if (in_array($driver, ['xtts-fastapi', 'chatterbox', 'pockettts'], true)) {
+        if (in_array($driver, ['xtts-fastapi', 'chatterbox', 'pockettts', 'omnivoice'], true)) {
             $metadata['voicelogic'] = 'voicetype';
         }
 
@@ -421,7 +430,7 @@ class TTSConnector
     public function driverSupportsLanguageOverride($driver): bool
     {
         $driver = $this->normalizeDriver($driver);
-        return in_array($driver, ['pockettts', 'chatterbox', 'xtts-fastapi', 'inworld', 'cartesia', 'piper-tts', 'xvasynth', 'melotts', 'zonos_gradio'], true);
+        return in_array($driver, ['pockettts', 'chatterbox', 'xtts-fastapi', 'omnivoice', 'inworld', 'cartesia', 'piper-tts', 'xvasynth', 'melotts', 'zonos_gradio'], true);
     }
 
     public function getProviderFieldSchema($driver): array
@@ -709,11 +718,16 @@ class TTSConnector
             $this->stripVoiceMetadataForDriver($driver, $metadata)
         );
 
-        $resolvedUrl = $this->normalizeUrlForDriver($driver, $currentTTSData["url"] ?? null, $metadata);
+        $resolvedUrl = $this->resolveRuntimeUrlForDriver($driver, $currentTTSData["url"] ?? null, $metadata);
         if ($resolvedUrl !== null && $resolvedUrl !== '') {
-            $metadata['endpoint'] = $metadata['endpoint'] ?? $resolvedUrl;
-            $metadata['url'] = $metadata['url'] ?? $resolvedUrl;
-            $metadata['URL'] = $metadata['URL'] ?? $resolvedUrl;
+            $metadata['endpoint'] = $resolvedUrl;
+            $metadata['url'] = $resolvedUrl;
+            $metadata['URL'] = $resolvedUrl;
+            if ($driver === 'pockettts' && preg_match('/\:8086(?:\/|$)/', $resolvedUrl)) {
+                if (!is_scalar($metadata['model'] ?? null) || trim(strval($metadata['model'] ?? '')) === '') {
+                    $metadata['model'] = 'pocket-tts';
+                }
+            }
         }
 
         $apiBadgeId = intval($currentTTSData['api_badge_id'] ?? 0);
@@ -913,6 +927,11 @@ class TTSConnector
         }
 
         return $candidate !== '' ? $candidate : null;
+    }
+
+    private function resolveRuntimeUrlForDriver($driver, $url, array $metadata = []): ?string
+    {
+        return $this->normalizeUrlForDriver($driver, $url, $metadata);
     }
 
     private function normalizeApiBadgeIdForDriver($driver, $apiBadgeId): ?int

@@ -34,9 +34,11 @@ if (isset($extended_data["middle_term_memory"])&&sizeof($extended_data["middle_t
 $dbNpcName=$GLOBALS["db"]->escape($selectedNpc);
 $scopeConditionSql = dataGetMemoryScopeConditionSql($selectedNpc);
 
-$query="SELECT summary as content,gamets_truncated FROM memory_summary where summary is not null and $scopeConditionSql and companions like '%|$dbNpcName|%' and gamets_truncated>$gametsfrom order by gamets_truncated desc LIMIT 100";
-// error_log($query);
+$query="SELECT summary as content,gamets_truncated FROM memory_summary where summary is not null and $scopeConditionSql and (companions like '%|$dbNpcName|%' or companions='$dbNpcName') and gamets_truncated>$gametsfrom order by gamets_truncated desc LIMIT 100";
+
 $contextDataFull=$GLOBALS["db"]->fetchAll($query);
+
+error_log("[MIDDLETERM] Retrieved " . count($contextDataFull) . " memory entries for $selectedNpc since gamets $gametsfrom");
 // $task=DataGetCurrentTask();
 $limit=10;
 

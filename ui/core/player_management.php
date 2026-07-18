@@ -14,6 +14,8 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPA
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "player_diary_connector.php");
 
 // Determine web root
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -60,6 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_player'])) {
             );
         }
         $player->set('diary_enabled', isset($_POST['diary_enabled']) && $_POST['diary_enabled'] === '1' ? '1' : '0');
+        $player->set('auto_diary_enabled', isset($_POST['auto_diary_enabled']) && $_POST['auto_diary_enabled'] === '1' ? '1' : '0');
+        $player->set('auto_diary_wait_enabled', isset($_POST['auto_diary_wait_enabled']) && $_POST['auto_diary_wait_enabled'] === '1' ? '1' : '0');
         $player->set('tts_connector_id', trim(strval($_POST['tts_connector_id'] ?? '')));
         $player->set('tts_voice_override', trim(strval($_POST['tts_voice_override'] ?? '')));
         $player->set('tts_voice_id_override', trim(strval($_POST['tts_voice_id_override'] ?? '')));
@@ -98,6 +102,8 @@ $bio = $allPlayerData['bio'] ?? '';
 $bioKnownByAll = ($allPlayerData['bio_known_by_all'] ?? 'false') === 'true';
 $speechStyle = $allPlayerData['speech_style'] ?? '';
 $playerDiaryEnabled = $player->getBool('diary_enabled', false);
+$playerAutoDiaryEnabled = $player->getBool('auto_diary_enabled', false);
+$playerAutoDiaryWaitEnabled = $player->getBool('auto_diary_wait_enabled', false);
 $playerTtsConnectorId = trim(strval($allPlayerData['tts_connector_id'] ?? ''));
 $playerTtsVoiceId = strval($allPlayerData['tts_voice_override'] ?? '');
 $playerTtsVoiceIdOverride = strval($allPlayerData['tts_voice_id_override'] ?? '');
@@ -112,6 +118,10 @@ $playerTtsElevenV3AudioTags = strval($allPlayerData['tts_elevenlabs_v3_audio_tag
 $playerRespeechConnectorId = trim(strval(chimGetGeneralSetting('CORE_CONNECTOR_PLAYER', strval($GLOBALS['CORE_CONNECTOR_PLAYER'] ?? ''))));
 $ttsConnectorRows = $ttsConnector->readAll();
 $llmConnectorRows = $llmConnector->readAll();
+$playerDiaryConnectorInfo = chimResolvePlayerDiaryConnectorFromDefaultProfile();
+$playerDiaryConnectorLabel = trim(strval($playerDiaryConnectorInfo['connector_label'] ?? 'Not configured'));
+$playerDiaryProfileLabel = trim(strval($playerDiaryConnectorInfo['profile_label'] ?? 'Default Profile'));
+$playerDiaryConnectorError = trim(strval($playerDiaryConnectorInfo['error'] ?? ''));
 $ttsConnectorMeta = [];
 foreach ($ttsConnectorRows as $row) {
     $ttsConnectorMeta[strval($row['id'] ?? '')] = [
@@ -458,6 +468,37 @@ if (!$isEmbed) {
         line-height: 1.4;
     }
 
+    .status-field {
+        margin-top: 14px;
+        margin-bottom: 14px;
+    }
+
+    .status-field-label {
+        display: block;
+        font-size: 13px;
+        color: rgb(242, 124, 17);
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .status-field-value {
+        color: #e9efff;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.35;
+    }
+
+    .status-field-value.warning {
+        color: #f1c27d;
+    }
+
+    .status-field-source {
+        color: #999;
+        font-size: 12px;
+        line-height: 1.4;
+        margin-top: 2px;
+    }
+
     .toggle-row {
         display: flex;
         align-items: center;
@@ -743,6 +784,20 @@ if (!$isEmbed) {
         margin: 0 auto;
     }
 
+    .equipment-group {
+        border: 1px solid #3d4654;
+        border-radius: 8px;
+        background: #20242b;
+        padding: 12px;
+        margin: 12px 0;
+    }
+
+    .equipment-group-title {
+        color: #f27c11;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
     .equipment-slot { 
         padding: 12px;
         background: linear-gradient(135deg, rgba(26, 26, 26, 0.9), rgba(20, 20, 20, 0.95));
@@ -988,6 +1043,7 @@ if (!$isEmbed) {
 </style>
 
 <?php if ($isEmbed): ?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/chim-theme.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'chim-theme.css'); ?>">
 <style>
     /* Embedded in hub: remove extra top padding since navbar is hidden */
     main { padding-top: 20px; }
@@ -1244,6 +1300,20 @@ if (!$isEmbed) {
             <div class="content-section">
                 <h2>📙 Player Diary</h2>
                 <input type="hidden" name="diary_enabled" value="0">
+                <input type="hidden" name="auto_diary_enabled" value="0">
+                <input type="hidden" name="auto_diary_wait_enabled" value="0">
+                <div class="status-field">
+                    <span class="status-field-label">Player Diary Connector</span>
+                    <div class="status-field-value <?php echo $playerDiaryConnectorError !== '' ? 'warning' : ''; ?>">
+                        <?php echo htmlspecialchars($playerDiaryConnectorLabel); ?>
+                    </div>
+                    <div class="status-field-source">
+                        Pulled from the Diary connector on the default profile: <?php echo htmlspecialchars($playerDiaryProfileLabel); ?>.
+                        <?php if ($playerDiaryConnectorError !== ''): ?>
+                            <?php echo htmlspecialchars($playerDiaryConnectorError); ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
                 <label class="toggle-row">
                     <div class="toggle-switch">
                         <input
@@ -1258,6 +1328,37 @@ if (!$isEmbed) {
                     <span class="toggle-label">Enable <?php echo htmlspecialchars($playerName); ?>'s Diary</span>
                 </label>
                 <span class="hint">Allows <?php echo htmlspecialchars($playerName); ?> to write diary entries. This can be triggered by the Prisma Actions menu or Auto Diary.</span>
+
+                <label class="toggle-row">
+                    <div class="toggle-switch">
+                        <input
+                            type="checkbox"
+                            id="auto_diary_enabled"
+                            name="auto_diary_enabled"
+                            value="1"
+                            <?php echo $playerAutoDiaryEnabled ? 'checked' : ''; ?>
+                        >
+                        <span class="toggle-slider"></span>
+                    </div>
+                    <span class="toggle-label">Player Auto Diary</span>
+                </label>
+                <span class="hint">Automatically writes <?php echo htmlspecialchars($playerName); ?>'s diary when sleeping. Requires Player Diary to be enabled.</span>
+
+                <label class="toggle-row">
+                    <div class="toggle-switch">
+                        <input
+                            type="checkbox"
+                            id="auto_diary_wait_enabled"
+                            name="auto_diary_wait_enabled"
+                            value="1"
+                            <?php echo $playerAutoDiaryWaitEnabled ? 'checked' : ''; ?>
+                        >
+                        <span class="toggle-slider"></span>
+                    </div>
+                    <span class="toggle-label">Player Auto Diary Wait</span>
+                </label>
+                <span class="hint">Also writes <?php echo htmlspecialchars($playerName); ?>'s diary when waiting. Requires Player Diary and Player Auto Diary to be enabled.</span>
+
             </div>
         </div>
     </form>
@@ -1298,25 +1399,19 @@ if (!$isEmbed) {
 
         <!-- Equipment Card -->
         <?php
-        $equipmentSlots = [
-            'helmet' => 'Helmet',
-            'armor' => 'Armor',
-            'boots' => 'Boots',
-            'gloves' => 'Gloves',
-            'amulet' => 'Amulet',
-            'ring' => 'Ring',
-            'cape' => 'Cape',
-            'backpack' => 'Backpack',
-            'left_hand' => 'Left Hand',
-            'right_hand' => 'Right Hand'
+        $equipmentGroups = [
+            'Vanilla Slots' => chimEquipmentVanillaSlotLabels(),
+            'Modded Slots' => chimEquipmentModdedSlotLabels(),
         ];
 
         $hasEquipment = false;
-        foreach ($equipmentSlots as $slot => $label) {
-            $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
-            if ($itemName) {
-                $hasEquipment = true;
-                break;
+        foreach ($equipmentGroups as $equipmentSlots) {
+            foreach ($equipmentSlots as $slot => $label) {
+                $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
+                if ($itemName) {
+                    $hasEquipment = true;
+                    break 2;
+                }
             }
         }
         ?>
@@ -1324,20 +1419,25 @@ if (!$isEmbed) {
             <h2>Equipment</h2>
             <?php if (!empty($equipment)): ?>
                 <?php if ($hasEquipment): ?>
-                    <div class="equipment-grid">
-                        <?php foreach ($equipmentSlots as $slot => $label):
-                            $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
-                        ?>
-                        <div class="equipment-slot">
-                            <div class="equipment-slot-name"><?php echo $label; ?></div>
-                            <?php if ($itemName): ?>
-                                <div class="equipment-item-name"><?php echo htmlspecialchars($itemName); ?></div>
-                            <?php else: ?>
-                                <div class="equipment-empty">Empty</div>
-                            <?php endif; ?>
+                    <?php foreach ($equipmentGroups as $groupLabel => $equipmentSlots): ?>
+                        <div class="equipment-group">
+                            <div class="equipment-group-title"><?php echo htmlspecialchars($groupLabel); ?></div>
+                            <div class="equipment-grid">
+                                <?php foreach ($equipmentSlots as $slot => $label):
+                                    $itemName = isset($equipment[$slot]) && !empty($equipment[$slot]) ? $equipment[$slot] : null;
+                                ?>
+                                <div class="equipment-slot">
+                                    <div class="equipment-slot-name"><?php echo htmlspecialchars($label); ?></div>
+                                    <?php if ($itemName): ?>
+                                        <div class="equipment-item-name"><?php echo htmlspecialchars($itemName); ?></div>
+                                    <?php else: ?>
+                                        <div class="equipment-empty">Empty</div>
+                                    <?php endif; ?>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
-                        <?php endforeach; ?>
-                    </div>
+                    <?php endforeach; ?>
                 <?php else: ?>
                     <div class="no-data">
                         <p><strong>No equipment currently equipped.</strong></p>

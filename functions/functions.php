@@ -990,7 +990,7 @@ $F_TRANSLATIONS_LOCAL["MakeFollower"] = "#HERIKA_NAME# joins #PLAYER_NAME#, form
 
 $F_TRANSLATIONS_LOCAL["Toast"] = "Raises a glass in celebration or honor.";
 $F_TRANSLATIONS_LOCAL["Drink"] = "Drinks a beverage to quench thirst or enjoy flavor.";
-$F_TRANSLATIONS_LOCAL["Consume"] = "#HERIKA_NAME# consumes a food, drink, or potion from inventory. Use the exact inventory item name in the target field.";
+$F_TRANSLATIONS_LOCAL["Consume"] = "#HERIKA_NAME# consumes a food, drink, or potion from inventory. Use the exact BaseID:ItemName inventory identifier in the target field.";
 $F_TRANSLATIONS_LOCAL["StartRitualCeremony"] = "Participates in a ritual or ceremony, following its customs and practices.";
 $F_TRANSLATIONS_LOCAL["EndRitualCeremony"] = "Concludes a ritual or ceremony, marking its completion.";
     
@@ -1879,7 +1879,7 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "REQUIRED: Exact name of the food, drink, or potion from <inventory> to consume.",
+                    "description" => "REQUIRED: Exact BaseID:ItemName identifier of the food, drink, or potion from <inventory> to consume.",
                 ],
                 "item" => [
                     "type" => "string",
@@ -2514,7 +2514,17 @@ function queueFunctionExecutionCommand(&$commandBuffer, &$alreadySent, $executio
     }
 
     $actorName = ($actorName !== null && trim(strval($actorName)) !== "") ? strval($actorName) : strval($GLOBALS["HERIKA_NAME"] ?? "Herika");
-    $commandStr = $actorName . "|command|" . strval($executionContext["function_code_name"] ?? "") . "@" . strval($executionContext["parameter_string"] ?? "") . "\r\n";
+    $functionCodeName = strval($executionContext["function_code_name"] ?? "");
+    $commandChannel = "command";
+
+    if (function_exists('herikaGetActionCatalogRow') && function_exists('herikaActionCatalogGetConfirmationCommandChannel')) {
+        $actionRow = herikaGetActionCatalogRow($functionCodeName);
+        if (is_array($actionRow)) {
+            $commandChannel = herikaActionCatalogGetConfirmationCommandChannel($actionRow);
+        }
+    }
+
+    $commandStr = $actorName . "|" . $commandChannel . "|" . $functionCodeName . "@" . strval($executionContext["parameter_string"] ?? "") . "\r\n";
     $commandHash = md5($commandStr);
 
     if (isset($alreadySent[$commandHash])) {
@@ -2809,6 +2819,14 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
             $actionCodeNameResolved = getFunctionCodeName($actionParts2[0]);
             if ($actionCodeNameResolved === false || trim(strval($actionCodeNameResolved)) === '') {
                 $actionCodeNameResolved = $actionParts2[0];
+            }
+
+            if (function_exists('chimQuestEngineIsActionSuppressedForTurn') && chimQuestEngineIsActionSuppressedForTurn($actionCodeNameResolved)) {
+                $reasons = $GLOBALS['CHIM_QUEST_SUPPRESSED_ACTION_REASONS'][$actionCodeNameResolved] ?? array();
+                $reasonText = is_array($reasons) && !empty($reasons) ? implode(', ', $reasons) : 'current quest beat';
+                error_log("[AI Quest] Dropping suppressed action {$actionCodeNameResolved}: {$reasonText}");
+                unset($actionsCopy[$n]);
+                continue;
             }
 
             if (herikaActionCatalogExecuteScriptProxyAction($action)) {

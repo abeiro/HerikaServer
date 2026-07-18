@@ -27,6 +27,12 @@ final class AsteriskParsingTest extends TestCase
             $GLOBALS['strip_emotes_from_output'],
             $GLOBALS['PATCH_OVERRIDE_VOICE'],
             $GLOBALS['PATCH_OVERRIDE_VOICE_ID'],
+            $GLOBALS['TTSFUNCTION'],
+            $GLOBALS['TTS_FUNCTION'],
+            $GLOBALS['CHIM_CORE_CURRENT_TTS_CONNECTOR_ID'],
+            $GLOBALS['PATCH_OVERRIDE_TTS_LANGUAGE'],
+            $GLOBALS['PATCH_OVERRIDE_TTS_OPTIONS'],
+            $GLOBALS['CHIM_EXECUTION_MODE'],
             $GLOBALS['TTS']
         );
     }
@@ -95,6 +101,48 @@ final class AsteriskParsingTest extends TestCase
         $this->assertSame('npc', getInlineNarrationMode());
         $this->assertFalse(shouldSplitInlineNarration());
         $this->assertTrue(isInlineNarrationEnabled());
+    }
+
+    public function testInlineNarrationModeSupportsTextOnlyMode(): void
+    {
+        $GLOBALS['INLINE_NARRATION_MODE'] = 'text_only';
+
+        $this->assertSame('text_only', getInlineNarrationMode());
+        $this->assertFalse(shouldSplitInlineNarration());
+        $this->assertTrue(isInlineNarrationEnabled());
+    }
+
+    public function testNarratorInlineNarrationKeepsLoadedNarratorVoice(): void
+    {
+        $savedSettings = [
+            'tts' => ['POCKETTTS' => ['voiceid' => 'alba']],
+            'has_patch_override_voice' => false,
+        ];
+        $GLOBALS['TTS'] = ['POCKETTTS' => ['voiceid' => 'alisenvoice']];
+        $GLOBALS['PATCH_OVERRIDE_VOICE'] = 'alisenvoice';
+
+        restoreInlineNarrationSpeakerVoiceSettings($savedSettings, 'The Narrator');
+
+        $this->assertSame('The Narrator', $GLOBALS['HERIKA_NAME']);
+        $this->assertSame('alisenvoice', $GLOBALS['PATCH_OVERRIDE_VOICE']);
+        $this->assertSame('alisenvoice', $GLOBALS['TTS']['POCKETTTS']['voiceid']);
+    }
+
+    public function testNpcInlineNarrationRestoresOriginalNpcVoice(): void
+    {
+        $savedSettings = [
+            'tts' => ['POCKETTTS' => ['voiceid' => 'lydiavoice']],
+            'has_patch_override_voice' => true,
+            'patch_override_voice' => 'lydiavoice',
+        ];
+        $GLOBALS['TTS'] = ['POCKETTTS' => ['voiceid' => 'alisenvoice']];
+        $GLOBALS['PATCH_OVERRIDE_VOICE'] = 'alisenvoice';
+
+        restoreInlineNarrationSpeakerVoiceSettings($savedSettings, 'Lydia');
+
+        $this->assertSame('Lydia', $GLOBALS['HERIKA_NAME']);
+        $this->assertSame('lydiavoice', $GLOBALS['PATCH_OVERRIDE_VOICE']);
+        $this->assertSame('lydiavoice', $GLOBALS['TTS']['POCKETTTS']['voiceid']);
     }
 
     public function testPlayerSpeechStripsAsteriskActionBlocksWhenPlayerFilterEnabled(): void
@@ -181,6 +229,18 @@ final class AsteriskParsingTest extends TestCase
         $this->assertSame(
             "Keep this quiet",
             formatPlayerSubtitleText("Rangroo: Keep this quiet (Whispering to Corpulus Vinius)")
+        );
+    }
+
+    public function testWhisperPrivatePeopleIncludesOnlyPlayerAndTarget(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+        $GLOBALS['CHIM_EXECUTION_MODE'] = 'WHISPER';
+
+        $this->assertTrue(isWhisperExecutionMode());
+        $this->assertSame(
+            '|Rangroo|Corpulus Vinius|',
+            buildWhisperPrivatePeople('Corpulus Vinius')
         );
     }
 
@@ -316,6 +376,26 @@ final class AsteriskParsingTest extends TestCase
         $GLOBALS['HERIKA_NAME'] = 'Carlotta Valentia';
 
         $this->assertSame('*smiles* Hello there', formatNpcSubtitleText('*smiles* Hello there'));
+    }
+
+    public function testTextOnlyNarrationKeepsSubtitleAndSpeaksOnlyDialogue(): void
+    {
+        $GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] = true;
+        $GLOBALS['HERIKA_NAME'] = 'Carlotta Valentia';
+        $line = '*She smiles softly* Hello *my* friend';
+
+        $this->assertSame($line, formatTextOnlyInlineNarrationSubtitleText($line));
+        $this->assertSame('Hello my friend', formatTextOnlyInlineNarrationSpeechText($line));
+    }
+
+    public function testTextOnlyNarrationOnlyLineProducesNoSpeech(): void
+    {
+        $GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] = true;
+        $GLOBALS['HERIKA_NAME'] = 'Carlotta Valentia';
+        $line = '*She looks toward the door*';
+
+        $this->assertSame($line, formatTextOnlyInlineNarrationSubtitleText($line));
+        $this->assertSame('', formatTextOnlyInlineNarrationSpeechText($line));
     }
 
     public function testInlineNarrationDialogueSubtitleRespectsNpcOutputFilter(): void

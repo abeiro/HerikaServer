@@ -222,12 +222,29 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
 // Function to process AUTO_DIARY for nearby NPCs with auto_diary_enabled
 function buildPlayerDiaryPrompt(string $playerName): string
 {
-    $template = trim((string)($GLOBALS["PLAYER_DIARY_PROMPT"] ?? ''));
+    $template = '';
+    try {
+        if (isset($GLOBALS["db"]) && is_object($GLOBALS["db"])) {
+            $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'player_diary_prompt'");
+            if (is_array($promptData)) {
+                $template = trim((string)(!empty($promptData['custom_prompt']) ? $promptData['custom_prompt'] : ($promptData['default_prompt'] ?? '')));
+            }
+        }
+    } catch (Throwable $e) {
+        Logger::warn("PLAYER_DIARY: Failed to load player_diary_prompt from Prompt Manager: " . $e->getMessage());
+    }
+
+    if ($template === '') {
+        $template = trim((string)($GLOBALS["PLAYER_DIARY_PROMPT"] ?? ''));
+    }
     if ($template === '') {
         $template = "Please write a short summary of #PLAYER_NAME#'s recent dialogues and events written above into #PLAYER_NAME#'s diary. WRITE AS IF YOU WERE #PLAYER_NAME#. Use first person and start the diary entry with the current date and time.";
     }
 
-    return strtr($template, ['#PLAYER_NAME#' => $playerName]);
+    return strtr($template, [
+        '#PLAYER_NAME#' => $playerName,
+        '{PLAYER_NAME}' => $playerName
+    ]);
 }
 
 function getConfiguredPlayerDiaryName(Player $player): string
@@ -255,6 +272,36 @@ function isPlayerDiaryEnabled(): bool
     }
 }
 
+function isPlayerAutoDiaryEnabled(): bool
+{
+    if (!class_exists('Player')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    }
+
+    try {
+        $player = new Player();
+        return $player->getBool('auto_diary_enabled', false);
+    } catch (Throwable $e) {
+        Logger::error("PLAYER_DIARY: Failed to read player auto diary setting: " . $e->getMessage());
+        return false;
+    }
+}
+
+function isPlayerAutoDiaryWaitEnabled(): bool
+{
+    if (!class_exists('Player')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
+    }
+
+    try {
+        $player = new Player();
+        return $player->getBool('auto_diary_wait_enabled', false);
+    } catch (Throwable $e) {
+        Logger::error("PLAYER_DIARY: Failed to read player auto diary wait setting: " . $e->getMessage());
+        return false;
+    }
+}
+
 function generatePlayerDiary($gameRequest, $eventType)
 {
     global $db;
@@ -264,6 +311,9 @@ function generatePlayerDiary($gameRequest, $eventType)
     }
     if (!class_exists('LLMConnector')) {
         require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "llm_connector.class.php");
+    }
+    if (!function_exists('chimResolvePlayerDiaryConnectorFromDefaultProfile')) {
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . "player_diary_connector.php");
     }
 
     $player = new Player();
@@ -358,24 +408,13 @@ function generatePlayerDiary($gameRequest, $eventType)
 
     try {
         $connector = new LLMConnector();
-        $coreConnectorId = trim((string)$player->get('diary_connector_id'));
-        if ($coreConnectorId === '') {
-            foreach (['CORE_CONNECTOR_SUMMARY', 'CORE_CONNECTOR_PLAYER', 'CORE_CONNECTOR_PROFILES'] as $globalConnectorKey) {
-                $candidateConnectorId = trim((string)($GLOBALS[$globalConnectorKey] ?? ''));
-                if ($candidateConnectorId !== '') {
-                    $coreConnectorId = $candidateConnectorId;
-                    break;
-                }
-            }
-        }
-
-        $currentConnectorData = null;
-        if ($coreConnectorId !== '') {
-            $currentConnectorData = $connector->getById($coreConnectorId);
-        }
+        $defaultDiaryConnector = chimResolvePlayerDiaryConnectorFromDefaultProfile();
+        $coreConnectorId = intval($defaultDiaryConnector['connector_id'] ?? 0);
+        $currentConnectorData = $defaultDiaryConnector['connector_data'] ?? null;
 
         if (!empty($currentConnectorData)) {
-            Logger::info("PLAYER_DIARY: Using core connector {$coreConnectorId} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]})");
+            $profileLabel = trim((string)($defaultDiaryConnector['profile_label'] ?? 'Default Profile'));
+            Logger::info("PLAYER_DIARY: Using default profile diary connector {$coreConnectorId} ({$currentConnectorData["driver"]}/{$currentConnectorData["model"]}) from {$profileLabel}");
             $connector->setOldGlobals($currentConnectorData);
             $GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"] = $currentConnectorData;
             unset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]["stop"]);
@@ -394,6 +433,11 @@ function generatePlayerDiary($gameRequest, $eventType)
             $connectionHandler = $connector->getConnector($currentConnectorData);
             $buffer = (string)$connectionHandler->fast_request($contextData, ["MAX_TOKENS" => $maxTokens], "diary");
         } else {
+            $defaultDiaryConnectorError = trim((string)($defaultDiaryConnector['error'] ?? ''));
+            if ($defaultDiaryConnectorError !== '') {
+                Logger::warn("PLAYER_DIARY: Default profile diary connector unavailable: {$defaultDiaryConnectorError}");
+            }
+
             $diaryConnector = function_exists('chimResolveDiaryConnectorName') ? chimResolveDiaryConnectorName() : null;
             if ($diaryConnector === null) {
                 Logger::warn("PLAYER_DIARY: No diary connector configured");
@@ -487,6 +531,10 @@ function processAutoDiary($gameRequest, $eventType) {
     
     Logger::info("AUTO_DIARY: Function called for event type: $eventType");
     $playerDiaryEnabled = isPlayerDiaryEnabled();
+    $playerAutoDiaryEnabled = isPlayerAutoDiaryEnabled();
+    $playerAutoDiaryWaitEnabled = isPlayerAutoDiaryWaitEnabled();
+    $shouldProcessPlayerDiary = ($eventType === "goodnight" && $playerDiaryEnabled && $playerAutoDiaryEnabled)
+        || ($eventType === "waitstart" && $playerDiaryEnabled && $playerAutoDiaryEnabled && $playerAutoDiaryWaitEnabled);
     
     // Get nearby NPCs
     $nearbyNpcsStr = DataBeingsInCloseRange();
@@ -512,7 +560,7 @@ function processAutoDiary($gameRequest, $eventType) {
         Logger::info("AUTO_DIARY: Added The Narrator to auto diary processing (auto toggle enabled)");
     }
     
-    if (empty($nearbyNpcs) && !$playerDiaryEnabled) {
+    if (empty($nearbyNpcs) && !$shouldProcessPlayerDiary) {
         Logger::info("AUTO_DIARY: No nearby NPCs, narrator, or player diary entries to process");
         return;
     }
@@ -521,7 +569,7 @@ function processAutoDiary($gameRequest, $eventType) {
     $generatedCount = 0;
     $diaryCooldownPeriod = isset($GLOBALS["DIARY_COOLDOWN"]) ? intval($GLOBALS["DIARY_COOLDOWN"]) : 30;
     
-    if ($playerDiaryEnabled) {
+    if ($shouldProcessPlayerDiary) {
         try {
             if (!class_exists('Player')) {
                 require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
@@ -1066,10 +1114,17 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         
     // Use centralized function from data_functions.php
     $dynamicBiography = buildDynamicBiography($GLOBALS);
+    $promptCharacterName = function_exists('chimGetPromptCharacterName')
+        ? chimGetPromptCharacterName()
+        : $GLOBALS["HERIKA_NAME"];
         
     $head[] = array('role' => 'system', 'content' =>  
     strtr($GLOBALS["PROMPT_HEAD"] . "\n\n#Character details\n".$GLOBALS["HERIKA_PERS"] . $dynamicBiography . "\n\n#General Instructions\n". $GLOBALS["COMMAND_PROMPT"],
-        ["#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]])
+        [
+            "#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"],
+            "#HERIKA_NAME#" => $promptCharacterName,
+            "#NARRATOR_NAME#" => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
+        ])
     );
         
     // Use diary-specific context history if this is a diary request and CONTEXT_HISTORY_DIARY is set
@@ -1099,7 +1154,11 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         $prompt[] = ["role" => "user", "content" => "Recent context: " . $historyData];
     }
 
-    $diaryPrompt=strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$followerName,'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"],"#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$GLOBALS["HERIKA_NAME"]]);
+    if (function_exists('chimRenderNarratorContextText')) {
+        $historyData = chimRenderNarratorContextText($historyData);
+    }
+
+    $diaryPrompt=strtr($GLOBALS["DIARY_PROMPT"],['{$GLOBALS["HERIKA_NAME"]}'=>$promptCharacterName,'{$GLOBALS["PLAYER_NAME"]}'=>$GLOBALS["PLAYER_NAME"],"#PLAYER_NAME#"=>$GLOBALS["PLAYER_NAME"],"#HERIKA_NAME#"=>$promptCharacterName,"#NARRATOR_NAME#"=>function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator']);
 
     $prompt[] = 
         ["role" => "user", "content" => $diaryPrompt
@@ -1108,6 +1167,9 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
     
 
     $contextData = array_merge($head, $prompt);
+    if (function_exists('chimApplyNarratorRoleplayNameToContext')) {
+        $contextData = chimApplyNarratorRoleplayNameToContext($contextData);
+    }
     
     // Set the request type for diary so connector knows to use diary grammar
     $originalGameRequest = isset($GLOBALS["gameRequest"]) ? $GLOBALS["gameRequest"] : null;
@@ -1254,10 +1316,13 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
         require_once(__DIR__ . "/core/narrator.class.php");
         $narrator = new Narrator();
         $npcData = $narrator->getNarratorData();
+        $GLOBALS['NARRATOR_ROLEPLAY_NAME'] = $narrator->getRoleplayName();
+        $promptNpcName = $narrator->getRoleplayName();
     } else {
         require_once(__DIR__ . "/core/npc_master.class.php");
         $npcMaster = new NpcMaster();
         $npcData = $npcMaster->getByName($npcName);
+        $promptNpcName = $npcName;
     }
 
     if (!$npcData) {
@@ -1303,7 +1368,10 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
     }
     
     // Replace placeholders in the prompt
-    $updatePrompt = str_replace('{HERIKA_NAME}', $npcName, $updatePrompt);
+    $updatePrompt = strtr($updatePrompt, [
+        '{HERIKA_NAME}' => $promptNpcName,
+        '{NARRATOR_NAME}' => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
+    ]);
     
     try {
         // Collect other profile fields for context (excluding the current field)
@@ -1335,7 +1403,11 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
 
         foreach ($profileFields as $fieldName => $fieldLabel) {
             if (!empty(trim($npcData[$fieldName]))) {
-                $profileContext[] = "**{$fieldLabel}**: " . trim($npcData[$fieldName]);
+                $profileValue = trim($npcData[$fieldName]);
+                if ($isNarrator && function_exists('chimRenderNarratorRoleplayText')) {
+                    $profileValue = chimRenderNarratorRoleplayText($profileValue);
+                }
+                $profileContext[] = "**{$fieldLabel}**: " . $profileValue;
             }
         }
 
@@ -1343,17 +1415,20 @@ function updateDynamicProfileField($npcName, $field, $historyData) {
 
         // Build prompt for this specific field
         $head = [
-            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update ONLY the " . ucfirst($field) . " for the character named '$npcName'. Focus mostly on information about $npcName and mostly ignore details about other characters mentioned in the dialogue."]
+            ["role" => "system", "content" => "You are an assistant. Analyze the dialogue history and character profile to update ONLY the " . ucfirst($field) . " for the character named '$promptNpcName'. Focus mostly on information about $promptNpcName and mostly ignore details about other characters mentioned in the dialogue."]
         ];
 
         $GLOBALS["HERIKA_NAME"] = $npcName; //note none of these prompts will contain #HERIKA_NAME, as the dialogue flow doesnt do this replacement (which may be a bug)
         $prompt = [
             ["role" => "user", "content" => "* Dialogue history:\n" . $historyData . ReplacePlayerNamePlaceholder($profileContextString)],
-            ["role" => "user", "content" => "Character name: " . $npcName . "\nCurrent " . ucfirst($field) . ":\n" . ReplacePlayerNamePlaceholder($currentValue)],
+            ["role" => "user", "content" => "Character name: " . $promptNpcName . "\nCurrent " . ucfirst($field) . ":\n" . ReplacePlayerNamePlaceholder($isNarrator && function_exists('chimRenderNarratorRoleplayText') ? chimRenderNarratorRoleplayText($currentValue) : $currentValue)],
             ["role" => "user", "content" => ReplacePlayerNamePlaceholder($updatePrompt)]
         ];
         
         $contextData = array_merge($head, $prompt);
+        if (function_exists('chimApplyNarratorRoleplayNameToContext')) {
+            $contextData = chimApplyNarratorRoleplayNameToContext($contextData);
+        }
         
         $connector=new LLMConnector();
         $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_PROFILES"]);

@@ -187,6 +187,20 @@ if (
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
     try {
+        $roleplayName = Narrator::normalizeRoleplayName($_POST['roleplay_name'] ?? Narrator::DEFAULT_ROLEPLAY_NAME);
+        $playerName = trim((string)($GLOBALS['PLAYER_NAME'] ?? ''));
+        if ($playerName !== '' && strcasecmp($roleplayName, $playerName) === 0) {
+            throw new InvalidArgumentException('Narrator roleplay name cannot match the player name.');
+        }
+        $escapedRoleplayName = $db->escape($roleplayName);
+        $matchingNpc = $db->fetchOne(
+            "SELECT npc_name FROM core_npc_master WHERE LOWER(npc_name) = LOWER('{$escapedRoleplayName}') LIMIT 1"
+        );
+        if ($matchingNpc) {
+            throw new InvalidArgumentException('Narrator roleplay name cannot match an existing NPC name.');
+        }
+        $narrator->set('roleplay_name', $roleplayName);
+
         // Save boolean settings
         $narrator->set('enabled', isset($_POST['enabled']) && $_POST['enabled'] === '1' ? '1' : '0');
         $narrator->set('welcome_enabled', isset($_POST['welcome_enabled']) && $_POST['welcome_enabled'] === '1' ? '1' : '0');
@@ -195,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
         $narrator->set('books_only_narrator', isset($_POST['books_only_narrator']) && $_POST['books_only_narrator'] === '1' ? '1' : '0');
         $narrator->set('hide_from_context', isset($_POST['hide_from_context']) && $_POST['hide_from_context'] === '1' ? '1' : '0');
         $inlineNarrationMode = isset($_POST['inline_narration_mode']) ? strtolower(trim((string)$_POST['inline_narration_mode'])) : 'disabled';
-        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
+        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
             $inlineNarrationMode = 'disabled';
         }
         $narrator->set('inline_narration_mode', $inlineNarrationMode);
@@ -312,10 +326,10 @@ $questCommentEnabled = $narrator->getBool('quest_comment_enabled', false);
 $questCommentChance = $narrator->getInt('quest_comment_chance', 10);
 $questCommentCooldown = $narrator->getInt('quest_comment_cooldown', 3);
 $booksOnlyNarrator = $narrator->getBool('books_only_narrator', false);
-$hideFromContext = $narrator->getBool('hide_from_context', false);
+$hideFromContext = $narrator->getBool('hide_from_context', true);
 $inlineNarrationMode = strtolower(trim((string)($narrator->get('inline_narration_mode') ?? '')));
-if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc'], true)) {
-    if (isset($GLOBALS['INLINE_NARRATION_MODE']) && in_array(strtolower(trim((string)$GLOBALS['INLINE_NARRATION_MODE'])), ['disabled', 'narrator', 'npc'], true)) {
+if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
+    if (isset($GLOBALS['INLINE_NARRATION_MODE']) && in_array(strtolower(trim((string)$GLOBALS['INLINE_NARRATION_MODE'])), ['disabled', 'narrator', 'npc', 'text_only'], true)) {
         $inlineNarrationMode = strtolower(trim((string)$GLOBALS['INLINE_NARRATION_MODE']));
     } else {
         $inlineNarrationMode = $narrator->getBool('inline_narration_enabled', isset($GLOBALS['INLINE_NARRATION_ENABLED']) ? (bool)$GLOBALS['INLINE_NARRATION_ENABLED'] : false) ? 'narrator' : 'disabled';
@@ -341,6 +355,7 @@ $dynamicProfileFields = $narrator->getDynamicProfileFields();
 
 // Extract character fields
 $profileId = $narrator->getInt('profile_id', 1);
+$roleplayName = $narrator->getRoleplayName();
 $voiceid = $narrator->get('voiceid') ?? 'TheNarrator';
 $core = $narrator->get('core') ?? '';
 $background = $narrator->get('background') ?? '';
@@ -1293,6 +1308,7 @@ if (!$isEmbed) {
 </style>
 
 <?php if ($isEmbed): ?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/chim-theme.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'chim-theme.css'); ?>">
 <style>
     /* Embedded in hub: remove extra top padding since navbar is hidden */
     main { padding-top: 20px; }
@@ -1333,6 +1349,10 @@ if (!$isEmbed) {
                 <!-- Core Settings Section -->
                 <div class="content-section">
                     <h2>Core Settings</h2>
+
+                    <label for="roleplay_name">Narrator Name</label>
+                    <input type="text" id="roleplay_name" name="roleplay_name" maxlength="64" value="<?php echo htmlspecialchars($roleplayName); ?>" placeholder="The Narrator">
+                    <span class="hint">Changes how the narrator is identified in prompts, LLM context, subtitles, and history displays. Internal routing, storage, actions, and TTS continue to use The Narrator.</span>
                     
                     <label class="toggle-row">
                         <div class="toggle-switch">
@@ -1389,8 +1409,9 @@ if (!$isEmbed) {
                         <option value="disabled" <?php echo $inlineNarrationMode === 'disabled' ? 'selected' : ''; ?>>Disabled</option>
                         <option value="narrator" <?php echo $inlineNarrationMode === 'narrator' ? 'selected' : ''; ?>>Narrator</option>
                         <option value="npc" <?php echo $inlineNarrationMode === 'npc' ? 'selected' : ''; ?>>NPC</option>
+                        <option value="text_only" <?php echo $inlineNarrationMode === 'text_only' ? 'selected' : ''; ?>>Text Only</option>
                     </select>
-                    <span class="hint">Controls who voices leading *narration* blocks. Narrator sends the asterisked section to The Narrator voice, NPC keeps the full line on the NPC voice, and Disabled turns off special inline narration routing.</span>
+                    <span class="hint">Controls leading *narration* blocks. Narrator uses The Narrator voice, NPC speaks the full line, Text Only displays the narration but speaks only the dialogue, and Disabled turns off special routing.</span>
 
                     <label class="toggle-row">
                         <div class="toggle-switch">
@@ -1408,7 +1429,7 @@ if (!$isEmbed) {
                         </div>
                         <span class="toggle-label">Remove NPC Output Asterisks</span>
                     </label>
-                    <span class="hint">Filters *asterisked* NPC narration/emotes from NPC speech and subtitles. Turn this off if you want NPCs to keep or speak their own asterisked text.</span>
+                    <span class="hint">Filters *asterisked* NPC narration/emotes from NPC speech and subtitles. Text Only always keeps leading narration visible. Turn this off if you want NPCs in other modes to keep or speak their own asterisked text.</span>
 
                     <label class="toggle-row">
                         <div class="toggle-switch">
@@ -1513,7 +1534,7 @@ if (!$isEmbed) {
             <div class="content-grid">
                 <div class="content-section">
                     <h2>Profile & Voice</h2>
-                    
+
                     <label for="profile_id">Profile</label>
                     <select id="profile_id" name="profile_id">
                         <?php foreach ($allProfiles as $profile): ?>

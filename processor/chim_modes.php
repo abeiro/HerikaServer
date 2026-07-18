@@ -165,8 +165,7 @@ if ($EXECUTION_MODE=="STANDARD") {
     $cleaned_player_dialogue = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
     $gameRequest[3]="(".trim($cleaned_player_dialogue).")";
     logEvent($gameRequest);
-
-
+    terminate();
     
 } else if ($EXECUTION_MODE=="INJECTION_CHAT") {
     $cleaned_player_dialogue = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
