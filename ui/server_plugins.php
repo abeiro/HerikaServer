@@ -222,6 +222,37 @@ tr.featured-plugin-row td {
     color: #FDF5D0;
     animation: sharmatNeonPulse 3s ease-in-out infinite alternate;
 }
+.package-installer-card {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto;
+    gap: 14px;
+    align-items: end;
+    margin-bottom: 20px;
+    padding: 16px;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    background: #242424;
+}
+.package-installer-card h2 { margin: 0 0 5px; color: #f27c11; }
+.package-installer-card p { margin: 0; color: #bbb; }
+.package-installer-controls { display: flex; gap: 8px; align-items: center; }
+.package-installer-controls input[type="file"] {
+    min-width: 300px;
+    padding: 7px;
+    color: #eee;
+    border: 1px solid #4a4a4a;
+    border-radius: 5px;
+    background: #191919;
+}
+.package-install-status { grid-column: 1 / -1; display: none; padding: 10px 12px; border-radius: 5px; background: #181818; color: #ddd; }
+.package-install-status.is-visible { display: block; }
+.package-install-status.is-error { color: #ff9a9a; border: 1px solid #7b3030; }
+.package-install-status.is-success { color: #a9e7b7; border: 1px solid #2d6b3d; }
+@media (max-width: 900px) {
+    .package-installer-card { grid-template-columns: 1fr; }
+    .package-installer-controls { flex-wrap: wrap; }
+    .package-installer-controls input[type="file"] { min-width: 0; width: 100%; }
+}
 </style>
 
 <main>
@@ -229,6 +260,18 @@ tr.featured-plugin-row td {
         <h1 id="page-title"><span id="title-text">Server Plugins</span></h1>
         <p class="page-subtitle">Manage and install plugins to extend CHIM functionality</p>
     </div>
+
+    <form id="unified-package-form" class="package-installer-card" enctype="multipart/form-data">
+        <div>
+            <h2>Unified Plugin Package</h2>
+            <p>Install one verified <code>.dwpkg</code> containing both the CHIM server extension and its separate Mod Organizer 2 mod.</p>
+        </div>
+        <div class="package-installer-controls">
+            <input id="unified-package-file" type="file" name="package" accept=".dwpkg" required>
+            <button id="unified-package-submit" type="submit" class="btn-base btn-save">Install Package</button>
+        </div>
+        <div id="unified-package-status" class="package-install-status" role="status" aria-live="polite"></div>
+    </form>
 
     <div class="table-container">
         <?php
@@ -647,6 +690,93 @@ tr.featured-plugin-row td {
         ?>
     </div>
 </main>
+
+<script>
+(() => {
+    const form = document.getElementById('unified-package-form');
+    const fileInput = document.getElementById('unified-package-file');
+    const submit = document.getElementById('unified-package-submit');
+    const status = document.getElementById('unified-package-status');
+    const endpoint = <?php echo json_encode($webRoot . '/ui/api/plugin_packages.php'); ?>;
+    let pollTimer = null;
+
+    const showStatus = (message, state = '') => {
+        status.textContent = message;
+        status.className = 'package-install-status is-visible' + (state ? ` is-${state}` : '');
+    };
+
+    const describe = job => {
+        if (job.status === 'awaiting_launcher') return `${job.package_name} ${job.version} is verified. Waiting for DwemerDistro Launcher to install the MO2 mod.`;
+        if (job.status === 'installing_game') return `${job.package_name} ${job.version}: installing the MO2 mod.`;
+        if (job.status === 'activating_server') return `${job.package_name} ${job.version}: activating the server extension.`;
+        if (job.status === 'completed') return `${job.package_name} ${job.version} installed successfully.`;
+        if (job.status === 'failed') return `${job.package_name} ${job.version} failed: ${job.error || 'unknown error'}`;
+        return `${job.package_name} ${job.version}: ${job.status}`;
+    };
+
+    const poll = async jobId => {
+        try {
+            const response = await fetch(`${endpoint}?action=status&job_id=${encodeURIComponent(jobId)}`, { cache: 'no-store' });
+            const payload = await response.json();
+            if (!response.ok || !payload.ok) throw new Error(payload.error || 'Could not read package status.');
+            const final = ['completed', 'failed'].includes(payload.job.status);
+            showStatus(describe(payload.job), payload.job.status === 'completed' ? 'success' : (payload.job.status === 'failed' ? 'error' : ''));
+            if (final) {
+                submit.disabled = false;
+                return;
+            }
+            pollTimer = window.setTimeout(() => poll(jobId), 1500);
+        } catch (error) {
+            showStatus(error.message, 'error');
+            submit.disabled = false;
+        }
+    };
+
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (!fileInput.files.length) return;
+        if (pollTimer) window.clearTimeout(pollTimer);
+        submit.disabled = true;
+        const file = fileInput.files[0];
+        const chunkSize = 1024 * 1024;
+        const totalChunks = Math.ceil(file.size / chunkSize);
+        showStatus(`Preparing ${totalChunks} upload chunk${totalChunks === 1 ? '' : 's'}...`);
+        try {
+            const startResponse = await fetch(`${endpoint}?action=start-upload`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: file.name, size: file.size, total_chunks: totalChunks })
+            });
+            const startPayload = await startResponse.json();
+            if (!startResponse.ok || !startPayload.ok) throw new Error(startPayload.error || 'Could not start package upload.');
+
+            let job = null;
+            for (let index = 0; index < totalChunks; index++) {
+                showStatus(`Uploading package: ${index + 1} of ${totalChunks} chunks...`);
+                const chunk = file.slice(index * chunkSize, Math.min(file.size, (index + 1) * chunkSize));
+                const chunkResponse = await fetch(`${endpoint}?action=upload-chunk&upload_id=${encodeURIComponent(startPayload.upload.upload_id)}&index=${index}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/octet-stream' },
+                    body: chunk
+                });
+                const chunkPayload = await chunkResponse.json();
+                if (!chunkResponse.ok || !chunkPayload.ok) throw new Error(chunkPayload.error || `Package chunk ${index + 1} failed.`);
+                if (chunkPayload.upload.complete) job = chunkPayload.upload.job;
+            }
+            if (!job) throw new Error('Package upload completed without creating an install job.');
+            showStatus(describe(job), job.status === 'failed' ? 'error' : '');
+            if (['completed', 'failed'].includes(job.status)) {
+                submit.disabled = false;
+                return;
+            }
+            poll(job.id);
+        } catch (error) {
+            showStatus(error.message, 'error');
+            submit.disabled = false;
+        }
+    });
+})();
+</script>
 
 <?php
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."footer.html");
