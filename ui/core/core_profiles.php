@@ -124,7 +124,7 @@ h1.api-title {
     background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
 }
-.llm-right { min-width: 0; }
+.llm-right { min-width: 0; container-type:inline-size; }
 .list-filters { display:flex; gap:8px; align-items:center; margin:6px 0 10px; flex-wrap:wrap; }
 .list-filters input[type="text"]{ 
     width: 100%; 
@@ -363,6 +363,112 @@ h1.api-title {
 .profile-core-compact-field > label { margin-bottom: 3px; line-height: 1.25; }
 .profile-core-compact-field > .hint,
 .profile-core-compact-field > small.hint { margin-top: 3px; line-height: 1.3; }
+
+/* Compact profile editor */
+.profile-editor-toolbar {
+    position:sticky;
+    top:0;
+    z-index:50;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:10px;
+    padding:10px 12px;
+    background:rgba(31,31,31,0.97);
+    border:1px solid #444;
+    border-radius:8px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.28);
+    backdrop-filter:blur(4px);
+}
+.profile-editor-toolbar-label { color:#9fb1c9; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; }
+.profile-editor-toolbar-name { color:#f3f5fa; font-size:16px; font-weight:700; margin-top:2px; }
+.profile-core-grid { display:grid; grid-template-columns:minmax(0, 2fr) 120px 190px; gap:10px; align-items:start; }
+.profile-core-grid .profile-core-compact-field { margin:0; }
+.profile-default-card {
+    min-height:68px;
+    display:flex !important;
+    flex-direction:column;
+    justify-content:center;
+    padding:9px 10px;
+    border:1px solid #414141;
+    border-radius:7px;
+    background:#242424;
+    cursor:pointer;
+}
+.profile-prompt-field { margin-top:10px; }
+.profile-prompt-field textarea { min-height:82px; }
+.profile-toggle-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; margin-top:10px; }
+.profile-toggle-card {
+    display:block !important;
+    min-height:78px;
+    margin:0 !important;
+    padding:9px 10px;
+    border:1px solid #414141;
+    border-radius:7px;
+    background:#242424;
+    cursor:pointer;
+}
+.profile-toggle-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; color:#f0f5ff; font-size:12px; font-weight:700; }
+.profile-toggle-control { display:inline-flex; align-items:center; gap:7px; white-space:nowrap; }
+.profile-toggle-card input[type="checkbox"],
+.profile-default-card input[type="checkbox"] { accent-color:#176529; transform:scale(1.25); cursor:pointer; }
+.profile-toggle-card .toggle-text,
+.profile-default-card .toggle-text { min-width:20px; color:#dce5f4; font-size:11px; text-align:right; }
+.profile-toggle-description { display:block; margin-top:6px; color:#9fb1c9; font-size:11px; font-weight:400; line-height:1.3; }
+.connector-selection-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; align-items:stretch; }
+.connector-group-card { min-width:0; height:100%; padding:11px; border:1px solid #414141; border-radius:7px; background:#202020; box-sizing:border-box; }
+.connector-group-title { margin:0; color:#f27c11; font-family:'MagicCards', serif; font-size:1.05em; line-height:1.25; letter-spacing:0.4px; word-spacing:5px; }
+.connector-group-subtitle { min-height:30px; margin:4px 0 8px; color:#9fb1c9; font-size:11px; line-height:1.3; }
+.connector-group-fields { display:grid; grid-template-columns:1fr; gap:8px; }
+.connector-option-card { min-width:0; padding:10px; border:1px solid #414141; border-radius:7px; background:#242424; }
+.connector-option-card .setting-key { margin-bottom:2px; }
+.connector-option-card .setting-desc { min-height:32px; }
+.connector-option-card .setting-control { max-width:none; margin-top:7px; }
+.profile-feature-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:9px; align-items:stretch; margin-bottom:9px; }
+.profile-feature-grid .provider-card { height:100%; margin:0 !important; box-sizing:border-box; }
+.profile-feature-grid .setting-row,
+.profile-settings-columns .setting-row { grid-template-columns:1fr; gap:7px; }
+.profile-feature-grid .setting-control,
+.profile-feature-grid .setting-control-wide,
+.profile-settings-columns .setting-control,
+.profile-settings-columns .setting-control-wide { max-width:none; justify-self:stretch; }
+.profile-feature-grid .profile-setting-chips,
+.profile-settings-columns .profile-setting-chips { justify-content:flex-start; }
+.profile-settings-columns { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; align-items:stretch; }
+.profile-settings-group { display:flex; min-width:0; flex-direction:column; }
+.profile-settings-group > .provider-card { flex:1 1 auto; box-sizing:border-box; }
+.profile-settings-heading {
+    margin:0 0 6px;
+    padding:0;
+    color:#f27c11;
+    font-family:'MagicCards', serif;
+    font-size:1.05em;
+    line-height:1.25;
+    letter-spacing:0.4px;
+    word-spacing:5px;
+    text-shadow:1px 1px 2px rgba(0,0,0,0.5);
+}
+.rechat-calculator { margin-bottom:7px; padding:8px 10px; border:1px solid #3c3c3c; border-radius:7px; background:#1d1d1d; }
+.rechat-calculator-title { display:flex; align-items:center; gap:7px; margin-bottom:5px; color:#f27c11; font-size:12px; font-weight:700; }
+.profile-settings-other { margin-top:10px; }
+
+@container (max-width: 760px) {
+    .profile-core-grid { grid-template-columns:minmax(0, 1fr) 110px; }
+    .profile-default-card { grid-column:1 / -1; min-height:auto; }
+    .profile-toggle-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .connector-selection-grid { grid-template-columns:1fr; }
+    .connector-group-fields { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .profile-settings-columns,
+    .profile-feature-grid { grid-template-columns:1fr; }
+}
+@container (max-width: 540px) {
+    .profile-editor-toolbar { position:static; }
+    .profile-core-grid,
+    .profile-toggle-grid { grid-template-columns:1fr; }
+    .connector-group-fields { grid-template-columns:1fr; }
+    .profile-default-card { grid-column:auto; }
+}
 </style>
 
 <main>
@@ -1629,166 +1735,105 @@ $ittById = $byId($ittRows);
 
     
 
+    <?php
+        $profileMetadata = [];
+        try {
+            if (!empty($editItem["metadata"])) {
+                $decodedProfileMetadata = json_decode($editItem["metadata"], true);
+                if (is_array($decodedProfileMetadata)) $profileMetadata = $decodedProfileMetadata;
+            }
+        } catch (Throwable $e) {}
+
+        $dynamicProfileEnabled = !empty($profileMetadata['DYNAMIC_PROFILE_ENABLED']);
+        $mtmEnabled = !empty($profileMetadata['MIDDLE_TERM_MEMORY_ENABLED']);
+        $autoDiaryEnabled = !empty($profileMetadata['AUTO_DIARY_ENABLED']);
+        $autoDiaryWaitEnabled = !empty($profileMetadata['AUTO_DIARY_WAIT_ENABLED']);
+        $randomizerEnabled = !empty($profileMetadata['LLM_RANDOMIZER_ENABLED']);
+        $fallbackEnabled = !empty($profileMetadata['LLM_FALLBACK_ENABLED']);
+
+        $usedSlotsRows = $GLOBALS["db"]->fetchAll("SELECT id, slot FROM core_profiles WHERE slot IS NOT NULL ORDER BY slot ASC");
+        $usedSlots = [];
+        foreach ($usedSlotsRows as $r){ $s=intval($r['slot']??0); if ($s>=1 && $s<=4) $usedSlots[$s]=(int)$r['id']; }
+        $currentId = (int)($editItem['id'] ?? 0);
+        $currentSlot = isset($editItem['slot']) ? (int)$editItem['slot'] : 0;
+
+        $profileToggleCards = [
+            ['key' => 'DYNAMIC_PROFILE_ENABLED', 'icon' => '&#x267B;&#xFE0F;', 'title' => 'Dynamic Profile', 'enabled' => $dynamicProfileEnabled, 'short' => 'Allow gameplay events to evolve NPC profiles.', 'help' => 'Allow systems to evolve NPC profiles based on gameplay events. NPCs using this profile will have dynamic profile enabled by default.'],
+            ['key' => 'MIDDLE_TERM_MEMORY_ENABLED', 'icon' => '&#x1F4C3;', 'title' => 'Middle Term Memory', 'enabled' => $mtmEnabled, 'short' => 'Include periodic middle-term memory summaries.', 'help' => 'Saves a list of recent events after every 10 memory summaries. NPCs using this profile will have MTM enabled by default.'],
+            ['key' => 'AUTO_DIARY_ENABLED', 'icon' => '&#x1F4D9;', 'title' => 'Auto Diary', 'enabled' => $autoDiaryEnabled, 'short' => 'Generate nearby NPC diaries during sleep or wait.', 'help' => 'Automatically generate diary entries when NPCs are nearby during sleep/wait events. NPCs using this profile will have auto diary enabled by default.'],
+            ['key' => 'AUTO_DIARY_WAIT_ENABLED', 'icon' => '&#x23F3;', 'title' => 'Auto Diary Wait', 'enabled' => $autoDiaryWaitEnabled, 'short' => 'Include wait events when Auto Diary is enabled.', 'help' => 'When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.'],
+            ['key' => 'LLM_RANDOMIZER_ENABLED', 'icon' => '&#x1F3B2;', 'title' => 'LLM Randomizer', 'enabled' => $randomizerEnabled, 'short' => 'Rotate among the four profile LLM connectors.', 'help' => 'Randomly switches between the 4 LLM connectors for NPCs using this profile. Will roughly switch every 2-3 responses per NPC.'],
+            ['key' => 'LLM_FALLBACK_ENABLED', 'icon' => '&#x1F504;', 'title' => 'LLM Fallback', 'enabled' => $fallbackEnabled, 'short' => 'Retry failed requests with the fallback connector.', 'help' => 'Automatically retry with the fallback connector when the primary connector fails. Response time will be longer when fallback is used.'],
+        ];
+    ?>
+
+    <div class="profile-editor-toolbar">
+        <div>
+            <div class="profile-editor-toolbar-label">Editing Profile</div>
+            <div class="profile-editor-toolbar-name"><?= htmlspecialchars($editItem["label"] ?? "Profile") ?></div>
+        </div>
+        <button type="button" id="btn_save_all" class="btn-save">Save All</button>
+    </div>
+
     <div class="connector-card" style="margin-bottom:12px;">
         <div class="connector-title">Profile Core</div>
-        <div class="connector-subtitle">&#x24D8; Core identity and runtime toggles for this profile.</div>
-        <div class="profile-core-compact-field">
-            <label for='label'>Name</label>
-            <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
-            <small class="hint">Name for the profile.</small>
+        <div class="connector-subtitle">&#x24D8; Core identity and runtime options for this profile.</div>
+
+        <div class="profile-core-grid">
+            <div class="profile-core-compact-field">
+                <label for="label">Name</label>
+                <input type="text" id="label" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
+                <small class="hint">Name shown when assigning this profile.</small>
+            </div>
+
+            <div class="profile-core-compact-field">
+                <label for="slot" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">Slot <span style="margin-left:4px; color:#9fb1c9; cursor:help;" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">&#x24D8;</span></label>
+                <select name="slot" id="slot" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">
+                    <option value="">&mdash;</option>
+                    <?php for($s=1;$s<=4;$s++):
+                        $takenBy = $usedSlots[$s] ?? null;
+                        $disabled = ($takenBy !== null && $takenBy !== $currentId) ? ' disabled' : '';
+                        $sel = ($currentSlot === $s) ? ' selected' : '';
+                    ?>
+                    <option value="<?= $s ?>"<?= $sel.$disabled ?>><?= $s ?></option>
+                    <?php endfor; ?>
+                </select>
+                <small class="hint">Settings Wheel shortcut.</small>
+            </div>
+
+            <label class="profile-default-card" title="When enabled, new NPCs will default to using this profile. Only one profile can be default.">
+                <span class="profile-toggle-heading">
+                    <span>&#x1F464; Default NPC</span>
+                    <span class="profile-toggle-control">
+                        <input type="hidden" name="default_npc" value="0">
+                        <input type="checkbox" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
+                        <span class="toggle-text">Off</span>
+                    </span>
+                </span>
+                <span class="profile-toggle-description">Use for newly discovered NPCs.</span>
+            </label>
         </div>
 
-        <div class="profile-core-compact-field">
-        <label for='slot' title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">Slot <span style="margin-left:6px; color:#9fb1c9; cursor:help;" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">&#x24D8;</span></label>
-        <?php
-            $usedSlotsRows = $GLOBALS["db"]->fetchAll("SELECT id, slot FROM core_profiles WHERE slot IS NOT NULL ORDER BY slot ASC");
-            $usedSlots = [];
-            foreach ($usedSlotsRows as $r){ $s=intval($r['slot']??0); if ($s>=1 && $s<=4) $usedSlots[$s]=(int)$r['id']; }
-            $currentId = (int)($editItem['id'] ?? 0);
-            $currentSlot = isset($editItem['slot']) ? (int)$editItem['slot'] : 0;
-        ?>
-        <select name="slot" id="slot" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">
-            <option value="">&mdash;</option>
-            <?php for($s=1;$s<=4;$s++):
-                $takenBy = $usedSlots[$s] ?? null;
-                $disabled = ($takenBy !== null && $takenBy !== $currentId) ? ' disabled' : '';
-                $sel = ($currentSlot === $s) ? ' selected' : '';
-            ?>
-            <option value="<?= $s ?>"<?= $sel.$disabled ?>><?= $s ?></option>
-            <?php endfor; ?>
-        </select>
-        <small class="hint">Optional quick-access slot (1-4). Can be quickchanged ingame.</small>
+        <div class="profile-prompt-field">
+            <label for="prompt">Profile Prompt</label>
+            <textarea id="prompt" name="prompt"><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
+            <small class="hint">Optional profile-specific system instructions appended to requests.</small>
         </div>
 
-        <div style="height:8px;"></div>
-        <label class="label-with-toggle">&#x1F464; Default NPC
-            <input type="hidden" name="default_npc" value="0">
-            <input type="checkbox" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
-            <span class="toggle-text">On</span>
-        </label>
-        <small class="hint">When enabled, new NPCs will default to using this profile. Only 1 profile can be default.</small>
-
-        <div style="height:8px;"></div>
-        <?php
-            $dynamicProfileEnabled = false;
-            try {
-                if (!empty($editItem["metadata"])) {
-                    $metaData = json_decode($editItem["metadata"], true);
-                    if (is_array($metaData)) {
-                        $dynamicProfileEnabled = !empty($metaData['DYNAMIC_PROFILE_ENABLED']);
-                    }
-                }
-            } catch (Throwable $e) {}
-        ?>
-        <label class="label-with-toggle">&#x267B;&#xFE0F; Dynamic Profile
-            <input type="hidden" name="meta_vis[DYNAMIC_PROFILE_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[DYNAMIC_PROFILE_ENABLED]" value="1" <?= $dynamicProfileEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">Allow systems to evolve NPC profiles based on gameplay events. NPCs using this profile will have dynamic profile enabled by default.</small>
-
-        <div style="height:6px;"></div>
-        <?php
-            $mtmEnabled = false;
-            try {
-                if (!empty($editItem["metadata"])) {
-                    $metaData = json_decode($editItem["metadata"], true);
-                    if (is_array($metaData)) {
-                        $mtmEnabled = !empty($metaData['MIDDLE_TERM_MEMORY_ENABLED']);
-                    }
-                }
-            } catch (Throwable $e) {}
-        ?>
-        <label class="label-with-toggle">&#x1F4C3; Middle Term Memory
-            <input type="hidden" name="meta_vis[MIDDLE_TERM_MEMORY_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[MIDDLE_TERM_MEMORY_ENABLED]" value="1" <?= $mtmEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">Saves a list of recent events after every 10 memory summaries. NPCs using this profile will have MTM enabled by default.</small>
-
-        <div style="height:6px;"></div>
-        <?php
-            $autoDiaryEnabled = false;
-            try {
-                if (!empty($editItem["metadata"])) {
-                    $metaData = json_decode($editItem["metadata"], true);
-                    if (is_array($metaData)) {
-                        $autoDiaryEnabled = !empty($metaData['AUTO_DIARY_ENABLED']);
-                    }
-                }
-            } catch (Throwable $e) {}
-        ?>
-        <label class="label-with-toggle">&#x1F4D9; Auto Diary
-            <input type="hidden" name="meta_vis[AUTO_DIARY_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[AUTO_DIARY_ENABLED]" value="1" <?= $autoDiaryEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">Automatically generate diary entries when NPCs are nearby during sleep/wait events. NPCs using this profile will have auto diary enabled by default.</small>
-
-        <div style="height:8px;"></div>
-        <?php
-            $autoDiaryWaitEnabled = false;
-            try {
-                if (!empty($editItem["metadata"])) {
-                    $metaData = json_decode($editItem["metadata"], true);
-                    if (is_array($metaData)) {
-                        $autoDiaryWaitEnabled = !empty($metaData['AUTO_DIARY_WAIT_ENABLED']);
-                    }
-                }
-            } catch (Throwable $e) {}
-        ?>
-        <label class="label-with-toggle">&#x23F3; Auto Diary Wait
-            <input type="hidden" name="meta_vis[AUTO_DIARY_WAIT_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[AUTO_DIARY_WAIT_ENABLED]" value="1" <?= $autoDiaryWaitEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.</small>
-
-        <div style="height:8px;"></div>
-        <label for="prompt">Profile Prompt</label>
-        <textarea name="prompt" placeholder="<?= htmlspecialchars('') ?>"><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
-        <small class="hint">Optional: profile-specific system instructions appended to requests. Example is using this to hold specific instructions for followers and assigning the profile only to followers.</small>
-
-        <div style="height:8px;"></div>
-        <?php
-            $randomizerEnabled = false;
-            try {
-                if (!empty($editItem["metadata"])) {
-                    $metaData = json_decode($editItem["metadata"], true);
-                    if (is_array($metaData)) {
-                        $randomizerEnabled = ProfileLLMMode::isTruthy($metaData['LLM_RANDOMIZER_ENABLED'] ?? false);
-                    }
-                }
-            } catch (Throwable $e) {}
-        ?>
-        <label class="label-with-toggle">LLM Randomizer
-            <input type="hidden" name="meta_vis[LLM_RANDOMIZER_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[LLM_RANDOMIZER_ENABLED]" value="1" <?= $randomizerEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">Randomly switches between the connectors configured on this profile. This setting affects every NPC using the profile.</small>
-
-        <div style="height:6px;"></div>
-        <?php
-            $fallbackEnabled = false;
-            try {
-                if (!empty($editItem["metadata"])) {
-                    $metaData = json_decode($editItem["metadata"], true);
-                    if (is_array($metaData)) {
-                        $fallbackEnabled = !empty($metaData['LLM_FALLBACK_ENABLED']);
-                    }
-                }
-            } catch (Throwable $e) {}
-        ?>
-        <label class="label-with-toggle">&#x1F504; LLM Fallback
-            <input type="hidden" name="meta_vis[LLM_FALLBACK_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[LLM_FALLBACK_ENABLED]" value="1" <?= $fallbackEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">Automatically retry with fallback connector when primary connector fails. Please use a reliable, ideally cheaper connector. Response time will be longer when fallback is used.</small>
-
-        <div style="margin-top:8px; display:flex; gap:8px;">
-            <button type="button" id="btn_save_profile_settings" class="btn-save">Save All</button>
+        <div class="profile-toggle-grid">
+            <?php foreach ($profileToggleCards as $toggleCard): ?>
+                <label class="profile-toggle-card" title="<?= htmlspecialchars($toggleCard['help']) ?>">
+                    <span class="profile-toggle-heading">
+                        <span><?= $toggleCard['icon'] ?> <?= htmlspecialchars($toggleCard['title']) ?></span>
+                        <span class="profile-toggle-control">
+                            <input type="hidden" name="meta_vis[<?= htmlspecialchars($toggleCard['key']) ?>]" value="">
+                            <input type="checkbox" name="meta_vis[<?= htmlspecialchars($toggleCard['key']) ?>]" value="1" <?= $toggleCard['enabled'] ? "checked" : "" ?>>
+                            <span class="toggle-text"><?= $toggleCard['enabled'] ? 'On' : 'Off' ?></span>
+                        </span>
+                    </span>
+                    <span class="profile-toggle-description"><?= htmlspecialchars($toggleCard['short']) ?></span>
+                </label>
+            <?php endforeach; ?>
         </div>
     </div>
 
@@ -1823,15 +1868,10 @@ const saveAllBtn = document.getElementById('btn_save_all');
         <div class="connector-subtitle">&#x24D8; Choose connector assignments for each role. Saved with Save All.</div>
 
         <?php
-            $connectorRoleSections = [
+            $connectorGroups = [
                 [
-                    'title' => 'Audio',
-                    'rows' => [
-                        ['field' => 'tts_connector_id',  'icon' => '&#x1F50A;',         'title' => 'TTS Connector',   'desc' => 'Voice synthesis connector used for spoken output.', 'options' => 'tts'],
-                    ],
-                ],
-                [
-                    'title' => 'Response',
+                    'title' => 'Response Connectors',
+                    'description' => 'Connectors used for live NPC dialogue and response modes.',
                     'rows' => [
                         ['field' => 'llm_primary_id',    'icon' => '&#x1F579;&#xFE0F;', 'title' => 'Standard LLM',     'desc' => 'General purpose connector for normal roleplay responses.', 'options' => 'llm'],
                         ['field' => 'llm_secondary_id',  'icon' => '&#x1F3C3;&#x200D;&#x2642;&#xFE0F;&#x200D;&#x27A1;&#xFE0F;', 'title' => 'Fast LLM',         'desc' => 'Lower-latency connector for quick reactions and lightweight dialogue.', 'options' => 'llm'],
@@ -1840,8 +1880,10 @@ const saveAllBtn = document.getElementById('btn_save_all');
                     ],
                 ],
                 [
-                    'title' => 'Background',
+                    'title' => 'Other Connectors',
+                    'description' => 'Voice, diary, formatting, and fallback services used by this profile.',
                     'rows' => [
+                        ['field' => 'tts_connector_id',  'icon' => '&#x1F50A;',         'title' => 'TTS Connector',   'desc' => 'Voice synthesis connector used for spoken output.', 'options' => 'tts'],
                         ['field' => 'diary_connector_id','icon' => '&#x1F4D3;',         'title' => 'Diary LLM',        'desc' => 'Connector used for diary generation.', 'options' => 'llm'],
                         ['field' => 'llm_formatter_id',  'icon' => '&#x1F9FE;',         'title' => 'Formatter LLM',    'desc' => 'Connector used for JSON formatting and structured background tasks.', 'options' => 'llm'],
                         ['field' => 'llm_fallback_id',   'icon' => '&#x1F504;',         'title' => 'Fallback LLM',     'desc' => 'Backup connector used when primary requests fail.', 'options' => 'llm'],
@@ -1849,33 +1891,38 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 ],
             ];
         ?>
-        <?php foreach ($connectorRoleSections as $sectionCfg): ?>
-            <div class="connector-subtitle" style="margin-top:10px; margin-bottom:4px; color:#ffffff; font-weight:700;"><?= htmlspecialchars($sectionCfg['title']) ?></div>
-            <?php foreach (($sectionCfg['rows'] ?? []) as $rowCfg): ?>
-                <?php $selectedId = (string)($editItem[$rowCfg['field']] ?? ''); ?>
-                <div class="setting-row">
-                    <div>
-                        <div class="setting-key"><span class="setting-icon"><?= $rowCfg['icon'] ?></span><span><?= htmlspecialchars($rowCfg['title']) ?></span></div>
-                        <div class="setting-desc"><?= htmlspecialchars($rowCfg['desc']) ?></div>
+        <div class="connector-selection-grid">
+            <?php foreach ($connectorGroups as $groupCfg): ?>
+                <section class="connector-group-card">
+                    <h3 class="connector-group-title"><?= htmlspecialchars($groupCfg['title']) ?></h3>
+                    <div class="connector-group-subtitle"><?= htmlspecialchars($groupCfg['description']) ?></div>
+                    <div class="connector-group-fields">
+                        <?php foreach (($groupCfg['rows'] ?? []) as $rowCfg): ?>
+                            <?php $selectedId = (string)($editItem[$rowCfg['field']] ?? ''); ?>
+                            <div class="connector-option-card">
+                                <div class="setting-key"><span class="setting-icon"><?= $rowCfg['icon'] ?></span><span><?= htmlspecialchars($rowCfg['title']) ?></span></div>
+                                <div class="setting-desc"><?= htmlspecialchars($rowCfg['desc']) ?></div>
+                                <div class="setting-control">
+                                    <select name="<?= htmlspecialchars($rowCfg['field']) ?>" id="<?= htmlspecialchars($rowCfg['field']) ?>">
+                                        <option value="">-- None --</option>
+                                        <?php $optionType = $rowCfg['options'] ?? 'llm'; ?>
+                                        <?php $optionRows = ($optionType === 'tts') ? ($ttsRows ?? []) : ($llmRows ?? []); ?>
+                                        <?php foreach ($optionRows as $opt): ?>
+                                            <?php
+                                                $optLabel = trim((string)($opt['label'] ?? '')) !== ''
+                                                    ? (string)$opt['label']
+                                                    : (string)($opt['model'] ?? ($optionType === 'tts' ? ('TTS #' . ($opt['id'] ?? '')) : ('LLM #' . ($opt['id'] ?? ''))));
+                                            ?>
+                                            <option value="<?= htmlspecialchars((string)$opt['id']) ?>" <?= ((string)$opt['id'] === $selectedId ? 'selected' : '') ?>><?= htmlspecialchars($optLabel) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-                    <div class="setting-control">
-                        <select name="<?= htmlspecialchars($rowCfg['field']) ?>" id="<?= htmlspecialchars($rowCfg['field']) ?>">
-                            <option value="">-- None --</option>
-                            <?php $optionType = $rowCfg['options'] ?? 'llm'; ?>
-                            <?php $optionRows = ($optionType === 'tts') ? ($ttsRows ?? []) : ($llmRows ?? []); ?>
-                            <?php foreach ($optionRows as $opt): ?>
-                                <?php
-                                    $optLabel = trim((string)($opt['label'] ?? '')) !== ''
-                                        ? (string)$opt['label']
-                                        : (string)($opt['model'] ?? ($optionType === 'tts' ? ('TTS #' . ($opt['id'] ?? '')) : ('LLM #' . ($opt['id'] ?? ''))));
-                                ?>
-                                <option value="<?= htmlspecialchars((string)$opt['id']) ?>" <?= ((string)$opt['id'] === $selectedId ? 'selected' : '') ?>><?= htmlspecialchars($optLabel) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
+                </section>
             <?php endforeach; ?>
-        <?php endforeach; ?>
+        </div>
     </div>
 
     <!-- Visual Profile Settings (first chunk) -->
@@ -1905,8 +1952,9 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 if (is_array($arr2)) { $dynSelected = array_values(array_map('strval', $arr2)); }
             } catch (Throwable $_e) { $dynSelected = []; }
         ?>
+        <div class="profile-feature-grid">
         <?php if (!empty($__dynOptions)): ?>
-        <div class="provider-card" style="margin-bottom:8px;">
+        <div class="provider-card">
             <div class="provider-head">
                 <div class="provider-title">
                     <div class="provider-icon">&#x1F6E0;&#xFE0F;</div>
@@ -1939,7 +1987,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
         </div>
         <?php endif; ?>
         <?php if (!empty($__rpgOptions)): ?>
-        <div class="provider-card" style="margin-bottom:8px;">
+        <div class="provider-card">
             <div class="provider-head">
                 <div class="provider-title">
                     <div class="provider-icon">&#x1F3B2;</div>
@@ -1995,10 +2043,10 @@ const saveAllBtn = document.getElementById('btn_save_all');
             </div>
         </div>
         <?php endif; ?>
+        </div>
         
         <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
-        <div style="margin-top:8px; display:flex; gap:8px;">
-<button type="button" id="btn_save_all" class="btn-save">Save All</button>
+        <div style="margin-top:8px; display:flex; justify-content:flex-end; gap:8px;">
             <button type="button" id="btn_back_to_top" class="btn-primary" title="Scroll to top">Back to top</button>
         </div>
     </div>

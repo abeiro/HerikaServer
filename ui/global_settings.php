@@ -277,9 +277,9 @@ function render_provider_help(string $flatName, string $help, string $webRoot): 
 {
     if ($flatName === 'CHIM_AI_QUEST_PROGRESSION') {
         $prefix = 'Enable CHIM AI quest progression. Allows you to progress regular Skyrim quests with AI dialogue. Most vanilla non radiant quests are supported.';
-        $url = rtrim($webRoot, '/') . '/ui/immersion.php?tab=questgen';
+        $url = rtrim($webRoot, '/') . '/ui/events-memories.php?tab=questgen';
         return htmlspecialchars($prefix, ENT_QUOTES, 'UTF-8')
-            . ' <a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Open AI Quest Manager in Immersion</a> for more info.';
+            . ' <a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Open AI Quest Manager</a> for more info.';
     }
 
     return htmlspecialchars($help, ENT_QUOTES, 'UTF-8');

@@ -435,6 +435,7 @@ if (!$updateAvailable && $remoteVersion !== "" && $currentVersion !== "") {
     <title>CHIM Plugin Installer: <?php echo chimPluginInstallerEscape($packageName); ?></title>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
     <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/chim-theme.css?v=<?php echo filemtime(__DIR__ . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'chim-theme.css'); ?>">
     <style>
         body { padding: 20px; background-color: #2c2c2c; color: #f8f9fa; font-family: 'Futura CondensedLight', Arial, sans-serif; }
         .installer-container { max-width: 900px; margin: 40px auto; background-color: #1a1a1a; padding: 30px; border-radius: 8px; border: 1px solid #3a3a3a; }

@@ -25,6 +25,7 @@ require_once(__DIR__ . "/lib/core/transformation_state.php");
 require_once(__DIR__ . "/lib/core/game_plugins.php");
 require_once(__DIR__ . "/lib/logger.php");
 require_once(__DIR__ . "/lib/chim_quest_engine.php");
+require_once(__DIR__ . "/lib/quest_reference_data.php");
 
 // Only accept POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -354,6 +355,20 @@ function handleLoadedPluginsUpdate(array $data): void
 
     $pluginCount = chimReplaceLoadedGamePlugins($data['plugins']);
     Logger::debug("[gamedata.php] Updated loaded plugin manifest ({$pluginCount} plugins)");
+
+    $repair = quest_reference_repair_runtime_formids_to_stable($data['plugins']);
+    if ($repair['error'] !== null) {
+        Logger::warn("[gamedata.php] AI Quest V1 FormID repair skipped: {$repair['error']}");
+        return;
+    }
+
+    Logger::debug(
+        "[gamedata.php] AI Quest V1 FormID repair: "
+        . "{$repair['rows_updated']}/{$repair['rows_scanned']} rows updated, "
+        . "{$repair['converted']} references converted, "
+        . "{$repair['unresolved']} unresolved, "
+        . "{$repair['dynamic']} dynamic"
+    );
 }
 
 function buildEquipmentMetadataValue(array $equipment): array

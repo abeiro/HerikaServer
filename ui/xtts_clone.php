@@ -180,7 +180,10 @@ if (!function_exists('chimTtsStudioIsAudioCppPocketTts')) {
         }
 
         $metadata = chimTtsStudioResolveConnectorMetadata($driver);
-        $apiFormat = strtolower(trim(strval($metadata['api_format'] ?? '')));
+        $apiFormatValue = $metadata['api_format'] ?? '';
+        $apiFormat = is_scalar($apiFormatValue)
+            ? strtolower(trim(strval($apiFormatValue)))
+            : '';
         if ($apiFormat === 'audio_cpp' || $apiFormat === 'audiocpp') {
             return true;
         }

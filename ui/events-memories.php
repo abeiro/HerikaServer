@@ -23,7 +23,8 @@ if (!file_exists($configFilepath."conf.php")) {
 // Load profiles through the centralized profile loader
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
-$TITLE = "Events & Memories";
+$TITLE = "Roleplay";
+$BODY_CLASS = 'hub-page';
 
 ob_start();
 
@@ -62,54 +63,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         letter-spacing: 1.5px;
     }
 
-    /* Tab styles */
-    .tab-container {
-        margin: 20px 0;
-    }
-
-    .tab-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        margin-bottom: 20px;
-        border-bottom: 2px solid rgba(242, 124, 17, 0.2);
-        gap: 5px;
-        word-spacing: 5px;
-    }
-
-    .tab-button {
-        background: linear-gradient(180deg, rgba(42, 42, 42, 0.8), rgba(34, 34, 34, 0.9));
-        border: 2px solid #3a3a3a;
-        border-bottom: none;
-        padding: 12px 18px;
-        color: #f8f9fa;
-        cursor: pointer;
-        border-top-left-radius: 8px;
-        border-top-right-radius: 8px;
-        transition: all 0.3s ease;
-        font-size: 1em;
-        white-space: nowrap;
-        font-family: 'MagicCards', sans-serif;
-        word-spacing: 5px;
-        letter-spacing: 1.5px;
-        margin-bottom: -2px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .tab-button:hover {
-        background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1));
-        color: rgb(242, 124, 17);
-        border-color: rgba(242, 124, 17, 0.3);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .tab-button.active {
-        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
-        border-color: rgba(242, 124, 17, 0.5);
-        border-bottom: 2px solid rgba(42, 42, 42, 0.95);
-        color: rgb(242, 124, 17);
-        box-shadow: 0 4px 8px rgba(242, 124, 17, 0.2);
-    }
-
     .tab-content {
         display: none;
         background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
@@ -122,6 +75,23 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .tab-content.active {
         display: block;
+    }
+
+    .tab-content.embed-tab {
+        padding: 0;
+        overflow: hidden;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .embed-frame {
+        width: 100%;
+        min-height: 78vh;
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
 
     /* Table Container Styles */
@@ -231,15 +201,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             padding: 8px;
         }
 
-        .tab-button {
-            padding: 10px 14px;
-            font-size: 0.9em;
-        }
-        
         #eventlog-tab table th:nth-child(4),
         #eventlog-tab table td:nth-child(4) {
             min-width: 150px;
             width: auto;
+        }
+
+        .embed-frame {
+            min-height: 75vh;
         }
     }
 
@@ -335,6 +304,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         padding: 8px !important;
     }
 </style>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/hub-navigation.css?v=<?php echo filemtime(__DIR__ . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'hub-navigation.css'); ?>">
 <?php
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
@@ -541,6 +511,11 @@ if (isset($_GET['delete_memory']) && !empty($_GET['delete_memory'])) {
 
 // Get active tab from URL parameter, default to 'eventlog'
 $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'eventlog';
+$validTabs = ['eventlog', 'responselog', 'adventure', 'memory', 'diaries', 'books', 'soulgaze', 'quests', 'questgen', 'backgroundlife'];
+if (!in_array($activeTab, $validTabs, true)) {
+    $activeTab = 'eventlog';
+}
+
 if ($activeTab === 'responselog') {
     $redirectParams = [];
     if (isset($_GET['page'])) {
@@ -584,24 +559,10 @@ function getTimeColor($time) {
 <div class="container-fluid">
 
     <div class="tab-container">
-        <div class="tab-buttons">
-            <button class="tab-button <?php echo $activeTab === 'eventlog' ? 'active' : ''; ?>" onclick="switchTab('eventlog')">
-                📝 Events
-            </button>
-            <button class="tab-button <?php echo $activeTab === 'responselog' ? 'active' : ''; ?>" onclick="switchTab('responselog')">
-                💬 AI Responses
-            </button>
-            <button class="tab-button <?php echo $activeTab === 'memory' ? 'active' : ''; ?>" onclick="switchTab('memory')">
-                🧠 Memories
-            </button>
-            <button class="tab-button <?php echo $activeTab === 'quests' ? 'active' : ''; ?>" onclick="switchTab('quests')">
-                🎯 Active Quests
-            </button>
-            <button class="tab-button <?php echo $activeTab === 'books' ? 'active' : ''; ?>" onclick="switchTab('books')">
-                📚 Books
-            </button>
-            
-        </div>
+        <?php
+        $eventsMemoriesActiveTab = $activeTab;
+        include(__DIR__ . DIRECTORY_SEPARATOR . 'tmpl' . DIRECTORY_SEPARATOR . 'events_memories_navigation.php');
+        ?>
 
         <!-- Event Log Tab -->
         <div id="eventlog-tab" class="tab-content <?php echo $activeTab === 'eventlog' ? 'active' : ''; ?>">
@@ -1910,6 +1871,26 @@ function getTimeColor($time) {
             }
             ?>
         </div>
+
+        <div id="adventure-tab" class="tab-content embed-tab <?php echo $activeTab === 'adventure' ? 'active' : ''; ?>">
+            <iframe class="embed-frame" title="Adventure Log" <?php echo $activeTab === 'adventure' ? 'src' : 'data-src'; ?>="<?php echo $webRoot; ?>/ui/adventurelog.php?embed=1"></iframe>
+        </div>
+
+        <div id="diaries-tab" class="tab-content embed-tab <?php echo $activeTab === 'diaries' ? 'active' : ''; ?>">
+            <iframe class="embed-frame" title="CHIM Diaries" <?php echo $activeTab === 'diaries' ? 'src' : 'data-src'; ?>="<?php echo $webRoot; ?>/ui/diarylog.php?embed=1"></iframe>
+        </div>
+
+        <div id="soulgaze-tab" class="tab-content embed-tab <?php echo $activeTab === 'soulgaze' ? 'active' : ''; ?>">
+            <iframe class="embed-frame" title="Soulgaze Gallery" <?php echo $activeTab === 'soulgaze' ? 'src' : 'data-src'; ?>="<?php echo $webRoot; ?>/ui/soulgaze_gallery.php?embed=1"></iframe>
+        </div>
+
+        <div id="questgen-tab" class="tab-content embed-tab <?php echo $activeTab === 'questgen' ? 'active' : ''; ?>">
+            <iframe class="embed-frame" title="AI Quest Manager" <?php echo $activeTab === 'questgen' ? 'src' : 'data-src'; ?>="<?php echo $webRoot; ?>/ui/addons/snqe/hub.php?embed=1"></iframe>
+        </div>
+
+        <div id="backgroundlife-tab" class="tab-content embed-tab <?php echo $activeTab === 'backgroundlife' ? 'active' : ''; ?>">
+            <iframe class="embed-frame" title="Background Life" <?php echo $activeTab === 'backgroundlife' ? 'src' : 'data-src'; ?>="<?php echo $webRoot; ?>/ui/mapview.php"></iframe>
+        </div>
     </div>
 </div>
 
@@ -1998,11 +1979,23 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 });
 
-function switchTab(tabName) {
+function loadEmbeddedTab(tabContent) {
+    const frame = tabContent ? tabContent.querySelector('iframe[data-src]') : null;
+    if (!frame) return;
+
+    frame.src = frame.dataset.src;
+    frame.removeAttribute('data-src');
+}
+
+function switchTab(tabName, updateHistory = true) {
     if (tabName === 'responselog') {
-        window.location.href = 'ai-response.php';
+        window.location.href = '<?php echo $webRoot; ?>/ui/ai-response.php';
         return;
     }
+
+    const target = document.getElementById(tabName + '-tab');
+    const clickedButton = document.querySelector('.events-memories-navigation .tab-button[data-tab="' + tabName + '"]');
+    if (!target || !clickedButton) return;
 
     // Hide all tab contents
     const tabContents = document.querySelectorAll('.tab-content');
@@ -2016,17 +2009,32 @@ function switchTab(tabName) {
         button.classList.remove('active');
     });
     
-    // Show selected tab content
-    document.getElementById(tabName + '-tab').classList.add('active');
+    // Show selected tab content and load embedded tools on demand.
+    target.classList.add('active');
+    loadEmbeddedTab(target);
     
-    // Add active class to clicked button
-    event.target.classList.add('active');
+    // Highlight the selected page and its category.
+    clickedButton.classList.add('active');
+    document.querySelectorAll('.events-memories-navigation .tab-group').forEach(group => {
+        group.classList.toggle('active', group.contains(clickedButton));
+    });
     
-    // Update URL without page reload
-    const url = new URL(window.location);
-    url.searchParams.set('tab', tabName);
-    window.history.pushState({}, '', url);
+    if (updateHistory) {
+        window.history.pushState({}, '', clickedButton.href);
+    }
 }
+
+document.querySelectorAll('.events-memories-navigation .tab-button[data-local-tab="true"]').forEach(button => {
+    button.addEventListener('click', event => {
+        event.preventDefault();
+        switchTab(button.dataset.tab);
+    });
+});
+
+window.addEventListener('popstate', () => {
+    const tabName = new URL(window.location.href).searchParams.get('tab') || 'eventlog';
+    switchTab(tabName, false);
+});
 
 // Checkbox selection functionality
 function updateSelectedCount() {
