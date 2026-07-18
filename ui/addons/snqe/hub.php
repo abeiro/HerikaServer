@@ -37,6 +37,10 @@ $tabs = [
         "label" => "Server Logs",
         "src" => $webRoot . "/ui/addons/snqe/index.php?embed=1&view=logs",
     ],
+    "traditional_quests" => [
+        "label" => "Traditional Quests",
+        "src" => $webRoot . "/ui/addons/snqe/traditional_quests.php?embed=1",
+    ],
 ];
 
 $activeTab = isset($_GET["tab"]) ? (string) $_GET["tab"] : "manager";

@@ -27,7 +27,7 @@ require_once $GLOBALS["ENGINE_PATH"] . "lib/relationship_manager.php";
 
 // Get existing JSONB relationships
 $extendedData = json_decode($editItem['extended_data'] ?? '{}', true) ?: [];
-$jsonbRelationships = $extendedData['relationships'] ?? [];
+$jsonbRelationships = RelationshipManager::normalizeRelationshipMap($extendedData['relationships'] ?? []);
 
 // Keep legacy text available as fallback input for AI analysis.
 $textRelationships = $editItem['relationships'] ?? '';
@@ -123,6 +123,12 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
             <br><span style="color:#b8860b;">⚠️ Dynamic relationship data is subject to CHIM Paradox Prevention. Save your game to preserve changes.</span>
         </small>
 
+        <label style="display:flex; align-items:center; gap:8px; margin:4px 0 10px; color:#fcd34d; font-size:0.9em; cursor:pointer;">
+            <input type="checkbox" id="rel-lock-checkbox" <?= !empty($extendedData['relationships_locked']) ? 'checked' : '' ?>>
+            🔒 Lock these relationships — stop the AI relationship model from changing them (your manual edits stay put)
+        </label>
+        <input type="hidden" name="relationships_locked" id="relationships_locked_hidden" value="<?= !empty($extendedData['relationships_locked']) ? '1' : '0' ?>">
+
         <div id="rel-editor-container" style="margin-top:12px;">
             <?php if (empty($jsonbRelationships)): ?>
                 <p id="rel-empty-msg" style="color:#666; font-style:italic;">No relationships tracked yet. Use "Build with AI" or add manually below.</p>
@@ -134,6 +140,7 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
                             <th style="text-align:center; padding:6px; color:#888;">Affinity</th>
                             <th style="text-align:center; padding:6px; color:#888;">Tier</th>
                             <th style="text-align:center; padding:6px; color:#888;">Type</th>
+                            <th style="text-align:left; padding:6px; color:#888;">Signals</th>
                             <th style="text-align:center; padding:6px; color:#888; width:70px;"></th>
                         </tr>
                     </thead>
@@ -178,6 +185,26 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
                                         <option value="<?= $t ?>" <?= $t === $type ? 'selected' : '' ?>><?= $icon ?> <?= ucfirst($t) ?></option>
                                     <?php endforeach; ?>
                                 </select>
+                            </td>
+                            <td style="padding:8px;">
+                                <?php if (!empty($note)): ?>
+                                    <div style="color:#d1d5db; font-size:0.82em; margin-bottom:3px;" title="<?= htmlspecialchars($note) ?>">
+                                        Last: <?= htmlspecialchars(mb_strimwidth($note, 0, 56, '...')) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (!empty($best)): ?>
+                                    <div style="color:#4ade80; font-size:0.82em; margin-bottom:3px;" title="<?= htmlspecialchars($best) ?>">
+                                        Best <?= $bestDelta > 0 ? '+' . intval($bestDelta) : intval($bestDelta) ?>: <?= htmlspecialchars(mb_strimwidth($best, 0, 48, '...')) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (!empty($worst)): ?>
+                                    <div style="color:#f87171; font-size:0.82em;" title="<?= htmlspecialchars($worst) ?>">
+                                        Worst <?= intval($worstDelta) ?>: <?= htmlspecialchars(mb_strimwidth($worst, 0, 48, '...')) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (empty($note) && empty($best) && empty($worst)): ?>
+                                    <span style="color:#666; font-size:0.82em;">No signals</span>
+                                <?php endif; ?>
                             </td>
                             <td style="padding:8px; text-align:center; white-space:nowrap;">
                                 <button type="button" class="rel-details" title="Edit details (relation, notes, events)"
@@ -592,6 +619,11 @@ function syncRelationshipsToHidden() {
     });
 
     document.getElementById('relationships_jsonb').value = JSON.stringify(relationships);
+
+    // Keep the relationship-lock hidden field in sync with the checkbox so it always submits 0/1 (even when unchecked).
+    const lockCb = document.getElementById('rel-lock-checkbox');
+    const lockHidden = document.getElementById('relationships_locked_hidden');
+    if (lockCb && lockHidden) { lockHidden.value = lockCb.checked ? '1' : '0'; }
 }
 
 function getCurrentRelationshipsFromHidden() {
@@ -867,6 +899,7 @@ function rebuildRelTable(relationships) {
                     <th style="text-align:center; padding:6px; color:#888;">Affinity</th>
                     <th style="text-align:center; padding:6px; color:#888;">Tier</th>
                     <th style="text-align:center; padding:6px; color:#888;">Type</th>
+                    <th style="text-align:left; padding:6px; color:#888;">Signals</th>
                     <th style="text-align:center; padding:6px; color:#888; width:70px;"></th>
                 </tr>
             </thead>
@@ -886,6 +919,7 @@ function rebuildRelTable(relationships) {
         const tierColor = tierColors[tier] || '#e5e7eb';
         const hasExtended = relation || note || best || worst;
         const detailsColor = hasExtended ? '#fde68a' : '#666';
+        const signalHtml = buildRelationshipSignalHtml(note, best, worst, bestDelta, worstDelta);
 
         html += `
             <tr class="rel-row" data-target="${escapeHtml(target)}"
@@ -914,6 +948,9 @@ function rebuildRelTable(relationships) {
                             `<option value="${t}" ${t === type ? 'selected' : ''}>${icon} ${t.charAt(0).toUpperCase() + t.slice(1)}</option>`
                         ).join('')}
                     </select>
+                </td>
+                <td style="padding:8px;">
+                    ${signalHtml}
                 </td>
                 <td style="padding:8px; text-align:center; white-space:nowrap;">
                     <button type="button" class="rel-details" title="Edit details (relation, notes, events)"
@@ -947,12 +984,42 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Sync on any change
-document.addEventListener('change', function(e) {
-    if (e.target.closest('#relationship-editor-section')) {
+function truncateSignal(text, maxLen) {
+    text = String(text || '');
+    return text.length > maxLen ? text.slice(0, Math.max(0, maxLen - 3)) + '...' : text;
+}
+
+function buildRelationshipSignalHtml(note, best, worst, bestDelta, worstDelta) {
+    const parts = [];
+    if (note) {
+        parts.push(`<div style="color:#d1d5db; font-size:0.82em; margin-bottom:3px;" title="${escapeHtml(note)}">Last: ${escapeHtml(truncateSignal(note, 56))}</div>`);
+    }
+    if (best) {
+        const bestNum = Number(bestDelta) || 0;
+        const bestSign = bestNum > 0 ? '+' + bestNum : String(bestNum);
+        parts.push(`<div style="color:#4ade80; font-size:0.82em; margin-bottom:3px;" title="${escapeHtml(best)}">Best ${bestSign}: ${escapeHtml(truncateSignal(best, 48))}</div>`);
+    }
+    if (worst) {
+        const worstNum = Number(worstDelta) || 0;
+        parts.push(`<div style="color:#f87171; font-size:0.82em;" title="${escapeHtml(worst)}">Worst ${worstNum}: ${escapeHtml(truncateSignal(worst, 48))}</div>`);
+    }
+    return parts.length ? parts.join('') : '<span style="color:#666; font-size:0.82em;">No signals</span>';
+}
+
+// Sync while editing and again at submit time so the hidden JSON cannot go stale.
+['input', 'change'].forEach(function(evtName) {
+    document.addEventListener(evtName, function(e) {
+        if (e.target.closest('#relationship-editor-section')) {
+            syncRelationshipsToHidden();
+        }
+    });
+});
+
+document.addEventListener('submit', function(e) {
+    if (e.target && e.target.querySelector && e.target.querySelector('#relationship-editor-section')) {
         syncRelationshipsToHidden();
     }
-});
+}, true);
 
 // Initial sync
 syncRelationshipsToHidden();

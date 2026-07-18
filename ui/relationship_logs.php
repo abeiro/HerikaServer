@@ -283,7 +283,9 @@ $results = $db->fetchAll($query);
     <tbody>
     <?php foreach ($results as $row):
         $reqData = json_decode($row['request'], true);
-        $resultData = json_decode($row['result'], true);
+        // Success rows carry an "OK|" status prefix (audit-viewer convention); strip before decoding
+        $resultRaw = preg_replace('/^OK\|/', '', (string)$row['result']);
+        $resultData = json_decode($resultRaw, true);
 
         // Parse type from request
         $type = $reqData['type'] ?? 'unknown';
@@ -328,7 +330,7 @@ $results = $db->fetchAll($query);
             $changes = $resultData['changes'];
         } elseif (is_string($row['result'])) {
             // Try to parse JSON from result string - handle both formats
-            $jsonContent = $row['result'];
+            $jsonContent = $resultRaw;
 
             // Extract JSON from markdown code block if present
             if (preg_match('/```(?:json)?\s*([\s\S]*?)```/', $jsonContent, $matches)) {

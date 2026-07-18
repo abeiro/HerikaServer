@@ -633,7 +633,7 @@ class openaijson
                                 $GLOBALS["PATCH_STORE_FUNC_RES"]="{$GLOBALS["HERIKA_NAME"]} issued ACTION, but {$element["content"]}";
                                 $contextDataCopy[]=[
                                     "role"=>"user",
-                                    "content"=>"The Narrator: ({$GLOBALS["HERIKA_NAME"]} used action $lastActionName). {$GLOBALS["PATCH_STORE_FUNC_RES"]}"
+                                    "content"=>chimBuildNarratorContextLine("({$GLOBALS["HERIKA_NAME"]} used action $lastActionName). {$GLOBALS["PATCH_STORE_FUNC_RES"]}")
                                     
                                 ];
                             } else {
@@ -641,7 +641,7 @@ class openaijson
                                 $GLOBALS["PATCH_STORE_FUNC_RES"]=strtr($lastAction,["#RESULT#"=>$element["content"]]);
                                 $contextDataCopy[]=[
                                     "role"=>"user",
-                                    "content"=>"The Narrator: ({$GLOBALS["HERIKA_NAME"]} used action $lastActionName). {$GLOBALS["PATCH_STORE_FUNC_RES"]} ",
+                                    "content"=>chimBuildNarratorContextLine("({$GLOBALS["HERIKA_NAME"]} used action $lastActionName). {$GLOBALS["PATCH_STORE_FUNC_RES"]}"),
                                     
                                 ];
                             }
@@ -842,12 +842,12 @@ class openaijson
                 } else if (!(stripos($this->_model, "qwen3.5-") === false)) { // qwen/qwen3.5-397b-a17b
                     unset($data["reasoning_effort"]);
                     $data["enable_thinking"] = $b_think;
-                } else if (!(stripos($this->_model, "zai-org/glm-4.7") === false)) {//is glm 4.7
+                } else if (!(stripos($this->_model, "zai-org/glm-4.7") === false) || !(stripos($this->_model, "z-ai/glm-4.7") === false)) {//is glm 4.7
                     if ($this->_disable_reasoning)
                         $data["thinking"] = array ('type' => 'disabled'); // "thinking":{"type": "disabled"}
                     else
                         $data["thinking"] = array ('type' => 'enabled'); 
-                } else if (!(stripos($this->_model, "zai-org/glm-5") === false)) {//is glm 4.7
+                } else if (!(stripos($this->_model, "zai-org/glm-5") === false) || !(stripos($this->_model, "z-ai/glm-5") === false)) {//is glm 5
                     if ($this->_disable_reasoning)
                         $data["thinking"] = array ('type' => 'disabled'); // "thinking":{"type": "disabled"}
                     else

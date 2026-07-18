@@ -37,6 +37,7 @@ require_once $enginePath . "lib/core/api_badge.class.php";
 require_once $enginePath . "lib/core/npc_master.class.php";
 require_once $enginePath . "lib/core/core_profiles.class.php";
 require_once $enginePath . "lib/logger.php";
+require_once $enginePath . "lib/relationship_manager.php";
 require_once __DIR__ . "/event_baseline.php";
 
 // Get POST data
@@ -291,18 +292,7 @@ PROMPT;
             $type = 'neutral';
         }
 
-        // Normalize player name references to "Player"
-        // If target matches actual player name, #PLAYER_NAME#, or common variants, store as "Player"
-        $targetLower = strtolower(trim($target));
-        $playerLower = strtolower($playerName);
-        if ($targetLower === $playerLower ||
-            $targetLower === '#player_name#' ||
-            $targetLower === 'player' ||
-            $targetLower === 'the player' ||
-            $targetLower === 'dragonborn' ||
-            $targetLower === 'the dragonborn') {
-            $target = 'Player';
-        }
+        $target = RelationshipManager::normalizeTargetName($target);
 
         $relationships[$target] = [
             'aff' => $aff,

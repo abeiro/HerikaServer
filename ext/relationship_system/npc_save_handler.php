@@ -18,6 +18,9 @@
 if (!class_exists('Logger')) {
     require_once $GLOBALS["ENGINE_PATH"] . "lib/logger.php";
 }
+if (!class_exists('RelationshipManager')) {
+    require_once $GLOBALS["ENGINE_PATH"] . "lib/relationship_manager.php";
+}
 
 // Only process if relationships_jsonb was submitted
 if (isset($_POST['relationships_jsonb']) && $_POST['relationships_jsonb'] !== '') {
@@ -25,6 +28,8 @@ if (isset($_POST['relationships_jsonb']) && $_POST['relationships_jsonb'] !== ''
     $relData = json_decode($relJsonbRaw, true);
 
     if (is_array($relData)) {
+        $relData = RelationshipManager::normalizeRelationshipMap($relData);
+
         // Get existing extended_data
         $extRaw = isset($_POST['extended_data']) ? (string)$_POST['extended_data'] : '{}';
         $extData = json_decode($extRaw, true);
@@ -37,6 +42,12 @@ if (isset($_POST['relationships_jsonb']) && $_POST['relationships_jsonb'] !== ''
 
         // Merge the new relationships
         $extData['relationships'] = $relData;
+
+        // RELATIONSHIP LOCK: persist the editor's lock checkbox (hidden field always submits 0/1) so the relationship
+        // model skips this NPC and stops overwriting manual edits.
+        if (isset($_POST['relationships_locked'])) {
+            $extData['relationships_locked'] = filter_var($_POST['relationships_locked'], FILTER_VALIDATE_BOOLEAN);
+        }
 
         // Log the changes
         $npcName = $_POST['npc_name'] ?? 'Unknown';
@@ -70,7 +81,10 @@ if (isset($_POST['relationships_jsonb']) && $_POST['relationships_jsonb'] !== ''
             Logger::info("[REL-UI] {$npcName}: {$changeCount} relationship change(s) saved via UI");
         }
 
-        // Update extended_data in POST
+        // Update extended_data in POST. The structured editor is authoritative;
+        // prevent the deprecated legacy textarea named "relationships" from
+        // being treated as a relationship seed later by NpcMaster normalization.
         $_POST['extended_data'] = json_encode($extData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        unset($_POST['relationships'], $_POST['npc_relationships']);
     }
 }

@@ -187,21 +187,22 @@ if (!$lastIt["gamets"]) {
 }
 $lastItNumber = $lastIt["gamets"] ?? 0;
 
-if (($last_gamets - $lastItNumber) < ((24 * 3) / 0.0000024)) {
-    Logger::info("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago");
+$bglTriggerHours = chimGetBackgroundLifeTriggerHours();
+if (($last_gamets - $lastItNumber) < ($bglTriggerHours / GAMETS_TO_HOURS)) {
+    Logger::info("[BACKGROUND LIFE] $npcNameEsc Last interaction less than {$bglTriggerHours} hours ago");
     $extdata = $npcMaster->getExtendedData($currentNpcData);
     $extdata["background_life_last_updated"] = $last_gamets;
     $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
     $npcMaster->updateByArray($currentNpcData);
-    error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago");
+    error_log("[BACKGROUND LIFE] $npcNameEsc Last interaction less than {$bglTriggerHours} hours ago");
 
     if (isset($argv[2]) && $argv[2] == "forceletter")
-        error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago...bypassing by forceletter");
+        error_log("[BACKGROUND LIFE] $npcNameEsc Bypassing interaction cooldown via forceletter");
     
     else if (isset($argv[3]) && $argv[3] == "forceaction")
-        error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago...bypassing by forceaction");
+        error_log("[BACKGROUND LIFE] $npcNameEsc Bypassing interaction cooldown via forceaction");
     else {
-        error_log("[BACKGROUND LIFE] $npcNameEsc Last iteration less than 3 days ago...suspended: ".implode("|",$argv));
+        error_log("[BACKGROUND LIFE] $npcNameEsc Interaction cooldown active...suspended: ".implode("|",$argv));
         return;
     }
         
@@ -581,6 +582,18 @@ if (is_array($parsed)) {
                 'party' => "",
             ]
         );
+        // Insert bgl_history log entry
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => ${$GLOBALS["HERIKA_NAME"]},
+                'ts' => $last_ts,
+                'gamets' => $last_gamets+1,
+                'localts' => time(),
+                'data' => "{$GLOBALS["HERIKA_NAME"]} sends a letter to {$GLOBALS["PLAYER_NAME"]}",
+            ]
+        );
+        
         $db->insert(
             'diarylog',
             [

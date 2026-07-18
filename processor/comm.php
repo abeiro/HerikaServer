@@ -141,6 +141,9 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     $db->delete("named_cell", "gamets>={$gameRequest[2]}  ");
     $db->delete("named_cell", "gamets<=({$gameRequest[2]} - 30000000) "); //((24 * 3) / 0.0000024)
     $db->delete("sneq_quests_saved", "gamets>={$gameRequest[2]}  ");
+    $db->delete("bgl_history", "gamets>={$gameRequest[2]}  ");
+    
+    
     /* This is obsolete */
     /*
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
@@ -152,6 +155,9 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     */
     $db->delete("memory_summary", "gamets_truncated>{$gameRequest[2]}  ");
     $db->delete("memory", "gamets>{$gameRequest[2]}  ");
+    if (function_exists('chimQuestEngineResetRuntime')) {
+        chimQuestEngineResetRuntime(true);
+    }
 
     //$db->delete("diarylogv2", "true");
     //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
@@ -306,6 +312,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     }
     $db->delete("memory_summary", " 1=1 ");
     $db->delete("memory", " 1=1 ");
+    if (function_exists('chimQuestEngineResetRuntime')) {
+        chimQuestEngineResetRuntime(true);
+    }
 
     //$db->delete("diarylogv2", "true");
     //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
@@ -1396,13 +1405,16 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
 
     
-} elseif (strpos($gameRequest[0], "addnpc")===0) {    // addnpc 
+} elseif ((strpos($gameRequest[0], "addnpc")===0) || (strpos($gameRequest[0], "addbgnpc")===0)) {    // addnpc 
     logEvent($gameRequest);
     
+    if ((strpos($gameRequest[0], "addbgnpc")===0))
+        $offline=true;
+    else
+        $offline=false;
+
     $splitNameBase=explode("@",$gameRequest[3]);
     $incomingDisplayName = trim($splitNameBase[0] ?? "");
-    $incomingBase = trim($splitNameBase[1] ?? "");
-    $incomingRefId = trim($splitNameBase[4] ?? "");
     if (sizeof($splitNameBase)>1) {
         $localName=$splitNameBase[0];
         $baseProfile=$splitNameBase[1];
@@ -1415,55 +1427,21 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $baseProfile="";
 
     $npcMaster=new NpcMaster();
-    $currentNpcData = null;
-    $retVal = 2;
-    $resolvedByRefId = false;
-
-    if ($incomingRefId !== "") {
-        $refIdCandidates = array_unique(array_filter([
-            $incomingRefId,
-            preg_replace('/^0x/i', '', $incomingRefId),
-            (stripos($incomingRefId, '0x') === 0 ? strtoupper(substr($incomingRefId, 2)) : strtoupper($incomingRefId)),
-            (stripos($incomingRefId, '0x') === 0 ? strtolower(substr($incomingRefId, 2)) : strtolower($incomingRefId)),
-        ], static function ($value) {
-            return $value !== null && $value !== "";
-        }));
-
-        foreach ($refIdCandidates as $refIdCandidate) {
-            $refNpcData = $npcMaster->getByRefId($refIdCandidate);
-            if (!$refNpcData) {
-                continue;
-            }
-
-            $existingBase = trim((string)($refNpcData["base"] ?? ""));
-            $sameBase = ($incomingBase === "" || $existingBase === "" || strcasecmp($incomingBase, $existingBase) === 0);
-            $looksLikeDistributedName = preg_match('/\[[^\]]+\]\s*$/', $incomingDisplayName) === 1;
-
-            if ($sameBase && ($looksLikeDistributedName || strcasecmp((string)$refNpcData["npc_name"], $incomingDisplayName) === 0)) {
-                $currentNpcData = $refNpcData;
-                $resolvedByRefId = true;
-                if (strcasecmp((string)$currentNpcData["npc_name"], $incomingDisplayName) !== 0) {
-                    error_log("[ADDNPC] resolved display name '{$incomingDisplayName}' to existing NPC '{$currentNpcData["npc_name"]}' by refid {$incomingRefId}");
-                }
-                $localName = $currentNpcData["npc_name"];
-                break;
-            }
-        }
-    }
-
-    if (!$currentNpcData) {
-        $retVal=createProfile($localName,[],false,$baseProfile); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
-        $currentNpcData=$npcMaster->getByName($localName);
-    }
+    // Refids are not stable identity for profile creation: spawned actors, recycled refs,
+    // and modlist changes can make a new visible actor collide with an old profile row.
+    // Always create/resolve by the incoming visible name, then store refid as metadata below.
+    $retVal=createProfile($localName,[],false,$baseProfile); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
+    $currentNpcData=$npcMaster->getByName($localName);
     audit_log("comm.php addnpc $localName");
 
-     if ($retVal==1)
+    // If using sendAllNpcs from plugin, this is no loner valid
+    if ($retVal==1 && !$offline)
         AddFirstTimeMet($localName, $momentum, $gameRequest[2],$gameRequest[1]);
 
 
     // Update new data
     
-    if (!$resolvedByRefId && isset($splitNameBase[4]) && $retVal==1) {
+    if (isset($splitNameBase[4]) && $retVal==1) {
         $currentNpcDataAlt=$npcMaster->getByRefId($splitNameBase[4]);
         if ($currentNpcDataAlt && $currentNpcDataAlt["npc_name"]!=$currentNpcData["npc_name"] ) {
             // Seems an NPC has changed name.
@@ -1564,6 +1542,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             $meta["mods"]=isset($splitNameBase[41]) ?explode("#",$splitNameBase[41]):null;
 
             // NPC factions - format: formID1:rank1[:PluginName.esp|LocalFormId]#formID2:rank2[:...]
+            // You cannot use | as separator, because it's already used as primary request separator.
+
             $factionString = isset($splitNameBase[42]) ? $splitNameBase[42] : '';
             $factionList = [];
             $formIds=[];
@@ -1585,7 +1565,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                             'name'=>'' // Placeholder, will be filled after fetching faction names from DB
                         ];
 
-                        $stableReference = isset($parts[2]) ? chimParseStableFormReference($parts[2]) : null;
+                        $stableReference = isset($parts[2]) ? chimParseStableFormReference(strtr($parts[2],["/"=>"|"])  ) : null;
                         if ($stableReference) {
                             $factionEntry['plugin'] = $stableReference['plugin_name'];
                             $factionEntry['local_formid'] = $stableReference['local_formid'];
@@ -1633,10 +1613,10 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             SELECT *
             FROM import_rules r
             WHERE r.enabled = TRUE
-            AND (r.match_name IS NULL OR '$npcName' ~ r.match_name)
-            AND (r.match_race IS NULL OR '$npcRace' ~ r.match_race)
-            AND (r.match_gender IS NULL OR '$npcGender' ~ r.match_gender)
-            AND (r.match_base IS NULL OR '$npcBase' ~ r.match_base)
+            AND (NULLIF(BTRIM(r.match_name), '') IS NULL OR '$npcName' ~ r.match_name)
+            AND (NULLIF(BTRIM(r.match_race), '') IS NULL OR '$npcRace' ~ r.match_race)
+            AND (NULLIF(BTRIM(r.match_gender), '') IS NULL OR '$npcGender' ~ r.match_gender)
+            AND (NULLIF(BTRIM(r.match_base), '') IS NULL OR '$npcBase' ~ r.match_base)
             AND (r.match_mods IS NULL OR r.match_mods <@ $modsArray)
             ORDER BY r.priority DESC
         ";
@@ -1710,73 +1690,77 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $profile=new CoreProfile();
         $profData=json_decode($profile->getById($currentNpcData["profile_id"])["metadata"],true);
 
-        $doAutoGreeting=(isset($profData["SALUTATION_AFTER_1_DAY"]) && $profData["SALUTATION_AFTER_1_DAY"] || isset($meta["SALUTATION_AFTER_1_DAY"]) && $meta["SALUTATION_AFTER_1_DAY"] );
-        if ($doAutoGreeting) {
-            error_log("[auto_greeting] enabled for {$currentNpcData["npc_name"]}, profile:{$profData["SALUTATION_AFTER_1_DAY"]} ,npc:{$meta["SALUTATION_AFTER_1_DAY"]}");
-            $lit=GetLastInteraction($GLOBALS["PLAYER_NAME"],$currentNpcData["npc_name"]);
-            if (gamets2days_between($lit,$gameRequest[2]) > 1) {
-                // If auto greeting is enabled for this NPC and enough time has passed, force a greeting.
-                $instructionText="should greet {$GLOBALS["PLAYER_NAME"]}, as more than 1 day passed with no talking.";
-                $roleMasterAction = "rolecommand|Instruction@{$currentNpcData["npc_name"]}@{$instructionText}@0";
-        
-                // Insert into database
-                $GLOBALS["db"]->insert(
+        if (!$offline) {
+            $doAutoGreeting=(isset($profData["SALUTATION_AFTER_1_DAY"]) && $profData["SALUTATION_AFTER_1_DAY"] || isset($meta["SALUTATION_AFTER_1_DAY"]) && $meta["SALUTATION_AFTER_1_DAY"] );
+            if ($doAutoGreeting) {
+                error_log("[auto_greeting] enabled for {$currentNpcData["npc_name"]}, profile:{$profData["SALUTATION_AFTER_1_DAY"]} ,npc:{$meta["SALUTATION_AFTER_1_DAY"]}");
+                $lit=GetLastInteraction($GLOBALS["PLAYER_NAME"],$currentNpcData["npc_name"]);
+                if (gamets2days_between($lit,$gameRequest[2]) > 1) {
+                    // If auto greeting is enabled for this NPC and enough time has passed, force a greeting.
+                    $instructionText="should greet {$GLOBALS["PLAYER_NAME"]}, as more than 1 day passed with no talking.";
+                    $roleMasterAction = "rolecommand|Instruction@{$currentNpcData["npc_name"]}@{$instructionText}@0";
+            
+                    // Insert into database
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => '',
+                            'action' => $roleMasterAction,
+                            'tag' => ""
+                        )
+                    );
+                } else {
+                    error_log("[auto_greeting] {$currentNpcData["npc_name"]} gamets2days_between($lit,$gameRequest[2]) > 1");
+                }
+            } else {
+                error_log("[auto_greeting] disabled for {$currentNpcData["npc_name"]}");
+            }
+            
+            $meta=$npcMaster->getMetadata($currentNpcData);
+            if ($meta && isset($meta["PENDING_DIALOGUE"]) && $meta["PENDING_DIALOGUE"]>0) {
+                if ($gameRequest[2]>$meta["PENDING_DIALOGUE"]) {
+                    $instructionText="should talk to {$GLOBALS["PLAYER_NAME"]}";
+                    $roleMasterAction = "rolecommand|Instruction@{$currentNpcData["npc_name"]}@{$instructionText}@0";
+
+                    // Insert into database
+                    $GLOBALS["db"]->insert(
                     'responselog',
-                    array(
-                        'localts' => time(),
-                        'sent' => 0,
-                        'actor' => "rolemaster",
-                        'text' => '',
-                        'action' => $roleMasterAction,
-                        'tag' => ""
-                    )
-                );
-            } else {
-                error_log("[auto_greeting] {$currentNpcData["npc_name"]} gamets2days_between($lit,$gameRequest[2]) > 1");
-            }
-        } else {
-            error_log("[auto_greeting] disabled for {$currentNpcData["npc_name"]}");
-        }
-        
-        $meta=$npcMaster->getMetadata($currentNpcData);
-        if ($meta && isset($meta["PENDING_DIALOGUE"]) && $meta["PENDING_DIALOGUE"]>0) {
-            if ($gameRequest[2]>$meta["PENDING_DIALOGUE"]) {
-                $instructionText="should talk to {$GLOBALS["PLAYER_NAME"]}";
-                $roleMasterAction = "rolecommand|Instruction@{$currentNpcData["npc_name"]}@{$instructionText}@0";
+                        array(
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => '',
+                            'action' => $roleMasterAction,
+                            'tag' => ""
+                        )
+                    );
+                    unset($meta["PENDING_DIALOGUE"]);
+                    $currentNpcData=$npcMaster->setMetadata($currentNpcData,$meta);
+                    $npcMaster->updateByArray($currentNpcData);
+                    error_log("[PENDING_DIALOGUE] {$currentNpcData["npc_name"]} had PENDING_DIALOGUE flag, triggered greeting and unset the flag");
+                } else {
+                    error_log("[PENDING_DIALOGUE] {$currentNpcData["npc_name"]} has PENDING_DIALOGUE flag but gamets2days_between({$meta["PENDING_DIALOGUE"]},{$gameRequest[2]}) <= 1");
+                }
 
-                // Insert into database
-                $GLOBALS["db"]->insert(
-                'responselog',
-                    array(
-                        'localts' => time(),
-                        'sent' => 0,
-                        'actor' => "rolemaster",
-                        'text' => '',
-                        'action' => $roleMasterAction,
-                        'tag' => ""
-                    )
-                );
-                unset($meta["PENDING_DIALOGUE"]);
-                $currentNpcData=$npcMaster->setMetadata($currentNpcData,$meta);
-                $npcMaster->updateByArray($currentNpcData);
-                error_log("[PENDING_DIALOGUE] {$currentNpcData["npc_name"]} had PENDING_DIALOGUE flag, triggered greeting and unset the flag");
             } else {
-                error_log("[PENDING_DIALOGUE] {$currentNpcData["npc_name"]} has PENDING_DIALOGUE flag but gamets2days_between({$meta["PENDING_DIALOGUE"]},{$gameRequest[2]}) <= 1");
+                error_log("[PENDING_DIALOGUE] {$currentNpcData["npc_name"]} does not have PENDING_DIALOGUE flag");
             }
-
-        } else {
-            error_log("[PENDING_DIALOGUE] {$currentNpcData["npc_name"]} does not have PENDING_DIALOGUE flag");
         }
     }
 
     // RELATIONSHIP SYSTEM: Queue NPC for relationship initialization
     // This parses TEXT relationships into JSONB without blocking map load
-    if ($currentNpcData && !empty($currentNpcData['id'])) {
-        $relAsyncFile = $GLOBALS["ENGINE_PATH"] . "ext/relationship_system/async_queue.php";
-        if (file_exists($relAsyncFile)) {
-            require_once $relAsyncFile;
-            if (function_exists('_relQueueNpcInit')) {
-                _relQueueNpcInit($currentNpcData['id'], $localName);
+    if (!$offline) {
+        if ($currentNpcData && !empty($currentNpcData['id'])) {
+            $relAsyncFile = $GLOBALS["ENGINE_PATH"] . "ext/relationship_system/async_queue.php";
+            if (file_exists($relAsyncFile)) {
+                require_once $relAsyncFile;
+                if (function_exists('_relQueueNpcInit')) {
+                    _relQueueNpcInit($currentNpcData['id'], $localName);
+                }
             }
         }
     }
@@ -1793,7 +1777,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         
         if ($splitNameBase[0] && $splitNameBase[1] && !in_array($splitNameBase[1],[241641])) { // Exception for Pellagua Farm) {
             $existingRecord = $db->fetchOne("SELECT * FROM locations WHERE formid = '{$splitNameBase[1]}'");
-            
+            error_log("[UTIL_LOCATION_NAME] Processing location: {$splitNameBase[0]} / {$splitNameBase[1]}");
             if ($existingRecord) {
                 $db->updateRow(
                     'locations',
@@ -1894,6 +1878,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 $splitNameBase[3] ?? '',
                 $splitNameBase[4] ?? '',
                 "last_updated"=>$gameRequest[2],
+                "location_formid"=>$splitNameBase[5] ?hexdec($splitNameBase[5]):null,
             ];
 
             if (isset($splitNameBase[5], $splitNameBase[6]) && $splitNameBase[5] !== '' && $splitNameBase[6] !== '') {
@@ -1946,19 +1931,25 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         
         if ($currentNpcData) {
             // Get existing metadata
-            $meta = [];
+            $extendedData = [];
             if (!empty($currentNpcData['extended_data'])) {
-                $meta = json_decode($currentNpcData['extended_data'], true);
-                if (!is_array($meta)) {
-                    $meta = [];
+                $extendedData = json_decode($currentNpcData['extended_data'], true);
+                if (!is_array($extendedData)) {
+                    $extendedData = [];
                 }
             }
             $currentNpcData["refid"]=$splitNameBase[1];
             // Update equipment section
-            $meta['background_life_enabled'] = true;
+            $extendedData['background_life_enabled'] = true;
             
+            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extendedData);
+
+            // Metadata
+            $metadata=$npcMaster->getMetadata($currentNpcData);
+            $metadata["low_process_actors"]=[];
+            $currentNpcData=$npcMaster->setMetadata($currentNpcData,$metadata);
+
             // Save back to database
-            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $meta);
             $npcMaster->updateByArray($currentNpcData);
             error_log("Updated background_life_enabled for {$currentNpcData["npc_name"]}");
             Logger::info("Updated background_life_enabled for {$currentNpcData["npc_name"]}");

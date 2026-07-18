@@ -484,6 +484,12 @@ function consolidation() {
         } catch(_e) {}
     }
 
+    try {
+        if (typeof syncRelationshipsToHidden === 'function') {
+            syncRelationshipsToHidden()
+        }
+    } catch(_e) {}
+
     return true;
 }
 
