@@ -168,7 +168,7 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
     </div>
     <div id="cache" class="tab-content">
         <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/soundcache/"></iframe>
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/cache_browser.php?embed=1"></iframe>
         </div>
     </div>
     <div id="requests" class="tab-content">
