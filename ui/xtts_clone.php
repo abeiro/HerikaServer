@@ -2841,33 +2841,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         form.submit();
     }
 
-    function manageCloudVoice(provider, voiceName, mode) {
-        const actionTextMap = {
-            unsync: 'Forgetting cached voice ID for ' + provider,
-            resync: 'Regenerating voice for ' + provider
-        };
-        showLoadingMessage((actionTextMap[mode] || 'Processing voice for ' + provider) + ', please wait...');
-
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = WEB_ROOT + '/ui/xtts_clone.php?tab=' + provider;
-
-        const actionInput = document.createElement('input');
-        actionInput.type = 'hidden';
-        actionInput.name = 'action';
-        actionInput.value = mode + '_' + provider + '_single';
-
-        const voiceInput = document.createElement('input');
-        voiceInput.type = 'hidden';
-        voiceInput.name = 'voice';
-        voiceInput.value = voiceName;
-
-        form.appendChild(actionInput);
-        form.appendChild(voiceInput);
-        document.body.appendChild(form);
-        form.submit();
-    }
-
     // Batch upload functionality
     let batchCancelled = false;
     let currentBatchProvider = null;
