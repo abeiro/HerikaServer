@@ -26,6 +26,7 @@ $distroDebuggerChimEmbedUrl = rtrim($distroDashboardRoot, '/') . '/distro_debugg
 $distroDatabaseManagerUrl = rtrim($distroDashboardRoot, '/') . '/database_manager.php';
 
 $TITLE = "Control Panel";
+$BODY_CLASS = 'hub-page';
 ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."head.html");
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."navbar.php");
@@ -128,7 +129,7 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
 }
 
 </style>
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/hub-navigation.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/hub-navigation.css?v=<?php echo filemtime(__DIR__ . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'hub-navigation.css'); ?>">
 
 <main>
     <div class="config-navigation" aria-label="Control Panel sections">

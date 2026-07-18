@@ -81,13 +81,14 @@ $tabIcons = [
     'serverplugins' => '&#x1F9E9;',
 ];
 
+$BODY_CLASS = 'hub-page';
 ob_start();
 include(__DIR__ . DIRECTORY_SEPARATOR . "../tmpl/head.html");
 include(__DIR__ . DIRECTORY_SEPARATOR . "../tmpl/navbar.php");
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/hub-navigation.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/hub-navigation.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'hub-navigation.css'); ?>">
 <style>
 main { padding: 80px 10px 10px; height: 100vh; }
 .tab-content { display: none; background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98)); border-radius: 8px; border-top-left-radius: 0; border: 1px solid #3a3a3a; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03); }

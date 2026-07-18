@@ -24,6 +24,7 @@ if (!file_exists($configFilepath."conf.php")) {
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
 $TITLE = "Roleplay";
+$BODY_CLASS = 'hub-page';
 
 ob_start();
 
@@ -303,7 +304,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         padding: 8px !important;
     }
 </style>
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/hub-navigation.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/hub-navigation.css?v=<?php echo filemtime(__DIR__ . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'hub-navigation.css'); ?>">
 <?php
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
