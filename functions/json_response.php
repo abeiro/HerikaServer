@@ -695,7 +695,7 @@
     }
 
     Function zonosIsActive() {
-        return $GLOBALS["TTSFUNCTION"] == "zonos_gradio" && isset($GLOBALS["TTS"]["ZONOS_GRADIO"]["dynamic_tones"]) && $GLOBALS["TTS"]["ZONOS_GRADIO"]["dynamic_tones"];
+        return ($GLOBALS["TTSFUNCTION"] ?? "") === "zonos_gradio" && isset($GLOBALS["TTS"]["ZONOS_GRADIO"]["dynamic_tones"]) && $GLOBALS["TTS"]["ZONOS_GRADIO"]["dynamic_tones"];
     }
 
 ?>
