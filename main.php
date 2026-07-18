@@ -33,6 +33,9 @@ chimRuntimeBootstrap($path, [
     'load_player_name' => true,
     'load_narrator' => true,
 ]);
+if (!headers_sent() && function_exists('chimGetNarratorDisplayNameHeaderValue')) {
+    header('X-Narrator-Display-Name: ' . chimGetNarratorDisplayNameHeaderValue());
+}
 require_once($path . "lib/auditing.php");
 require_once($path . "lib/model_dynmodel.php");
 require_once($path . "lib/minimet5_service.php");
@@ -43,6 +46,7 @@ require_once($path . "lib/memory_helper_vectordb.php");
 require_once($path . "lib/llm_randomizer.php");
 require_once($path . "lib/utils_game_timestamp.php");
 require_once($path . "lib/logger.php"); 
+require_once($path . "lib/chim_quest_engine.php");
 requireFilesRecursively(__DIR__."/ext/","globals.php");
 
 // New profile system
@@ -189,10 +193,11 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 }
 
 
-$fast_commands = ["addnpc","updateprofile","updateprofile_narrator","diary","diary_narrator","diary_player","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
+$fast_commands = ["addnpc","addbgnpc","updateprofile","updateprofile_narrator","diary","diary_narrator","diary_player","_quest","setconf","request","_speech","infoloc","infonpc","infonpc_close",
     "infoaction","status_msg","delete_event","itemfound","_questdata","_uquest","location","_questreset","chat","bleedout","waitstart","waitstop",
     "util_location_name","util_faction_name","spellcast","npcspellcast","updateprofiles_batch_async","core_profile_assign","switchrace","combatbark",
-    "util_location_npc","enable_bg","region","named_cell","snqe","named_cell_static","player_menu_tts_prefetch","player_menu_tts_play"];
+    "util_location_npc","enable_bg","region","named_cell","snqe","named_cell_static","player_menu_tts_prefetch","player_menu_tts_play",
+    "physics_raw"]; // raw VR contact/gaze telemetry from client plugins: log-only unless an extension opts in by renaming it in preprocessing
 
 if (isset($GLOBALS["external_fast_commands"])) {
     $fast_commands = array_merge($fast_commands, $GLOBALS["external_fast_commands"]);
@@ -222,6 +227,16 @@ if (in_array($gameRequest[0],["addnpc"])) {
 
 if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
     sleep(1);   // Give time to populate data
+
+    // Load/newgame is a hard scene boundary. Rolemaster scene notes are transient
+    // director state; do not let them bleed across save/load into normal chat.
+    try {
+        $db->delete("rolemaster", "type='scenenote'");
+        $db->delete("responselog", "sent=0 and actor='rolemaster' and (action like 'rolecommand|Instruction@%' or action like 'rolecommand|Suggestion@%')");
+        Logger::info("[main] Cleared transient rolemaster scene state on {$gameRequest[0]}");
+    } catch (Exception $e) {
+        Logger::warn("[main] Failed to clear transient rolemaster scene state on {$gameRequest[0]}: " . $e->getMessage());
+    }
 }
 
 // Misc events, some of them can terminate the request
@@ -886,6 +901,15 @@ if ($gameRequest[0] == "npcspellcast") {
     terminate(); // Always exit, whether logged or not
 }
 
+if (in_array($gameRequest[0], ["ext_held_item_raw", "ext_vr_item_raw"], true)) {
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "vr_items.php");
+    $processedHeldItemRequest = HeldItems::processEventRequest($gameRequest);
+    if ($processedHeldItemRequest !== null) {
+        logEvent($processedHeldItemRequest);
+    }
+    terminate();
+}
+
 // Exit if only a event info log.
 // Optional events
 
@@ -1049,6 +1073,12 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 
 
 if (in_array($gameRequest[0],["rechat","narration"]) ) {
+    $configuredChimMode = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
+    $configuredChimMode = strtoupper(trim((string)($configuredChimMode["value"] ?? "")));
+    if ($configuredChimMode === "WHISPER") {
+        Logger::info("[RECHAT_SELECT] WHISPER mode is active; terminating private rechat/narration request");
+        terminate();
+    }
     
     //RECHAT. Must choose if we continue conversation or no.
     // Note: narration is part of rechat system (random narrator interjections count as rechat rounds)
@@ -1565,7 +1595,7 @@ if (in_array('Training', $GLOBALS["ENABLED_FUNCTIONS"]) && isset($currentNpcData
         $functionName = "Train" . ucfirst($skill);
         $GLOBALS["FUNCTIONS"][] = [
             "name" => $functionName,
-            "description" => "{$GLOBALS["HERIKA_NAME"]} offers {$tier} {$skill} training.",
+            "description" => (function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : $GLOBALS["HERIKA_NAME"]) . " offers {$tier} {$skill} training.",
             "parameters" => [
                 "type" => "object",
                 "properties" => [
@@ -1606,7 +1636,8 @@ if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"]) && $gameRequest[0] == "bored
     }
 
     $PROMPTS["bored"]["cue"] = [strtr($boredPrompt, [
-        '{HERIKA_NAME}' => $GLOBALS["HERIKA_NAME"] ?? 'The Narrator',
+                        '{HERIKA_NAME}' => function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : ($GLOBALS["HERIKA_NAME"] ?? 'The Narrator'),
+                        '{NARRATOR_NAME}' => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
         '{PLAYER_NAME}' => $GLOBALS["PLAYER_NAME"] ?? 'Player',
         '{TEMPLATE_DIALOG}' => $GLOBALS["TEMPLATE_DIALOG"] ?? '',
     ])];
@@ -1679,6 +1710,15 @@ $authoritativePeople = $hasAuthoritativeRequestAudience ? $requestAudienceSnapsh
 $directiveFallbackPeople = "";
 if ($authoritativePeople === "" && in_array($gameRequest[0] ?? "", $directiveDialogueEventTypes, true)) {
     $directiveFallbackPeople = DataBeingsInCloseRange(true);
+}
+
+if (isWhisperExecutionMode() && in_array($gameRequest[0] ?? "", $playerInputEventTypes, true)) {
+    $whisperPrivatePeople = buildWhisperPrivatePeople($GLOBALS["HERIKA_NAME"] ?? "");
+    if ($whisperPrivatePeople !== "") {
+        $authoritativePeople = $whisperPrivatePeople;
+        $directiveFallbackPeople = "";
+        Logger::info("Scoped CACHE_PEOPLE for WHISPER {$gameRequest[0]}: " . $whisperPrivatePeople);
+    }
 }
 
 if ($authoritativePeople !== "") {
@@ -1982,6 +2022,15 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         
         // MinAI prompts are breaking rechat actor adressing "Respond to #target# as #herika_name#"
         $GLOBALS['action_prompts']=[];
+        $rechatEnabledFunctionSet=array_fill_keys($GLOBALS["ENABLED_FUNCTIONS"] ?? [], true);
+        $rechatActionSourceCodes=[
+            "TradeItems"=>"OpenInventory",
+        ];
+        $rechatActionWasEnabled=function ($functionCode) use ($rechatEnabledFunctionSet, $rechatActionSourceCodes) {
+            $sourceCode=$rechatActionSourceCodes[$functionCode] ?? $functionCode;
+            return isset($rechatEnabledFunctionSet[$sourceCode]);
+        };
+
         // Unset some functions here.
        
         unsetFunction("OpenInventory");
@@ -1996,19 +2045,21 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         // Change name of functions here
         // Function clone and renaming
         // ExchangeItems (trade with player) will be modified to TradeItems (roleplayed trade)
-        $NEWFUNCTION=$GLOBALS["BASE_FUNCTIONS"]["OpenInventory"];
-        $NEWFUNCTION["name"]="TradeItems";
-        $NEWFUNCTION["description"]="{$GLOBALS["HERIKA_NAME"]} trade items with another actor. Amount and item will be infered from dialogue, so no need to specify";
-        $NEWFUNCTION["parameters"]["properties"]["target"]["description"]="Actor name to trade with";
-        $GLOBALS["FUNCTIONS"][]=$NEWFUNCTION;
-        $GLOBALS["ENABLED_FUNCTIONS"][]="TradeItems";
-        $GLOBALS["F_NAMES"]["TradeItems"]="TradeItems";
+        if ($rechatActionWasEnabled("TradeItems") && isset($GLOBALS["BASE_FUNCTIONS"]["OpenInventory"])) {
+            $NEWFUNCTION=$GLOBALS["BASE_FUNCTIONS"]["OpenInventory"];
+            $NEWFUNCTION["name"]="TradeItems";
+        $NEWFUNCTION["description"]=(function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : $GLOBALS["HERIKA_NAME"]) . " trade items with another actor. Amount and item will be infered from dialogue, so no need to specify";
+            $NEWFUNCTION["parameters"]["properties"]["target"]["description"]="Actor name to trade with";
+            $GLOBALS["FUNCTIONS"][]=$NEWFUNCTION;
+            $GLOBALS["ENABLED_FUNCTIONS"][]="TradeItems";
+            $GLOBALS["F_NAMES"]["TradeItems"]="TradeItems";
+        }
 
-        if ($GLOBALS["IS_NPC"]) {
+        if ($GLOBALS["IS_NPC"] && $rechatActionWasEnabled("TravelTo") && isset($GLOBALS["BASE_FUNCTIONS"]["TravelTo"])) {
             // TravelTo (lead the way to for player) will be modified to TravelTo (TravelTo) if no follower
             $NEWFUNCTION=$GLOBALS["BASE_FUNCTIONS"]["TravelTo"];
             $NEWFUNCTION["name"]="TravelTo";
-            $NEWFUNCTION["description"]="{$GLOBALS["HERIKA_NAME"]} travels to location";
+            $NEWFUNCTION["description"]=(function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : $GLOBALS["HERIKA_NAME"]) . " travels to location";
             $NEWFUNCTION["parameters"]["properties"]["location"]["description"]="location name";
             $GLOBALS["FUNCTIONS"][]=$NEWFUNCTION;
             $GLOBALS["ENABLED_FUNCTIONS"][]="TravelTo";
@@ -2019,7 +2070,23 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
 
         }
 
+        $GLOBALS["ENABLED_FUNCTIONS"]=array_values(array_unique(array_filter(
+            $GLOBALS["ENABLED_FUNCTIONS"] ?? [],
+            function ($functionCode) use ($rechatActionWasEnabled) {
+                return $rechatActionWasEnabled($functionCode);
+            }
+        )));
 
+        $GLOBALS["FUNCTIONS"]=array_values(array_filter(
+            $GLOBALS["FUNCTIONS"] ?? [],
+            function ($functionEntry) use ($rechatActionWasEnabled) {
+                if (!is_array($functionEntry) || empty($functionEntry["name"])) {
+                    return false;
+                }
+                $functionCode=getFunctionCodeName($functionEntry["name"]);
+                return $functionCode !== false && $rechatActionWasEnabled($functionCode);
+            }
+        ));
        
     }
 }
@@ -2250,6 +2317,13 @@ if ($gameRequest[0] === "vision") {
     $GLOBALS["COMMAND_PROMPT"] = "Respond with atmospheric narration only. Use the Talk action.";
 }
 
+if (function_exists('chimQuestEngineApplyActionSuppressionsForTurn')) {
+    chimQuestEngineApplyActionSuppressionsForTurn(
+        $GLOBALS["HERIKA_NAME"] ?? '',
+        $GLOBALS["CACHE_LOCATION"] ?? ''
+    );
+}
+
 // Ensure actions and nearby sections are added to PROMPT_HEAD before building system prompt
 require_once(__DIR__.DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
 
@@ -2283,6 +2357,7 @@ if (isset($GLOBALS["TTSFUNCTION"]) && !empty($GLOBALS["TTSFUNCTION"])) {
     $ttsMap = [
         'melotts' => 'MELOTTS',
         'xtts-fastapi' => 'XTTSFASTAPI',
+        'omnivoice' => 'OMNIVOICE',
         'chatterbox' => 'CHATTERBOX',
         'pockettts' => 'POCKETTTS',
         'mimic3' => 'MIMIC3',
@@ -2322,23 +2397,48 @@ if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
     $nearbySections = $GLOBALS["PROMPT_NEARBY_SECTIONS"];
 }
 
+$promptInjectionContext = [
+    "game_request" => $gameRequest,
+    "herika_name" => function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : ($GLOBALS["HERIKA_NAME"] ?? ""),
+    "narrator_name" => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
+    "player_name" => $GLOBALS["PLAYER_NAME"] ?? "",
+];
+$characterBottomInjections = function_exists('chimRenderPromptInjections')
+    ? chimRenderPromptInjections("character_bottom", $promptInjectionContext)
+    : "";
+$promptBottomInjections = function_exists('chimRenderPromptInjections')
+    ? chimRenderPromptInjections("prompt_bottom", $promptInjectionContext)
+    : "";
+
 $knowledgeSection = "";
+$questContext = chimQuestEngineBuildPromptContext(
+    $GLOBALS["HERIKA_NAME"] ?? '',
+    $GLOBALS["CACHE_LOCATION"] ?? ''
+);
+if ($questContext !== '') {
+    $dynamicBiography .= $questContext;
+}
+
 if (!empty($GLOBALS["OGHMA_HINT"])) {
     $knowledgeSection = "\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"] . "\n</knowledge>";
 }
 
 $systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
     "\n</roleplay_instructions>" . $worldPrompt .
-    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography .
+    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography . $characterBottomInjections .
     "\n</character>" . $knowledgeSection .
     "\n\n<general_instructions>\n" . $GLOBALS["COMMAND_PROMPT"] .
-    "\n</general_instructions>" . $actionsList . $nearbySections . $paralinguisticTagsPrompt .
+    "\n</general_instructions>" . $actionsList . $nearbySections . $promptBottomInjections . $paralinguisticTagsPrompt .
     "\n" . $rumorsText . "\n";
 
 $systemPrompt = chimFormatPromptXmlSections(
     strtr(
         $systemPromptRaw,
-        ["#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"], "#HERIKA_NAME#" => $GLOBALS["HERIKA_NAME"]]
+        [
+            "#PLAYER_NAME#" => $GLOBALS["PLAYER_NAME"],
+            "#HERIKA_NAME#" => function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : $GLOBALS["HERIKA_NAME"],
+            "#NARRATOR_NAME#" => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
+        ]
     )
 );
 
@@ -2490,6 +2590,10 @@ if ($gameRequest[0] == "diary") {
     generateFollowerDiary($GLOBALS["HERIKA_NAME"],$gameRequest,"diary");
     Logger::info("Terminated after diary request");
     terminate();
+}
+
+if (isset($contextData) && is_array($contextData) && function_exists('chimApplyNarratorRoleplayNameToContext')) {
+    $contextData = chimApplyNarratorRoleplayNameToContext($contextData);
 }
 
 /**********************

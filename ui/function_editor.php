@@ -520,6 +520,7 @@ function functionEditorNormalizeSubmittedActionTextValue($value, $fieldLabel, $a
 
 $message = "";
 $messageType = "ok";
+$advancedOpenCode = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
     if ($_POST["action"] === "toggle_action") {
@@ -537,6 +538,119 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
         } else {
             $message = "Could not update action toggle.";
             $messageType = "err";
+        }
+    } elseif ($_POST["action"] === "update_action_basic_fields") {
+        $codeName = functionEditorTrim($_POST["code_name"] ?? "");
+        $row = function_exists('herikaGetActionCatalogRow') ? herikaGetActionCatalogRow($codeName) : null;
+
+        if (!function_exists("herikaActionCatalogDbReady") || !herikaActionCatalogDbReady()) {
+            $message = "Action catalog tables are not available yet. Run database updates first.";
+            $messageType = "err";
+        } elseif (!is_array($row)) {
+            $message = "Unknown action code name.";
+            $messageType = "err";
+        } elseif (!function_exists("herikaActionCatalogUpsertCustomTextFields")) {
+            $message = "Action catalog text override support is not available in this build.";
+            $messageType = "err";
+        } else {
+            $submittedName = functionEditorNormalizeSubmittedActionTextValue($_POST["action_name"] ?? "", "Action name", false);
+            $submittedDescription = functionEditorNormalizeSubmittedActionTextValue($_POST["description"] ?? "", "Description", true);
+            $errorMessage = trim(implode(' ', array_filter([
+                $submittedName['error'] ?? '',
+                $submittedDescription['error'] ?? '',
+            ])));
+
+            if ($errorMessage !== '') {
+                $message = $errorMessage;
+                $messageType = "err";
+            } elseif (function_exists("herikaFindActionCatalogActionNameConflict")) {
+                $conflictingRow = herikaFindActionCatalogActionNameConflict($submittedName['value'], $codeName);
+                if (is_array($conflictingRow) && !empty($conflictingRow['code_name'])) {
+                    $conflictingActionName = trim(strval($conflictingRow['action_name'] ?? ''));
+                    $conflictingActionName = $conflictingActionName !== '' ? $conflictingActionName : trim(strval($conflictingRow['code_name'] ?? ''));
+                    $message = "Action name conflicts with " . $conflictingActionName . " (" . trim(strval($conflictingRow['code_name'] ?? '')) . "). Keep action names unique.";
+                    $messageType = "err";
+                } elseif (herikaActionCatalogUpsertCustomTextFields($codeName, [
+                    'action_name' => $submittedName['value'],
+                    'description' => functionEditorNormalizeSubmittedActionTextForStorage($submittedDescription['value']),
+                ])) {
+                    functionEditorRedirectWithNotice($codeName . " updated.", "ok", $isEmbed);
+                } else {
+                    $message = "Could not update action name and description.";
+                    $messageType = "err";
+                }
+            } elseif (herikaActionCatalogUpsertCustomTextFields($codeName, [
+                'action_name' => $submittedName['value'],
+                'description' => functionEditorNormalizeSubmittedActionTextForStorage($submittedDescription['value']),
+            ])) {
+                functionEditorRedirectWithNotice($codeName . " updated.", "ok", $isEmbed);
+            } else {
+                $message = "Could not update action name and description.";
+                $messageType = "err";
+            }
+        }
+    } elseif ($_POST["action"] === "update_action_advanced") {
+        $codeName = functionEditorTrim($_POST["code_name"] ?? "");
+        $advancedOpenCode = $codeName;
+        $row = function_exists('herikaGetActionCatalogRow') ? herikaGetActionCatalogRow($codeName) : null;
+        $configFields = functionEditorGetEditableConfigFieldsForRow($row);
+        $submittedConfig = $_POST["config"] ?? [];
+
+        if (!function_exists("herikaActionCatalogDbReady") || !herikaActionCatalogDbReady()) {
+            $message = "Action catalog tables are not available yet. Run database updates first.";
+            $messageType = "err";
+        } elseif (!is_array($row)) {
+            $message = "Unknown action code name.";
+            $messageType = "err";
+        } elseif (!function_exists("herikaActionCatalogUpsertCustomTextFields")
+            || !function_exists("herikaActionCatalogUpsertCustomParameters")
+            || (count($configFields) > 0 && !function_exists("herikaActionCatalogUpsertCustomConfig"))) {
+            $message = "Advanced action override support is not available in this build.";
+            $messageType = "err";
+        } else {
+            $submittedReturnMessage = functionEditorNormalizeSubmittedActionTextValue($_POST["return_message"] ?? "", "Return message", true);
+            $errorMessage = strval($submittedReturnMessage['error'] ?? '');
+            $normalizedParameters = functionEditorNormalizeSubmittedParameterSchema($_POST["parameters_json"] ?? "", $errorMessage);
+            $configValues = [];
+
+            if ($errorMessage === "") {
+                foreach ($configFields as $field) {
+                    $normalizedValue = functionEditorNormalizeSubmittedConfigValue($field, $submittedConfig, $errorMessage);
+                    if ($errorMessage !== "") {
+                        break;
+                    }
+                    $configValues[strval($field['key'])] = $normalizedValue;
+                }
+            }
+
+            if ($errorMessage !== "") {
+                $message = $errorMessage;
+                $messageType = "err";
+            } else {
+                $transactionStarted = $GLOBALS["db"]->execQuery("BEGIN") !== false;
+                $saved = false;
+                if ($transactionStarted) {
+                    $saved = herikaActionCatalogUpsertCustomTextFields($codeName, [
+                        'return_message' => functionEditorNormalizeSubmittedActionTextForStorage($submittedReturnMessage['value']),
+                    ]);
+                    if ($saved && count($configFields) > 0) {
+                        $saved = herikaActionCatalogUpsertCustomConfig($codeName, $configValues);
+                    }
+                    if ($saved) {
+                        $saved = herikaActionCatalogUpsertCustomParameters($codeName, $normalizedParameters);
+                    }
+                }
+
+                if ($saved && $GLOBALS["db"]->execQuery("COMMIT") !== false) {
+                    functionEditorRedirectWithNotice($codeName . " advanced options updated.", "ok", $isEmbed);
+                } else {
+                    if ($transactionStarted) {
+                        $GLOBALS["db"]->execQuery("ROLLBACK");
+                    }
+                    $message = "Could not update advanced options.";
+                    $messageType = "err";
+                }
+            }
         }
     } elseif ($_POST["action"] === "update_action_config") {
         $codeName = functionEditorTrim($_POST["code_name"] ?? "");
@@ -1268,20 +1382,18 @@ if (!$isEmbed) {
     }
     .table-container {
         width: 100%;
-        overflow-x: auto;
         margin-top: 20px;
-        min-height: 72vh;
-        max-height: calc(100vh - 120px);
+        max-height: 600px;
+        overflow-x: auto;
         overflow-y: auto;
         border: 1px solid #3a3a3a;
-        border-radius: 8px;
-        background: rgba(18, 18, 18, 0.82);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
     }
     .table-container table {
         width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
+        border-collapse: collapse;
         background: transparent;
         table-layout: fixed;
     }
@@ -1289,30 +1401,37 @@ if (!$isEmbed) {
         position: sticky;
         top: 0;
         z-index: 3;
+        background: linear-gradient(180deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
+        border-bottom: 2px solid rgba(242, 124, 17, 0.5);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
     .table-container thead th {
-        background: linear-gradient(135deg, rgb(58, 58, 58), rgb(48, 48, 48));
-        color: #e6b76c;
-        padding: 12px 10px;
+        background: transparent;
+        color: rgb(242, 124, 17);
+        padding: 15px 12px;
         text-align: left;
         font-family: "MagicCards", serif;
+        font-size: 1.1em;
+        font-weight: normal;
         letter-spacing: 1px;
-        border-bottom: 2px solid rgba(230, 183, 108, 0.3);
-        box-shadow: inset 0 -1px 0 rgba(18, 18, 18, 0.8);
+        border-bottom: 0;
+        box-shadow: none;
+    }
+    .table-container tbody tr {
+        border-bottom: 1px solid #3a3a3a;
+        transition: background-color 0.2s ease, box-shadow 0.2s ease;
     }
     .table-container td {
-        padding: 10px;
-        border-bottom: 1px solid #3a3a3a;
+        padding: 12px;
         vertical-align: top;
         word-wrap: break-word;
         overflow-wrap: break-word;
-        background: rgba(33, 38, 46, 0.98);
+        color: #e0e0e0;
+        background: transparent;
     }
-    .table-container tbody tr:nth-child(even) td {
-        background: rgba(28, 33, 40, 0.99);
-    }
-    .table-container tbody tr:hover td {
-        background: rgba(58, 58, 58, 0.78);
+    .table-container tbody tr:hover {
+        background: rgba(242, 124, 17, 0.05);
+        box-shadow: inset 0 0 10px rgba(242, 124, 17, 0.1);
     }
     .status-pill {
         display: inline-block;
@@ -1496,6 +1615,216 @@ if (!$isEmbed) {
         font-size: 0.9em;
         line-height: 1.45;
     }
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+    .action-name-column {
+        width: 28%;
+    }
+    .action-description-column {
+        width: 52%;
+    }
+    .action-controls-column {
+        width: 20%;
+    }
+    .table-container td[data-label="Actions"] {
+        text-align: center;
+    }
+    .action-name-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .action-name-title .basic-action-input {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .table-container .basic-action-input,
+    .table-container .basic-action-description,
+    .advanced-options-form input[type="text"],
+    .advanced-options-form input[type="number"],
+    .advanced-options-form textarea,
+    .advanced-options-form select {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #3a3a3a;
+        border-radius: 4px;
+        background: #1a1a1a;
+        color: #cccccc;
+        padding: 10px;
+    }
+    .table-container .basic-action-input:focus,
+    .table-container .basic-action-description:focus,
+    .advanced-options-form input:focus,
+    .advanced-options-form textarea:focus,
+    .advanced-options-form select:focus {
+        outline: 2px solid rgba(242, 124, 17, 0.48);
+        outline-offset: 1px;
+        border-color: rgb(242, 124, 17);
+    }
+    .table-container .basic-action-description {
+        min-height: 96px;
+        resize: vertical;
+        line-height: 1.42;
+    }
+    .action-code-hint {
+        display: block;
+        margin-top: 8px;
+        color: rgb(100, 149, 237);
+        font-family: "Courier New", monospace;
+        font-size: 0.9em;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+    }
+    .action-row-status {
+        display: inline-block;
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 4px 10px;
+        border: 1px solid currentColor;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: 700;
+    }
+    .action-row-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+    .action-row-buttons form {
+        display: inline-flex;
+        width: auto;
+        margin: 0;
+    }
+    .action-row-buttons button {
+        width: auto;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.85em;
+        margin: 2px;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+    .advanced-options-button,
+    .action-button.secondary.advanced-options-button {
+        background: linear-gradient(135deg, rgba(100, 149, 237, 0.9), rgba(80, 129, 217, 0.9));
+        color: #ffffff;
+        border-color: rgba(100, 149, 237, 0.3);
+    }
+    .advanced-options-button:hover,
+    .action-button.secondary.advanced-options-button:hover {
+        background: linear-gradient(135deg, rgba(80, 129, 217, 1), rgba(60, 109, 197, 1));
+        color: #ffffff;
+        border-color: rgba(100, 149, 237, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+    }
+    .advanced-options-panel {
+        width: min(920px, 100%);
+    }
+    .advanced-options-content,
+    .advanced-options-form {
+        display: grid;
+        gap: 16px;
+    }
+    .advanced-section {
+        padding: 16px;
+        border: 1px solid rgba(138, 155, 182, 0.25);
+        border-radius: 10px;
+        background: rgba(25, 30, 38, 0.72);
+    }
+    .advanced-section h4,
+    .advanced-section h5 {
+        margin: 0 0 12px;
+        color: #f3d8a0;
+    }
+    .advanced-section h5 {
+        margin-top: 16px;
+        font-size: 0.94em;
+    }
+    .advanced-section .config-field {
+        display: grid;
+        gap: 7px;
+    }
+    .advanced-section .config-field > label {
+        color: #e4e9f2;
+        font-weight: 650;
+    }
+    .advanced-field-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+    .advanced-checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-height: 40px;
+    }
+    .advanced-checkbox-row input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        accent-color: rgb(242, 124, 17);
+    }
+    .advanced-details > summary {
+        cursor: pointer;
+        color: #f3d8a0;
+        font-weight: 700;
+    }
+    .advanced-details-body {
+        margin-top: 14px;
+    }
+    .parameter-preview {
+        margin-bottom: 14px;
+    }
+    .code-textarea {
+        font-family: Consolas, "Courier New", monospace;
+        line-height: 1.4;
+    }
+    .advanced-status-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 14px;
+    }
+    .advanced-modal-footer {
+        position: sticky;
+        bottom: -24px;
+        display: flex;
+        justify-content: flex-end;
+        padding: 14px 0 0;
+        background: linear-gradient(180deg, transparent, rgba(20, 20, 20, 0.98) 28%);
+    }
+    .advanced-modal-footer button {
+        min-width: 210px;
+    }
+    .danger-zone {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        border-color: rgba(220, 110, 110, 0.42);
+        background: rgba(96, 32, 32, 0.18);
+    }
+    .danger-zone h4 {
+        color: #ffb3b3;
+        margin-bottom: 5px;
+    }
+    .danger-zone p {
+        margin: 0;
+        color: #c8ced8;
+    }
     @media (max-width: 1024px) {
         main {
             padding-left: 4%;
@@ -1512,10 +1841,6 @@ if (!$isEmbed) {
             width: 100%;
             min-width: 0;
         }
-        .table-container {
-            min-height: 60vh;
-            max-height: calc(100vh - 100px);
-        }
         .action-modal {
             padding: 14px;
         }
@@ -1531,6 +1856,67 @@ if (!$isEmbed) {
         .active-action-row {
             grid-template-columns: 1fr;
             gap: 4px;
+        }
+        .advanced-field-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    @media (max-width: 720px) {
+        .table-container {
+            overflow: visible;
+            max-height: none;
+            min-height: 0;
+            border: 0;
+            background: transparent;
+        }
+        .table-container table,
+        .table-container tbody,
+        .table-container tr,
+        .table-container td {
+            display: block;
+            width: 100%;
+        }
+        .table-container colgroup,
+        .table-container thead {
+            display: none;
+        }
+        .table-container tbody tr {
+            margin-bottom: 14px;
+            border: 1px solid #3a3a3a;
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(28, 33, 40, 0.99);
+        }
+        .table-container td {
+            box-sizing: border-box;
+            border-bottom: 1px solid #3a3a3a;
+            background: transparent !important;
+        }
+        .table-container td:last-child {
+            border-bottom: 0;
+        }
+        .table-container td::before {
+            content: attr(data-label);
+            display: block;
+            margin-bottom: 7px;
+            color: #e6b76c;
+            font-family: "MagicCards", serif;
+            letter-spacing: 1px;
+        }
+        .action-modal {
+            align-items: stretch;
+            padding: 8px;
+        }
+        .action-modal-panel {
+            max-height: calc(100vh - 16px);
+        }
+        .danger-zone {
+            align-items: stretch;
+            flex-direction: column;
+        }
+        .danger-zone button,
+        .advanced-modal-footer button {
+            width: 100%;
         }
     }
 </style>
@@ -1575,12 +1961,9 @@ if (!$isEmbed) {
             <div class="content-section">
                 <h2>How It Works</h2>
                 <p style="margin:0; color:#d0d6df; line-height:1.45;">
-                    Toggling an action writes a persistent override into <code>core_action_custom</code>.
-                    Built-in defaults in <code>core_action</code> remain untouched. Scope flags decide whether an action
-                    is available to NPC mode, follower mode, or only as a dynamic runtime action. Parameter schemas mirror
-                    the exported JSON function definition, metadata holds dispatch details such as <code>plugin_command</code>
-                    versus <code>script_proxy</code>, and the pricing column can override selected gold costs per action
-                    without changing the shipped base catalog.
+                    Edit the action name or description, then press <strong>Save</strong>. Use <strong>Enable</strong> or
+                    <strong>Disable</strong> to control whether the AI may use it. Confirmation rules, return messages,
+                    parameters, and technical settings are available under <strong>Advanced Options</strong>.
                 </p>
             </div>
 
@@ -1708,19 +2091,21 @@ if (!$isEmbed) {
 
                 <div class="table-container">
                     <table>
+                        <colgroup>
+                            <col class="action-name-column">
+                            <col class="action-description-column">
+                            <col class="action-controls-column">
+                        </colgroup>
                         <thead>
                             <tr>
-                                <th>Command</th>
-                                <th>Info</th>
-                                <th>Config</th>
-                                <th>Parameters</th>
-                                <th>Metadata</th>
-                                <th>Toggle</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (count($rows) === 0): ?>
-                                <tr><td colspan="6">No actions found.</td></tr>
+                                <tr><td colspan="3">No actions found.</td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $row): ?>
                                 <?php
@@ -1751,10 +2136,21 @@ if (!$isEmbed) {
                                 $actionNameValue = strval($row["action_name"] ?? "");
                                 $descriptionValue = functionEditorReplaceActionTextVariablesInString(strval($row["description"] ?? ""));
                                 $returnMessageValue = functionEditorReplaceActionTextVariablesInString(strval($row["return_message"] ?? ""));
+                                if ($advancedOpenCode === $codeName && ($_POST["action"] ?? "") === "update_action_advanced") {
+                                    $returnMessageValue = strval($_POST["return_message"] ?? $returnMessageValue);
+                                    $parametersEditorValue = strval($_POST["parameters_json"] ?? $parametersEditorValue);
+                                    if (is_array($_POST["config"] ?? null)) {
+                                        $resolvedConfig = array_merge($resolvedConfig, $_POST["config"]);
+                                    }
+                                }
                                 $searchBlob = strtolower(trim(implode(' ', array_filter([
                                     $codeName,
                                     $actionNameValue,
+                                    $descriptionValue,
                                 ]))));
+                                $rowDomId = preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName) . '-' . substr(md5($codeName), 0, 8);
+                                $basicFormId = 'basic-action-' . $rowDomId;
+                                $advancedTemplateId = 'advanced-action-' . $rowDomId;
                                 $rowScopes = [];
                                 if ($isNpc) {
                                     $rowScopes[] = "npc";
@@ -1777,209 +2173,201 @@ if (!$isEmbed) {
                                     data-dispatch="<?php echo $isGameFunction ? 'game' : 'server'; ?>"
                                     data-source="<?php echo $isCustom ? 'custom' : 'base'; ?>"
                                 >
-                                    <td style="min-width: 220px;">
-                                        <code class="command-code"><?php echo h($codeName); ?></code>
-                                        <div class="command-meta">
-                                            <?php if ($isNpc): ?>
-                                                <span class="status-pill scope">NPC</span>
-                                            <?php endif; ?>
-                                            <?php if ($isFollowers): ?>
-                                                <span class="status-pill scope">Followers</span>
-                                            <?php endif; ?>
-                                            <?php if ($isNarrator): ?>
-                                                <span class="status-pill scope">Narrator</span>
-                                            <?php endif; ?>
-                                            <?php if (!$isNpc && !$isFollowers && !$isNarrator): ?>
-                                                <span class="status-pill scope">Dynamic</span>
-                                            <?php endif; ?>
-                                            <span class="status-pill <?php echo $isGameFunction ? "game" : "server"; ?>"><?php echo $isGameFunction ? "Game" : "Server"; ?></span>
-                                            <span class="status-pill <?php echo $isCustom ? "custom" : "base"; ?>"><?php echo $isCustom ? "Custom" : "Base"; ?></span>
-                                            <span class="status-pill <?php echo $enabled ? "enabled" : "disabled"; ?>"><?php echo $enabled ? "Enabled" : "Disabled"; ?></span>
+                                    <td data-label="Name">
+                                        <label class="sr-only" for="<?php echo h('name-' . $rowDomId); ?>">Action name for <?php echo h($codeName); ?></label>
+                                        <div class="action-name-title">
+                                            <input
+                                                class="basic-action-input"
+                                                type="text"
+                                                id="<?php echo h('name-' . $rowDomId); ?>"
+                                                name="action_name"
+                                                form="<?php echo h($basicFormId); ?>"
+                                                value="<?php echo h($actionNameValue); ?>"
+                                                required
+                                            >
+                                            <span class="action-row-status <?php echo $enabled ? 'state-enabled' : 'state-disabled'; ?>">
+                                                <?php echo $enabled ? 'Enabled' : 'Disabled'; ?>
+                                            </span>
                                         </div>
+                                        <code class="action-code-hint"><?php echo h($codeName); ?></code>
                                     </td>
-                                    <td style="max-width: 360px;">
-                                        <div style="margin-bottom:8px;"><strong><?php echo h($actionNameValue); ?></strong></div>
-                                        <?php echo nl2br(h($descriptionValue)); ?>
-                                        <div class="inline-action-editor" style="margin-top: 12px;">
+                                    <td data-label="Description">
+                                        <label class="sr-only" for="<?php echo h('description-' . $rowDomId); ?>">Action description for <?php echo h($codeName); ?></label>
+                                        <textarea
+                                            class="basic-action-description"
+                                            id="<?php echo h('description-' . $rowDomId); ?>"
+                                            name="description"
+                                            form="<?php echo h($basicFormId); ?>"
+                                            rows="4"
+                                        ><?php echo h($descriptionValue); ?></textarea>
+                                    </td>
+                                    <td data-label="Actions">
+                                        <div class="action-row-buttons">
+                                            <form id="<?php echo h($basicFormId); ?>" method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
+                                                <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+                                                <input type="hidden" name="action" value="update_action_basic_fields">
+                                                <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
+                                                <button type="submit" class="btn-save">Save</button>
+                                            </form>
                                             <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
-                                                <input type="hidden" name="action" value="update_action_text_fields">
+                                                <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+                                                <input type="hidden" name="action" value="toggle_action">
                                                 <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
-                                                <div class="config-field" style="margin-bottom: 12px;">
-                                                    <label for="<?php echo h('text-name-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Name</label>
-                                                    <div class="editor-controls">
-                                                        <input
-                                                            type="text"
-                                                            id="<?php echo h('text-name-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>"
-                                                            name="action_name"
-                                                            value="<?php echo h($actionNameValue); ?>"
-                                                        >
-                                                    </div>
-                                                </div>
-                                                <div class="config-field" style="margin-bottom: 12px;">
-                                                    <label for="<?php echo h('text-description-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Prompt</label>
-                                                    <div class="editor-controls">
-                                                        <textarea
-                                                            id="<?php echo h('text-description-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>"
-                                                            name="description"
-                                                            rows="4"
-                                                        ><?php echo h($descriptionValue); ?></textarea>
-                                                    </div>
-                                                </div>
-                                                <div class="config-field">
-                                                    <label for="<?php echo h('text-return-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Return Message</label>
-                                                    <div class="editor-controls">
-                                                        <textarea
-                                                            id="<?php echo h('text-return-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>"
-                                                            name="return_message"
-                                                            rows="3"
-                                                        ><?php echo h($returnMessageValue); ?></textarea>
-                                                    </div>
-                                                    <div class="helper-text">
-                                                        Edit the visible action name, the prompt text, and the default return text from this row.
-                                                    </div>
-                                                </div>
-                                                <div class="editor-controls">
-                                                    <button type="submit" class="btn-save">Save Info</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </td>
-                                    <td class="pricing-cell">
-                                        <?php if (count($configFields) > 0): ?>
-                                            <div class="inline-action-editor">
-                                                <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
-                                                    <input type="hidden" name="action" value="update_action_config">
-                                                    <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
-                                                    <?php foreach ($configFields as $configField): ?>
-                                                        <?php
-                                                        $fieldKey = strval($configField['key'] ?? '');
-                                                        $fieldId = 'config-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName . '-' . $fieldKey);
-                                                        $fieldType = strval($configField['type'] ?? 'text');
-                                                        $fieldValue = $resolvedConfig[$fieldKey] ?? (function_exists('herikaActionCatalogGetEditorFieldDefaultValue')
-                                                            ? herikaActionCatalogGetEditorFieldDefaultValue($configField, $row)
-                                                            : '');
-                                                        ?>
-                                                        <div class="config-field" style="margin-bottom: 14px;">
-                                                            <label for="<?php echo h($fieldId); ?>"><?php echo h($configField['label'] ?? $fieldKey); ?></label>
-                                                            <div class="editor-controls">
-                                                                <?php if ($fieldType === 'boolean'): ?>
-                                                                    <input type="hidden" name="config[<?php echo h($fieldKey); ?>]" value="0">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        id="<?php echo h($fieldId); ?>"
-                                                                        name="config[<?php echo h($fieldKey); ?>]"
-                                                                        value="1"
-                                                                        <?php echo functionEditorToBool($fieldValue) ? 'checked' : ''; ?>
-                                                                    >
-                                                                <?php elseif ($fieldType === 'textarea'): ?>
-                                                                    <textarea
-                                                                        id="<?php echo h($fieldId); ?>"
-                                                                        name="config[<?php echo h($fieldKey); ?>]"
-                                                                        rows="3"
-                                                                        placeholder="<?php echo h($configField['placeholder'] ?? ''); ?>"
-                                                                    ><?php echo h($fieldValue); ?></textarea>
-                                                                <?php elseif ($fieldType === 'select'): ?>
-                                                                    <select
-                                                                        id="<?php echo h($fieldId); ?>"
-                                                                        name="config[<?php echo h($fieldKey); ?>]"
-                                                                    >
-                                                                        <?php foreach (($configField['options'] ?? []) as $option): ?>
-                                                                            <?php $optionValue = strval($option['value'] ?? ''); ?>
-                                                                            <option value="<?php echo h($optionValue); ?>" <?php echo $optionValue === strval($fieldValue) ? 'selected' : ''; ?>>
-                                                                                <?php echo h($option['label'] ?? $optionValue); ?>
-                                                                            </option>
-                                                                        <?php endforeach; ?>
-                                                                    </select>
-                                                                <?php else: ?>
-                                                                    <input
-                                                                        type="<?php echo $fieldType === 'integer' || $fieldType === 'number' ? 'number' : 'text'; ?>"
-                                                                        id="<?php echo h($fieldId); ?>"
-                                                                        name="config[<?php echo h($fieldKey); ?>]"
-                                                                        <?php if (is_numeric($configField['minimum'] ?? null)): ?>min="<?php echo h($configField['minimum']); ?>"<?php endif; ?>
-                                                                        <?php if (is_numeric($configField['maximum'] ?? null)): ?>max="<?php echo h($configField['maximum']); ?>"<?php endif; ?>
-                                                                        <?php if (is_numeric($configField['step'] ?? null)): ?>step="<?php echo h($configField['step']); ?>"<?php elseif ($fieldType === 'integer'): ?>step="1"<?php endif; ?>
-                                                                        placeholder="<?php echo h($configField['placeholder'] ?? ''); ?>"
-                                                                        value="<?php echo h($fieldValue); ?>"
-                                                                    >
-                                                                <?php endif; ?>
-                                                            </div>
-                                                        </div>
-                                                    <?php endforeach; ?>
-                                                    <div class="editor-controls">
-                                                        <button type="submit" class="btn-save">Save Config</button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        <?php else: ?>
-                                            <span class="pricing-empty">No editable config</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td style="min-width: 420px;">
-                                        <?php echo $parametersRendered; ?>
-                                        <details class="inline-action-editor" style="margin-top: 12px;">
-                                            <summary class="parameter-schema-toggle">Advanced: Edit Parameter Schema</summary>
-                                            <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>" style="margin-top: 10px;">
-                                                <input type="hidden" name="action" value="update_action_parameters">
-                                                <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
-                                                <div class="config-field">
-                                                    <label for="<?php echo h('parameters-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>">Parameter Schema JSON</label>
-                                                    <div class="editor-controls">
-                                                        <textarea
-                                                            id="<?php echo h('parameters-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $codeName)); ?>"
-                                                            name="parameters_json"
-                                                            rows="12"
-                                                            style="font-family: Consolas, monospace;"
-                                                            placeholder="{&quot;type&quot;:&quot;object&quot;,&quot;properties&quot;:{},&quot;required&quot;:[]}"
-                                                        ><?php echo h($parametersEditorValue); ?></textarea>
-                                                    </div>
-                                                    <div class="helper-text">
-                                                        Save a full <code>parameters_json</code> override. This updates enums, properties, descriptions, and required fields for built-in or custom actions.
-                                                    </div>
-                                                </div>
-                                                <div class="editor-controls">
-                                                    <button type="submit" class="btn-save">Save Parameters</button>
-                                                </div>
-                                            </form>
-                                        </details>
-                                    </td>
-                                    <td style="min-width: 320px;">
-                                        <details>
-                                            <summary class="parameter-schema-toggle">Metadata JSON</summary>
-                                            <pre class="json-preview"><?php echo h($metadataPreview); ?></pre>
-                                        </details>
-                                        <?php if (!in_array(trim($scriptProxyPreview), ["", "[]", "{}"], true)): ?>
-                                            <details style="margin-top:10px;">
-                                                <summary class="return-preview" style="cursor:pointer;">ScriptProxy Program</summary>
-                                                <pre class="json-preview"><?php echo h($scriptProxyPreview); ?></pre>
-                                            </details>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
-                                            <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
-                                            <input type="hidden" name="action" value="toggle_action">
-                                            <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
                                             <input type="hidden" name="target_enabled" value="<?php echo h($targetEnabled); ?>">
                                             <button type="submit" class="<?php echo $enabled ? "btn-danger" : "btn-save"; ?>">
-                                                <?php echo $enabled ? "Disable" : "Enable"; ?>
-                                            </button>
-                                        </form>
-                                        <?php if ($isCustom && $hasBase): ?>
-                                            <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>" style="margin-top: 8px;" onsubmit="return confirm('Reset this action to its base definition? This will delete the custom override row for <?php echo h($codeName); ?>.');">
-                                                <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
-                                                <input type="hidden" name="action" value="reset_action_override">
-                                                <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
-                                                <button type="submit" class="action-button secondary">
-                                                    Reset Override
+                                                    <?php echo $enabled ? "Disable" : "Enable"; ?>
                                                 </button>
                                             </form>
-                                        <?php endif; ?>
+                                            <button
+                                                type="button"
+                                                class="action-button secondary advanced-options-button"
+                                                data-advanced-template="<?php echo h($advancedTemplateId); ?>"
+                                                data-action-name="<?php echo h($actionNameValue !== '' ? $actionNameValue : $codeName); ?>"
+                                                data-code-name="<?php echo h($codeName); ?>"
+                                            >Advanced Options</button>
+                                        </div>
+
+                                        <template id="<?php echo h($advancedTemplateId); ?>">
+                                            <div class="advanced-options-content">
+                                                <form class="advanced-options-form" method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
+                                                    <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+                                                    <input type="hidden" name="action" value="update_action_advanced">
+                                                    <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
+
+                                                    <section class="advanced-section">
+                                                        <h4>Response</h4>
+                                                        <div class="config-field">
+                                                            <label for="<?php echo h('return-' . $rowDomId); ?>">Return Message</label>
+                                                            <textarea id="<?php echo h('return-' . $rowDomId); ?>" name="return_message" rows="3"><?php echo h($returnMessageValue); ?></textarea>
+                                                            <div class="helper-text">The default event text returned after this action runs.</div>
+                                                        </div>
+                                                    </section>
+
+                                                    <?php if (count($configFields) > 0): ?>
+                                                        <section class="advanced-section">
+                                                            <h4>Behavior</h4>
+                                                            <div class="advanced-field-grid">
+                                                                <?php foreach ($configFields as $configField): ?>
+                                                                    <?php
+                                                                    $fieldKey = strval($configField['key'] ?? '');
+                                                                    $fieldId = 'config-' . $rowDomId . '-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $fieldKey);
+                                                                    $fieldType = strval($configField['type'] ?? 'text');
+                                                                    $fieldValue = $resolvedConfig[$fieldKey] ?? (function_exists('herikaActionCatalogGetEditorFieldDefaultValue')
+                                                                        ? herikaActionCatalogGetEditorFieldDefaultValue($configField, $row)
+                                                                        : '');
+                                                                    ?>
+                                                                    <div class="config-field">
+                                                                        <label for="<?php echo h($fieldId); ?>"><?php echo h($configField['label'] ?? $fieldKey); ?></label>
+                                                                        <?php if ($fieldType === 'boolean'): ?>
+                                                                            <div class="advanced-checkbox-row">
+                                                                                <input type="hidden" name="config[<?php echo h($fieldKey); ?>]" value="0">
+                                                                                <input type="checkbox" id="<?php echo h($fieldId); ?>" name="config[<?php echo h($fieldKey); ?>]" value="1" <?php echo functionEditorToBool($fieldValue) ? 'checked' : ''; ?>>
+                                                                                <span><?php echo functionEditorToBool($fieldValue) ? 'Enabled' : 'Disabled'; ?></span>
+                                                                            </div>
+                                                                        <?php elseif ($fieldType === 'textarea'): ?>
+                                                                            <textarea id="<?php echo h($fieldId); ?>" name="config[<?php echo h($fieldKey); ?>]" rows="3" placeholder="<?php echo h($configField['placeholder'] ?? ''); ?>"><?php echo h($fieldValue); ?></textarea>
+                                                                        <?php elseif ($fieldType === 'select'): ?>
+                                                                            <select id="<?php echo h($fieldId); ?>" name="config[<?php echo h($fieldKey); ?>]">
+                                                                                <?php foreach (($configField['options'] ?? []) as $option): ?>
+                                                                                    <?php $optionValue = strval($option['value'] ?? ''); ?>
+                                                                                    <option value="<?php echo h($optionValue); ?>" <?php echo $optionValue === strval($fieldValue) ? 'selected' : ''; ?>><?php echo h($option['label'] ?? $optionValue); ?></option>
+                                                                                <?php endforeach; ?>
+                                                                            </select>
+                                                                        <?php else: ?>
+                                                                            <input
+                                                                                type="<?php echo $fieldType === 'integer' || $fieldType === 'number' ? 'number' : 'text'; ?>"
+                                                                                id="<?php echo h($fieldId); ?>"
+                                                                                name="config[<?php echo h($fieldKey); ?>]"
+                                                                                <?php if (is_numeric($configField['minimum'] ?? null)): ?>min="<?php echo h($configField['minimum']); ?>"<?php endif; ?>
+                                                                                <?php if (is_numeric($configField['maximum'] ?? null)): ?>max="<?php echo h($configField['maximum']); ?>"<?php endif; ?>
+                                                                                <?php if (is_numeric($configField['step'] ?? null)): ?>step="<?php echo h($configField['step']); ?>"<?php elseif ($fieldType === 'integer'): ?>step="1"<?php endif; ?>
+                                                                                placeholder="<?php echo h($configField['placeholder'] ?? ''); ?>"
+                                                                                value="<?php echo h($fieldValue); ?>"
+                                                                            >
+                                                                        <?php endif; ?>
+                                                                        <?php if (trim(strval($configField['help'] ?? '')) !== ''): ?>
+                                                                            <div class="helper-text"><?php echo h($configField['help']); ?></div>
+                                                                        <?php endif; ?>
+                                                                    </div>
+                                                                <?php endforeach; ?>
+                                                            </div>
+                                                        </section>
+                                                    <?php endif; ?>
+
+                                                    <section class="advanced-section">
+                                                        <details class="advanced-details">
+                                                            <summary>Parameter Schema</summary>
+                                                            <div class="advanced-details-body">
+                                                                <div class="parameter-preview"><?php echo $parametersRendered; ?></div>
+                                                                <div class="config-field">
+                                                                    <label for="<?php echo h('parameters-' . $rowDomId); ?>">Parameter Schema JSON</label>
+                                                                    <textarea id="<?php echo h('parameters-' . $rowDomId); ?>" name="parameters_json" rows="12" class="code-textarea" placeholder="{&quot;type&quot;:&quot;object&quot;,&quot;properties&quot;:{},&quot;required&quot;:[]}"><?php echo h($parametersEditorValue); ?></textarea>
+                                                                    <div class="helper-text">Controls the fields and values the LLM may provide when issuing this action.</div>
+                                                                </div>
+                                                            </div>
+                                                        </details>
+                                                    </section>
+
+                                                    <section class="advanced-section">
+                                                        <details class="advanced-details">
+                                                            <summary>Technical Details</summary>
+                                                            <div class="advanced-details-body">
+                                                                <div class="advanced-status-list">
+                                                                    <?php foreach ($rowScopes as $rowScope): ?><span class="status-pill scope"><?php echo h(ucfirst($rowScope)); ?></span><?php endforeach; ?>
+                                                                    <span class="status-pill <?php echo $isGameFunction ? 'game' : 'server'; ?>"><?php echo $isGameFunction ? 'Game' : 'Server'; ?></span>
+                                                                    <span class="status-pill <?php echo $isCustom ? 'custom' : 'base'; ?>"><?php echo $isCustom ? 'Custom' : 'Base'; ?></span>
+                                                                    <span class="status-pill <?php echo $enabled ? 'enabled' : 'disabled'; ?>"><?php echo $enabled ? 'Enabled' : 'Disabled'; ?></span>
+                                                                </div>
+                                                                <h5>Metadata JSON</h5>
+                                                                <pre class="json-preview"><?php echo h($metadataPreview); ?></pre>
+                                                                <?php if (!in_array(trim($scriptProxyPreview), ["", "[]", "{}"], true)): ?>
+                                                                    <h5>ScriptProxy Program</h5>
+                                                                    <pre class="json-preview"><?php echo h($scriptProxyPreview); ?></pre>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        </details>
+                                                    </section>
+
+                                                    <div class="advanced-modal-footer">
+                                                        <button type="submit" class="btn-save">Save Advanced Options</button>
+                                                    </div>
+                                                </form>
+
+                                                <?php if ($isCustom && $hasBase): ?>
+                                                    <section class="advanced-section danger-zone">
+                                                        <div>
+                                                            <h4>Reset Override</h4>
+                                                            <p>Restore this action to its shipped defaults.</p>
+                                                        </div>
+                                                        <form method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>" onsubmit="return confirm('Reset this action to its base definition? This will delete the custom override row for <?php echo h($codeName); ?>.');">
+                                                            <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+                                                            <input type="hidden" name="action" value="reset_action_override">
+                                                            <input type="hidden" name="code_name" value="<?php echo h($codeName); ?>">
+                                                            <button type="submit" class="btn-danger">Reset Override</button>
+                                                        </form>
+                                                    </section>
+                                                <?php endif; ?>
+                                            </div>
+                                        </template>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                     <div class="empty-filter-state" id="actionFilterEmptyState">No actions match the current filters.</div>
+                </div>
+
+                <div id="advancedOptionsModal" class="action-modal" hidden>
+                    <div class="action-modal-panel advanced-options-panel" role="dialog" aria-modal="true" aria-labelledby="advancedOptionsModalTitle">
+                        <div class="action-modal-header">
+                            <div>
+                                <h3 class="action-modal-title" id="advancedOptionsModalTitle">Advanced Options</h3>
+                                <p class="action-modal-subtitle" id="advancedOptionsModalSubtitle"></p>
+                            </div>
+                            <button type="button" class="action-modal-close" data-advanced-modal-close aria-label="Close advanced options modal">&times;</button>
+                        </div>
+                        <div class="action-modal-body" id="advancedOptionsModalBody"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2113,6 +2501,114 @@ document.addEventListener("DOMContentLoaded", function() {
             closeModal();
         }
     });
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+    const modal = document.getElementById("advancedOptionsModal");
+    const modalBody = document.getElementById("advancedOptionsModalBody");
+    const modalTitle = document.getElementById("advancedOptionsModalTitle");
+    const modalSubtitle = document.getElementById("advancedOptionsModalSubtitle");
+    const closeButton = modal?.querySelector("[data-advanced-modal-close]");
+    const openButtons = Array.from(document.querySelectorAll("[data-advanced-template]"));
+    let previousFocus = null;
+
+    if (!modal || !modalBody || !modalTitle || !modalSubtitle || !closeButton || !openButtons.length) {
+        return;
+    }
+
+    function focusableElements() {
+        return Array.from(modal.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'))
+            .filter((element) => element.offsetParent !== null);
+    }
+
+    function openAdvancedOptions(button) {
+        const template = document.getElementById(button.dataset.advancedTemplate || "");
+        if (!(template instanceof HTMLTemplateElement)) {
+            return;
+        }
+
+        previousFocus = button;
+        modalBody.replaceChildren(template.content.cloneNode(true));
+        modalTitle.textContent = "Advanced Options";
+        modalSubtitle.textContent = `${button.dataset.actionName || button.dataset.codeName || "Action"} (${button.dataset.codeName || ""})`;
+        modal.hidden = false;
+        document.body.style.overflow = "hidden";
+
+        window.requestAnimationFrame(() => {
+            const focusable = focusableElements();
+            (focusable[0] || closeButton).focus();
+        });
+    }
+
+    function closeAdvancedOptions() {
+        modal.hidden = true;
+        modalBody.replaceChildren();
+        document.body.style.overflow = "";
+        if (previousFocus instanceof HTMLElement) {
+            previousFocus.focus();
+        }
+        previousFocus = null;
+    }
+
+    openButtons.forEach((button) => {
+        button.addEventListener("click", function() {
+            openAdvancedOptions(button);
+        });
+    });
+
+    closeButton.addEventListener("click", closeAdvancedOptions);
+    modal.addEventListener("click", function(event) {
+        if (event.target === modal) {
+            closeAdvancedOptions();
+        }
+    });
+
+    modalBody.addEventListener("change", function(event) {
+        if (event.target instanceof HTMLInputElement && event.target.type === "checkbox") {
+            const stateLabel = event.target.closest(".advanced-checkbox-row")?.querySelector("span");
+            if (stateLabel) {
+                stateLabel.textContent = event.target.checked ? "Enabled" : "Disabled";
+            }
+        }
+    });
+
+    document.addEventListener("keydown", function(event) {
+        if (modal.hidden) {
+            return;
+        }
+        if (event.key === "Escape") {
+            event.preventDefault();
+            closeAdvancedOptions();
+            return;
+        }
+        if (event.key !== "Tab") {
+            return;
+        }
+
+        const focusable = focusableElements();
+        if (!focusable.length) {
+            event.preventDefault();
+            closeButton.focus();
+            return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+
+    const reopenCode = <?php echo json_encode($advancedOpenCode); ?>;
+    if (reopenCode) {
+        const reopenButton = openButtons.find((button) => button.dataset.codeName === reopenCode);
+        if (reopenButton) {
+            openAdvancedOptions(reopenButton);
+        }
+    }
 });
 </script>
 

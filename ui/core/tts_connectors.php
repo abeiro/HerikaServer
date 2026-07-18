@@ -64,7 +64,7 @@ function ttsVisibleDriverOptions(TTSConnector $ttsConnector): array
 
 function ttsGroupedDriverOptions(TTSConnector $ttsConnector, array $driverOptions): array
 {
-    $recommendedOrder = ['pockettts', 'chatterbox', 'xtts-fastapi', 'inworld', 'cartesia'];
+    $recommendedOrder = ['omnivoice', 'pockettts', 'chatterbox', 'xtts-fastapi', 'inworld', 'cartesia'];
     $available = [];
     foreach ($driverOptions as $driverOption) {
         $normalized = $ttsConnector->normalizeDriverValue($driverOption);
@@ -99,8 +99,12 @@ function ttsShouldRenderField(string $fieldName, $definition, TTSConnector $ttsC
     if ($ttsConnector->isDriverVoiceMetadataField($driver, $fieldName)) {
         return false;
     }
-    if (in_array($ttsConnector->normalizeDriverValue($driver), ['xtts-fastapi', 'chatterbox', 'pockettts'], true)
+    $normalizedDriver = $ttsConnector->normalizeDriverValue($driver);
+    if (in_array($normalizedDriver, ['xtts-fastapi', 'chatterbox', 'pockettts'], true)
         && in_array($fieldName, ['language', 'voicelogic'], true)) {
+        return false;
+    }
+    if ($normalizedDriver === 'omnivoice' && $fieldName === 'voicelogic') {
         return false;
     }
     return true;
@@ -175,6 +179,106 @@ function ttsFormatFieldLabel(string $fieldName): string
     $label = str_replace(['_', '-'], ' ', trim($fieldName));
     $label = preg_replace('/\s+/', ' ', $label ?? '');
     return ucwords(strtolower($label));
+}
+
+function ttsOmniVoiceLanguageLabel(string $languageId): string
+{
+    static $fallbackLabels = [
+        'cs' => 'Czech',
+        'en' => 'English',
+        'es' => 'Spanish',
+        'ro' => 'Romanian',
+        'ru' => 'Russian',
+        'sk' => 'Slovak',
+    ];
+
+    $languageId = strtolower(trim($languageId));
+    if ($languageId === '') {
+        return '';
+    }
+
+    $profilePath = '/home/dwemer/omnivoice-tts/languages/' . $languageId . '.json';
+    if (is_file($profilePath) && is_readable($profilePath)) {
+        $profile = json_decode(strval(@file_get_contents($profilePath)), true);
+        if (is_array($profile)) {
+            $label = trim(strval($profile['display_name'] ?? $profile['omnivoice_language'] ?? ''));
+            if ($label !== '') {
+                return $label;
+            }
+        }
+    }
+
+    return $fallbackLabels[$languageId] ?? strtoupper($languageId);
+}
+
+function ttsOmniVoicePreparedLanguages(): array
+{
+    $profilesPath = '/home/dwemer/omnivoice-tts/languages';
+    $voicesPath = '/home/dwemer/omnivoice-tts/voices';
+    if (!is_dir($profilesPath) || !is_readable($profilesPath)) {
+        return [];
+    }
+
+    $entries = @scandir($profilesPath);
+    if (!is_array($entries)) {
+        return [];
+    }
+
+    $options = [];
+    foreach ($entries as $entry) {
+        if ($entry === '.' || $entry === '..' || substr($entry, -5) !== '.json') {
+            continue;
+        }
+        $profilePath = $profilesPath . DIRECTORY_SEPARATOR . $entry;
+        if (!is_file($profilePath) || !is_readable($profilePath)) {
+            continue;
+        }
+        $rawProfile = strval(@file_get_contents($profilePath));
+        if ($rawProfile === '' || stripos($rawProfile, 'REPLACE THIS') !== false) {
+            continue;
+        }
+        $profile = json_decode($rawProfile, true);
+        if (!is_array($profile)) {
+            continue;
+        }
+        $languageId = strtolower(trim(strval($profile['id'] ?? basename($entry, '.json'))));
+        if ($languageId === '' || !preg_match('/^[a-z][a-z0-9-]*$/', $languageId)) {
+            continue;
+        }
+
+        $voiceCount = 0;
+        $totalVoiceFolders = 0;
+        $languagePath = $voicesPath . DIRECTORY_SEPARATOR . $languageId;
+        $voiceEntries = @scandir($languagePath);
+        if (is_array($voiceEntries)) {
+            foreach ($voiceEntries as $voiceEntry) {
+                if ($voiceEntry === '.' || $voiceEntry === '..') {
+                    continue;
+                }
+                $voicePath = $languagePath . DIRECTORY_SEPARATOR . $voiceEntry;
+                if (is_dir($voicePath)) {
+                    $totalVoiceFolders++;
+                    if (is_file($voicePath . DIRECTORY_SEPARATOR . 'reference.wav')
+                        && is_file($voicePath . DIRECTORY_SEPARATOR . 'reference.txt')) {
+                        $voiceCount++;
+                    }
+                }
+            }
+        }
+
+        $options[$languageId] = [
+            'id' => $languageId,
+            'label' => trim(strval($profile['display_name'] ?? $profile['omnivoice_language'] ?? '')) ?: ttsOmniVoiceLanguageLabel($languageId),
+            'voice_count' => $voiceCount,
+            'total_voice_folders' => $totalVoiceFolders,
+        ];
+    }
+
+    uasort($options, function ($a, $b) {
+        return strcasecmp(strval($a['label'] ?? ''), strval($b['label'] ?? ''));
+    });
+
+    return array_values($options);
 }
 
 function ttsApiBadgeHasConfiguredKey($value): bool
@@ -722,7 +826,41 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
                                             ?>
                                             <div class="field-block">
                                                 <label for="<?php echo h($fieldKey); ?>"><?php echo h(ttsFormatFieldLabel($fieldName)); ?></label>
-                                                <?php if ($fieldType === 'boolean'): ?>
+                                                <?php if ($groupDriver === 'omnivoice' && $fieldName === 'language'): ?>
+                                                    <?php
+                                                        $omniLanguages = ttsOmniVoicePreparedLanguages();
+                                                        $currentOmniLanguage = strtolower(trim(strval($fieldValue)));
+                                                        $preparedLanguageIds = array_map(function ($option) {
+                                                            return strval($option['id'] ?? '');
+                                                        }, $omniLanguages);
+                                                        $currentLanguagePrepared = $currentOmniLanguage !== '' && in_array($currentOmniLanguage, $preparedLanguageIds, true);
+                                                        $selectedOmniLanguage = $currentLanguagePrepared || empty($omniLanguages)
+                                                            ? $currentOmniLanguage
+                                                            : strval($omniLanguages[0]['id'] ?? '');
+                                                    ?>
+                                                    <?php if (!empty($omniLanguages)): ?>
+                                                        <select id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>">
+                                                            <?php foreach ($omniLanguages as $languageOption): ?>
+                                                                <?php
+                                                                    $languageId = strval($languageOption['id'] ?? '');
+                                                                    $languageLabel = strval($languageOption['label'] ?? strtoupper($languageId));
+                                                                    $optionLabel = $languageLabel . ' (' . $languageId . ')';
+                                                                ?>
+                                                                <option value="<?php echo h($languageId); ?>" <?php echo $selectedOmniLanguage === $languageId ? 'selected' : ''; ?>>
+                                                                    <?php echo h($optionLabel); ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                        <?php if ($currentOmniLanguage !== '' && !$currentLanguagePrepared): ?>
+                                                            <div class="field-help">Saved language <?php echo h($currentOmniLanguage); ?> is not available as an OmniVoice profile.</div>
+                                                        <?php elseif (!empty($definition['description'])): ?>
+                                                            <div class="field-help">Saving this connector will prepare the selected language automatically if needed.</div>
+                                                        <?php endif; ?>
+                                                    <?php else: ?>
+                                                        <input type="text" id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>" value="<?php echo h($fieldValue); ?>">
+                                                        <div class="field-help">No OmniVoice language profiles were found in /home/dwemer/omnivoice-tts/languages.</div>
+                                                    <?php endif; ?>
+                                                <?php elseif ($fieldType === 'boolean'): ?>
                                                     <input type="hidden" name="<?php echo h($fieldKey); ?>" value="false">
                                                     <select id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>">
                                                         <option value="true" <?php echo $fieldValue ? 'selected' : ''; ?>>Enabled</option>
@@ -754,7 +892,7 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
                                                 <?php else: ?>
                                                     <input type="text" id="<?php echo h($fieldKey); ?>" name="<?php echo h($fieldKey); ?>" value="<?php echo h($fieldValue); ?>">
                                                 <?php endif; ?>
-                                                <?php if (!empty($definition['description'])): ?>
+                                                <?php if (!($groupDriver === 'omnivoice' && $fieldName === 'language') && !empty($definition['description'])): ?>
                                                     <div class="field-help"><?php echo $definition['description']; ?></div>
                                                 <?php endif; ?>
                                             </div>

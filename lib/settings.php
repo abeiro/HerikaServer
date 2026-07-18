@@ -144,6 +144,41 @@ if (!function_exists('chimReadLegacyGlobalValue')) {
     }
 }
 
+if (!function_exists('chimNormalizeBackgroundLifeTriggerHours')) {
+    function chimNormalizeBackgroundLifeTriggerHours($hours, float $default = 24.0): float
+    {
+        $value = is_numeric($hours) ? floatval($hours) : $default;
+        return max(1.0, min(720.0, $value));
+    }
+}
+
+if (!function_exists('chimConvertBackgroundLifeDaysToHours')) {
+    function chimConvertBackgroundLifeDaysToHours($days, float $default = 24.0): float
+    {
+        if (!is_numeric($days)) {
+            return chimNormalizeBackgroundLifeTriggerHours($default, $default);
+        }
+
+        return chimNormalizeBackgroundLifeTriggerHours(floatval($days) * 24.0, $default);
+    }
+}
+
+if (!function_exists('chimGetBackgroundLifeTriggerHours')) {
+    function chimGetBackgroundLifeTriggerHours(float $default = 24.0): float
+    {
+        if (isset($GLOBALS['BGL_TRIGGER_HOURS']) && is_numeric($GLOBALS['BGL_TRIGGER_HOURS'])) {
+            return chimNormalizeBackgroundLifeTriggerHours($GLOBALS['BGL_TRIGGER_HOURS'], $default);
+        }
+
+        // Compatibility for pre-hours configuration files and databases.
+        if (isset($GLOBALS['BGL_TRIGGER_DAYS']) && is_numeric($GLOBALS['BGL_TRIGGER_DAYS'])) {
+            return chimConvertBackgroundLifeDaysToHours($GLOBALS['BGL_TRIGGER_DAYS'], $default);
+        }
+
+        return chimNormalizeBackgroundLifeTriggerHours($default, $default);
+    }
+}
+
 if (!function_exists('chimGetManagedGeneralSettingIds')) {
     function chimGetManagedGeneralSettingIds(): array
     {
@@ -151,7 +186,7 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'AUTO_LOCK_PROFILE',
             'AUTOFILL_CUSTOM_PROFILES',
             'AUTOFILL_CUSTOM_PROFILES_TRIGGER',
-            'BGL_TRIGGER_DAYS',
+            'BGL_TRIGGER_HOURS',
             'END_CONVERSATION_COOLDOWN',
             'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY',
             'FEATURES@MEMORY_EMBEDDING@ENABLED',
@@ -165,11 +200,14 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'LOCATION_BLACKLIST',
             'ITEM_BLACKLIST',
             'EVENT_TYPE_FILTER',
+            'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE',
             'GROUND_ITEMS_DESCRIPTIONS_ONLY',
             'INVENTORY_ITEMS_DESCRIPTIONS_ONLY',
             'HIDE_AMBIENT_COMBAT',
             'DISABLE_REANIMATION_TRACKING',
             'TRANSFORMATION_DETECTION',
+            'CHIM_AI_QUEST_PROGRESSION',
+            'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT',
             'PROMPT_TIMESTAMP',
             'PROMPT_CONTEXT_OPTIONS',
             'RECHAT_MODE',
@@ -267,10 +305,13 @@ if (!function_exists('chimPrettySettingLabel')) {
             'EMOTEMOODS' => 'Emote Moods',
             'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
             'SHORTER_NEARBY_ITEM_LIST' => 'Shorter Nearby Item List',
-            'BGL_TRIGGER_DAYS' => 'Background Life Days Cooldown',
+            'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time',
             'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
             'GLOBAL_STT_CONNECTOR_ID' => 'Speech To Text Connector',
             'GLOBAL_ITT_CONNECTOR_ID' => 'Image To Text Connector',
+            'CHIM_AI_QUEST_PROGRESSION' => 'AI Quest Progression (Beta)',
+            'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
+            'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 'Item Pickup Detection Value',
         ];
         if (isset($customLabels[$flatName])) {
             return $customLabels[$flatName];
@@ -299,6 +340,10 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
             return 'Rechat';
         }
 
+        if (in_array($flatId, ['CHIM_AI_QUEST_PROGRESSION', 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT'], true)) {
+            return 'Quests';
+        }
+
         if (strpos($flatId, 'FEATURES@MEMORY_EMBEDDING@') === 0) {
             return 'Memory';
         }
@@ -317,6 +362,8 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
                 'HIDE_AMBIENT_COMBAT',
                 'DISABLE_REANIMATION_TRACKING',
                 'TRANSFORMATION_DETECTION',
+                'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE',
+                'CHIM_AI_QUEST_PROGRESSION',
                 'POWER_AWARENESS_ENABLED',
                 'SCENE_CLASSIFIER_ENABLED',
                 'RELATIONSHIP_SYSTEM_ENABLED',
@@ -605,6 +652,51 @@ if (!function_exists('chimGetPromptContextOptionCatalog')) {
                     'description' => 'Current and recent plan/task summary.',
                 ],
             ],
+            'enabled_nearby_actor_subsections' => [
+                'basic_summary' => [
+                    'label' => 'Basic summary',
+                    'description' => 'Nearby actor profile summary or short biography.',
+                ],
+                'appearance' => [
+                    'label' => 'Appearance',
+                    'description' => 'Nearby actor physical appearance and visible traits.',
+                ],
+                'equipment' => [
+                    'label' => 'Equipment',
+                    'description' => 'Nearby actor currently equipped gear and worn items.',
+                ],
+                'equipment_descriptions' => [
+                    'label' => 'Equipment descriptions',
+                    'description' => 'Adds item descriptions to nearby actor equipment when available.',
+                ],
+                'current_activity' => [
+                    'label' => 'Current activity',
+                    'description' => 'What nearby actors are currently doing.',
+                ],
+                'power_awareness' => [
+                    'label' => 'Power awareness',
+                    'description' => 'Relative strength assessment for nearby actors when power awareness is enabled.',
+                ],
+                'factions' => [
+                    'label' => 'Factions',
+                    'description' => 'Faction names and group descriptions for nearby actors.',
+                ],
+                'custom_state' => [
+                    'label' => 'Custom state',
+                    'description' => 'Custom plugin state attached to nearby actor profile lines.',
+                ],
+            ],
+            'enabled_nearby_item_subsections' => [
+                'group_duplicates' => [
+                    'label' => 'Group duplicates',
+                    'description' => 'Groups duplicate nearby ground items into counted entries.',
+                    'default_enabled' => false,
+                ],
+                'item_descriptions' => [
+                    'label' => 'Item descriptions',
+                    'description' => 'Adds item descriptions for nearby ground items when available.',
+                ],
+            ],
         ];
     }
 }
@@ -615,7 +707,12 @@ if (!function_exists('chimGetDefaultPromptContextOptions')) {
         $catalog = chimGetPromptContextOptionCatalog();
         $defaults = [];
         foreach ($catalog as $bucket => $options) {
-            $defaults[$bucket] = array_keys($options);
+            $defaults[$bucket] = [];
+            foreach ($options as $id => $meta) {
+                if (!isset($meta['default_enabled']) || $meta['default_enabled'] !== false) {
+                    $defaults[$bucket][] = $id;
+                }
+            }
         }
 
         return $defaults;

@@ -24,6 +24,7 @@ require_once(__DIR__ . "/lib/core/activity_status.php");
 require_once(__DIR__ . "/lib/core/transformation_state.php");
 require_once(__DIR__ . "/lib/core/game_plugins.php");
 require_once(__DIR__ . "/lib/logger.php");
+require_once(__DIR__ . "/lib/chim_quest_engine.php");
 
 // Only accept POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -44,7 +45,20 @@ if (!$data || !isset($data['type'])) {
 }
 
 // Types that operate on global data and do not require an actor
-$actorlessTypes = ['market_stock', 'activity_status_bulk', 'transformation_state_bulk', 'loaded_plugins'];
+$actorlessTypes = [
+    'market_stock',
+    'activity_status_bulk',
+    'transformation_state_bulk',
+    'loaded_plugins',
+    'quest_event',
+    'quest_action_poll',
+    'quest_action_ack',
+    'quest_import_bundled',
+    'quest_reset_runtime',
+    'quest_status',
+    'player_item_acquired',
+    'player_items_acquired'
+];
 
 // Validate required fields (skipped for actorless types)
 if (!in_array($data['type'], $actorlessTypes)) {
@@ -57,6 +71,8 @@ if (!in_array($data['type'], $actorlessTypes)) {
 }
 
 $npcMaster = new NpcMaster();
+$responseBody = "OK";
+$responseIsJson = false;
 
 try {
     switch ($data['type']) {
@@ -102,14 +118,65 @@ try {
         case 'loaded_plugins':
             handleLoadedPluginsUpdate($data);
             break;
+        case 'low_process_actors':
+            handleLowProcessActorsUpdate($data,$npcMaster);
+            break;
+        case 'quest_event':
+            $responseBody = chimQuestEngineJsonEncode(chimQuestEngineHandleEvent(
+                $data['event_type'] ?? '',
+                (isset($data['payload']) && is_array($data['payload'])) ? $data['payload'] : $data
+            ));
+            $responseIsJson = true;
+            break;
+        case 'quest_action_poll':
+            $responseBody = chimQuestEngineJsonEncode(array(
+                'ok' => true,
+                'actions' => chimQuestEngineFetchPendingActions($data['limit'] ?? 25),
+            ));
+            $responseIsJson = true;
+            break;
+        case 'quest_action_ack':
+            $responseBody = chimQuestEngineJsonEncode(chimQuestEngineAcknowledgeAction(
+                $data['action_id'] ?? 0,
+                $data['status'] ?? 'applied',
+                (isset($data['result']) && is_array($data['result'])) ? $data['result'] : array()
+            ));
+            $responseIsJson = true;
+            break;
+        case 'quest_import_bundled':
+            $responseBody = chimQuestEngineJsonEncode(array(
+                'ok' => true,
+                'imported' => chimQuestEngineImportBundledDefinitions(),
+            ));
+            $responseIsJson = true;
+            break;
+        case 'quest_reset_runtime':
+            $responseBody = chimQuestEngineJsonEncode(array(
+                'ok' => chimQuestEngineResetRuntime(true),
+            ));
+            $responseIsJson = true;
+            break;
+        case 'quest_status':
+            $responseBody = chimQuestEngineJsonEncode(chimQuestEngineStatus());
+            $responseIsJson = true;
+            break;
+        case 'player_item_acquired':
+            handlePlayerItemAcquired($data);
+            break;
+        case 'player_items_acquired':
+            handlePlayerItemsAcquired($data);
+            break;
         default:
             http_response_code(400);
             echo "Bad Request: Unknown type";
             Logger::error("[gamedata.php] Bad request - unknown type: {$data['type']}");
             exit;
     }
-    
-    echo "OK";
+
+    if ($responseIsJson) {
+        header('Content-Type: application/json');
+    }
+    echo $responseBody;
 } catch (Exception $e) {
     http_response_code(500);
     echo "Internal Server Error";
@@ -294,9 +361,32 @@ function buildEquipmentMetadataValue(array $equipment): array
     foreach ($equipment as $slot => $item) {
         $equipmentData[$slot] = isset($item['name']) ? $item['name'] : '';
         $equipmentData[$slot . '_baseid'] = isset($item['baseid']) ? $item['baseid'] : '';
+        $equipmentData[$slot . '_keywords'] = isset($item['keywords'])
+            ? sanitizeItemKeywordList($item['keywords'])
+            : [];
     }
 
     return $equipmentData;
+}
+
+function sanitizeItemKeywordList($keywords): array
+{
+    if (!is_array($keywords)) {
+        return [];
+    }
+
+    $clean = [];
+    foreach ($keywords as $keyword) {
+        $keyword = trim((string)$keyword);
+        if ($keyword === '') {
+            continue;
+        }
+        if (!in_array($keyword, $clean, true)) {
+            $clean[] = $keyword;
+        }
+    }
+
+    return $clean;
 }
 
 function buildInventoryMetadataValue(array $items): array
@@ -308,6 +398,7 @@ function buildInventoryMetadataValue(array $items): array
                 'name' => $item['name'],
                 'baseid' => $item['baseid'],
                 'count' => intval($item['count']),
+                'keywords' => isset($item['keywords']) ? sanitizeItemKeywordList($item['keywords']) : [],
             ];
         }
     }
@@ -372,11 +463,11 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
     
     // If this is a player, save directly to core_player table (player doesn't need NPC record)
     if ($actorType === 'player') {
+        $inventoryData = buildInventoryMetadataValue($items);
+
         try {
             require_once(__DIR__ . "/lib/core/player.class.php");
             $player = new Player();
-
-            $inventoryData = buildInventoryMetadataValue($items);
             $player->setJson('inventory', $inventoryData);
             Logger::debug("[gamedata.php] Saved player inventory to core_player table");
         } catch (Exception $e) {
@@ -390,6 +481,8 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
                 'inventory' => buildInventoryMetadataValue($items),
             ]);
         }
+
+        chimQuestEngineSyncPlayerInventory($inventoryData, $data['gamets'] ?? null);
         
         $itemCount = count($items);
         Logger::debug("[gamedata.php] Updated inventory for player: {$actorName} ({$itemCount} items)");
@@ -408,8 +501,138 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
         'inventory' => buildInventoryMetadataValue($items),
     ]);
     
+    $npcMaster->updateMetadataKeysByName($actorName, [
+        'last_inventory_update_gamets' => $data['gamets'] ?? null,
+    ]);
+    
+    
+
     $itemCount = count($items);
     Logger::debug("[gamedata.php] Updated inventory for {$actorType}: {$actorName} ({$itemCount} items)");
+}
+
+/**
+ * Handle player item pickup telemetry.
+ */
+function handlePlayerItemAcquired(array $data): void {
+    $itemName = trim(strval($data['name'] ?? ''));
+    if ($itemName === '') {
+        Logger::warn("[gamedata.php] player_item_acquired missing item name");
+        return;
+    }
+
+    $count = max(1, intval($data['count'] ?? 1));
+    $goldValue = max(0, intval($data['gold_value'] ?? 0));
+    $totalValue = isset($data['total_value'])
+        ? max(0, intval($data['total_value']))
+        : ($goldValue * $count);
+    $playerName = trim(strval($data['actor_name'] ?? ($GLOBALS['PLAYER_NAME'] ?? 'Player')));
+    if ($playerName === '') {
+        $playerName = 'Player';
+    }
+
+    Logger::debug("[gamedata.php] Received player item pickup: {$playerName} x{$count} {$itemName} (value {$totalValue})");
+
+    if (!empty($data['barter_suppressed']) || !empty($data['crafting_active'])) {
+        return;
+    }
+
+    $minimumValue = 500;
+    if (function_exists('chimGetGeneralSettingInt')) {
+        $minimumValue = max(0, chimGetGeneralSettingInt('CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE', 500));
+    }
+
+    if ($totalValue < $minimumValue) {
+        return;
+    }
+
+    $sourceName = trim(strval($data['source_name'] ?? ''));
+    $sourceOwner = trim(strval($data['source_owner'] ?? ''));
+    $sourceType = strtolower(trim(strval($data['source_type'] ?? '')));
+
+    if ($sourceOwner !== '') {
+        $eventText = "{$playerName} took/traded {$count} {$itemName} from {$sourceOwner}";
+    } elseif ($sourceName !== '' && $sourceType === 'actor') {
+        $eventText = "{$playerName} looted {$count} {$itemName} from {$sourceName}";
+    } elseif ($sourceName !== '') {
+        $eventText = "{$playerName} found {$count} {$itemName} in a {$sourceName}";
+    } else {
+        $eventText = "{$playerName} found {$count} {$itemName}";
+    }
+
+    $gamets = intval($data['gamets'] ?? 0);
+    if ($gamets < 5) {
+        $gamets = 5;
+    }
+
+    $ts = (int)floor(microtime(true) * 1000000);
+    $people = getPlayerItemEventPeopleSnapshot($playerName);
+    $GLOBALS["db"]->insert('eventlog', [
+        'ts' => $ts,
+        'gamets' => $gamets,
+        'type' => 'itemfound',
+        'data' => $eventText,
+        'sess' => 'pending',
+        'localts' => time(),
+        'people' => $people,
+        'location' => '',
+        'party' => '',
+    ]);
+}
+
+function handlePlayerItemsAcquired(array $data): void {
+    $items = $data['items'] ?? [];
+    if (!is_array($items)) {
+        Logger::warn("[gamedata.php] player_items_acquired missing items payload");
+        return;
+    }
+
+    foreach ($items as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        if (empty($item['actor_name']) && !empty($data['actor_name'])) {
+            $item['actor_name'] = $data['actor_name'];
+        }
+        if (empty($item['actor_type']) && !empty($data['actor_type'])) {
+            $item['actor_type'] = $data['actor_type'];
+        }
+
+        handlePlayerItemAcquired($item);
+    }
+}
+
+function getPlayerItemEventPeopleSnapshot(string $playerName): string {
+    $people = '';
+    try {
+        $row = $GLOBALS["db"]->fetchOne("
+            SELECT people
+              FROM public.eventlog
+             WHERE type IN ('infonpc_close', 'infonpc')
+               AND COALESCE(people, '') <> ''
+             ORDER BY gamets DESC, ts DESC
+             LIMIT 1
+        ");
+        if (is_array($row)) {
+            $people = trim(strval($row['people'] ?? ''));
+        } elseif (is_string($row)) {
+            $people = trim($row);
+        }
+    } catch (Exception $e) {
+        Logger::warn("[gamedata.php] Could not read nearby people snapshot for item pickup: " . $e->getMessage());
+    }
+
+    $tokens = array_values(array_filter(array_map('trim', explode('|', $people))));
+    if ($playerName !== '' && !in_array($playerName, $tokens, true)) {
+        array_unshift($tokens, $playerName);
+    }
+
+    if (empty($tokens)) {
+        $tokens[] = ($playerName !== '') ? $playerName : 'Player';
+    }
+
+    return '|' . implode('|', array_values(array_unique($tokens))) . '|';
 }
 
 /**
@@ -629,6 +852,28 @@ function handleMarketStockUpdate(array $data): void {
                 $gold=intval($item['count']);
             } 
 
+            // Insert or update the item description in the descriptions_custom table, if a matching plugin can be found
+            $baseid="00".substr($item['itemid'],2);
+            $modIndex=substr($item['itemid'],0,4);
+            $candidateMod=$db->fetchOne("select * from game_plugins where formid_prefix='{$modIndex}'");
+            if (!$candidateMod) {
+                $modIndex=substr($item['itemid'],0,2);
+                $candidateMod=$db->fetchOne("select * from game_plugins where formid_prefix='{$modIndex}'");
+            }
+
+            if ($candidateMod) {
+                $pluginName=$candidateMod['plugin_name'];
+                // Insert. if exists, will throw error.
+                $candidateMod=$db->fetchOne("select * from combined_descriptions where baseid='{$baseid}' and plugin='{$pluginName}'");
+                $db->insert("descriptions_custom", [
+                    'baseid' => $baseid,
+                    'plugin' => $pluginName,
+                    'name' => trim($item['name'])
+                ] );
+
+            }
+
+            
         }
     }
 
@@ -647,3 +892,45 @@ function handleMarketStockUpdate(array $data): void {
     }
 }
 
+function handleLowProcessActorsUpdate(array $data,NpcMaster $npcMaster): void {
+
+    $actorList = isset($data['actors_nearby']) && is_array($data['actors_nearby']) ? $data['actors_nearby'] : [];
+
+    $currentData = $npcMaster->getByName($data['actor_name']);
+    if ($currentData) {
+        $extendedData=$npcMaster->getMetadata(($currentData));
+        // Ensure the history bucket exists and is always an array.
+        if (!isset($extendedData['low_process_actors']) || !is_array($extendedData['low_process_actors'])) {
+            $extendedData['low_process_actors'] = [];
+        }
+
+        $actorSanitizedList = [];
+        foreach ($data['actors_nearby'] as $k=>$v) {
+            $unsignedInt = (intval($v["formId"]) + 0) & 0xFFFFFFFF;
+            $hexRefId = strtoupper(str_pad(dechex($unsignedInt), 8, '0', STR_PAD_LEFT));
+            $actorSanitizedList[$hexRefId] = $v["name"];
+        }
+
+        // Store current nearby actors snapshot keyed by game timestamp.
+        if ($actorSanitizedList === []) {
+            error_log("[gamedata.php] Received empty low_process_actors list for {$data['actor_name']}");
+            //return; // Not an error, just an empty list. We'll still store it.
+        } else {
+            Logger::debug("[gamedata.php] Received low_process_actors list for {$data['actor_name']}: " . count($actorSanitizedList) . " actor(s)");
+        }
+        $gametsKey = isset($data['gamets']) ? (string)$data['gamets'] : (string)time();
+        $extendedData['low_process_actors'][$gametsKey] = $actorSanitizedList;
+
+        // Keep entries ordered by timestamp and retain only the 5 most recent snapshots.
+        ksort($extendedData['low_process_actors'], SORT_NUMERIC);
+        if (count($extendedData['low_process_actors']) > 5) {
+            $extendedData['low_process_actors'] = array_slice($extendedData['low_process_actors'], -5, null, true);
+        }
+
+        $currentData=$npcMaster->setMetadata($currentData, $extendedData);
+        $npcMaster->updateByArray($currentData);
+
+        Logger::debug("[gamedata.php] Updated low_process_actors list for {$data['actor_name']}: " . count($actorList) . " actor(s)");
+        error_log("[gamedata.php] Updated low_process_actors list for {$data['actor_name']}: " . count($actorList) . " actor(s)");
+    }
+}

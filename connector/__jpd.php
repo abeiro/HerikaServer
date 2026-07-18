@@ -415,32 +415,17 @@ function __jpd_decode($inputString)
 }
 
 /*
-$FATA = <<<EOIN
+Quick and dirty test.
+$TEST_STRING = <<<EOIN
 ```json
 {
-"instructions": [
-{
-"character": "Lyne",
-"instruction": "Lyne approaches Kinjo with a playful smirk, swaying slightly as she leans against the bar. 'Well hello there, handsome. I don't believe we've been properly introduced. The name's Lyne - and you are?'",
-"action": "JustTalk",
-"target": "Kinjo",
-"scene_note": "Lyne's flirtatious greeting cuts through the tense atmosphere, shifting the mood. Other patrons might glance over, some amused, others annoyed by the interruption."
-},
-{
-"character": "Hulda",
-"instruction": "Hulda rolls her eyes and mutters under her breath, 'Gods give me strength. Lyne, if you're done making eyes at customers, the ale won't serve itself.'",
-"action": "JustTalk",
-"target": "Lyne",
-"scene_note": "Hulda's exasperation adds a layer of workplace tension, hinting at Lyne's reputation for distraction."
-}
-]
+  "action": "Produced:0x00071cf3:21",
+  "reasoning": "At Whistling Mine working, Karl produced 21 iron ore in 10.7 hours at 2 per hour."
 }
 ```
 EOIN;
-//$res= __jpd__extractContentBetweenBraces($FATA);
-//echo $res;
 
-print_r(__jpd_decode_lazy($FATA));
+print_r(__jpd_decode_lazy($TEST_STRING));
 
 */
 

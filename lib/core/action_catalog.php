@@ -361,6 +361,92 @@ function herikaActionCatalogGetSharedEditorFields()
     ];
 }
 
+function herikaActionCatalogGetDefaultConfirmationPolicy($codeName)
+{
+    $codeName = strtolower(trim(strval($codeName)));
+    $askByDefault = [
+        'arrestplayer',
+        'acceptsex',
+        'kiss',
+        'makelove',
+        'removeclothes',
+        'sexaction',
+        'takegoldfromplayer',
+    ];
+
+    return in_array($codeName, $askByDefault, true) ? 'ask' : 'automatic';
+}
+
+function herikaActionCatalogRowSupportsConfirmation($row)
+{
+    if (!is_array($row) || !herikaActionCatalogToBool($row['game_function'] ?? false)) {
+        return false;
+    }
+
+    $codeName = strtolower(trim(strval($row['code_name'] ?? '')));
+    $readOnlyActions = [
+        'checkinventory',
+        'gettime',
+        'gettopicinfo',
+        'inspect',
+        'inspectsurroundings',
+        'listinventory',
+        'readquestjournal',
+        'talk',
+    ];
+
+    return $codeName !== '' && !in_array($codeName, $readOnlyActions, true);
+}
+
+function herikaActionCatalogGetConfirmationEditorField($row)
+{
+    $codeName = trim(strval($row['code_name'] ?? ''));
+
+    return [
+        'key' => 'confirmation_required',
+        'label' => 'Require Confirmation',
+        'type' => 'boolean',
+        'default' => herikaActionCatalogGetDefaultConfirmationPolicy($codeName) === 'ask',
+        'help' => 'When enabled, CHIM asks for permission before this action executes. Cancelling the prompt silently discards the action.',
+    ];
+}
+
+function herikaActionCatalogGetConfirmationCommandChannel($row)
+{
+    if (!herikaActionCatalogRowSupportsConfirmation($row)) {
+        return 'command';
+    }
+
+    $metadata = herikaActionCatalogDecodeJson($row['metadata'] ?? [], []);
+    $customConfig = is_array($metadata['custom_config'] ?? null) ? $metadata['custom_config'] : [];
+
+    if (array_key_exists('confirmation_required', $customConfig)) {
+        return herikaActionCatalogToBool($customConfig['confirmation_required'])
+            ? 'confirmcommand'
+            : 'approvedcommand';
+    }
+
+    // Preserve settings saved by builds that exposed the earlier three-state selector.
+    $selectedPolicy = strtolower(trim(strval($customConfig['confirmation_policy'] ?? 'default')));
+    if (!in_array($selectedPolicy, ['default', 'ask', 'automatic'], true)) {
+        $selectedPolicy = 'default';
+    }
+
+    $confirmationMetadata = is_array($metadata['confirmation'] ?? null) ? $metadata['confirmation'] : [];
+    $defaultPolicy = strtolower(trim(strval($confirmationMetadata['default_policy'] ?? '')));
+    if (!in_array($defaultPolicy, ['ask', 'automatic'], true)) {
+        $defaultPolicy = herikaActionCatalogGetDefaultConfirmationPolicy($row['code_name'] ?? '');
+    }
+
+    $effectivePolicy = $selectedPolicy === 'default' ? $defaultPolicy : $selectedPolicy;
+    if ($effectivePolicy === 'ask') {
+        return 'confirmcommand';
+    }
+
+    // Explicit automatic permission bypasses older per-action confirmation prompts.
+    return $selectedPolicy === 'automatic' ? 'approvedcommand' : 'command';
+}
+
 function herikaActionCatalogNormalizeEditorField($field)
 {
     if (!is_array($field)) {
@@ -427,6 +513,15 @@ function herikaActionCatalogGetEditorFields($rowOrCode = null)
         }
 
         $normalized[$normalizedField['key']] = $normalizedField;
+    }
+
+    if (herikaActionCatalogRowSupportsConfirmation($row)) {
+        $confirmationField = herikaActionCatalogNormalizeEditorField(
+            herikaActionCatalogGetConfirmationEditorField($row)
+        );
+        if ($confirmationField !== null) {
+            $normalized[$confirmationField['key']] = $confirmationField;
+        }
     }
 
     foreach ($fields as $field) {
@@ -548,6 +643,9 @@ function herikaActionCatalogGetResolvedCustomConfig($codeName, $row = null)
         $fieldKey = $field['key'];
         if (array_key_exists($fieldKey, $customConfig)) {
             $resolvedConfig[$fieldKey] = herikaActionCatalogCastEditorFieldValue($field, $customConfig[$fieldKey]);
+        } elseif ($fieldKey === 'confirmation_required' && array_key_exists('confirmation_policy', $customConfig)) {
+            $legacyPolicy = strtolower(trim(strval($customConfig['confirmation_policy'])));
+            $resolvedConfig[$fieldKey] = $legacyPolicy === 'ask';
         } else {
             $resolvedConfig[$fieldKey] = herikaActionCatalogGetEditorFieldDefaultValue($field, $row);
         }
@@ -1069,16 +1167,16 @@ function herikaActionCatalogGetBuiltinRequirements($codeName)
             ],
         ],
         'AddBounty' => [
-            'npc_factions_any' => ['00086EEE'],
+            'npc_factions_any' => ['00086EEE', '00028848', '00028849'],
         ],
         'PayBounty' => [
-            'npc_factions_any' => ['00086EEE'],
+            'npc_factions_any' => ['00086EEE', '00028848', '00028849'],
         ],
         'ArrestPlayer' => [
-            'npc_factions_any' => ['00086EEE'],
+            'npc_factions_any' => ['00086EEE', '00028848', '00028849'],
         ],
         'ForgiveCrime' => [
-            'npc_factions_any' => ['00086EEE'],
+            'npc_factions_any' => ['00086EEE', '00028848', '00028849'],
         ],
         'ReturnBackHome' => [
             'requires_rolemaster' => true,
@@ -1149,6 +1247,9 @@ function herikaActionCatalogBuildBaseMetadata($codeName, $scriptProxyProgram = n
         'builtin' => true,
         'status' => 'active',
         'source' => 'functions.php',
+        'confirmation' => [
+            'default_policy' => herikaActionCatalogGetDefaultConfirmationPolicy($codeName),
+        ],
     ];
 
     $editorFields = herikaActionCatalogGetBuiltinEditorFields($codeName);

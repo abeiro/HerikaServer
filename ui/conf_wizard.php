@@ -821,7 +821,7 @@ foreach ($currentConf as $pname=>$parms) {
         $jsid = strtr($fieldName,["@"=>"_"]);
     }
     
-    if (!in_array($fieldName,["HERIKA_NAME","LOCK_PROFILE","HERIKA_PERS","HERIKA_DYNAMIC","HERIKA_BACKGROUND","HERIKA_PERSONALITY","HERIKA_APPEARANCE","HERIKA_OCCUPATION","HERIKA_SKILLS","HERIKA_SPEECHSTYLE","HERIKA_GOALS","DBDRIVER","TTS@AZURE@voice","TTS@MIMIC3@voice",'TTS@ELEVEN_LABS@voice_id',"TTS@openai@voice","TTS@CONVAI@voiceid","TTS@XTTSFASTAPI@voiceid","TTS@CHATTERBOX@voiceid","TTS@POCKETTTS@voiceid","TTS@MELOTTS@voiceid","TTS@PIPERTTS@voiceid", "OGHMA_KNOWLEDGE"]))
+    if (!in_array($fieldName,["HERIKA_NAME","LOCK_PROFILE","HERIKA_PERS","HERIKA_DYNAMIC","HERIKA_BACKGROUND","HERIKA_PERSONALITY","HERIKA_APPEARANCE","HERIKA_OCCUPATION","HERIKA_SKILLS","HERIKA_SPEECHSTYLE","HERIKA_GOALS","DBDRIVER","TTS@AZURE@voice","TTS@MIMIC3@voice",'TTS@ELEVEN_LABS@voice_id',"TTS@openai@voice","TTS@CONVAI@voiceid","TTS@XTTSFASTAPI@voiceid","TTS@CHATTERBOX@voiceid","TTS@POCKETTTS@voiceid","TTS@OMNIVOICE@voiceid","TTS@MELOTTS@voiceid","TTS@PIPERTTS@voiceid", "OGHMA_KNOWLEDGE"]))
         if (!in_array($parms["type"],["util"]))
             if (!isset($parms["scope"]) || !in_array($parms["scope"],["global","constant"]))
                 echo "<button class='ctapb' title='Copy $fieldName to all profiles' style='

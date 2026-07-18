@@ -19,12 +19,14 @@ if (!function_exists('chimGetVisibleEventLogExcludedTypes')) {
             'dynamic_oghma_import',
             'infoitems',
             'description_import',
+            'traditional_quest_import',
             'backgroundaction',
             'innerchat',
             'npc_reanimated',
             'npcvoice_refresh',
             'status_msg',
             'region',
+            'ext_nsfw_physics_raw',
         ];
     }
 }

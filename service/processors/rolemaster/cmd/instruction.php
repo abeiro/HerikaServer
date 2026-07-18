@@ -32,9 +32,9 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
     } else {
         logMsg("Using {$GLOBALS["CURRENT_CONNECTOR"]}");
     
-        $sqlfilter=" and type not in ('prechat','backgroundaction') ";
+        $sqlfilter=" and type not in ('prechat','backgroundaction','addnpc','addbgnpc','travelcancel','innerchat') ";
 
-        $contextDataHistoric = DataLastDataExpandedFor("", -50);    // Full context
+        $contextDataHistoric = DataLastDataExpandedFor($GLOBALS["PLAYER_NAME"], -50,$sqlfilter);    // Full context
         
         foreach ($contextDataHistoric as $element) {
             // We should clean here background events entries
@@ -266,7 +266,7 @@ user request: actor \"a\" leaves the place
                     'actor' => "rolemaster",
                     'text' => '',
                     'action' => $roleMasterAction,
-                    'tag' => ""
+                    'tag' => __FILE__ . ":" . __LINE__
                 )
             );
 

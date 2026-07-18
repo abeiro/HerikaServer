@@ -184,6 +184,48 @@ final class HistoricContextTest extends DatabaseTestCase
         $this->assertContains("Lydia: The perimeter is secure, my Thane. (talking to Prisoner)", $contents);
     }
 
+    public function testBuildHistoricContextIncludesOwnContextPrefixedBackgroundDialogue(): void
+    {
+        $line = "(Context location: Abandoned House,Hold: Markarth background chat) Hivorate [Dremora]: Mortal, we've come to test your worth.";
+        $this->insertEvent(
+            "chat",
+            $line,
+            "|Demienna|Molag Grunda|Gniledan [Dremora]|Hivorate [Dremora]|Gatanas [Dremora]|",
+            100,
+            100,
+            100,
+            "spoken"
+        );
+
+        $context = buildHistoricContext("Hivorate [Dremora]", -5);
+        $contents = array_map(static function (array $row): string {
+            return (string)($row["content"] ?? "");
+        }, $context);
+
+        $this->assertContains("Hivorate [Dremora]: Mortal, we've come to test your worth.", $contents);
+    }
+
+    public function testBuildHistoricContextStillExcludesContextPrefixedDialogueFromBystanders(): void
+    {
+        $line = "(Context location: Abandoned House,Hold: Markarth background chat) Hivorate [Dremora]: Mortal, we've come to test your worth.";
+        $this->insertEvent(
+            "chat",
+            $line,
+            "|Gniledan [Dremora]|Hivorate [Dremora]|",
+            100,
+            100,
+            100,
+            "spoken"
+        );
+
+        $context = buildHistoricContext("Gniledan [Dremora]", -5);
+        $contents = array_map(static function (array $row): string {
+            return (string)($row["content"] ?? "");
+        }, $context);
+
+        $this->assertNotContains("Hivorate [Dremora]: Mortal, we've come to test your worth.", $contents);
+    }
+
     public function testBuildHistoricContextExcludesPendingChatRows(): void
     {
         $this->insertEvent(

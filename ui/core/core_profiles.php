@@ -743,6 +743,64 @@ if (isset($_GET["clone"])) {
     exit;
 }
 
+if (!function_exists('chimNormalizeImportedProfileLabel')) {
+    function chimNormalizeImportedProfileLabel($rawLabel, $fileName = '')
+    {
+        $label = trim((string)$rawLabel);
+        $label = preg_replace('/(?:\s*\(Imported\))+$/i', '', $label);
+        $label = trim($label);
+
+        if ($label === '') {
+            $baseName = trim((string)$fileName);
+            if ($baseName !== '') {
+                $baseName = basename(str_replace('\\', '/', $baseName));
+                $baseName = preg_replace('/\.json$/i', '', $baseName);
+                $baseName = preg_replace('/[_-]+/', ' ', $baseName);
+                $label = trim($baseName);
+            }
+        }
+
+        return $label !== '' ? $label : 'Imported Profile';
+    }
+}
+
+if (!function_exists('chimUniqueProfileLabel')) {
+    function chimUniqueProfileLabel($label)
+    {
+        $label = trim((string)$label);
+        if ($label === '') {
+            $label = 'Imported Profile';
+        }
+
+        $escaped = $GLOBALS["db"]->escape($label);
+        $existing = $GLOBALS["db"]->fetchOne("SELECT id FROM core_profiles WHERE label = '{$escaped}' LIMIT 1");
+        if (!$existing) {
+            return $label;
+        }
+
+        $base = $label . ' (Imported)';
+        $candidate = $base;
+        $counter = 2;
+        while (true) {
+            $escapedCandidate = $GLOBALS["db"]->escape($candidate);
+            $existingCandidate = $GLOBALS["db"]->fetchOne("SELECT id FROM core_profiles WHERE label = '{$escapedCandidate}' LIMIT 1");
+            if (!$existingCandidate) {
+                return $candidate;
+            }
+            $candidate = $base . ' ' . $counter;
+            $counter++;
+        }
+    }
+}
+
+if (!function_exists('chimNullIfBlank')) {
+    function chimNullIfBlank($value)
+    {
+        $value = trim((string)$value);
+        return $value === '' ? null : $value;
+    }
+}
+
 // Handle Import Profile (AJAX)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
@@ -769,6 +827,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         $ttsConnector = $importData['tts_connector'] ?? null;
         $ittConnector = $importData['itt_connector'] ?? null;
         $apiBadges = $importData['api_badges'] ?? [];
+        $makeDefaultNpc = ($_POST['make_default_npc'] ?? '') === '1';
+        $migrateOldDefaultNpcs = ($_POST['migrate_old_default_npcs'] ?? '') === '1';
+        $assignSlotRaw = trim((string)($_POST['assign_slot'] ?? ''));
+        $assignSlot = $assignSlotRaw === '' ? null : intval($assignSlotRaw);
+        if ($assignSlot !== null && ($assignSlot < 1 || $assignSlot > 4)) {
+            echo json_encode(['ok' => false, 'error' => 'Profile slot must be 1-4 or empty']);
+            exit;
+        }
+        $previousDefaultNpc = $profiles->getDefaultNpc();
+        $previousDefaultNpcId = is_array($previousDefaultNpc) && !empty($previousDefaultNpc['id'])
+            ? (int)$previousDefaultNpc['id']
+            : 0;
+        $importFileName = $_POST['import_filename'] ?? '';
+        $profileLabel = chimUniqueProfileLabel(chimNormalizeImportedProfileLabel($profileData['label'] ?? '', $importFileName));
         
         // Map old IDs to new IDs
         $apiBadgeIdMap = [];
@@ -880,7 +952,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         
         // Step 5: Create new profile with remapped connector IDs
         $newProfileData = [
-            'label' => ($profileData['label'] ?? 'Imported Profile') . ' (Imported)',
+            'label' => $profileLabel,
             'default_npc' => 0, // Don't set as default
             'default_narrator' => 0,
             'tts_connector_id' => $ttsConnectorId,
@@ -905,11 +977,49 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         ];
         
         $newProfileId = $profiles->create($newProfileData);
+        if (!$newProfileId) {
+            throw new Exception($profiles->getLastError() ?: 'Could not create imported profile');
+        }
+
+        if ($assignSlot !== null) {
+            $GLOBALS["db"]->query("UPDATE core_profiles SET slot = NULL WHERE slot = {$assignSlot}");
+            $slotOk = $profiles->update($newProfileId, ['slot' => $assignSlot]);
+            if ($slotOk === false) {
+                throw new Exception($profiles->getLastError() ?: 'Could not assign imported profile slot');
+            }
+        }
+
+        if ($makeDefaultNpc) {
+            $profiles->promoteToDefaultNpc($newProfileId);
+        }
+
+        $migratedNpcCount = 0;
+        if ($migrateOldDefaultNpcs) {
+            $whereParts = ["profile_id IS NULL"];
+            if ($previousDefaultNpcId > 0) {
+                $whereParts[] = "profile_id = {$previousDefaultNpcId}";
+            }
+            $where = implode(' OR ', $whereParts);
+            $countRow = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master WHERE {$where}");
+            $migratedNpcCount = (int)($countRow['c'] ?? 0);
+            $GLOBALS["db"]->query("UPDATE core_npc_master SET profile_id = {$newProfileId} WHERE {$where}");
+        }
+
+        $messageParts = ['Profile imported successfully'];
+        if ($makeDefaultNpc) {
+            $messageParts[] = 'set as default NPC profile';
+        }
+        if ($assignSlot !== null) {
+            $messageParts[] = "assigned to slot {$assignSlot}";
+        }
+        if ($migrateOldDefaultNpcs) {
+            $messageParts[] = "migrated {$migratedNpcCount} NPCs from old default/empty profile";
+        }
         
         echo json_encode([
             'ok' => true, 
             'id' => $newProfileId,
-            'message' => 'Profile imported successfully. Please review connector settings and API keys.'
+            'message' => implode('; ', $messageParts) . '. Please review connector settings and API keys.'
         ]);
         
     } catch (Throwable $e) {
@@ -951,10 +1061,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create_import_rule"])
 
     $data = [
         'description' => trim($_POST['description'] ?? ''),
-        'match_name' => !empty($_POST['match_name']) ? trim($_POST['match_name']) : null,
-        'match_race' => !empty($_POST['match_race']) ? trim($_POST['match_race']) : null,
-        'match_gender' => !empty($_POST['match_gender']) ? trim($_POST['match_gender']) : null,
-        'match_base' => !empty($_POST['match_base']) ? trim($_POST['match_base']) : null,
+        'match_name' => chimNullIfBlank($_POST['match_name'] ?? ''),
+        'match_race' => chimNullIfBlank($_POST['match_race'] ?? ''),
+        'match_gender' => chimNullIfBlank($_POST['match_gender'] ?? ''),
+        'match_base' => chimNullIfBlank($_POST['match_base'] ?? ''),
         'match_mods' => $modsArr,
         'action' => $decodedAction,
         'profile' => !empty($_POST['profile']) ? (int)$_POST['profile'] : null,
@@ -991,10 +1101,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_import_rule"])
 
     $data = [
         'description' => trim($_POST['description'] ?? ''),
-        'match_name' => !empty($_POST['match_name']) ? trim($_POST['match_name']) : null,
-        'match_race' => !empty($_POST['match_race']) ? trim($_POST['match_race']) : null,
-        'match_gender' => !empty($_POST['match_gender']) ? trim($_POST['match_gender']) : null,
-        'match_base' => !empty($_POST['match_base']) ? trim($_POST['match_base']) : null,
+        'match_name' => chimNullIfBlank($_POST['match_name'] ?? ''),
+        'match_race' => chimNullIfBlank($_POST['match_race'] ?? ''),
+        'match_gender' => chimNullIfBlank($_POST['match_gender'] ?? ''),
+        'match_base' => chimNullIfBlank($_POST['match_base'] ?? ''),
         'match_mods' => $modsArr,
         'action' => $decodedAction,
         'profile' => !empty($_POST['profile']) ? (int)$_POST['profile'] : null,
@@ -2543,6 +2653,27 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 </label>
                 <input type="file" id="import_file" accept=".json" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #4a4a4a; border-radius: 6px; color: #e9efff; cursor: pointer;">
             </div>
+
+            <div style="margin-bottom: 16px; padding: 12px; background: #141414; border: 1px solid #3a3a3a; border-radius: 8px;">
+                <div style="font-weight: 700; color: rgb(242, 124, 17); margin-bottom: 8px;">Import Assignment Options</div>
+                <label style="display:flex; gap:8px; align-items:flex-start; margin-bottom: 8px; cursor:pointer;">
+                    <input type="checkbox" id="import_make_default_npc" value="1" style="margin-top: 3px;">
+                    <span>Make Default Profile</span>
+                </label>
+                <label style="display:flex; gap:8px; align-items:flex-start; margin-bottom: 8px; cursor:pointer;">
+                    <input type="checkbox" id="import_migrate_old_default_npcs" value="1" style="margin-top: 3px;">
+                    <span>Move current default NPCs to this profile</span>
+                </label>
+                <label for="import_assign_slot" style="display:block; font-weight: 700; margin-bottom: 6px;">Assign quick slot</label>
+                <select id="import_assign_slot" style="width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #4a4a4a; border-radius: 6px; color: #e9efff;">
+                    <option value="">Do not assign a slot</option>
+                    <option value="1">Slot 1</option>
+                    <option value="2">Slot 2</option>
+                    <option value="3">Slot 3</option>
+                    <option value="4">Slot 4</option>
+                </select>
+                <div style="color:#9fb1c9; font-size:12px; margin-top:6px;">If a slot is already used, importing with that slot will move the old profile out of the slot.</div>
+            </div>
             
             <div id="import_preview" style="display: none; margin-bottom: 16px;">
                 <div style="font-weight: 700; color: rgb(242, 124, 17); margin-bottom: 8px;">Preview:</div>
@@ -2949,6 +3080,9 @@ const saveAllBtn = document.getElementById('btn_save_all');
     const previewDiv = document.getElementById('import_preview');
     const previewContent = document.getElementById('import_preview_content');
     const confirmBtn = document.getElementById('confirm_import_btn');
+    const makeDefaultNpcInput = document.getElementById('import_make_default_npc');
+    const migrateOldDefaultNpcsInput = document.getElementById('import_migrate_old_default_npcs');
+    const assignSlotInput = document.getElementById('import_assign_slot');
     
     let importData = null;
     
@@ -2977,12 +3111,24 @@ const saveAllBtn = document.getElementById('btn_save_all');
         previewDiv.style.display = 'none';
         previewContent.innerHTML = '';
         confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Import Profile';
+        if (makeDefaultNpcInput) makeDefaultNpcInput.checked = false;
+        if (migrateOldDefaultNpcsInput) migrateOldDefaultNpcsInput.checked = false;
+        if (assignSlotInput) assignSlotInput.value = '';
         importData = null;
     }
     
     function escapeHtml(str) {
         if (str === null || str === undefined) return '';
         return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function normalizePreviewLabel(label, filename) {
+        let value = String(label || '').trim().replace(/(?:\s*\(Imported\))+$/gi, '').trim();
+        if (!value && filename) {
+            value = String(filename).replace(/^.*[\\/]/, '').replace(/\.json$/i, '').replace(/[_-]+/g, ' ').trim();
+        }
+        return value || 'Imported Profile';
     }
     
     fileInput.addEventListener('change', async (e) => {
@@ -3011,9 +3157,13 @@ const saveAllBtn = document.getElementById('btn_save_all');
             const ttsConnector = data.tts_connector;
             const ittConnector = data.itt_connector;
             const apiBadges = data.api_badges || [];
+            const normalizedProfileLabel = normalizePreviewLabel(profile.label, file.name);
             
             let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
-            html += '<div><strong>Profile:</strong> ' + escapeHtml(profile.label || 'Unnamed') + '</div>';
+            html += '<div><strong>Profile:</strong> ' + escapeHtml(normalizedProfileLabel) + '</div>';
+            if (String(profile.label || '').trim() !== normalizedProfileLabel) {
+                html += '<div style="color:#9fb1c9;"><strong>Original Label:</strong> ' + escapeHtml(profile.label || 'Unnamed') + '</div>';
+            }
             html += '<div><strong>Export Date:</strong> ' + escapeHtml(data.export_date || 'Unknown') + '</div>';
             html += '<div><strong>LLM Connectors:</strong> ' + llmConnectors.length + '</div>';
             html += '<div><strong>API Badges:</strong> ' + apiBadges.length + ' (keys must be set manually)</div>';
@@ -3049,6 +3199,10 @@ const saveAllBtn = document.getElementById('btn_save_all');
             const formData = new FormData();
             formData.append('import_profile', '1');
             formData.append('import_data', JSON.stringify(importData));
+            formData.append('import_filename', fileInput.files && fileInput.files[0] ? fileInput.files[0].name : '');
+            formData.append('make_default_npc', makeDefaultNpcInput && makeDefaultNpcInput.checked ? '1' : '0');
+            formData.append('migrate_old_default_npcs', migrateOldDefaultNpcsInput && migrateOldDefaultNpcsInput.checked ? '1' : '0');
+            formData.append('assign_slot', assignSlotInput ? assignSlotInput.value : '');
             
             const res = await fetch('core_profiles.php', {
                 method: 'POST',

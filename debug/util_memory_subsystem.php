@@ -120,7 +120,7 @@ function resyncMemorySummaries($db, $forceAll = false, $onlyFix = false)
     $missingCompanions = $db->fetchAll("SELECT * FROM memory_summary WHERE (companions IS NULL OR companions = '') and classifier<>'diary' ORDER BY gamets_truncated ASC");
     $n=0;
     foreach ($missingCompanions as $row) {
-        $peopleRows = $db->fetchAll("SELECT CASE WHEN party='[]' THEN people ELSE COALESCE(people, party) END AS people FROM eventlog WHERE gamets > {$row["gamets_truncated"]} - $pfi AND gamets <= {$row["gamets_truncated"]} + $pfi");
+        $peopleRows = $db->fetchAll("SELECT CASE WHEN party='[]' THEN people ELSE COALESCE(people, party) END AS people FROM eventlog WHERE gamets > {$row["gamets_truncated"]}::bigint - $pfi AND gamets <= {$row["gamets_truncated"]}::bigint + $pfi");
         $npcs       = [];
         foreach ($peopleRows as $p) {
             if (! empty($p["people"])) {
@@ -159,7 +159,7 @@ function resyncMemorySummaries($db, $forceAll = false, $onlyFix = false)
     $n=0;
     $missingCompanions2 = $db->fetchAll("SELECT * FROM memory_summary WHERE (companions IS NULL OR companions = '') and classifier<>'diary' ORDER BY gamets_truncated ASC");
     foreach ($missingCompanions2 as $row) {
-        $peopleRow = $db->fetchOne("SELECT STRING_AGG(DISTINCT speaker || '|' || listener, '|') AS people FROM public.memory_v WHERE gamets > {$row["gamets_truncated"]} - $pfi AND gamets <= {$row["gamets_truncated"]} + $pfi");
+        $peopleRow = $db->fetchOne("SELECT STRING_AGG(DISTINCT speaker || '|' || listener, '|') AS people FROM public.memory_v WHERE gamets > {$row["gamets_truncated"]}::bigint - $pfi AND gamets <= {$row["gamets_truncated"]}::bigint + $pfi");
         $npcs      = [];
         if (! empty($peopleRow["people"])) {
             foreach (explode("|", $peopleRow["people"]) as $npc) {

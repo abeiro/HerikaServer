@@ -51,8 +51,10 @@
   "BOOK_EVENT_ALWAYS_NARRATOR": {"userlvl":"basic","type":"boolean","description":"The Narrator will be the only one to summarize books.","scope":"global"},
   "NARRATOR_TALKS": {"userlvl":"basic","type":"boolean","description":"Enable the Narrator.","scope":"global"},
   "NARRATOR_WELCOME": {"userlvl":"basic","type":"boolean","description":"The Narrator will give you a quick recap of what happened previously after you have loaded a save game. Has a 10 minute IRL cooldown so its not annoying.","scope":"global"},
-  "HIDE_NARRATOR_DIALOGUE": {"userlvl":"basic","type":"boolean","description":"Hide Narrator-spoken dialogue lines from NPC context.","scope":"global"},
+  "HIDE_NARRATOR_DIALOGUE": {"userlvl":"basic","type":"boolean","default":true,"description":"Hide Narrator-spoken dialogue lines from NPC context.","scope":"global"},
   "QUEST_COMMENT":{"type":"boolean","userlvl":"basic","description":"Will trigger AI (NPCs and Narrator) to talk about new objectives in your current active quest. Will trigger a lot of events on a new character, so leave disabled until you complete the tutorial!"},
+  "CHIM_AI_QUEST_PROGRESSION": {"type":"boolean","userlvl":"basic","scope":"global","default":false,"description":"Enable CHIM AI quest progression. Allows you to progress regular Skyrim quests with AI dialogue. Most vanilla non radiant quests are supported. Open the AI Quest Manager in Immersion for more info."},
+  "CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT": {"type":"boolean","userlvl":"basic","scope":"global","default":true,"description":"When enabled, only direct player dialogue can fire CHIM AI quest beats and queue quest stage actions. Disable to let NPC responses and game interaction events advance or start quest beats."},
   "QUEST_COMMENT_CHANCE":{"type":"select","userlvl":"basic","values":["10%","25%","50%","75%","100%"],"description":"Chance that an AI Quest Comment will happen every time a quest updates."},
   "QUEST_COMMENT_COOLDOWN": {"type":"integer","userlvl":"basic","description":"Minimum time in minutes between quest comments. Default: 3 minutes","scope":"global"},
   "CURRENT_TASK": {"userlvl":"basic","type":"boolean","description":"Include the current Dynamic AI Objective to the AI NPC's prompt. Disable this if the AI NPC becomes fixated on the task."},
@@ -63,6 +65,7 @@
   "ITEM_BLACKLIST": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of item/armor names to exclude from dynamic context (e.g. 'Iron Sword, Leather Armor, Health Potion')."},
   "SHORTER_NEARBY_ITEM_LIST": {"userlvl":"basic","type":"boolean","scope":"global","description":"Group duplicate nearby ground items into one counted entry. When enabled, context shows one line per unique nearby item plus a single representative RefID in the item descriptions block."},
   "EVENT_TYPE_FILTER": {"userlvl":"basic","type":"longstring","scope":"global","description":"Comma-separated list of event types to exclude from context generation (e.g. 'death, itemfound, spellcast')."},
+  "CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE": {"userlvl":"basic","type":"integer","scope":"global","default":500,"description":"Minimum total item value for player pickups to be detected in context."},
   "GROUND_ITEMS_DESCRIPTIONS_ONLY": {"userlvl":"basic","type":"boolean","scope":"global","description":"Only show nearby ground items in context that have descriptions in the description manager."},
   "INVENTORY_ITEMS_DESCRIPTIONS_ONLY": {"userlvl":"basic","type":"boolean","scope":"global","description":"Only show inventory items in context that have descriptions in the description manager."},
   "HIDE_AMBIENT_COMBAT": {"userlvl":"basic","type":"boolean","scope":"global","description":"Hide ambient NPC-to-NPC combat deaths from context during requests. Only player and companion kills will be shown. This is useful for hiding the violent nature of Skyrim's nature from being detected."},
@@ -75,9 +78,9 @@
   "MAX_WORDS_LIMIT": {"userlvl":"basic","type":"integer","description":"Attempt to enforce a word limit for AI's responses. Leave as 0 to have no limit."},
   "JSON_DIALOGUE_FORMAT_REORDER": {"type":"boolean","userlvl":"pro","description":"Reorders properties in the output JSON schema. AI generates an action first, then a dialogue comment. Some users report this improves actions performance."},
    "EMOTEMOODS": {"userlvl":"pro","type":"longstring","description":"Default list of moods passed to LLM (comma separated). Can be overridden per-NPC in CHIM NPCs. Some moods will trigger animations if enabled.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#GeneralSettings"},
-   "INLINE_NARRATION_MODE": {"userlvl":"basic","type":"select","values":["disabled","narrator","npc"],"description":"Controls who voices inline *narration* blocks. disabled = no special routing, narrator = The Narrator voices the asterisked section, npc = the NPC keeps the whole line.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
+   "INLINE_NARRATION_MODE": {"userlvl":"basic","type":"select","values":["disabled","narrator","npc","text_only"],"description":"Controls who voices inline *narration* blocks. disabled = no special routing, narrator = The Narrator voices the asterisked section, npc = the NPC keeps the whole line, text_only = narration stays visible but only dialogue is spoken.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
    "REMOVE_ASTERISKS_FROM_PLAYER_INPUT": {"userlvl":"basic","type":"boolean","description":"Filter *asterisked* player input from player TTS only. The in-game player subtitle echo keeps the visible *text*.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
-   "REMOVE_ASTERISKS_FROM_NPC_OUTPUT": {"userlvl":"basic","type":"boolean","description":"Filter *asterisked* NPC narration/emotes from NPC speech and subtitles.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
+   "REMOVE_ASTERISKS_FROM_NPC_OUTPUT": {"userlvl":"basic","type":"boolean","description":"Filter *asterisked* NPC narration/emotes from NPC speech and subtitles. Text Only always keeps leading narration visible.", "helpurl":"https://dwemerdynamics.com/chim/configuration.html#Narration"},
   "ENFORCE_ACTIONS_PROMPT": {"userlvl":"basic","type":"boolean","description":"Adds a prompt to enforce use of actions", "helpurl":""},
   "SUMMARY_PROMPT": {"userlvl":"pro","type":"longstring","description":"Custom instructions added when generating summaries for memories. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
   "DYNAMIC_PROMPT": {"userlvl":"basic","type":"longstring","description":"Legacy instructions for updating HERIKA_DYNAMIC. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the SUMMARY connector you are using.","scope":"global"},
@@ -102,7 +105,7 @@
   "RELLLM_CONNECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Relationship Management system. Analyzes and updates NPC relationships. Recommend to use a 🏃‍♀️‍➡️Fast LLM with ❄️low temperature (0.1-0.3) for consistent evaluations.","scope":"global"},
   "POWER_AWARENESS_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"NPCs will be aware of relative power levels (based on character level) and react appropriately to threats.","_title":"Power Awareness System"},
   "CLEAN_CONTEXT_FOCUS_CHAT_HISTORY": {"userlvl":"basic","type": "integer","description": "Context history length with only conversations. Ideally set it to 20-30.","scope":"global"},
-  "BGL_TRIGGER_DAYS": {"userlvl":"basic","type": "integer","description": "RECOMMEND TO NOT GO BELOW 5 DAYS! Number of in-game days between Background Life events. NPCs will generate thoughts and take actions based on this interval. Default: 5 days. Range: 1-30 days.","scope":"global"},
+  "BGL_TRIGGER_HOURS": {"userlvl":"basic","type": "number","default": 24,"description": "Number of in-game hours between Background Life events. NPCs will generate thoughts and take actions based on this interval. Default: 24 hours. Range: 1-720 hours.","scope":"global"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
     "openrouterjson": {
@@ -244,7 +247,7 @@
        "url": {"type":"url","description":"Player2 should be running on the same machine as DwemerDistro! Will connect automatically so do not change the URL. Does not currently support Chat Assist/Creation.","helpurl":"https://dwemerdynamics.com/chim/llm.html#Player2Service"}
     }
   },
-  "TTSFUNCTION": {"type":"select","values":["pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","deepgram"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
+  "TTSFUNCTION": {"type":"select","values":["omnivoice","pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","koboldcpp","zonos_gradio","deepgram"],"description":"Text-to-Speech service options. Used to generate AI NPC voice.","_title":"Text-to-Speech Service"},
 
   "TTS": {
     "_title":"Text-to-Speech Service",
@@ -275,9 +278,17 @@
       "PARALINGUISTIC_TAGS_PROMPT":{"type":"longstring","description":"Prompt snippet instructing the LLM to use paralinguistic tags. Added to system prompt when enabled.","scope":"global"},
       "PARALINGUISTIC_TAGS_LIST":{"type":"string","description":"Comma-separated list of supported paralinguistic tags (e.g., [laugh],[sigh],[gasp]). Tags are case-insensitive.","scope":"global"}
     },
+    "OMNIVOICE": {
+      "_title":"OmniVoice",
+      "endpoint":{"type":"url","description":"OmniVoice endpoint. DwemerDistro default is 8021. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://github.com/Dwemer-Dynamics/omnivoice-tts"},
+      "language":{"type":"select","values":["cs","de","en","es","fr","hu","it","ja","ko","pl","pt","pt-br","ro","ru","sk","uk","yue","zh"],"description":"Active OmniVoice language profile."},
+      "voiceid":{"type":"string","description":"Generated voice file name. Use a VoiceID from the installed OmniVoice language library."},
+      "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS OMNIVOICE voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
+    },
     "POCKETTTS": {
       "_title":"PocketTTS",
-       "endpoint":{"type":"url","description":"PocketTTS endpoint. CPU-only TTS, uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.com/chim/tts.html#PocketTts"},
+       "endpoint":{"type":"url","description":"PocketTTS endpoint. DwemerDistro audio.cpp PocketTTS uses port 8086 by default. Legacy Python PocketTTS uses port 8020. The connector detects the API automatically from the endpoint.", "helpurl":"https://dwemerdynamics.com/chim/tts.html#PocketTts"},
+      "model":{"type":"string","description":"audio.cpp model id. Default: pocket-tts."},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS POCKETTTS voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"}
@@ -404,12 +415,12 @@
       "workspace": {"type":"string","description":"Inworld workspace ID (required for voice cloning). Format: workspaces/{workspace} or just the workspace ID.","helpurl":"https://docs.inworld.ai/"},
       "voiceid": {"type":"string","description":"Voice file name. Works the same as CHIM-XTTS voiceid. Will only work with voices in your Voice Cache. Voice will be automatically cloned to Inworld when first used.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "language": {"type":"select","values":["en-US","zh-CN","ko-KR","ja-JP","ru-RU","it-IT","es-ES","pt-BR","de-DE","fr-FR","ar-SA","pl-PL","nl-NL","hi-IN","he-IL"],"description":"Language to use for TTS generation. Uses BCP-47 regional language codes."},
-      "model_id": {"type":"select","values":["inworld-tts-1","inworld-tts-1-max","inworld-tts-1.5-mini","inworld-tts-1.5-max"],"description":"Inworld model to use. inworld-tts-1 is the standard model, inworld-tts-1.5-max is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
+      "model_id": {"type":"select","values":["inworld-tts-1 (deprecated)","inworld-tts-1-max (deprecated)","inworld-tts-1.5-mini","inworld-tts-1.5-max","inworld-tts-2"],"description":"Inworld model to use. inworld-tts-2 is the higher quality model.","helpurl":"https://docs.inworld.ai/docs/tts/tts-models"},
       "temperature": {"type":"number","description":"Sampling temperature (0-2). Higher values make output more random. Default: 1.0"},
       "speed": {"type":"number","description":"Speaking rate/speed (0.5-1.5). Default: 1.0"}
     }
 },
-  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
+  "TTSFUNCTION_PLAYER": {"type":"select","userlvl":"basic","scope":"global","values":["omnivoice","pockettts","chatterbox","xtts-fastapi","inworld","cartesia","piper-tts","xvasynth","none","melotts","mimic3","azure","11labs","openai","kokoro","zonos_gradio"],"description":"Text-to-Speech service options. Used to generate your voice.","_title":"Player TTS"},
   "TTSFUNCTION_PLAYER_VOICE": {"type":"string","userlvl":"basic","scope":"global","description":"VoiceID to use for the player character."},
   "TTSFUNCTION_PLAYER_VOICE_ID": {"type":"integer","userlvl":"pro","scope":"global","description":"Speaker ID to select a voice from multi-voice model."},
   "TTSFUNCTION_PLAYER_LANGUAGE": {"type":"string","userlvl":"basic","scope":"global","description":"Overrides the TTS language for the player character."},

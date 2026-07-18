@@ -100,7 +100,7 @@ $columnHeaders = [
     'ts' => 'TS',
 ];
 
-$mappedResults = array_map(function ($row) use ($columnHeaders) {
+$mappedResults = array_map(function ($row) use ($columnHeaders, $rawFormat) {
     $mappedRow = [];
     
     // Derive People Present from JSON in data if people field is empty
@@ -118,8 +118,14 @@ $mappedResults = array_map(function ($row) use ($columnHeaders) {
             }
         }
     }
+    if (function_exists('chimRenderNarratorRoleplayText')) {
+        $peoplePresent = chimRenderNarratorRoleplayText($peoplePresent);
+    }
     
     foreach ($row as $key => $value) {
+        if ($key === 'data' && function_exists('chimRenderNarratorRoleplayText')) {
+            $value = chimRenderNarratorRoleplayText($value);
+        }
         if ($key === 'gamets' && !empty($value)) {
             // Convert gamets to Skyrim date format
             $value = convert_gamets2skyrim_long_date2($value);
@@ -169,6 +175,9 @@ if (!empty($results) && isset($results[0]['gamets'])) {
 $response = [
     'success' => true,
     'data' => $mappedResults,
+    'narrator_name' => function_exists('chimGetNarratorRoleplayName')
+        ? chimGetNarratorRoleplayName()
+        : 'The Narrator',
     'timestamp' => time(),
     'new_count' => count($mappedResults),
     'latest_gamets' => $latestGamets

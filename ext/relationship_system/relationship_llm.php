@@ -18,6 +18,7 @@
 
 // Ensure Logger is available
 require_once $GLOBALS["ENGINE_PATH"] . "lib/logger.php";
+require_once $GLOBALS["ENGINE_PATH"] . "lib/relationship_manager.php";
 
 class RelationshipLLM {
 
@@ -135,6 +136,53 @@ class RelationshipLLM {
      * NOTE: Does NOT call setOldGlobals() here - that happens in makeSafeRequest()
      * to avoid corrupting the main chat connector's globals
      */
+    // Extension-provided character facts. Extensions register fact sources in
+    // conf_opts id='chim_character_facts_sources' (JSON array of
+    // {table, name_column, facts:{label: sql_expression}, skip_values:{label:[values]}}).
+    // Data-driven (no code hooks) so the standalone worker daemon sees registrations too.
+    // No registrations -> empty string; unknown tables/columns fail silently per source.
+    private function extensionCharacterFacts($npcName) {
+        try {
+            if (empty($GLOBALS['db']) || (string)$npcName === '') { return ''; }
+            static $sources = null;
+            if ($sources === null) {
+                $sources = [];
+                $row = $GLOBALS['db']->fetchOne("SELECT value FROM conf_opts WHERE id = 'chim_character_facts_sources'");
+                if ($row && !empty($row['value'])) {
+                    $decoded = json_decode($row['value'], true);
+                    if (is_array($decoded)) { $sources = $decoded; }
+                }
+            }
+            if (empty($sources)) { return ''; }
+            $bits = [];
+            $e = $GLOBALS['db']->escape($npcName);
+            foreach ($sources as $src) {
+                $table = preg_replace('/[^a-zA-Z0-9_]/', '', (string)($src['table'] ?? ''));
+                $nameCol = preg_replace('/[^a-zA-Z0-9_]/', '', (string)($src['name_column'] ?? ''));
+                $facts = is_array($src['facts'] ?? null) ? $src['facts'] : [];
+                if ($table === '' || $nameCol === '' || empty($facts)) { continue; }
+                $selects = [];
+                $i = 0;
+                $aliasByLabel = [];
+                foreach ($facts as $label => $expr) {
+                    $alias = 'f' . $i++;
+                    $aliasByLabel[$label] = $alias;
+                    $selects[] = "({$expr}) AS {$alias}";
+                }
+                $frow = $GLOBALS['db']->fetchOne("SELECT " . implode(', ', $selects) . " FROM {$table} WHERE {$nameCol} = '{$e}'");
+                if (!$frow) { continue; }
+                $skip = is_array($src['skip_values'] ?? null) ? $src['skip_values'] : [];
+                foreach ($aliasByLabel as $label => $alias) {
+                    $val = trim((string)($frow[$alias] ?? ''));
+                    if ($val === '') { continue; }
+                    if (isset($skip[$label]) && in_array(strtolower($val), array_map('strtolower', (array)$skip[$label]), true)) { continue; }
+                    $bits[] = "{$label}: {$val}";
+                }
+            }
+            if (!$bits) { return ''; }
+            return "Character facts for {$npcName} (persistent profile - respect these when judging relationship changes): " . implode('; ', $bits) . "\n";
+        } catch (\Throwable $t) { return ''; }
+    }
     private function initConnector() {
         require_once $GLOBALS['ENGINE_PATH'] . "lib/core/llm_connector.class.php";
 
@@ -218,13 +266,23 @@ class RelationshipLLM {
         $connectorLabel = $this->connector['label'] ?? 'RelationshipLLM';
         $model = $this->modelName ?? 'unknown';
 
+        // The audit viewer infers status from the result text: "OK|" prefix = success.
+        $resultText = is_string($response) ? $response : json_encode($response);
+        $ok = is_string($response) && trim($response) !== '';
+        if ($ok) {
+            $decoded = json_decode(trim($response), true);
+            if (is_array($decoded) && isset($decoded['error'])) {
+                $ok = false;
+            }
+        }
+
         $this->db->insert('audit_request', [
             'request' => json_encode([
                 'type' => $callType,
                 'model' => $model,
                 'messages' => $request
             ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'result' => is_string($response) ? substr($response, 0, 2000) : json_encode($response),
+            'result' => ($ok ? 'OK|' : '') . substr((string)$resultText, 0, 2000),
             'connector' => "RelationshipLLM ({$connectorLabel})",
             'url' => "ext/relationship_system/{$callType}"
         ]);
@@ -258,14 +316,15 @@ class RelationshipLLM {
             return ['ok' => true, 'skipped' => true, 'reason' => 'No text relationships'];
         }
 
-        // Build the analysis
-        return $this->runAnalysis($npc);
+        // Build the analysis. Forced rebuilds intentionally replace the map;
+        // lazy/gameplay initialization only merges missing targets.
+        return $this->runAnalysis($npc, $forceReanalyze);
     }
 
     /**
      * Run the actual LLM analysis for an NPC
      */
-    private function runAnalysis($npc) {
+    private function runAnalysis($npc, $replaceExisting = false) {
         if (!$this->isAvailable()) {
             return ['ok' => false, 'error' => 'LLM not available'];
         }
@@ -293,6 +352,7 @@ class RelationshipLLM {
         if (!empty($npc['race'])) {
             $npcContext .= "Race: " . $npc['race'] . "\n";
         }
+        $npcContext .= $this->extensionCharacterFacts($npcName); // extension character facts (see extensionCharacterFacts)
 
         // Build prompt
         $systemPrompt = $this->getAnalysisPrompt($playerName);
@@ -331,7 +391,7 @@ class RelationshipLLM {
         }
 
         // Save to NPC
-        $this->saveRelationships($npc['id'], $relationships);
+        $this->saveRelationships($npc['id'], $relationships, $replaceExisting);
 
         Logger::info("[REL-LLM] Saved " . count($relationships) . " relationships for {$npcName}");
 
@@ -436,9 +496,10 @@ PROMPT;
 
             // Normalize player references
             $targetLower = strtolower(trim($target));
-            if (in_array($targetLower, ['player', 'the player', 'dragonborn', 'the dragonborn', '#player_name#'])) {
-                $target = 'Player';
+            if (in_array($targetLower, ['narrator', 'the narrator'], true)) {
+                continue; // never track the narrator as a relationship target
             }
+            $target = RelationshipManager::normalizeTargetName($target);
 
             $rel = ['aff' => $aff, 'type' => $type];
             if (!empty($note)) {
@@ -453,7 +514,7 @@ PROMPT;
     /**
      * Save relationships to NPC's extended_data
      */
-    private function saveRelationships($npcId, $relationships) {
+    private function saveRelationships($npcId, $relationships, $replaceExisting = false) {
         require_once $GLOBALS['ENGINE_PATH'] . "lib/core/npc_master.class.php";
 
         // Advisory lock to prevent race conditions
@@ -475,15 +536,36 @@ PROMPT;
                 $this->releaseNpcLock($npcId);
                 return false;
             }
+            // USER LOCK: the editor lock checkbox was only honored by postrequest - this path
+            // kept overwriting manual UI edits. Locked NPCs are user-curated; never machine-write their map.
+            if (!empty($extended['relationships_locked'])) {
+                Logger::info("[REL-LLM] SKIP saveRelationships for {$npc['npc_name']} - relationships_locked (manual edits protected)");
+                $this->releaseNpcLock($npcId);
+                return false;
+            }
 
-            $extended['relationships'] = $relationships;
+            $incomingRelationships = RelationshipManager::normalizeRelationshipMap($relationships);
+            if ($replaceExisting) {
+                $extended['relationships'] = $incomingRelationships;
+            } else {
+                $existingRelationships = RelationshipManager::normalizeRelationshipMap($extended['relationships'] ?? []);
+                foreach ($incomingRelationships as $target => $relationship) {
+                    if (!isset($existingRelationships[$target])) {
+                        $existingRelationships[$target] = $relationship;
+                    }
+                }
+                $extended['relationships'] = $existingRelationships;
+            }
             $extended['relationships_analyzed'] = date('Y-m-d H:i:s');
             $extended['relationships_model'] = $this->modelName;
 
-            $result = $npcMaster->updateByArray([
-                'id' => $npcId,
-                'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-            ]);
+            $result = chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcId, $extended) {
+                return $npcMaster->updateByArray([
+                    'id' => $npcId,
+                    'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                ]);
+            });
+            if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcId); }
 
             $this->releaseNpcLock($npcId);
             return $result;
@@ -651,10 +733,13 @@ PROMPT;
                 $extended['relationships'] = $myRels;
                 $extended['relationships_inferred'] = date('Y-m-d H:i:s');
 
-                $npcMaster->updateByArray([
-                    'id' => $npcId,
-                    'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-                ]);
+                chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcId, $extended) {
+                    return $npcMaster->updateByArray([
+                        'id' => $npcId,
+                        'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                    ]);
+                });
+                if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcId); }
 
                 $this->releaseNpcLock($npcId);
                 Logger::info("[REL-LLM] Inferred " . count($inferred) . " relationships for " . $npc['npc_name']);
@@ -706,10 +791,11 @@ PROMPT;
         if ($extended === null) {
             return ['ok' => false, 'error' => 'Corrupted extended_data'];
         }
-        $currentRels = $extended['relationships'] ?? [];
+        $currentRels = RelationshipManager::normalizeRelationshipMap($extended['relationships'] ?? []);
 
         // Build context string
         $contextStr = "";
+        $contextStr .= $this->extensionCharacterFacts($npcName); // extension character facts
 
         // Director instruction context (rolemaster guidance)
         // This explains why an NPC might behave in ways that seem out of character
@@ -846,6 +932,12 @@ Only suggest changes for SIGNIFICANT moments - not every interaction needs a cha
 {$outputKeyInstruction}
 
 Return JSON: {"changes": {"{$listenerKey}": {"delta": X, "reason": "brief"}}}
+If (and ONLY if) this exchange changed the relationship's NATURE - romance, betrayal,
+marriage, becoming enemies - also include "type", e.g.
+{"changes": {"{$listenerKey}": {"delta": X, "type": "crush", "reason": "brief"}}}
+Be conservative: one passing line never flips a type. The change must be backed by sustained
+energy or real/implied history, and it must come from {$npcName}'s own expressed feelings -
+{$listenerKey} pushing or flirting is not grounds for it.
 Or if no changes: {"changes": {}}
 PROMPT;
 
@@ -935,6 +1027,8 @@ PROMPT;
 
         // Build context string
         $contextStr = "";
+        $contextStr .= $this->extensionCharacterFacts($speakerName);  // extension character facts, both parties
+        $contextStr .= $this->extensionCharacterFacts($listenerName);
 
         // Director instruction context (rolemaster guidance)
         if (!empty($context['director_instruction'])) {
@@ -1128,17 +1222,30 @@ REASON FORMAT - Keep it SHORT (under 15 words):
 ✓ "Protective action builds trust"
 ✗ NOT: Long clinical explanations
 
-TYPE CHANGES (rare - only for defining moments):
-- Only change type for: romance confession, betrayal, violence, marriage, family reveal
-- Most interactions just adjust affinity, not type
+TYPE CHANGES (rare - only for DEFINING moments):
+- Add "type" ONLY when this exchange visibly changed the NATURE of the relationship:
+  romance, betrayal, marriage, family reveal, becoming enemies.
+- Be conservative. One passing compliment, joke, or flirty line NEVER flips a type.
+  A type change must be backed by sustained energy in this exchange or by the history
+  between them - repeated warmth, declarations, a shared past, stated or clearly implied.
+- The evidence must come from the SPEAKER's own expressed feelings. The other party
+  flirting, pushing, or asking is never grounds to flip a type.
+- When in doubt, omit "type". Most interactions only adjust affinity.
 
 OUTPUT (JSON only):
 {"changes": {"Player": {"delta": 1, "reason": "brief insight"}}}
+Defining type change: {"changes": {"Player": {"delta": 5, "type": "crush", "reason": "confessed her crush"}}}
 
 No changes? Return: {"changes": {}}
 PROMPT;
 
-        return $this->loadPrompt('rel_llm_evaluation', $fallback);
+        $prompt = $this->loadPrompt('rel_llm_evaluation', $fallback);
+        // Seeded defaults from before the type-change syntax existed teach a delta-only output;
+        // upgrade them in place. Custom prompts that already know "type" are left alone.
+        if (strpos($prompt, 'only for defining moments') !== false && strpos($prompt, '"type"') === false) {
+            return $fallback;
+        }
+        return $prompt;
     }
 
     /**
@@ -1200,15 +1307,20 @@ PROMPT;
             'hero', 'the hero',
             'champion', 'the champion',
             'chosen one', 'the chosen one',
-            'nightingale', 'the nightingale'
+            'nightingale', 'the nightingale',
+            'narrator', 'the narrator'
         ];
 
         foreach ($changes as $target => $change) {
             $delta = intval($change['delta'] ?? 0);
             $newType = $change['type'] ?? null;
+            if (is_string($newType)) {
+                $newType = strtolower(trim($newType));
+                if ($newType === '') {
+                    $newType = null;
+                }
+            }
             $reason = $change['reason'] ?? '';
-
-            if ($delta === 0 && $newType === null) continue;
 
             // Skip titles/roles (but allow factions/groups)
             if (in_array(strtolower(trim($target)), $blockedTitles)) {
@@ -1217,15 +1329,22 @@ PROMPT;
             }
 
             // Normalize player name references to canonical "Player"
-            $playerName = $this->getPlayerName();
-            $targetLower = strtolower(trim($target));
-            if ($targetLower === strtolower($playerName) ||
-                in_array($targetLower, ['player', 'the player', 'dragonborn', 'the dragonborn', '#player_name#'])) {
-                $target = 'Player';
+            $target = RelationshipManager::normalizeTargetName($target);
+
+            $targetExists = isset($currentRels[$target]);
+
+            // REL LLMs often emit {"delta":0,"type":"neutral"} as a generic
+            // "no meaningful change" shape. Do not let that create or downgrade
+            // Player/NPC rows to 0 neutral.
+            if ($delta === 0) {
+                if ($newType === null || $newType === 'neutral' || !$targetExists) {
+                    Logger::debug("[REL-LLM] Ignoring zero-delta/no-op relationship output for {$npc['npc_name']} -> {$target}");
+                    continue;
+                }
             }
 
             // Initialize if doesn't exist
-            if (!isset($currentRels[$target])) {
+            if (!$targetExists) {
                 $currentRels[$target] = ['aff' => 0, 'type' => 'neutral'];
             }
 
@@ -1237,22 +1356,34 @@ PROMPT;
             $typeChanged = false;
             $finalType = $oldType;
 
+            // EARNED-ROMANCE GATE: promotion INTO a romantic-leaning type requires Fond-tier
+            // affinity (56+, matches getAffinityTierName) and an explicit reason from the model.
+            // Below that, blocked - one flirty exchange must not flip a stranger to romantic.
+            // Downgrades OUT of romantic and moves between non-romantic types are unaffected.
+            $romanticTypes = ['romantic', 'crush', 'admirer', 'obsessed', 'infatuated', 'lover'];
+            $oldIsRomantic = in_array(strtolower((string)$oldType), $romanticTypes, true);
+
             if ($newType) {
                 // LLM explicitly set a type
                 $newTypeLower = strtolower($newType);
-                if ($oldType !== $newTypeLower) {
-                    Logger::info("[REL-LLM] TYPE CHANGE: {$npc['npc_name']} -> {$target}: {$oldType} => {$newTypeLower}");
-                    $typeChanged = true;
+                $promotesToRomantic = in_array($newTypeLower, $romanticTypes, true) && !$oldIsRomantic;
+                if ($promotesToRomantic && ($newAff < 56 || trim((string)$reason) === '')) {
+                    Logger::info("[REL-LLM] BLOCKED romantic promotion: {$npc['npc_name']} -> {$target}: {$oldType} => {$newTypeLower} (aff {$newAff} below fond tier or no reason; kept '{$oldType}')");
+                } else {
+                    if ($oldType !== $newTypeLower) {
+                        Logger::info("[REL-LLM] TYPE CHANGE: {$npc['npc_name']} -> {$target}: {$oldType} => {$newTypeLower}");
+                        $typeChanged = true;
+                    }
+                    $currentRels[$target]['type'] = $newTypeLower;
+                    $finalType = $newTypeLower;
                 }
-                $currentRels[$target]['type'] = $newTypeLower;
-                $finalType = $newTypeLower;
             } else {
                 // Auto-evolve type ONLY when leaving neutral
                 // Once you've formed an opinion, you don't go back to neutral
                 $currentType = $currentRels[$target]['type'];
                 if ($currentType === 'neutral') {
                     $inferredType = $this->inferTypeFromAffinity($newAff);
-                    if ($inferredType !== 'neutral') {
+                    if ($inferredType !== 'neutral' && !in_array($inferredType, $romanticTypes, true)) {
                         Logger::info("[REL-LLM] AUTO TYPE CHANGE: {$npc['npc_name']} -> {$target}: neutral => {$inferredType} (affinity: {$newAff})");
                         $currentRels[$target]['type'] = $inferredType;
                         $finalType = $inferredType;
@@ -1309,6 +1440,9 @@ PROMPT;
                 'new' => $newAff,
                 'delta' => $delta,
                 'type' => $finalType,
+                'base_type' => $oldType,
+                'requested_type' => $newType,
+                'relation' => $change['relation'] ?? null,
                 'reason' => $reason
             ];
 
@@ -1336,11 +1470,33 @@ PROMPT;
                     $this->releaseNpcLock($npcId);
                     return []; // Return empty - changes not saved
                 }
+                // USER LOCK: honor the editor lock here too - this eval/rebase path was the
+                // writer clobbering manual UI edits minutes after they were saved.
+                if (!empty($extended['relationships_locked'])) {
+                    Logger::info("[REL-LLM] SKIP applyChanges for {$npc['npc_name']} - relationships_locked (manual edits protected)");
+                    $this->releaseNpcLock($npcId);
+                    return []; // Return empty - changes not saved
+                }
 
-                // Merge our changes with latest state
-                $existingRels = $extended['relationships'] ?? [];
-                foreach ($currentRels as $target => $data) {
-                    $existingRels[$target] = $data;
+                // Merge only the relationship targets changed by this evaluation,
+                // and rebase each delta onto the freshly fetched row. The evaluator
+                // may have started from an old snapshot while the UI or another
+                // worker changed the same target; copying the pre-eval target would
+                // clobber that newer state.
+                $existingRels = RelationshipManager::normalizeRelationshipMap($extended['relationships'] ?? []);
+                foreach ($applied as $target => $change) {
+                    $freshRel = $existingRels[$target] ?? [];
+                    $rebasedRel = $this->rebaseRelationshipChange(
+                        $freshRel,
+                        $currentRels[$target] ?? [],
+                        $change
+                    );
+                    $freshAff = (int)($freshRel['aff'] ?? 0);
+                    $staleAff = (int)($change['old'] ?? 0);
+                    if ($freshAff !== $staleAff) {
+                        Logger::info("[REL-LLM] Rebased {$npc['npc_name']} -> {$target}: fresh {$freshAff} + delta {$change['delta']} => {$rebasedRel['aff']}");
+                    }
+                    $existingRels[$target] = $rebasedRel;
                 }
 
                 $extended['relationships'] = $existingRels;
@@ -1348,13 +1504,16 @@ PROMPT;
 
                 $jsonData = json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-                $result = $npcMaster->updateByArray([
-                    'id' => $npcId,
-                    'extended_data' => $jsonData
-                ]);
+                $result = chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcId, $jsonData) {
+                    return $npcMaster->updateByArray([
+                        'id' => $npcId,
+                        'extended_data' => $jsonData
+                    ]);
+                });
+                if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcId); }
 
                 $this->releaseNpcLock($npcId);
-                Logger::debug("[REL-LLM] Database update for NPC {$npcId}: " . ($result ? "SUCCESS" : "FAILED") . " - relationships: " . json_encode($existingRels));
+                Logger::debug("[REL-LLM] Database update for NPC {$npcId}: " . ($result === false ? "FAILED" : "OK") . " - relationships: " . json_encode($existingRels));
             } catch (Exception $e) {
                 $this->releaseNpcLock($npcId);
                 throw $e;
@@ -1362,6 +1521,93 @@ PROMPT;
         }
 
         return $applied;
+    }
+
+    /**
+     * Apply an LLM relationship change to the latest DB value instead of the
+     * stale value captured when the evaluation was queued.
+     */
+    private function rebaseRelationshipChange($freshRel, $computedRel, $change) {
+        if (!is_array($freshRel)) {
+            $freshRel = [];
+        }
+        if (!is_array($computedRel)) {
+            $computedRel = [];
+        }
+
+        $rebased = $freshRel;
+        $freshAff = (int)($freshRel['aff'] ?? 0);
+        $delta = (int)($change['delta'] ?? 0);
+        $rebasedAff = max(-100, min(100, $freshAff + $delta));
+        $rebased['aff'] = $rebasedAff;
+
+        $freshType = strtolower(trim((string)($freshRel['type'] ?? 'neutral')));
+        if ($freshType === '') {
+            $freshType = 'neutral';
+        }
+
+        $requestedType = $change['requested_type'] ?? null;
+        if (is_string($requestedType)) {
+            $requestedType = strtolower(trim($requestedType));
+        }
+
+        // ROMANTIC AUTO-PROMOTION GUARD (mirrors the main apply path): never let the concurrent-rebase apply a
+        // romantic-leaning type on top of a non-romantic one. Romantic types are player-set, not model-assigned.
+        $romanticTypes = ['romantic', 'crush', 'admirer', 'obsessed', 'infatuated', 'lover'];
+        $freshIsRomantic = in_array($freshType, $romanticTypes, true);
+        if (!empty($requestedType)) {
+            // Never let a stale generic "neutral" response downgrade a newer UI
+            // or worker type. Non-neutral model type changes can still apply.
+            if (in_array($requestedType, $romanticTypes, true) && !$freshIsRomantic) {
+                // blocked romantic auto-promotion: keep the existing (fresh) type
+                $rebased['type'] = $freshType;
+            } elseif ($requestedType !== 'neutral' || $freshType === 'neutral') {
+                $rebased['type'] = $requestedType;
+            } else {
+                $rebased['type'] = $freshType;
+            }
+        } else {
+            $rebased['type'] = $freshType;
+            if ($freshType === 'neutral') {
+                $inferredType = $this->inferTypeFromAffinity($rebasedAff);
+                if ($inferredType !== 'neutral' && !in_array($inferredType, $romanticTypes, true)) {
+                    $rebased['type'] = $inferredType;
+                }
+            }
+        }
+
+        $reason = trim((string)($change['reason'] ?? ''));
+        if ($reason !== '') {
+            if (abs($delta) >= 3 || empty($rebased['note'] ?? '')) {
+                $rebased['note'] = $computedRel['note'] ?? $reason;
+            }
+
+            if ($delta >= 10) {
+                $existingBestDelta = (int)($rebased['best_delta'] ?? 0);
+                if ($delta >= $existingBestDelta) {
+                    $rebased['best'] = $computedRel['best'] ?? $reason;
+                    $rebased['best_delta'] = $delta;
+                }
+            }
+
+            if ($delta <= -10) {
+                $existingWorstDelta = (int)($rebased['worst_delta'] ?? 0);
+                if ($delta <= $existingWorstDelta) {
+                    $rebased['worst'] = $computedRel['worst'] ?? $reason;
+                    $rebased['worst_delta'] = $delta;
+                }
+            }
+        }
+
+        $requestedRelation = $change['relation'] ?? null;
+        if (is_string($requestedRelation)) {
+            $requestedRelation = strtolower(trim($requestedRelation));
+        }
+        if (!empty($requestedRelation) && empty($rebased['relation'])) {
+            $rebased['relation'] = $requestedRelation;
+        }
+
+        return $rebased;
     }
 
     /**

@@ -67,6 +67,7 @@ $updateVersion = function($tablename,$version) {
 
 // Ensure base schema and extensions exist for fresh installs
 $db->execQuery('CREATE SCHEMA IF NOT EXISTS public');
+$db->execQuery('CREATE SCHEMA IF NOT EXISTS plugins');
 $db->execQuery("SET search_path TO public");
 $db->execQuery('CREATE EXTENSION IF NOT EXISTS vector');
 $db->execQuery('CREATE EXTENSION IF NOT EXISTS pg_trgm');
@@ -3326,6 +3327,8 @@ if ($checkVersion("npc_templates")<20250619001) {
                 npc_goals text
             )");
             $db->execQuery($newDataSql);
+            // pg_dump exports clear search_path; restore it for subsequent unqualified helpers.
+            $db->execQuery("SET search_path TO public");
             
             // Upsert from temp table to main table with explicit column list
             $db->execQuery("INSERT INTO public.npc_templates (
@@ -3482,7 +3485,7 @@ if ($checkVersion("core_llm_connector") < 20260423001) {
                 $insertPayload["api_badge_id"] = $openRouterBadgeId;
             }
 
-            $db->insert("core_llm_connector", $insertPayload);
+            $db->insert("public.core_llm_connector", $insertPayload);
             Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
         } else {
             Logger::info("Dedicated scene classifier connector already exists with ID " . intval($existingSceneClassifier["id"]));
@@ -3536,10 +3539,10 @@ if ($checkVersion("core_llm_connector") < 20260423002) {
         }
 
         if ($sceneClassifierRow && isset($sceneClassifierRow["id"])) {
-            $db->updateRow("core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
+            $db->updateRow("public.core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
             Logger::info("Updated dedicated scene classifier connector ID " . intval($sceneClassifierRow["id"]) . " to Gemma 3N E4B");
         } else {
-            $db->insert("core_llm_connector", $sceneClassifierPayload);
+            $db->insert("public.core_llm_connector", $sceneClassifierPayload);
             Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
         }
 
@@ -3591,10 +3594,10 @@ if ($checkVersion("core_llm_connector") < 20260423003) {
         }
 
         if ($sceneClassifierRow && isset($sceneClassifierRow["id"])) {
-            $db->updateRow("core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
+            $db->updateRow("public.core_llm_connector", $sceneClassifierPayload, "id=" . intval($sceneClassifierRow["id"]));
             Logger::info("Renamed scene classifier connector ID " . intval($sceneClassifierRow["id"]) . " to '{$sceneClassifierLabel}'");
         } else {
-            $db->insert("core_llm_connector", $sceneClassifierPayload);
+            $db->insert("public.core_llm_connector", $sceneClassifierPayload);
             Logger::info("Inserted dedicated scene classifier connector '{$sceneClassifierLabel}'");
         }
 
@@ -4292,7 +4295,44 @@ if ($checkTableExists("sneq_quests_saved") == -1) {
 } else
     Logger::info(__FILE__." sneq_quests_saved exists");
 
+$questEngineSchemaSql = file_get_contents(__DIR__."/../data/chim_quest_engine.sql");
+if ($checkTableExists("skyrim_quest_definitions") == -1 || $checkTableExists("chim_quest_definitions") != -1) {
+    $db->execQuery($questEngineSchemaSql);
+} else {
+    Logger::info(__FILE__." skyrim_quest_definitions exists");
+    $db->execQuery($questEngineSchemaSql);
+}
 
+if ($checkTableExists("skyrim_quest_definitions") != -1) {
+    require_once(__DIR__ . "/../lib/chim_quest_engine.php");
+    try {
+        $questDefinitionCount = $db->fetchOne("SELECT COUNT(*) AS n FROM public.skyrim_quest_definitions");
+        $questDefinitionSeedVersion = 20260628003;
+        if (intval($questDefinitionCount["n"] ?? 0) === 0 || $checkVersion("skyrim_quest_definitions") < $questDefinitionSeedVersion) {
+            $db->execQuery("
+                DELETE FROM public.skyrim_quest_definitions
+                WHERE source_path LIKE '%/data/chim_quest_engine/definitions/%'
+                   OR source_path LIKE '%\\data\\chim_quest_engine\\definitions\\%'
+            ");
+            $questImportResults = chimQuestEngineImportBundledDefinitions();
+            $questImportSuccessCount = 0;
+            foreach ($questImportResults as $questImportResult) {
+                if (is_array($questImportResult) && !empty($questImportResult["success"])) {
+                    $questImportSuccessCount++;
+                }
+            }
+            Logger::info(__FILE__ . " imported bundled skyrim quest definitions: {$questImportSuccessCount}/" . count($questImportResults));
+            if ($questImportSuccessCount === count($questImportResults) && $questImportSuccessCount > 0) {
+                $updateVersion("skyrim_quest_definitions", $questDefinitionSeedVersion);
+            } else {
+                Logger::warn(__FILE__ . " bundled skyrim quest definitions import incomplete; version not advanced");
+            }
+        }
+    } catch (Exception $e) {
+        Logger::warn(__FILE__ . " could not import bundled skyrim quest definitions: " . $e->getMessage());
+    }
+
+}
 
 // Some imported dump-style SQL files clear search_path; restore it before
 // running unqualified late-stage migrations.
@@ -4882,6 +4922,27 @@ if ($checkVersion("core_player")<20241128001) {
     Logger::info("Applied patch core_player 20241128001 - Migrated player data from conf_opts");
 }
 
+
+//----------------------------------------------------
+// PLAYER AUTO DIARY FEATURE - Add auto diary toggles
+// Version 20260707001
+//----------------------------------------------------
+
+if ($checkVersion("core_player")<20260707001) {
+    Logger::debug("Applying core_player migration 20260707001 - Adding player auto diary toggles");
+
+    $db->execQuery("
+        INSERT INTO public.core_player (id, value)
+        VALUES
+            ('auto_diary_enabled', '0'),
+            ('auto_diary_wait_enabled', '0')
+        ON CONFLICT (id) DO NOTHING
+    ");
+
+    $updateVersion("core_player", 20260707001);
+    Logger::info("Applied patch core_player 20260707001 - Added player auto diary toggles");
+}
+
 //----------------------------------------------------
 // CORE_NARRATOR DATA MIGRATION
 //----------------------------------------------------
@@ -4928,13 +4989,14 @@ if ($checkVersion("core_narrator")<20250101001) {
     if ($count === 0) {
         // Seed with defaults from conf.php if available, otherwise use hardcoded defaults
         $defaults = [
+            'roleplay_name' => 'The Narrator',
             'enabled' => isset($GLOBALS["NARRATOR_TALKS"]) ? ($GLOBALS["NARRATOR_TALKS"] ? '1' : '0') : '1',
             'welcome_enabled' => isset($GLOBALS["NARRATOR_WELCOME"]) ? ($GLOBALS["NARRATOR_WELCOME"] ? '1' : '0') : '0',
             'random_enabled' => isset($GLOBALS["RANDOM_NARATION"]) ? ($GLOBALS["RANDOM_NARATION"] ? '1' : '0') : '0',
             'random_chance' => isset($GLOBALS["RANDOM_NARATION_CHANCE"]) ? (string)intval($GLOBALS["RANDOM_NARATION_CHANCE"]) : '15',
             'random_cooldown' => isset($GLOBALS["RANDOM_NARRATION_COOLDOWN"]) ? (string)intval($GLOBALS["RANDOM_NARRATION_COOLDOWN"]) : '2',
             'books_only_narrator' => isset($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"]) ? ($GLOBALS["BOOK_EVENT_ALWAYS_NARRATOR"] ? '1' : '0') : '0',
-            'hide_from_context' => isset($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) ? ($GLOBALS["HIDE_NARRATOR_DIALOGUE"] ? '1' : '0') : '0',
+            'hide_from_context' => isset($GLOBALS["HIDE_NARRATOR_DIALOGUE"]) ? ($GLOBALS["HIDE_NARRATOR_DIALOGUE"] ? '1' : '0') : '1',
         ];
         
         foreach ($defaults as $key => $value) {
@@ -5038,6 +5100,7 @@ if ($checkVersion("core_narrator")<20250101002) {
             
             $defaults = [
                 'profile_id' => $profileId,
+                'roleplay_name' => 'The Narrator',
                 'voiceid' => 'TheNarrator',
                 'core' => "The Narrator is a male voice within the player's mind. His job is to help the player as they navigate the world of Tamriel. Provide unique insight and descriptions of what is going on in the world.",
                 'background' => "A guiding voice that describes the world, events, and transitions. He is not a character, but a voice within the player's mind.",
@@ -6487,6 +6550,82 @@ if ($checkVersion("general_settings") < 20260511001) {
 
 //----------------------------------------------------
 
+if ($checkVersion("general_settings") < 20260619001) {
+    Logger::debug("Applying general_settings 20260619001 - add CHIM AI quest progression settings");
+    $b_ok = true;
+
+    try {
+        $questSettingDefaults = [
+            'CHIM_AI_QUEST_PROGRESSION' => false,
+            'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => true,
+        ];
+
+        foreach ($questSettingDefaults as $settingId => $fallbackDefault) {
+            $existingRow = chimGetGeneralSettingRow($settingId);
+            $definition = chimGetSchemaDefinition($settingId);
+            $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+
+            if ($existingRow) {
+                $currentValue = $existingRow['value'] ?? ($definition['default'] ?? $fallbackDefault);
+            } else {
+                $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+                $currentValue = ($hasLegacyValue === "__CHIM_SETTING_MISSING__")
+                    ? ($definition['default'] ?? $fallbackDefault)
+                    : $hasLegacyValue;
+            }
+
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing general setting '{$settingId}'");
+            }
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error adding CHIM AI quest progression settings: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260619001);
+        Logger::info("Applied patch general_settings 20260619001");
+    }
+}
+
+//----------------------------------------------------
+
+if ($checkVersion("general_settings") < 20260627001) {
+    Logger::debug("Applying general_settings 20260627001 - add player item pickup eventlog threshold");
+    $b_ok = true;
+
+    try {
+        $settingId = 'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE';
+        $existingRow = chimGetGeneralSettingRow($settingId);
+        $definition = chimGetSchemaDefinition($settingId);
+        $description = chimGetManagedGeneralSettingDescriptions()[$settingId] ?? chimGetSchemaDescription($settingId);
+
+        if ($existingRow) {
+            $currentValue = $existingRow['value'] ?? ($definition['default'] ?? 500);
+        } else {
+            $hasLegacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+            $currentValue = ($hasLegacyValue === "__CHIM_SETTING_MISSING__")
+                ? ($definition['default'] ?? 500)
+                : $hasLegacyValue;
+        }
+
+        if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+            throw new Exception("Failed writing general setting '{$settingId}'");
+        }
+    } catch (Exception $e) {
+        $b_ok = false;
+        Logger::error("Error adding player item pickup eventlog threshold setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260627001);
+        Logger::info("Applied patch general_settings 20260627001");
+    }
+}
+
+//----------------------------------------------------
+
 if ($checkVersion("core_action") < 20260502011) {
     Logger::debug("Applying core_action 20260502011 - sync sitting restrictions for Drink, Toast, and StartRitualCeremony");
     $b_ok = true;
@@ -6770,9 +6909,9 @@ $db->execQuery("
 
 //----------------------------------------------------
 // Refresh base bio template relationship metadata from canonical SQL
-// Version 20260505003
+// Version 20260619001
 //----------------------------------------------------
-$relationshipMetadataNeedsRefresh = $checkVersion("bio_templates_relationship_refresh") < 20260505003;
+$relationshipMetadataNeedsRefresh = $checkVersion("bio_templates_relationship_refresh") < 20260619001;
 if (!$relationshipMetadataNeedsRefresh) {
     try {
         $relationshipSentinel = $db->fetchOne("SELECT relationships FROM public.bio_templates WHERE npc_name = 'corpulus_vinius' LIMIT 1");
@@ -6788,8 +6927,36 @@ if (!$relationshipMetadataNeedsRefresh) {
 }
 
 if ($relationshipMetadataNeedsRefresh) {
-    Logger::debug("Applying bio_templates_relationship_refresh 20260505003");
+    Logger::debug("Applying bio_templates_relationship_refresh 20260619001");
     try {
+        $splitMergedIceMageTemplate = function($tableName) use ($db, $checkTableExists) {
+            if (!in_array($tableName, ["bio_templates", "bio_templates_custom"], true) || $checkTableExists($tableName) == -1) {
+                return;
+            }
+
+            foreach (["ice_mage", "ice_wizard"] as $targetName) {
+                $targetEscaped = $db->escape($targetName);
+                $db->execQuery("
+                    INSERT INTO public.{$tableName} (
+                        npc_name, oghma_knowledge_tags, core, npc_static_bio, appearance, personality,
+                        relationships, occupation, skills, speechstyle, goals, voiceid, gender, race, refid
+                    )
+                    SELECT
+                        '{$targetEscaped}', oghma_knowledge_tags, core, npc_static_bio, appearance, personality,
+                        relationships, occupation, skills, speechstyle, goals, voiceid, gender, race, refid
+                      FROM public.{$tableName}
+                     WHERE npc_name = 'ice_mage ice_wizard'
+                     LIMIT 1
+                    ON CONFLICT (npc_name) DO NOTHING
+                ");
+            }
+
+            $db->execQuery("DELETE FROM public.{$tableName} WHERE npc_name = 'ice_mage ice_wizard'");
+        };
+
+        $splitMergedIceMageTemplate("bio_templates");
+        $splitMergedIceMageTemplate("bio_templates_custom");
+
         $sqlFile = __DIR__ . "/../data/relationship_metadata.sql";
         if (file_exists($sqlFile)) {
             $sqlContent = file_get_contents($sqlFile);
@@ -6798,21 +6965,29 @@ if ($relationshipMetadataNeedsRefresh) {
                 $refreshResult = $db->execQuery($sqlContent);
                 $cleanupResult = false;
                 if ($refreshResult) {
-                    $cleanupResult = $db->execQuery("
+                    $baseCleanupResult = $db->execQuery("
+                        UPDATE public.bio_templates
+                           SET relationships = NULL
+                         WHERE relationships IS NOT NULL
+                           AND btrim(relationships) <> ''
+                           AND left(ltrim(relationships), 1) <> '{'
+                    ");
+                    $customCleanupResult = $db->execQuery("
                         UPDATE public.bio_templates_custom
                            SET relationships = NULL
                          WHERE relationships IS NOT NULL
                            AND btrim(relationships) <> ''
                            AND left(ltrim(relationships), 1) <> '{'
                     ");
+                    $cleanupResult = $baseCleanupResult && $customCleanupResult;
                 } else {
                     $db->execQuery("ROLLBACK");
                 }
                 if ($refreshResult && $cleanupResult) {
-                    $updateVersion("bio_templates_relationship_refresh", 20260505003);
-                    Logger::info("Applied patch bio_templates_relationship_refresh 20260505003");
+                    $updateVersion("bio_templates_relationship_refresh", 20260619001);
+                    Logger::info("Applied patch bio_templates_relationship_refresh 20260619001");
                 } else {
-                    Logger::error("Failed to apply bio_templates_relationship_refresh 20260505003 - canonical relationship metadata refresh did not execute cleanly.");
+                    Logger::error("Failed to apply bio_templates_relationship_refresh 20260619001 - canonical relationship metadata refresh did not execute cleanly.");
                 }
             } else {
                 Logger::warn("relationship metadata file is empty: " . $sqlFile);
@@ -6823,6 +6998,34 @@ if ($relationshipMetadataNeedsRefresh) {
     } catch (Exception $e) {
         Logger::error("Error applying bio_templates relationship refresh: " . $e->getMessage());
     }
+}
+
+if ($checkVersion("memory") < 20260617001) {
+    Logger::debug("Applying memory 20260617001 - widen localts to bigint (avoids int4 overflow on long-running games / Y2038)");
+
+    $db->execQuery("ALTER TABLE public.memory ALTER COLUMN localts TYPE bigint");
+
+    $updateVersion("memory", 20260617001);
+    Logger::info("Applied patch memory 20260617001");
+}
+
+if ($checkVersion("bgl_history") < 20260623001) {
+    Logger::debug("Applying bgl_history 20260623001 - create BgL history table");
+
+    $db->execQuery("
+        CREATE TABLE IF NOT EXISTS public.bgl_history (
+            rowid bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            npc varchar,
+            gamets bigint,
+            ts bigint,
+            localts bigint,
+            data varchar
+        )
+    ");
+
+    $updateVersion("bgl_history", 20260623001);
+    Logger::info("Applied patch bgl_history 20260623001");
+
 }
 
 if ($checkVersion("oghma") < 20260625001) {
@@ -6888,6 +7091,126 @@ if ($checkVersion("oghma") < 20260625001) {
 
     $updateVersion("oghma", 20260625001);
     Logger::info("Applied patch oghma 20260625001");
+}
+
+if ($checkVersion("core_tts_connector_pockettts_audiocpp") < 20260628001) {
+    Logger::debug("Applying core_tts_connector_pockettts_audiocpp 20260628001 - expose audio.cpp PocketTTS metadata");
+
+    if ($checkTableExists("core_tts_connector") != -1) {
+        $db->execQuery("
+            UPDATE public.core_tts_connector
+               SET metadata = jsonb_set(
+                    jsonb_set(
+                        jsonb_set(
+                            COALESCE(metadata, '{}'::jsonb),
+                            '{endpoint,description}',
+                            to_jsonb('Endpoint URL. DwemerDistro audio.cpp PocketTTS uses port 8086 by default. Legacy Python PocketTTS uses port 8020.'::text),
+                            true
+                        ),
+                        '{api_format}',
+                        '{\"type\":\"select\",\"values\":[\"audio_cpp\",\"legacy\"],\"description\":\"PocketTTS API format. Use audio_cpp for the DwemerDistro C++ runtime or legacy for the older Python bridge.\"}'::jsonb,
+                        true
+                    ),
+                    '{model}',
+                    '{\"type\":\"string\",\"description\":\"audio.cpp model id. Default: pocket-tts.\"}'::jsonb,
+                    true
+                )
+             WHERE driver = 'pockettts'
+        ");
+    }
+
+    $updateVersion("core_tts_connector_pockettts_audiocpp", 20260628001);
+    Logger::info("Applied patch core_tts_connector_pockettts_audiocpp 20260628001");
+}
+
+if ($checkVersion("core_tts_connector_omnivoice") < 20260708001) {
+    Logger::debug("Applying core_tts_connector_omnivoice 20260708001 - add OmniVoice default connector");
+
+    $b_ok = true;
+    try {
+        $db->execQuery("
+            INSERT INTO public.core_tts_connector (driver, label, metadata, api_badge_id, url, voice_field)
+            SELECT
+                'omnivoice',
+                'OmniVoice Default',
+                '{\"language\":\"en\",\"voicelogic\":\"voicetype\",\"fallback_male\":\"malenord\",\"fallback_female\":\"femalenord\"}'::jsonb,
+                NULL,
+                'http://127.0.0.1:8021',
+                'voiceid'
+            WHERE NOT EXISTS (
+                SELECT 1
+                  FROM public.core_tts_connector
+                 WHERE lower(coalesce(label, '')) = 'omnivoice default'
+            )
+        ");
+
+        $db->execQuery("
+            UPDATE public.core_tts_connector
+               SET driver = 'omnivoice',
+                   url = 'http://127.0.0.1:8021',
+                   voice_field = 'voiceid',
+                   metadata = COALESCE(metadata, '{}'::jsonb) || '{\"language\":\"en\",\"voicelogic\":\"voicetype\",\"fallback_male\":\"malenord\",\"fallback_female\":\"femalenord\"}'::jsonb
+             WHERE lower(coalesce(label, '')) = 'omnivoice default'
+        ");
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error adding OmniVoice default TTS connector: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("core_tts_connector_omnivoice", 20260708001);
+        Logger::info("Applied patch core_tts_connector_omnivoice 20260708001");
+    }
+}
+
+//----------------------------------------------------
+// NARRATOR ROLEPLAY NAME - Prompt-facing narrator alias
+// Version 20260714001
+//----------------------------------------------------
+
+if ($checkVersion("core_narrator")<20260714001) {
+    Logger::debug("Applying core_narrator migration 20260714001 - Adding narrator roleplay name");
+
+    $db->execQuery("
+        INSERT INTO public.core_narrator (id, value)
+        VALUES ('roleplay_name', 'The Narrator')
+        ON CONFLICT (id) DO NOTHING
+    ");
+
+    $updateVersion("core_narrator", 20260714001);
+    Logger::info("Applied patch core_narrator 20260714001 - Added narrator roleplay name");
+}
+
+if ($checkVersion("general_settings") < 20260711001) {
+    Logger::debug("Applying general_settings 20260711001 - convert Background Life cooldown from days to hours");
+
+    $b_ok = true;
+    try {
+        $hoursRow = $db->fetchOne("SELECT value FROM public.general_settings WHERE id = 'BGL_TRIGGER_HOURS' LIMIT 1");
+        if (isset($hoursRow['value']) && is_numeric($hoursRow['value'])) {
+            $cooldownHours = chimNormalizeBackgroundLifeTriggerHours($hoursRow['value']);
+        } else {
+            $daysRow = $db->fetchOne("SELECT value FROM public.general_settings WHERE id = 'BGL_TRIGGER_DAYS' LIMIT 1");
+            $legacyDays = $daysRow['value'] ?? chimReadLegacyGlobalValue('BGL_TRIGGER_DAYS', null);
+            $cooldownHours = is_numeric($legacyDays)
+                ? chimConvertBackgroundLifeDaysToHours($legacyDays)
+                : 24.0;
+        }
+
+        $description = chimGetManagedGeneralSettingDescriptions()['BGL_TRIGGER_HOURS']
+            ?? chimGetSchemaDescription('BGL_TRIGGER_HOURS');
+        if (!chimSetGeneralSetting('BGL_TRIGGER_HOURS', $cooldownHours, $description)) {
+            throw new Exception("Failed writing BGL_TRIGGER_HOURS");
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error converting Background Life cooldown to hours: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260711001);
+        Logger::info("Applied patch general_settings 20260711001");
+    }
 }
 
 Logger::info(__FILE__." update file processed");

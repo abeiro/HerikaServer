@@ -128,6 +128,7 @@ if (is_array($bgevent)) {
             $npcData = $npcManager->getByName($bgevent["actor"]);
             $cn = $GLOBALS["db"]->escape($npcData["npc_name"]);
             $extended = json_decode($npcData["extended_data"], true);
+            $bgevent["server_processed"] = false;
             if (isset($extended["background_life_enabled"]) && $extended["background_life_enabled"] == true) {
                 $lastAction = $GLOBALS["db"]->fetchOne("select * from actions_issued where actorname='$cn' order by gamets desc,ts desc,localts desc limit 1 offset 0");
                 if (isset($lastAction) && isset($lastAction["action"]) && ( 
@@ -135,13 +136,31 @@ if (is_array($bgevent)) {
                     ||
                     ($lastAction["action"] == $bgevent["name"] . "Raw") // Handle the TravelToRaw case, where the issued action is TravelToRaw but the event is TravelTo
                     ||
-                    ($lastAction["action"] == "MoveTo" && $bgevent["name"]=="TravelTo") // Handle the TravelToRaw case, where the issued action is TravelToRaw but the event is TravelTo
+                    ($lastAction["action"] == "MoveTo" && $bgevent["name"]=="TravelTo") // Handle the MoveTo/TravelTo case, where the issued action is MoveTo but the event is TravelTo
                     )
                 ) {
                     // NPC finishes? last action issued
                     if ($bgevent["event"] == "end") {
                         error_log("[BGL] {$npcData["npc_name"]} has finished ISSUED action {$bgevent["name"]} <{$lastAction["action"]}>");
                         $extended["background_life_last_updated"] = 0; // Force trigger on next middleterm BgL check, NPC will request a new action.
+                        $bgevent["server_processed"] = true;
+
+                        if ($bgevent["name"] == "TravelTo" || $bgevent["name"] == "MoveTo") {
+                            $message="{$npcData["npc_name"]} reaches destination";
+                        } else {
+                            $message="{$npcData["npc_name"]} {$bgevent["event"]} {$bgevent["name"]}";
+                        }
+
+                        $GLOBALS["db"]->insert(
+                            'bgl_history',
+                            [
+                                'npc' => $npcData["npc_name"],
+                                'ts' => $gameRequest[1],
+                                'gamets' => $gameRequest[2],
+                                'localts' => time(),
+                                'data' => $message
+                            ]
+                        );
                     }
 
                 } else 
@@ -151,20 +170,21 @@ if (is_array($bgevent)) {
                 $extended["background_life_last"] = $bgevent;
                 $npcData = $npcManager->setExtendedData($npcData, $extended);
                 $npcManager->updateByArray($npcData);
-            }
-            // Also, lets track coords.
-            if ($npcData["refid"]) {
-                $GLOBALS["db"]->insert(
-                    'responselog',
-                    [
-                        'localts' => time(),
-                        'sent' => 0,
-                        'actor' => "rolemaster",
-                        'text' => "",
-                        'action' => "rolecommand|BackgroundCmd@0x{$npcData['refid']}@Track/",
-                        'tag' => '',
-                    ]
-                );
+
+                // Also, lets track coords.
+                if ($npcData["refid"]) {
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        [
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => "",
+                            'action' => "rolecommand|BackgroundCmd@0x{$npcData['refid']}@Track/",
+                            'tag' => "requested after background event {$bgevent["name"]}",
+                        ]
+                    );
+                }
             }
         }
     } else

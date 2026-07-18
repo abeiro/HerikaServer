@@ -150,6 +150,72 @@ if (!function_exists('herikaResolveNpcRolemasterState')) {
     }
 }
 
+if (!function_exists('chimRelationshipTimelineStamp')) {
+    // Timeline safety for relationship writes (re-applied 2026-07-06; this is the USEFUL half of the
+    // reverted 110e0b84 - the paradox-clear NULL bucket below stays exactly as designed). Relationship
+    // progress previously lived ONLY in the live row between infosave backups: rows were never
+    // gamets-stamped (so the restore paradox-clear treated them as unsaved data and a mere server
+    // reconnect wiped them) and never snapshotted (so a load restored pre-grind state).
+    // 1) stamp gamets_last_updated with the current game time so the row sits on the timeline;
+    // 2) drop a THROTTLED history snapshot (once per NPC per 30 real minutes, cross-process via
+    //    the history table itself) so the progress is restorable like any other profile state.
+    // A genuine Dragon Break (loading an older save) still clears these rows correctly: their stamp
+    // is provably in that save's future.
+    function chimRelationshipTimelineStamp($npcId)
+    {
+        try {
+            $npcId = (int) $npcId;
+            if ($npcId <= 0 || !isset($GLOBALS['db'])) {
+                return;
+            }
+            $g = 0;
+            if (isset($GLOBALS['gameRequest'][2]) && is_numeric($GLOBALS['gameRequest'][2])) {
+                $g = (float) $GLOBALS['gameRequest'][2];
+            } elseif (function_exists('DataLastKnownGameTS')) {
+                $g = (float) DataLastKnownGameTS();
+            }
+            if ($g > 0) {
+                $GLOBALS['db']->execQuery("UPDATE core_npc_master SET gamets_last_updated = {$g} WHERE id = {$npcId}");
+            }
+            static $lastSnap = [];
+            $now = time();
+            if (($lastSnap[$npcId] ?? 0) > $now - 1800) {
+                return;
+            }
+            $row = $GLOBALS['db']->fetchOne("SELECT extract(epoch from created) AS e FROM core_npc_master_history WHERE npc_id = {$npcId} ORDER BY created DESC LIMIT 1");
+            if ($row && (float) ($row['e'] ?? 0) > $now - 1800) {
+                $lastSnap[$npcId] = $now;
+                return;
+            }
+            $nm = new NpcMaster();
+            $nm->backupNpcById($npcId);
+            $lastSnap[$npcId] = $now;
+            error_log("[REL] Timeline snapshot for npc_id {$npcId} (relationship progress persisted to history)");
+        } catch (Exception $e) {
+            error_log("[REL] Timeline stamp failed for npc_id " . (int) $npcId . ": " . $e->getMessage());
+        }
+    }
+}
+
+if (!function_exists('chimRunWithRelationshipExtendedDataWrite')) {
+    function chimRunWithRelationshipExtendedDataWrite($callback)
+    {
+        $hadPrevious = array_key_exists('CHIM_ALLOW_RELATIONSHIP_EXTENDED_DATA_WRITE', $GLOBALS);
+        $previous = $hadPrevious ? $GLOBALS['CHIM_ALLOW_RELATIONSHIP_EXTENDED_DATA_WRITE'] : null;
+        $GLOBALS['CHIM_ALLOW_RELATIONSHIP_EXTENDED_DATA_WRITE'] = true;
+
+        try {
+            return $callback();
+        } finally {
+            if ($hadPrevious) {
+                $GLOBALS['CHIM_ALLOW_RELATIONSHIP_EXTENDED_DATA_WRITE'] = $previous;
+            } else {
+                unset($GLOBALS['CHIM_ALLOW_RELATIONSHIP_EXTENDED_DATA_WRITE']);
+            }
+        }
+    }
+}
+
 class NpcMaster
 {
     private $table = "core_npc_master";
@@ -323,6 +389,8 @@ class NpcMaster
             }
         }
 
+        $data = $this->preserveRelationshipExtendedDataOnGenericUpdate($data, $existing);
+
         foreach ($data as $k => $v) {
             // Preserve explicit 0/false values; only treat empty-string/null as unset.
             if ($v === '' || $v === null) {
@@ -348,6 +416,67 @@ class NpcMaster
         unset($data['id']); // Remove 'id' from the data array to avoid updating it
 
         return $this->update($id, $data);
+    }
+
+    private function preserveRelationshipExtendedDataOnGenericUpdate($data, $existing)
+    {
+        if (!is_array($data) || !array_key_exists('extended_data', $data)) {
+            return $data;
+        }
+
+        if (!empty($GLOBALS['CHIM_ALLOW_RELATIONSHIP_EXTENDED_DATA_WRITE'])) {
+            return $data;
+        }
+
+        if (!is_array($existing) || !array_key_exists('extended_data', $existing)) {
+            return $data;
+        }
+
+        $incoming = $this->decodeExtendedDataForRelationshipGuard($data['extended_data']);
+        $current = $this->decodeExtendedDataForRelationshipGuard($existing['extended_data'] ?? null);
+        if (!is_array($incoming) || !is_array($current)) {
+            return $data;
+        }
+
+        $relationshipKeys = [
+            'relationships',
+            'relationships_analyzed',
+            'relationships_inferred',
+            'relationships_last_eval',
+            'relationships_model',
+            'relationships_updated',
+        ];
+
+        $changed = false;
+        foreach ($relationshipKeys as $key) {
+            if (array_key_exists($key, $current)) {
+                $incoming[$key] = $current[$key];
+                $changed = true;
+            } elseif (array_key_exists($key, $incoming)) {
+                unset($incoming[$key]);
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
+            $data['extended_data'] = json_encode($incoming, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
+        return $data;
+    }
+
+    private function decodeExtendedDataForRelationshipGuard($value)
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        $decoded = json_decode($value, true);
+        return is_array($decoded) ? $decoded : null;
     }
 
     // Delete NPC by ID
@@ -708,7 +837,21 @@ class NpcMaster
                 $currentNpcData['core'] = $OLD_GLOBALS_ARRAY['HERIKA_NAME'];
             }
         }
-        $currentNpcData['profile_id'] = 1;                                // Default profile
+        $defaultProfileId = 1;
+        try {
+            if (!class_exists('CoreProfile')) {
+                require_once __DIR__ . DIRECTORY_SEPARATOR . 'core_profiles.class.php';
+            }
+            $coreProfile = new CoreProfile();
+            $defaultProfile = $coreProfile->getDefaultNpc();
+            if (is_array($defaultProfile) && !empty($defaultProfile['id'])) {
+                $defaultProfileId = (int)$defaultProfile['id'];
+            }
+        } catch (Throwable $e) {
+            error_log("[NPCMASTER] Could not resolve default NPC profile, falling back to profile #1: " . $e->getMessage());
+        }
+
+        $currentNpcData['profile_id'] = $defaultProfileId;
         $currentNpcData['md5']        = md5($currentNpcData["npc_name"]); // Default profile
 
         return $currentNpcData;
@@ -734,43 +877,27 @@ class NpcMaster
             $GLOBALS['PROMPT_HEAD'] = $currentNpcData['prompt_head'];
         }
 
-        if (isset($currentNpcData['npc_static_bio'])) {
-            $GLOBALS['HERIKA_BACKGROUND'] = $currentNpcData['npc_static_bio'];
-        }
-
-        if (isset($currentNpcData['oghma_knowledge_tags'])) {
-            $GLOBALS['OGHMA_KNOWLEDGE'] = $currentNpcData['oghma_knowledge_tags'];
-        }
-
-        if (isset($currentNpcData['personality'])) {
-            $GLOBALS['HERIKA_PERSONALITY'] = $currentNpcData['personality'];
-        }
+        // ALWAYS reset identity/bio globals from THIS NPC's own row (coalesce NULL -> ''), never leave the
+        // previous NPC's value in place. A generic/bio-less NPC (e.g. an unnamed "Breton") has NULL profile
+        // fields; the old `if (isset())` guards skipped the assignment on NULL, so the global retained the
+        // last-processed NPC's data and the bio-less NPC spoke as them (the cross-NPC identity bleed
+        // bleed). Mirrors the per-NPC reset already done for HERIKA_RELATIONSHIPS below.
+        $GLOBALS['HERIKA_BACKGROUND']  = $currentNpcData['npc_static_bio'] ?? '';
+        $GLOBALS['OGHMA_KNOWLEDGE']    = $currentNpcData['oghma_knowledge_tags'] ?? '';
+        $GLOBALS['HERIKA_PERSONALITY'] = $currentNpcData['personality'] ?? '';
 
         unset($GLOBALS['HERIKA_RELATIONSHIPS']);
 
-        if (isset($currentNpcData['occupation'])) {
-            $GLOBALS['HERIKA_OCCUPATION'] = $currentNpcData['occupation'];
-        }
-
-        if (isset($currentNpcData['appearance'])) {
-            $GLOBALS['HERIKA_APPEARANCE'] = $currentNpcData['appearance'];
-        }
-
-        if (isset($currentNpcData['skills'])) {
-            $GLOBALS['HERIKA_SKILLS'] = $currentNpcData['skills'];
-        }
-
-        if (isset($currentNpcData['speechstyle'])) {
-            $GLOBALS['HERIKA_SPEECHSTYLE'] = $currentNpcData['speechstyle'];
-        }
+        $GLOBALS['HERIKA_OCCUPATION']  = $currentNpcData['occupation'] ?? '';
+        $GLOBALS['HERIKA_APPEARANCE']  = $currentNpcData['appearance'] ?? '';
+        $GLOBALS['HERIKA_SKILLS']      = $currentNpcData['skills'] ?? '';
+        $GLOBALS['HERIKA_SPEECHSTYLE'] = $currentNpcData['speechstyle'] ?? '';
 
         if (isset($currentNpcData['emote_moods']) && ! empty(trim($currentNpcData['emote_moods']))) {
             $GLOBALS['EMOTEMOODS'] = $currentNpcData['emote_moods'];
         }
 
-        if (isset($currentNpcData['goals'])) {
-            $GLOBALS['HERIKA_GOALS'] = $currentNpcData['goals'];
-        }
+        $GLOBALS['HERIKA_GOALS']       = $currentNpcData['goals'] ?? '';
 
         if (isset($currentNpcData['core'])) {
             $GLOBALS['HERIKA_PERS'] = "Roleplay as {$GLOBALS['HERIKA_NAME']}.\n{$currentNpcData['core']}";
@@ -960,6 +1087,70 @@ class NpcMaster
         return $this->db->execQuery($query) !== false;
     }
 
+
+    public function updateExtendedKeysByName(string $npcName, array $setValues = [], array $unsetKeys = []): bool
+    {
+        $npcName = trim($npcName);
+        if ($npcName === '') {
+            return false;
+        }
+
+        $normalizedSetValues = [];
+        foreach ($setValues as $key => $value) {
+            $metadataKey = trim((string) $key);
+            if ($metadataKey === '') {
+                continue;
+            }
+
+            if ($value === null) {
+                $unsetKeys[] = $metadataKey;
+                continue;
+            }
+
+            $normalizedSetValues[$metadataKey] = $value;
+        }
+
+        $normalizedUnsetKeys = [];
+        foreach ($unsetKeys as $key) {
+            $metadataKey = trim((string) $key);
+            if ($metadataKey === '') {
+                continue;
+            }
+            $normalizedUnsetKeys[$metadataKey] = true;
+        }
+
+        if (count($normalizedSetValues) === 0 && count($normalizedUnsetKeys) === 0) {
+            return false;
+        }
+
+        $metadataExpr = "COALESCE(extended_data, '{}'::jsonb)";
+
+        foreach (array_keys($normalizedUnsetKeys) as $metadataKey) {
+            $escapedKey = $this->db->escape($metadataKey);
+            $metadataExpr = "({$metadataExpr} - '{$escapedKey}')";
+        }
+
+        foreach ($normalizedSetValues as $metadataKey => $value) {
+            $escapedKey = $this->db->escape($metadataKey);
+            $encodedValue = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($encodedValue === false) {
+                continue;
+            }
+
+            $escapedValue = $this->db->escape($encodedValue);
+            $metadataExpr = "jsonb_set({$metadataExpr}, '{\"{$escapedKey}\"}', '{$escapedValue}'::jsonb, true)";
+        }
+
+        $escapedNpcName = $this->db->escape($npcName);
+        $query = "
+            UPDATE {$this->table}
+            SET extended_data = {$metadataExpr}
+            WHERE npc_name = '{$escapedNpcName}'
+        ";
+
+        return $this->db->execQuery($query) !== false;
+    }
+
     public function backupNpcById($id)
     {
         $id = (int) $id;
@@ -978,6 +1169,11 @@ class NpcMaster
 
         // Add the current timestamp for tracking purposes (optional)
         $npc['created'] = date('Y-m-d H:i:s');
+
+        $npc['extended_data'] = $this->markHistoryExtendedData(
+            $npc['extended_data'] ?? null,
+            'manual'
+        );
 
         // Insert the data into the history table
         return $this->db->insert('core_npc_master_history', $npc);
@@ -1010,7 +1206,8 @@ class NpcMaster
                 id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
                 oghma_knowledge_tags, emote_moods, personality, relationships,
                 occupation, skills, speechstyle, goals, voiceid, metadata,
-                gender, race, refid, profile_id, dynamic_profile, extended_data,
+                gender, race, refid, profile_id, dynamic_profile,
+                COALESCE(extended_data, '{}'::jsonb) || jsonb_build_object('_chim_history_source', 'infosave'),
                 md5, $timestamp, core, base, tags, appearance, '{$createdTimestamp}'
             FROM core_npc_master
         ";
@@ -1056,7 +1253,10 @@ restore AS (
         h.refid,
         h.profile_id,
         h.dynamic_profile,
-        h.extended_data,
+        CASE
+            WHEN h.extended_data IS NULL THEN NULL
+            ELSE h.extended_data - '_chim_history_source'
+        END AS extended_data,
         h.md5,
         h.gamets_last_updated,
         h.core,
@@ -1066,7 +1266,11 @@ restore AS (
     FROM core_npc_master_history h
     JOIN deleted d ON h.npc_id = d.id
     WHERE h.gamets_last_updated <= $timestamp OR h.gamets_last_updated IS NULL
-    ORDER BY h.npc_id, h.gamets_last_updated DESC NULLS LAST,h.created DESC
+    ORDER BY
+        h.npc_id,
+        h.gamets_last_updated DESC NULLS LAST,
+        CASE WHEN h.extended_data ->> '_chim_history_source' = 'infosave' THEN 1 ELSE 0 END DESC,
+        h.created DESC
 )
 INSERT INTO core_npc_master (
     id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
@@ -1087,6 +1291,55 @@ FROM restore
         error_log("[NPC RESTORE] using gamets: $timestamp.. " . date('Y-m-d H:i:s'));
         $GLOBALS["db"]->query($query);
 
+        // Locked profiles keep their bio/profile fields, but relationship state is timeline data.
+        // Roll only relationship keys back to the loaded save snapshot so locked NPCs do not
+        // carry future affinity changes into the past.
+        $lockedRelRestoreQ = "WITH restore AS (
+            SELECT DISTINCT ON (h.npc_id)
+                h.npc_id,
+                h.extended_data
+            FROM core_npc_master_history h
+            JOIN core_npc_master c ON c.id = h.npc_id
+            WHERE c.npc_name <> 'The Narrator'
+              AND COALESCE(c.lock_profile, 0) = 1
+              AND (h.gamets_last_updated <= $timestamp OR h.gamets_last_updated IS NULL)
+            ORDER BY
+                h.npc_id,
+                h.gamets_last_updated DESC NULLS LAST,
+                CASE WHEN h.extended_data ->> '_chim_history_source' = 'infosave' THEN 1 ELSE 0 END DESC,
+                h.created DESC
+        )
+        UPDATE core_npc_master c
+        SET extended_data = (
+            (
+                COALESCE(c.extended_data, '{}'::jsonb)
+                - 'relationships'
+                - 'relationships_analyzed'
+                - 'relationships_inferred'
+                - 'relationships_last_eval'
+                - 'relationships_model'
+                - 'relationships_updated'
+                - '_chim_history_source'
+            )
+            || jsonb_strip_nulls(jsonb_build_object(
+                'relationships', restore.extended_data -> 'relationships',
+                'relationships_analyzed', restore.extended_data -> 'relationships_analyzed',
+                'relationships_inferred', restore.extended_data -> 'relationships_inferred',
+                'relationships_last_eval', restore.extended_data -> 'relationships_last_eval',
+                'relationships_model', restore.extended_data -> 'relationships_model',
+                'relationships_updated', restore.extended_data -> 'relationships_updated'
+            ))
+        )
+        FROM restore
+        WHERE c.id = restore.npc_id";
+
+        try {
+            $GLOBALS["db"]->execQuery($lockedRelRestoreQ);
+            error_log("[NPC RESTORE] Restored relationship timeline data for locked NPCs at gamets $timestamp");
+        } catch (Exception $e) {
+            error_log("[NPC RESTORE] Failed to restore locked NPC relationships: " . $e->getMessage());
+        }
+
         $bglife_q="UPDATE public.core_npc_master
         SET extended_data = jsonb_set(
             extended_data,
@@ -1102,7 +1355,14 @@ FROM restore
         // NPCs added AFTER the save timestamp don't have history entries, so they keep their
         // current (future) state. We need to clear their relationship data to prevent paradoxes.
         $rel_reset_q = "UPDATE public.core_npc_master
-            SET extended_data = extended_data - 'relationships' - 'relationships_updated' - 'relationships_model' - 'relationships_inferred'
+            SET extended_data = extended_data
+                - 'relationships'
+                - 'relationships_analyzed'
+                - 'relationships_inferred'
+                - 'relationships_last_eval'
+                - 'relationships_model'
+                - 'relationships_updated'
+                - '_chim_history_source'
             WHERE npc_name <> 'The Narrator'
               AND (gamets_last_updated > $timestamp OR gamets_last_updated IS NULL)
               AND extended_data IS NOT NULL
@@ -1117,6 +1377,24 @@ FROM restore
 
         error_log("[NPC RESTORE] " . date('Y-m-d H:i:s') . ", NPCs restore made in " . (time() - $startTime) . " secs ");
         return true;
+    }
+
+    private function markHistoryExtendedData($extendedData, $source)
+    {
+        $decoded = null;
+        if (is_array($extendedData)) {
+            $decoded = $extendedData;
+        } elseif (is_string($extendedData) && trim($extendedData) !== '') {
+            $decoded = json_decode($extendedData, true);
+        }
+
+        if (!is_array($decoded)) {
+            $decoded = [];
+        }
+
+        $decoded['_chim_history_source'] = $source;
+
+        return json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
     public function renameNPC($oldname, $newname)
@@ -1303,6 +1581,7 @@ FROM restore
         $GLOBALS['TTS']['XTTSFASTAPI']['voiceid'] = $voiceId;
         $GLOBALS['TTS']['CHATTERBOX']['voiceid'] = $voiceId;
         $GLOBALS['TTS']['POCKETTTS']['voiceid'] = $voiceId;
+        $GLOBALS['TTS']['OMNIVOICE']['voiceid'] = $voiceId;
         $GLOBALS['TTS']['MELOTTS']['voiceid'] = $voiceId;
         $GLOBALS['TTS']['MIMIC3']['voice'] = $voiceId;
         $GLOBALS['TTS']['XVASYNTH']['model'] = $voiceId;

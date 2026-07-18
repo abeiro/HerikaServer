@@ -539,7 +539,7 @@ foreach ($currentConf as $pname=>$parms) {
         </p>".PHP_EOL;
 
     } 
-    if (!in_array($fieldName,["HERIKA_NAME","LOCK_PROFILE","HERIKA_PERS","HERIKA_DYNAMIC","DBDRIVER","TTS@AZURE@voice","TTS@MIMIC3@voice",'TTS@ELEVEN_LABS@voice_id',"TTS@openai@voice","TTS@CONVAI@voiceid","TTS@XTTSFASTAPI@voiceid","TTS@MELOTTS@voiceid", "OGHMA_KNOWLEDGE"]))
+    if (!in_array($fieldName,["HERIKA_NAME","LOCK_PROFILE","HERIKA_PERS","HERIKA_DYNAMIC","DBDRIVER","TTS@AZURE@voice","TTS@MIMIC3@voice",'TTS@ELEVEN_LABS@voice_id',"TTS@openai@voice","TTS@CONVAI@voiceid","TTS@XTTSFASTAPI@voiceid","TTS@OMNIVOICE@voiceid","TTS@MELOTTS@voiceid", "OGHMA_KNOWLEDGE"]))
         if (!in_array($parms["type"],["util"]))
             if (!in_array($parms["scope"],["global","constant"]))
                 echo "<button class='copy-to-all-btn' title='Copy $fieldName to all profiles' onclick=\"copyToAllprofiles(event,'$fieldName','$jsid')\">Copy to All Profiles</button>";
