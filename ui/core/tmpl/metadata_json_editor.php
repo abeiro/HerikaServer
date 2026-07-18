@@ -108,6 +108,14 @@ $visualGroups = [
   'Quest' => ["QUEST_COMMENT","QUEST_COMMENT_CHANCE"],
 ];
 
+// Pair sections into aligned rows so the editor stays easy to scan.
+$visualRows = [
+  ['Language', 'Rechat'],
+  ['Bored Event', 'Context'],
+  ['Diary', 'Combat'],
+  ['Oghma', 'Quest'],
+];
+
 // Pretty label similar to global_settings General tab
 function meta_pretty_label(string $name): string {
     // Custom label overrides
@@ -260,25 +268,24 @@ function renderMetaSettingRow(string $key, array $schemaEntry, $value): string {
     <div class="content-section" style="margin-bottom:10px;">
         <?php
         $rendered = [];
-        foreach ($visualGroups as $title => $keys) {
+
+        $renderVisualGroup = function(string $title, array $keys) use (&$rendered, $visualKeys, $metadataCurrent, $localSchemaOverrides, $confSchema): void {
             $keysInVisual = array_values(array_intersect($keys, $visualKeys));
-            if (count($keysInVisual) === 0) continue;
-            echo '<h2 style="font-family: \''."MagicCards".'\', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin: 10px 0 12px; font-size: 1.2em; padding-top: 20px;">'.htmlspecialchars($title).'</h2>';
+            if (count($keysInVisual) === 0) return;
+
+            echo '<section class="profile-settings-group">';
+            echo '<h2 class="profile-settings-heading">'.htmlspecialchars($title).'</h2>';
             
             // Add Rechat Calculator before Rechat section
             if ($title === 'Rechat') {
                 $rechatH = $metadataCurrent['RECHAT_H'] ?? 2;
                 $rechatP = $metadataCurrent['RECHAT_P'] ?? 50;
-                echo '<div class="provider-card" style="margin-bottom: 12px; background: #1a1a1a; padding: 10px 12px;">';
-                echo   '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">';
-                echo     '<div style="font-size: 18px;">&#x1F501;</div>';
-                echo     '<div style="font-weight: 700; color: rgb(242, 124, 17); font-size: 13px;">Rechat Response Calculator</div>';
-                echo   '</div>';
+                echo '<div class="rechat-calculator">';
+                echo   '<div class="rechat-calculator-title"><span>&#x1F501;</span><span>Rechat Response Calculator</span></div>';
                 echo   '<div id="rechat-calc-output" style="font-size: 13px; line-height: 1.6;"></div>';
                 echo '</div>';
             }
             
-            echo '<div class="provider-grid">';
             echo '<div class="provider-card profile-settings-group-card">';
             foreach ($keysInVisual as $k) {
                 $schemaEntry = $localSchemaOverrides[$k] ?? ($confSchema[$k] ?? []);
@@ -287,12 +294,31 @@ function renderMetaSettingRow(string $key, array $schemaEntry, $value): string {
                 $rendered[$k] = true;
             }
             echo '</div>';
-            echo '</div>';
+            echo '</section>';
+        };
+
+        echo '<div class="profile-settings-columns">';
+        foreach ($visualRows as $rowTitles) {
+            foreach ($rowTitles as $title) {
+                if (!isset($visualGroups[$title])) continue;
+                $renderVisualGroup($title, $visualGroups[$title]);
+            }
         }
+        echo '</div>';
+
+        // Future groups not explicitly placed above remain visible.
+        $placedGroups = [];
+        foreach ($visualRows as $rowTitles) {
+            foreach ($rowTitles as $title) $placedGroups[$title] = true;
+        }
+        foreach ($visualGroups as $title => $keys) {
+            if (!isset($placedGroups[$title])) $renderVisualGroup($title, $keys);
+        }
+
         $remaining = array_values(array_diff($visualKeys, array_keys($rendered)));
         if (count($remaining) > 0) {
-            echo '<h2 style="font-family: \''."MagicCards".'\', serif; color: rgb(242,124,17); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); word-spacing: 6px; margin: 10px 0 12px; font-size: 1.2em; padding-top: 20px;">Other</h2>';
-            echo '<div class="provider-grid">';
+            echo '<section class="profile-settings-other">';
+            echo '<h2 class="profile-settings-heading">Other</h2>';
             echo '<div class="provider-card profile-settings-group-card">';
             foreach ($remaining as $k) {
                 $schemaEntry = $localSchemaOverrides[$k] ?? ($confSchema[$k] ?? []);
@@ -300,7 +326,7 @@ function renderMetaSettingRow(string $key, array $schemaEntry, $value): string {
                 echo renderMetaSettingRow($k, $schemaEntry, $val);
             }
             echo '</div>';
-            echo '</div>';
+            echo '</section>';
         }
         ?>
     </div>
@@ -548,6 +574,7 @@ function consolidation() {
 
     document.addEventListener("DOMContentLoaded", function() {
         const miniUpdateAppearance = document.getElementById('small_update_appearance');
+        if (!miniUpdateAppearance) return;
         miniUpdateAppearance.addEventListener('click', async function(e){
             
             e.preventDefault();
