@@ -23,4 +23,3 @@ final class VisualContextTest extends TestCase
         $this->assertSame('{"model":"vision"}', chimVisualContextText(['model' => 'vision'], 100));
     }
 }
-
