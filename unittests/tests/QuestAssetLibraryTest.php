@@ -118,6 +118,27 @@ final class QuestAssetLibraryTest extends TestCase
         $this->assertNotContains('npc_own_templates', $datasets);
     }
 
+    public function testOfficialPackContainsOnlyApprovedOfficialRecords(): void
+    {
+        $manifest = quest_asset_manifest_validate($this->manifest('skyrim_official.json'))['manifest'];
+        $this->assertTrue($manifest['pack']['active']);
+        $this->assertSame(['Skyrim.esm'], $manifest['pack']['required_plugins']);
+        $officialPlugins = [
+            'Skyrim.esm',
+            'Update.esm',
+            'Dawnguard.esm',
+            'HearthFires.esm',
+            'Dragonborn.esm',
+        ];
+
+        foreach ($manifest['assets'] as $asset) {
+            $this->assertContains($asset['source_plugin'], $officialPlugins);
+            $this->assertContains($asset['winning_plugin'], $officialPlugins);
+            $this->assertStringStartsWith($asset['source_plugin'] . '|', $asset['stable_ref']);
+            $this->assertSame('approved', $asset['safety_status']);
+        }
+    }
+
     public function testManifestNormalizesPluginStableReferences(): void
     {
         $validation = quest_asset_manifest_validate($this->minimalManifest());

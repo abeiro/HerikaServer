@@ -28,44 +28,13 @@ function quest_asset_ui_redirect_url($message, $error = false)
     return ($_SERVER['PHP_SELF'] ?? 'quest_asset_library.php') . '?' . http_build_query($params);
 }
 
-if (isset($_GET['download_pack'])) {
-    $manifest = quest_asset_export_manifest($_GET['download_pack']);
-    if ($manifest === null) {
-        http_response_code(404);
-        echo 'Asset pack not found.';
-        exit;
-    }
-    $filename = preg_replace('/[^a-z0-9_.-]+/i', '_', $manifest['pack']['key']) . '.json';
-    header('Content-Type: application/json; charset=utf-8');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    echo json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
-    exit;
-}
-
 $message = trim((string) ($_GET['message'] ?? ''));
 $error = trim((string) ($_GET['error'] ?? ''));
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
     try {
-        if ($action === 'import_manifest') {
-            $upload = $_FILES['manifest'] ?? null;
-            if (!is_array($upload) || ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-                throw new RuntimeException('Choose a readable JSON manifest to import.');
-            }
-            if (($upload['size'] ?? 0) > 25 * 1024 * 1024) {
-                throw new RuntimeException('Manifest exceeds the 25 MB import limit.');
-            }
-            $decoded = json_decode(file_get_contents($upload['tmp_name']), true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new RuntimeException('Invalid JSON: ' . json_last_error_msg());
-            }
-            $result = quest_asset_import_manifest($decoded, basename((string) ($upload['name'] ?? 'upload.json')));
-            if (empty($result['success'])) {
-                throw new RuntimeException(implode('; ', $result['errors'] ?? ['Manifest import failed.']));
-            }
-            $message = "Imported {$result['assets']} assets and {$result['groups']} groups into {$result['pack_key']}.";
-        } elseif ($action === 'toggle_pack') {
+        if ($action === 'toggle_pack') {
             $packKey = quest_asset_normalize_key($_POST['pack_key'] ?? '');
             if ($packKey === null) {
                 throw new RuntimeException('Invalid pack key.');
@@ -229,7 +198,7 @@ code { color: #d6e5f5; font-size: .79rem; }
 <main class="asset-shell">
     <section class="asset-header">
         <h1>Quest Asset Library</h1>
-        <p>Plugin-aware records used by AI Quest Manager. Imported candidates stay inactive or under review until you approve them.</p>
+        <p>Curated vanilla and CHIM records used safely by AI Quest Manager.</p>
     </section>
 
     <?php if ($message !== ''): ?><div class="notice ok"><?php echo quest_asset_ui_h($message); ?></div><?php endif; ?>
@@ -237,16 +206,6 @@ code { color: #d6e5f5; font-size: .79rem; }
     <?php if (!$tablesReady): ?>
         <div class="notice error">Quest asset tables are not installed yet. Run database updates, then reload this page.</div>
     <?php else: ?>
-        <section class="asset-panel">
-            <h2>Import Pack</h2>
-            <form method="post" enctype="multipart/form-data" class="compact-form">
-                <input type="hidden" name="action" value="import_manifest">
-                <input type="file" name="manifest" accept="application/json,.json" required>
-                <button class="btn btn-primary" type="submit">Import JSON</button>
-                <span class="muted">Format: <code>chim.quest-assets.v1</code>. Use the extractor for your current load order.</span>
-            </form>
-        </section>
-
         <section class="asset-grid">
             <?php foreach ($packs as $pack): ?>
                 <?php $packActive = quest_asset_db_bool($pack['active'] ?? false); ?>
@@ -266,7 +225,6 @@ code { color: #d6e5f5; font-size: .79rem; }
                         <input type="hidden" name="pack_key" value="<?php echo quest_asset_ui_h($pack['pack_key']); ?>">
                         <label><input type="checkbox" name="active" value="1" <?php echo $packActive ? 'checked' : ''; ?>> Enabled</label>
                         <button class="btn" type="submit">Save</button>
-                        <a class="btn" href="?embed=1&amp;download_pack=<?php echo rawurlencode($pack['pack_key']); ?>">Export</a>
                     </form>
                 </article>
             <?php endforeach; ?>
