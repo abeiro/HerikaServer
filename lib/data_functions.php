@@ -4290,17 +4290,28 @@ function extractDialogueTarget($string) {
     return ['target' => null, 'cleanedString' => $string];
 }
 
-function DataGetLastReadedBook(?int $requestGamets = null) {
+function DataGetLastReadedBook() {
     global $db;
-
-    require_once(__DIR__ . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'book_context.php');
-
-    $book = $GLOBALS['CHIM_ACTIVE_BOOK_CONTEXT'] ?? null;
-    if (!is_array($book)) {
-        $book = chimResolveGroundedBook($db, (int)($requestGamets ?? 0));
+    
+    
+    // To push where the book was taken from.
+    $results = $db->fetchAll("select data from eventlog where data is not null and type='itemfound' and data like '%book%' 
+    order by gamets desc,ts desc,localts desc,rowid desc LIMIT 1 OFFSET 0");
+    
+    if ($results) {
+        $bookOnlyContext[] = array('role' => "user", 'content' => $results[0]["data"]);
     }
+    
+    
+    $lastData = "";
+    $results = $db->fetchAll("select content from books where content is not null
+    order by gamets desc,ts desc,localts desc,rowid desc LIMIT 1 OFFSET 0");
+    $lastData = "";
+    
+    $bookOnlyContext[] = array('role' => "user", 'content' => $results[0]["content"]);
 
-    return chimBuildGroundedBookContext($book);
+    return $bookOnlyContext;
+    
 }
 
 function DataGetTrackedStat($stat) {
