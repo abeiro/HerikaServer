@@ -187,6 +187,9 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'AUTOFILL_CUSTOM_PROFILES',
             'AUTOFILL_CUSTOM_PROFILES_TRIGGER',
             'BGL_TRIGGER_HOURS',
+            'VISUAL_CONTEXT_ENABLED',
+            'VISUAL_CONTEXT_SCENE_TTL_MINUTES',
+            'VISUAL_CONTEXT_PROMPT_MAX_CHARS',
             'END_CONVERSATION_COOLDOWN',
             'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY',
             'FEATURES@MEMORY_EMBEDDING@ENABLED',
@@ -312,6 +315,9 @@ if (!function_exists('chimPrettySettingLabel')) {
             'CHIM_AI_QUEST_PROGRESSION' => 'AI Quest Progression (Beta)',
             'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
             'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 'Item Pickup Detection Value',
+            'VISUAL_CONTEXT_ENABLED' => 'Use Visual Context',
+            'VISUAL_CONTEXT_SCENE_TTL_MINUTES' => 'Visual Scene Lifetime',
+            'VISUAL_CONTEXT_PROMPT_MAX_CHARS' => 'Visual Prompt Limit',
         ];
         if (isset($customLabels[$flatName])) {
             return $customLabels[$flatName];
@@ -338,6 +344,10 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
 
         if (strpos($flatId, 'RECHAT') === 0) {
             return 'Rechat';
+        }
+
+        if (strpos($flatId, 'VISUAL_CONTEXT_') === 0) {
+            return 'Visual Context';
         }
 
         if (in_array($flatId, ['CHIM_AI_QUEST_PROGRESSION', 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT'], true)) {
