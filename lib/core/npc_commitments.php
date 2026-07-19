@@ -7,7 +7,6 @@ if (!function_exists('chimCommitmentNormalizeHours')) {
         return max(0.25, min(8760.0, $hours));
     }
 }
-
 if (!function_exists('chimCommitmentHoursToGamets')) {
     function chimCommitmentHoursToGamets($hours): int
     {
@@ -196,4 +195,3 @@ if (!function_exists('chimCommitmentFormatContext')) {
             . "\n</commitments>";
     }
 }
-

@@ -42,7 +42,6 @@ final class CommitmentFakeDb
         return $this->rows;
     }
 }
-
 #[RunTestsInSeparateProcesses]
 final class NpcCommitmentsTest extends TestCase
 {
@@ -108,4 +107,3 @@ final class NpcCommitmentsTest extends TestCase
         $this->assertStringContainsString("status IN ('scheduled', 'due')", $query);
     }
 }
-
