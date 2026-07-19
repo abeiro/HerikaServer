@@ -53,6 +53,7 @@ require_once $enginePath . 'lib/core/api_badge.class.php';
 require_once $enginePath . 'lib/core/core_profiles.class.php';
 require_once $enginePath . 'lib/core/llm_connector.class.php';
 require_once $enginePath . 'lib/core/tts_connector.class.php';
+require_once $enginePath . 'lib/core/bgl_narrative_pacing.php';
 require_once $enginePath . 'lib/lazy_xml.php';
 require_once $enginePath . 'debug/background_action_handler.php';
 
@@ -1000,6 +1001,10 @@ if ($isFullMode) {
 
 $step2Content .= "<text>\n$innerThoughtBuffer\n</text>\n\n";
 $step2Content .= $innerThoughtStyle . "\n\n";
+$pacingState = is_array($extdata['background_life_pacing'] ?? null)
+    ? $extdata['background_life_pacing']
+    : [];
+$step2Content .= chimBglPacingPromptBlock($pacingState) . "\n\n";
 
 
 $step2Content .= <<<PROMPT
@@ -1166,7 +1171,9 @@ $metadata = $npcMaster->getMetadata($currentNpcData);
 // ─── Update Background-Life Timestamp ────────────────────────────────────────
 
 $extdata['background_life_last_updated'] = $last_gamets;
-$npcMaster->updateExtendedKeysByName($npcName, $extdata);
+$npcMaster->updateExtendedKeysByName($npcName, [
+    'background_life_last_updated' => $last_gamets,
+]);
 
 
 // ─── Parse LLM Decision Response ─────────────────────────────────────────────
@@ -1188,37 +1195,49 @@ if ($isDryRun && $forceAction) {   // In dry-run mode (forceAction was enabled),
     die();
 }
 
+$pacingReview = chimBglPacingReviewAction(
+    (string) $parsed['action'],
+    $pacingState,
+    $LAST_REPORTED_LOCATION ?: (string) ($lastLocRow['location'] ?? ''),
+    $npcIsTravelling
+);
+if ($pacingReview['adjusted']) {
+    error_log("[BGL PACING] Replaced '{$parsed['action']}' with '{$pacingReview['action']}': {$pacingReview['reason']}");
+    $parsed['action'] = $pacingReview['action'];
+}
+
 $refHexString = convertSignedToUnsignedHex(hexdec($currentNpcData['refid']));
 
 // ─── Dispatch: Movement / Stay Action ────────────────────────────────────────
 $recordDiaryEntry = true;
+$actionHandled = false;
 if (!empty($parsed['action'])) {
     [$actionCmd, $actionArg] = array_pad(explode(':', $parsed['action'], 2), 2, null);
     error_log("[BGL RUN] Chosen action: $actionCmd, argument: $actionArg, reason: {$parsed['reason']}");
     $GLOBALS["LAST_REASON"] = $parsed['reason'];
     switch ($actionCmd) {
         case 'TravelTo':
-            handleTravelToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $lastEventParsed, $db);
+            $actionHandled = handleTravelToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $lastEventParsed, $db);
             unset($parsed['rumor']);   // Prevent rumor dispatch if MoveTo action is chosen
             break;
         case 'StayAtPlace':
             [$stayLocation, $stayIntent] = array_pad(explode(':', (string) $actionArg, 2), 2, '');
             $stayLocation = trim($stayLocation);
             $stayIntent = trim($stayIntent);
-            handleStayAtPlaceAction($stayLocation, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db, $stayIntent);
+            $actionHandled = handleStayAtPlaceAction($stayLocation, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db, $stayIntent);
             break;
         case 'ReturnHome':
-            handleReturnHome($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db);
+            $actionHandled = handleReturnHome($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db);
             unset($parsed['notification']);   // Prevent letter dispatch if ReturnHome action is chosen
             break;
         case 'FindNPC':
-            handleFindNPCAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db, $LAST_REPORTED_LOCATION);
+            $actionHandled = handleFindNPCAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db, $LAST_REPORTED_LOCATION);
             unset($parsed['notification']);   // Prevent letter dispatch if FindNPC action is chosen
             unset($parsed['rumor']);   // Prevent rumor dispatch if FindNPC action is chosen
             $recordDiaryEntry = false;
             break;
         case 'MoveTo':
-            handleMoveToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db);
+            $actionHandled = handleMoveToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db);
             unset($parsed['notification']);   // Prevent letter dispatch if MoveTo action is chosen
             unset($parsed['rumor']);   // Prevent rumor dispatch if MoveTo action is chosen
             $recordDiaryEntry = false;
@@ -1226,7 +1245,7 @@ if (!empty($parsed['action'])) {
         case 'SpeakTo':
             $historyWithInnerThought = $history
                 . "\n\n<inner_thought>\n{$innerThoughtBuffer}\n</inner_thought>\n";
-            handleSpeakToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db, $connectionHandler, $dynamicBiography, $historyWithInnerThought, $lastEventParsed['location']);
+            $actionHandled = handleSpeakToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db, $connectionHandler, $dynamicBiography, $historyWithInnerThought, $lastEventParsed['location'] ?? null);
             unset($parsed['notification']);   // Prevent letter dispatch if SpeakTo action is chosen
             //unset($parsed['rumor']);   // Prevent rumor dispatch if SpeakTo action is chosen
             $recordDiaryEntry = false;
@@ -1244,7 +1263,9 @@ if (!empty($parsed['action'])) {
                 $tradeCmd = trim($tradeCmd);
                 if ($tradeCmd !== 'BuyItem' && $tradeCmd !== 'SellItem')
                     continue;
-                handleTradeItemsAction($tradeCmd, $tradeArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db);
+                if (handleTradeItemsAction($tradeCmd, $tradeArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db)) {
+                    $actionHandled = true;
+                }
             }
             unset($parsed['notification']);
             unset($parsed['rumor']);
@@ -1252,6 +1273,7 @@ if (!empty($parsed['action'])) {
             break;
         case 'Continue':
             error_log("[BGL RUN] Chosen action: Continue. No new action will be issued. Reason: {$parsed['reason']}");
+            $actionHandled = true;
             unset($parsed['notification']);
             unset($parsed['rumor']);
             $recordDiaryEntry = false;
@@ -1264,6 +1286,23 @@ if (!empty($parsed['action'])) {
             triggerNpcUpdate($GLOBALS['HERIKA_NAME'], ($extdata['background_life_last_updated_ec'] ?? 0) + 1);
             break;
     }
+}
+
+if ($actionHandled) {
+    $pacingState = chimBglPacingRecordAction(
+        $pacingState,
+        (string) $parsed['action'],
+        $last_gamets,
+        $bglTriggerHours,
+        (bool) $pacingReview['adjusted'],
+        (string) $pacingReview['reason']
+    );
+    $npcMaster->updateExtendedKeysByName($npcName, [
+        'background_life_last_updated' => $last_gamets,
+        'background_life_last_updated_ec' => 0,
+        'background_life_pacing' => $pacingState,
+    ]);
+    error_log("[BGL PACING] {$GLOBALS['HERIKA_NAME']} entered phase {$pacingState['phase']}; next cycle in {$pacingState['cadence_hours']} in-game hours.");
 }
 
 // ─── Dispatch: Letter / Notification (disabled) ─────────────────────────────

@@ -21,6 +21,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     require_once $enginePath . "lib/core/api_badge.class.php";
     require_once $enginePath . "lib/core/core_profiles.class.php";
     require_once $enginePath . "lib/core/llm_connector.class.php";
+    require_once $enginePath . "lib/core/bgl_narrative_pacing.php";
 
     /**
      * Process delayed events waiting for TTS to finish
@@ -111,10 +112,6 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
     $bglTriggerHoursAgoGamets = $maxRow - ($bglTriggerHours / 0.0000024);
 
-    $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
-    $bglTriggerDays = $bglTriggerHours/24;
-    $bglTriggerDaysAgoGamets=$maxRow - ( (24 * $bglTriggerDays) / 0.0000024);
-
 
     // BgL tracking coords, in-game daily
 
@@ -180,7 +177,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         $mwdata = json_decode($npc["extended_data"], true);
         // Trigger if never updated, or if last update is older than configured threshold
         $mustInstructBypassBgl=false;
-        if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < ($bglTriggerDaysAgoGamets)) {
+        if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < $bglTriggerHoursAgoGamets) {
             logger::info("[BGL] Passive event for {$npc["npc_name"]}");
 
 
@@ -210,6 +207,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     
     // BgL commands
     $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' ");
+    $allEnabledBgLNpc = chimBglPacingSortCandidates($allEnabledBgLNpc, $bglTriggerHours);
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata = json_decode($npc["extended_data"], true);
         $mustInstructBypassBgl=false;
@@ -247,9 +245,12 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         }
 
         // Trigger if never updated, or if last update is older than configured threshold
-        if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < ($bglTriggerDaysAgoGamets)) {
-            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerDaysAgoGamets) * 0.0000024;
-            error_log("[BGL] Event for {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}, presence delta: {$mwdata["background_life_last_updated_presence_delta"]}");
+        if (chimBglPacingIsDue($mwdata, $maxRow, $bglTriggerHours)) {
+            $lastUpdated = (int) ($mwdata["background_life_last_updated"] ?? 0);
+            $presenceDelta = (int) ($mwdata["background_life_last_updated_presence_delta"] ?? 0);
+            $nextDue = chimBglPacingNextDueGamets($npc, $bglTriggerHours);
+            $delta = ($maxRow - $nextDue) * 0.0000024;
+            error_log("[BGL] Event for {$npc["npc_name"]}, last updated: {$lastUpdated}, next due: {$nextDue}, BGL_TRIGGER_HOURS: {$bglTriggerHours}, overdue hours: {$delta}, presence delta: {$presenceDelta}");
 
             if ($mustInstructBypassBgl){
                 error_log("[BGL] {$npc["npc_name"]} has been near a player for more than 10 checks. Issuing INSTRUCTION");
@@ -271,6 +272,10 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
                 $extended = json_decode($npcData["extended_data"], true);
                 $extended["background_life_last_updated"] = $maxRow;
                 $extended["background_life_last_updated_presence_delta"] = 0;
+                $pacingState = is_array($extended['background_life_pacing'] ?? null)
+                    ? $extended['background_life_pacing']
+                    : [];
+                $extended['background_life_pacing'] = chimBglPacingDefer($pacingState, $maxRow, $bglTriggerHours);
                 $npcData = $npcManager->setExtendedData($npcData, $extended);
                 $npcManager->updateByArray($npcData);
                 
@@ -283,8 +288,10 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
             }
             break;  // One per iteration - break after processing
         } else {
-            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerHoursAgoGamets) * 0.0000024;
-            error_log("[BGL] Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours}, delta: {$delta}");
+            $lastUpdated = (int) ($mwdata["background_life_last_updated"] ?? 0);
+            $nextDue = chimBglPacingNextDueGamets($npc, $bglTriggerHours);
+            $hoursRemaining = max(0, ($nextDue - $maxRow) * 0.0000024);
+            error_log("[BGL] Skipping {$npc["npc_name"]}, last updated: {$lastUpdated}, next due: {$nextDue}, BGL_TRIGGER_HOURS: {$bglTriggerHours}, hours remaining: {$hoursRemaining}");
         }
     }
 
