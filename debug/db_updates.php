@@ -7213,8 +7213,8 @@ if ($checkVersion("general_settings") < 20260711001) {
     }
 }
 
-if ($checkVersion("quest_asset_library") < 20260718001) {
-    Logger::debug("Applying quest_asset_library 20260718001 - add plugin-aware AI Quest Manager assets");
+if ($checkVersion("quest_asset_library") < 20260718003) {
+    Logger::debug("Applying quest_asset_library 20260718003 - add full playable race support");
 
     $schemaFile = __DIR__ . "/../data/quest_asset_library.sql";
     $manifestDirectory = __DIR__ . "/../data/quest_assets";
@@ -7238,10 +7238,43 @@ if ($checkVersion("quest_asset_library") < 20260718001) {
     }
 
     if ($migrationOk) {
-        $updateVersion("quest_asset_library", 20260718001);
-        Logger::info("Applied patch quest_asset_library 20260718001");
+        require_once __DIR__ . "/../lib/quest_reference_data.php";
+        $canonicalDefaults = [
+            "npc_templates" => [],
+            "npc_own_templates" => [],
+        ];
+        foreach (["skyrim_official.json", "chim_spawn_templates.json"] as $manifestName) {
+            $manifestPath = $manifestDirectory . "/" . $manifestName;
+            $manifest = json_decode((string) file_get_contents($manifestPath), true);
+            foreach (($manifest["groups"] ?? []) as $group) {
+                $datasetName = strtolower(trim((string) ($group["dataset"] ?? "")));
+                $groupKey = strtolower(trim((string) ($group["key"] ?? "")));
+                if (!isset($canonicalDefaults[$datasetName]) || $groupKey === "") {
+                    continue;
+                }
+                foreach (($group["members"] ?? []) as $member) {
+                    $stableRef = trim((string) ($member["stable_ref"] ?? ""));
+                    if ($stableRef !== "") {
+                        $canonicalDefaults[$datasetName][$groupKey][] = $stableRef;
+                    }
+                }
+            }
+        }
+
+        foreach ($canonicalDefaults as $datasetName => $valueMap) {
+            if (quest_reference_add_missing_dataset_entries($datasetName, $valueMap) === false) {
+                $migrationOk = false;
+                Logger::error("Failed synchronizing bundled {$datasetName} groups into the canonical quest table");
+                break;
+            }
+        }
+    }
+
+    if ($migrationOk) {
+        $updateVersion("quest_asset_library", 20260718003);
+        Logger::info("Applied patch quest_asset_library 20260718003");
     } else {
-        Logger::error("Failed to apply quest_asset_library 20260718001");
+        Logger::error("Failed to apply quest_asset_library 20260718003");
     }
 }
 

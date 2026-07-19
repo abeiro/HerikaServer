@@ -57,8 +57,8 @@ final class QuestAssetLibraryTest extends TestCase
     public function testBundledCuratedManifestsValidate(): void
     {
         $expected = [
-            'skyrim_official.json' => [162, 85],
-            'chim_spawn_templates.json' => [71, 266],
+            'skyrim_official.json' => [178, 93],
+            'chim_spawn_templates.json' => [79, 442],
         ];
 
         foreach ($expected as $filename => [$assetCount, $groupCount]) {
@@ -102,7 +102,7 @@ final class QuestAssetLibraryTest extends TestCase
         }
 
         foreach (['male', 'female'] as $gender) {
-            foreach (['nord', 'imperial', 'redguard', 'breton', 'argonian', 'orc'] as $race) {
+            foreach (quest_reference_playable_races() as $race) {
                 foreach ($classes as $class) {
                     $this->assertArrayHasKey("{$gender}_{$race}_{$class}", $ownGroups);
                 }
@@ -266,6 +266,60 @@ final class QuestAssetLibraryTest extends TestCase
         $this->assertSame(101, quest_reference_pick_safe_spawn_base($dataset, 'male', 'nord', 'guard'));
         $this->assertSame(202, quest_reference_pick_safe_spawn_base($dataset, 'female', 'nord', 'guard'));
         $this->assertSame(0, quest_reference_pick_safe_spawn_base($dataset, 'female', 'orc', 'guard'));
+    }
+
+    public function testEveryPlayableRaceHasDonorsAndSafeSpawnBases(): void
+    {
+        $official = quest_asset_manifest_validate($this->manifest('skyrim_official.json'))['manifest'];
+        $spawnTemplates = quest_asset_manifest_validate($this->manifest('chim_spawn_templates.json'))['manifest'];
+        $donorKeys = [];
+        $spawnKeys = [];
+        $classes = [];
+
+        foreach ($official['groups'] as $group) {
+            if ($group['dataset'] === 'npc_templates') {
+                $donorKeys[] = $group['key'];
+            } elseif ($group['dataset'] === 'outfit') {
+                $classes[] = $group['key'];
+            }
+        }
+        foreach ($spawnTemplates['groups'] as $group) {
+            if ($group['dataset'] === 'npc_own_templates') {
+                $spawnKeys[] = $group['key'];
+            }
+        }
+
+        $this->assertSame(
+            quest_reference_playable_races(),
+            quest_reference_spawnable_playable_races($donorKeys, $spawnKeys, $classes)
+        );
+    }
+
+    public function testIncompletePlayableRaceIsNotAdvertisedAsSpawnable(): void
+    {
+        $this->assertSame(['nord'], quest_reference_spawnable_playable_races(
+            ['male_nord', 'female_nord', 'male_altmer'],
+            ['male_nord_warrior', 'female_nord_warrior', 'male_altmer_warrior'],
+            ['warrior']
+        ));
+    }
+
+    public function testMissingDatasetDefaultsPreserveExistingKeys(): void
+    {
+        $this->assertSame(
+            [
+                'female_altmer' => ['Skyrim.esm|00013269'],
+                'male_altmer' => ['Skyrim.esm|000233D2'],
+            ],
+            quest_reference_missing_dataset_values(
+                [
+                    'female_nord' => ['Skyrim.esm|000955B6'],
+                    'female_altmer' => ['Skyrim.esm|00013269'],
+                    'male_altmer' => ['Skyrim.esm|000233D2'],
+                ],
+                ['female_nord']
+            )
+        );
     }
 
     public function testPromptConstraintsReplaceEveryAssetPlaceholder(): void

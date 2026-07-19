@@ -49,7 +49,7 @@ if (strpos($userPrompt, "Quest Title") !== false) {
 }
 
 // Validation Rules (fallback values)
-$allowedRaces = ['nord', 'imperial', 'redguard', 'breton', 'argonian', 'orc', 'draugr', 'elk', 'frost_troll', 'frostbite_spider', 'dwarven_sphere_guardian', 'falmer', 'giant'];
+$allowedRaces = array_merge(quest_reference_playable_races(), ['draugr', 'elk', 'frost_troll', 'frostbite_spider', 'dwarven_sphere_guardian', 'falmer', 'giant']);
 $allowedClasses = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'creature', 'forsworn'];
 $allowedItemTypes = ['potion', 'necklace', 'amulet', 'ring', 'book', 'axe', 'note', 'dagger'];
 $allowedItemLocations = ['nearby', 'pocket'];

@@ -4,7 +4,7 @@
         "key": "skyrim_official_quest_assets",
         "label": "Skyrim SE/AE Official Quest Assets",
         "game": "SkyrimSE",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "required_plugins": [
             "Skyrim.esm"
         ],
@@ -3328,6 +3328,459 @@
             },
             "safety_status": "approved",
             "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|000233D2",
+            "signature": "NPC_",
+            "editor_id": "Nerien",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "altmer",
+                "race_ref": "Skyrim.esm|00013743",
+                "gender": "male",
+                "voice_ref": "Skyrim.esm|00013AF0",
+                "head_part_count": 5,
+                "script_count": 0,
+                "package_count": 0,
+                "faction_count": 0,
+                "template_ref": "",
+                "flags": "Essential, AutoCalcStats, Unique, IsGhost, Invulnerable",
+                "rejection_reasons": [
+                    "unique",
+                    "essential"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|0002BA3C",
+            "signature": "NPC_",
+            "editor_id": "Quaranir",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "altmer",
+                "race_ref": "Skyrim.esm|00013743",
+                "gender": "male",
+                "voice_ref": "Skyrim.esm|00013AF0",
+                "head_part_count": 4,
+                "script_count": 0,
+                "package_count": 0,
+                "faction_count": 1,
+                "template_ref": "",
+                "flags": "Essential, AutoCalcStats, Unique, IsGhost",
+                "rejection_reasons": [
+                    "unique",
+                    "essential"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|00013269",
+            "signature": "NPC_",
+            "editor_id": "Elenwen",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "altmer",
+                "race_ref": "Skyrim.esm|00013743",
+                "gender": "female",
+                "voice_ref": "Skyrim.esm|0001A63B",
+                "head_part_count": 2,
+                "script_count": 0,
+                "package_count": 4,
+                "faction_count": 4,
+                "template_ref": "",
+                "flags": "Female, Essential, AutoCalcStats, Unique, OppositeGenderAnims",
+                "rejection_reasons": [
+                    "has_packages",
+                    "unique",
+                    "essential"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|0001C197",
+            "signature": "NPC_",
+            "editor_id": "Faralda",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "altmer",
+                "race_ref": "Skyrim.esm|00013743",
+                "gender": "female",
+                "voice_ref": "Skyrim.esm|00013AE0",
+                "head_part_count": 3,
+                "script_count": 1,
+                "package_count": 2,
+                "faction_count": 7,
+                "template_ref": "",
+                "flags": "Female, Essential, AutoCalcStats, Unique, PCLevelMult",
+                "rejection_reasons": [
+                    "has_scripts",
+                    "has_packages",
+                    "unique",
+                    "essential"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|0003983E",
+            "signature": "NPC_",
+            "editor_id": "Gelebros",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "bosmer",
+                "race_ref": "Skyrim.esm|00013749",
+                "gender": "male",
+                "voice_ref": "Skyrim.esm|00013AD2",
+                "head_part_count": 5,
+                "script_count": 0,
+                "package_count": 0,
+                "faction_count": 0,
+                "template_ref": "",
+                "flags": "Essential, AutoCalcStats, Unique, IsGhost, Invulnerable",
+                "rejection_reasons": [
+                    "unique",
+                    "essential"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|00013480",
+            "signature": "NPC_",
+            "editor_id": "Faendal",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "bosmer",
+                "race_ref": "Skyrim.esm|00013749",
+                "gender": "male",
+                "voice_ref": "Skyrim.esm|00013AD2",
+                "head_part_count": 4,
+                "script_count": 2,
+                "package_count": 9,
+                "faction_count": 8,
+                "template_ref": "",
+                "flags": "AutoCalcStats, Unique, PCLevelMult",
+                "rejection_reasons": [
+                    "has_scripts",
+                    "has_packages",
+                    "unique"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|00013349",
+            "signature": "NPC_",
+            "editor_id": "Anuriel",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "bosmer",
+                "race_ref": "Skyrim.esm|00013749",
+                "gender": "female",
+                "voice_ref": "Skyrim.esm|00013ADD",
+                "head_part_count": 4,
+                "script_count": 0,
+                "package_count": 2,
+                "faction_count": 7,
+                "template_ref": "",
+                "flags": "Female, Essential, AutoCalcStats, Unique",
+                "rejection_reasons": [
+                    "has_packages",
+                    "unique",
+                    "essential"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|00019DEF",
+            "signature": "NPC_",
+            "editor_id": "Wylandriah",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "bosmer",
+                "race_ref": "Skyrim.esm|00013749",
+                "gender": "female",
+                "voice_ref": "Skyrim.esm|00013ADD",
+                "head_part_count": 4,
+                "script_count": 1,
+                "package_count": 1,
+                "faction_count": 8,
+                "template_ref": "",
+                "flags": "Female, AutoCalcStats, Unique",
+                "rejection_reasons": [
+                    "has_scripts",
+                    "has_packages",
+                    "unique"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|000BD759",
+            "signature": "NPC_",
+            "editor_id": "WEDL13Farmer",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "dunmer",
+                "race_ref": "Skyrim.esm|00013742",
+                "gender": "male",
+                "voice_ref": "Skyrim.esm|00013AF2",
+                "head_part_count": 4,
+                "script_count": 0,
+                "package_count": 0,
+                "faction_count": 0,
+                "template_ref": "",
+                "flags": "AutoCalcStats, Unique",
+                "rejection_reasons": [
+                    "unique"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|0002427D",
+            "signature": "NPC_",
+            "editor_id": "Erandur",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "dunmer",
+                "race_ref": "Skyrim.esm|00013742",
+                "gender": "male",
+                "voice_ref": "Skyrim.esm|00013AF2",
+                "head_part_count": 5,
+                "script_count": 0,
+                "package_count": 3,
+                "faction_count": 3,
+                "template_ref": "",
+                "flags": "Essential, AutoCalcStats, Unique, PCLevelMult",
+                "rejection_reasons": [
+                    "has_packages",
+                    "unique",
+                    "essential"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|0001C196",
+            "signature": "NPC_",
+            "editor_id": "BrelynaMaryon",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "dunmer",
+                "race_ref": "Skyrim.esm|00013742",
+                "gender": "female",
+                "voice_ref": "Skyrim.esm|00013ADC",
+                "head_part_count": 4,
+                "script_count": 0,
+                "package_count": 3,
+                "faction_count": 5,
+                "template_ref": "",
+                "flags": "Female, AutoCalcStats, Unique, PCLevelMult",
+                "rejection_reasons": [
+                    "has_packages",
+                    "unique"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|000B9982",
+            "signature": "NPC_",
+            "editor_id": "HirelingJenassa",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "dunmer",
+                "race_ref": "Skyrim.esm|00013742",
+                "gender": "female",
+                "voice_ref": "Skyrim.esm|00013AF3",
+                "head_part_count": 4,
+                "script_count": 0,
+                "package_count": 1,
+                "faction_count": 6,
+                "template_ref": "",
+                "flags": "Female, AutoCalcStats, Unique, PCLevelMult, Protected, OppositeGenderAnims",
+                "rejection_reasons": [
+                    "has_packages",
+                    "unique"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|0001B1DB",
+            "signature": "NPC_",
+            "editor_id": "Risaad",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "khajiit",
+                "race_ref": "Skyrim.esm|00013745",
+                "gender": "male",
+                "voice_ref": "Skyrim.esm|00013AEC",
+                "head_part_count": 3,
+                "script_count": 0,
+                "package_count": 0,
+                "faction_count": 5,
+                "template_ref": "",
+                "flags": "Essential, Unique",
+                "rejection_reasons": [
+                    "unique",
+                    "essential"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|0001B1D2",
+            "signature": "NPC_",
+            "editor_id": "Kharjo",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "khajiit",
+                "race_ref": "Skyrim.esm|00013745",
+                "gender": "male",
+                "voice_ref": "Skyrim.esm|00013AEC",
+                "head_part_count": 4,
+                "script_count": 0,
+                "package_count": 1,
+                "faction_count": 4,
+                "template_ref": "",
+                "flags": "AutoCalcStats, Unique, PCLevelMult, Protected",
+                "rejection_reasons": [
+                    "has_packages",
+                    "unique"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|000353C7",
+            "signature": "NPC_",
+            "editor_id": "Tsavani",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "khajiit",
+                "race_ref": "Skyrim.esm|00013745",
+                "gender": "female",
+                "voice_ref": "Skyrim.esm|00013AED",
+                "head_part_count": 3,
+                "script_count": 0,
+                "package_count": 0,
+                "faction_count": 3,
+                "template_ref": "",
+                "flags": "Female, AutoCalcStats, Unique",
+                "rejection_reasons": [
+                    "unique"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "Skyrim.esm|0001B1D6",
+            "signature": "NPC_",
+            "editor_id": "Ahkari",
+            "display_name": "",
+            "source_plugin": "Skyrim.esm",
+            "winning_plugin": "Skyrim.esm",
+            "metadata": {
+                "race": "khajiit",
+                "race_ref": "Skyrim.esm|00013745",
+                "gender": "female",
+                "voice_ref": "Skyrim.esm|00013AED",
+                "head_part_count": 3,
+                "script_count": 0,
+                "package_count": 1,
+                "faction_count": 5,
+                "template_ref": "",
+                "flags": "Female, AutoCalcStats, Unique, Protected",
+                "rejection_reasons": [
+                    "has_packages",
+                    "unique"
+                ],
+                "curation": "CHIM maintained official asset",
+                "curated_scope": "appearance_only"
+            },
+            "safety_status": "approved",
+            "active": true
         }
     ],
     "groups": [
@@ -5616,6 +6069,198 @@
             "members": [
                 {
                     "stable_ref": "Skyrim.esm|00023AAE",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_templates",
+            "key": "male_altmer",
+            "label": "Male Altmer",
+            "description": "Curated appearance donor pool; never used as a spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "Skyrim.esm|000233D2",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                },
+                {
+                    "stable_ref": "Skyrim.esm|0002BA3C",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_templates",
+            "key": "female_altmer",
+            "label": "Female Altmer",
+            "description": "Curated appearance donor pool; never used as a spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "Skyrim.esm|00013269",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                },
+                {
+                    "stable_ref": "Skyrim.esm|0001C197",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_templates",
+            "key": "male_bosmer",
+            "label": "Male Bosmer",
+            "description": "Curated appearance donor pool; never used as a spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "Skyrim.esm|0003983E",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                },
+                {
+                    "stable_ref": "Skyrim.esm|00013480",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_templates",
+            "key": "female_bosmer",
+            "label": "Female Bosmer",
+            "description": "Curated appearance donor pool; never used as a spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "Skyrim.esm|00013349",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                },
+                {
+                    "stable_ref": "Skyrim.esm|00019DEF",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_templates",
+            "key": "male_dunmer",
+            "label": "Male Dunmer",
+            "description": "Curated appearance donor pool; never used as a spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "Skyrim.esm|000BD759",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                },
+                {
+                    "stable_ref": "Skyrim.esm|0002427D",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_templates",
+            "key": "female_dunmer",
+            "label": "Female Dunmer",
+            "description": "Curated appearance donor pool; never used as a spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "Skyrim.esm|0001C196",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                },
+                {
+                    "stable_ref": "Skyrim.esm|000B9982",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_templates",
+            "key": "male_khajiit",
+            "label": "Male Khajiit",
+            "description": "Curated appearance donor pool; never used as a spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "Skyrim.esm|0001B1DB",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                },
+                {
+                    "stable_ref": "Skyrim.esm|0001B1D2",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_templates",
+            "key": "female_khajiit",
+            "label": "Female Khajiit",
+            "description": "Curated appearance donor pool; never used as a spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "Skyrim.esm|000353C7",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                },
+                {
+                    "stable_ref": "Skyrim.esm|0001B1D6",
                     "weight": 1,
                     "constraints": {},
                     "note": "",
