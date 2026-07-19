@@ -7214,6 +7214,18 @@ if ($checkVersion("general_settings") < 20260711001) {
 }
 
 
+if ($checkVersion("physical_npc_diaries") < 20260719001) {
+    Logger::debug("Applying physical_npc_diaries 20260719001 - add physical NPC diary tracking");
+
+    $schemaPath = __DIR__ . "/../lib/core/database_schema/physical_npc_diaries.sql";
+    if ($db->execQuery(file_get_contents($schemaPath))) {
+        $updateVersion("physical_npc_diaries", 20260719001);
+        Logger::info("Applied patch physical_npc_diaries 20260719001");
+    } else {
+        Logger::error("Failed to apply patch physical_npc_diaries 20260719001");
+    }
+}
+
 // master Packages update 
 if ($checkVersion("master_packages")<20260716002) {
     if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607.sql"))) {
