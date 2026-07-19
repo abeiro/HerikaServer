@@ -2216,8 +2216,7 @@ $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
 if (($gameRequest[0]=="chatnf_book")&&($GLOBALS["BOOK_EVENT_FULL"])) {
     // When chatnf_book (make the AI to read a book), context will only be the book data.
-    $contextDataFull = array_merge($contextDataFull, DataGetLastReadedBook());
-    //DataGetLastReadedBook();
+    $contextDataFull = array_merge($contextDataFull, DataGetLastReadedBook((int)($gameRequest[2] ?? 0)));
 }
 
 
