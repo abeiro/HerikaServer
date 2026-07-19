@@ -188,7 +188,7 @@ final class HistoricContextTest extends DatabaseTestCase
     {
         $line = "(Context location: Abandoned House,Hold: Markarth background chat) Hivorate [Dremora]: Mortal, we've come to test your worth.";
         $this->insertEvent(
-            "chat",
+            "chat_background",
             $line,
             "|Demienna|Molag Grunda|Gniledan [Dremora]|Hivorate [Dremora]|Gatanas [Dremora]|",
             100,
