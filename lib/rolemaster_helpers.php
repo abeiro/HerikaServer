@@ -203,29 +203,6 @@ $GLOBALS["npc_own_templates"] = [
 
 ];
 
-$questRaceSpawnBases = [
-    "male_altmer" => "AIAgent.esp|00045CE7",
-    "female_altmer" => "AIAgent.esp|00045CE8",
-    "male_bosmer" => "AIAgent.esp|00045CE9",
-    "female_bosmer" => "AIAgent.esp|00045CEA",
-    "male_dunmer" => "AIAgent.esp|00045CEB",
-    "female_dunmer" => "AIAgent.esp|00045CEC",
-    "male_khajiit" => "AIAgent.esp|00045CED",
-    "female_khajiit" => "AIAgent.esp|00045CEE",
-];
-$questSpawnAliases = [];
-foreach (array_keys($GLOBALS["npc_own_templates"]) as $templateKey) {
-    if (preg_match('/^male_argonian_(.+)$/', $templateKey, $matches)) {
-        $questSpawnAliases[] = $matches[1];
-    }
-}
-foreach ($questRaceSpawnBases as $templatePrefix => $formId) {
-    foreach ($questSpawnAliases as $classAlias) {
-        $GLOBALS["npc_own_templates"]["{$templatePrefix}_{$classAlias}"] = [$formId];
-    }
-}
-unset($questRaceSpawnBases, $questSpawnAliases, $templateKey, $templatePrefix, $classAlias, $formId, $matches);
-
 $GLOBALS["outfit"] = [
     "beggar" => [0x000a1983],
     "mage" => [0x0006e26f, 0x001034ef, 0x000a199c, 0x000d504c, 0x0007eab5, 0x0001703a, 0x000f3e7d, 0x00106114, 0x000fba59, 0x000e9ac4, 0x000b7a3e, 0x000b7a3f],
