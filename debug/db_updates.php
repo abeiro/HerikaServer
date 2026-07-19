@@ -7355,6 +7355,8 @@ if ($checkVersion("quest_asset_library") < 20260719001) {
     } else {
         Logger::error("Failed to apply quest_asset_library 20260719001");
     }
+}
+
 if ($checkVersion("prompts") < 20260719001) {
     Logger::debug("Applying prompts 20260719001 - improve book reading prompt");
 
