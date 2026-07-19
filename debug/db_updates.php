@@ -7217,7 +7217,7 @@ if ($checkVersion("prompts") < 20260719001) {
     Logger::debug("Applying prompts 20260719001 - improve book reading prompt");
 
     $bookSummaryPrompt = $db->escape(
-        "Read the provided book as {HERIKA_NAME}. Give a concise, accurate summary based only on the book text included in the current context, then add a brief in-character reaction. Do not invent missing passages, quotations, author details, or lore. If the book text is unavailable, clearly say that you cannot read it yet. {TEMPLATE_DIALOG}"
+        "Read the provided book as {HERIKA_NAME}. Give a concise, accurate summary based only on the book text included in the current context, then add a brief in-character reaction. Do not invent missing passages, quotations, author details, or lore. If the book text is unavailable, say that you do not see any legible words on the pages. {TEMPLATE_DIALOG}"
     );
     $description = $db->escape(
         "Controls how NPCs summarize and react to books. Editable in Prompts Manager; custom prompts are preserved during updates."
