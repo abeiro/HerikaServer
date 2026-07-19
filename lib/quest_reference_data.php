@@ -25,10 +25,6 @@ if (!function_exists('quest_reference_dataset_config')) {
                 'table' => 'quest_outfits',
                 'key_column' => 'class_key',
             ],
-            'weapons' => [
-                'table' => 'quest_weapons',
-                'key_column' => 'class_key',
-            ],
         ];
     }
 }
@@ -978,20 +974,27 @@ if (!function_exists('quest_reference_replace_dataset_with_arrays')) {
 if (!function_exists('quest_reference_load_dataset')) {
     function quest_reference_load_dataset($datasetName, $activeOnly = true)
     {
+        $datasetName = strtolower(trim((string) $datasetName));
         $cfg = quest_reference_dataset_config();
-        if (!isset($cfg[$datasetName])) {
+        $libraryDatasets = function_exists('quest_asset_dataset_signatures')
+            ? quest_asset_dataset_signatures()
+            : [];
+        if (!isset($cfg[$datasetName]) && !isset($libraryDatasets[$datasetName])) {
             return [];
         }
-
-        $table = $cfg[$datasetName]["table"];
-        $keyColumn = $cfg[$datasetName]["key_column"];
 
         $result = [];
         $seen = [];
         $rows = [];
         $hasArrayColumn = false;
         $hasFormIdColumn = false;
-        if (quest_reference_table_exists($table)) {
+        $table = null;
+        $keyColumn = null;
+        if (isset($cfg[$datasetName])) {
+            $table = $cfg[$datasetName]["table"];
+            $keyColumn = $cfg[$datasetName]["key_column"];
+        }
+        if ($table !== null && $keyColumn !== null && quest_reference_table_exists($table)) {
             $where = $activeOnly ? "WHERE active = true" : "";
             $hasArrayColumn = quest_reference_column_exists($table, "formids_json");
             $hasFormIdColumn = quest_reference_column_exists($table, "formid");
@@ -1075,9 +1078,16 @@ if (!function_exists('quest_reference_load_dataset')) {
 if (!function_exists('quest_reference_load_all_active')) {
     function quest_reference_load_all_active()
     {
-        $cfg = quest_reference_dataset_config();
+        $datasetNames = array_keys(quest_reference_dataset_config());
+        if (function_exists('quest_asset_dataset_signatures')) {
+            $datasetNames = array_unique(array_merge(
+                $datasetNames,
+                array_keys(quest_asset_dataset_signatures())
+            ));
+        }
+
         $result = [];
-        foreach ($cfg as $datasetName => $_cfg) {
+        foreach ($datasetNames as $datasetName) {
             $result[$datasetName] = quest_reference_load_dataset($datasetName, true);
         }
 

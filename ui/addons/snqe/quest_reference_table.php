@@ -174,10 +174,6 @@ function quest_ref_example_rows($datasetName)
             ["key_name" => "warrior", "formids" => ["Skyrim.esm|000D191F", "Skyrim.esm|000D1920"], "active" => "true", "note" => "heavy outfit sample"],
             ["key_name" => "mage", "formids" => ["Skyrim.esm|000D1922", "Skyrim.esm|000D1923"], "active" => "true", "note" => "robe outfit sample"],
         ],
-        "weapons" => [
-            ["key_name" => "default", "formids" => ["Skyrim.esm|00013989"], "active" => "true", "note" => "fallback weapon"],
-            ["key_name" => "assassin", "formids" => ["Skyrim.esm|0001397E", "Skyrim.esm|00013986"], "active" => "true", "note" => "class weapon pool"],
-        ],
     ];
 
     return $examples[$datasetName] ?? [];
@@ -264,7 +260,6 @@ $datasetLabels = [
     "npc_templates" => "NPC Templates",
     "npc_own_templates" => "NPC Own Templates",
     "outfit" => "Outfits",
-    "weapons" => "Weapons",
 ];
 
 $datasetCfg = quest_reference_dataset_config();

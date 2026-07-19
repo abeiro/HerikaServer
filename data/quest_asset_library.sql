@@ -104,15 +104,3 @@ CREATE INDEX IF NOT EXISTS quest_asset_members_pack_idx
     ON public.quest_asset_group_members(source_pack);
 CREATE INDEX IF NOT EXISTS quest_asset_members_group_idx
     ON public.quest_asset_group_members(dataset_name, group_key, active);
-
--- Weapons use the same legacy editor/runtime contract as the original datasets.
-CREATE TABLE IF NOT EXISTS public.quest_weapons (
-    class_key text PRIMARY KEY,
-    formids_json jsonb NOT NULL DEFAULT '[]'::jsonb,
-    active boolean NOT NULL DEFAULT true,
-    note text NOT NULL DEFAULT '',
-    created_at timestamp without time zone NOT NULL DEFAULT now(),
-    updated_at timestamp without time zone NOT NULL DEFAULT now(),
-    CONSTRAINT quest_weapons_formids_json_is_array
-        CHECK (jsonb_typeof(formids_json) = 'array')
-);

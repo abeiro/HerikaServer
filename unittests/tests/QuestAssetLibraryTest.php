@@ -118,6 +118,71 @@ final class QuestAssetLibraryTest extends TestCase
         $this->assertNotContains('npc_own_templates', $datasets);
     }
 
+    public function testWeaponsUseGenericAssetGroupsWithoutLegacyStorage(): void
+    {
+        $this->assertArrayNotHasKey('weapons', quest_reference_dataset_config());
+        $this->assertSame(['WEAP'], quest_asset_dataset_signatures()['weapons']);
+
+        $manifest = quest_asset_manifest_validate($this->manifest('skyrim_official.json'))['manifest'];
+        $weaponGroups = array_values(array_filter(
+            $manifest['groups'],
+            static fn(array $group): bool => $group['dataset'] === 'weapons'
+        ));
+        $this->assertCount(23, $weaponGroups);
+
+        $schema = (string) file_get_contents(
+            dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'quest_asset_library.sql'
+        );
+        $this->assertStringNotContainsString('quest_weapons', $schema);
+    }
+
+    public function testLibraryOnlyWeaponDatasetLoadsForRuntime(): void
+    {
+        $db = new class {
+            public function escape($value): string
+            {
+                return str_replace("'", "''", (string) $value);
+            }
+
+            public function fetchOne(string $query): array
+            {
+                if (str_contains($query, 'FROM public.game_plugins')) {
+                    return [
+                        'plugin_name' => 'QuestAssetTestWeapons.esm',
+                        'formid_prefix' => '01',
+                    ];
+                }
+                return ['table_name' => 'present'];
+            }
+
+            public function fetchAll(string $query): array
+            {
+                if (str_contains($query, 'm.stable_ref')) {
+                    return [[
+                        'group_key' => 'guard',
+                        'stable_ref' => 'QuestAssetTestWeapons.esm|00001234',
+                        'weight' => 1,
+                        'required_plugins_json' => '["QuestAssetTestWeapons.esm"]',
+                    ]];
+                }
+                return [];
+            }
+        };
+        $previousDb = $GLOBALS['db'] ?? null;
+        $GLOBALS['db'] = $db;
+        try {
+            $weapons = quest_reference_load_dataset('weapons');
+        } finally {
+            if ($previousDb === null) {
+                unset($GLOBALS['db']);
+            } else {
+                $GLOBALS['db'] = $previousDb;
+            }
+        }
+
+        $this->assertSame([hexdec('01001234')], $weapons['guard']);
+    }
+
     public function testOfficialPackContainsOnlyApprovedOfficialRecords(): void
     {
         $manifest = quest_asset_manifest_validate($this->manifest('skyrim_official.json'))['manifest'];

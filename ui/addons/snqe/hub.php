@@ -21,10 +21,6 @@ $tabs = [
         "label" => "Item Types",
         "src" => $webRoot . "/ui/addons/snqe/quest_reference_table.php?embed=1&dataset=item_types",
     ],
-    "weapons" => [
-        "label" => "Weapons",
-        "src" => $webRoot . "/ui/addons/snqe/quest_reference_table.php?embed=1&dataset=weapons",
-    ],
     "npc_templates" => [
         "label" => "NPC Templates",
         "src" => $webRoot . "/ui/addons/snqe/quest_reference_table.php?embed=1&dataset=npc_templates",
