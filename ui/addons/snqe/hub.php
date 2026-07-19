@@ -33,10 +33,6 @@ $tabs = [
         "label" => "Outfits",
         "src" => $webRoot . "/ui/addons/snqe/quest_reference_table.php?embed=1&dataset=outfit",
     ],
-    "asset_library" => [
-        "label" => "Asset Library",
-        "src" => $webRoot . "/ui/addons/snqe/quest_asset_library.php?embed=1",
-    ],
     "server_logs" => [
         "label" => "Server Logs",
         "src" => $webRoot . "/ui/addons/snqe/index.php?embed=1&view=logs",
@@ -177,7 +173,7 @@ footer {
 <main>
     <div class="tab-container">
         <h1 class="hub-title">AI Quest Manager</h1>
-        <p class="hub-subtitle">Review the plugin-aware assets AI Quest Manager can use, or maintain legacy reference tables for compatibility.</p>
+        <p class="hub-subtitle">Generate AI quests and maintain legacy reference tables for compatibility.</p>
         <div class="tab-buttons">
             <?php foreach ($tabs as $tabKey => $tabCfg): ?>
                 <button class="tab-button <?php echo ($tabKey === $activeTab) ? "active" : ""; ?>" data-tab="<?php echo htmlspecialchars($tabKey); ?>">
