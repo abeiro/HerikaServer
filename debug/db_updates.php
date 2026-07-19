@@ -7214,6 +7214,19 @@ if ($checkVersion("general_settings") < 20260711001) {
 }
 
 
+// master Packages update
+if ($checkVersion("npc_commitments") < 20260719001) {
+    Logger::debug("Applying npc_commitments 20260719001 - add persistent NPC commitments");
+
+    $schemaPath = __DIR__ . "/../lib/core/database_schema/npc_commitments.sql";
+    if ($db->execQuery(file_get_contents($schemaPath))) {
+        $updateVersion("npc_commitments", 20260719001);
+        Logger::info("Applied patch npc_commitments 20260719001");
+    } else {
+        Logger::error("Failed to apply patch npc_commitments 20260719001");
+    }
+}
+
 // master Packages update 
 if ($checkVersion("master_packages")<20260716002) {
     if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607.sql"))) {

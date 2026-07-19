@@ -60,6 +60,9 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'PayBounty',
     'ArrestPlayer',
     'ForgiveCrime',
+    'CreateCommitment',
+    'ResolveCommitment',
+    'CancelCommitment',
     'EndConversation'
     //    'WaitHere'
 ];
@@ -976,6 +979,9 @@ $F_TRANSLATIONS_LOCAL["AddBounty"] = "#HERIKA_NAME# adds a crime bounty to #PLAY
 $F_TRANSLATIONS_LOCAL["PayBounty"] = "#PLAYER_NAME# pays off their bounty to #HERIKA_NAME#. Stolen items are confiscated and the matter is resolved immediately. Guard-only action.";
 $F_TRANSLATIONS_LOCAL["ArrestPlayer"] = "#HERIKA_NAME# attempts to arrest #PLAYER_NAME#. #PLAYER_NAME# can submit or resist. Guard-only action for serious crimes or refusal to pay.";
 $F_TRANSLATIONS_LOCAL["ForgiveCrime"] = "#HERIKA_NAME# forgives #PLAYER_NAME#'s crimes and clears their bounty. Guard-only action for persuasion, bribe, or thane status.";
+$F_TRANSLATIONS_LOCAL["CreateCommitment"] = "Create a persistent promise, appointment, delivery, escort, fetch task, or other errand that #HERIKA_NAME# intends to honor later. Use a short concrete subject and an in-game delay.";
+$F_TRANSLATIONS_LOCAL["ResolveCommitment"] = "Mark one of #HERIKA_NAME#'s active commitments as completed or failed after the promised outcome has actually happened.";
+$F_TRANSLATIONS_LOCAL["CancelCommitment"] = "Cancel one of #HERIKA_NAME#'s active commitments when it can no longer be honored. Include a brief reason.";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"] = "#HERIKA_NAME# follows #PLAYER_NAME#.";
 $F_TRANSLATIONS_LOCAL["ComeCloser"] = "#HERIKA_NAME# approaches #PLAYER_NAME#.";
 $F_TRANSLATIONS_LOCAL["Brawl"] = "#HERIKA_NAME# engages in non-lethal combat with another actor, using weapons.";
@@ -1030,6 +1036,9 @@ $F_RETURNMESSAGES_LOCAL["AddBounty"] = "#HERIKA_NAME# added a bounty for #TARGET
 $F_RETURNMESSAGES_LOCAL["PayBounty"] = "#PLAYER_NAME# paid off their bounty to #HERIKA_NAME#, and stolen items were removed from inventory.";
 $F_RETURNMESSAGES_LOCAL["ArrestPlayer"] = "#HERIKA_NAME# attempted to arrest #PLAYER_NAME#.";
 $F_RETURNMESSAGES_LOCAL["ForgiveCrime"] = "#HERIKA_NAME# forgave #PLAYER_NAME#'s crimes and cleared their bounty.";
+$F_RETURNMESSAGES_LOCAL["CreateCommitment"] = "#HERIKA_NAME# records a persistent commitment.";
+$F_RETURNMESSAGES_LOCAL["ResolveCommitment"] = "#HERIKA_NAME# resolves a persistent commitment.";
+$F_RETURNMESSAGES_LOCAL["CancelCommitment"] = "#HERIKA_NAME# cancels a persistent commitment.";
 $F_RETURNMESSAGES_LOCAL["FollowPlayer"] = "#HERIKA_NAME# follows #PLAYER_NAME#.";
 $F_RETURNMESSAGES_LOCAL["Brawl"] = "#HERIKA_NAME# starts a brawl with #TARGET#.";
 $F_RETURNMESSAGES_LOCAL["ReturnBackHome"] = "#HERIKA_NAME# goes back home.";
@@ -1084,6 +1093,9 @@ $F_NAMES_LOCAL["AddBounty"] = "AddBounty";
 $F_NAMES_LOCAL["PayBounty"] = "PayBounty";
 $F_NAMES_LOCAL["ArrestPlayer"] = "Arrest_#PLAYER_NAME#";
 $F_NAMES_LOCAL["ForgiveCrime"] = "ForgiveCrime";
+$F_NAMES_LOCAL["CreateCommitment"] = "CreateCommitment";
+$F_NAMES_LOCAL["ResolveCommitment"] = "ResolveCommitment";
+$F_NAMES_LOCAL["CancelCommitment"] = "CancelCommitment";
 $F_NAMES_LOCAL["FollowPlayer"] = "Follow_#PLAYER_NAME#";
 $F_NAMES_LOCAL["ComeCloser"] = "ComeCloser";
 $F_NAMES_LOCAL["Brawl"] = "Brawl";
@@ -1930,6 +1942,62 @@ $GLOBALS["FUNCTIONS"] = [
                 ],
             ],
             "required" => [""],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["CreateCommitment"],
+        "description" => $F_TRANSLATIONS_LOCAL["CreateCommitment"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "type" => [
+                    "type" => "string",
+                    "enum" => ["meeting", "message_delivery", "fetch", "escort", "errand", "other"],
+                    "description" => "Kind of promise being made.",
+                ],
+                "subject" => [
+                    "type" => "string",
+                    "description" => "Short concrete description of what must happen.",
+                ],
+                "counterparty" => [
+                    "type" => "string",
+                    "description" => "Other person involved, if any.",
+                ],
+                "location" => [
+                    "type" => "string",
+                    "description" => "Place where the commitment should be fulfilled, if any.",
+                ],
+                "due_in_hours" => [
+                    "type" => "number",
+                    "description" => "In-game hours until this commitment is due. Minimum 0.25, maximum 8760.",
+                ],
+            ],
+            "required" => ["type", "subject", "due_in_hours"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["ResolveCommitment"],
+        "description" => $F_TRANSLATIONS_LOCAL["ResolveCommitment"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "commitment_id" => ["type" => "integer", "description" => "Commitment number shown in the active commitments context."],
+                "status" => ["type" => "string", "enum" => ["completed", "failed"], "description" => "Final outcome."],
+                "outcome" => ["type" => "string", "description" => "Brief factual description of what happened."],
+            ],
+            "required" => ["commitment_id", "status", "outcome"],
+        ],
+    ],
+    [
+        "name" => $F_NAMES_LOCAL["CancelCommitment"],
+        "description" => $F_TRANSLATIONS_LOCAL["CancelCommitment"],
+        "parameters" => [
+            "type" => "object",
+            "properties" => [
+                "commitment_id" => ["type" => "integer", "description" => "Commitment number shown in the active commitments context."],
+                "reason" => ["type" => "string", "description" => "Brief reason the promise is being cancelled."],
+            ],
+            "required" => ["commitment_id", "reason"],
         ],
     ],
     [
@@ -2800,6 +2868,7 @@ chimTraceFunctionsIncludePhase(__LINE__, 'functions_reindexed', $startTime);
 
 require_once __DIR__ . "/../lib/scriptproxy_papyrus.php";
 require_once __DIR__ . "/../lib/core/activity_status.php";
+require_once __DIR__ . "/../lib/core/npc_commitments.php";
 
 chimTraceFunctionsIncludePhase(__LINE__, 'post_filter_dependencies_loaded', $startTime);
 
@@ -2830,6 +2899,70 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
             }
 
             if (herikaActionCatalogExecuteScriptProxyAction($action)) {
+                unset($actionsCopy[$n]);
+                continue;
+            }
+
+            if (in_array($actionCodeNameResolved, ['CreateCommitment', 'ResolveCommitment', 'CancelCommitment'], true)) {
+                $rawParameter = implode("@", array_slice($actionParts2, 1));
+                $payload = decodeFunctionExecutionParameterPayload($rawParameter);
+                if (!is_array($payload)) {
+                    $payload = [];
+                }
+
+                $actorName = trim((string)($actionParts[0] ?? ($GLOBALS['HERIKA_NAME'] ?? '')));
+                $currentGamets = (int)($gameRequest[2] ?? 0);
+                if ($actionCodeNameResolved === 'CreateCommitment') {
+                    $result = chimCommitmentCreate($actorName, $payload, $currentGamets);
+                    $message = !empty($result['ok'])
+                        ? "{$actorName} made commitment #{$result['id']}: " . trim((string)($payload['subject'] ?? ''))
+                        : "{$actorName} could not create a commitment: " . (string)($result['error'] ?? 'unknown error');
+                } elseif ($actionCodeNameResolved === 'ResolveCommitment') {
+                    $result = chimCommitmentSetStatus(
+                        $actorName,
+                        (int)($payload['commitment_id'] ?? 0),
+                        (string)($payload['status'] ?? ''),
+                        (string)($payload['outcome'] ?? ''),
+                        $currentGamets
+                    );
+                    $message = !empty($result['ok'])
+                        ? "{$actorName} resolved commitment #{$result['id']} as " . trim((string)($payload['status'] ?? 'completed')) . "."
+                        : "{$actorName} could not resolve that commitment.";
+                } else {
+                    $result = chimCommitmentSetStatus(
+                        $actorName,
+                        (int)($payload['commitment_id'] ?? 0),
+                        'cancelled',
+                        (string)($payload['reason'] ?? ''),
+                        $currentGamets
+                    );
+                    $message = !empty($result['ok'])
+                        ? "{$actorName} cancelled commitment #{$result['id']}."
+                        : "{$actorName} could not cancel that commitment.";
+                }
+
+                $GLOBALS['db']->insert('eventlog', [
+                    'ts' => (int)($gameRequest[1] ?? time()),
+                    'gamets' => $currentGamets,
+                    'type' => 'infoaction',
+                    'data' => 'The Narrator: ' . $message,
+                    'sess' => (int)($gameRequest[1] ?? time()),
+                    'localts' => time(),
+                    'people' => $actorName,
+                    'location' => null,
+                    'party' => '',
+                ]);
+
+                $GLOBALS['db']->insert('actions_issued', [
+                    'action' => $actionCodeNameResolved,
+                    'fullcall' => $rawParameter,
+                    'actorname' => $actorName,
+                    'ts' => (int)($gameRequest[1] ?? time()),
+                    'gamets' => $currentGamets,
+                    'localts' => time(),
+                    'original' => chimPrepareActionsIssuedOriginalValue(''),
+                ]);
+
                 unset($actionsCopy[$n]);
                 continue;
             }
