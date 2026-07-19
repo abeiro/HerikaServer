@@ -1310,11 +1310,9 @@ if (!function_exists('quest_reference_spawnable_playable_races')) {
     {
         $donorKeys = is_array($donorKeys) ? $donorKeys : quest_reference_active_keys('npc_templates');
         $spawnKeys = is_array($spawnKeys) ? $spawnKeys : quest_reference_active_keys('npc_own_templates');
-        $classes = is_array($classes) ? $classes : quest_reference_active_keys('outfit');
 
         $donorSet = array_fill_keys(quest_reference_normalize_allowed_values($donorKeys), true);
         $spawnSet = array_fill_keys(quest_reference_normalize_allowed_values($spawnKeys), true);
-        $classes = quest_reference_normalize_allowed_values($classes);
         $spawnable = [];
 
         foreach (quest_reference_playable_races() as $race) {
@@ -1325,26 +1323,19 @@ if (!function_exists('quest_reference_spawnable_playable_races')) {
                     break;
                 }
 
-                if (empty($classes)) {
-                    $prefix = "{$gender}_{$race}_";
-                    $hasSpawnBase = false;
-                    foreach ($spawnSet as $spawnKey => $_enabled) {
-                        if (str_starts_with($spawnKey, $prefix)) {
-                            $hasSpawnBase = true;
-                            break;
-                        }
-                    }
-                    if (!$hasSpawnBase) {
-                        $supported = false;
+                // Outfit groups are global and may include classes unavailable to some races.
+                // The spawn resolver safely falls back within the same race and gender.
+                $prefix = "{$gender}_{$race}_";
+                $hasSpawnBase = false;
+                foreach ($spawnSet as $spawnKey => $_enabled) {
+                    if (str_starts_with($spawnKey, $prefix)) {
+                        $hasSpawnBase = true;
                         break;
                     }
                 }
-
-                foreach ($classes as $class) {
-                    if (!isset($spawnSet["{$gender}_{$race}_{$class}"])) {
-                        $supported = false;
-                        break 2;
-                    }
+                if (!$hasSpawnBase) {
+                    $supported = false;
+                    break;
                 }
             }
 

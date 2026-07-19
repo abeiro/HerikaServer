@@ -304,6 +304,24 @@ final class QuestAssetLibraryTest extends TestCase
         ));
     }
 
+    public function testAdditionalOutfitClassesDoNotRemoveSpawnablePlayableRaces(): void
+    {
+        $this->assertSame(['nord'], quest_reference_spawnable_playable_races(
+            ['male_nord', 'female_nord'],
+            ['male_nord_warrior', 'female_nord_farmer'],
+            ['warrior', 'farmer', 'unsupported_legacy_class']
+        ));
+    }
+
+    public function testPlayableRaceWithoutBothGenderSpawnBasesIsNotAdvertised(): void
+    {
+        $this->assertSame([], quest_reference_spawnable_playable_races(
+            ['male_nord', 'female_nord'],
+            ['male_nord_warrior'],
+            ['warrior']
+        ));
+    }
+
     public function testMissingDatasetDefaultsPreserveExistingKeys(): void
     {
         $this->assertSame(
