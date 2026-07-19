@@ -7213,6 +7213,42 @@ if ($checkVersion("general_settings") < 20260711001) {
     }
 }
 
+if ($checkVersion("general_settings") < 20260719001) {
+    Logger::debug("Applying general_settings 20260719001 - add scripted dialogue context controls");
+
+    $b_ok = true;
+    try {
+        $defaults = [
+            'SCRIPTED_DIALOGUE_CONTEXT_MODE' => 'scene',
+            'SCRIPTED_DIALOGUE_DEDUP_SECONDS' => 0,
+            'SCRIPTED_DIALOGUE_CONTEXT_LIMIT' => 0,
+        ];
+        $descriptions = chimGetManagedGeneralSettingDescriptions();
+
+        foreach ($defaults as $settingId => $defaultValue) {
+            $existing = $db->fetchOne(
+                "SELECT id FROM public.general_settings WHERE id = " . $db->escapeLiteral($settingId) . " LIMIT 1"
+            );
+            if (!empty($existing)) {
+                continue;
+            }
+
+            $description = $descriptions[$settingId] ?? chimGetSchemaDescription($settingId);
+            if (!chimSetGeneralSetting($settingId, $defaultValue, $description)) {
+                throw new Exception("Failed writing general setting '{$settingId}'");
+            }
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error adding scripted dialogue context controls: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260719001);
+        Logger::info("Applied patch general_settings 20260719001");
+    }
+}
+
 
 // master Packages update 
 if ($checkVersion("master_packages")<20260716002) {

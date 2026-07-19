@@ -89,6 +89,9 @@ $gsSections = [
         [ 'name' => 'TRANSFORMATION_DETECTION', 'type' => 'boolean' ],
         [ 'name' => 'POWER_AWARENESS_ENABLED', 'type' => 'boolean' ],
         [ 'name' => 'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE', 'type' => 'integer', 'min' => 0 ],
+        [ 'name' => 'SCRIPTED_DIALOGUE_CONTEXT_MODE', 'type' => 'select', 'values' => ['scene', 'speaker', 'disabled'] ],
+        [ 'name' => 'SCRIPTED_DIALOGUE_DEDUP_SECONDS', 'type' => 'integer', 'min' => 0, 'max' => 3600 ],
+        [ 'name' => 'SCRIPTED_DIALOGUE_CONTEXT_LIMIT', 'type' => 'integer', 'min' => 0, 'max' => 100 ],
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
     ],
     $promptContextSectionTitle => $promptContextOptionFields,
@@ -154,6 +157,9 @@ function pretty_label(string $flatName): string
         'CHIM_AI_QUEST_PROGRESSION' => 'CHIM AI Quest Progression (Beta)',
         'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
         'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 'Item Pickup Detection Value',
+        'SCRIPTED_DIALOGUE_CONTEXT_MODE' => 'Scripted Dialogue Context',
+        'SCRIPTED_DIALOGUE_DEDUP_SECONDS' => 'Repeated Line Window',
+        'SCRIPTED_DIALOGUE_CONTEXT_LIMIT' => 'Recent Scripted Line Limit',
     ];
     if (isset($customLabels[$flatName])) {
         return $customLabels[$flatName];
@@ -208,6 +214,16 @@ function select_option_label(string $fieldName, string $optionValue): string
             'conversational' => 'Conversational',
             'group' => 'Group',
             'random' => 'Random (Recommended)',
+        ];
+
+        return $labels[$optionValue] ?? ucwords(str_replace('_', ' ', strtolower($optionValue)));
+    }
+
+    if ($fieldName === 'SCRIPTED_DIALOGUE_CONTEXT_MODE') {
+        $labels = [
+            'scene' => 'Current Scene',
+            'speaker' => 'Current NPC Only',
+            'disabled' => 'Disabled',
         ];
 
         return $labels[$optionValue] ?? ucwords(str_replace('_', ' ', strtolower($optionValue)));
