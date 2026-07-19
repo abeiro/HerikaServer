@@ -3,6 +3,7 @@
 if (!function_exists('chimParseStableFormReference')) {
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "game_plugins.php");
 }
+require_once(__DIR__ . DIRECTORY_SEPARATOR . 'quest_asset_library.php');
 
 if (!function_exists('quest_reference_dataset_config')) {
     function quest_reference_dataset_config()
@@ -22,6 +23,10 @@ if (!function_exists('quest_reference_dataset_config')) {
             ],
             'outfit' => [
                 'table' => 'quest_outfits',
+                'key_column' => 'class_key',
+            ],
+            'weapons' => [
+                'table' => 'quest_weapons',
                 'key_column' => 'class_key',
             ],
         ];
@@ -981,44 +986,44 @@ if (!function_exists('quest_reference_load_dataset')) {
         $table = $cfg[$datasetName]["table"];
         $keyColumn = $cfg[$datasetName]["key_column"];
 
-        if (!quest_reference_table_exists($table)) {
-            return [];
-        }
-
-        $where = $activeOnly ? "WHERE active = true" : "";
-
-        $hasArrayColumn = quest_reference_column_exists($table, "formids_json");
-        $hasFormIdColumn = quest_reference_column_exists($table, "formid");
-
-        $selectColumns = ["{$keyColumn} as key_name"];
-        if ($hasFormIdColumn) {
-            $selectColumns[] = "formid";
-        }
-        if ($hasArrayColumn) {
-            $selectColumns[] = "formids_json";
-        }
-
-        $orderColumns = [$keyColumn];
-        if ($hasFormIdColumn) {
-            $orderColumns[] = "formid";
-        }
-
-        $selectSql = implode(", ", $selectColumns);
-        $orderSql = implode(", ", $orderColumns);
-
-        try {
-            $rows = $GLOBALS["db"]->fetchAll("
-                SELECT {$selectSql}
-                FROM public.{$table}
-                {$where}
-                ORDER BY {$orderSql}
-            ");
-        } catch (Exception $e) {
-            return [];
-        }
-
         $result = [];
         $seen = [];
+        $rows = [];
+        $hasArrayColumn = false;
+        $hasFormIdColumn = false;
+        if (quest_reference_table_exists($table)) {
+            $where = $activeOnly ? "WHERE active = true" : "";
+            $hasArrayColumn = quest_reference_column_exists($table, "formids_json");
+            $hasFormIdColumn = quest_reference_column_exists($table, "formid");
+
+            $selectColumns = ["{$keyColumn} as key_name"];
+            if ($hasFormIdColumn) {
+                $selectColumns[] = "formid";
+            }
+            if ($hasArrayColumn) {
+                $selectColumns[] = "formids_json";
+            }
+
+            $orderColumns = [$keyColumn];
+            if ($hasFormIdColumn) {
+                $orderColumns[] = "formid";
+            }
+
+            $selectSql = implode(", ", $selectColumns);
+            $orderSql = implode(", ", $orderColumns);
+
+            try {
+                $rows = $GLOBALS["db"]->fetchAll("
+                    SELECT {$selectSql}
+                    FROM public.{$table}
+                    {$where}
+                    ORDER BY {$orderSql}
+                ");
+            } catch (Throwable $e) {
+                $rows = [];
+            }
+        }
+
         foreach ($rows as $row) {
             $key = strtolower(trim((string) ($row["key_name"] ?? "")));
             if ($key === "") {
@@ -1055,7 +1060,15 @@ if (!function_exists('quest_reference_load_dataset')) {
             }
         }
 
-        return $result;
+        $libraryValues = function_exists('quest_asset_load_dataset')
+            ? quest_asset_load_dataset($datasetName)
+            : [];
+        $result = function_exists('quest_asset_merge_dataset')
+            ? quest_asset_merge_dataset($result, $libraryValues)
+            : $result;
+        return function_exists('quest_asset_apply_group_fallbacks')
+            ? quest_asset_apply_group_fallbacks($datasetName, $result)
+            : $result;
     }
 }
 
@@ -1077,6 +1090,90 @@ if (!function_exists('quest_reference_active_keys')) {
     {
         $dataset = quest_reference_load_dataset($datasetName, true);
         return array_keys($dataset);
+    }
+}
+
+if (!function_exists('quest_reference_pick_safe_spawn_base')) {
+    function quest_reference_pick_safe_spawn_base($dataset, $gender, $race, $class, $defaultClasses = null)
+    {
+        if (!is_array($dataset)) {
+            return 0;
+        }
+
+        $gender = strtolower(trim((string) $gender));
+        $race = strtolower(trim((string) $race));
+        $class = strtolower(trim((string) $class));
+        $classes = [$class];
+        foreach (is_array($defaultClasses) ? $defaultClasses : ['warrior', 'soldier', 'farmer'] as $fallbackClass) {
+            $fallbackClass = strtolower(trim((string) $fallbackClass));
+            if ($fallbackClass !== '' && !in_array($fallbackClass, $classes, true)) {
+                $classes[] = $fallbackClass;
+            }
+        }
+
+        foreach ($classes as $candidateClass) {
+            $value = quest_reference_pick_random($dataset, "{$gender}_{$race}_{$candidateClass}", 0);
+            if ($value !== 0) {
+                return $value;
+            }
+        }
+        return 0;
+    }
+}
+
+if (!function_exists('quest_reference_normalize_allowed_values')) {
+    function quest_reference_normalize_allowed_values($values)
+    {
+        $normalized = [];
+        foreach (is_array($values) ? $values : [] as $value) {
+            $key = strtolower(trim((string) $value));
+            if ($key !== '' && preg_match('/^[a-z0-9_]+$/', $key)) {
+                $normalized[$key] = true;
+            }
+        }
+        $result = array_keys($normalized);
+        sort($result, SORT_NATURAL | SORT_FLAG_CASE);
+        return $result;
+    }
+}
+
+if (!function_exists('quest_reference_prompt_constraints')) {
+    function quest_reference_prompt_constraints($fallbackRaces, $fallbackClasses, $fallbackItemTypes)
+    {
+        $races = quest_reference_active_keys('npc_templates');
+        $races = quest_reference_derive_races_from_template_keys($races);
+        if (empty($races)) {
+            $races = $fallbackRaces;
+        }
+
+        $classes = quest_reference_active_keys('outfit');
+        if (empty($classes)) {
+            $classes = $fallbackClasses;
+        }
+        $classes[] = 'creature';
+
+        $itemTypes = quest_reference_active_keys('item_types');
+        if (empty($itemTypes)) {
+            $itemTypes = $fallbackItemTypes;
+        }
+
+        return [
+            'races' => quest_reference_normalize_allowed_values($races),
+            'classes' => quest_reference_normalize_allowed_values($classes),
+            'item_types' => quest_reference_normalize_allowed_values($itemTypes),
+        ];
+    }
+}
+
+if (!function_exists('quest_reference_apply_prompt_constraints')) {
+    function quest_reference_apply_prompt_constraints($template, $constraints)
+    {
+        $constraints = is_array($constraints) ? $constraints : [];
+        return strtr((string) $template, [
+            '{{ALLOWED_RACES}}' => implode(', ', $constraints['races'] ?? []),
+            '{{ALLOWED_CLASSES}}' => implode(', ', $constraints['classes'] ?? []),
+            '{{ALLOWED_ITEM_TYPES}}' => implode(', ', $constraints['item_types'] ?? []),
+        ]);
     }
 }
 

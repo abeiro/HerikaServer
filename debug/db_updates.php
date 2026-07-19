@@ -7213,6 +7213,38 @@ if ($checkVersion("general_settings") < 20260711001) {
     }
 }
 
+if ($checkVersion("quest_asset_library") < 20260718001) {
+    Logger::debug("Applying quest_asset_library 20260718001 - add plugin-aware AI Quest Manager assets");
+
+    $schemaFile = __DIR__ . "/../data/quest_asset_library.sql";
+    $manifestDirectory = __DIR__ . "/../data/quest_assets";
+    $migrationOk = is_readable($schemaFile)
+        && $db->execQuery(file_get_contents($schemaFile)) !== false;
+
+    if ($migrationOk) {
+        require_once __DIR__ . "/../lib/quest_asset_library.php";
+        foreach (["skyrim_official.json", "chim_spawn_templates.json"] as $manifestName) {
+            $manifestPath = $manifestDirectory . "/" . $manifestName;
+            $result = quest_asset_import_manifest_file($manifestPath);
+            if (empty($result["success"])) {
+                $migrationOk = false;
+                Logger::error(
+                    "Failed importing quest asset manifest {$manifestName}: "
+                    . implode("; ", $result["errors"] ?? ["unknown error"])
+                );
+                break;
+            }
+        }
+    }
+
+    if ($migrationOk) {
+        $updateVersion("quest_asset_library", 20260718001);
+        Logger::info("Applied patch quest_asset_library 20260718001");
+    } else {
+        Logger::error("Failed to apply quest_asset_library 20260718001");
+    }
+}
+
 
 // master Packages update 
 if ($checkVersion("master_packages")<20260716002) {

@@ -32,15 +32,19 @@ $connector->setOldGlobals($currentConnectorData);
 $method = $_SERVER['REQUEST_METHOD'];
 
 $formInput = json_decode(file_get_contents("php://input"), true);
+if (!is_array($formInput)) {
+    $formInput = [];
+}
 
 $questType = $formInput["questType"] ?? "toplevel";
-$npclist = $formInput["npclist"] ?? "toplevel";
+$npclist = is_array($formInput["npclist"] ?? null) ? $formInput["npclist"] : [];
 $sysprompt_content = file_get_contents(__DIR__ . "/../prompts/agent1.txt");
+$userPrompt = (string) ($formInput["userprompt"] ?? "");
 
 
-if (strpos($formInput["userprompt"], "Quest Title") !== false) {
+if (strpos($userPrompt, "Quest Title") !== false) {
     // First Quest iteration
-    $formInput["userprompt"] .= "\nNote: this is the first step of the quest, so first topic should be a salutation, and then generate the quest steps. THIS IS THE QUEST BEGINNING, quest will continue later, so no final end.";
+    $userPrompt .= "\nNote: this is the first step of the quest, so first topic should be a salutation, and then generate the quest steps. THIS IS THE QUEST BEGINNING, quest will continue later, so no final end.";
 
 }
 
@@ -49,69 +53,30 @@ $allowedRaces = ['nord', 'imperial', 'redguard', 'breton', 'argonian', 'orc', 'd
 $allowedClasses = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'creature', 'forsworn'];
 $allowedItemTypes = ['potion', 'necklace', 'amulet', 'ring', 'book', 'axe', 'note', 'dagger'];
 $allowedItemLocations = ['nearby', 'pocket'];
-$npcTemplatesPrompt = '';
-$npcOwnTemplatesPrompt = '';
-
-if (quest_reference_tables_ready()) {
-    $dbItemTypes = quest_reference_active_keys('item_types');
-    if (!empty($dbItemTypes)) {
-        $allowedItemTypes = array_values(array_unique($dbItemTypes));
-    }
-
-    $dbClasses = quest_reference_active_keys('outfit');
-    if (!empty($dbClasses)) {
-        $allowedClasses = array_values(array_unique(array_merge($dbClasses, ['creature'])));
-    }
-
-    $dbTemplateKeys = quest_reference_active_keys('npc_templates');
-    $dbRaces = quest_reference_derive_races_from_template_keys($dbTemplateKeys);
-    if (!empty($dbRaces)) {
-        $allowedRaces = $dbRaces;
-    }
-
-    $npcTemplatesPrompt = quest_reference_format_dataset_for_prompt('npc_templates', true);
-    $npcOwnTemplatesPrompt = quest_reference_format_dataset_for_prompt('npc_own_templates', true);
-
-}
+$promptConstraints = quest_reference_prompt_constraints($allowedRaces, $allowedClasses, $allowedItemTypes);
+$allowedRaces = $promptConstraints['races'];
+$allowedClasses = $promptConstraints['classes'];
+$allowedItemTypes = $promptConstraints['item_types'];
+$sysprompt_content = quest_reference_apply_prompt_constraints($sysprompt_content, $promptConstraints);
 
 $prompt = [];
 
 
-$fquestTitle = $formInput["questTitle"];
+$fquestTitle = trim((string) ($formInput["questTitle"] ?? ''));
 
 $prompt[] = ['role' => 'system', 'content' => $sysprompt_content];
-$prompt[] = ['role' => 'user', 'content' => $formInput["userprompt"]];
-$prompt[] = ['role' => 'user', 'content' => "Write XML to acomplish all the quest steps"];
-
-/*
-$prompt[] = [
-    'role' => 'user',
-    'content' => "Use ONLY active quest reference values from database:
-Allowed races: " . implode(', ', $allowedRaces) . "
-Allowed classes: " . implode(', ', $allowedClasses) . "
-Allowed item types: " . implode(', ', $allowedItemTypes) . "
-Allowed item locations: " . implode(', ', $allowedItemLocations) . "
-Any value not in these lists is forbidden."
-];
-
-$prompt[] = [
-    'role' => 'user',
-    'content' => "Active NPC template pools (grouped by template key; one key per line):
-" . ($npcTemplatesPrompt !== '' ? $npcTemplatesPrompt : '(not available)') . "
-
-Active custom NPC template pools (grouped by template key; one key per line):
-" . ($npcOwnTemplatesPrompt !== '' ? $npcOwnTemplatesPrompt : '(not available)') . "
-
-If database has duplicate rows for a template key, treat them as one combined key with all formids merged."
-];
-*/
+$prompt[] = ['role' => 'user', 'content' => $userPrompt];
 $prompt[] = ['role' => 'user', 'content' => "Write XML to acomplish all the quest steps"];
 
 
-$allowedLocationList = $formInput["locations"];
+$allowedLocationList = is_array($formInput["locations"] ?? null) ? $formInput["locations"] : [];
 $allowedLocationList[] = "nearby";
+$allowedLocationList = array_values(array_unique(array_filter(array_map(
+    static fn ($location) => trim((string) $location),
+    $allowedLocationList
+))));
 
-$spawneditemslist = $formInput["spawneditemslist"];
+$spawneditemslist = is_array($formInput["spawneditemslist"] ?? null) ? $formInput["spawneditemslist"] : [];
 $contextData = $prompt;
 
 $connectionHandler = $connector->getConnector($currentConnectorData);
@@ -177,12 +142,12 @@ function validate_spawns($xmlString, $allowedRaces, $allowedClasses, $allowedLoc
         }
 
         // Validate race
-        if (!in_array($race, $allowedRaces)) {
+        if (!in_array($race, $allowedRaces, true)) {
             $errors[] = "NPC '$name': Invalid race '$race'. Allowed: " . implode(', ', $allowedRaces);
         }
 
         // Validate class
-        if (!in_array($class, $allowedClasses)) {
+        if (!in_array($class, $allowedClasses, true)) {
             $errors[] = "NPC '$name': Invalid class '$class'. Allowed: " . implode(', ', $allowedClasses);
         }
 
@@ -202,7 +167,7 @@ function validate_spawns($xmlString, $allowedRaces, $allowedClasses, $allowedLoc
         }
          
         // Validate location (case-insensitive)
-        if ($location !== 'nearby' && !in_array($location, $allowedLocationsLower)) {
+        if ($location !== 'nearby' && !in_array($location, $allowedLocationsLower, true)) {
             if (preg_match('/^[a-zA-Z0-9\s\'-]+@[0-9]+$/', $location)) {
                 continue; // Valid reference format
             } else
@@ -255,12 +220,12 @@ function validate_spawned_items($xmlString, $allowedItemTypes, $allowedLocationL
         }
 
         // Validate item type
-        if (!in_array($type, $allowedItemTypes)) {
+        if (!in_array($type, $allowedItemTypes, true)) {
             $errors[] = "Item '$name': Invalid type '$type'. Allowed: " . implode(', ', $allowedItemTypes);
         }
 
         // Validate location (case-insensitive)
-        if (!in_array($location, $allowedLocationsLower)) {
+        if (!in_array($location, $allowedLocationsLower, true)) {
             // Check first if location is a reference in the format name:0xHEXID, pattern should be like "pedestal:0x00027f92"
             if (preg_match('/^[a-zA-Z0-9\s\'-]+:0x[0-9a-fA-F]+$/', $location)) {
                 continue; // Valid reference format

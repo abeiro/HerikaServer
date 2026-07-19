@@ -21,6 +21,10 @@ $tabs = [
         "label" => "Item Types",
         "src" => $webRoot . "/ui/addons/snqe/quest_reference_table.php?embed=1&dataset=item_types",
     ],
+    "weapons" => [
+        "label" => "Weapons",
+        "src" => $webRoot . "/ui/addons/snqe/quest_reference_table.php?embed=1&dataset=weapons",
+    ],
     "npc_templates" => [
         "label" => "NPC Templates",
         "src" => $webRoot . "/ui/addons/snqe/quest_reference_table.php?embed=1&dataset=npc_templates",
@@ -32,6 +36,10 @@ $tabs = [
     "outfit" => [
         "label" => "Outfits",
         "src" => $webRoot . "/ui/addons/snqe/quest_reference_table.php?embed=1&dataset=outfit",
+    ],
+    "asset_library" => [
+        "label" => "Asset Library",
+        "src" => $webRoot . "/ui/addons/snqe/quest_asset_library.php?embed=1",
     ],
     "server_logs" => [
         "label" => "Server Logs",
@@ -173,7 +181,7 @@ footer {
 <main>
     <div class="tab-container">
         <h1 class="hub-title">AI Quest Manager</h1>
-        <p class="hub-subtitle">The quest system is limited in spawning assests defined in the system. You can add more assest within the other tabs in this menu.</p>
+        <p class="hub-subtitle">Review the plugin-aware assets AI Quest Manager can use, or maintain legacy reference tables for compatibility.</p>
         <div class="tab-buttons">
             <?php foreach ($tabs as $tabKey => $tabCfg): ?>
                 <button class="tab-button <?php echo ($tabKey === $activeTab) ? "active" : ""; ?>" data-tab="<?php echo htmlspecialchars($tabKey); ?>">

@@ -19,6 +19,12 @@ $GLOBALS["item_types"] = [
     "dagger" => [0x000aebf7], // Vanilla
 ];
 
+$GLOBALS["weapons"] = [
+    "default" => [0x00013989],
+    "warrior" => [0x00013989],
+    "soldier" => [0x00013989],
+];
+
 // Review this, this are used to copy appearance.
 
 $GLOBALS["npc_templates"] = [
@@ -216,6 +222,7 @@ if (!function_exists("initializeQuestReferenceData")) {
             "npc_templates" => $GLOBALS["npc_templates"] ?? [],
             "npc_own_templates" => $GLOBALS["npc_own_templates"] ?? [],
             "outfit" => $GLOBALS["outfit"] ?? [],
+            "weapons" => $GLOBALS["weapons"] ?? [],
         ];
 
         foreach ($defaults as $datasetName => $valueMap) {
@@ -603,9 +610,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
     $masterData = $GLOBALS["npc_own_templates"];
 
 
-    $weapon = [
-        "sword" => [0x00013989],
-    ];
+    $weapons = $GLOBALS["weapons"] ?? [];
 
     $locations = [];
     $locationRows = $GLOBALS["db"]->fetchAll("SELECT lower(name) AS location_key, formid FROM locations WHERE formid IS NOT NULL");
@@ -654,10 +659,19 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
         Logger::warn("[npcProfileBase] No active quest_npc_templates entry for {$templateKey}");
     }
 
-    if (isset($masterData[$classTemplateKey])) {
-        $parm1 = quest_reference_pick_random($masterData, $classTemplateKey, $parm5);
-    } else {
+    $humanoidRaces = ["nord", "imperial", "redguard", "breton", "argonian", "orc"];
+    $parm1 = quest_reference_pick_safe_spawn_base($masterData, $gender, $race, $dclass);
+    if ($parm1 === 0) {
+        if (in_array($race, $humanoidRaces, true)) {
+            Logger::warn("[npcProfileBase] Aborting humanoid spawn: no CHIM-owned base for {$classTemplateKey}");
+            return;
+        }
+        // Generic creature records are complete spawn bases rather than appearance donors.
         $parm1 = $parm5;
+    }
+    if ($parm1 === 0) {
+        Logger::warn("[npcProfileBase] Aborting spawn: no usable base for {$gender}_{$race}");
+        return;
     }
 
     // Just for outfit
@@ -677,10 +691,12 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
         $parm2 = 0;
     }
 
-    //$parm3=$weapon["{$weapon}"][0];
     $rumors = false;
-    // TO-DO to have a list of weapons
-    $parm3 = $weapon["sword"][0];
+    $parm3 = quest_reference_pick_random(
+        $weapons,
+        $dclass,
+        quest_reference_pick_random($weapons, "default", 0x00013989)
+    );
     $patchedTaskid = $taskId;
 
     if ($location == "nearby") {
@@ -788,11 +804,7 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
 
     $localItemType = quest_reference_pick_random($masterData, $basetype, 0);
     if ($localItemType === 0) {
-        Logger::warn("[SkCreateItem] No active quest_item_types entry for '{$basetype}', trying any active type");
-        $localItemType = quest_reference_pick_any_random($masterData, 0);
-    }
-    if ($localItemType === 0) {
-        Logger::warn("[SkCreateItem] Aborting item spawn for '{$name}': no active quest_item_types values available");
+        Logger::warn("[SkCreateItem] Aborting item spawn for '{$name}': no active quest_item_types entry for '{$basetype}'");
         return;
     }
 
@@ -938,10 +950,7 @@ function CreateItemNpc($basetype, $name, $npc)
     $localItemNPC = $GLOBALS["db"]->escape($npc);
     $localItemType = quest_reference_pick_random($masterData, $basetype, 0);
     if ($localItemType === 0) {
-        $localItemType = quest_reference_pick_any_random($masterData, 0);
-    }
-    if ($localItemType === 0) {
-        Logger::warn("[CreateItemNpc] Aborting item spawn for '{$name}': no active quest_item_types values available");
+        Logger::warn("[CreateItemNpc] Aborting item spawn for '{$name}': no active quest_item_types entry for '{$basetype}'");
         return;
     }
 
