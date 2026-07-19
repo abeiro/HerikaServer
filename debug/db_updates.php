@@ -7225,6 +7225,17 @@ if ($checkVersion("master_packages")<20260716002) {
 
 }
 
+if ($checkVersion("faction_politics") < 20260719001) {
+    Logger::debug("Applying faction_politics 20260719001 - create persistent faction world-state tables");
+    $schemaFile = __DIR__ . "/../lib/core/database_schema/faction_politics.sql";
+    if (is_file($schemaFile) && $db->execQuery(file_get_contents($schemaFile))) {
+        $updateVersion("faction_politics", 20260719001);
+        Logger::info("Applied patch faction_politics 20260719001");
+    } else {
+        Logger::error("Failed to apply patch faction_politics 20260719001");
+    }
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------

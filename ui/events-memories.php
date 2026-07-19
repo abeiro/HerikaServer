@@ -511,7 +511,7 @@ if (isset($_GET['delete_memory']) && !empty($_GET['delete_memory'])) {
 
 // Get active tab from URL parameter, default to 'eventlog'
 $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'eventlog';
-$validTabs = ['eventlog', 'responselog', 'adventure', 'memory', 'diaries', 'books', 'soulgaze', 'quests', 'questgen', 'backgroundlife'];
+$validTabs = ['eventlog', 'responselog', 'adventure', 'memory', 'diaries', 'books', 'soulgaze', 'quests', 'questgen', 'backgroundlife', 'factionpolitics'];
 if (!in_array($activeTab, $validTabs, true)) {
     $activeTab = 'eventlog';
 }
@@ -1890,6 +1890,10 @@ function getTimeColor($time) {
 
         <div id="backgroundlife-tab" class="tab-content embed-tab <?php echo $activeTab === 'backgroundlife' ? 'active' : ''; ?>">
             <iframe class="embed-frame" title="Background Life" <?php echo $activeTab === 'backgroundlife' ? 'src' : 'data-src'; ?>="<?php echo $webRoot; ?>/ui/mapview.php"></iframe>
+        </div>
+
+        <div id="factionpolitics-tab" class="tab-content embed-tab <?php echo $activeTab === 'factionpolitics' ? 'active' : ''; ?>">
+            <iframe class="embed-frame" title="Faction Politics" <?php echo $activeTab === 'factionpolitics' ? 'src' : 'data-src'; ?>="<?php echo $webRoot; ?>/ui/faction_politics.php?embed=1"></iframe>
         </div>
     </div>
 </div>

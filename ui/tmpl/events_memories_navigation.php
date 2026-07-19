@@ -33,6 +33,7 @@ $eventsMemoriesGroups = [
             ['key' => 'quests', 'label' => 'Active Quests', 'icon' => '&#x1F3AF;', 'href' => $eventsMemoriesUiRoot . '/events-memories.php?tab=quests'],
             ['key' => 'questgen', 'label' => 'AI Quest Manager', 'icon' => '&#x1F9ED;', 'href' => $eventsMemoriesUiRoot . '/events-memories.php?tab=questgen'],
             ['key' => 'backgroundlife', 'label' => 'Background Life', 'icon' => '&#x1F5FA;&#xFE0F;', 'href' => $eventsMemoriesUiRoot . '/events-memories.php?tab=backgroundlife'],
+            ['key' => 'factionpolitics', 'label' => 'Faction Politics', 'icon' => '&#x2696;&#xFE0F;', 'href' => $eventsMemoriesUiRoot . '/events-memories.php?tab=factionpolitics'],
         ],
     ],
 ];

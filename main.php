@@ -2395,6 +2395,16 @@ if (isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
     $nearbySections = $GLOBALS["PROMPT_NEARBY_SECTIONS"];
 }
 
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'faction_politics.php';
+$factionPoliticsContext = chimFactionPoliticsBuildSceneContext(
+    $GLOBALS['db'],
+    $GLOBALS['CHIM_CORE_CURRENT_NPC_DATA'] ?? null,
+    $GLOBALS['CACHE_PEOPLE'] ?? ''
+);
+if ($factionPoliticsContext !== '') {
+    $nearbySections .= $factionPoliticsContext;
+}
+
 $promptInjectionContext = [
     "game_request" => $gameRequest,
     "herika_name" => function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : ($GLOBALS["HERIKA_NAME"] ?? ""),
