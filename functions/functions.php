@@ -60,7 +60,6 @@ $ENABLED_FUNCTIONS_LOCAL = [
     'PayBounty',
     'ArrestPlayer',
     'ForgiveCrime',
-    'MaterializeDiary',
     'EndConversation'
     //    'WaitHere'
 ];
@@ -977,7 +976,6 @@ $F_TRANSLATIONS_LOCAL["AddBounty"] = "#HERIKA_NAME# adds a crime bounty to #PLAY
 $F_TRANSLATIONS_LOCAL["PayBounty"] = "#PLAYER_NAME# pays off their bounty to #HERIKA_NAME#. Stolen items are confiscated and the matter is resolved immediately. Guard-only action.";
 $F_TRANSLATIONS_LOCAL["ArrestPlayer"] = "#HERIKA_NAME# attempts to arrest #PLAYER_NAME#. #PLAYER_NAME# can submit or resist. Guard-only action for serious crimes or refusal to pay.";
 $F_TRANSLATIONS_LOCAL["ForgiveCrime"] = "#HERIKA_NAME# forgives #PLAYER_NAME#'s crimes and clears their bounty. Guard-only action for persuasion, bribe, or thane status.";
-$F_TRANSLATIONS_LOCAL["MaterializeDiary"] = "Create a readable physical diary from #HERIKA_NAME#'s recent diary entries and keep it in #HERIKA_NAME#'s inventory. Use only when #HERIKA_NAME# deliberately decides to keep a physical journal.";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"] = "#HERIKA_NAME# follows #PLAYER_NAME#.";
 $F_TRANSLATIONS_LOCAL["ComeCloser"] = "#HERIKA_NAME# approaches #PLAYER_NAME#.";
 $F_TRANSLATIONS_LOCAL["Brawl"] = "#HERIKA_NAME# engages in non-lethal combat with another actor, using weapons.";
@@ -1032,7 +1030,6 @@ $F_RETURNMESSAGES_LOCAL["AddBounty"] = "#HERIKA_NAME# added a bounty for #TARGET
 $F_RETURNMESSAGES_LOCAL["PayBounty"] = "#PLAYER_NAME# paid off their bounty to #HERIKA_NAME#, and stolen items were removed from inventory.";
 $F_RETURNMESSAGES_LOCAL["ArrestPlayer"] = "#HERIKA_NAME# attempted to arrest #PLAYER_NAME#.";
 $F_RETURNMESSAGES_LOCAL["ForgiveCrime"] = "#HERIKA_NAME# forgave #PLAYER_NAME#'s crimes and cleared their bounty.";
-$F_RETURNMESSAGES_LOCAL["MaterializeDiary"] = "#HERIKA_NAME# keeps a physical diary in their inventory.";
 $F_RETURNMESSAGES_LOCAL["FollowPlayer"] = "#HERIKA_NAME# follows #PLAYER_NAME#.";
 $F_RETURNMESSAGES_LOCAL["Brawl"] = "#HERIKA_NAME# starts a brawl with #TARGET#.";
 $F_RETURNMESSAGES_LOCAL["ReturnBackHome"] = "#HERIKA_NAME# goes back home.";
@@ -1087,7 +1084,6 @@ $F_NAMES_LOCAL["AddBounty"] = "AddBounty";
 $F_NAMES_LOCAL["PayBounty"] = "PayBounty";
 $F_NAMES_LOCAL["ArrestPlayer"] = "Arrest_#PLAYER_NAME#";
 $F_NAMES_LOCAL["ForgiveCrime"] = "ForgiveCrime";
-$F_NAMES_LOCAL["MaterializeDiary"] = "MaterializeDiary";
 $F_NAMES_LOCAL["FollowPlayer"] = "Follow_#PLAYER_NAME#";
 $F_NAMES_LOCAL["ComeCloser"] = "ComeCloser";
 $F_NAMES_LOCAL["Brawl"] = "Brawl";
@@ -1674,15 +1670,6 @@ $GLOBALS["FUNCTIONS"] = [
                 ],
             ],
             "required" => [""],
-        ],
-    ],
-    [
-        "name" => $F_NAMES_LOCAL["MaterializeDiary"],
-        "description" => $F_TRANSLATIONS_LOCAL["MaterializeDiary"],
-        "parameters" => [
-            "type" => "object",
-            "properties" => [],
-            "required" => [],
         ],
     ],
     [
@@ -2813,7 +2800,6 @@ chimTraceFunctionsIncludePhase(__LINE__, 'functions_reindexed', $startTime);
 
 require_once __DIR__ . "/../lib/scriptproxy_papyrus.php";
 require_once __DIR__ . "/../lib/core/activity_status.php";
-require_once __DIR__ . "/../lib/core/physical_npc_diaries.php";
 
 chimTraceFunctionsIncludePhase(__LINE__, 'post_filter_dependencies_loaded', $startTime);
 
@@ -2839,46 +2825,6 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 $reasons = $GLOBALS['CHIM_QUEST_SUPPRESSED_ACTION_REASONS'][$actionCodeNameResolved] ?? array();
                 $reasonText = is_array($reasons) && !empty($reasons) ? implode(', ', $reasons) : 'current quest beat';
                 error_log("[AI Quest] Dropping suppressed action {$actionCodeNameResolved}: {$reasonText}");
-                unset($actionsCopy[$n]);
-                continue;
-            }
-
-            if ($actionCodeNameResolved === 'MaterializeDiary') {
-                $actorName = trim((string)($actionParts[0] ?? ($GLOBALS['HERIKA_NAME'] ?? '')));
-                $npcMaster = new NpcMaster();
-                $npcData = $npcMaster->getByName($actorName);
-                $result = chimPhysicalDiaryMaterialize(
-                    $actorName,
-                    $npcData['refid'] ?? '',
-                    (int)($gameRequest[2] ?? 0)
-                );
-
-                $message = !empty($result['ok'])
-                    ? (!empty($result['created'])
-                        ? "{$actorName} created a physical diary."
-                        : "{$actorName}'s physical diary was refreshed without creating another copy.")
-                    : "{$actorName} could not create a physical diary: " . (string)($result['error'] ?? 'unknown error');
-
-                $GLOBALS['db']->insert('eventlog', [
-                    'ts' => (int)($gameRequest[1] ?? time()),
-                    'gamets' => (int)($gameRequest[2] ?? 0),
-                    'type' => 'infoaction',
-                    'data' => 'The Narrator: ' . $message,
-                    'sess' => (int)($gameRequest[1] ?? time()),
-                    'localts' => time(),
-                    'people' => '|' . $actorName . '|',
-                ]);
-
-                $GLOBALS['db']->insert('actions_issued', [
-                    'action' => 'MaterializeDiary',
-                    'fullcall' => $actionParts[0] . '|' . $actionParts[1] . '|' . $actionParts[2],
-                    'actorname' => $actorName,
-                    'ts' => (int)($gameRequest[1] ?? time()),
-                    'gamets' => (int)($gameRequest[2] ?? 0),
-                    'localts' => time(),
-                    'original' => chimPrepareActionsIssuedOriginalValue(''),
-                ]);
-
                 unset($actionsCopy[$n]);
                 continue;
             }

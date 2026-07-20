@@ -27,6 +27,13 @@ final class PhysicalDiaryFakeDb
     public function fetchOne(string $query): array
     {
         $this->queries[] = $query;
+        if (str_contains($query, 'INSERT INTO physical_npc_diaries')) {
+            if (!empty($this->physicalRows)) {
+                return [];
+            }
+            $this->physicalRows = [['npc_name' => 'Lydia']];
+            return $this->physicalRows[0];
+        }
         if (str_contains($query, 'FROM physical_npc_diaries')) {
             return $this->physicalRows[0] ?? [];
         }
@@ -39,9 +46,6 @@ final class PhysicalDiaryFakeDb
     public function execQuery(string $query): bool
     {
         $this->queries[] = $query;
-        if (str_contains($query, 'INSERT INTO physical_npc_diaries')) {
-            $this->physicalRows = [['npc_name' => 'Lydia']];
-        }
         return true;
     }
 
@@ -121,35 +125,88 @@ final class PhysicalNpcDiariesTest extends TestCase
             static fn(array $insert): bool => $insert['table'] === 'responselog'
         ));
         $this->assertCount(1, $commands);
-        $this->assertSame(
-            "rolecommand|spawnBook@Lydia's Diary@0@666766@0@Lydia's Diary",
-            $commands[0]['row']['action']
-        );
+        $parts = explode('@', $commands[0]['row']['action']);
+        $this->assertSame("rolecommand|spawnBook@Lydia's Diary@0@666766@0", implode('@', array_slice($parts, 0, 5)));
+        $this->assertStringStartsWith('b64:', $parts[5]);
+        $this->assertSame(chimPhysicalDiaryContent(array_reverse($GLOBALS['db']->entries)), base64_decode(substr($parts[5], 4), true));
     }
 
-    public function testExistingPhysicalDiaryRefreshesWithoutSpawningDuplicate(): void
+    public function testExistingPhysicalDiaryQueuesInventoryEnsureCommand(): void
     {
         $GLOBALS['db']->physicalRows = [['npc_name' => 'Lydia']];
         $result = chimPhysicalDiaryMaterialize('Lydia', '000A2C8E', 600, static function (): void {});
 
         $this->assertTrue($result['ok']);
         $this->assertFalse($result['created']);
-        $commands = array_filter(
+        $commands = array_values(array_filter(
             $GLOBALS['db']->inserts,
             static fn(array $insert): bool => $insert['table'] === 'responselog'
-        );
-        $this->assertCount(0, $commands);
+        ));
+        $this->assertCount(1, $commands);
+        $parts = explode('@', $commands[0]['row']['action']);
+        $this->assertSame("rolecommand|spawnBook@Lydia's Diary@0@666766@0", implode('@', array_slice($parts, 0, 5)));
+        $this->assertStringStartsWith('b64:', $parts[5]);
+        $this->assertSame(chimPhysicalDiaryContent(array_reverse($GLOBALS['db']->entries)), base64_decode(substr($parts[5], 4), true));
     }
 
-    public function testInactiveDiaryRefreshDoesNoRenderingWork(): void
+    public function testProfileSettingDefaultsOffWithoutRendering(): void
     {
         $rendered = false;
-        $result = chimPhysicalDiaryRefreshIfActive('Lydia', 700, static function () use (&$rendered): void {
-            $rendered = true;
-        });
+        $result = chimPhysicalDiarySyncForNpc(
+            'Lydia',
+            700,
+            static function () use (&$rendered): void {
+                $rendered = true;
+            },
+            static fn(): array => ['refid' => '000A2C8E', 'profile_metadata' => '{}']
+        );
 
         $this->assertTrue($result['ok']);
-        $this->assertFalse($result['active']);
+        $this->assertFalse($result['enabled']);
         $this->assertFalse($rendered);
+    }
+
+    public function testEnabledProfileCreatesAndRefreshesOneDiary(): void
+    {
+        $resolver = static fn(): array => [
+            'refid' => '000A2C8E',
+            'profile_metadata' => '{"MATERIALIZE_DIARY_ENABLED":true}',
+        ];
+
+        $first = chimPhysicalDiarySyncForNpc('Lydia', 700, static function (): void {}, $resolver);
+        $second = chimPhysicalDiarySyncForNpc('Lydia', 800, static function (): void {}, $resolver);
+
+        $this->assertTrue($first['enabled']);
+        $this->assertTrue($first['created']);
+        $this->assertFalse($second['created']);
+        $commands = array_values(array_filter(
+            $GLOBALS['db']->inserts,
+            static fn(array $insert): bool => $insert['table'] === 'responselog'
+        ));
+        $this->assertCount(2, $commands);
+        $this->assertStringStartsWith('rolecommand|spawnBook@', $commands[0]['row']['action']);
+        $this->assertStringStartsWith("rolecommand|spawnBook@Lydia's Diary@0@666766@0@b64:", $commands[1]['row']['action']);
+    }
+
+    public function testDisablingProfileStopsUpdatesWithoutRemovingTracking(): void
+    {
+        $GLOBALS['db']->physicalRows = [['npc_name' => 'Lydia']];
+        $rendered = false;
+        $result = chimPhysicalDiarySyncForNpc(
+            'Lydia',
+            900,
+            static function () use (&$rendered): void {
+                $rendered = true;
+            },
+            static fn(): array => [
+                'refid' => '000A2C8E',
+                'profile_metadata' => '{"MATERIALIZE_DIARY_ENABLED":false}',
+            ]
+        );
+
+        $this->assertTrue($result['ok']);
+        $this->assertFalse($result['enabled']);
+        $this->assertFalse($rendered);
+        $this->assertNotEmpty($GLOBALS['db']->physicalRows);
     }
 }

@@ -7226,6 +7226,14 @@ if ($checkVersion("physical_npc_diaries") < 20260719001) {
     }
 }
 
+if ($checkVersion("physical_npc_diaries") < 20260719002) {
+    Logger::debug("Applying physical_npc_diaries 20260719002 - remove draft action registration");
+
+    $db->execQuery("DELETE FROM public.core_action WHERE code_name = 'MaterializeDiary'");
+    $updateVersion("physical_npc_diaries", 20260719002);
+    Logger::info("Applied patch physical_npc_diaries 20260719002");
+}
+
 // master Packages update 
 if ($checkVersion("master_packages")<20260716002) {
     if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607.sql"))) {

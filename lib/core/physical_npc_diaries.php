@@ -10,6 +10,57 @@ function chimPhysicalDiaryTitle($npcName)
     return trim((string)$npcName) . "'s Diary";
 }
 
+function chimPhysicalDiarySettingEnabled($metadata)
+{
+    if (is_string($metadata)) {
+        $metadata = json_decode($metadata, true);
+    }
+    if (!is_array($metadata)) {
+        return false;
+    }
+
+    $value = $metadata['MATERIALIZE_DIARY_ENABLED'] ?? false;
+    if (is_bool($value)) {
+        return $value;
+    }
+    if (is_int($value) || is_float($value)) {
+        return (int)$value === 1;
+    }
+
+    return in_array(strtolower(trim((string)$value)), ['1', 'true', 'yes', 'on'], true);
+}
+
+function chimPhysicalDiaryResolveNpcContext($npcName)
+{
+    $npcName = trim((string)$npcName);
+    if ($npcName === '' || strcasecmp($npcName, 'The Narrator') === 0) {
+        return [];
+    }
+
+    if (!class_exists('NpcMaster')) {
+        require_once __DIR__ . DIRECTORY_SEPARATOR . 'npc_master.class.php';
+    }
+    if (!class_exists('CoreProfile')) {
+        require_once __DIR__ . DIRECTORY_SEPARATOR . 'core_profiles.class.php';
+    }
+
+    $npcData = (new NpcMaster())->getByName($npcName);
+    $profileId = (int)($npcData['profile_id'] ?? 0);
+    if (empty($npcData) || $profileId <= 0) {
+        return [];
+    }
+
+    $profileData = (new CoreProfile())->getById($profileId);
+    if (empty($profileData)) {
+        return [];
+    }
+
+    return [
+        'refid' => $npcData['refid'] ?? '',
+        'profile_metadata' => $profileData['metadata'] ?? '{}',
+    ];
+}
+
 function chimPhysicalDiaryRefIdToSignedInt($refId)
 {
     $value = trim((string)$refId);
@@ -131,8 +182,17 @@ function chimPhysicalDiaryStoreBook($title, $content, $gamets)
 function chimPhysicalDiaryMaterialize($npcName, $refId, $gamets, $renderer = null, $queueSpawn = true)
 {
     $npcName = trim((string)$npcName);
+    if ($npcName === '') {
+        return ['ok' => false, 'error' => 'missing_npc_reference'];
+    }
+
+    $safeName = chimPhysicalDiaryEscape($npcName);
+    $existing = $GLOBALS['db']->fetchOne(
+        "SELECT npc_name FROM physical_npc_diaries WHERE lower(npc_name) = lower('{$safeName}') LIMIT 1"
+    );
+    $created = empty($existing);
     $signedRefId = chimPhysicalDiaryRefIdToSignedInt($refId);
-    if ($npcName === '' || ($queueSpawn && $signedRefId === null)) {
+    if ($queueSpawn && $signedRefId === null) {
         return ['ok' => false, 'error' => 'missing_npc_reference'];
     }
 
@@ -147,20 +207,20 @@ function chimPhysicalDiaryMaterialize($npcName, $refId, $gamets, $renderer = nul
         return ['ok' => false, 'error' => 'render_failed'];
     }
 
-    $safeName = chimPhysicalDiaryEscape($npcName);
     $safeTitle = chimPhysicalDiaryEscape($title);
     $latestLocalts = max(array_map(static fn($entry) => (int)($entry['localts'] ?? 0), $entries));
     $now = time();
-    $existing = $GLOBALS['db']->fetchOne(
-        "SELECT npc_name FROM physical_npc_diaries WHERE lower(npc_name) = lower('{$safeName}') LIMIT 1"
-    );
 
-    if (empty($existing)) {
-        $GLOBALS['db']->execQuery(
+    if ($created) {
+        $inserted = $GLOBALS['db']->fetchOne(
             "INSERT INTO physical_npc_diaries (npc_name, title, last_diary_localts, created_at, updated_at)
-             VALUES ('{$safeName}', '{$safeTitle}', {$latestLocalts}, {$now}, {$now})"
+             VALUES ('{$safeName}', '{$safeTitle}', {$latestLocalts}, {$now}, {$now})
+             ON CONFLICT (npc_name) DO NOTHING
+             RETURNING npc_name"
         );
-    } else {
+        $created = !empty($inserted);
+    }
+    if (!$created) {
         $GLOBALS['db']->execQuery(
             "UPDATE physical_npc_diaries
              SET title = '{$safeTitle}', last_diary_localts = {$latestLocalts}, updated_at = {$now}
@@ -170,38 +230,50 @@ function chimPhysicalDiaryMaterialize($npcName, $refId, $gamets, $renderer = nul
 
     chimPhysicalDiaryStoreBook($title, $content, $gamets);
 
-    if ($queueSpawn && empty($existing)) {
+    if ($queueSpawn) {
         $taskId = str_replace('@', '', (string)($GLOBALS['taskId'] ?? '0'));
         $safeCommandTitle = str_replace('@', '', $title);
+        $encodedContent = base64_encode($content);
         $GLOBALS['db']->insert('responselog', [
             'localts' => $now,
             'sent' => 0,
             'actor' => 'rolemaster',
             'text' => '',
-            'action' => "rolecommand|spawnBook@{$safeCommandTitle}@0@{$signedRefId}@{$taskId}@{$safeCommandTitle}",
+            'action' => "rolecommand|spawnBook@{$safeCommandTitle}@0@{$signedRefId}@{$taskId}@b64:{$encodedContent}",
             'tag' => '',
         ]);
     }
 
     return [
         'ok' => true,
-        'created' => empty($existing),
+        'created' => $created,
         'title' => $title,
         'entry_count' => count($entries),
     ];
 }
 
-function chimPhysicalDiaryRefreshIfActive($npcName, $gamets, $renderer = null)
+function chimPhysicalDiarySyncForNpc($npcName, $gamets, $renderer = null, $contextResolver = null)
 {
-    $safeName = chimPhysicalDiaryEscape($npcName);
-    $existing = $GLOBALS['db']->fetchOne(
-        "SELECT npc_name FROM physical_npc_diaries WHERE lower(npc_name) = lower('{$safeName}') LIMIT 1"
-    );
-    if (empty($existing)) {
-        return ['ok' => true, 'active' => false];
-    }
+    try {
+        $context = is_callable($contextResolver)
+            ? call_user_func($contextResolver, $npcName)
+            : chimPhysicalDiaryResolveNpcContext($npcName);
+        if (!is_array($context) || !chimPhysicalDiarySettingEnabled($context['profile_metadata'] ?? null)) {
+            return ['ok' => true, 'enabled' => false];
+        }
 
-    $result = chimPhysicalDiaryMaterialize($npcName, null, $gamets, $renderer, false);
-    $result['active'] = true;
-    return $result;
+        $result = chimPhysicalDiaryMaterialize(
+            $npcName,
+            $context['refid'] ?? '',
+            (int)$gamets,
+            $renderer
+        );
+        $result['enabled'] = true;
+        return $result;
+    } catch (Throwable $e) {
+        if (class_exists('Logger')) {
+            Logger::warn('Physical diary sync failed for ' . trim((string)$npcName) . ': ' . $e->getMessage());
+        }
+        return ['ok' => false, 'enabled' => true, 'error' => 'sync_failed'];
+    }
 }

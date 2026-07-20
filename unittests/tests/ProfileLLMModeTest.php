@@ -72,6 +72,7 @@ final class ProfileLLMModeTest extends TestCase
             'middle_term_memory' => false,
             'auto_diary' => true,
             'auto_diary_wait' => false,
+            'physical_diary' => false,
         ], ProfileLLMMode::getProfileDefaults([
             'metadata' => '{"DYNAMIC_PROFILE_ENABLED":"on","MIDDLE_TERM_MEMORY_ENABLED":0,' .
                 '"AUTO_DIARY_ENABLED":true,"AUTO_DIARY_WAIT_ENABLED":"false"}',
@@ -89,6 +90,15 @@ final class ProfileLLMModeTest extends TestCase
 
         $this->assertTrue($decoded['AUTO_DIARY_ENABLED']);
         $this->assertSame('ja', $decoded['CORE_LANG']);
+    }
+
+    public function testPhysicalDiaryDefaultsOffAndCanBeEnabled(): void
+    {
+        $defaults = ProfileLLMMode::getProfileDefaults(['metadata' => '{}']);
+        $this->assertFalse($defaults['physical_diary']);
+
+        $updated = ProfileLLMMode::updateProfileDefaultMetadata('{}', 'physical_diary', true);
+        $this->assertTrue(json_decode($updated, true)['MATERIALIZE_DIARY_ENABLED']);
     }
 
     public function testUpdatingUnsupportedProfileDefaultFails(): void

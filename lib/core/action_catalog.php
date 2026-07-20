@@ -1236,7 +1236,7 @@ function herikaActionCatalogBuildBaseMetadata($codeName, $scriptProxyProgram = n
     $dispatch = 'plugin_command';
     if ($scriptProxyProgram !== null) {
         $dispatch = 'script_proxy';
-    } elseif (in_array($codeName, ['CreateNewNPC', 'DirectorCommand', 'MaterializeDiary'], true)) {
+    } elseif (in_array($codeName, ['CreateNewNPC', 'DirectorCommand'], true)) {
         $dispatch = 'server_action';
     } elseif (in_array($codeName, ['Training', 'TeleportNPC', 'SpawnItem', 'SpawnGold', 'SpawnNPC', 'KillTarget'], true)) {
         $dispatch = 'rolecommand';
@@ -1390,7 +1390,6 @@ function herikaActionCatalogBuildBaseFollowupConfig($codeName)
         'GiveItemTo',
         'HireCarriage',
         'HireFerry',
-        'MaterializeDiary',
         'MoveTo',
         'RentRoom',
         'TakeGoldFromPlayer',
