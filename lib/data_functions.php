@@ -10,6 +10,7 @@ require_once(__DIR__."/emote_moods.php");
 require_once(__DIR__."/core/activity_status.php");
 require_once(__DIR__."/core/transformation_state.php");
 require_once(__DIR__."/core/game_plugins.php");
+require_once(__DIR__."/core/event_type.php");
 require_once(__DIR__."/core/npc_master.class.php");
 require_once(__DIR__."/core/core_profiles.class.php");
 require_once(__DIR__."/prompt_injections.php");
@@ -897,7 +898,7 @@ function DataLastDataFor($actor, $lastNelements = -10)
     $lastDialogFull = array();
     $results = $db->fetchAll("select  
     case 
-      when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%' or data like '%background chat%' then 'The Narrator:'
+      when type like 'info%' or type like 'death%' or type like 'funcret%' or type like 'location%' or type='chat_background' or data like '%background chat%' then 'The Narrator:'
       when type='book' then 'The Narrator: ({$GLOBALS["PLAYER_NAME"]} took the book ' 
       else '' 
     end||a.data  as data 
@@ -2517,7 +2518,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     case 
       when type='infoaction' and a.data like '#%MEMORY%' then 'MEMORY'
       when type like 'info%' or type like 'funcret%' or type like 'location%' then 'CONTEXTI'
-      when a.data like '%background chat%' then 'BACKDIAG'
+      when a.type='chat_background' or a.data like '%background chat%' then 'BACKDIAG'
       when type='book' then 'BOOKEVT' 
       when type='contentbook' then 'BOOKEVT'
       when type='quest' then 'QUEST' 
@@ -2568,18 +2569,9 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     // Keep generic far-away actors out of historic context. Shared narrator rows are flattened on write.
     $results = $db->fetchAll($query);
 
-    // Filter blacklisted event types
+    // Filter stored event types, treating legacy background chat rows as chat_background.
     if (isset($GLOBALS["EVENT_TYPE_FILTER"]) && !empty($GLOBALS["EVENT_TYPE_FILTER"])) {
-        $blacklistedEventTypes = array_map('trim', explode(',', strtolower($GLOBALS["EVENT_TYPE_FILTER"])));
-        $results = array_filter($results, function($row) use ($blacklistedEventTypes) {
-            $eventType = strtolower($row["type"] ?? '');
-            foreach ($blacklistedEventTypes as $blacklistedType) {
-                if (!empty($blacklistedType) && $eventType === $blacklistedType) {
-                    return false;
-                }
-            }
-            return true;
-        });
+        $results = chimFilterRowsByEventType($results, $GLOBALS["EVENT_TYPE_FILTER"]);
     }
 
     $results = array_filter($results, function ($row) {
@@ -3260,7 +3252,7 @@ function DataLastDataExpandedForBak($actor, $lastNelements = -10,$sqlfilter="")
     $results = $db->fetchAll("select  
     case 
     when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%'  then 'The Narrator:'
-    when a.data like '%background chat%' then 'The Narrator: background dialogue: '
+    when a.type='chat_background' or a.data like '%background chat%' then 'The Narrator: background dialogue: '
     when type='book' then 'The Narrator: ({$GLOBALS["PLAYER_NAME"]} took the book ' 
     else '' 
     end||a.data  as data , gamets,localts,type

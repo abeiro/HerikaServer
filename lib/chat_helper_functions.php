@@ -10,6 +10,7 @@ require_once(__DIR__."/online_translation.php");
 require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/pipeline_status.php");
 require_once(__DIR__."/emote_moods.php");
+require_once(__DIR__."/core/event_type.php");
 
 function callConfiguredTts($textString, $mood, $stringforhash)
 {
@@ -4665,7 +4666,7 @@ function buildScopedPeopleForEvent($eventType, $eventData, $listenerName, $fallb
         return buildScopedPeopleForPlayerInput($eventType, $eventData, $listenerName, $effectiveFallback);
     }
 
-    if ($eventType === "chat") {
+    if (in_array($eventType, ["chat", "chat_background"], true)) {
         return buildScopedPeopleForChatEvent($eventData, $effectiveFallback);
     }
 
@@ -4754,7 +4755,11 @@ function logEvent($dataArray,$forcePeople='')
             $dataArray[2] = $new_gts;
         }
 
-        $eventType = strtolower((string)($dataArray[0] ?? ""));
+        $dataArray[0] = chimNormalizeLoggedEventType(
+            $dataArray[0] ?? "",
+            $dataArray[3] ?? ""
+        );
+        $eventType = strtolower((string)$dataArray[0]);
         $defaultPeopleFallback = $GLOBALS["CACHE_PEOPLE_LIMITED"];
         
         if (in_array($eventType, ["infoaction", "funcret"], true)) {
