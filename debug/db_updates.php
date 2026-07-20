@@ -7213,6 +7213,150 @@ if ($checkVersion("general_settings") < 20260711001) {
     }
 }
 
+if ($checkVersion("quest_asset_library") < 20260718003) {
+    Logger::debug("Applying quest_asset_library 20260718003 - add curated quest spawn templates");
+
+    $schemaFile = __DIR__ . "/../data/quest_asset_library.sql";
+    $manifestDirectory = __DIR__ . "/../data/quest_assets";
+    $migrationOk = is_readable($schemaFile)
+        && $db->execQuery(file_get_contents($schemaFile)) !== false;
+
+    if ($migrationOk) {
+        require_once __DIR__ . "/../lib/quest_asset_library.php";
+        foreach (["skyrim_official.json", "chim_spawn_templates.json"] as $manifestName) {
+            $manifestPath = $manifestDirectory . "/" . $manifestName;
+            $result = quest_asset_import_manifest_file($manifestPath);
+            if (empty($result["success"])) {
+                $migrationOk = false;
+                Logger::error(
+                    "Failed importing quest asset manifest {$manifestName}: "
+                    . implode("; ", $result["errors"] ?? ["unknown error"])
+                );
+                break;
+            }
+        }
+    }
+
+    if ($migrationOk) {
+        require_once __DIR__ . "/../lib/quest_reference_data.php";
+        $canonicalDefaults = [
+            "npc_templates" => [],
+            "npc_own_templates" => [],
+        ];
+        foreach (["skyrim_official.json", "chim_spawn_templates.json"] as $manifestName) {
+            $manifestPath = $manifestDirectory . "/" . $manifestName;
+            $manifest = json_decode((string) file_get_contents($manifestPath), true);
+            foreach (($manifest["groups"] ?? []) as $group) {
+                $datasetName = strtolower(trim((string) ($group["dataset"] ?? "")));
+                $groupKey = strtolower(trim((string) ($group["key"] ?? "")));
+                if (!isset($canonicalDefaults[$datasetName]) || $groupKey === "") {
+                    continue;
+                }
+                foreach (($group["members"] ?? []) as $member) {
+                    $stableRef = trim((string) ($member["stable_ref"] ?? ""));
+                    if ($stableRef !== "") {
+                        $canonicalDefaults[$datasetName][$groupKey][] = $stableRef;
+                    }
+                }
+            }
+        }
+
+        foreach ($canonicalDefaults as $datasetName => $valueMap) {
+            if (quest_reference_add_missing_dataset_entries($datasetName, $valueMap) === false) {
+                $migrationOk = false;
+                Logger::error("Failed synchronizing bundled {$datasetName} groups into the canonical quest table");
+                break;
+            }
+        }
+    }
+
+    if ($migrationOk) {
+        $updateVersion("quest_asset_library", 20260718003);
+        Logger::info("Applied patch quest_asset_library 20260718003");
+    } else {
+        Logger::error("Failed to apply quest_asset_library 20260718003");
+    }
+}
+
+if ($checkVersion("quest_asset_library") < 20260719001) {
+    Logger::debug("Applying quest_asset_library 20260719001 - remove unshipped quest NPC templates");
+
+    require_once __DIR__ . "/../lib/quest_asset_library.php";
+    require_once __DIR__ . "/../lib/quest_reference_data.php";
+
+    $migrationOk = true;
+    $manifestPath = __DIR__ . "/../data/quest_assets/chim_spawn_templates.json";
+    $result = quest_asset_import_manifest_file($manifestPath);
+    if (empty($result["success"])) {
+        $migrationOk = false;
+        Logger::error(
+            "Failed importing cleaned quest asset manifest chim_spawn_templates.json: "
+            . implode("; ", $result["errors"] ?? ["unknown error"])
+        );
+    }
+
+    if ($migrationOk && quest_reference_table_exists("quest_npc_own_templates")) {
+        $templateKeyFilter = "template_key ~* '^(male|female)_(altmer|bosmer|dunmer|khajiit)(_|$)'";
+        $invalidStableRefs = "'aiagent.esp|00045ce7', 'aiagent.esp|00045ce8', "
+            . "'aiagent.esp|00045ce9', 'aiagent.esp|00045cea', "
+            . "'aiagent.esp|00045ceb', 'aiagent.esp|00045cec', "
+            . "'aiagent.esp|00045ced', 'aiagent.esp|00045cee'";
+        $invalidHexPattern = "^0x[0-9a-f]{2}045ce[7-9a-e]$";
+
+        if (quest_reference_column_exists("quest_npc_own_templates", "formids_json")) {
+            $migrationOk = $db->execQuery("
+                UPDATE public.quest_npc_own_templates AS templates
+                SET formids_json = (
+                    SELECT COALESCE(jsonb_agg(entry.value ORDER BY entry.ordinality), '[]'::jsonb) AS formids_json
+                    FROM jsonb_array_elements(COALESCE(templates.formids_json, '[]'::jsonb))
+                        WITH ORDINALITY AS entry(value, ordinality)
+                    WHERE NOT (
+                        lower(entry.value #>> '{}') IN ({$invalidStableRefs})
+                        OR lower(entry.value #>> '{}') ~ '{$invalidHexPattern}'
+                        OR (
+                            (entry.value #>> '{}') ~ '^[0-9]+$'
+                            AND (((entry.value #>> '{}')::bigint & 16777215) BETWEEN 285927 AND 285934)
+                        )
+                    )
+                )
+                WHERE {$templateKeyFilter}
+            ") !== false;
+
+            if ($migrationOk) {
+                $migrationOk = $db->execQuery("
+                    DELETE FROM public.quest_npc_own_templates
+                    WHERE {$templateKeyFilter}
+                      AND jsonb_array_length(COALESCE(formids_json, '[]'::jsonb)) = 0
+                ") !== false;
+            }
+        }
+
+        if ($migrationOk && quest_reference_column_exists("quest_npc_own_templates", "formid")) {
+            if (quest_reference_formid_column_is_text("quest_npc_own_templates")) {
+                $formIdFilter = "lower(trim(formid::text)) IN ({$invalidStableRefs}) "
+                    . "OR lower(trim(formid::text)) ~ '{$invalidHexPattern}' "
+                    . "OR (trim(formid::text) ~ '^[0-9]+$' "
+                    . "AND ((trim(formid::text)::bigint & 16777215) BETWEEN 285927 AND 285934))";
+            } else {
+                $formIdFilter = "(formid::bigint & 16777215) BETWEEN 285927 AND 285934";
+            }
+
+            $migrationOk = $db->execQuery("
+                DELETE FROM public.quest_npc_own_templates
+                WHERE {$templateKeyFilter}
+                  AND ({$formIdFilter})
+            ") !== false;
+        }
+    }
+
+    if ($migrationOk) {
+        $updateVersion("quest_asset_library", 20260719001);
+        Logger::info("Applied patch quest_asset_library 20260719001");
+    } else {
+        Logger::error("Failed to apply quest_asset_library 20260719001");
+    }
+}
+
 if ($checkVersion("prompts") < 20260719001) {
     Logger::debug("Applying prompts 20260719001 - improve book reading prompt");
 
