@@ -14,6 +14,30 @@ if (!function_exists('chimCommitmentHoursToGamets')) {
     }
 }
 
+if (!function_exists('chimCommitmentNormalizeRepeatHours')) {
+    function chimCommitmentNormalizeRepeatHours($value): float
+    {
+        if (!is_numeric($value) || (float)$value <= 0.0) {
+            return 0.0;
+        }
+
+        return chimCommitmentNormalizeHours($value);
+    }
+}
+
+if (!function_exists('chimCommitmentNextDueGamets')) {
+    function chimCommitmentNextDueGamets(int $dueGamets, int $currentGamets, int $repeatIntervalGamets): int
+    {
+        if ($repeatIntervalGamets <= 0) {
+            return $dueGamets;
+        }
+
+        $elapsed = max(0, $currentGamets - $dueGamets);
+        $intervals = intdiv($elapsed, $repeatIntervalGamets) + 1;
+        return $dueGamets + ($intervals * $repeatIntervalGamets);
+    }
+}
+
 if (!function_exists('chimCommitmentNormalizeType')) {
     function chimCommitmentNormalizeType($value): string
     {
@@ -65,6 +89,10 @@ if (!function_exists('chimCommitmentCreate')) {
         $location = trim((string)($payload['location'] ?? ''));
         $hours = chimCommitmentNormalizeHours($payload['due_in_hours'] ?? 24);
         $dueGamets = max(1, $currentGamets) + chimCommitmentHoursToGamets($hours);
+        $repeatHours = chimCommitmentNormalizeRepeatHours($payload['repeat_every_hours'] ?? 0);
+        $repeatIntervalGamets = $repeatHours > 0
+            ? chimCommitmentHoursToGamets($repeatHours)
+            : 0;
 
         $db = $GLOBALS['db'];
         $actorSql = $db->escape($actorName);
@@ -77,11 +105,11 @@ if (!function_exists('chimCommitmentCreate')) {
         $row = $db->fetchOne("
             INSERT INTO public.npc_commitments
                 (actor_name, commitment_type, subject, counterparty, location_name, status,
-                 created_gamets, due_gamets, payload_json, updated_at)
+                 created_gamets, due_gamets, repeat_interval_gamets, payload_json, updated_at)
             VALUES
                 ('{$actorSql}', '{$typeSql}', '{$subjectSql}', '{$counterpartySql}', '{$locationSql}',
-                 'scheduled', {$currentGamets}, {$dueGamets}, '{$payloadSql}'::jsonb, NOW())
-            RETURNING id, due_gamets
+                 'scheduled', {$currentGamets}, {$dueGamets}, {$repeatIntervalGamets}, '{$payloadSql}'::jsonb, NOW())
+            RETURNING id, due_gamets, repeat_interval_gamets
         ");
 
         return [
@@ -89,6 +117,7 @@ if (!function_exists('chimCommitmentCreate')) {
             'id' => isset($row['id']) ? (int)$row['id'] : null,
             'due_gamets' => isset($row['due_gamets']) ? (int)$row['due_gamets'] : $dueGamets,
             'hours' => $hours,
+            'repeat_every_hours' => $repeatHours,
         ];
     }
 }
@@ -108,18 +137,74 @@ if (!function_exists('chimCommitmentSetStatus')) {
 
         $db = $GLOBALS['db'];
         $actorSql = $db->escape(trim($actorName));
-        $statusSql = $db->escape($status);
         $outcomeSql = $db->escape(trim($outcome));
+        $active = $db->fetchOne("
+            SELECT id, due_gamets, repeat_interval_gamets, occurrence_count
+              FROM public.npc_commitments
+             WHERE id = {$commitmentId}
+               AND lower(actor_name) = lower('{$actorSql}')
+               AND status IN ('scheduled', 'due')
+             LIMIT 1
+        ");
+        if (empty($active['id'])) {
+            return ['ok' => false, 'error' => 'task_not_found_or_not_owned'];
+        }
+
+        $repeatIntervalGamets = (int)($active['repeat_interval_gamets'] ?? 0);
+        $isRepeating = $repeatIntervalGamets > 0 && $status !== 'cancelled';
+        if ($isRepeating) {
+            $nextDueGamets = chimCommitmentNextDueGamets(
+                (int)$active['due_gamets'],
+                $currentGamets,
+                $repeatIntervalGamets
+            );
+            $row = $db->fetchOne("
+                UPDATE public.npc_commitments
+                   SET status = 'scheduled',
+                       outcome = '{$outcomeSql}',
+                       last_resolved_gamets = {$currentGamets},
+                       resolved_gamets = NULL,
+                       occurrence_count = occurrence_count + 1,
+                       due_gamets = {$nextDueGamets},
+                       updated_at = NOW()
+                 WHERE id = {$commitmentId}
+                   AND lower(actor_name) = lower('{$actorSql}')
+                   AND status IN ('scheduled', 'due')
+                RETURNING id, due_gamets, occurrence_count
+            ");
+
+            return [
+                'ok' => !empty($row['id']),
+                'id' => isset($row['id']) ? (int)$row['id'] : null,
+                'repeated' => !empty($row['id']),
+                'next_due_gamets' => isset($row['due_gamets']) ? (int)$row['due_gamets'] : $nextDueGamets,
+                'occurrence_count' => isset($row['occurrence_count'])
+                    ? (int)$row['occurrence_count']
+                    : ((int)($active['occurrence_count'] ?? 0) + 1),
+            ];
+        }
+
+        $statusSql = $db->escape($status);
+        $occurrenceIncrement = $status === 'cancelled' ? 0 : 1;
         $row = $db->fetchOne("
             UPDATE public.npc_commitments
-               SET status = '{$statusSql}', outcome = '{$outcomeSql}', resolved_gamets = {$currentGamets}, updated_at = NOW()
+               SET status = '{$statusSql}',
+                   outcome = '{$outcomeSql}',
+                   last_resolved_gamets = {$currentGamets},
+                   resolved_gamets = {$currentGamets},
+                   occurrence_count = occurrence_count + {$occurrenceIncrement},
+                   updated_at = NOW()
              WHERE id = {$commitmentId}
                AND lower(actor_name) = lower('{$actorSql}')
                AND status IN ('scheduled', 'due')
             RETURNING id
         ");
 
-        return ['ok' => !empty($row['id']), 'id' => isset($row['id']) ? (int)$row['id'] : null];
+        return [
+            'ok' => !empty($row['id']),
+            'id' => isset($row['id']) ? (int)$row['id'] : null,
+            'repeated' => false,
+        ];
     }
 }
 
@@ -145,7 +230,8 @@ if (!function_exists('chimCommitmentGetActive')) {
 
         return $db->fetchAll("
             SELECT id, commitment_type, subject, counterparty, location_name, status,
-                   created_gamets, due_gamets
+                   created_gamets, due_gamets, repeat_interval_gamets, occurrence_count,
+                   last_resolved_gamets
               FROM public.npc_commitments
              WHERE lower(actor_name) = lower('{$actorSql}')
                AND status IN ('scheduled', 'due')
@@ -178,6 +264,12 @@ if (!function_exists('chimCommitmentFormatContext')) {
             if (!empty($row['location_name'])) {
                 $details[] = 'at ' . trim((string)$row['location_name']);
             }
+            $repeatIntervalGamets = (int)($row['repeat_interval_gamets'] ?? 0);
+            if ($repeatIntervalGamets > 0) {
+                $repeatHours = max(0.25, $repeatIntervalGamets * 0.0000024);
+                $details[] = 'repeats every about ' . round($repeatHours, 2) . ' in-game hour(s)';
+                $details[] = 'completed ' . (int)($row['occurrence_count'] ?? 0) . ' time(s)';
+            }
             $suffix = empty($details) ? '' : ' (' . implode(', ', $details) . ')';
             $lines[] = sprintf(
                 '#%d [%s, %s] %s%s',
@@ -189,9 +281,9 @@ if (!function_exists('chimCommitmentFormatContext')) {
             );
         }
 
-        return "<commitments>\n# ACTIVE COMMITMENTS FOR {$actorName}\n"
-            . "These promises persist across conversations. Due commitments should be acted on using available actions, then resolved.\n## "
+        return "<tasks>\n# ACTIVE TASKS FOR {$actorName}\n"
+            . "These tasks persist across conversations. Due tasks should be acted on using available actions, then resolved. Repeating tasks automatically advance to their next scheduled occurrence when resolved.\n## "
             . implode("\n## ", $lines)
-            . "\n</commitments>";
+            . "\n</tasks>";
     }
 }

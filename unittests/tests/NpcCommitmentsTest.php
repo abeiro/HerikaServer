@@ -9,6 +9,12 @@ final class CommitmentFakeDb
 {
     public array $rows = [];
     public array $queries = [];
+    public array $activeRow = [
+        'id' => 17,
+        'due_gamets' => 110416667,
+        'repeat_interval_gamets' => 0,
+        'occurrence_count' => 0,
+    ];
 
     public function escape(string $value): string
     {
@@ -22,10 +28,21 @@ final class CommitmentFakeDb
             return ['table_name' => 'npc_commitments'];
         }
         if (str_contains($query, 'INSERT INTO public.npc_commitments')) {
-            return ['id' => 17, 'due_gamets' => 110416667];
+            return ['id' => 17, 'due_gamets' => 110416667, 'repeat_interval_gamets' => 0];
+        }
+        if (str_contains($query, 'SELECT id, due_gamets, repeat_interval_gamets')) {
+            return $this->activeRow;
         }
         if (str_contains($query, 'UPDATE public.npc_commitments')) {
-            return ['id' => 17];
+            $dueGamets = 120416667;
+            if (preg_match('/due_gamets = (\d+)/', $query, $matches)) {
+                $dueGamets = (int)$matches[1];
+            }
+            return [
+                'id' => 17,
+                'due_gamets' => $dueGamets,
+                'occurrence_count' => ((int)$this->activeRow['occurrence_count']) + 1,
+            ];
         }
         return [];
     }
@@ -60,24 +77,29 @@ final class NpcCommitmentsTest extends TestCase
         $this->assertSame(0.25, chimCommitmentNormalizeHours(0));
         $this->assertSame(8760.0, chimCommitmentNormalizeHours(99999));
         $this->assertSame(10000000, chimCommitmentHoursToGamets(24));
+        $this->assertSame(0.0, chimCommitmentNormalizeRepeatHours(0));
+        $this->assertSame(24.0, chimCommitmentNormalizeRepeatHours(24));
     }
 
-    public function testCreateCommitmentUsesAnInGameDueTimestamp(): void
+    public function testCreateTaskUsesAnInGameDueTimestampAndOptionalRepeatInterval(): void
     {
         $result = chimCommitmentCreate('Lydia', [
             'type' => 'meeting',
             'subject' => 'Meet the player at the Bannered Mare',
             'location' => 'The Bannered Mare',
             'due_in_hours' => 24,
+            'repeat_every_hours' => 24,
         ], 100416667);
 
         $this->assertTrue($result['ok']);
         $this->assertSame(17, $result['id']);
         $this->assertStringContainsString('100416667', $GLOBALS['db']->queries[1]);
         $this->assertStringContainsString('110416667', $GLOBALS['db']->queries[1]);
+        $this->assertStringContainsString('10000000', $GLOBALS['db']->queries[1]);
+        $this->assertSame(24.0, $result['repeat_every_hours']);
     }
 
-    public function testContextMarksOverduePromisesAsDueNow(): void
+    public function testContextMarksOverdueTasksAndRepeatSchedule(): void
     {
         $GLOBALS['db']->rows = [[
             'id' => 17,
@@ -88,13 +110,19 @@ final class NpcCommitmentsTest extends TestCase
             'status' => 'due',
             'created_gamets' => 100,
             'due_gamets' => 200,
+            'repeat_interval_gamets' => 10000000,
+            'occurrence_count' => 2,
+            'last_resolved_gamets' => 150,
         ]];
 
         $context = chimCommitmentFormatContext('Lydia', 300);
 
-        $this->assertStringContainsString('<commitments>', $context);
+        $this->assertStringContainsString('<tasks>', $context);
+        $this->assertStringContainsString('# ACTIVE TASKS FOR Lydia', $context);
         $this->assertStringContainsString('#17 [message delivery, DUE NOW]', $context);
         $this->assertStringContainsString('with Balgruuf, at Dragonsreach', $context);
+        $this->assertStringContainsString('repeats every about 24 in-game hour(s)', $context);
+        $this->assertStringContainsString('completed 2 time(s)', $context);
     }
 
     public function testOnlyTheOwningActorCanResolveACommitment(): void
@@ -107,6 +135,44 @@ final class NpcCommitmentsTest extends TestCase
         $this->assertStringContainsString("status IN ('scheduled', 'due')", $query);
     }
 
+    public function testRepeatingTaskAdvancesToTheNextFutureOccurrence(): void
+    {
+        $GLOBALS['db']->activeRow = [
+            'id' => 17,
+            'due_gamets' => 100,
+            'repeat_interval_gamets' => 50,
+            'occurrence_count' => 2,
+        ];
+
+        $result = chimCommitmentSetStatus('Lydia', 17, 'completed', 'Patrol completed', 225);
+
+        $this->assertTrue($result['ok']);
+        $this->assertTrue($result['repeated']);
+        $this->assertSame(250, $result['next_due_gamets']);
+        $this->assertSame(3, $result['occurrence_count']);
+        $this->assertStringContainsString("status = 'scheduled'", $GLOBALS['db']->queries[2]);
+        $this->assertStringContainsString('due_gamets = 250', $GLOBALS['db']->queries[2]);
+    }
+
+    public function testNextOccurrenceKeepsItsOriginalScheduleAnchor(): void
+    {
+        $this->assertSame(150, chimCommitmentNextDueGamets(100, 90, 50));
+        $this->assertSame(150, chimCommitmentNextDueGamets(100, 100, 50));
+        $this->assertSame(250, chimCommitmentNextDueGamets(100, 225, 50));
+    }
+
+    public function testCancellingStopsARepeatingTask(): void
+    {
+        $GLOBALS['db']->activeRow['repeat_interval_gamets'] = 50;
+
+        $result = chimCommitmentSetStatus('Lydia', 17, 'cancelled', 'No longer needed', 225);
+
+        $this->assertTrue($result['ok']);
+        $this->assertFalse($result['repeated']);
+        $this->assertStringContainsString("status = 'cancelled'", $GLOBALS['db']->queries[2]);
+        $this->assertStringContainsString('occurrence_count = occurrence_count + 0', $GLOBALS['db']->queries[2]);
+    }
+
     public function testUpgradeMigrationSeedsCommitmentActions(): void
     {
         $updates = file_get_contents(
@@ -115,10 +181,10 @@ final class NpcCommitmentsTest extends TestCase
         );
 
         $this->assertIsString($updates);
-        $this->assertStringContainsString('$checkVersion("core_action") < 20260719001', $updates);
-        $this->assertStringContainsString("'CreateCommitment'", $updates);
-        $this->assertStringContainsString("'ResolveCommitment'", $updates);
-        $this->assertStringContainsString("'CancelCommitment'", $updates);
-        $this->assertStringContainsString('$updateVersion("core_action", 20260719001)', $updates);
+        $this->assertStringContainsString('$checkVersion("core_action") < 20260719002', $updates);
+        $this->assertStringContainsString("'CreateTasks'", $updates);
+        $this->assertStringContainsString("'ResolveTask'", $updates);
+        $this->assertStringContainsString("'CancelTask'", $updates);
+        $this->assertStringContainsString('$updateVersion("core_action", 20260719002)', $updates);
     }
 }

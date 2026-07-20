@@ -1466,14 +1466,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $heldItemsContext;
     }
 
-    $commitmentActor = trim((string)($GLOBALS['HERIKA_NAME'] ?? ''));
-    $commitmentGamets = (int)($GLOBALS['gameRequest'][2] ?? 0);
-    $commitmentContext = chimCommitmentFormatContext($commitmentActor, $commitmentGamets);
-    if ($commitmentContext !== '') {
+    $taskActor = trim((string)($GLOBALS['HERIKA_NAME'] ?? ''));
+    $taskGamets = (int)($GLOBALS['gameRequest'][2] ?? 0);
+    $taskContext = chimCommitmentFormatContext($taskActor, $taskGamets);
+    if ($taskContext !== '') {
         if (!isset($GLOBALS['PROMPT_NEARBY_SECTIONS'])) {
             $GLOBALS['PROMPT_NEARBY_SECTIONS'] = '';
         }
-        $GLOBALS['PROMPT_NEARBY_SECTIONS'] .= "\n" . $commitmentContext;
+        $GLOBALS['PROMPT_NEARBY_SECTIONS'] .= "\n" . $taskContext;
     }
     
     /*
