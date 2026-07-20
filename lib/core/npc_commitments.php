@@ -48,6 +48,154 @@ if (!function_exists('chimCommitmentNormalizeType')) {
     }
 }
 
+if (!function_exists('chimCommitmentParseHoursFromText')) {
+    function chimCommitmentParseHoursFromText(string $text, string $prefix): ?float
+    {
+        $numbers = [
+            'one' => 1, 'two' => 2, 'three' => 3, 'four' => 4, 'five' => 5,
+            'six' => 6, 'seven' => 7, 'eight' => 8, 'nine' => 9, 'ten' => 10,
+            'twelve' => 12, 'twenty-four' => 24,
+        ];
+        $numberPattern = '(\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|twelve|twenty-four)';
+        if (!preg_match('/\b' . $prefix . '\s+' . $numberPattern . '\s*(?:in-game\s+)?(hours?|days?)\b/i', $text, $matches)) {
+            return null;
+        }
+
+        $rawNumber = strtolower($matches[1]);
+        $value = is_numeric($rawNumber) ? (float)$rawNumber : (float)($numbers[$rawNumber] ?? 0);
+        if (str_starts_with(strtolower($matches[2]), 'day')) {
+            $value *= 24;
+        }
+
+        return $value > 0 ? chimCommitmentNormalizeHours($value) : null;
+    }
+}
+
+if (!function_exists('chimCommitmentCleanRequestText')) {
+    function chimCommitmentCleanRequestText(string $text): string
+    {
+        $text = preg_replace('/\s*\(Talking to [^)]*\)\s*$/i', '', trim($text));
+        $text = preg_replace('/^[^:\r\n]{1,80}:\s*/', '', (string)$text);
+        return trim((string)$text, " \t\n\r\0\x0B\"'");
+    }
+}
+
+if (!function_exists('chimCommitmentInferSubject')) {
+    function chimCommitmentInferSubject(string $requestText, string $dialogueMessage = ''): string
+    {
+        $requestText = chimCommitmentCleanRequestText($requestText);
+        $patterns = [
+            '/\b(?:task|duty|job)\s+(?:is\s+)?(?:to\s+)?(.+?)(?=\s*[,.;]?\s*\b(?:every|in|after)\b|$)/i',
+            '/\b(?:remember|agree|promise|need|should|must|will)\s+(?:that\s+)?(?:you\s+)?(?:to\s+)?(.+?)(?=\s*[,.;]?\s*\b(?:every|in|after)\b|$)/i',
+        ];
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $requestText, $matches)) {
+                $subject = trim((string)$matches[1], " \t\n\r\0\x0B,.;:!?\"'");
+                if ($subject !== '') {
+                    return ucfirst($subject);
+                }
+            }
+        }
+
+        if ($requestText !== '') {
+            $subject = preg_replace('/\s*[,.;]?\s*\b(?:every|in|after)\s+(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|twelve|twenty-four)\s*(?:in-game\s+)?(?:hours?|days?)\b.*$/i', '', $requestText);
+            $subject = preg_replace('/\s*\btomorrow\b.*$/i', '', (string)$subject);
+            $subject = trim((string)$subject, " \t\n\r\0\x0B,.;:!?\"'");
+            if ($subject !== '') {
+                return ucfirst($subject);
+            }
+        }
+
+        $dialogueMessage = trim(strip_tags($dialogueMessage));
+        $dialogueMessage = preg_replace('/\*[^*]*\*/', '', $dialogueMessage);
+        return trim((string)$dialogueMessage, " \t\n\r\0\x0B,.;:!?\"'");
+    }
+}
+
+if (!function_exists('chimCommitmentPrepareCreatePayload')) {
+    function chimCommitmentPrepareCreatePayload(array $payload, string $requestText = '', string $dialogueMessage = ''): array
+    {
+        if (trim((string)($payload['subject'] ?? '')) === '') {
+            $payload['subject'] = chimCommitmentInferSubject($requestText, $dialogueMessage);
+        }
+
+        if (trim((string)($payload['type'] ?? '')) === '') {
+            $haystack = strtolower($requestText . ' ' . ($payload['subject'] ?? ''));
+            if (str_contains($haystack, 'meet')) {
+                $payload['type'] = 'meeting';
+            } elseif (str_contains($haystack, 'message') || str_contains($haystack, 'tell ')) {
+                $payload['type'] = 'message_delivery';
+            } elseif (str_contains($haystack, 'fetch') || str_contains($haystack, 'bring ') || str_contains($haystack, 'get ')) {
+                $payload['type'] = 'fetch';
+            } elseif (str_contains($haystack, 'escort')) {
+                $payload['type'] = 'escort';
+            } elseif (str_contains($haystack, 'errand')) {
+                $payload['type'] = 'errand';
+            } else {
+                $payload['type'] = 'other';
+            }
+        }
+
+        if (!isset($payload['repeat_every_hours']) || !is_numeric($payload['repeat_every_hours'])) {
+            $repeatHours = chimCommitmentParseHoursFromText($requestText, 'every');
+            if ($repeatHours !== null) {
+                $payload['repeat_every_hours'] = $repeatHours;
+            }
+        }
+
+        if (!isset($payload['due_in_hours']) || !is_numeric($payload['due_in_hours'])) {
+            $dueHours = chimCommitmentParseHoursFromText($requestText, '(?:in|after)');
+            if ($dueHours === null && preg_match('/\btomorrow\b/i', $requestText)) {
+                $dueHours = 24;
+            }
+            if ($dueHours === null && is_numeric($payload['repeat_every_hours'] ?? null)) {
+                $dueHours = (float)$payload['repeat_every_hours'];
+            }
+            $payload['due_in_hours'] = $dueHours ?? 24;
+        }
+
+        return $payload;
+    }
+}
+
+if (!function_exists('chimCommitmentQueueCreate')) {
+    function chimCommitmentQueueCreate(string $actorName, array $payload, int $currentGamets, string $requestText = ''): array
+    {
+        if (!isset($GLOBALS['db']) || !is_object($GLOBALS['db'])) {
+            return ['ok' => false, 'error' => 'database_unavailable'];
+        }
+
+        $actorName = trim($actorName);
+        if ($actorName === '') {
+            return ['ok' => false, 'error' => 'actor_required'];
+        }
+
+        $queueId = 'npc_commitment_queue_' . time() . '_' . uniqid('', true);
+        $queueData = [
+            'actor_name' => $actorName,
+            'payload' => $payload,
+            'request_text' => $requestText,
+            'current_gamets' => max(0, $currentGamets),
+            'queued_at' => time(),
+        ];
+        $encoded = json_encode($queueData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            return ['ok' => false, 'error' => 'queue_encoding_failed'];
+        }
+
+        $ok = $GLOBALS['db']->upsertRowOnConflict('conf_opts', [
+            'id' => $queueId,
+            'value' => $encoded,
+        ], 'id');
+
+        return [
+            'ok' => $ok !== false,
+            'queue_id' => $ok !== false ? $queueId : null,
+            'error' => $ok !== false ? null : 'queue_write_failed',
+        ];
+    }
+}
+
 if (!function_exists('chimCommitmentDbReady')) {
     function chimCommitmentDbReady(): bool
     {
@@ -236,6 +384,31 @@ if (!function_exists('chimCommitmentGetActive')) {
              WHERE lower(actor_name) = lower('{$actorSql}')
                AND status IN ('scheduled', 'due')
              ORDER BY CASE WHEN status = 'due' THEN 0 ELSE 1 END, due_gamets ASC, id ASC
+             LIMIT {$limit}
+        ");
+    }
+}
+
+if (!function_exists('chimCommitmentGetAll')) {
+    function chimCommitmentGetAll(string $actorName, int $limit = 100): array
+    {
+        if (!chimCommitmentDbReady() || trim($actorName) === '') {
+            return [];
+        }
+
+        $db = $GLOBALS['db'];
+        $actorSql = $db->escape(trim($actorName));
+        $limit = max(1, min(250, $limit));
+        return $db->fetchAll("
+            SELECT id, commitment_type, subject, counterparty, location_name, status,
+                   created_gamets, due_gamets, repeat_interval_gamets, occurrence_count,
+                   last_resolved_gamets, resolved_gamets, outcome, created_at, updated_at
+              FROM public.npc_commitments
+             WHERE lower(actor_name) = lower('{$actorSql}')
+             ORDER BY CASE WHEN status = 'due' THEN 0
+                           WHEN status = 'scheduled' THEN 1
+                           ELSE 2 END,
+                      due_gamets ASC, id DESC
              LIMIT {$limit}
         ");
     }

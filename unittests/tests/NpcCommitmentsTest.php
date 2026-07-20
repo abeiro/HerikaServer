@@ -4,11 +4,13 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'npc_commitments.php');
+require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'npc_commitment_worker.php');
 
 final class CommitmentFakeDb
 {
     public array $rows = [];
     public array $queries = [];
+    public array $inserts = [];
     public array $activeRow = [
         'id' => 17,
         'due_gamets' => 110416667,
@@ -51,6 +53,11 @@ final class CommitmentFakeDb
     {
         $this->queries[] = $query;
         return true;
+    }
+
+    public function insert(string $table, array $data): void
+    {
+        $this->inserts[] = ['table' => $table, 'data' => $data];
     }
 
     public function fetchAll(string $query): array
@@ -171,6 +178,60 @@ final class NpcCommitmentsTest extends TestCase
         $this->assertFalse($result['repeated']);
         $this->assertStringContainsString("status = 'cancelled'", $GLOBALS['db']->queries[2]);
         $this->assertStringContainsString('occurrence_count = occurrence_count + 0', $GLOBALS['db']->queries[2]);
+    }
+
+    public function testPartialTaskPayloadIsCompletedFromPlayerRequest(): void
+    {
+        $payload = chimCommitmentPrepareCreatePayload(
+            ['type' => 'other'],
+            'RANGROO: Remember a task to check the town gate every two hours. (Talking to Danica Pure-Spring)'
+        );
+
+        $this->assertSame('other', $payload['type']);
+        $this->assertSame('Check the town gate', $payload['subject']);
+        $this->assertSame(2.0, $payload['due_in_hours']);
+        $this->assertSame(2.0, $payload['repeat_every_hours']);
+    }
+
+    public function testOneTimeTaskDueTimeIsInferredFromPlayerRequest(): void
+    {
+        $payload = chimCommitmentPrepareCreatePayload(
+            [],
+            'Please remember to deliver a message to Balgruuf in 6 hours'
+        );
+
+        $this->assertSame('message_delivery', $payload['type']);
+        $this->assertSame('Deliver a message to Balgruuf', $payload['subject']);
+        $this->assertSame(6.0, $payload['due_in_hours']);
+        $this->assertArrayNotHasKey('repeat_every_hours', $payload);
+    }
+
+    public function testFormatterResponseJsonIsExtractedFromCodeFence(): void
+    {
+        $payload = chimCommitmentExtractJsonObject("```json\n{\"type\":\"escort\",\"subject\":\"Escort the merchant\",\"due_in_hours\":4}\n```");
+
+        $this->assertIsArray($payload);
+        $this->assertSame('escort', $payload['type']);
+        $this->assertSame('Escort the merchant', $payload['subject']);
+        $this->assertSame(4, $payload['due_in_hours']);
+    }
+
+    public function testCreatedTaskNotificationUsesTheExistingChimDebugCommand(): void
+    {
+        chimCommitmentQueueCreatedNotification(
+            "Danica|Pure-Spring",
+            "Check the town gate@midnight\nwithout delay"
+        );
+
+        $this->assertCount(1, $GLOBALS['db']->inserts);
+        $queued = $GLOBALS['db']->inserts[0];
+        $this->assertSame('responselog', $queued['table']);
+        $this->assertSame(0, $queued['data']['sent']);
+        $this->assertSame('rolemaster', $queued['data']['actor']);
+        $this->assertSame(
+            'rolecommand|DebugNotification@Task created for Danica Pure-Spring: Check the town gate midnight without delay',
+            $queued['data']['action']
+        );
     }
 
     public function testUpgradeMigrationSeedsCommitmentActions(): void

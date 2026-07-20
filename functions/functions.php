@@ -979,7 +979,7 @@ $F_TRANSLATIONS_LOCAL["AddBounty"] = "#HERIKA_NAME# adds a crime bounty to #PLAY
 $F_TRANSLATIONS_LOCAL["PayBounty"] = "#PLAYER_NAME# pays off their bounty to #HERIKA_NAME#. Stolen items are confiscated and the matter is resolved immediately. Guard-only action.";
 $F_TRANSLATIONS_LOCAL["ArrestPlayer"] = "#HERIKA_NAME# attempts to arrest #PLAYER_NAME#. #PLAYER_NAME# can submit or resist. Guard-only action for serious crimes or refusal to pay.";
 $F_TRANSLATIONS_LOCAL["ForgiveCrime"] = "#HERIKA_NAME# forgives #PLAYER_NAME#'s crimes and clears their bounty. Guard-only action for persuasion, bribe, or thane status.";
-$F_TRANSLATIONS_LOCAL["CreateTasks"] = "Create a persistent task that #HERIKA_NAME# intends to complete later. Set repeat_every_hours to make it repeat on an in-game interval, or omit it for a one-time task.";
+$F_TRANSLATIONS_LOCAL["CreateTasks"] = "Create a persistent task whenever #HERIKA_NAME# accepts, promises, remembers, or schedules a future duty. Use this instead of Talk when a commitment is made. Include any task details already known; the server will structure and save the task in the background.";
 $F_TRANSLATIONS_LOCAL["ResolveTask"] = "Mark one of #HERIKA_NAME#'s active tasks as completed or failed after the outcome has happened. Repeating tasks automatically advance to their next scheduled occurrence.";
 $F_TRANSLATIONS_LOCAL["CancelTask"] = "Cancel one of #HERIKA_NAME#'s active tasks. Cancelling permanently stops a repeating task.";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"] = "#HERIKA_NAME# follows #PLAYER_NAME#.";
@@ -2553,6 +2553,14 @@ function buildFunctionExecutionContextFromResponse($parsedResponse)
             $parameterResponse = array_merge($parameterResponse, $actionParameters);
         }
 
+        if ($functionCodeName === 'CreateTasks' && function_exists('chimCommitmentPrepareCreatePayload')) {
+            $parameterResponse = chimCommitmentPrepareCreatePayload(
+                $parameterResponse,
+                (string)($GLOBALS['gameRequest'][3] ?? ''),
+                (string)($parsedResponse['message'] ?? '')
+            );
+        }
+
         $parameterData = buildFunctionParameterValueFromResponse($functionDef, $parameterResponse);
         $parameterValue = $parameterData["parameter_value"];
         $missingRequired = $parameterData["missing_required"];
@@ -2923,10 +2931,15 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
                 $actorName = trim((string)($actionParts[0] ?? ($GLOBALS['HERIKA_NAME'] ?? '')));
                 $currentGamets = (int)($gameRequest[2] ?? 0);
                 if ($actionCodeNameResolved === 'CreateTasks') {
-                    $result = chimCommitmentCreate($actorName, $payload, $currentGamets);
+                    $result = chimCommitmentQueueCreate(
+                        $actorName,
+                        $payload,
+                        $currentGamets,
+                        (string)($gameRequest[3] ?? '')
+                    );
                     $message = !empty($result['ok'])
-                        ? "{$actorName} created task #{$result['id']}: " . trim((string)($payload['subject'] ?? ''))
-                        : "{$actorName} could not create a task: " . (string)($result['error'] ?? 'unknown error');
+                        ? "{$actorName} queued a persistent task for structured setup."
+                        : "{$actorName} could not queue a task: " . (string)($result['error'] ?? 'unknown error');
                 } elseif ($actionCodeNameResolved === 'ResolveTask') {
                     $result = chimCommitmentSetStatus(
                         $actorName,

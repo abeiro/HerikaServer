@@ -255,7 +255,7 @@
                 } else if ($fname == "ForgiveCrime") {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Use when {$GLOBALS["PLAYER_NAME"]} successfully persuades, bribes, or invokes thane status to clear their bounty.";
                 } else if ($fname == "CreateTasks") {
-                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put type, subject, due_in_hours, and any optional counterparty, location, or repeat_every_hours value in the 'action_params' object.";
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). When accepting, promising, remembering, or scheduling a future duty, use this action instead of Talk. Include any known details in 'action_params'; the server will complete the structured task in the background.";
                 } else if ($fname == "ResolveTask") {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put task_id, status, and outcome in the 'action_params' object.";
                 } else if ($fname == "CancelTask") {

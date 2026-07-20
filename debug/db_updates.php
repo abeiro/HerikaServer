@@ -7320,6 +7320,21 @@ if ($checkVersion("core_action") < 20260719002) {
     Logger::info("Applied patch core_action 20260719002");
 }
 
+if ($checkVersion("core_action") < 20260719003) {
+    Logger::debug("Applying core_action 20260719003 - strengthen persistent task prompting");
+    $description = $db->escape("Create a persistent task whenever #HERIKA_NAME# accepts, promises, remembers, or schedules a future duty. Use this instead of Talk when a commitment is made. Include any task details already known; the server will structure and save the task in the background.");
+    if ($db->execQuery("
+        UPDATE public.core_action
+           SET description = '{$description}', updated_at = NOW()
+         WHERE code_name = 'CreateTasks'
+    ")) {
+        $updateVersion("core_action", 20260719003);
+        Logger::info("Applied patch core_action 20260719003");
+    } else {
+        Logger::error("Failed to apply patch core_action 20260719003");
+    }
+}
+
 // master Packages update 
 if ($checkVersion("master_packages")<20260716002) {
     if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607.sql"))) {
