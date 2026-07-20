@@ -2543,7 +2543,17 @@ function buildFunctionExecutionContextFromResponse($parsedResponse)
     $missingRequired = [];
 
     if (is_array($functionDef)) {
-        $parameterData = buildFunctionParameterValueFromResponse($functionDef, is_array($parsedResponse) ? $parsedResponse : []);
+        $parameterResponse = is_array($parsedResponse) ? $parsedResponse : [];
+        $actionParameters = $parameterResponse["action_params"] ?? [];
+        if (!is_array($actionParameters)) {
+            $actionParameters = decodeFunctionExecutionParameterPayload($actionParameters);
+        }
+        if (is_array($actionParameters)) {
+            unset($parameterResponse["action_params"]);
+            $parameterResponse = array_merge($parameterResponse, $actionParameters);
+        }
+
+        $parameterData = buildFunctionParameterValueFromResponse($functionDef, $parameterResponse);
         $parameterValue = $parameterData["parameter_value"];
         $missingRequired = $parameterData["missing_required"];
     }
@@ -2577,10 +2587,6 @@ function queueFunctionExecutionCommand(&$commandBuffer, &$alreadySent, $executio
 
     $missingRequired = $executionContext["missing_required"] ?? [];
     if (count($missingRequired) > 0) {
-        Logger::warn("{$connectorName}: Missing required parameter(s) for " . strval($executionContext["function_code_name"] ?? $actionName) . ": " . implode(", ", $missingRequired));
-    }
-
-    if (!empty($executionContext["has_required_parameters"]) && !empty($executionContext["parameter_is_empty"])) {
         Logger::warn("{$connectorName}: Missing required parameter(s) for " . strval($executionContext["function_code_name"] ?? $actionName) . ": " . implode(", ", $missingRequired));
         return false;
     }
