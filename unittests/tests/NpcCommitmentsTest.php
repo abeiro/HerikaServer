@@ -106,4 +106,19 @@ final class NpcCommitmentsTest extends TestCase
         $this->assertStringContainsString("lower(actor_name) = lower('Lydia')", $query);
         $this->assertStringContainsString("status IN ('scheduled', 'due')", $query);
     }
+
+    public function testUpgradeMigrationSeedsCommitmentActions(): void
+    {
+        $updates = file_get_contents(
+            __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..'
+            . DIRECTORY_SEPARATOR . 'debug' . DIRECTORY_SEPARATOR . 'db_updates.php'
+        );
+
+        $this->assertIsString($updates);
+        $this->assertStringContainsString('$checkVersion("core_action") < 20260719001', $updates);
+        $this->assertStringContainsString("'CreateCommitment'", $updates);
+        $this->assertStringContainsString("'ResolveCommitment'", $updates);
+        $this->assertStringContainsString("'CancelCommitment'", $updates);
+        $this->assertStringContainsString('$updateVersion("core_action", 20260719001)', $updates);
+    }
 }

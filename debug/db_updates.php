@@ -7214,7 +7214,7 @@ if ($checkVersion("general_settings") < 20260711001) {
 }
 
 
-// master Packages update
+// Persistent NPC commitments
 if ($checkVersion("npc_commitments") < 20260719001) {
     Logger::debug("Applying npc_commitments 20260719001 - add persistent NPC commitments");
 
@@ -7225,6 +7225,90 @@ if ($checkVersion("npc_commitments") < 20260719001) {
     } else {
         Logger::error("Failed to apply patch npc_commitments 20260719001");
     }
+}
+
+if ($checkVersion("core_action") < 20260719001) {
+    Logger::debug("Applying core_action 20260719001 - add persistent NPC commitment actions");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES
+        (
+            'CreateCommitment',
+            'Create_Commitment',
+            'Create a persistent promise, appointment, delivery, escort, fetch task, or other errand that #HERIKA_NAME# intends to honor later. Use a short concrete subject and an in-game delay.',
+            '#HERIKA_NAME# records a persistent commitment.',
+            TRUE,
+            TRUE,
+            FALSE,
+            TRUE,
+            '{\"type\":\"object\",\"required\":[\"type\",\"subject\",\"due_in_hours\"],\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"meeting\",\"message_delivery\",\"fetch\",\"escort\",\"errand\",\"other\"],\"description\":\"Kind of promise being made.\"},\"subject\":{\"type\":\"string\",\"description\":\"Short concrete description of what must happen.\"},\"counterparty\":{\"type\":\"string\",\"description\":\"Other person involved, if any.\"},\"location\":{\"type\":\"string\",\"description\":\"Place where the commitment should be fulfilled, if any.\"},\"due_in_hours\":{\"type\":\"number\",\"description\":\"In-game hours until this commitment is due. Minimum 0.25, maximum 8760.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"server_action\"}'::jsonb,
+            FALSE,
+            0,
+            NULL
+        ),
+        (
+            'ResolveCommitment',
+            'Resolve_Commitment',
+            'Mark one of #HERIKA_NAME#''s active commitments as completed or failed after the promised outcome has actually happened.',
+            '#HERIKA_NAME# resolves a persistent commitment.',
+            TRUE,
+            TRUE,
+            FALSE,
+            TRUE,
+            '{\"type\":\"object\",\"required\":[\"commitment_id\",\"status\",\"outcome\"],\"properties\":{\"commitment_id\":{\"type\":\"integer\",\"description\":\"Commitment number shown in the active commitments context.\"},\"status\":{\"type\":\"string\",\"enum\":[\"completed\",\"failed\"],\"description\":\"Final outcome.\"},\"outcome\":{\"type\":\"string\",\"description\":\"Brief factual description of what happened.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"server_action\"}'::jsonb,
+            FALSE,
+            0,
+            NULL
+        ),
+        (
+            'CancelCommitment',
+            'Cancel_Commitment',
+            'Cancel one of #HERIKA_NAME#''s active commitments when it can no longer be honored. Include a brief reason.',
+            '#HERIKA_NAME# cancels a persistent commitment.',
+            TRUE,
+            TRUE,
+            FALSE,
+            TRUE,
+            '{\"type\":\"object\",\"required\":[\"commitment_id\",\"reason\"],\"properties\":{\"commitment_id\":{\"type\":\"integer\",\"description\":\"Commitment number shown in the active commitments context.\"},\"reason\":{\"type\":\"string\",\"description\":\"Brief reason the promise is being cancelled.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"server_action\"}'::jsonb,
+            FALSE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260719001);
+    Logger::info("Applied patch core_action 20260719001");
 }
 
 // master Packages update 
