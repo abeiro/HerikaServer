@@ -7236,7 +7236,6 @@ if ($checkVersion("visual_context") < 20260718001) {
 
     $b_ok = chimEnsureVisualContextTable();
     if ($b_ok) {
-        chimSetGeneralSetting('VISUAL_CONTEXT_ENABLED', false, chimGetSchemaDescription('VISUAL_CONTEXT_ENABLED'));
         chimSetGeneralSetting('VISUAL_CONTEXT_SCENE_TTL_MINUTES', 10, chimGetSchemaDescription('VISUAL_CONTEXT_SCENE_TTL_MINUTES'));
         chimSetGeneralSetting('VISUAL_CONTEXT_PROMPT_MAX_CHARS', 1800, chimGetSchemaDescription('VISUAL_CONTEXT_PROMPT_MAX_CHARS'));
         $updateVersion("visual_context", 20260718001);

@@ -187,7 +187,6 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'AUTOFILL_CUSTOM_PROFILES',
             'AUTOFILL_CUSTOM_PROFILES_TRIGGER',
             'BGL_TRIGGER_HOURS',
-            'VISUAL_CONTEXT_ENABLED',
             'VISUAL_CONTEXT_SCENE_TTL_MINUTES',
             'VISUAL_CONTEXT_PROMPT_MAX_CHARS',
             'END_CONVERSATION_COOLDOWN',
@@ -315,7 +314,6 @@ if (!function_exists('chimPrettySettingLabel')) {
             'CHIM_AI_QUEST_PROGRESSION' => 'AI Quest Progression (Beta)',
             'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
             'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 'Item Pickup Detection Value',
-            'VISUAL_CONTEXT_ENABLED' => 'Use Visual Context',
             'VISUAL_CONTEXT_SCENE_TTL_MINUTES' => 'Visual Scene Lifetime',
             'VISUAL_CONTEXT_PROMPT_MAX_CHARS' => 'Visual Prompt Limit',
         ];

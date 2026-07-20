@@ -180,10 +180,6 @@ if (!function_exists('chimVisualContextDelete')) {
 if (!function_exists('chimBuildVisualContextPrompt')) {
     function chimBuildVisualContextPrompt(string $location): string
     {
-        if (!chimGetGeneralSettingBool('VISUAL_CONTEXT_ENABLED', false)) {
-            return '';
-        }
-
         $db = $GLOBALS['db'] ?? null;
         $location = trim($location);
         if (!$db || $location === '' || !chimEnsureVisualContextTable()) {
