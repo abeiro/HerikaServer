@@ -8,6 +8,19 @@ if (!function_exists('chimTtsStudioProbeSucceeded')) {
     }
 }
 
+if (!function_exists('chimTtsStudioNormalizeProviderIdentity')) {
+    function chimTtsStudioNormalizeProviderIdentity(string $provider): string
+    {
+        return match (strtolower(trim($provider))) {
+            'xtts', 'xtts-fastapi' => 'xtts-fastapi',
+            'pocket_tts', 'pocket-tts', 'pockettts' => 'pockettts',
+            'chatterbox' => 'chatterbox',
+            'omnivoice' => 'omnivoice',
+            default => '',
+        };
+    }
+}
+
 if (!function_exists('chimTtsStudioClassifyPocketTtsRuntime')) {
     function chimTtsStudioClassifyPocketTtsRuntime(
         string $endpoint,
