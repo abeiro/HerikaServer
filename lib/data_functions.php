@@ -4092,7 +4092,12 @@ function PackIntoSummary($onlyMissingDiary=false)
     
     if ($onlyMissingDiary) {
         $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions,scope)
-        select gamets,1,message,message,'diary',uid,speaker,'global'
+        select gamets,1,message,message,'diary',uid,
+            case
+                when nullif(trim(speaker), '') is null then ''
+                else '|' || trim(both '|' from trim(speaker)) || '|'
+            end,
+            'global'
         from memory
         where event in ('diary','auto_diary','backgroundlife_diary')
         and uid not in (select uid from memory_summary where classifier in  ('diary','auto_diary','backgroundlife_diary'))");
@@ -4204,7 +4209,12 @@ function PackIntoSummary($onlyMissingDiary=false)
         $results = $db->query($query);
         
         $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions,scope)
-                                    select gamets,1,message,message,'diary',uid,speaker,'global'
+                                    select gamets,1,message,message,'diary',uid,
+                                        case
+                                            when nullif(trim(speaker), '') is null then ''
+                                            else '|' || trim(both '|' from trim(speaker)) || '|'
+                                        end,
+                                        'global'
                                     from memory
                                     where event='diary'
                                     and gamets>$maxRow
@@ -4805,6 +4815,18 @@ function dataGetMemoryScopeConditionSql($npcName)
     return "(scope IS NULL OR scope='global')";
 }
 
+function dataGetMemoryCompanionConditionSql($npcName, string $column = 'companions'): string
+{
+    $npcName = trim((string)$npcName);
+    if ($npcName === '') {
+        // The narrator intentionally searches the global memory bank.
+        return 'TRUE';
+    }
+
+    $npcEsc = $GLOBALS['db']->escape($npcName);
+    return "($column LIKE '%|$npcEsc|%' OR $column='$npcEsc')";
+}
+
 function DataSearchMemory($rawstring,$npcfilter) {
     
     //$kw=explode(" ",($rawstring));
@@ -4922,6 +4944,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
     
     
     $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
+    $companionConditionSql = dataGetMemoryCompanionConditionSql($npcfilter, 'A.companions');
 
     $memory=$GLOBALS["db"]->fetchAll("
         SELECT summary,gamets_truncated,
@@ -4931,7 +4954,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         where native_vec @@to_tsquery('$kwStringAny')
         and not (native_vec @@to_tsquery('#Reminiscence'))
         and $scopeConditionSql
-        and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
+        and $companionConditionSql
 
         ORDER BY rank_all DESC, rank_any DESC;
         ",true);
@@ -5120,14 +5143,12 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
         }
 
        
-        if (empty($npcfilter)) {
-            $npcfilter=$GLOBALS["HERIKA_NAME"];
-        } else {
-            if ($useContextKw)
-                $result=array_merge($result,lastKeyWordsContext(5,$npcfilter));
+        if (!empty($npcfilter) && $useContextKw) {
+            $result=array_merge($result,lastKeyWordsContext(5,$npcfilter));
         }
 
         $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
+        $companionConditionSql = dataGetMemoryCompanionConditionSql($npcfilter);
 
         $contextKeywords  = implode(" ", $result);
         $contextKeywords=strtr(internalDumbTranslator($contextKeywords),["remember"=>"","Remember"=>"","do you remember"=>""]);
@@ -5194,7 +5215,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
                     and $scopeConditionSql
-                    and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
+                    and $companionConditionSql
                     and (gamets_truncated<$timeThreshold or $timeThreshold=0)
                     
                     ORDER BY 
