@@ -30,11 +30,6 @@ $localSchemaOverrides = [
         'type' => 'longstring',
         'description' => 'Default profile only! Instructions for generating diary entries. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the DIARY connector you are using.',
     ],
-    'OGHMA_AMOUNT' => [
-        'type' => 'select',
-        'values' => ['1','2','3'],
-        'description' => 'Number of Oghma keywords to extract from each response. More keyword extraction will mean longer response times.',
-    ],
     'LANG_LLM_XTTS' => [
         'type' => 'boolean',
         'description' => 'XTTS/Chatterbox Only! Will offer a language field to LLM, and will try match to XTTSv2 language.',
@@ -51,11 +46,6 @@ $localSchemaOverrides = [
         'type' => 'integer',
         'description' => 'Cooldown period in seconds between combat barks to prevent spam during combat. This cooldown is global across all NPCs in the party.',
     ],
-    'OGHMA_INFINIUM' => [
-        'type' => 'boolean',
-        'description' => "Tamriel lore information will be added to the prompt, enhancing understanding on specific topics. MiniMe-T5 is auto-detected when the service is running.",
-    ],
-    // OGHMA_CUSTOM removed - now only in Global Settings
     'CONTEXT_HISTORY' => [
         'type' => 'integer',
         'description' => 'Amount of context history (dialogue and events) that will be sent to LLM. Improves short term memory.Higher Context = more tokens used and slower response time.We recommend you do not go over 100',
@@ -90,8 +80,8 @@ $localSchemaOverrides = [
 // Visual keys to expose (can be expanded easily)
 $visualKeys = [
   "RECHAT_H","RECHAT_P","CORE_LANG","BORED_EVENT",
-  "DIARY_PROMPT","OGHMA_AMOUNT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
-  "OGHMA_INFINIUM","CONTEXT_HISTORY","MAX_WORDS_LIMIT",
+  "DIARY_PROMPT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
+  "CONTEXT_HISTORY","MAX_WORDS_LIMIT",
   "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE",
   "CONTEXT_HISTORY_DYNAMIC_PROFILE"
 ];
@@ -104,7 +94,6 @@ $visualGroups = [
   'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
   'Diary' => ["DIARY_PROMPT","DIARY_COOLDOWN"],
   'Combat' => ["COMBAT_BARK_COOLDOWN"],
-  'Oghma' => ["OGHMA_INFINIUM","OGHMA_AMOUNT"],
   'Quest' => ["QUEST_COMMENT","QUEST_COMMENT_CHANCE"],
 ];
 
@@ -113,7 +102,7 @@ $visualRows = [
   ['Language', 'Rechat'],
   ['Bored Event', 'Context'],
   ['Diary', 'Combat'],
-  ['Oghma', 'Quest'],
+  ['Quest'],
 ];
 
 // Pretty label similar to global_settings General tab
@@ -122,7 +111,6 @@ function meta_pretty_label(string $name): string {
     $customLabels = [
         'RECHAT_H' => 'Rechat Response Rounds',
         'RECHAT_P' => 'Rechat Probaility',
-        'OGHMA_AMOUNT' => 'Oghma Articles Amount',
         'BORED_EVENT' => 'Bored Event Chance',
         'CONTEXT_HISTORY' => 'Context History Event Count',
         'CONTEXT_HISTORY_DIARY' => 'Context History Diary Event Count',

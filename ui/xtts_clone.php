@@ -14,6 +14,7 @@ require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
 @include_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "online_translation.php");
 @include_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_studio_provider_detection.php");
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 
@@ -170,26 +171,49 @@ if (!function_exists('chimTtsStudioResolveEndpointForDriver')) {
     }
 }
 
+if (!function_exists('chimTtsStudioDetectPocketTtsRuntime')) {
+    function chimTtsStudioDetectPocketTtsRuntime(string $endpoint): array
+    {
+        $endpoint = normalize_endpoint_url(trim($endpoint));
+        if ($endpoint === '') {
+            return [
+                'reachable' => false,
+                'mode' => 'standard',
+                'reason' => 'No endpoint configured',
+            ];
+        }
+
+        static $cache = [];
+        if (isset($cache[$endpoint])) {
+            return $cache[$endpoint];
+        }
+
+        $audioCppBase = chimTtsStudioAudioCppBaseEndpoint($endpoint);
+        $healthProbe = chimTtsStudioProbeJson($audioCppBase . '/health');
+        $modelsProbe = chimTtsStudioProbeSucceeded($healthProbe)
+            ? chimTtsStudioProbeJson($audioCppBase . '/v1/models')
+            : ['response' => false, 'decoded' => null, 'http_code' => 0, 'curl_error' => ''];
+        $speakersProbe = chimTtsStudioProbeJson($endpoint . '/speakers_list');
+
+        return $cache[$endpoint] = chimTtsStudioClassifyPocketTtsRuntime(
+            $endpoint,
+            chimTtsStudioResolveConnectorMetadata('pockettts'),
+            $healthProbe,
+            $modelsProbe,
+            $speakersProbe
+        );
+    }
+}
+
 if (!function_exists('chimTtsStudioIsAudioCppPocketTts')) {
     function chimTtsStudioIsAudioCppPocketTts(string $driver, string $endpoint = ''): bool
     {
         $ttsConnector = new TTSConnector();
-        $driver = $ttsConnector->normalizeDriverValue($driver);
-        if ($driver !== 'pockettts') {
+        if ($ttsConnector->normalizeDriverValue($driver) !== 'pockettts') {
             return false;
         }
 
-        $metadata = chimTtsStudioResolveConnectorMetadata($driver);
-        $apiFormatValue = $metadata['api_format'] ?? '';
-        $apiFormat = is_scalar($apiFormatValue)
-            ? strtolower(trim(strval($apiFormatValue)))
-            : '';
-        if ($apiFormat === 'audio_cpp' || $apiFormat === 'audiocpp') {
-            return true;
-        }
-
-        $endpoint = normalize_endpoint_url(trim($endpoint));
-        return strpos($endpoint, ':8086') !== false || strpos($endpoint, '/v1/audio/speech') !== false;
+        return (chimTtsStudioDetectPocketTtsRuntime($endpoint)['mode'] ?? '') === 'audio_cpp';
     }
 }
 
@@ -1817,30 +1841,21 @@ function chimTtsStudioProbeEndpointStatus(string $driver, string $endpoint): arr
         ];
     }
 
-    if (chimTtsStudioIsAudioCppPocketTts($driver, $endpoint)) {
-        $audioCppBase = chimTtsStudioAudioCppBaseEndpoint($endpoint);
-        $healthProbe = chimTtsStudioProbeJson($audioCppBase . '/health');
-        $modelsProbe = chimTtsStudioProbeJson($audioCppBase . '/v1/models');
-        if ($healthProbe['response'] !== false
-            && intval($healthProbe['http_code']) >= 200
-            && intval($healthProbe['http_code']) < 300
-            && $modelsProbe['response'] !== false
-            && intval($modelsProbe['http_code']) >= 200
-            && intval($modelsProbe['http_code']) < 300) {
+    if ($driver === 'pockettts') {
+        $runtime = chimTtsStudioDetectPocketTtsRuntime($endpoint);
+        $modeLabel = ($runtime['mode'] ?? '') === 'audio_cpp' ? 'audio.cpp' : 'standard API';
+        if (!empty($runtime['reachable'])) {
             return [
                 'label' => 'Connected',
                 'class' => 'connected',
-                'title' => $endpoint . ' - audio.cpp PocketTTS detected',
+                'title' => $endpoint . ' - PocketTTS ' . $modeLabel . ' detected automatically',
             ];
         }
 
-        $reason = $healthProbe['curl_error'] !== ''
-            ? $healthProbe['curl_error']
-            : ('HTTP ' . (intval($healthProbe['http_code']) > 0 ? strval($healthProbe['http_code']) : 'no response'));
         return [
             'label' => 'Not Connected',
             'class' => 'disconnected',
-            'title' => $endpoint . ' - ' . $reason,
+            'title' => $endpoint . ' - PocketTTS ' . $modeLabel . ' configured; ' . ($runtime['reason'] ?? 'no response'),
         ];
     }
 
@@ -1957,6 +1972,8 @@ $xttsStudioEndpoints = [
     'pockettts' => chimTtsStudioResolveEndpointForDriver('pockettts'),
     'omnivoice' => chimTtsStudioResolveEndpointForDriver('omnivoice'),
 ];
+$pocketTtsRuntime = chimTtsStudioDetectPocketTtsRuntime($xttsStudioEndpoints['pockettts'] ?? '');
+$pocketTtsModeLabel = ($pocketTtsRuntime['mode'] ?? '') === 'audio_cpp' ? 'audio.cpp' : 'Standard API';
 
 $ttsStudioProviderStatuses = [
     'xtts' => chimTtsStudioProbeEndpointStatus('xtts-fastapi', $xttsStudioEndpoints['xtts-fastapi'] ?? ''),
@@ -3743,7 +3760,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 onclick="switchTab('chatterbox')"><span class="tab-label">Chatterbox</span><span class="tab-status <?php echo htmlspecialchars($ttsStudioProviderStatuses['chatterbox']['class']); ?>"><?php echo htmlspecialchars($ttsStudioProviderStatuses['chatterbox']['label']); ?></span></button>
         <button class="tab-btn <?php echo $activeTab === 'pockettts' ? 'active' : ''; ?>"
                 title="<?php echo htmlspecialchars($ttsStudioProviderStatuses['pockettts']['title']); ?>"
-                onclick="switchTab('pockettts')"><span class="tab-label">PocketTTS</span><span class="tab-status <?php echo htmlspecialchars($ttsStudioProviderStatuses['pockettts']['class']); ?>"><?php echo htmlspecialchars($ttsStudioProviderStatuses['pockettts']['label']); ?></span></button>
+                onclick="switchTab('pockettts')"><span class="tab-label">PocketTTS (<?php echo htmlspecialchars($pocketTtsModeLabel); ?>)</span><span class="tab-status <?php echo htmlspecialchars($ttsStudioProviderStatuses['pockettts']['class']); ?>"><?php echo htmlspecialchars($ttsStudioProviderStatuses['pockettts']['label']); ?></span></button>
         <button class="tab-btn <?php echo $activeTab === 'omnivoice' ? 'active' : ''; ?>"
                 title="<?php echo htmlspecialchars($ttsStudioProviderStatuses['omnivoice']['title']); ?>"
                 onclick="switchTab('omnivoice')"><span class="tab-label">OmniVoice</span><span class="tab-status <?php echo htmlspecialchars($ttsStudioProviderStatuses['omnivoice']['class']); ?>"><?php echo htmlspecialchars($ttsStudioProviderStatuses['omnivoice']['label']); ?></span></button>
@@ -4078,8 +4095,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="tab-content <?php echo $activeTab === 'pockettts' ? 'active' : ''; ?>" data-tab-type="pockettts">
         <div class="content-section full-width-section">
             <h1>Voice Sample Upload</h1>
-            <p>Upload voice samples to <code>data/voices</code>. audio.cpp PocketTTS uses these local files directly.</p>
-            <p style="color: #4a8ab6;"><strong>PocketTTS Info:</strong> DwemerDistro uses the audio.cpp C++ runtime on port 8086. Python is only needed during model download.</p>
+            <p>Upload voice samples to <code>data/voices</code>. TTS Studio automatically uses local files for audio.cpp or server synchronization for the standard API.</p>
+            <p style="color: #4a8ab6;"><strong>Detected PocketTTS Mode:</strong> <?php echo htmlspecialchars($pocketTtsModeLabel); ?> at <code><?php echo htmlspecialchars($xttsStudioEndpoints['pockettts'] ?? 'Not configured'); ?></code>.</p>
 
             <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=pockettts" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
                 <div style="margin-bottom: 15px;">
@@ -4105,7 +4122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="content-section full-width-section">
             <h1>PocketTTS Voice Cache</h1>
-            <p>Manage voice samples for PocketTTS. audio.cpp mode reads local .wav files from <code>data/voices</code>.</p>
+            <p>Manage voice samples for PocketTTS. Current mode: <strong><?php echo htmlspecialchars($pocketTtsModeLabel); ?></strong>.</p>
 
             <?php
             $localVoices = getLocalVoices();

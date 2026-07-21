@@ -2018,7 +2018,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
         $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
         
-        // MinAI prompts are breaking rechat actor adressing "Respond to #target# as #herika_name#"
+        // Legacy plugin prompts can break rechat actor addressing: "Respond to #target# as #herika_name#".
         $GLOBALS['action_prompts']=[];
         $rechatEnabledFunctionSet=array_fill_keys($GLOBALS["ENABLED_FUNCTIONS"] ?? [], true);
         $rechatActionSourceCodes=[
@@ -2181,6 +2181,8 @@ if (!function_exists('isOghmaSettingEnabled')) {
 $minimeEnabled = isMinimeT5Enabled();
 $oghmaCustomEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
 $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
+$racialOghmaEnabled = isOghmaSettingEnabled($GLOBALS['RACIAL_OGHMA'] ?? true);
+$locationOghmaEnabled = isOghmaSettingEnabled($GLOBALS['LOCATION_OGHMA'] ?? true);
 
 // Debug: Log the actual values being checked BEFORE the conditional
 error_log("[OGHMA CHECK] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
@@ -2189,7 +2191,7 @@ error_log("[OGHMA CHECK] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
     . " | OGHMA_INFINIUM=" . var_export($GLOBALS["OGHMA_INFINIUM"] ?? null, true)
     . " (enabled=" . ($oghmaInfiniumEnabled ? 'Y' : 'N') . ")");
 
-if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
+if (($minimeEnabled || $oghmaCustomEnabled || $racialOghmaEnabled || $locationOghmaEnabled) && $oghmaInfiniumEnabled) {
     if (!isset($GLOBALS["OGHMA_CALLED"])) {// Avoid double call
         require(__DIR__."/processor/oghma.php");
         $GLOBALS["OGHMA_CALLED"] = true;
