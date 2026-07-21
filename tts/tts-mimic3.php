@@ -14,29 +14,27 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood = "cheerful", $stringforhash=
     
     $start = microtime(true);
 
-    $ttsServiceUri = $GLOBALS["TTS"]["MIMIC3"]["URL"] . "/api/tts";
+    $ttsServiceUri = rtrim(strval($GLOBALS["TTS"]["MIMIC3"]["URL"] ?? 'http://127.0.0.1:59125'), '/') . "/api/tts";
     
     $testP="?text=".urlencode($textString);
-    $voiceP="&voice=".urlencode($GLOBALS["TTS"]["MIMIC3"]["voice"]);
-
-    if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
-        $voiceP="&voice=".urlencode($GLOBALS["PATCH_OVERRIDE_VOICE"]);
+    $voice = $GLOBALS["PATCH_OVERRIDE_VOICE"] ?? ($GLOBALS["TTS"]["MIMIC3"]["voice"] ?? 'en_UK/apope_low');
+    $voiceP="&voice=".urlencode($voice);
 
     $noiseScaleP="&noiseScale=0.667";
     $noiseW="&noiseW=0.8";
-    $lengthScaleP="&lengthScale=".urlencode($GLOBALS["TTS"]["MIMIC3"]["rate"]);
+    $lengthScaleP="&lengthScale=".urlencode($GLOBALS["TTS"]["MIMIC3"]["rate"] ?? '1');
     $restP="&ssml=false&audioTarget=client";
-    $result = file_get_contents($ttsServiceUri.$testP.$voiceP.$noiseScaleP.$noiseW.$lengthScaleP.$restP, false, $context);
+    $result = file_get_contents($ttsServiceUri.$testP.$voiceP.$noiseScaleP.$noiseW.$lengthScaleP.$restP);
      
     if (!$result) {
-        file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".err", trim($data));
+        file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".err", trim($textString));
         return false;
     } else {
     }
    
 
     // Trying to avoid sync problems.
-    $stream = fopen(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav", 'w');
+    $stream = fopen(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav", 'wb');
     $size = fwrite($stream, $result);
     fsync($stream);
     fclose($stream);
@@ -45,7 +43,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood = "cheerful", $stringforhash=
 
     $executionTime = ($end - $start);
 
-    file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($data) . "\n\rsize of wav ($size)\n\rexecution time: $executionTime secs  function tts($textString,$mood=\"cheerful\",$stringforhash)");
+    file_put_contents(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".txt", trim($textString) . "\n\rsize of wav ($size)\n\rexecution time: $executionTime secs  function tts($textString,$mood=\"cheerful\",$stringforhash)");
 
     return "soundcache/" . md5(trim($stringforhash)) . ".wav";
     
