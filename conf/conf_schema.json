@@ -270,7 +270,7 @@
     },
     "CHATTERBOX": {
       "_title":"Chatterbox",
-       "endpoint":{"type":"url","description":"Chatterbox endpoint. Uses same port as XTTS (8020) by default. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.com/chim/tts.html#Chatterbox"},
+       "endpoint":{"type":"url","description":"Chatterbox endpoint. DwemerDistro uses dedicated port 8023. Click[HOST PC IP] or [WSL IP] to configure.", "helpurl":"https://dwemerdynamics.com/chim/tts.html#Chatterbox"},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
       "voicelogic":{"type":"select","values":["voicetype","name"], "description":"Default profile only. Logic used for generating [TTS CHATTERBOX voiceid] <br> voicetype = NPC voicetype ID (femalenord) <br> name = NPC name (mjoll_the_lioness)", "scope":"global"},
@@ -287,7 +287,7 @@
     },
     "POCKETTTS": {
       "_title":"PocketTTS",
-       "endpoint":{"type":"url","description":"PocketTTS endpoint. DwemerDistro audio.cpp PocketTTS uses port 8086 by default. Legacy Python PocketTTS uses port 8020. The connector detects the API automatically from the endpoint.", "helpurl":"https://dwemerdynamics.com/chim/tts.html#PocketTts"},
+       "endpoint":{"type":"url","description":"PocketTTS endpoint. DwemerDistro audio.cpp PocketTTS uses port 8086; Python PocketTTS uses dedicated port 8024. The connector detects the API automatically from the endpoint.", "helpurl":"https://dwemerdynamics.com/chim/tts.html#PocketTts"},
       "model":{"type":"string","description":"audio.cpp model id. Default: pocket-tts."},
       "language":{"type":"select","values":[  "ar","pt","zh-cn", "cs","nl","en","fr", "de", "it", "pl", "ru", "es", "tr","ja", "ko","hu","hi"],"description":"Language to use."},
       "voiceid":{"type":"string","description":"Generated voice file name. Click the help link to go to voice management.","helpurl":"/HerikaServer/ui/xtts_clone.php"},
