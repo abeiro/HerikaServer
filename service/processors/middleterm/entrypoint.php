@@ -181,25 +181,32 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         // Trigger if never updated, or if last update is older than configured threshold
         $mustInstructBypassBgl=false;
         if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < ($bglTriggerDaysAgoGamets)) {
-            logger::info("[BGL] Passive event for {$npc["npc_name"]}");
+            error_log("[BGL]  Passive event for {$npc["npc_name"]}");
 
 
+            if (isset($mwdata["background_life_last_updated"]))  {
+                if ($mwdata["background_life_last_updated"] > ($oneDayAgoGamets)) {
+                    
+                    $delta = ($mwdata["background_life_last_updated"] - $oneDayAgoGamets) * 0.0000024;
+                    error_log("[BGL]  {$npc["npc_name"]} Avoiding by 1-day HARDCODED RULE. Last updated: {$mwdata["background_life_last_updated"]}, threshold: {$oneDayAgoGamets }, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}");
+                    continue;
+                
+                }
+            }
 
             $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" ");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }
 
-            $npcManager = new NpcMaster();
-            $npcData = $npcManager->getByName($npc["npc_name"]);
-            $extended = json_decode($npcData["extended_data"], true);
-            $extended["background_life_last_updated"] = $maxRow;
-            $npcData = $npcManager->setExtendedData($npcData, $extended);
-            $npcManager->updateByArray($npcData);
+            
+            $extdata["background_life_last_updated"] = $maxRow;
+            $npcMaster->updateExtendedKeysByName($npc["npc_name"], $extdata);
 
             break;  // One per iteration - break after processing
         } else {
-            logger::debug("[BGL] (Passive) Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours}");
+            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerHoursAgoGamets) * 0.0000024;
+            error_log("[BGL] (Passive) Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours},delta: {$delta}");
         }
     }
 
