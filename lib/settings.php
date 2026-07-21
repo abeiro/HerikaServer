@@ -195,6 +195,10 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARYS',
             'PROMPT_HEAD',
             'EMOTEMOODS',
+            'OGHMA_INFINIUM',
+            'OGHMA_AMOUNT',
+            'RACIAL_OGHMA',
+            'LOCATION_OGHMA',
             'DETECT_MAGIC_EVENT',
             'MAGIC_EVENT_BLACKLIST',
             'LOCATION_BLACKLIST',
@@ -303,6 +307,10 @@ if (!function_exists('chimPrettySettingLabel')) {
             'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
             'RELLLM_CONNECTOR' => 'Relationship Management',
             'EMOTEMOODS' => 'Emote Moods',
+            'OGHMA_INFINIUM' => 'Oghma Infinium',
+            'OGHMA_AMOUNT' => 'Oghma Articles Amount',
+            'RACIAL_OGHMA' => 'Force Racial Oghma',
+            'LOCATION_OGHMA' => 'Force Location Oghma',
             'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
             'SHORTER_NEARBY_ITEM_LIST' => 'Shorter Nearby Item List',
             'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time',
@@ -329,6 +337,10 @@ if (!function_exists('chimPrettySettingLabel')) {
 if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
     function chimGetOverrideableGeneralSettingCategory(string $flatId): string
     {
+        if (in_array($flatId, ['OGHMA_INFINIUM', 'OGHMA_AMOUNT', 'RACIAL_OGHMA', 'LOCATION_OGHMA', 'OGHMA_CUSTOM', 'CORE_CONNECTOR_OGHMA_CUSTOM'], true)) {
+            return 'Oghma';
+        }
+
         if (
             strpos($flatId, 'PROMPT_') === 0
             || in_array($flatId, ['EMOTEMOODS', 'DETECT_MAGIC_EVENT', 'MAGIC_EVENT_BLACKLIST', 'LOCATION_BLACKLIST', 'ITEM_BLACKLIST', 'EVENT_TYPE_FILTER'], true)
@@ -367,7 +379,6 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
                 'POWER_AWARENESS_ENABLED',
                 'SCENE_CLASSIFIER_ENABLED',
                 'RELATIONSHIP_SYSTEM_ENABLED',
-                'OGHMA_CUSTOM',
             ], true)
         ) {
             return 'Context';
