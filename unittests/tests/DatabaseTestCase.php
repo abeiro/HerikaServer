@@ -90,21 +90,6 @@ abstract class DatabaseTestCase extends TestCase
         $GLOBALS["db"]=$db;
         require($path.DIRECTORY_SEPARATOR."debug".DIRECTORY_SEPARATOR."db_updates.php");
 
-        // if minAI is installed then create its database tables as well, to avoid errors
-        if (is_dir(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR."minai_plugin")) {
-            $GLOBALS["PLAYER_NAME"]="Prisoner";
-            $GLOBALS["HERIKA_NAME"]="Unit Test";
-            require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR."minai_plugin".DIRECTORY_SEPARATOR."importDataToDB.php");
-            require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR."minai_plugin".DIRECTORY_SEPARATOR."customintegrations.php");
-            unset($GLOBALS["PLAYER_NAME"]);
-            unset($GLOBALS["HERIKA_NAME"]);
-
-            DropThreadsTableIfExists();
-            InitiateDBTables();
-            importXPersonalities();
-            importScenesDescriptions();
-        }
-
         $db->close();
         unset($db);
         unset($GLOBALS["db"]);

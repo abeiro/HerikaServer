@@ -417,34 +417,6 @@ tr.featured-plugin-row td {
             exit;
         }
 
-        if (isset($_POST['download_minai'])) {
-            $zipUrl = 'https://github.com/MinLL/MinAI/archive/refs/heads/stable.zip';
-            $zipFile = tempnam(sys_get_temp_dir(), 'minai_') . '.zip';
-            $zipContent = @file_get_contents($zipUrl);
-            if ($zipContent !== false) {
-                file_put_contents($zipFile, $zipContent);
-                $zip = new ZipArchive;
-                if ($zip->open($zipFile) === TRUE) {
-                    $destination = __DIR__ . '/../ext/';
-                    $zip->extractTo($destination);
-                    $zip->close();
-                    @unlink($zipFile);
-                    // Move extracted folder
-                    $sourcePath = $destination . 'MinAI-stable/minai_plugin';
-                    $targetPath = $destination . 'minai_plugin';
-                    if (is_dir($sourcePath)) {
-                        if (is_dir($targetPath)) rrmdir($targetPath);
-                        @rename($sourcePath, $targetPath);
-                        rrmdir($destination . 'MinAI-stable');
-                    }
-                } else {
-                    @unlink($zipFile);
-                }
-            }
-            header('Location: ' . $_SERVER['REQUEST_URI']);
-            exit;
-        }
-
         // Gather installed plugins
         $pluginFoldersRoot = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "ext" . DIRECTORY_SEPARATOR;
         $pluginFolders = scandir($pluginFoldersRoot);
@@ -626,23 +598,6 @@ tr.featured-plugin-row td {
         }
         echo '</table>';
 
-        // MinAI plugin quick-download
-        $pluginFoldersRoot = __DIR__ . '/../ext/';
-        $minaiInstalled = is_dir($pluginFoldersRoot . 'minai_plugin');
-        echo '<table border="1">';
-        echo '<tr><th>Plugin</th><th>Description</th><th>Mod Page</th><th>Skyrim Mod Download</th></tr>';
-        echo '<tr>';
-        echo '<td style="text-align:center;">';
-        if ($minaiInstalled) {
-            echo '<button class="btn-base btn-primary" disabled>MinAI Installed</button>';
-        } else {
-            echo '<form method="post" style="margin:0;"><input type="hidden" name="download_minai" value="1"><button type="submit" class="btn-base btn-primary">Download MinAI</button></form>';
-        }
-        echo '</td>';
-        echo '<td>Extension for CHIM that expands its capabilities and optionally adds NSFW integrations.<br><span style="color: #ff6b6b; font-size: 0.9em;"><strong>Note:</strong> No longer supported by the original author. May have compatibility issues. Use at your own risk.</span></td>';
-        echo '<td><button onclick="window.open(\'https://github.com/MinLL/MinAI\', \'_blank\')" class="btn-base btn-primary">More Info</button></td>';
-        echo '<td><button onclick="window.open(\'https://github.com/MinLL/MinAI/releases\', \'_blank\')" class="btn-base btn-primary">Mod Download</button></td>';
-        echo '</tr></table>';
         echo '</div>'; // Close the second table-container
         ?>
     </div>
