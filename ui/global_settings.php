@@ -48,6 +48,13 @@ $gsSections = [
         [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
     ],
+    'Oghma' => [
+        [ 'name' => 'OGHMA_INFINIUM', 'type' => 'boolean' ],
+        [ 'name' => 'OGHMA_AMOUNT', 'type' => 'select', 'values' => ['1', '2', '3'] ],
+        [ 'name' => 'RACIAL_OGHMA', 'type' => 'boolean' ],
+        [ 'name' => 'LOCATION_OGHMA', 'type' => 'boolean' ],
+        [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
+    ],
     'Rechat' => [
         [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
         [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
@@ -79,7 +86,6 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_BGL', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'PLAYER_WORST_MEMORY_GAME_DAYS', 'type' => 'integer', 'min' => 0, 'max' => 365, 'default' => 7, 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.' ],
-        [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
     'Context' => [
         [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
@@ -148,6 +154,10 @@ function pretty_label(string $flatName): string
         'RELLLM_CONNECTOR' => 'Relationship Management',
         'PLAYER_WORST_MEMORY_GAME_DAYS' => 'Worst Memory Lifespan',
         'EMOTEMOODS' => 'Emote Moods',
+        'OGHMA_INFINIUM' => 'Oghma Infinium',
+        'OGHMA_AMOUNT' => 'Oghma Articles Amount',
+        'RACIAL_OGHMA' => 'Force Racial Oghma',
+        'LOCATION_OGHMA' => 'Force Location Oghma',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
         'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time',
         'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',

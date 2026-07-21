@@ -1,6 +1,7 @@
 <?php
 
 $GLOBALS["OGHMA_HINT"] = "";
+$GLOBALS["OGHMA_INJECTED_TOPICS"] = [];
 
 // Helper function to properly check boolean values (handles string "false" from form submissions)
 // Guard against redeclaration when oghma.php is included multiple times (e.g., during rechat)
@@ -16,6 +17,19 @@ if (!function_exists('isOghmaEnabled')) {
 $minimeEnabled = isMinimeT5Enabled();
 $oghmaCustomEnabled = isOghmaEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
 $oghmaInfiniumEnabled = isOghmaEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
+$oghmaRequestEligible = in_array(
+    $gameRequest[0] ?? '',
+    ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "rechat", "continue", "instruction", "suggestion"],
+    true
+);
+
+if ($oghmaInfiniumEnabled && $oghmaRequestEligible) {
+    require_once(__DIR__ . "/../lib/oghma_forced_context.php");
+    $forcedNpcMaster = isset($npcMaster) && $npcMaster instanceof NpcMaster
+        ? $npcMaster
+        : (class_exists('NpcMaster') ? new NpcMaster() : null);
+    chimOghmaInjectForcedContext($GLOBALS['db'] ?? null, $forcedNpcMaster);
+}
 
 // Debug: Log the actual values being checked
 error_log("[OGHMA DEBUG] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
@@ -26,7 +40,7 @@ error_log("[OGHMA DEBUG] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
 
 if ($minimeEnabled || $oghmaCustomEnabled) {
     if ($oghmaInfiniumEnabled) {
-        if (in_array($gameRequest[0], ["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat", "continue", "instruction", "suggestion"])) {
+        if ($oghmaRequestEligible) {
             
             if ($gameRequest[0] === "rechat") {
                 $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
@@ -209,7 +223,8 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                             $msg = 'oghma keyword offered';
 
                             // If rank is good enough, we try to see if user can access advanced or basic lore
-                            if ($topTopic["combined_rank"] > 3.3) {
+                            $hintLengthBeforeTopic = strlen($GLOBALS["OGHMA_HINT"]);
+                            if ($topTopic["combined_rank"] > 3.3 && !chimOghmaTopicWasInjected($topTopic["topic"] ?? '')) {
                                 // -----------------------------
                                 // 1) Check advanced article
                                 // -----------------------------
@@ -293,6 +308,11 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                                         $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information\nYou do not know ANYTHING about {$topTopic["topic"]}";
                                     }
                                 }
+                                if (strlen($GLOBALS["OGHMA_HINT"]) > $hintLengthBeforeTopic) {
+                                    chimOghmaMarkTopicInjected($topTopic["topic"] ?? '');
+                                }
+                            } elseif (chimOghmaTopicWasInjected($topTopic["topic"] ?? '')) {
+                                $msg = "oghma keyword already injected from scene context";
                             } else {
                                 $msg = "oghma keyword NOT offered (no good results in search)";
                             }
@@ -371,6 +391,6 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
         error_log("[OGHMA] OGHMA_INFINIUM disabled: {$GLOBALS["OGHMA_INFINIUM"]}");
     }
 }  else {
-        error_log("[OGHMA] MiniMe service unavailable and OGHMA_CUSTOM is disabled");
+        error_log("[OGHMA] Dynamic topic extraction unavailable; forced scene context was processed when enabled");
 }
 ?>

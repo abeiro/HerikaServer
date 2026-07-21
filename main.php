@@ -2179,6 +2179,8 @@ if (!function_exists('isOghmaSettingEnabled')) {
 $minimeEnabled = isMinimeT5Enabled();
 $oghmaCustomEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
 $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
+$racialOghmaEnabled = isOghmaSettingEnabled($GLOBALS['RACIAL_OGHMA'] ?? true);
+$locationOghmaEnabled = isOghmaSettingEnabled($GLOBALS['LOCATION_OGHMA'] ?? true);
 
 // Debug: Log the actual values being checked BEFORE the conditional
 error_log("[OGHMA CHECK] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
@@ -2187,7 +2189,7 @@ error_log("[OGHMA CHECK] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
     . " | OGHMA_INFINIUM=" . var_export($GLOBALS["OGHMA_INFINIUM"] ?? null, true)
     . " (enabled=" . ($oghmaInfiniumEnabled ? 'Y' : 'N') . ")");
 
-if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
+if (($minimeEnabled || $oghmaCustomEnabled || $racialOghmaEnabled || $locationOghmaEnabled) && $oghmaInfiniumEnabled) {
     if (!isset($GLOBALS["OGHMA_CALLED"])) {// Avoid double call
         require(__DIR__."/processor/oghma.php");
         $GLOBALS["OGHMA_CALLED"] = true;

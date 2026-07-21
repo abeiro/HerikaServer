@@ -7213,6 +7213,113 @@ if ($checkVersion("general_settings") < 20260711001) {
     }
 }
 
+if ($checkVersion("general_settings") < 20260720001) {
+    Logger::debug("Applying general_settings 20260720001 - add forced Oghma scene context settings");
+
+    $b_ok = true;
+    try {
+        foreach ([
+            'RACIAL_OGHMA' => true,
+            'LOCATION_OGHMA' => true,
+        ] as $settingId => $fallbackDefault) {
+            $existingRow = chimGetGeneralSettingRow($settingId);
+            $definition = chimGetSchemaDefinition($settingId);
+            $description = chimGetManagedGeneralSettingDescriptions()[$settingId]
+                ?? chimGetSchemaDescription($settingId);
+
+            if ($existingRow) {
+                $currentValue = $existingRow['value'] ?? ($definition['default'] ?? $fallbackDefault);
+            } else {
+                $legacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+                $currentValue = ($legacyValue === "__CHIM_SETTING_MISSING__")
+                    ? ($definition['default'] ?? $fallbackDefault)
+                    : $legacyValue;
+            }
+
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing {$settingId}");
+            }
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error adding forced Oghma scene context settings: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260720001);
+        Logger::info("Applied patch general_settings 20260720001");
+    }
+}
+
+if ($checkVersion("general_settings") < 20260720002) {
+    Logger::debug("Applying general_settings 20260720002 - move Oghma controls to global settings");
+
+    $b_ok = true;
+    try {
+        $defaultProfileMetadata = [];
+        $defaultProfile = $db->fetchOne(
+            "SELECT metadata FROM public.core_profiles "
+            . "WHERE lower(COALESCE(default_npc, '')) IN ('1', 'true', 'yes', 'on') "
+            . "ORDER BY id ASC LIMIT 1"
+        );
+        if (is_array($defaultProfile)) {
+            $rawMetadata = $defaultProfile['metadata'] ?? [];
+            $defaultProfileMetadata = is_array($rawMetadata)
+                ? $rawMetadata
+                : (json_decode(strval($rawMetadata), true) ?: []);
+        }
+
+        $resolvedValues = [];
+        foreach ([
+            'OGHMA_INFINIUM' => true,
+            'OGHMA_AMOUNT' => '1',
+        ] as $settingId => $fallbackDefault) {
+            $existingRow = chimGetGeneralSettingRow($settingId);
+            $definition = chimGetSchemaDefinition($settingId);
+            $description = chimGetManagedGeneralSettingDescriptions()[$settingId]
+                ?? chimGetSchemaDescription($settingId);
+
+            if ($existingRow) {
+                $currentValue = $existingRow['value'] ?? ($definition['default'] ?? $fallbackDefault);
+            } elseif (array_key_exists($settingId, $defaultProfileMetadata)) {
+                $currentValue = $defaultProfileMetadata[$settingId];
+            } else {
+                $legacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+                $currentValue = ($legacyValue === "__CHIM_SETTING_MISSING__")
+                    ? ($definition['default'] ?? $fallbackDefault)
+                    : $legacyValue;
+            }
+
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing {$settingId}");
+            }
+            $resolvedValues[$settingId] = chimSettingsStringifyValue($currentValue);
+        }
+
+        // Keep only meaningful per-profile differences as overrides.
+        foreach ($resolvedValues as $settingId => $globalValue) {
+            $safeSettingId = $db->escapeLiteral($settingId);
+            $safeGlobalValue = $db->escapeLiteral(strtolower(trim($globalValue)));
+            if ($db->execQuery(
+                "UPDATE public.core_profiles "
+                . "SET metadata = COALESCE(metadata, '{}'::jsonb) - {$safeSettingId} "
+                . "WHERE COALESCE(metadata, '{}'::jsonb) ? {$safeSettingId} "
+                . "AND lower(trim(COALESCE(metadata ->> {$safeSettingId}, ''))) = {$safeGlobalValue}"
+            ) === false) {
+                throw new Exception("Failed normalizing profile override {$settingId}");
+            }
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error moving Oghma controls to global settings: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260720002);
+        Logger::info("Applied patch general_settings 20260720002");
+    }
+}
+
 if ($checkVersion("quest_asset_library") < 20260718003) {
     Logger::debug("Applying quest_asset_library 20260718003 - add curated quest spawn templates");
 

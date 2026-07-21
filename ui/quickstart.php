@@ -336,6 +336,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
     }
 
     if ($action === 'profile_quicksave_metadata') {
+        require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "settings.php");
         $truthy = function($v) {
             if ($v === null) return null;
             $s = strtolower(trim((string)$v));
@@ -347,14 +348,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         if ($pid <= 0) { echo json_encode(['ok'=>false,'error'=>'No profile found']); exit; }
         $oghma  = $truthy($_POST['oghma_infinium'] ?? null);
         $player2Force = $truthy($_POST['player2_force_all_llm'] ?? null);
-        $row = $GLOBALS['db']->fetchOne("SELECT metadata FROM core_profiles WHERE id=".$pid." LIMIT 1");
-        $meta = [];
-        if (isset($row['metadata']) && $row['metadata'] !== '') {
-            try { $tmp = json_decode($row['metadata'], true); if (is_array($tmp)) $meta = $tmp; } catch (Throwable $_) {}
+        if ($oghma !== null && !chimSetGeneralSetting('OGHMA_INFINIUM', $oghma, chimGetSchemaDescription('OGHMA_INFINIUM'))) {
+            echo json_encode(['ok'=>false,'error'=>'Unable to save Oghma Infinium']);
+            exit;
         }
-        if ($oghma  !== null) { $meta['OGHMA_INFINIUM'] = $oghma ? true : false; }
-        $json = json_encode($meta, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
-        $GLOBALS['db']->updateRow('core_profiles', [ 'metadata' => $json ], "id=".$pid);
 
         $player2ConnectorId = null;
         if ($player2Force !== null) {
