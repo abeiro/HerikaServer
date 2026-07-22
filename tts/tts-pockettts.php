@@ -353,7 +353,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 };
 
 /*
-$GLOBALS["TTS"]["POCKETTTS"]["endpoint"]='http://localhost:8020';
+$GLOBALS["TTS"]["POCKETTTS"]["endpoint"]='http://localhost:8024';
 $GLOBALS["TTS"]["POCKETTTS"]["voiceid"]='svenja';
 $GLOBALS["TTS"]["POCKETTTS"]["language"]='en';
 

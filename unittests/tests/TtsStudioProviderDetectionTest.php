@@ -33,7 +33,7 @@ final class TtsStudioProviderDetectionTest extends TestCase
     public function testDetectsStandardApiFromSpeakersEndpoint(): void
     {
         $runtime = chimTtsStudioClassifyPocketTtsRuntime(
-            'http://127.0.0.1:8020',
+            'http://127.0.0.1:8024',
             ['api_format' => 'audio_cpp'],
             $this->probe(404),
             $this->probe(404),
@@ -56,5 +56,35 @@ final class TtsStudioProviderDetectionTest extends TestCase
 
         $this->assertFalse($runtime['reachable']);
         $this->assertSame('audio_cpp', $runtime['mode']);
+    }
+
+    public function testNormalizesDedicatedServiceIdentities(): void
+    {
+        $this->assertSame('chatterbox', chimTtsStudioNormalizeProviderIdentity('Chatterbox'));
+        $this->assertSame('pockettts', chimTtsStudioNormalizeProviderIdentity('pocket_tts'));
+        $this->assertSame('xtts-fastapi', chimTtsStudioNormalizeProviderIdentity('xtts'));
+        $this->assertSame('', chimTtsStudioNormalizeProviderIdentity('unknown'));
+    }
+
+    public function testIdentifiesReleasedServicesFromOpenApiFingerprints(): void
+    {
+        $this->assertSame('chatterbox', chimTtsStudioProviderFromOpenApi([
+            'info' => ['title' => 'Chatterbox TTS API'],
+            'paths' => ['/speakers_list' => [], '/sample/{file_name}' => []],
+        ]));
+        $this->assertSame('pockettts', chimTtsStudioProviderFromOpenApi([
+            'info' => ['title' => 'FastAPI'],
+            'paths' => ['/speakers_list' => [], '/tts_to_audio_form' => []],
+        ]));
+        $this->assertSame('xtts-fastapi', chimTtsStudioProviderFromOpenApi([
+            'info' => ['title' => 'FastAPI'],
+            'paths' => [
+                '/speakers_list' => [],
+                '/speakers' => [],
+                '/sample/{file_name}' => [],
+                '/set_tts_settings' => [],
+                '/languages' => [],
+            ],
+        ]));
     }
 }

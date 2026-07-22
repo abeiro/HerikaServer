@@ -7104,7 +7104,7 @@ if ($checkVersion("core_tts_connector_pockettts_audiocpp") < 20260628001) {
                         jsonb_set(
                             COALESCE(metadata, '{}'::jsonb),
                             '{endpoint,description}',
-                            to_jsonb('Endpoint URL. DwemerDistro audio.cpp PocketTTS uses port 8086 by default. Legacy Python PocketTTS uses port 8020.'::text),
+                            to_jsonb('Endpoint URL. DwemerDistro audio.cpp PocketTTS uses port 8086. Python PocketTTS uses dedicated port 8024.'::text),
                             true
                         ),
                         '{api_format}',
