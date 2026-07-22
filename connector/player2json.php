@@ -320,7 +320,7 @@ class player2json
                 
             } else {
 
-                if ($lastrole=="assistant" && $lastrole!=$element["role"] && $element["role"]!="tool" ) {
+                if ($lastrole=="assistant" && $lastrole!=$element["role"] && $element["role"]!="tool" && !empty($assistantRoleBuffer)) {
                     $contextDataCopy[]=[
                         "role"=>"assistant",
                         "content"=>"{\"character\": \"{$GLOBALS["HERIKA_NAME"]}\", \"listener\": \"$lastTargetBuffer\", \"mood\": \"\", \"action\": \"Talk\",\"target\": \"\", \"message\":\"".trim($assistantRoleBuffer)."\"}"
@@ -373,6 +373,16 @@ class player2json
                         
                         unset($contextData[$n]);
                     } else {
+                        if (!empty($element["_chim_compact_history"])) {
+                            $contextDataCopy[] = [
+                                "role" => "assistant",
+                                "content" => trim((string)$element["content"]),
+                            ];
+                            $pb["system"].=trim((string)$element["content"])."\n";
+                            $lastrole = "assistant";
+                            continue;
+                        }
+
                         $alreadyJs=json_decode($element["content"],true);
                         if (is_array($alreadyJs)) {
                             $contextDataCopy[]=[

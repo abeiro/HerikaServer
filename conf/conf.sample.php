@@ -34,6 +34,7 @@ $OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More 
 $PLAYER_RESPEECH=true; //Use default diary connector AI to rewrite player speech. Currently only triggers when starting speech with **.
 $PLAYER_SPEECH_STYLE=""; //Instructions for how the player character speaks and communicates. Used as context when rewriting player dialogue.
 $PROMPT_TIMESTAMP=false; //Add rough timestamp subdividers to event context (e.g., 'Moments Ago', 'A while ago') to help the LLM understand temporal relationships.
+$COMPACT_NPC_CONTEXT_HISTORY=false; //Use a compact plaintext conversation history for NPC prompts while preserving user/assistant roles.
 $use_emotions_expression = false; //Add emotions support. Changes the affect context/json object offered to LLM must be false by default.
 
 //[Advanced Configuration]

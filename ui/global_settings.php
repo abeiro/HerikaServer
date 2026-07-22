@@ -96,6 +96,7 @@ $gsSections = [
         [ 'name' => 'POWER_AWARENESS_ENABLED', 'type' => 'boolean' ],
         [ 'name' => 'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE', 'type' => 'integer', 'min' => 0 ],
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
+        [ 'name' => 'COMPACT_NPC_CONTEXT_HISTORY', 'type' => 'boolean', 'default' => false ],
     ],
     $promptContextSectionTitle => $promptContextOptionFields,
     'Translation' => [
@@ -164,6 +165,7 @@ function pretty_label(string $flatName): string
         'CHIM_AI_QUEST_PROGRESSION' => 'CHIM AI Quest Progression (Beta)',
         'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
         'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 'Item Pickup Detection Value',
+        'COMPACT_NPC_CONTEXT_HISTORY' => 'Compact NPC Context History',
     ];
     if (isset($customLabels[$flatName])) {
         return $customLabels[$flatName];
@@ -186,6 +188,7 @@ function icon_for_field(string $flatName): string
     if ($u === 'PROMPT_HEAD') return '🔝';
     if ($u === 'EMOTEMOODS') return '🎭';
     if ($u === 'PROMPT_TIMESTAMP') return '🕐';
+    if ($u === 'COMPACT_NPC_CONTEXT_HISTORY') return '🗜️';
     if (strpos($u, 'CORE_CONNECTOR_') === 0) {
         if ($u === 'CORE_CONNECTOR_PLAYER') return '🎮';
         if ($u === 'CORE_CONNECTOR_SUMMARY') return '📝';

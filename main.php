@@ -41,6 +41,7 @@ require_once($path . "lib/model_dynmodel.php");
 require_once($path . "lib/minimet5_service.php");
 require_once($path . "lib/data_functions.php");
 require_once($path . "lib/chat_helper_functions.php");
+require_once($path . "lib/compact_context_history.php");
 require_once($path . "lib/lazy_xml.php");
 require_once($path . "lib/memory_helper_vectordb.php");
 require_once($path . "lib/llm_randomizer.php");
@@ -2212,6 +2213,12 @@ $contextDataHistoric = filterHistoricContextForNarratorVisibility(
     $contextDataHistoric,
     $GLOBALS["HERIKA_NAME"] ?? ""
 );
+if (chimShouldCompactNpcContextHistory($GLOBALS["HERIKA_NAME"] ?? "")) {
+    $contextDataHistoric = chimFormatCompactNpcContextHistory(
+        $contextDataHistoric,
+        (string)($GLOBALS["HERIKA_NAME"] ?? "")
+    );
+}
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
 // audit_log(__FILE__." [OGHMA]  ".__LINE__);
