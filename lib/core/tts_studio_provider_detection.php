@@ -69,3 +69,28 @@ if (!function_exists('chimTtsStudioClassifyPocketTtsRuntime')) {
         ];
     }
 }
+
+if (!function_exists('chimTtsStudioProviderFromOpenApi')) {
+    function chimTtsStudioProviderFromOpenApi(array $document): string
+    {
+        $title = strtolower(trim(strval($document['info']['title'] ?? '')));
+        $paths = is_array($document['paths'] ?? null) ? array_keys($document['paths']) : [];
+        // Released XTTS exposes several generic speaker/settings routes also used
+        // by the other compatible APIs, so test its unique routes first.
+        if (in_array('/languages', $paths, true)
+            || in_array('/get_models_list', $paths, true)) {
+            return 'xtts-fastapi';
+        }
+        if (str_contains($title, 'chatterbox')
+            || (in_array('/sample/{file_name}', $paths, true)
+                && in_array('/speakers_list_extended', $paths, true))) {
+            return 'chatterbox';
+        }
+        if (in_array('/tts_to_audio_form', $paths, true)
+            || (in_array('/tts_to_audio', $paths, true)
+                && in_array('/voices/{voice_id}', $paths, true))) {
+            return 'pockettts';
+        }
+        return '';
+    }
+}

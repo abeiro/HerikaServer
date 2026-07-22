@@ -65,4 +65,26 @@ final class TtsStudioProviderDetectionTest extends TestCase
         $this->assertSame('xtts-fastapi', chimTtsStudioNormalizeProviderIdentity('xtts'));
         $this->assertSame('', chimTtsStudioNormalizeProviderIdentity('unknown'));
     }
+
+    public function testIdentifiesReleasedServicesFromOpenApiFingerprints(): void
+    {
+        $this->assertSame('chatterbox', chimTtsStudioProviderFromOpenApi([
+            'info' => ['title' => 'Chatterbox TTS API'],
+            'paths' => ['/speakers_list' => [], '/sample/{file_name}' => []],
+        ]));
+        $this->assertSame('pockettts', chimTtsStudioProviderFromOpenApi([
+            'info' => ['title' => 'FastAPI'],
+            'paths' => ['/speakers_list' => [], '/tts_to_audio_form' => []],
+        ]));
+        $this->assertSame('xtts-fastapi', chimTtsStudioProviderFromOpenApi([
+            'info' => ['title' => 'FastAPI'],
+            'paths' => [
+                '/speakers_list' => [],
+                '/speakers' => [],
+                '/sample/{file_name}' => [],
+                '/set_tts_settings' => [],
+                '/languages' => [],
+            ],
+        ]));
+    }
 }
