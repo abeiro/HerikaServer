@@ -1734,17 +1734,31 @@ function chimTtsStudioDetectEndpointProvider(string $endpoint): array
         return $cache[$endpoint];
     }
 
-    $omniVoiceProbe = chimTtsStudioProbeJson($endpoint . '/provider_info');
-    $omniVoiceDecoded = $omniVoiceProbe['decoded'];
-    if ($omniVoiceProbe['response'] !== false
-        && intval($omniVoiceProbe['http_code']) >= 200
-        && intval($omniVoiceProbe['http_code']) < 300
-        && is_array($omniVoiceDecoded)
-        && strtolower(trim(strval($omniVoiceDecoded['provider'] ?? ''))) === 'omnivoice') {
+    $providerProbe = chimTtsStudioProbeJson($endpoint . '/provider_info');
+    $providerDecoded = $providerProbe['decoded'];
+    $providerIdentity = is_array($providerDecoded)
+        ? chimTtsStudioNormalizeProviderIdentity(strval($providerDecoded['provider'] ?? ''))
+        : '';
+    if ($providerProbe['response'] !== false
+        && intval($providerProbe['http_code']) >= 200
+        && intval($providerProbe['http_code']) < 300
+        && $providerIdentity !== '') {
         return $cache[$endpoint] = [
             'reachable' => true,
-            'provider' => 'omnivoice',
-            'reason' => 'OmniVoice provider fingerprint matched',
+            'provider' => $providerIdentity,
+            'reason' => 'Provider identity endpoint matched ' . $providerIdentity,
+        ];
+    }
+
+    $openApiProbe = chimTtsStudioProbeJson($endpoint . '/openapi.json');
+    $openApiIdentity = is_array($openApiProbe['decoded'] ?? null)
+        ? chimTtsStudioProviderFromOpenApi($openApiProbe['decoded'])
+        : '';
+    if (chimTtsStudioProbeSucceeded($openApiProbe) && $openApiIdentity !== '') {
+        return $cache[$endpoint] = [
+            'reachable' => true,
+            'provider' => $openApiIdentity,
+            'reason' => 'Legacy OpenAPI fingerprint matched ' . $openApiIdentity,
         ];
     }
 
