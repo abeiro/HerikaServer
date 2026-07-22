@@ -2566,6 +2566,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     " {$ext_sqlfilter2} 
     ORDER BY gamets desc, ts desc, rowid desc LIMIT {$nRecordsLimit} OFFSET 0 ";
     
+    // error_log("[BGL] $query");   
     // Keep generic far-away actors out of historic context. Shared narrator rows are flattened on write.
     $results = $db->fetchAll($query);
 
