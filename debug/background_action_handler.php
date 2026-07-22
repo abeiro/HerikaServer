@@ -856,8 +856,36 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
 
     // ─── Generate NPC-to-NPC Dialogue via LLM ────────────────────────────────
     if ($connectionHandler !== null) {
+
+        $npcMaster = new NpcMaster();
+        $targetNpcData = $npcMaster->getByName($resolvedName);
+        $extdata=$npcMaster->getExtendedData($targetNpcData);
+        
+
+        $targetNpcDataBasicProfile="";
+
+        if (isset($extdata['middle_term_memory'])) {
+            $middleTermMemory = end($extdata['middle_term_memory']);
+            
+        }
+        $targetNpcDataBasicProfile.= "Name: {$targetNpcData['npc_name']}\n";
+        $targetNpcDataBasicProfile.= "Race: {$targetNpcData['race']}\n";
+        $targetNpcDataBasicProfile.= "Gender: {$targetNpcData['gender']}\n";        
+        $targetNpcDataBasicProfile.= "Bio: {$targetNpcData['npc_static_bio']}\n";
+        $targetNpcDataBasicProfile.= "Personality: {$targetNpcData['personality']}\n";
+        $targetNpcDataBasicProfile.= "Occupation: {$targetNpcData['occupation']}\n";
+        $targetNpcDataBasicProfile.= "Appearance: {$targetNpcData['appearance']}\n";
+        $targetNpcDataBasicProfile.= "Skills: {$targetNpcData['skills']}\n";
+        $targetNpcDataBasicProfile.= "Speechstyle: {$targetNpcData['speechstyle']}\n";
+        $targetNpcDataBasicProfile.= "Goals: {$targetNpcData['goals']}\n";
+        $targetNpcDataBasicProfile.= "Memories: {$middleTermMemory}\n";
+        
         $contextBlock = !empty($dynamicBiography)
             ? "<character_sheet>\n{$npcName}:\n{$dynamicBiography}\n</character_sheet>\n\n"
+            : '';
+
+        $contextBlock .= !empty($targetNpcDataBasicProfile)
+            ? "<character_sheet>\n{$resolvedName}:\n{$targetNpcDataBasicProfile}\n</character_sheet>\n\n"
             : '';
 
         $historyBlock = !empty($contextHistory)
