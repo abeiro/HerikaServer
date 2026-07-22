@@ -292,7 +292,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 };
 
 /*
-$GLOBALS["TTS"]["CHATTERBOX"]["endpoint"]='http://localhost:8020';
+$GLOBALS["TTS"]["CHATTERBOX"]["endpoint"]='http://localhost:8023';
 $GLOBALS["TTS"]["CHATTERBOX"]["voiceid"]='svenja';
 $GLOBALS["TTS"]["CHATTERBOX"]["language"]='en';
 
