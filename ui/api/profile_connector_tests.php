@@ -300,7 +300,7 @@ function profileConnectorTestsBuildGlobalPlan(): array
     $slotDefinitions = [
         ['field' => 'CORE_CONNECTOR_PLAYER', 'type' => 'llm', 'label' => 'Player Respeech'],
         ['field' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'llm', 'label' => 'Summaries'],
-        ['field' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'llm', 'label' => 'Middle Term Memory/Background Life'],
+        ['field' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'llm', 'label' => 'Middle Term Memory'],
         ['field' => 'CORE_CONNECTOR_SCENECLASSIFIER', 'type' => 'llm', 'label' => 'Scene Classifier', 'enabled_by' => 'SCENE_CLASSIFIER_ENABLED', 'enabled_label' => 'Scene Classifier'],
         ['field' => 'CORE_CONNECTOR_PROFILES', 'type' => 'llm', 'label' => 'Dynamic Profile'],
         ['field' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'llm', 'label' => 'Director Mode'],

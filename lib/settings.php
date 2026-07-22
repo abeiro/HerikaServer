@@ -299,7 +299,7 @@ if (!function_exists('chimPrettySettingLabel')) {
         $customLabels = [
             'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
             'CORE_CONNECTOR_SUMMARY' => 'Summaries',
-            'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
+            'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory',
             'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
             'SCENE_CLASSIFIER_ENABLED' => 'Scene Classifier',
             'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
