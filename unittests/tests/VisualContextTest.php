@@ -35,6 +35,17 @@ final class VisualContextTest extends TestCase
         );
     }
 
+    public function testGalleryFilenameUsesLocationAndSkyrimTime(): void
+    {
+        $this->assertSame(
+            'Riverwood_outdoors__Tirdas_7_19_AM_19th_of_Last_Seed_4E_201.jpg',
+            chimVisualContextGalleryFilename(
+                'Riverwood outdoors ,Hold: Whiterun',
+                'Tirdas, 7:19 AM, 19th of Last Seed, 4E 201'
+            )
+        );
+    }
+
     public function testCurrentLocationContextIsAlwaysAvailableWithoutAnEnableSetting(): void
     {
         $db = new class {

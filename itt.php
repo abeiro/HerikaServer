@@ -99,8 +99,20 @@ require_once($path."itt/itt-{$GLOBALS["ITTFUNCTION"]}.php");
 
 $description = trim(strval(itt($finalNameJpeg, $hints)));
 $galleryDirectory = __DIR__.DIRECTORY_SEPARATOR."data/pictures/gallery/";
-$galleryPath = $galleryDirectory.basename($finalNameJpeg);
+$visualLocation = $_GET['visual_location'] ?? $location;
+$gameTs = DataLastKnownGameTS();
+$gameDate = $gameTs > 0 ? convert_gamets2skyrim_long_date($gameTs) : '';
 @mkdir($galleryDirectory, 0777, true);
+$galleryFilename = chimVisualContextGalleryFilename($visualLocation, $gameDate, 'jpg');
+$galleryPath = $galleryDirectory.$galleryFilename;
+$filenameStem = pathinfo($galleryFilename, PATHINFO_FILENAME);
+$filenameExtension = pathinfo($galleryFilename, PATHINFO_EXTENSION);
+$filenameCounter = 2;
+while (file_exists($galleryPath)) {
+    $galleryFilename = $filenameStem . '__' . $filenameCounter . '.' . $filenameExtension;
+    $galleryPath = $galleryDirectory.$galleryFilename;
+    $filenameCounter++;
+}
 if (@rename($finalNameJpeg, $galleryPath)) {
     $visualType = chimVisualContextSubjectType($_GET['visual_type'] ?? 'scene');
     $subjectName = chimVisualContextText($_GET['visual_name'] ?? ($_GET['fg'] ?? ''), 300);
@@ -113,7 +125,7 @@ if (@rename($finalNameJpeg, $galleryPath)) {
         'baseid' => $_GET['visual_baseid'] ?? '',
         'refid' => $_GET['visual_refid'] ?? '',
         'cell_id' => $_GET['visual_cell'] ?? '',
-        'location_name' => $_GET['visual_location'] ?? $location,
+        'location_name' => $visualLocation,
         'image_path' => 'data/pictures/gallery/' . basename($galleryPath),
         'image_sha256' => hash_file('sha256', $galleryPath) ?: '',
         'description' => $description,

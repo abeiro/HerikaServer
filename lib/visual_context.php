@@ -94,6 +94,41 @@ if (!function_exists('chimVisualContextLocationBase')) {
     }
 }
 
+if (!function_exists('chimVisualContextFilenamePart')) {
+    function chimVisualContextFilenamePart($value, string $fallback, int $maxLength = 120): string
+    {
+        $value = html_entity_decode(chimVisualContextText($value, 500), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if (function_exists('iconv')) {
+            $transliterated = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+            if ($transliterated !== false) {
+                $value = $transliterated;
+            }
+        }
+
+        $value = preg_replace('/[^A-Za-z0-9]+/', '_', $value) ?? '';
+        $value = trim($value, '_');
+        if ($value === '') {
+            $value = $fallback;
+        }
+
+        return substr($value, 0, max(1, $maxLength));
+    }
+}
+
+if (!function_exists('chimVisualContextGalleryFilename')) {
+    function chimVisualContextGalleryFilename($location, $gameDate, string $extension = 'jpg'): string
+    {
+        $locationPart = chimVisualContextFilenamePart(chimVisualContextLocationBase($location), 'Unknown_Location', 100);
+        $datePart = chimVisualContextFilenamePart($gameDate, 'Unknown_Skyrim_Time', 140);
+        $extension = strtolower(preg_replace('/[^A-Za-z0-9]/', '', $extension) ?? 'jpg');
+        if ($extension === '') {
+            $extension = 'jpg';
+        }
+
+        return $locationPart . '__' . $datePart . '.' . $extension;
+    }
+}
+
 if (!function_exists('chimVisualContextStore')) {
     function chimVisualContextStore(array $record): bool
     {

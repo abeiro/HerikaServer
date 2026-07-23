@@ -229,7 +229,7 @@ foreach (chimVisualContextList(1000) as $record) {
                         </div>
                         <div class="visual-editor-options">
                             <input type="hidden" name="active" value="0">
-                            <label><input type="checkbox" name="active" value="1" <?= !empty($visualRecord['active']) && $visualRecord['active'] !== 'f' ? 'checked' : '' ?>> Active</label>
+                            <label><input type="checkbox" name="active" value="1" <?= !empty($visualRecord['active']) && $visualRecord['active'] !== 'f' ? 'checked' : '' ?>> Eligible for prompt use</label>
                             <input type="hidden" name="locked" value="0">
                             <label><input type="checkbox" name="locked" value="1" <?= !empty($visualRecord['locked']) && $visualRecord['locked'] !== 'f' ? 'checked' : '' ?>> Locked</label>
                             <button class="btn" type="submit" name="visual_context_action" value="save">Save</button>
