@@ -78,7 +78,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['visual_context_action
         chimVisualContextUpdate($recordId, [
             'description' => $_POST['description'] ?? '',
             'locked' => !empty($_POST['locked']),
-            'active' => !empty($_POST['active']),
         ]);
     } elseif ($action === 'delete') {
         chimVisualContextDelete($recordId);
@@ -228,10 +227,8 @@ foreach (chimVisualContextList(1000) as $record) {
                             <span><?= htmlspecialchars(strval($visualRecord['location_name'] ?? '')) ?></span>
                         </div>
                         <div class="visual-editor-options">
-                            <input type="hidden" name="active" value="0">
-                            <label><input type="checkbox" name="active" value="1" <?= !empty($visualRecord['active']) && $visualRecord['active'] !== 'f' ? 'checked' : '' ?>> Eligible for prompt use</label>
                             <input type="hidden" name="locked" value="0">
-                            <label><input type="checkbox" name="locked" value="1" <?= !empty($visualRecord['locked']) && $visualRecord['locked'] !== 'f' ? 'checked' : '' ?>> Locked</label>
+                            <label><input type="checkbox" name="locked" value="1" <?= !empty($visualRecord['locked']) && $visualRecord['locked'] !== 'f' ? 'checked' : '' ?>> Lock as Location Description</label>
                             <button class="btn" type="submit" name="visual_context_action" value="save">Save</button>
                             <button class="btn" type="submit" name="visual_context_action" value="delete" onclick="return confirm('Remove this visual context record? The image will remain in the gallery.');">Remove Record</button>
                         </div>
