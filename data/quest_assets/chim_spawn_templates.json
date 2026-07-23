@@ -1,0 +1,4599 @@
+{
+    "schema": "chim.quest-assets.v1",
+    "pack": {
+        "key": "chim_spawn_templates",
+        "label": "CHIM Spawn Templates",
+        "game": "SkyrimSE",
+        "version": "1.1.0",
+        "required_plugins": [
+            "AIAgent.esp"
+        ],
+        "source": "CHIM AIAgent plugin",
+        "note": "Only these CHIM-owned NPC records are approved as spawn bases.",
+        "active": true
+    },
+    "assets": [
+        {
+            "stable_ref": "AIAgent.esp|00025844",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025844",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025845",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025845",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025846",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025846",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025847",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025847",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025848",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025848",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025849",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025849",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|0002584A",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 0002584A",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DAF",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DAF",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DB0",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DB0",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DB1",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DB1",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DB3",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DB3",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DB2",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DB2",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DB4",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DB4",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DB5",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DB5",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DB6",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DB6",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|0002584D",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 0002584D",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DB7",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DB7",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DB8",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DB8",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DBB",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DBB",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DB9",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DB9",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DBA",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DBA",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DBC",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DBC",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DBD",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DBD",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DBE",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DBE",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DBF",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DBF",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DC0",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DC0",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DC2",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DC2",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DC1",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DC1",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DCE",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DCE",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DCA",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DCA",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DD0",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DD0",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DCD",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DCD",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DCC",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DCC",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DCF",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DCF",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DCB",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DCB",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DC7",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DC7",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DC3",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DC3",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DC9",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DC9",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DC6",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DC6",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DC5",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DC5",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DC8",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DC8",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DD6",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DD6",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DD2",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DD2",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DD8",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DD8",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DD5",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DD5",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DD4",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DD4",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DD7",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DD7",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DD3",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DD3",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DDD",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DDD",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DD9",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DD9",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DDF",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DDF",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DDC",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DDC",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DDB",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DDB",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DDE",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DDE",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DDA",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DDA",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DE0",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DE0",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|0002584C",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 0002584C",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DE1",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DE1",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DE2",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DE2",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DE3",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DE3",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DE4",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DE4",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DE5",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DE5",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DE6",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DE6",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DE7",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DE7",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DE8",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DE8",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DE9",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DE9",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DEA",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DEA",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DEB",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DEB",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DEC",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DEC",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|0002584B",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 0002584B",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        },
+        {
+            "stable_ref": "AIAgent.esp|00025DED",
+            "signature": "NPC_",
+            "editor_id": "",
+            "display_name": "CHIM Spawn Template 00025DED",
+            "source_plugin": "AIAgent.esp",
+            "winning_plugin": "AIAgent.esp",
+            "metadata": {
+                "curation": "CHIM-owned spawn template",
+                "curated_scope": "spawn_base"
+            },
+            "safety_status": "approved",
+            "active": true
+        }
+    ],
+    "groups": [
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_noble",
+            "label": "Female Breton Noble",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025844",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_merchant",
+            "label": "Female Breton Merchant",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025844",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_warrior",
+            "label": "Female Breton Warrior",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025845",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_assassin",
+            "label": "Female Breton Assassin",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025846",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_mage",
+            "label": "Female Breton Mage",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025847",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_beggar",
+            "label": "Female Breton Beggar",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025848",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_farmer",
+            "label": "Female Breton Farmer",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025848",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_bard",
+            "label": "Female Breton Bard",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025849",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_soldier",
+            "label": "Female Breton Soldier",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|0002584A",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_forsworn",
+            "label": "Female Breton Forsworn",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025848",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_noble",
+            "label": "Male Breton Noble",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DAF",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_merchant",
+            "label": "Male Breton Merchant",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DAF",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_warrior",
+            "label": "Male Breton Warrior",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB0",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_assassin",
+            "label": "Male Breton Assassin",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB1",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_mage",
+            "label": "Male Breton Mage",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB3",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_beggar",
+            "label": "Male Breton Beggar",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB2",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_farmer",
+            "label": "Male Breton Farmer",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB2",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_bard",
+            "label": "Male Breton Bard",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB4",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_soldier",
+            "label": "Male Breton Soldier",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB5",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_forsworn",
+            "label": "Male Breton Forsworn",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB2",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_noble",
+            "label": "Male Nord Noble",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB6",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_merchant",
+            "label": "Male Nord Merchant",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB6",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_warrior",
+            "label": "Male Nord Warrior",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|0002584D",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_assassin",
+            "label": "Male Nord Assassin",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB7",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_mage",
+            "label": "Male Nord Mage",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB8",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_beggar",
+            "label": "Male Nord Beggar",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DBB",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_farmer",
+            "label": "Male Nord Farmer",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DBB",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_bard",
+            "label": "Male Nord Bard",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DB9",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_soldier",
+            "label": "Male Nord Soldier",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DBA",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_noble",
+            "label": "Female Nord Noble",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DBC",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_merchant",
+            "label": "Female Nord Merchant",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DBC",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_warrior",
+            "label": "Female Nord Warrior",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DBD",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_assassin",
+            "label": "Female Nord Assassin",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DBE",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_mage",
+            "label": "Female Nord Mage",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DBF",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_beggar",
+            "label": "Female Nord Beggar",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DC0",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_farmer",
+            "label": "Female Nord Farmer",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DC0",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_bard",
+            "label": "Female Nord Bard",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DC2",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_soldier",
+            "label": "Female Nord Soldier",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DC1",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_noble",
+            "label": "Male Imperial Noble",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DCE",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_merchant",
+            "label": "Male Imperial Merchant",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DCE",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_warrior",
+            "label": "Male Imperial Warrior",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DCA",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_assassin",
+            "label": "Male Imperial Assassin",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DD0",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_mage",
+            "label": "Male Imperial Mage",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DCD",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_beggar",
+            "label": "Male Imperial Beggar",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DCC",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_farmer",
+            "label": "Male Imperial Farmer",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DCC",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_bard",
+            "label": "Male Imperial Bard",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DCF",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_soldier",
+            "label": "Male Imperial Soldier",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DCB",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_noble",
+            "label": "Female Imperial Noble",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DC7",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_merchant",
+            "label": "Female Imperial Merchant",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DC7",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_warrior",
+            "label": "Female Imperial Warrior",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DC3",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_assassin",
+            "label": "Female Imperial Assassin",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DC9",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_mage",
+            "label": "Female Imperial Mage",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DC6",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_beggar",
+            "label": "Female Imperial Beggar",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DC5",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_farmer",
+            "label": "Female Imperial Farmer",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DC5",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_bard",
+            "label": "Female Imperial Bard",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DC8",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_soldier",
+            "label": "Female Imperial Soldier",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DCB",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_noble",
+            "label": "Male Redguard Noble",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DD6",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_merchant",
+            "label": "Male Redguard Merchant",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DD6",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_warrior",
+            "label": "Male Redguard Warrior",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DD2",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_assassin",
+            "label": "Male Redguard Assassin",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DD8",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_mage",
+            "label": "Male Redguard Mage",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DD5",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_beggar",
+            "label": "Male Redguard Beggar",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DD4",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_farmer",
+            "label": "Male Redguard Farmer",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DD4",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_bard",
+            "label": "Male Redguard Bard",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DD7",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_soldier",
+            "label": "Male Redguard Soldier",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DD3",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_noble",
+            "label": "Female Redguard Noble",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DDD",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_merchant",
+            "label": "Female Redguard Merchant",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DDD",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_warrior",
+            "label": "Female Redguard Warrior",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DD9",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_assassin",
+            "label": "Female Redguard Assassin",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DDF",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_mage",
+            "label": "Female Redguard Mage",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DDC",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_beggar",
+            "label": "Female Redguard Beggar",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DDB",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_farmer",
+            "label": "Female Redguard Farmer",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DDB",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_bard",
+            "label": "Female Redguard Bard",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DDE",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_soldier",
+            "label": "Female Redguard Soldier",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DDA",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_noble",
+            "label": "Male Orc Noble",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE0",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_merchant",
+            "label": "Male Orc Merchant",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE0",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_warrior",
+            "label": "Male Orc Warrior",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|0002584C",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_assassin",
+            "label": "Male Orc Assassin",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE1",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_mage",
+            "label": "Male Orc Mage",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE2",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_beggar",
+            "label": "Male Orc Beggar",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE3",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_farmer",
+            "label": "Male Orc Farmer",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE3",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_bard",
+            "label": "Male Orc Bard",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE4",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_soldier",
+            "label": "Male Orc Soldier",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE5",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_noble",
+            "label": "Female Orc Noble",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE6",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_merchant",
+            "label": "Female Orc Merchant",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE6",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_warrior",
+            "label": "Female Orc Warrior",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE7",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_assassin",
+            "label": "Female Orc Assassin",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE8",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_mage",
+            "label": "Female Orc Mage",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DE9",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_beggar",
+            "label": "Female Orc Beggar",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DEA",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_farmer",
+            "label": "Female Orc Farmer",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DEA",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_bard",
+            "label": "Female Orc Bard",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DEB",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_soldier",
+            "label": "Female Orc Soldier",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DEC",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_noble",
+            "label": "Male Argonian Noble",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|0002584B",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_merchant",
+            "label": "Male Argonian Merchant",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|0002584B",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_warrior",
+            "label": "Male Argonian Warrior",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|0002584B",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_assassin",
+            "label": "Male Argonian Assassin",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|0002584B",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_mage",
+            "label": "Male Argonian Mage",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|0002584B",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_beggar",
+            "label": "Male Argonian Beggar",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|0002584B",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_farmer",
+            "label": "Male Argonian Farmer",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|0002584B",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_bard",
+            "label": "Male Argonian Bard",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|0002584B",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_soldier",
+            "label": "Male Argonian Soldier",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|0002584B",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_noble",
+            "label": "Female Argonian Noble",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DED",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_merchant",
+            "label": "Female Argonian Merchant",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DED",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_warrior",
+            "label": "Female Argonian Warrior",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DED",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_assassin",
+            "label": "Female Argonian Assassin",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DED",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_mage",
+            "label": "Female Argonian Mage",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DED",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_beggar",
+            "label": "Female Argonian Beggar",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DED",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_farmer",
+            "label": "Female Argonian Farmer",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DED",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_bard",
+            "label": "Female Argonian Bard",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DED",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_soldier",
+            "label": "Female Argonian Soldier",
+            "description": "CHIM-owned NPC spawn base.",
+            "selection_policy": {},
+            "active": true,
+            "members": [
+                {
+                    "stable_ref": "AIAgent.esp|00025DED",
+                    "weight": 1,
+                    "constraints": {},
+                    "note": "",
+                    "active": true
+                }
+            ]
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_blacksmith",
+            "label": "Female Argonian Blacksmith",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_hunter",
+            "label": "Female Argonian Hunter",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_bandit",
+            "label": "Female Argonian Bandit",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_miner",
+            "label": "Female Argonian Miner",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_farmer"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_guard",
+            "label": "Female Argonian Guard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_imperial",
+            "label": "Female Argonian Imperial",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_stormcloak",
+            "label": "Female Argonian Stormcloak",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_thalmor",
+            "label": "Female Argonian Thalmor",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_dawnguard",
+            "label": "Female Argonian Dawnguard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_skaal",
+            "label": "Female Argonian Skaal",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_priest",
+            "label": "Female Argonian Priest",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_vampire",
+            "label": "Female Argonian Vampire",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_argonian_cultist",
+            "label": "Female Argonian Cultist",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_argonian_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_blacksmith",
+            "label": "Female Breton Blacksmith",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_hunter",
+            "label": "Female Breton Hunter",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_bandit",
+            "label": "Female Breton Bandit",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_miner",
+            "label": "Female Breton Miner",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_farmer"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_guard",
+            "label": "Female Breton Guard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_imperial",
+            "label": "Female Breton Imperial",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_stormcloak",
+            "label": "Female Breton Stormcloak",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_thalmor",
+            "label": "Female Breton Thalmor",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_dawnguard",
+            "label": "Female Breton Dawnguard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_skaal",
+            "label": "Female Breton Skaal",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_priest",
+            "label": "Female Breton Priest",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_vampire",
+            "label": "Female Breton Vampire",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_breton_cultist",
+            "label": "Female Breton Cultist",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_breton_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_blacksmith",
+            "label": "Female Imperial Blacksmith",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_hunter",
+            "label": "Female Imperial Hunter",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_bandit",
+            "label": "Female Imperial Bandit",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_miner",
+            "label": "Female Imperial Miner",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_farmer"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_guard",
+            "label": "Female Imperial Guard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_imperial",
+            "label": "Female Imperial Imperial",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_stormcloak",
+            "label": "Female Imperial Stormcloak",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_thalmor",
+            "label": "Female Imperial Thalmor",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_dawnguard",
+            "label": "Female Imperial Dawnguard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_skaal",
+            "label": "Female Imperial Skaal",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_priest",
+            "label": "Female Imperial Priest",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_vampire",
+            "label": "Female Imperial Vampire",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_imperial_cultist",
+            "label": "Female Imperial Cultist",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_imperial_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_blacksmith",
+            "label": "Female Nord Blacksmith",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_hunter",
+            "label": "Female Nord Hunter",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_bandit",
+            "label": "Female Nord Bandit",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_miner",
+            "label": "Female Nord Miner",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_farmer"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_guard",
+            "label": "Female Nord Guard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_imperial",
+            "label": "Female Nord Imperial",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_stormcloak",
+            "label": "Female Nord Stormcloak",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_thalmor",
+            "label": "Female Nord Thalmor",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_dawnguard",
+            "label": "Female Nord Dawnguard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_skaal",
+            "label": "Female Nord Skaal",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_priest",
+            "label": "Female Nord Priest",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_vampire",
+            "label": "Female Nord Vampire",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_nord_cultist",
+            "label": "Female Nord Cultist",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_nord_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_blacksmith",
+            "label": "Female Orc Blacksmith",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_hunter",
+            "label": "Female Orc Hunter",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_bandit",
+            "label": "Female Orc Bandit",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_miner",
+            "label": "Female Orc Miner",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_farmer"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_guard",
+            "label": "Female Orc Guard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_imperial",
+            "label": "Female Orc Imperial",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_stormcloak",
+            "label": "Female Orc Stormcloak",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_thalmor",
+            "label": "Female Orc Thalmor",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_dawnguard",
+            "label": "Female Orc Dawnguard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_skaal",
+            "label": "Female Orc Skaal",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_priest",
+            "label": "Female Orc Priest",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_vampire",
+            "label": "Female Orc Vampire",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_orc_cultist",
+            "label": "Female Orc Cultist",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_orc_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_blacksmith",
+            "label": "Female Redguard Blacksmith",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_hunter",
+            "label": "Female Redguard Hunter",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_bandit",
+            "label": "Female Redguard Bandit",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_miner",
+            "label": "Female Redguard Miner",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_farmer"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_guard",
+            "label": "Female Redguard Guard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_imperial",
+            "label": "Female Redguard Imperial",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_stormcloak",
+            "label": "Female Redguard Stormcloak",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_thalmor",
+            "label": "Female Redguard Thalmor",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_dawnguard",
+            "label": "Female Redguard Dawnguard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_skaal",
+            "label": "Female Redguard Skaal",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_priest",
+            "label": "Female Redguard Priest",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_vampire",
+            "label": "Female Redguard Vampire",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "female_redguard_cultist",
+            "label": "Female Redguard Cultist",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "female_redguard_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_blacksmith",
+            "label": "Male Argonian Blacksmith",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_hunter",
+            "label": "Male Argonian Hunter",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_bandit",
+            "label": "Male Argonian Bandit",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_miner",
+            "label": "Male Argonian Miner",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_farmer"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_guard",
+            "label": "Male Argonian Guard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_imperial",
+            "label": "Male Argonian Imperial",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_stormcloak",
+            "label": "Male Argonian Stormcloak",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_thalmor",
+            "label": "Male Argonian Thalmor",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_dawnguard",
+            "label": "Male Argonian Dawnguard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_skaal",
+            "label": "Male Argonian Skaal",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_priest",
+            "label": "Male Argonian Priest",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_vampire",
+            "label": "Male Argonian Vampire",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_argonian_cultist",
+            "label": "Male Argonian Cultist",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_argonian_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_blacksmith",
+            "label": "Male Breton Blacksmith",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_hunter",
+            "label": "Male Breton Hunter",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_bandit",
+            "label": "Male Breton Bandit",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_miner",
+            "label": "Male Breton Miner",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_farmer"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_guard",
+            "label": "Male Breton Guard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_imperial",
+            "label": "Male Breton Imperial",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_stormcloak",
+            "label": "Male Breton Stormcloak",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_thalmor",
+            "label": "Male Breton Thalmor",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_dawnguard",
+            "label": "Male Breton Dawnguard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_skaal",
+            "label": "Male Breton Skaal",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_priest",
+            "label": "Male Breton Priest",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_vampire",
+            "label": "Male Breton Vampire",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_breton_cultist",
+            "label": "Male Breton Cultist",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_breton_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_blacksmith",
+            "label": "Male Imperial Blacksmith",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_hunter",
+            "label": "Male Imperial Hunter",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_bandit",
+            "label": "Male Imperial Bandit",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_miner",
+            "label": "Male Imperial Miner",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_farmer"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_guard",
+            "label": "Male Imperial Guard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_imperial",
+            "label": "Male Imperial Imperial",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_stormcloak",
+            "label": "Male Imperial Stormcloak",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_thalmor",
+            "label": "Male Imperial Thalmor",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_dawnguard",
+            "label": "Male Imperial Dawnguard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_skaal",
+            "label": "Male Imperial Skaal",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_priest",
+            "label": "Male Imperial Priest",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_vampire",
+            "label": "Male Imperial Vampire",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_imperial_cultist",
+            "label": "Male Imperial Cultist",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_imperial_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_blacksmith",
+            "label": "Male Nord Blacksmith",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_hunter",
+            "label": "Male Nord Hunter",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_bandit",
+            "label": "Male Nord Bandit",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_miner",
+            "label": "Male Nord Miner",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_farmer"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_guard",
+            "label": "Male Nord Guard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_imperial",
+            "label": "Male Nord Imperial",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_stormcloak",
+            "label": "Male Nord Stormcloak",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_thalmor",
+            "label": "Male Nord Thalmor",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_dawnguard",
+            "label": "Male Nord Dawnguard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_skaal",
+            "label": "Male Nord Skaal",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_priest",
+            "label": "Male Nord Priest",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_vampire",
+            "label": "Male Nord Vampire",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_nord_cultist",
+            "label": "Male Nord Cultist",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_nord_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_blacksmith",
+            "label": "Male Orc Blacksmith",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_hunter",
+            "label": "Male Orc Hunter",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_bandit",
+            "label": "Male Orc Bandit",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_miner",
+            "label": "Male Orc Miner",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_farmer"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_guard",
+            "label": "Male Orc Guard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_imperial",
+            "label": "Male Orc Imperial",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_stormcloak",
+            "label": "Male Orc Stormcloak",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_thalmor",
+            "label": "Male Orc Thalmor",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_dawnguard",
+            "label": "Male Orc Dawnguard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_skaal",
+            "label": "Male Orc Skaal",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_priest",
+            "label": "Male Orc Priest",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_vampire",
+            "label": "Male Orc Vampire",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_orc_cultist",
+            "label": "Male Orc Cultist",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_orc_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_blacksmith",
+            "label": "Male Redguard Blacksmith",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_hunter",
+            "label": "Male Redguard Hunter",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_bandit",
+            "label": "Male Redguard Bandit",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_warrior"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_miner",
+            "label": "Male Redguard Miner",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_farmer"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_guard",
+            "label": "Male Redguard Guard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_imperial",
+            "label": "Male Redguard Imperial",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_stormcloak",
+            "label": "Male Redguard Stormcloak",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_thalmor",
+            "label": "Male Redguard Thalmor",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_dawnguard",
+            "label": "Male Redguard Dawnguard",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_skaal",
+            "label": "Male Redguard Skaal",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_soldier"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_priest",
+            "label": "Male Redguard Priest",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_vampire",
+            "label": "Male Redguard Vampire",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_mage"
+            },
+            "active": true,
+            "members": []
+        },
+        {
+            "dataset": "npc_own_templates",
+            "key": "male_redguard_cultist",
+            "label": "Male Redguard Cultist",
+            "description": "Safe alias to an existing CHIM spawn template.",
+            "selection_policy": {
+                "fallback_group": "male_redguard_mage"
+            },
+            "active": true,
+            "members": []
+        }
+    ]
+}

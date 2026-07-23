@@ -7104,7 +7104,7 @@ if ($checkVersion("core_tts_connector_pockettts_audiocpp") < 20260628001) {
                         jsonb_set(
                             COALESCE(metadata, '{}'::jsonb),
                             '{endpoint,description}',
-                            to_jsonb('Endpoint URL. DwemerDistro audio.cpp PocketTTS uses port 8086 by default. Legacy Python PocketTTS uses port 8020.'::text),
+                            to_jsonb('Endpoint URL. DwemerDistro audio.cpp PocketTTS uses port 8086. Python PocketTTS uses dedicated port 8024.'::text),
                             true
                         ),
                         '{api_format}',
@@ -7210,6 +7210,257 @@ if ($checkVersion("general_settings") < 20260711001) {
     if ($b_ok) {
         $updateVersion("general_settings", 20260711001);
         Logger::info("Applied patch general_settings 20260711001");
+    }
+}
+
+if ($checkVersion("general_settings") < 20260720001) {
+    Logger::debug("Applying general_settings 20260720001 - add forced Oghma scene context settings");
+
+    $b_ok = true;
+    try {
+        foreach ([
+            'RACIAL_OGHMA' => true,
+            'LOCATION_OGHMA' => true,
+        ] as $settingId => $fallbackDefault) {
+            $existingRow = chimGetGeneralSettingRow($settingId);
+            $definition = chimGetSchemaDefinition($settingId);
+            $description = chimGetManagedGeneralSettingDescriptions()[$settingId]
+                ?? chimGetSchemaDescription($settingId);
+
+            if ($existingRow) {
+                $currentValue = $existingRow['value'] ?? ($definition['default'] ?? $fallbackDefault);
+            } else {
+                $legacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+                $currentValue = ($legacyValue === "__CHIM_SETTING_MISSING__")
+                    ? ($definition['default'] ?? $fallbackDefault)
+                    : $legacyValue;
+            }
+
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing {$settingId}");
+            }
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error adding forced Oghma scene context settings: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260720001);
+        Logger::info("Applied patch general_settings 20260720001");
+    }
+}
+
+if ($checkVersion("general_settings") < 20260720002) {
+    Logger::debug("Applying general_settings 20260720002 - move Oghma controls to global settings");
+
+    $b_ok = true;
+    try {
+        $defaultProfileMetadata = [];
+        $defaultProfile = $db->fetchOne(
+            "SELECT metadata FROM public.core_profiles "
+            . "WHERE lower(COALESCE(default_npc, '')) IN ('1', 'true', 'yes', 'on') "
+            . "ORDER BY id ASC LIMIT 1"
+        );
+        if (is_array($defaultProfile)) {
+            $rawMetadata = $defaultProfile['metadata'] ?? [];
+            $defaultProfileMetadata = is_array($rawMetadata)
+                ? $rawMetadata
+                : (json_decode(strval($rawMetadata), true) ?: []);
+        }
+
+        $resolvedValues = [];
+        foreach ([
+            'OGHMA_INFINIUM' => true,
+            'OGHMA_AMOUNT' => '1',
+        ] as $settingId => $fallbackDefault) {
+            $existingRow = chimGetGeneralSettingRow($settingId);
+            $definition = chimGetSchemaDefinition($settingId);
+            $description = chimGetManagedGeneralSettingDescriptions()[$settingId]
+                ?? chimGetSchemaDescription($settingId);
+
+            if ($existingRow) {
+                $currentValue = $existingRow['value'] ?? ($definition['default'] ?? $fallbackDefault);
+            } elseif (array_key_exists($settingId, $defaultProfileMetadata)) {
+                $currentValue = $defaultProfileMetadata[$settingId];
+            } else {
+                $legacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+                $currentValue = ($legacyValue === "__CHIM_SETTING_MISSING__")
+                    ? ($definition['default'] ?? $fallbackDefault)
+                    : $legacyValue;
+            }
+
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing {$settingId}");
+            }
+            $resolvedValues[$settingId] = chimSettingsStringifyValue($currentValue);
+        }
+
+        // Keep only meaningful per-profile differences as overrides.
+        foreach ($resolvedValues as $settingId => $globalValue) {
+            $safeSettingId = $db->escapeLiteral($settingId);
+            $safeGlobalValue = $db->escapeLiteral(strtolower(trim($globalValue)));
+            if ($db->execQuery(
+                "UPDATE public.core_profiles "
+                . "SET metadata = COALESCE(metadata, '{}'::jsonb) - {$safeSettingId} "
+                . "WHERE COALESCE(metadata, '{}'::jsonb) ? {$safeSettingId} "
+                . "AND lower(trim(COALESCE(metadata ->> {$safeSettingId}, ''))) = {$safeGlobalValue}"
+            ) === false) {
+                throw new Exception("Failed normalizing profile override {$settingId}");
+            }
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error moving Oghma controls to global settings: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260720002);
+        Logger::info("Applied patch general_settings 20260720002");
+    }
+}
+
+if ($checkVersion("quest_asset_library") < 20260718003) {
+    Logger::debug("Applying quest_asset_library 20260718003 - add curated quest spawn templates");
+
+    $schemaFile = __DIR__ . "/../data/quest_asset_library.sql";
+    $manifestDirectory = __DIR__ . "/../data/quest_assets";
+    $migrationOk = is_readable($schemaFile)
+        && $db->execQuery(file_get_contents($schemaFile)) !== false;
+
+    if ($migrationOk) {
+        require_once __DIR__ . "/../lib/quest_asset_library.php";
+        foreach (["skyrim_official.json", "chim_spawn_templates.json"] as $manifestName) {
+            $manifestPath = $manifestDirectory . "/" . $manifestName;
+            $result = quest_asset_import_manifest_file($manifestPath);
+            if (empty($result["success"])) {
+                $migrationOk = false;
+                Logger::error(
+                    "Failed importing quest asset manifest {$manifestName}: "
+                    . implode("; ", $result["errors"] ?? ["unknown error"])
+                );
+                break;
+            }
+        }
+    }
+
+    if ($migrationOk) {
+        require_once __DIR__ . "/../lib/quest_reference_data.php";
+        $canonicalDefaults = [
+            "npc_templates" => [],
+            "npc_own_templates" => [],
+        ];
+        foreach (["skyrim_official.json", "chim_spawn_templates.json"] as $manifestName) {
+            $manifestPath = $manifestDirectory . "/" . $manifestName;
+            $manifest = json_decode((string) file_get_contents($manifestPath), true);
+            foreach (($manifest["groups"] ?? []) as $group) {
+                $datasetName = strtolower(trim((string) ($group["dataset"] ?? "")));
+                $groupKey = strtolower(trim((string) ($group["key"] ?? "")));
+                if (!isset($canonicalDefaults[$datasetName]) || $groupKey === "") {
+                    continue;
+                }
+                foreach (($group["members"] ?? []) as $member) {
+                    $stableRef = trim((string) ($member["stable_ref"] ?? ""));
+                    if ($stableRef !== "") {
+                        $canonicalDefaults[$datasetName][$groupKey][] = $stableRef;
+                    }
+                }
+            }
+        }
+
+        foreach ($canonicalDefaults as $datasetName => $valueMap) {
+            if (quest_reference_add_missing_dataset_entries($datasetName, $valueMap) === false) {
+                $migrationOk = false;
+                Logger::error("Failed synchronizing bundled {$datasetName} groups into the canonical quest table");
+                break;
+            }
+        }
+    }
+
+    if ($migrationOk) {
+        $updateVersion("quest_asset_library", 20260718003);
+        Logger::info("Applied patch quest_asset_library 20260718003");
+    } else {
+        Logger::error("Failed to apply quest_asset_library 20260718003");
+    }
+}
+
+if ($checkVersion("quest_asset_library") < 20260719001) {
+    Logger::debug("Applying quest_asset_library 20260719001 - remove unshipped quest NPC templates");
+
+    require_once __DIR__ . "/../lib/quest_asset_library.php";
+    require_once __DIR__ . "/../lib/quest_reference_data.php";
+
+    $migrationOk = true;
+    $manifestPath = __DIR__ . "/../data/quest_assets/chim_spawn_templates.json";
+    $result = quest_asset_import_manifest_file($manifestPath);
+    if (empty($result["success"])) {
+        $migrationOk = false;
+        Logger::error(
+            "Failed importing cleaned quest asset manifest chim_spawn_templates.json: "
+            . implode("; ", $result["errors"] ?? ["unknown error"])
+        );
+    }
+
+    if ($migrationOk && quest_reference_table_exists("quest_npc_own_templates")) {
+        $templateKeyFilter = "template_key ~* '^(male|female)_(altmer|bosmer|dunmer|khajiit)(_|$)'";
+        $invalidStableRefs = "'aiagent.esp|00045ce7', 'aiagent.esp|00045ce8', "
+            . "'aiagent.esp|00045ce9', 'aiagent.esp|00045cea', "
+            . "'aiagent.esp|00045ceb', 'aiagent.esp|00045cec', "
+            . "'aiagent.esp|00045ced', 'aiagent.esp|00045cee'";
+        $invalidHexPattern = "^0x[0-9a-f]{2}045ce[7-9a-e]$";
+
+        if (quest_reference_column_exists("quest_npc_own_templates", "formids_json")) {
+            $migrationOk = $db->execQuery("
+                UPDATE public.quest_npc_own_templates AS templates
+                SET formids_json = (
+                    SELECT COALESCE(jsonb_agg(entry.value ORDER BY entry.ordinality), '[]'::jsonb) AS formids_json
+                    FROM jsonb_array_elements(COALESCE(templates.formids_json, '[]'::jsonb))
+                        WITH ORDINALITY AS entry(value, ordinality)
+                    WHERE NOT (
+                        lower(entry.value #>> '{}') IN ({$invalidStableRefs})
+                        OR lower(entry.value #>> '{}') ~ '{$invalidHexPattern}'
+                        OR (
+                            (entry.value #>> '{}') ~ '^[0-9]+$'
+                            AND (((entry.value #>> '{}')::bigint & 16777215) BETWEEN 285927 AND 285934)
+                        )
+                    )
+                )
+                WHERE {$templateKeyFilter}
+            ") !== false;
+
+            if ($migrationOk) {
+                $migrationOk = $db->execQuery("
+                    DELETE FROM public.quest_npc_own_templates
+                    WHERE {$templateKeyFilter}
+                      AND jsonb_array_length(COALESCE(formids_json, '[]'::jsonb)) = 0
+                ") !== false;
+            }
+        }
+
+        if ($migrationOk && quest_reference_column_exists("quest_npc_own_templates", "formid")) {
+            if (quest_reference_formid_column_is_text("quest_npc_own_templates")) {
+                $formIdFilter = "lower(trim(formid::text)) IN ({$invalidStableRefs}) "
+                    . "OR lower(trim(formid::text)) ~ '{$invalidHexPattern}' "
+                    . "OR (trim(formid::text) ~ '^[0-9]+$' "
+                    . "AND ((trim(formid::text)::bigint & 16777215) BETWEEN 285927 AND 285934))";
+            } else {
+                $formIdFilter = "(formid::bigint & 16777215) BETWEEN 285927 AND 285934";
+            }
+
+            $migrationOk = $db->execQuery("
+                DELETE FROM public.quest_npc_own_templates
+                WHERE {$templateKeyFilter}
+                  AND ({$formIdFilter})
+            ") !== false;
+        }
+    }
+
+    if ($migrationOk) {
+        $updateVersion("quest_asset_library", 20260719001);
+        Logger::info("Applied patch quest_asset_library 20260719001");
+    } else {
+        Logger::error("Failed to apply quest_asset_library 20260719001");
     }
 }
 
@@ -7367,6 +7618,26 @@ if ($checkVersion("master_packages")<20260716002) {
         Logger::error("Failed to apply patch master_packages 20260716001");
     }
 
+}
+
+//----------------------------------------------------
+// VISUAL CONTEXT - Persistent image descriptions
+// Version 20260718001
+//----------------------------------------------------
+
+if ($checkVersion("visual_context") < 20260718001) {
+    Logger::debug("Applying visual_context 20260718001 - add persistent visual descriptions");
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'visual_context.php');
+
+    $b_ok = chimEnsureVisualContextTable();
+    if ($b_ok) {
+        chimSetGeneralSetting('VISUAL_CONTEXT_SCENE_TTL_MINUTES', 10, chimGetSchemaDescription('VISUAL_CONTEXT_SCENE_TTL_MINUTES'));
+        chimSetGeneralSetting('VISUAL_CONTEXT_PROMPT_MAX_CHARS', 1800, chimGetSchemaDescription('VISUAL_CONTEXT_PROMPT_MAX_CHARS'));
+        $updateVersion("visual_context", 20260718001);
+        Logger::info("Applied patch visual_context 20260718001");
+    } else {
+        Logger::error("Failed to apply patch visual_context 20260718001");
+    }
 }
 
 Logger::info(__FILE__." update file processed");

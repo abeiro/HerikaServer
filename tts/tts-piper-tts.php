@@ -1,5 +1,14 @@
 <?php
 
+if (!function_exists('piper_tts_synthesis_url')) {
+	function piper_tts_synthesis_url($endpoint) {
+		$endpoint = rtrim(trim(strval($endpoint)), '/');
+		if ($endpoint === '') {
+			$endpoint = 'http://127.0.0.1:5000';
+		}
+		return substr($endpoint, -11) === '/synthesize' ? $endpoint : $endpoint . '/synthesize';
+	}
+}
 
 $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
@@ -11,7 +20,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		
 	    $starTime = microtime(true);
 
-		$url = ($GLOBALS["TTS"]["PIPERTTS"]["endpoint"]) ?? "http://127.0.0.1:5000";
+		$url = piper_tts_synthesis_url($GLOBALS["TTS"]["PIPERTTS"]["endpoint"] ?? '');
 
 		/*
 		$lang = isset($GLOBALS["TTS"]["FORCED_LANG_DEV"]) ? $GLOBALS["TTS"]["FORCED_LANG_DEV"] : $GLOBALS["TTS"]["PIPERTTS"]["language"];
@@ -23,7 +32,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$lang = $GLOBALS["TTS"]["PIPERTTS"]["language"] ?? "EN";
 		*/
 		
-        $voice = $GLOBALS["TTS"]["FORCED_VOICE_DEV"] ?? $GLOBALS["TTS"]["PIPERTTS"]["voiceid"];
+		$voice = $GLOBALS["TTS"]["FORCED_VOICE_DEV"] ?? ($GLOBALS["TTS"]["PIPERTTS"]["voiceid"] ?? "en_US-amy-low");
 		if (empty($voice))
 			$voice = $GLOBALS["TTS"]["PIPERTTS"]["voiceid"] ?? "en_US-amy-low";
 

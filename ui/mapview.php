@@ -666,9 +666,17 @@ if (!function_exists('race_icon_web_path')) {
             echo json_encode(['ok' => false, 'message' => 'NPC name required']);
             return;
         }
-        
+        $npcMaster=new NpcMaster();
+        $npcData=$npcMaster->getByName($npcName);
+        $extendedData=$npcMaster->getExtendedData($npcData);
+        if (!isset($extendedData['background_life_commands']) || $extendedData['background_life_commands']===false) {
+            `php $enginePath/debug/simple_llm_request_with_context_life.php "$npcName" full forceaction`;
+        } else {
+            `php $enginePath/debug/simple_llm_request_with_context_life_v2.php "$npcName" full forceaction`;
+        }
+
         // Add your handler code here
-        `php $enginePath/debug/simple_llm_request_with_context_life_v2.php "$npcName" full forceaction`;
+        
 
         echo json_encode(['ok' => true, 'message' => "Action request processed for $npcName"]);
     }

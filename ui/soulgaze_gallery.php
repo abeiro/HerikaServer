@@ -13,6 +13,7 @@ if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."visual_context.php");
 
 $TITLE = "🖼️ Soulgaze Gallery - CHIM";
 
@@ -36,6 +37,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     .card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; overflow:hidden; display:flex; flex-direction:column; }
     .thumb { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; cursor:pointer; background:#1a1a1a; }
     .info { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 8px; }
+    .visual-editor { border-top:1px solid #4a4a4a; padding:8px; display:grid; gap:7px; }
+    .visual-editor textarea { width:100%; min-height:76px; resize:vertical; box-sizing:border-box; border:1px solid #4a4a4a; border-radius:5px; background:#171717; color:#e9efff; padding:7px; font:inherit; font-size:12px; }
+    .visual-editor-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; color:#9fb1c9; font-size:11px; }
+    .visual-editor-options { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .visual-editor-options label { display:flex; gap:5px; align-items:center; color:#cfd9ea; font-size:11px; }
     .name { color:#e9efff; font-size:12px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
     .actions { display:flex; gap:6px; }
     .btn { padding:4px 8px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; text-decoration:none; cursor:pointer; font-size:12px; }
@@ -64,6 +70,25 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
 $isEmbed = isset($_GET['embed']) && $_GET['embed'] == '1';
 $isPicker = isset($_GET['picker']) && $_GET['picker'] == '1';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['visual_context_action'])) {
+    $recordId = intval($_POST['visual_context_id'] ?? 0);
+    $action = strval($_POST['visual_context_action']);
+    if ($action === 'save') {
+        chimVisualContextUpdate($recordId, [
+            'description' => $_POST['description'] ?? '',
+            'locked' => !empty($_POST['locked']),
+        ]);
+    } elseif ($action === 'delete') {
+        chimVisualContextDelete($recordId);
+    }
+
+    $qs = [];
+    if ($isEmbed) $qs['embed'] = '1';
+    if ($isPicker) $qs['picker'] = '1';
+    header('Location: soulgaze_gallery.php' . (count($qs) ? ('?' . http_build_query($qs)) : ''));
+    exit;
+}
 
 // Handle direct uploads into the gallery
 $uploadError = '';
@@ -146,6 +171,18 @@ if ($rootFs && is_dir($rootFs)) {
 }
 // Sort newest first
 usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
+$visualByRel = [];
+foreach (chimVisualContextList(1000) as $record) {
+    $relativePath = str_replace('\\', '/', strval($record['image_path'] ?? ''));
+    $marker = 'data/pictures/gallery/';
+    $markerPosition = strpos($relativePath, $marker);
+    if ($markerPosition !== false) {
+        $relativePath = substr($relativePath, $markerPosition + strlen($marker));
+    }
+    if ($relativePath !== '') {
+        $visualByRel[$relativePath] = $record;
+    }
+}
 ?>
 
 <div class="container-fluid">
@@ -164,7 +201,7 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
         <div class="empty">No images found. Make sure to use the Soulgaze hotkey ingame to take pictures!</div>
     <?php else: ?>
         <div class="grid">
-            <?php foreach ($images as $img): $n = $img['name']; $u = $img['url']; ?>
+            <?php foreach ($images as $img): $n = $img['name']; $u = $img['url']; $visualRecord = $visualByRel[$img['rel']] ?? null; ?>
                 <div class="card" data-url="<?php echo htmlspecialchars($u); ?>">
                     <?php if ($img['type']=="mp4") {?>
                     <video class="vthumb thumb" controls src="<?php echo htmlspecialchars($u); ?>" alt="<?php echo htmlspecialchars($n); ?>" loading="lazy" ></video>
@@ -181,6 +218,22 @@ usort($images, function($a, $b){ return $b['mtime'] <=> $a['mtime']; });
                             <?php endif; ?>
                         </div>
                     </div>
+                    <?php if ($visualRecord): ?>
+                    <form method="post" class="visual-editor">
+                        <input type="hidden" name="visual_context_id" value="<?= intval($visualRecord['id']) ?>">
+                        <textarea name="description" aria-label="Visual description"><?= htmlspecialchars(strval($visualRecord['description'] ?? ''), ENT_QUOTES) ?></textarea>
+                        <div class="visual-editor-meta">
+                            <span><?= htmlspecialchars(ucfirst(strval($visualRecord['subject_type'] ?? 'scene'))) ?><?= !empty($visualRecord['subject_name']) ? ': ' . htmlspecialchars(strval($visualRecord['subject_name'])) : '' ?></span>
+                            <span><?= htmlspecialchars(strval($visualRecord['location_name'] ?? '')) ?></span>
+                        </div>
+                        <div class="visual-editor-options">
+                            <input type="hidden" name="locked" value="0">
+                            <label><input type="checkbox" name="locked" value="1" <?= !empty($visualRecord['locked']) && $visualRecord['locked'] !== 'f' ? 'checked' : '' ?>> Lock as Location Description</label>
+                            <button class="btn" type="submit" name="visual_context_action" value="save">Save</button>
+                            <button class="btn" type="submit" name="visual_context_action" value="delete" onclick="return confirm('Remove this visual context record? The image will remain in the gallery.');">Remove Record</button>
+                        </div>
+                    </form>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>
@@ -293,6 +346,7 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
   document.addEventListener('click', function(e){
     const card = e.target && e.target.closest && e.target.closest('.card');
     if (!card) return;
+    if (e.target && e.target.closest && e.target.closest('.visual-editor')) return;
     const useBtn = e.target && e.target.classList && e.target.classList.contains('pick');
     const img = card.querySelector('.thumb');
     if (!img) return;

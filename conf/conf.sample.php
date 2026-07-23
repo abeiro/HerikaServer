@@ -328,7 +328,7 @@ $TTS["XTTSFASTAPI"]["PARALINGUISTIC_TAGS_ENABLED"]=false; //Enable paralinguisti
 $TTS["XTTSFASTAPI"]["PARALINGUISTIC_TAGS_PROMPT"]=''; //Prompt snippet for instructing LLM to use paralinguistic tags.
 $TTS["XTTSFASTAPI"]["PARALINGUISTIC_TAGS_LIST"]='[clear throat],[sigh],[shush],[cough],[groan],[sniff],[gasp],[chuckle],[laugh]'; //Comma-separated list of supported tags.
 //Chatterbox
-$TTS["CHATTERBOX"]["endpoint"]='http://127.0.0.1:8020'; //API endpoint.
+$TTS["CHATTERBOX"]["endpoint"]='http://127.0.0.1:8023'; //API endpoint.
 $TTS["CHATTERBOX"]["language"]='en'; //Language.
 $TTS["CHATTERBOX"]["voiceid"]='TheNarrator'; //Generated voice file name.
 $TTS["CHATTERBOX"]["voicelogic"]='voicetype';
@@ -601,5 +601,7 @@ $RANDOM_NARATION_CHANCE=15;
 $RANDOM_NARRATION_COOLDOWN=2;
 
 $OGHMA_CUSTOM=false;
+$RACIAL_OGHMA=true;
+$LOCATION_OGHMA=true;
 ?>
 

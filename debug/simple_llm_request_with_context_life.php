@@ -94,7 +94,7 @@ function loadBGLStylePrompt($promptKey, $replacements = [])
         $promptData = false;//$db->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = '$promptKey'");
 
         if (!$promptData) {
-            error_log("[BGL] Style prompt not found: $promptKey - using fallback");
+            error_log("[BGL RUN] Style prompt not found: $promptKey - using fallback");
             // Fallback defaults
             if ($promptKey === 'background_life_letter') {
                 return "Write a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]} based on the content of <text>. Use same language as <text>. Take into account the <speech_style> section for the writing style, and particularly <letter_guidance> if present. Do not include any meta-commentary or asside, only the content of the letter.";
@@ -113,7 +113,7 @@ function loadBGLStylePrompt($promptKey, $replacements = [])
 
         return $prompt;
     } catch (Exception $e) {
-        error_log("[BGL] Exception loading style prompt $promptKey: " . $e->getMessage());
+        error_log("[BGL RUN] Exception loading style prompt $promptKey: " . $e->getMessage());
         // Return fallback
         if ($promptKey === 'background_life_letter') {
             return "Write it as a letter to {$GLOBALS["PLAYER_NAME"]} from {$GLOBALS["HERIKA_NAME"]}. Use same language as <text>.";
@@ -126,7 +126,7 @@ function loadBGLStylePrompt($promptKey, $replacements = [])
 $npcMaster = new NpcMaster();
 
 $connector = new LLMConnector();
-$currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
+$currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_BGL"]);
 $currentNpcData = $npcMaster->getByName($argv[1]);
 
 $profile = new CoreProfile();
@@ -177,10 +177,9 @@ $lastIt = $db->fetchOne($query);
 
 if (!$lastIt["gamets"]) {
 
-    $extdata = $npcMaster->getExtendedData($currentNpcData);
+    
     $extdata["background_life_last_updated"] = $last_gamets;
-    $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
-    $npcMaster->updateByArray($currentNpcData);
+    $npcMaster->updateExtendedKeysByName($GLOBALS["HERIKA_NAME"], $extdata);
 
     error_log("[BGL RUN] NO LAST ITERATION, SKIPPING $argv[1] - {$GLOBALS["HERIKA_NAME"]} last_gamets: $last_gamets");
     return;
@@ -256,7 +255,7 @@ foreach (array_reverse($diaryEntries) as $dentry) {
 }
 
 $bgEvents = [];
-error_log("Last interaction {$lastIt["gamets"]}");
+error_log("[BGL RUN] Last interaction {$lastIt["gamets"]}");
 if (isset($lastIt["gamets"])) {
     $query2 = "SELECT gamets,data FROM eventlog where type='backgroundaction' and gamets>{$lastIt["gamets"]} order by gamets asc ,ts asc";
     error_log($query2);
@@ -286,15 +285,24 @@ if (isset($lastIt["gamets"])) {
 
 $bgEvents[] = ["gamets" => $lastLoc["gamets"], "content" => "{$lastLoc["location"]}", "type" => "last_known_location"];
 
-if (isset($metadata["last_coords"]) && $metadata["last_coords"][3]) {
+if (isset($metadata['last_coords']) && !empty($metadata['last_coords'][3])) {
+    $coords = $metadata['last_coords'];
+    $hoursAgo = number_format(($last_gamets - $coords['last_updated']) * GAMETS_TO_HOURS, 2);
     $bgEvents[] = [
-        "gamets" => $metadata["last_coords"]["last_updated"],
-        "content" => "{$metadata["last_coords"][3]}, " .
-            number_format(($last_gamets - $metadata["last_coords"]["last_updated"]) * 0.0000024, 2) .
-            " hours ago",
-        "type" => "last_reported_location"
+        'gamets' => $coords['last_updated'],
+        'content' => "{$coords[3]}",
+        'type' => 'reported_location',
     ];
-    $LAST_REPORTED_LOCATION = $metadata["last_coords"][3];
+    $LAST_REPORTED_LOCATION = $coords[3];
+
+    $richLocation = $db->fetchOne("SELECT name,region,hold,is_interior  FROM locations WHERE formid='{$coords["location_formid"]}'");
+    // error_log("[BGL RUN]  Last reported location: " . json_encode($coords) . " => rich location: " . json_encode($richLocation));
+    if ($richLocation && !empty($richLocation['name'])) {
+        $LAST_REPORTED_LOCATION = $richLocation['name'];
+        if ($richLocation['is_interior']) {
+            $LAST_REPORTED_LOCATION .= " (Interior)";
+        }
+    }
 }
 
 if (isset($metadata['last_coords_history'])) {
@@ -465,13 +473,44 @@ $promptContent .= $innerThoughtStyle . "\n\n";
 // Hardcoded action definitions
 if ($fullMode) {
     $promptContent .= "Possible actions (check character's goals section):\n";
-    $promptContent .= "StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 24 hours.\n";
-    $promptContent .= "TravelTo:<Place> - the character decides to travel to another location (replace <Place> with the chosen destination).The character should have a clear and logical reason for traveling.\n";
-    $promptContent .= "ReturnHome - Character returns to its base location, probably to meet {$GLOBALS["PLAYER_NAME"]} . Use when no further action is needed or all goals have been accomplished.\n";
+    $promptContent .= "
+StayAtPlace:<Place>:<intent>
+The character remains in their current location, performing activities locally (intent). Take into account how much time character has been at 
+this location and its current task
+
+- intent can be: Work, Rest, Relax, Socialize, Sleep, Study, Guard.
+- Remain at the current location to work, rest, relax, socialize, or perform ongoing activities.
+- This is the default action when the NPC should remain where they are.
+- At an inn: rest, relax, socialize with patrons. E.G StayAtPlace:Inn:Relax
+- At home: rest, relax, socialize with companions,sleep. e.g StayAtPlace:Breezehome:Sleep
+
+TravelTo:<Place>
+- Travel to another location.
+- Use only when the destination is different from the current location and travel is necessary.
+
+ReturnHome 
+Character returns to its base location, probably to meet {$GLOBALS["PLAYER_NAME"]} . 
+Use when no further action is needed or all goals have been accomplished.
+
+";
+  
 } else {
     $promptContent .= "Possible actions:\n";
-    $promptContent .= "StayAtPlace - The character remains in their current location, performing activities locally. Take into account how much time character has been at this location and is current task. If gathering info or spreading rumors, should stay at least 24 hours.\n";
-    $promptContent .= "SpreadRumor - Character activities generate rumors, also, character can explictly create a rumor. E.G. If character's goal or activity is to enforce local trade, create a rumor about local trading being enhanced.\n";
+    $promptContent .= "
+StayAtPlace:<Place>:<intent>
+The character remains in their current location, performing activities locally (intent). Take into account how much time character has been at 
+this location and its current task
+
+- intent can be: Work, Rest, Relax, Socialize, Sleep, Study, Guard.
+- Remain at the current location to work, rest, relax, socialize, or perform ongoing activities.
+- This is the default action when the NPC should remain where they are.
+- At an inn: rest, relax, socialize with patrons. E.G StayAtPlace:Inn:Relax
+- At home: rest, relax, socialize with companions,sleep. e.g StayAtPlace:Breezehome:Sleep
+
+SpreadRumor - Character activities generate rumors, also, character can explictly create a rumor. 
+E.G. If character's goal or activity is to enforce local trade, create a rumor about local trading being enhanced.
+
+";
 }
 
 // XML structure based on letter setting
@@ -526,11 +565,15 @@ if (is_array($parsed)) {
         $cmds = explode(":", $parsed["action"]);
         if ($cmds[0] == "TravelTo") {
             handleTravelToAction($cmds[1], $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $eventParsed, $db);
+            unset($parsed['rumor']);   // Prevent rumor dispatch if MoveTo action is chosen
 
         } else if ($cmds[0] == "StayAtPlace") {
             handleStayAtPlaceAction($LAST_REPORTED_LOCATION, $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $db);
+            unset($parsed['rumor']);   // Prevent rumor dispatch if MoveTo action is chosen
+
         } else if ($cmds[0] == "ReturnHome") {
             handleReturnHome($cmds[1], $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $db);
+            unset($parsed['rumor']);   // Prevent rumor dispatch if MoveTo action is chosen
         }
     }
 
@@ -586,7 +629,7 @@ if (is_array($parsed)) {
         $db->insert(
             'bgl_history',
             [
-                'npc' => ${$GLOBALS["HERIKA_NAME"]},
+                'npc' => $GLOBALS["HERIKA_NAME"],
                 'ts' => $last_ts,
                 'gamets' => $last_gamets+1,
                 'localts' => time(),

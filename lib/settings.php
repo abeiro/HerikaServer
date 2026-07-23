@@ -187,6 +187,8 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'AUTOFILL_CUSTOM_PROFILES',
             'AUTOFILL_CUSTOM_PROFILES_TRIGGER',
             'BGL_TRIGGER_HOURS',
+            'VISUAL_CONTEXT_SCENE_TTL_MINUTES',
+            'VISUAL_CONTEXT_PROMPT_MAX_CHARS',
             'END_CONVERSATION_COOLDOWN',
             'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY',
             'FEATURES@MEMORY_EMBEDDING@ENABLED',
@@ -195,6 +197,10 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARYS',
             'PROMPT_HEAD',
             'EMOTEMOODS',
+            'OGHMA_INFINIUM',
+            'OGHMA_AMOUNT',
+            'RACIAL_OGHMA',
+            'LOCATION_OGHMA',
             'DETECT_MAGIC_EVENT',
             'MAGIC_EVENT_BLACKLIST',
             'LOCATION_BLACKLIST',
@@ -295,7 +301,7 @@ if (!function_exists('chimPrettySettingLabel')) {
         $customLabels = [
             'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
             'CORE_CONNECTOR_SUMMARY' => 'Summaries',
-            'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
+            'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory',
             'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
             'SCENE_CLASSIFIER_ENABLED' => 'Scene Classifier',
             'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
@@ -303,6 +309,10 @@ if (!function_exists('chimPrettySettingLabel')) {
             'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
             'RELLLM_CONNECTOR' => 'Relationship Management',
             'EMOTEMOODS' => 'Emote Moods',
+            'OGHMA_INFINIUM' => 'Oghma Infinium',
+            'OGHMA_AMOUNT' => 'Oghma Articles Amount',
+            'RACIAL_OGHMA' => 'Force Racial Oghma',
+            'LOCATION_OGHMA' => 'Force Location Oghma',
             'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
             'SHORTER_NEARBY_ITEM_LIST' => 'Shorter Nearby Item List',
             'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time',
@@ -312,6 +322,8 @@ if (!function_exists('chimPrettySettingLabel')) {
             'CHIM_AI_QUEST_PROGRESSION' => 'AI Quest Progression (Beta)',
             'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
             'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 'Item Pickup Detection Value',
+            'VISUAL_CONTEXT_SCENE_TTL_MINUTES' => 'Visual Scene Lifetime',
+            'VISUAL_CONTEXT_PROMPT_MAX_CHARS' => 'Visual Prompt Limit',
         ];
         if (isset($customLabels[$flatName])) {
             return $customLabels[$flatName];
@@ -329,6 +341,10 @@ if (!function_exists('chimPrettySettingLabel')) {
 if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
     function chimGetOverrideableGeneralSettingCategory(string $flatId): string
     {
+        if (in_array($flatId, ['OGHMA_INFINIUM', 'OGHMA_AMOUNT', 'RACIAL_OGHMA', 'LOCATION_OGHMA', 'OGHMA_CUSTOM', 'CORE_CONNECTOR_OGHMA_CUSTOM'], true)) {
+            return 'Oghma';
+        }
+
         if (
             strpos($flatId, 'PROMPT_') === 0
             || in_array($flatId, ['EMOTEMOODS', 'DETECT_MAGIC_EVENT', 'MAGIC_EVENT_BLACKLIST', 'LOCATION_BLACKLIST', 'ITEM_BLACKLIST', 'EVENT_TYPE_FILTER'], true)
@@ -338,6 +354,10 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
 
         if (strpos($flatId, 'RECHAT') === 0) {
             return 'Rechat';
+        }
+
+        if (strpos($flatId, 'VISUAL_CONTEXT_') === 0) {
+            return 'Visual Context';
         }
 
         if (in_array($flatId, ['CHIM_AI_QUEST_PROGRESSION', 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT'], true)) {
@@ -367,7 +387,6 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
                 'POWER_AWARENESS_ENABLED',
                 'SCENE_CLASSIFIER_ENABLED',
                 'RELATIONSHIP_SYSTEM_ENABLED',
-                'OGHMA_CUSTOM',
             ], true)
         ) {
             return 'Context';

@@ -15,6 +15,7 @@ require_once($path . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($path . "lib" .DIRECTORY_SEPARATOR."logger.php");
+require_once($path . "lib" .DIRECTORY_SEPARATOR."visual_context.php");
 
 if (isset($_GET["format"]) && $_GET["format"]=="png")
     $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_img_".md5($_FILES["file"]["tmp_name"]).".png";
@@ -96,10 +97,49 @@ $hints.="Location: $location";
 
 require_once($path."itt/itt-{$GLOBALS["ITTFUNCTION"]}.php");
 
-echo itt($finalNameJpeg,$hints);
+$description = trim(strval(itt($finalNameJpeg, $hints)));
+$galleryDirectory = __DIR__.DIRECTORY_SEPARATOR."data/pictures/gallery/";
+$visualLocation = $_GET['visual_location'] ?? $location;
+$gameTs = DataLastKnownGameTS();
+$gameDate = $gameTs > 0 ? convert_gamets2skyrim_long_date($gameTs) : '';
+@mkdir($galleryDirectory, 0777, true);
+$galleryFilename = chimVisualContextGalleryFilename($visualLocation, $gameDate, 'jpg');
+$galleryPath = $galleryDirectory.$galleryFilename;
+$filenameStem = pathinfo($galleryFilename, PATHINFO_FILENAME);
+$filenameExtension = pathinfo($galleryFilename, PATHINFO_EXTENSION);
+$filenameCounter = 2;
+while (file_exists($galleryPath)) {
+    $galleryFilename = $filenameStem . '__' . $filenameCounter . '.' . $filenameExtension;
+    $galleryPath = $galleryDirectory.$galleryFilename;
+    $filenameCounter++;
+}
+if (@rename($finalNameJpeg, $galleryPath)) {
+    $visualType = chimVisualContextSubjectType($_GET['visual_type'] ?? 'scene');
+    $subjectName = chimVisualContextText($_GET['visual_name'] ?? ($_GET['fg'] ?? ''), 300);
+    $subjectKey = chimVisualContextText($_GET['visual_key'] ?? '', 500);
+    chimVisualContextStore([
+        'subject_type' => $visualType,
+        'subject_key' => $subjectKey,
+        'subject_name' => $subjectName,
+        'plugin' => $_GET['visual_plugin'] ?? '',
+        'baseid' => $_GET['visual_baseid'] ?? '',
+        'refid' => $_GET['visual_refid'] ?? '',
+        'cell_id' => $_GET['visual_cell'] ?? '',
+        'location_name' => $visualLocation,
+        'image_path' => 'data/pictures/gallery/' . basename($galleryPath),
+        'image_sha256' => hash_file('sha256', $galleryPath) ?: '',
+        'description' => $description,
+        'perspective' => $_GET['visual_perspective'] ?? 'first_person',
+        'provider' => $GLOBALS['ITTFUNCTION'] ?? '',
+        'model' => $GLOBALS['ITT']['model'] ?? '',
+        'metadata' => [
+            'visible_characters' => $vc ?? [],
+            'foreground' => chimVisualContextText($_GET['fg'] ?? '', 300),
+        ],
+    ]);
+}
 
-@mkdir(__DIR__.DIRECTORY_SEPARATOR."data/pictures/gallery/",0777);
-@rename($finalNameJpeg,__DIR__.DIRECTORY_SEPARATOR."data/pictures/gallery/".basename($finalNameJpeg));
+echo $description;
 
 
 ?>
