@@ -23,9 +23,23 @@ final class VisualContextTest extends TestCase
         $this->assertSame('{"model":"vision"}', chimVisualContextText(['model' => 'vision'], 100));
     }
 
+    public function testLocationBaseNormalizesEventAndStoredFormats(): void
+    {
+        $this->assertSame(
+            'Riverwood outdoors',
+            chimVisualContextLocationBase("(Context location: Riverwood outdoors ,Hold: Whiterun, Buildings to go:Riverwood Trader)")
+        );
+        $this->assertSame(
+            'Riverwood outdoors',
+            chimVisualContextLocationBase('Riverwood outdoors ,Hold: Whiterun')
+        );
+    }
+
     public function testCurrentLocationContextIsAlwaysAvailableWithoutAnEnableSetting(): void
     {
-        $GLOBALS['db'] = new class {
+        $db = new class {
+            public string $lastQuery = '';
+
             public function execQuery(string $query): bool
             {
                 return true;
@@ -43,6 +57,7 @@ final class VisualContextTest extends TestCase
 
             public function fetchAll(string $query): array
             {
+                $this->lastQuery = $query;
                 if (strpos($query, 'FROM public.visual_context') === false) {
                     return [];
                 }
@@ -55,11 +70,13 @@ final class VisualContextTest extends TestCase
                 ]];
             }
         };
+        $GLOBALS['db'] = $db;
 
         try {
-            $prompt = chimBuildVisualContextPrompt('Riverwood');
+            $prompt = chimBuildVisualContextPrompt('(Context location: Riverwood, Hold: Whiterun)');
             $this->assertStringContainsString('<visual_context>', $prompt);
             $this->assertStringContainsString('Lantern light falls across the wet road.', $prompt);
+            $this->assertStringContainsString("LOWER('Riverwood')", $db->lastQuery);
         } finally {
             unset($GLOBALS['db']);
         }

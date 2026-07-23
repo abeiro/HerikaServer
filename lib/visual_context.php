@@ -74,6 +74,26 @@ if (!function_exists('chimVisualContextText')) {
     }
 }
 
+if (!function_exists('chimVisualContextLocationBase')) {
+    function chimVisualContextLocationBase($value): string
+    {
+        $value = html_entity_decode(chimVisualContextText($value, 1000), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if ($value === '') {
+            return '';
+        }
+
+        if (preg_match('/Context\s*(?:new\s*)?location:\s*([^,\)]+)/iu', $value, $matches)) {
+            $value = $matches[1];
+        } else {
+            $value = preg_split('/,\s*Hold\s*:/iu', $value, 2)[0] ?? $value;
+            $value = preg_replace('/^(?:Location|Context\s*(?:new\s*)?location):\s*/iu', '', $value) ?? $value;
+        }
+
+        $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+        return chimVisualContextText(trim($value, " \t\n\r\0\x0B,()"), 300);
+    }
+}
+
 if (!function_exists('chimVisualContextStore')) {
     function chimVisualContextStore(array $record): bool
     {
@@ -182,18 +202,24 @@ if (!function_exists('chimBuildVisualContextPrompt')) {
     {
         $db = $GLOBALS['db'] ?? null;
         $location = trim($location);
-        if (!$db || $location === '' || !chimEnsureVisualContextTable()) {
+        $locationBase = chimVisualContextLocationBase($location);
+        if (!$db || $locationBase === '' || !chimEnsureVisualContextTable()) {
             return '';
         }
 
         $ttlMinutes = max(1, min(chimGetGeneralSettingInt('VISUAL_CONTEXT_SCENE_TTL_MINUTES', 10), 1440));
         $maxChars = max(200, min(chimGetGeneralSettingInt('VISUAL_CONTEXT_PROMPT_MAX_CHARS', 1800), 12000));
-        $locationLiteral = $db->escapeLiteral($location);
+        $locationLiteral = $db->escapeLiteral($locationBase);
         $rows = $db->fetchAll("SELECT subject_type, subject_name, description, captured_at
             FROM public.visual_context
             WHERE active = TRUE
               AND description <> ''
-              AND LOWER(location_name) = LOWER({$locationLiteral})
+              AND LOWER(BTRIM(REGEXP_REPLACE(
+                    SPLIT_PART(location_name, ',', 1),
+                    '^\\(?context[[:space:]]+(new[[:space:]]+)?location:[[:space:]]*',
+                    '',
+                    'i'
+                  ), ' ()')) = LOWER({$locationLiteral})
               AND (locked = TRUE OR captured_at >= CURRENT_TIMESTAMP - INTERVAL '{$ttlMinutes} minutes')
             ORDER BY locked DESC, user_edited DESC, captured_at DESC
             LIMIT 3");
