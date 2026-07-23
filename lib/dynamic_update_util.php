@@ -1,4 +1,6 @@
 <?php 
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'physical_npc_diaries.php';
+
 // Function to process diary entries for all nearby NPCs (triggered by C++ with 400 unit range)
 function processNearbyDiary($gameRequest, $eventType) {
     global $db;
@@ -173,7 +175,7 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
             $topic = DataLastKnowDate();
             $location = DataLastKnownLocation();
             $momentum=time();
-            $db->insert(
+            $diarySaved = $db->insert(
                 'diarylog',
                 array(
                     'ts' => $gameRequest[1],
@@ -187,6 +189,10 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
                     'localts' => time()
                 )
             );
+
+            if ($diarySaved !== false) {
+                chimPhysicalDiarySyncForNpc($npcName, (int)$gameRequest[2]);
+            }
             
             // Log memory
             if (function_exists('logMemory')) {
@@ -1212,7 +1218,7 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
         $topic = DataLastKnowDate();
         $location = DataLastKnownLocation();
         $momentum=time();
-        $db->insert(
+        $diarySaved = $db->insert(
             'diarylog',
             array(
                 'ts' => $gameRequest[1],
@@ -1226,12 +1232,16 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
                 'localts' => time()
             )
         );
+
+        if ($diarySaved !== false && strcasecmp($followerName, 'The Narrator') !== 0) {
+            chimPhysicalDiarySyncForNpc($followerName, (int)$gameRequest[2]);
+        }
             
         // Log memory
         if (function_exists('logMemory')) {
             logMemory($followerName, $followerName, trim($buffer),  $momentum, $gameRequest[2], 'auto_diary', $gameRequest[1]);
         }
-        
+
         // Send notification to plugin for this follower (same format as manual diary)
         echo $followerName."|rolecommand|DebugNotification@Diary Entry Written for ".$followerName.PHP_EOL;
         @ob_flush();

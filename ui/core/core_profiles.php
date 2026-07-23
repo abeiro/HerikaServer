@@ -1748,6 +1748,7 @@ $ittById = $byId($ittRows);
         $mtmEnabled = !empty($profileMetadata['MIDDLE_TERM_MEMORY_ENABLED']);
         $autoDiaryEnabled = !empty($profileMetadata['AUTO_DIARY_ENABLED']);
         $autoDiaryWaitEnabled = !empty($profileMetadata['AUTO_DIARY_WAIT_ENABLED']);
+        $physicalDiaryEnabled = !empty($profileMetadata['MATERIALIZE_DIARY_ENABLED']);
         $randomizerEnabled = !empty($profileMetadata['LLM_RANDOMIZER_ENABLED']);
         $fallbackEnabled = !empty($profileMetadata['LLM_FALLBACK_ENABLED']);
 
@@ -1762,6 +1763,7 @@ $ittById = $byId($ittRows);
             ['key' => 'MIDDLE_TERM_MEMORY_ENABLED', 'icon' => '&#x1F4C3;', 'title' => 'Middle Term Memory', 'enabled' => $mtmEnabled, 'short' => 'Include periodic middle-term memory summaries.', 'help' => 'Saves a list of recent events after every 10 memory summaries. NPCs using this profile will have MTM enabled by default.'],
             ['key' => 'AUTO_DIARY_ENABLED', 'icon' => '&#x1F4D9;', 'title' => 'Auto Diary', 'enabled' => $autoDiaryEnabled, 'short' => 'Generate nearby NPC diaries during sleep or wait.', 'help' => 'Automatically generate diary entries when NPCs are nearby during sleep/wait events. NPCs using this profile will have auto diary enabled by default.'],
             ['key' => 'AUTO_DIARY_WAIT_ENABLED', 'icon' => '&#x23F3;', 'title' => 'Auto Diary Wait', 'enabled' => $autoDiaryWaitEnabled, 'short' => 'Include wait events when Auto Diary is enabled.', 'help' => 'When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.'],
+            ['key' => 'MATERIALIZE_DIARY_ENABLED', 'icon' => '&#x1F4D5;', 'title' => 'Physical Diary', 'enabled' => $physicalDiaryEnabled, 'short' => 'Create a physical ingame diary that can be read.', 'help' => 'Automatically creates one physical diary in each NPC\'s inventory when they write a diary entry, then refreshes that same book after future entries.'],
             ['key' => 'LLM_RANDOMIZER_ENABLED', 'icon' => '&#x1F3B2;', 'title' => 'LLM Randomizer', 'enabled' => $randomizerEnabled, 'short' => 'Rotate among the four profile LLM connectors.', 'help' => 'Randomly switches between the 4 LLM connectors for NPCs using this profile. Will roughly switch every 2-3 responses per NPC.'],
             ['key' => 'LLM_FALLBACK_ENABLED', 'icon' => '&#x1F504;', 'title' => 'LLM Fallback', 'enabled' => $fallbackEnabled, 'short' => 'Retry failed requests with the fallback connector.', 'help' => 'Automatically retry with the fallback connector when the primary connector fails. Response time will be longer when fallback is used.'],
         ];
@@ -1839,7 +1841,7 @@ $ittById = $byId($ittRows);
 
     <script>
     document.addEventListener('DOMContentLoaded', function(){
-        const names = ['default_npc','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]'];
+        const names = ['default_npc','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]','meta_vis[MATERIALIZE_DIARY_ENABLED]'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -2088,7 +2090,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 'mode' => 'profile',
                 'fieldName' => 'metadata',
                 'settingsCatalog' => $profileOverrideCatalog,
-                'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'AUTO_DIARY_ENABLED', 'AUTO_DIARY_WAIT_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
+                'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'AUTO_DIARY_ENABLED', 'AUTO_DIARY_WAIT_ENABLED', 'MATERIALIZE_DIARY_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
                 'currentData' => $currentProfileOverrides,
                 'systemFields' => [],
             ];
