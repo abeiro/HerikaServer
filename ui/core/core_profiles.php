@@ -18,6 +18,7 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."profile_llm_mode.php");
 require_once "{$enginePath}/lib/core/core_profiles.class.php";
 require_once "{$enginePath}/lib/core/llm_connector.class.php";
 require_once "{$enginePath}/lib/core/tts_connector.class.php";
+require_once "{$enginePath}/lib/core/itt_connector.class.php";
 require_once "{$enginePath}/lib/core/api_badge.class.php";
 require_once "{$enginePath}/lib/core/import_rules.class.php";
 
@@ -912,7 +913,8 @@ if (!function_exists('chimNullIfBlank')) {
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
     header('Content-Type: application/json');
-    
+
+    $importTransactionStarted = false;
     try {
         $importJson = $_POST['import_data'] ?? '';
         
@@ -942,6 +944,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
             echo json_encode(['ok' => false, 'error' => 'Profile slot must be 1-4 or empty']);
             exit;
         }
+
+        if ($GLOBALS["db"]->query("BEGIN") === false) {
+            throw new Exception('Could not start profile import transaction');
+        }
+        $importTransactionStarted = true;
+
         $previousDefaultNpc = $profiles->getDefaultNpc();
         $previousDefaultNpcId = is_array($previousDefaultNpc) && !empty($previousDefaultNpc['id'])
             ? (int)$previousDefaultNpc['id']
@@ -957,6 +965,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         
         $llmConn = new LLMConnector();
         $ttsConn = new TTSConnector();
+        $ittConn = new ITTConnector();
         $apiBadgeObj = new ApiBadge();
         
         // Step 1: Create or match API badges
@@ -974,6 +983,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
                     'label' => $label,
                     'api_key' => '' // Empty, user must fill in
                 ]);
+                if (!$newBadgeId) {
+                    throw new Exception($apiBadgeObj->getLastError() ?: "Could not import API key entry '{$label}'");
+                }
                 $apiBadgeIdMap[$oldId] = $newBadgeId;
             }
         }
@@ -1007,6 +1019,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
                 
                 // Create new connector
                 $newConnId = $llmConn->create($connData);
+                if (!$newConnId) {
+                    throw new Exception($llmConn->getLastError() ?: "Could not import LLM connector '{$label}'");
+                }
                 $llmConnectorIdMap[$oldId] = $newConnId;
             }
         }
@@ -1034,6 +1049,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
                 }
                 
                 $ttsConnectorId = $ttsConn->create($ttsData);
+                if (!$ttsConnectorId) {
+                    throw new Exception($ttsConn->getLastError() ?: "Could not import TTS connector '{$label}'");
+                }
             }
         }
         
@@ -1053,7 +1071,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
             } else {
                 $ittData = $ittConnector;
                 unset($ittData['id']);
-                $ittConnectorId = $GLOBALS["db"]->insert('core_itt_connector', $ittData);
+                if (!empty($ittData['api_badge_id']) && isset($apiBadgeIdMap[$ittData['api_badge_id']])) {
+                    $ittData['api_badge_id'] = $apiBadgeIdMap[$ittData['api_badge_id']];
+                } else {
+                    $ittData['api_badge_id'] = null;
+                }
+                $ittConnectorId = $ittConn->create($ittData);
+                if (!$ittConnectorId) {
+                    throw new Exception($ittConn->getLastError() ?: "Could not import ITT connector '{$label}'");
+                }
             }
         }
         
@@ -1089,7 +1115,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         }
 
         if ($assignSlot !== null) {
-            $GLOBALS["db"]->query("UPDATE core_profiles SET slot = NULL WHERE slot = {$assignSlot}");
+            if ($GLOBALS["db"]->query("UPDATE core_profiles SET slot = NULL WHERE slot = {$assignSlot}") === false) {
+                throw new Exception('Could not clear the selected profile slot');
+            }
             $slotOk = $profiles->update($newProfileId, ['slot' => $assignSlot]);
             if ($slotOk === false) {
                 throw new Exception($profiles->getLastError() ?: 'Could not assign imported profile slot');
@@ -1097,7 +1125,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         }
 
         if ($makeDefaultNpc) {
-            $profiles->promoteToDefaultNpc($newProfileId);
+            if ($profiles->promoteToDefaultNpc($newProfileId) === false) {
+                throw new Exception($profiles->getLastError() ?: 'Could not set imported profile as the default');
+            }
         }
 
         $migratedNpcCount = 0;
@@ -1109,7 +1139,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
             $where = implode(' OR ', $whereParts);
             $countRow = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master WHERE {$where}");
             $migratedNpcCount = (int)($countRow['c'] ?? 0);
-            $GLOBALS["db"]->query("UPDATE core_npc_master SET profile_id = {$newProfileId} WHERE {$where}");
+            if ($GLOBALS["db"]->query("UPDATE core_npc_master SET profile_id = {$newProfileId} WHERE {$where}") === false) {
+                throw new Exception('Could not move current default NPCs to the imported profile');
+            }
         }
 
         $messageParts = ['Profile imported successfully'];
@@ -1122,7 +1154,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         if ($migrateOldDefaultNpcs) {
             $messageParts[] = "migrated {$migratedNpcCount} NPCs from old default/empty profile";
         }
-        
+
+        if ($GLOBALS["db"]->query("COMMIT") === false) {
+            throw new Exception('Could not commit imported profile');
+        }
+        $importTransactionStarted = false;
+
         echo json_encode([
             'ok' => true, 
             'id' => $newProfileId,
@@ -1130,6 +1167,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         ]);
         
     } catch (Throwable $e) {
+        if ($importTransactionStarted) {
+            $GLOBALS["db"]->query("ROLLBACK");
+        }
         echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
     }
     exit;
