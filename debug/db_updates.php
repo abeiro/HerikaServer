@@ -7499,6 +7499,26 @@ if ($checkVersion("master_packages")<20260716002) {
 
 }
 
+//----------------------------------------------------
+// VISUAL CONTEXT - Persistent image descriptions
+// Version 20260718001
+//----------------------------------------------------
+
+if ($checkVersion("visual_context") < 20260718001) {
+    Logger::debug("Applying visual_context 20260718001 - add persistent visual descriptions");
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'visual_context.php');
+
+    $b_ok = chimEnsureVisualContextTable();
+    if ($b_ok) {
+        chimSetGeneralSetting('VISUAL_CONTEXT_SCENE_TTL_MINUTES', 10, chimGetSchemaDescription('VISUAL_CONTEXT_SCENE_TTL_MINUTES'));
+        chimSetGeneralSetting('VISUAL_CONTEXT_PROMPT_MAX_CHARS', 1800, chimGetSchemaDescription('VISUAL_CONTEXT_PROMPT_MAX_CHARS'));
+        $updateVersion("visual_context", 20260718001);
+        Logger::info("Applied patch visual_context 20260718001");
+    } else {
+        Logger::error("Failed to apply patch visual_context 20260718001");
+    }
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------

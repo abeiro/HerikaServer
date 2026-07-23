@@ -15,6 +15,7 @@ require_once(__DIR__."/core/npc_master.class.php");
 require_once(__DIR__."/core/core_profiles.class.php");
 require_once(__DIR__."/prompt_injections.php");
 require_once(__DIR__."/vr_items.php");
+require_once(__DIR__."/visual_context.php");
 
 
 function ChangeHerikaName($new_name="") {
@@ -1550,6 +1551,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 $nearbyActorsList[]=$nearbyActor;
         }
         $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<actors_nearby>\n" . implode(", ", $nearbyActorsList) . "\n</actors_nearby>";
+    }
+
+    $visualContext = chimBuildVisualContextPrompt(DataLastKnownLocation());
+    if ($visualContext !== '') {
+        if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+            $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
+        }
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $visualContext;
     }
     
 
