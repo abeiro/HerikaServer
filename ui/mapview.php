@@ -82,7 +82,7 @@ $spawnNpcFormData = [
     'speech_style' => '',
     'disposition' => 'friendly',
     'goal' => '',
-    'starting_point' => '0x0002b0dd',
+    'starting_point' => '',
     'gold_qty' => '100',
     'iron_ore_qty' => '10',
     'gold_ore_qty' => '5',
@@ -2879,7 +2879,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     <input id="npc_disposition" name="npc_disposition" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['disposition'] ?? 'friendly'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
                 </div>
                 <div>
-                    <label for="npc_starting_point" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Starting Point (FormID)</label>
+                    <label for="npc_starting_point" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Starting Point (FormID) (will use location if empty)</label>
                     <input id="npc_starting_point" name="npc_starting_point" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['starting_point'] ?? '0x0002b0dd'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
                 </div>
                 <div>
