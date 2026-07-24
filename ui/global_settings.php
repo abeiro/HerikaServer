@@ -47,6 +47,7 @@ $gsSections = [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
+        [ 'name' => 'COMPACT_NPC_CONTEXT_HISTORY', 'type' => 'boolean', 'default' => false ],
     ],
     'Oghma' => [
         [ 'name' => 'OGHMA_INFINIUM', 'type' => 'boolean' ],
@@ -96,7 +97,6 @@ $gsSections = [
         [ 'name' => 'POWER_AWARENESS_ENABLED', 'type' => 'boolean' ],
         [ 'name' => 'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE', 'type' => 'integer', 'min' => 0 ],
         [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
-        [ 'name' => 'COMPACT_NPC_CONTEXT_HISTORY', 'type' => 'boolean', 'default' => false ],
     ],
     $promptContextSectionTitle => $promptContextOptionFields,
     'Translation' => [

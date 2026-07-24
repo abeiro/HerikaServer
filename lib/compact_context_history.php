@@ -148,8 +148,26 @@ if (!function_exists('chimFormatCompactNpcContextHistory')) {
     function chimFormatCompactNpcContextHistory(array $history, string $actorName): array
     {
         $formatted = [];
+        $lines = [];
+
+        $flushLines = static function () use (&$formatted, &$lines): void {
+            if ($lines === []) {
+                return;
+            }
+
+            $formatted[] = [
+                'role' => 'user',
+                'content' => implode("\n", array_map(
+                    static fn(string $line): string => '# ' . $line,
+                    $lines
+                )),
+            ];
+            $lines = [];
+        };
+
         foreach ($history as $entry) {
             if (!is_array($entry) || !isset($entry['role'], $entry['content'])) {
+                $flushLines();
                 $formatted[] = $entry;
                 continue;
             }
@@ -157,50 +175,48 @@ if (!function_exists('chimFormatCompactNpcContextHistory')) {
             $role = (string)$entry['role'];
             if ($role === 'assistant') {
                 if (isset($entry['tool_calls']) || (!is_string($entry['content']) && !is_scalar($entry['content']))) {
+                    $flushLines();
                     $formatted[] = $entry;
                     continue;
                 }
 
                 $content = chimCompactAssistantHistoryEntry((string)$entry['content'], $actorName);
                 if ($content !== '') {
-                    $formatted[] = [
-                        'role' => 'assistant',
-                        'content' => $content,
-                        '_chim_compact_history' => true,
-                    ];
+                    $lines[] = $content;
                 }
                 continue;
             }
 
             if ($role === 'user') {
                 if (!is_string($entry['content']) && !is_scalar($entry['content'])) {
+                    $flushLines();
                     $formatted[] = $entry;
                     continue;
                 }
 
                 $content = chimCompactUserHistoryEntry((string)$entry['content']);
                 if ($content !== '') {
-                    $lastIndex = count($formatted) - 1;
+                    $lastIndex = count($lines) - 1;
                     if (
                         str_starts_with($content, 'The current scene is ')
                         && $lastIndex >= 0
-                        && is_array($formatted[$lastIndex])
-                        && ($formatted[$lastIndex]['role'] ?? '') === 'user'
-                        && str_starts_with((string)($formatted[$lastIndex]['content'] ?? ''), 'After ')
+                        && str_starts_with($lines[$lastIndex], 'After ')
                     ) {
-                        $formatted[$lastIndex]['content'] = rtrim((string)$formatted[$lastIndex]['content'], '.')
+                        $lines[$lastIndex] = rtrim($lines[$lastIndex], '.')
                             . '; ' . lcfirst($content);
                         continue;
                     }
 
-                    $formatted[] = ['role' => 'user', 'content' => $content];
+                    $lines[] = $content;
                 }
                 continue;
             }
 
+            $flushLines();
             $formatted[] = $entry;
         }
 
+        $flushLines();
         return $formatted;
     }
 }

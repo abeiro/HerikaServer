@@ -27,7 +27,7 @@ final class CompactNpcContextHistoryTest extends TestCase
         $this->assertTrue(chimShouldCompactNpcContextHistory('Lucan Valerius'));
     }
 
-    public function testFormatsRecentLucanConversationWithoutLosingRoles(): void
+    public function testCombinesRecentLucanConversationIntoOnePlaintextBlock(): void
     {
         $history = [
             [
@@ -43,17 +43,18 @@ final class CompactNpcContextHistoryTest extends TestCase
 
         $formatted = chimFormatCompactNpcContextHistory($history, 'Lucan Valerius');
 
-        $this->assertSame('assistant', $formatted[0]['role']);
-        $this->assertSame('Lucan Valerius, speaking to RANGROO: Good evening. Looking for something in particular?', $formatted[0]['content']);
-        $this->assertTrue($formatted[0]['_chim_compact_history']);
-        $this->assertSame('Ambient dialogue: Lucan Valerius: The sooner you find the claw, the sooner our lives can get back to normal.', $formatted[1]['content']);
-        $this->assertSame('RANGROO, speaking to Lucan Valerius: What have you got for sale?', $formatted[2]['content']);
-        $this->assertSame('Lucan Valerius: Oh, a bit of this and a bit of that.', $formatted[3]['content']);
+        $this->assertSame('user', $formatted[0]['role']);
         $this->assertSame(
-            'After 11 hours, it is now Tirdas, 7:19 AM, 19 Last Seed, 4E 201; the current scene is at Riverwood Trader in Whiterun Hold.',
-            $formatted[4]['content']
+            implode("\n", [
+                '# Lucan Valerius, speaking to RANGROO: Good evening. Looking for something in particular?',
+                '# Ambient dialogue: Lucan Valerius: The sooner you find the claw, the sooner our lives can get back to normal.',
+                '# RANGROO, speaking to Lucan Valerius: What have you got for sale?',
+                '# Lucan Valerius: Oh, a bit of this and a bit of that.',
+                '# After 11 hours, it is now Tirdas, 7:19 AM, 19 Last Seed, 4E 201; the current scene is at Riverwood Trader in Whiterun Hold.',
+            ]),
+            $formatted[0]['content']
         );
-        $this->assertCount(5, $formatted);
+        $this->assertCount(1, $formatted);
     }
 
     public function testKeepsHistoricActionsInPlaintext(): void
@@ -65,9 +66,25 @@ final class CompactNpcContextHistoryTest extends TestCase
 
         $formatted = chimFormatCompactNpcContextHistory($history, 'Lucan Valerius');
 
+        $this->assertSame('user', $formatted[0]['role']);
         $this->assertSame(
-            'Lucan Valerius, speaking to RANGROO: Come with me. [Action: Follow, targeting RANGROO]',
+            '# Lucan Valerius, speaking to RANGROO: Come with me. [Action: Follow, targeting RANGROO]',
             $formatted[0]['content']
         );
+    }
+
+    public function testPreservesToolMessagesOutsidePlaintextHistoryBlock(): void
+    {
+        $history = [
+            ['role' => 'user', 'content' => 'RANGROO: Wait here. (Talking to Lucan Valerius)'],
+            ['role' => 'assistant', 'content' => null, 'tool_calls' => [['id' => 'call_1']]],
+            ['role' => 'tool', 'content' => 'WaitHere completed.'],
+        ];
+
+        $formatted = chimFormatCompactNpcContextHistory($history, 'Lucan Valerius');
+
+        $this->assertSame('# RANGROO, speaking to Lucan Valerius: Wait here.', $formatted[0]['content']);
+        $this->assertSame($history[1], $formatted[1]);
+        $this->assertSame($history[2], $formatted[2]);
     }
 }
