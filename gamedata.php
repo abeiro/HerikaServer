@@ -869,7 +869,7 @@ function handleMarketStockUpdate(array $data): void
                 'itemid' => $item['itemid'],
                 'name' => trim($item['name']),
                 'count' => intval($item['count']),
-                'gold' => intval($item['gold']),
+                'price' => intval($item['gold']),
                 'enchantment' => isset($item['enchantment']) ? $item['enchantment'] : []
 
             ];
