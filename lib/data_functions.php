@@ -2004,7 +2004,7 @@ function DataQuestJournal($quest)
 }
 
 function removeTalkingToOccurrences($input) {
-    $pattern = '/\((?:talking|whispering|shouting)\s+to\s+[^()]+\)/i';
+    $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
     preg_match_all($pattern, $input, $matches, PREG_OFFSET_CAPTURE);
 
     // Get all positions of the matches
@@ -2035,7 +2035,7 @@ function moveDialogueTargetSuffixToEnd($input) {
         return "";
     }
 
-    $pattern = '/\s*(\((?:talking|whispering|shouting)\s+to [^()]+?\)|\(speaking loudly to [^()]+?\))\s*/i';
+    $pattern = '/\s*(\((?:(?:talking|whispering|shouting)|speaking privately)\s+to [^()]+?\)|\(speaking loudly to [^()]+?\))\s*/i';
     if (preg_match_all($pattern, $input, $matches) !== 1 || empty($matches[1])) {
         return trim(preg_replace('/\s+/', ' ', $input));
     }
@@ -4280,16 +4280,16 @@ function DataRechatHistory()
 
 function extractDialogueTarget($string) {
     // Check if the string contains a directed-dialogue tag.
-    if ($string && preg_match('/\((?:talking|whispering|shouting)\s+to\s+/i', $string)) {
+    if ($string && preg_match('/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+/i', $string)) {
         // Extract the target's name using regular expression
-        preg_match('/\((?:talking|whispering|shouting)\s+to\s+([^\)]+)\)/i', $string, $matches);
+        preg_match('/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+([^\)]+)\)/i', $string, $matches);
         
         // Check if a match is found and extract the target's name
         if (isset($matches[1])) {
             $target = $matches[1];
 
             // Remove the directed-dialogue tag from the original string
-            $cleanedString = preg_replace('/\((?:talking|whispering|shouting)\s+to\s+[^\)]+\)/i', '', $string);
+            $cleanedString = preg_replace('/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^\)]+\)/i', '', $string);
             if (strpos($cleanedString,"{$GLOBALS["HERIKA_NAME"]}:")===0) {
                 $cleanedString=str_replace("{$GLOBALS["HERIKA_NAME"]}:","",$cleanedString);
             }
@@ -4862,13 +4862,17 @@ function DataSearchMemory($rawstring,$npcfilter) {
         // MiniMe keyword extraction
         Logger::info("Using minime-t5 context");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+        $rawstring=strtr($rawstring,[
+            "Talking to The Narrator"=>"",
+            "Whispering to The Narrator"=>"",
+            "Speaking privately to The Narrator"=>""
+        ]);
 
         $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
                     
-        $pattern = '/\(talking to [^()]+\)/i';
+        $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
         $keywords=minimeExtract($TEST_TEXT);
@@ -4935,13 +4939,17 @@ function DataSearchMemory($rawstring,$npcfilter) {
     if (empty($kwStringAll)) {
         Logger::info("Using dumb context");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+        $rawstring=strtr($rawstring,[
+            "Talking to The Narrator"=>"",
+            "Whispering to The Narrator"=>"",
+            "Speaking privately to The Narrator"=>""
+        ]);
 
         $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
                     
-        $pattern = '/\(talking to [^()]+\)/i';
+        $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
         $keywords=hashtagifySentences($TEST_TEXT);
@@ -5038,13 +5046,17 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
             Logger::info("Using minime-t5 context");
             error_log("[DataSearchMemoryByVector] Using minime-t5 context");
             $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-            $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+            $rawstring=strtr($rawstring,[
+                "Talking to The Narrator"=>"",
+                "Whispering to The Narrator"=>"",
+                "Speaking privately to The Narrator"=>""
+            ]);
 
             $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
             $replacement = "";
             $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
                         
-            $pattern = '/\(talking to [^()]+\)/i';
+            $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
             $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
             error_log("[DataSearchMemoryByVector start] minimeExtract : " . (microtime(true) - $localStartTime) . " seconds");
@@ -5126,13 +5138,17 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
         if (sizeof($result)<1) {
             Logger::info("Using dumb context");
             $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-            $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+            $rawstring=strtr($rawstring,[
+                "Talking to The Narrator"=>"",
+                "Whispering to The Narrator"=>"",
+                "Speaking privately to The Narrator"=>""
+            ]);
 
             $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
             $replacement = "";
             $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
                         
-            $pattern = '/\(talking to [^()]+\)/i';
+            $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
             $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
             $keywords=strtr($TEST_TEXT,["."=>" ",","=>" ","'"=>" "]);
@@ -5307,13 +5323,17 @@ function DataSearchOghmaByVector($rawstring,$currentOghmaTopic,$locationCtx,$con
     
     Logger::info("Using DataSearchOghmaByVector");
     $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-    $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+    $rawstring=strtr($rawstring,[
+        "Talking to The Narrator"=>"",
+        "Whispering to The Narrator"=>"",
+        "Speaking privately to The Narrator"=>""
+    ]);
 
     $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
     $replacement = "";
     $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
                 
-    $pattern = '/\(talking to [^()]+\)/i';
+    $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
     $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
    

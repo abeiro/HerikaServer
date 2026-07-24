@@ -244,6 +244,48 @@ final class AsteriskParsingTest extends TestCase
         );
     }
 
+    public function testPlayerSubtitleTextStripsPrivateTargetTag(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+
+        $this->assertSame(
+            "Keep this between us",
+            formatPlayerSubtitleText("Rangroo: Keep this between us (Speaking privately to Corpulus Vinius)")
+        );
+    }
+
+    public function testIntimateModeUsesPrivateTargetAndPeopleScope(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+        $GLOBALS['CHIM_EXECUTION_MODE'] = 'INTIMATE';
+
+        $this->assertTrue(isIntimateExecutionMode());
+        $this->assertTrue(isPrivateConversationExecutionMode());
+        $this->assertSame(
+            '(speaking privately to Corpulus Vinius)',
+            buildDialogueTargetSuffix('Corpulus Vinius')
+        );
+        $this->assertSame(
+            '|Rangroo|Corpulus Vinius|',
+            buildPrivateConversationPeople('Corpulus Vinius')
+        );
+    }
+
+    public function testPrivateTagConversionAndTargetExtraction(): void
+    {
+        $converted = convertTalkingTagsToPrivately(
+            'Rangroo: Keep this quiet (Talking to Corpulus Vinius)'
+        );
+        $this->assertSame(
+            'Rangroo: Keep this quiet (Speaking privately to Corpulus Vinius)',
+            $converted
+        );
+
+        $metadata = extractTalkTargetMetadata($converted);
+        $this->assertTrue($metadata['hasExplicitTarget']);
+        $this->assertSame(['Corpulus Vinius'], $metadata['targets']);
+    }
+
     public function testSanitizePlayerRespeechTextStripsLeadingNarrationAndPlayerPrefix(): void
     {
         $GLOBALS['PLAYER_NAME'] = 'Rangroo';

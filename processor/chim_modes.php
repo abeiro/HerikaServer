@@ -9,10 +9,11 @@
 //      Example:(Volkur falls to the ground wounded)
 //
 // * Whisper (WHISPER)
-//      (When enabled, we should send to plugin via InternalSetting a reduced DISTANCE_ACTIVATING_NPC,
-//      from this point, all NPC beyond that distance should be marked as far away, We must take this in 
-//      account to only store people NOT far away on eventlog (so far away NPCs won't have access to this context).
-//       If player is in stealh mode, no rechat (this is a standard behavior).
+//      Uses the plugin-provided reduced routing radius and private server context.
+//
+// * Intimate (INTIMATE)
+//      Uses the plugin-provided 200-unit private routing scope. Only the player
+//      and resolved responder are admitted to the conversation context.
 //
 // * Narrator (NARRATOR)
 //      Routes player speech privately to The Narrator only, using narrator_inputtext semantics.
@@ -61,34 +62,10 @@ if ($EXECUTION_MODE=="STANDARD") {
 
 
 } else if ($EXECUTION_MODE=="WHISPER") {
-    // Hard whisper range for CHIM whisper mode.
-    $GLOBALS["WHISPER_RANGE"] = 200;
-    
-    // Send commands to plugin to reduce NPC detection range to whisper distance
-    $GLOBALS["db"]->insert(
-        'responselog',
-        array(
-            'localts' => time(),
-            'sent' => 0,
-            'actor' => "rolemaster",
-            'text' => '',
-            'action' => "rolecommand|SetConf@_max_distance_outside@{$GLOBALS["WHISPER_RANGE"]}@0@",
-            'tag' => ""
-        )
-    );
-    $GLOBALS["db"]->insert(
-        'responselog',
-        array(
-            'localts' => time(),
-            'sent' => 0,
-            'actor' => "rolemaster",
-            'text' => '',
-            'action' => "rolecommand|SetConf@_max_distance_inside@{$GLOBALS["WHISPER_RANGE"]}@0@",
-            'tag' => ""
-        )
-    );
-    
-    // Disable rechat when player is sneaking (handled by plugin side based on stealth state)
+    // Routing distance is request-local and supplied by the CHIM plugin.
+
+} else if ($EXECUTION_MODE=="INTIMATE") {
+    // Routing distance and private audience are supplied by the CHIM plugin.
 
 } else if ($EXECUTION_MODE=="NARRATOR") {
     if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"], true)) {
@@ -180,47 +157,5 @@ if (isset($CONTEXT_MODE["value"]) && $CONTEXT_MODE["value"]==1)
     $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]=true;
 else
     $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]=false;
-
-// Restore normal distances when leaving whisper mode
-if ($EXECUTION_MODE != "WHISPER") {
-    // Check if we were previously in whisper mode and need to restore
-    $prevMode = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode_previous'");
-    if (isset($prevMode["value"]) && strtoupper($prevMode["value"]) == "WHISPER") {
-        // Restore normal distances (2400 outdoors, 1200 indoors)
-        $GLOBALS["db"]->insert(
-            'responselog',
-            array(
-                'localts' => time(),
-                'sent' => 0,
-                'actor' => "rolemaster",
-                'text' => '',
-                'action' => "rolecommand|SetConf@_max_distance_outside@2400@0@",
-                'tag' => ""
-            )
-        );
-        $GLOBALS["db"]->insert(
-            'responselog',
-            array(
-                'localts' => time(),
-                'sent' => 0,
-                'actor' => "rolemaster",
-                'text' => '',
-                'action' => "rolecommand|SetConf@_max_distance_inside@1200@0@",
-                'tag' => ""
-            )
-        );
-    }
-}
-
-// Store current mode as previous for next check
-$db->upsertRow(
-    'conf_opts',
-    array(
-        'id' => 'chim_mode_previous',
-        'value' => $EXECUTION_MODE
-    ),
-    "id='chim_mode_previous'"
-);
-
 
 ?>

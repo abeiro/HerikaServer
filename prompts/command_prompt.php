@@ -44,6 +44,9 @@ if (!function_exists('chimGetDialogueTargetVerb')) {
         if ($mode === "WHISPER") {
             return "Whispering to";
         }
+        if ($mode === "INTIMATE") {
+            return "Speaking privately to";
+        }
         if ($mode === "SHOUT") {
             return "Shouting to";
         }
