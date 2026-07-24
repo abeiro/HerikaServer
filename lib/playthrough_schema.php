@@ -10,16 +10,29 @@
 require_once(__DIR__ . DIRECTORY_SEPARATOR . 'logger.php');
 
 /**
+ * Check whether the installed clone function includes identity-column support.
+ */
+function pts_clone_function_is_current($definition): bool {
+    return is_string($definition)
+        && stripos($definition, 'OVERRIDING SYSTEM VALUE') !== false;
+}
+
+/**
  * Ensure the clone_schema SQL functions exist in the database.
  * Safe to call multiple times (idempotent).
  */
 function pts_ensure_functions($conn): bool {
-    // Check if functions already exist in chim_meta schema
-    $checkQuery = "SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE p.proname = 'clone_schema' AND n.nspname = 'chim_meta' LIMIT 1";
+    // Existing installations may have an older function definition that cannot
+    // copy explicit values into GENERATED ALWAYS identity columns.
+    $checkQuery = "SELECT pg_get_functiondef(p.oid) AS function_definition FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE p.proname = 'clone_schema' AND n.nspname = 'chim_meta' LIMIT 1";
     $checkResult = @pg_query($conn, $checkQuery);
     if ($checkResult && pg_num_rows($checkResult) > 0) {
-        // Functions already exist
-        return true;
+        $row = pg_fetch_assoc($checkResult);
+        if (pts_clone_function_is_current($row['function_definition'] ?? null)) {
+            return true;
+        }
+
+        Logger::info("Schema clone functions are outdated; refreshing definitions");
     }
     
     $sqlFile = __DIR__ . DIRECTORY_SEPARATOR . 'schema_clone_function.sql';
@@ -42,10 +55,11 @@ function pts_ensure_functions($conn): bool {
         return false;
     }
     
-    // Verify functions were created
+    // Verify the current function definition was installed
     $verifyResult = @pg_query($conn, $checkQuery);
-    if (!$verifyResult || pg_num_rows($verifyResult) === 0) {
-        Logger::error("Schema clone functions were not created successfully");
+    $verifyRow = $verifyResult ? pg_fetch_assoc($verifyResult) : false;
+    if (!$verifyRow || !pts_clone_function_is_current($verifyRow['function_definition'] ?? null)) {
+        Logger::error("Schema clone functions were not installed successfully");
         return false;
     }
     
