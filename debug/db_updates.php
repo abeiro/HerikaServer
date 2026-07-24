@@ -7487,6 +7487,25 @@ if ($checkVersion("prompts") < 20260719001) {
     Logger::info("Applied patch prompts 20260719001 - improved book reading prompt");
 }
 
+if ($checkVersion("memory_summary") < 20260721001) {
+    Logger::debug("Applying memory_summary 20260721001 - normalize diary memory owners");
+
+    $migrationOk = $db->execQuery("
+        UPDATE public.memory_summary
+        SET companions = '|' || trim(both '|' from trim(companions)) || '|'
+        WHERE classifier = 'diary'
+          AND nullif(trim(companions), '') IS NOT NULL
+          AND companions NOT LIKE '|%|'
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("memory_summary", 20260721001);
+        Logger::info("Applied patch memory_summary 20260721001");
+    } else {
+        Logger::error("Failed to apply patch memory_summary 20260721001");
+    }
+}
+
 
 if ($checkVersion("physical_npc_diaries") < 20260719001) {
     Logger::debug("Applying physical_npc_diaries 20260719001 - add physical NPC diary tracking");
