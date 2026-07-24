@@ -16,9 +16,20 @@ final class SchemaCloneIdentityTest extends TestCase
         $this->assertFalse(pts_clone_function_is_current($legacyDefinition));
     }
 
+    public function testIdentityOnlyCloneFunctionNeedsSequenceRefresh(): void
+    {
+        $identityOnlyDefinition =
+            'INSERT INTO destination OVERRIDING SYSTEM VALUE SELECT * FROM source';
+
+        $this->assertFalse(pts_clone_function_is_current($identityOnlyDefinition));
+    }
+
     public function testIdentityAwareCloneFunctionIsCurrent(): void
     {
-        $currentDefinition = 'INSERT INTO destination OVERRIDING SYSTEM VALUE SELECT * FROM source';
+        $currentDefinition = <<<'SQL'
+INSERT INTO destination OVERRIDING SYSTEM VALUE SELECT * FROM source;
+PERFORM chim_meta.sync_schema_sequences(dest_schema);
+SQL;
 
         $this->assertTrue(pts_clone_function_is_current($currentDefinition));
     }
@@ -34,6 +45,30 @@ final class SchemaCloneIdentityTest extends TestCase
         $this->assertStringContainsString(
             'INSERT INTO %I.%I OVERRIDING SYSTEM VALUE SELECT * FROM %I.%I ON CONFLICT DO NOTHING',
             $sql
+        );
+        $this->assertStringContainsString('sync_schema_sequences', $sql);
+        $this->assertStringContainsString("dependency.deptype IN ('a', 'i')", $sql);
+        $this->assertStringContainsString(
+            'PERFORM chim_meta.sync_schema_sequences(dest_schema)',
+            $sql
+        );
+    }
+
+    public function testDatabaseUpdateRepairsExistingPublicSequences(): void
+    {
+        $updates = file_get_contents(
+            __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..'
+            . DIRECTORY_SEPARATOR . 'debug' . DIRECTORY_SEPARATOR . 'db_updates.php'
+        );
+
+        $this->assertIsString($updates);
+        $this->assertStringContainsString(
+            "SELECT chim_meta.sync_schema_sequences('public')",
+            $updates
+        );
+        $this->assertStringContainsString(
+            '$updateVersion("playthrough_schema", 20260723001)',
+            $updates
         );
     }
 }

@@ -4,6 +4,88 @@
 
 CREATE SCHEMA IF NOT EXISTS chim_meta;
 
+-- Advance sequence-backed columns whose next value would collide with existing
+-- rows. Ownership metadata is used instead of sequence-name conventions.
+CREATE OR REPLACE FUNCTION chim_meta.sync_schema_sequences(target_schema text)
+RETURNS integer AS $$
+DECLARE
+    obj RECORD;
+    boundary_value BIGINT;
+    sequence_last_value BIGINT;
+    sequence_is_called BOOLEAN;
+    sequence_next_value BIGINT;
+    repaired_count integer := 0;
+BEGIN
+    FOR obj IN
+        SELECT
+            sequence_relation.relname AS sequence_name,
+            table_relation.relname AS table_name,
+            table_column.attname AS column_name,
+            sequence_data.seqincrement AS increment_by
+        FROM pg_class AS sequence_relation
+        JOIN pg_namespace AS sequence_namespace
+            ON sequence_namespace.oid = sequence_relation.relnamespace
+        JOIN pg_sequence AS sequence_data
+            ON sequence_data.seqrelid = sequence_relation.oid
+        JOIN pg_depend AS dependency
+            ON dependency.classid = 'pg_class'::regclass
+            AND dependency.objid = sequence_relation.oid
+            AND dependency.refclassid = 'pg_class'::regclass
+            AND dependency.deptype IN ('a', 'i')
+        JOIN pg_class AS table_relation
+            ON table_relation.oid = dependency.refobjid
+        JOIN pg_namespace AS table_namespace
+            ON table_namespace.oid = table_relation.relnamespace
+        JOIN pg_attribute AS table_column
+            ON table_column.attrelid = table_relation.oid
+            AND table_column.attnum = dependency.refobjsubid
+        WHERE sequence_relation.relkind = 'S'
+            AND sequence_namespace.nspname = target_schema
+            AND table_namespace.nspname = target_schema
+            AND table_column.attnum > 0
+            AND NOT table_column.attisdropped
+    LOOP
+        EXECUTE format(
+            'SELECT %s(%I)::bigint FROM %I.%I',
+            CASE WHEN obj.increment_by > 0 THEN 'MAX' ELSE 'MIN' END,
+            obj.column_name,
+            target_schema,
+            obj.table_name
+        ) INTO boundary_value;
+
+        -- Empty tables cannot have a collision and should retain their original
+        -- sequence start state.
+        IF boundary_value IS NULL THEN
+            CONTINUE;
+        END IF;
+
+        EXECUTE format(
+            'SELECT last_value::bigint, is_called FROM %I.%I',
+            target_schema,
+            obj.sequence_name
+        ) INTO sequence_last_value, sequence_is_called;
+
+        sequence_next_value := CASE
+            WHEN sequence_is_called
+                THEN sequence_last_value + obj.increment_by
+            ELSE sequence_last_value
+        END;
+
+        IF (obj.increment_by > 0 AND sequence_next_value <= boundary_value)
+            OR (obj.increment_by < 0 AND sequence_next_value >= boundary_value) THEN
+            EXECUTE format(
+                'SELECT setval(%L::regclass, %s, true)',
+                format('%I.%I', target_schema, obj.sequence_name),
+                boundary_value
+            );
+            repaired_count := repaired_count + 1;
+        END IF;
+    END LOOP;
+
+    RETURN repaired_count;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION chim_meta.clone_schema(source_schema text, dest_schema text)
 RETURNS void AS $$
 DECLARE
@@ -90,8 +172,9 @@ BEGIN
                 seq_val := source_val;
             END IF;
             
-            -- Set sequence to the calculated value
-            EXECUTE format('SELECT setval(''%I.%I'', %s, true)', dest_schema, obj.sequencename, seq_val);
+            -- seq_val represents the next value to issue, so leave is_called
+            -- false. Marking it called would skip an extra ID.
+            EXECUTE format('SELECT setval(''%I.%I'', %s, false)', dest_schema, obj.sequencename, seq_val);
         END;
     END LOOP;
 
@@ -161,6 +244,10 @@ BEGIN
                          obj.tablename, obj.column_name, SQLERRM, obj.column_default;
         END;
     END LOOP;
+
+    -- The copied data can contain explicit serial/identity values. Synchronize
+    -- the destination's owned sequences after defaults and ownership are fixed.
+    PERFORM chim_meta.sync_schema_sequences(dest_schema);
 
     -- Clone views (optional - captures query definitions)
     FOR obj IN
