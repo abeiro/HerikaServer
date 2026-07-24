@@ -1681,7 +1681,14 @@ if (!isset($GLOBALS["CACHE_PARTY"])) {
     $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 } 
 
-if (in_array($gameRequest[0],["inputtext_s"]) && chimDecodeAudienceSnapshotField($gameRequest[4] ?? "") === "") {    // Stealth-targeted follower: scope to target NPC only
+$requestRoutingSnapshot = chimDecodePlayerRoutingSnapshotField($gameRequest[4] ?? "");
+$requestAudienceSnapshot = (string)($requestRoutingSnapshot["audience"] ?? "");
+$requestPresentActorsSnapshot = chimSetCurrentTurnPresentActorsSnapshot(
+    $requestRoutingSnapshot["present_actors"] ?? []
+);
+$requestPresentPeople = chimPresentActorsPeoplePipe($requestPresentActorsSnapshot);
+
+if (in_array($gameRequest[0],["inputtext_s"]) && $requestAudienceSnapshot === "") {    // Stealth-targeted follower: scope to target NPC only
     $GLOBALS["CACHE_PEOPLE"]=$GLOBALS["HERIKA_NAME"];
 }
 
@@ -1698,7 +1705,6 @@ error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime
 $playerInputEventTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
 $directiveDialogueEventTypes = ["instruction", "suggestion"];
 $turnPeopleSnapshotEventTypes = array_merge($playerInputEventTypes, $directiveDialogueEventTypes);
-$requestAudienceSnapshot = chimDecodeAudienceSnapshotField($gameRequest[4] ?? "");
 $hasAuthoritativeRequestAudience = (
     in_array($gameRequest[0] ?? "", $turnPeopleSnapshotEventTypes, true) &&
     $requestAudienceSnapshot !== ""
@@ -1729,6 +1735,11 @@ if (isWhisperExecutionMode() && in_array($gameRequest[0] ?? "", $playerInputEven
         $directiveFallbackPeople = "";
         Logger::info("Scoped CACHE_PEOPLE for CLOSE {$gameRequest[0]} from private fallback: " . $closePrivatePeople);
     }
+}
+if (isPrivateConversationExecutionMode() &&
+    in_array($gameRequest[0] ?? "", $playerInputEventTypes, true)) {
+    $requestPresentActorsSnapshot = chimSetCurrentTurnPresentActorsSnapshot([]);
+    $requestPresentPeople = "";
 }
 
 if ($authoritativePeople !== "") {
@@ -1813,6 +1824,11 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
             if (!empty($eventPeople)) {
                 $GLOBALS["CACHE_PEOPLE"] = $eventPeople;
             }
+        }
+        if ($requestPresentPeople !== "" &&
+            in_array($gameRequest[0] ?? "", $playerInputEventTypes, true)) {
+            $eventPeople = chimMergePeoplePipeLists($eventPeople, $requestPresentPeople);
+            Logger::info("Added physical presence to event people for {$gameRequest[0]}: " . $requestPresentPeople);
         }
 
         if (in_array($gameRequest[0], $turnPeopleSnapshotEventTypes, true)) {

@@ -1299,6 +1299,12 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
         $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
     }
+    if (function_exists("chimBuildCurrentTurnPresentPeoplePrompt")) {
+        $peoplePresentPrompt = chimBuildCurrentTurnPresentPeoplePrompt();
+        if ($peoplePresentPrompt !== "") {
+            $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $peoplePresentPrompt;
+        }
+    }
     $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<nearby_actors>\n# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange\n</nearby_actors>";
     
     // Add faction descriptions section if any factions were found

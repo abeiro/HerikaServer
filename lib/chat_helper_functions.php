@@ -2714,32 +2714,153 @@ function parsePeoplePipeList($peoplePipe)
     return $cleanPeople;
 }
 
-function chimDecodeAudienceSnapshotField($rawField)
+function chimNormalizePresentActors($actors)
 {
+    if (!is_array($actors)) {
+        return [];
+    }
+
+    $normalized = [];
+    $seenNames = [];
+    foreach ($actors as $actor) {
+        if (is_string($actor)) {
+            $actor = ["name" => $actor];
+        }
+        if (!is_array($actor)) {
+            continue;
+        }
+
+        $name = trim((string)($actor["name"] ?? ""));
+        $name = trim($name, "|");
+        if ($name === "" || !shouldIncludeActorNameInPeopleList($name)) {
+            continue;
+        }
+
+        $nameKey = mb_strtolower($name, "UTF-8");
+        if (isset($seenNames[$nameKey])) {
+            continue;
+        }
+        $seenNames[$nameKey] = true;
+
+        $normalized[] = [
+            "name" => $name,
+            "form_id" => (int)($actor["form_id"] ?? 0),
+            "managed" => !empty($actor["managed"]),
+            "creature" => !empty($actor["creature"]),
+            "distance" => (float)($actor["distance"] ?? 0.0),
+        ];
+        if (count($normalized) >= 32) {
+            break;
+        }
+    }
+
+    return $normalized;
+}
+
+function chimDecodePlayerRoutingSnapshotField($rawField)
+{
+    $result = [
+        "audience" => "",
+        "present_actors" => [],
+    ];
     $rawField = trim((string)$rawField);
     if ($rawField === "") {
-        return "";
+        return $result;
     }
 
     $decoded = base64_decode($rawField, true);
     if ($decoded === false || $decoded === "") {
-        return "";
+        return $result;
     }
 
     $payload = json_decode($decoded, true);
     if (!is_array($payload)) {
-        return "";
+        return $result;
     }
 
     if (!empty($payload["people"]) && is_string($payload["people"])) {
-        return normalizePeoplePipeList(parsePeoplePipeList($payload["people"]));
+        $result["audience"] = normalizePeoplePipeList(parsePeoplePipeList($payload["people"]));
+    } elseif (!empty($payload["companions"]) && is_array($payload["companions"])) {
+        $result["audience"] = normalizePeoplePipeList($payload["companions"]);
     }
 
-    if (!empty($payload["companions"]) && is_array($payload["companions"])) {
-        return normalizePeoplePipeList($payload["companions"]);
+    $result["present_actors"] = chimNormalizePresentActors($payload["present_actors"] ?? []);
+    return $result;
+}
+
+function chimDecodeAudienceSnapshotField($rawField)
+{
+    $snapshot = chimDecodePlayerRoutingSnapshotField($rawField);
+    return (string)($snapshot["audience"] ?? "");
+}
+
+function chimDecodePresentActorsSnapshotField($rawField)
+{
+    $snapshot = chimDecodePlayerRoutingSnapshotField($rawField);
+    return chimNormalizePresentActors($snapshot["present_actors"] ?? []);
+}
+
+function chimPresentActorsPeoplePipe($actors)
+{
+    $names = [];
+    foreach (chimNormalizePresentActors($actors) as $actor) {
+        $names[] = $actor["name"];
+    }
+    return normalizePeoplePipeList($names);
+}
+
+function chimMergePeoplePipeLists()
+{
+    $names = [];
+    foreach (func_get_args() as $peoplePipe) {
+        foreach (parsePeoplePipeList($peoplePipe) as $name) {
+            $names[] = $name;
+        }
+    }
+    return normalizePeoplePipeList($names);
+}
+
+function chimSetCurrentTurnPresentActorsSnapshot($actors)
+{
+    $normalized = chimNormalizePresentActors($actors);
+    if (empty($normalized)) {
+        unset($GLOBALS["CHIM_TURN_PRESENT_ACTORS_SNAPSHOT"]);
+        return [];
     }
 
-    return "";
+    $GLOBALS["CHIM_TURN_PRESENT_ACTORS_SNAPSHOT"] = $normalized;
+    return $normalized;
+}
+
+function chimGetCurrentTurnPresentActorsSnapshot()
+{
+    return chimNormalizePresentActors($GLOBALS["CHIM_TURN_PRESENT_ACTORS_SNAPSHOT"] ?? []);
+}
+
+function chimBuildCurrentTurnPresentPeoplePrompt()
+{
+    $actors = chimGetCurrentTurnPresentActorsSnapshot();
+    if (empty($actors)) {
+        return "";
+    }
+
+    $lines = [];
+    foreach ($actors as $actor) {
+        $name = htmlspecialchars($actor["name"], ENT_QUOTES | ENT_XML1, "UTF-8");
+        $formId = (int)($actor["form_id"] ?? 0);
+        if ($formId > 0) {
+            $name .= " [RefID: " . strtoupper(str_pad(dechex($formId), 8, "0", STR_PAD_LEFT)) . "]";
+        }
+        if (empty($actor["managed"])) {
+            $name .= " (present, not CHIM-active)";
+        }
+        $lines[] = "## " . $name;
+    }
+
+    return "<people_present>\n"
+        . "# Physically present actors. Entries marked not CHIM-active are context only and cannot respond or receive AI actions.\n"
+        . implode("\n", $lines)
+        . "\n</people_present>";
 }
 
 function chimSetCurrentTurnPeopleSnapshot($peoplePipe)
