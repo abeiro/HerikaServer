@@ -66,7 +66,7 @@ class CoreProfile
         }
 
         $filtered = array_intersect_key($data, array_flip($fields));
-        return $GLOBALS["db"]->insert($this->table, $filtered);
+        return $GLOBALS["db"]->insertReturningId($this->table, $filtered);
     }
 
     public function readAll()

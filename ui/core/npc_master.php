@@ -286,6 +286,10 @@ h1.api-title {
 .npc-metadata-collapse-body {
     padding: 12px;
 }
+
+#npc_modal_dev_toggle {
+    zoom:0.75;
+}
 </style>
 
 <main>
@@ -972,6 +976,68 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["set_portrait"])) {
     }
     exit;
 }
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["dev_visit"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $id = intval($_POST['target_id'] ?? 0);
+        require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "scriptproxy_papyrus.php");
+        $npcData=$npc->getById($id);
+        if (isset($npcData['refid']) && $npcData['refid']!=='') {
+            $refid = $npcData['refid'];
+            $skyrimCmd = new SkyrimCommandBuilder();
+            $json = $skyrimCmd->ObjectReference->MoveTo("0x00000014","0x".$refid);
+            $skyrimCmd->send(cmd: $json);
+            echo json_encode(["ok"=>true]);
+        } else {
+            echo json_encode(["ok"=>false, "error"=>"NPC <{$id}> does not have a valid refid"]);
+        }
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bgl_inception"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $id = intval($_POST['target_id'] ?? 0);
+        
+        $npcData=$npc->getById($id);
+        $extendedData['bgl_inception'] = $_POST['idea'] ?? '';
+        $npc->updateExtendedKeysByName($npcData['npc_name'], $extendedData);
+        echo json_encode(["ok"=>true]);
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["dev_teleport"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $id = intval($_POST['target_id'] ?? 0);
+        require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "scriptproxy_papyrus.php");
+        $npcData=$npc->getById($id);
+        if (isset($npcData['refid']) && $npcData['refid']!=='') {
+            $refid = $npcData['refid'];
+            $skyrimCmd = new SkyrimCommandBuilder();
+            $json = $skyrimCmd->ObjectReference->MoveTo("0x".$refid,"0x00000014");
+            $skyrimCmd->send(cmd: $json);
+            echo json_encode(["ok"=>true]);
+        } else {
+            echo json_encode(["ok"=>false, "error"=>"NPC <{$id}> does not have a valid refid"]);
+        }
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
 
 // Handle Delete
 if (isset($_GET["delete"])) {
@@ -3655,6 +3721,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <button id="npc_modal_close" class="btn-cancel">Close</button>
       </div>
     </div>
+    <div class="modal-header-dev">
+        <span style="cursor:pointer" id="" onclick="document.getElementById('npc_modal_dev_toggle').style.display = (document.getElementById('npc_modal_dev_toggle').style.display === 'none' ? 'block' : 'none')">🐞</span>
+        <div id="npc_modal_dev_toggle" class="modal-dev-actions" style="font-size:8px;zoom:0.75px;display:none">
+            <button id="npc_modal_dev_visit" title="Teleport player to NPC">Visit</button>
+            <button id="npc_modal_dev_teleport" title="Teleport NPC to player">Teleport</button>
+            <button id="npc_modal_dev_bgl_inception" title="BgL Inception. Puts an ephemeral thought on BgL NPC">BgL Inception</button>
+        </div>
+    </div>
     <div class="modal-body">
       <div id="npc_modal_tabs" style="display:flex; gap:8px; padding:8px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2;">
         <button type="button" class="pf-tab active" data-pane="pane_manual">✍️ Manual</button>
@@ -5459,6 +5533,81 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     });
   }
   
+  const visitBtn = document.getElementById('npc_modal_dev_visit');
+  if (visitBtn) {
+    visitBtn.addEventListener('click', async function(){
+      
+        const formData = new FormData();
+        const id = window.CURRENT_NPC_ID;
+        if (!id) { alert('No NPC selected. Save the NPC first before importing.'); return; }
+
+        formData.append('dev_visit', '1');
+        formData.append('target_id', id);
+        
+        const res = await fetch('npc_master.php', { method: 'POST', body: formData });
+        const result = await res.json();
+        
+        if (result.ok) {
+            alert(result.message || 'Dev visit triggered successfully');
+        
+        } else {
+            alert('Error: ' + (result.error || 'Dev visit failed'));
+        }
+            
+    });
+  }
+
+  const bglInceptionBtn = document.getElementById('npc_modal_dev_bgl_inception');
+  if (bglInceptionBtn) {
+    bglInceptionBtn.addEventListener('click', async function(){
+      
+        const formData = new FormData();
+        const id = window.CURRENT_NPC_ID;
+        const idea=prompt('Enter the idea for BgL Inception:');
+
+        formData.append('bgl_inception', '1');
+        formData.append('idea', idea);
+        formData.append('target_id', id);
+        
+        const res = await fetch('npc_master.php', { method: 'POST', body: formData });
+        const result = await res.json();
+        
+        if (result.ok) {
+            alert(result.message || 'BgL Inception triggered successfully');
+            document.location.reload();
+        } else {
+            alert('Error: ' + (result.error || 'BgL Inception failed'));
+        }
+            
+    });
+  }
+
+  
+  const teleportBtn = document.getElementById('npc_modal_dev_teleport');
+  if (teleportBtn) {
+    teleportBtn.addEventListener('click', async function(){
+      
+        const formData = new FormData();
+        const id = window.CURRENT_NPC_ID;
+        if (!id) { alert('No NPC selected. Save the NPC first before importing.'); return; }
+
+        formData.append('dev_teleport', '1');
+        formData.append('target_id', id);
+        
+        const res = await fetch('npc_master.php', { method: 'POST', body: formData });
+        const result = await res.json();
+        
+        if (result.ok) {
+            alert(result.message || 'Dev teleport triggered successfully');
+        
+        } else {
+            alert('Error: ' + (result.error || 'Dev teleport failed'));
+        }
+            
+    });
+  }
+  
+
   // Import Bio to current NPC button in modal header (only for existing NPCs)
   const importToBtn = document.getElementById('npc_modal_import_to');
   if (importToBtn) {

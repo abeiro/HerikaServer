@@ -7487,6 +7487,66 @@ if ($checkVersion("prompts") < 20260719001) {
     Logger::info("Applied patch prompts 20260719001 - improved book reading prompt");
 }
 
+if ($checkVersion("memory_summary") < 20260721001) {
+    Logger::debug("Applying memory_summary 20260721001 - normalize diary memory owners");
+
+    $migrationOk = $db->execQuery("
+        UPDATE public.memory_summary
+        SET companions = '|' || trim(both '|' from trim(companions)) || '|'
+        WHERE classifier = 'diary'
+          AND nullif(trim(companions), '') IS NOT NULL
+          AND companions NOT LIKE '|%|'
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("memory_summary", 20260721001);
+        Logger::info("Applied patch memory_summary 20260721001");
+    } else {
+        Logger::error("Failed to apply patch memory_summary 20260721001");
+    }
+}
+
+
+if ($checkVersion("physical_npc_diaries") < 20260719001) {
+    Logger::debug("Applying physical_npc_diaries 20260719001 - add physical NPC diary tracking");
+
+    $schemaPath = __DIR__ . "/../lib/core/database_schema/physical_npc_diaries.sql";
+    if ($db->execQuery(file_get_contents($schemaPath))) {
+        $updateVersion("physical_npc_diaries", 20260719001);
+        Logger::info("Applied patch physical_npc_diaries 20260719001");
+    } else {
+        Logger::error("Failed to apply patch physical_npc_diaries 20260719001");
+    }
+}
+
+if ($checkVersion("physical_npc_diaries") < 20260719002) {
+    Logger::debug("Applying physical_npc_diaries 20260719002 - remove draft action registration");
+
+    $db->execQuery("DELETE FROM public.core_action WHERE code_name = 'MaterializeDiary'");
+    $updateVersion("physical_npc_diaries", 20260719002);
+    Logger::info("Applied patch physical_npc_diaries 20260719002");
+}
+
+if ($checkVersion("playthrough_schema") < 20260723001) {
+    Logger::debug("Applying playthrough_schema 20260723001 - repair stale database sequences");
+
+    $schemaFunctionsPath = __DIR__ . "/../lib/schema_clone_function.sql";
+    $migrationOk = is_readable($schemaFunctionsPath)
+        && $db->execQuery(file_get_contents($schemaFunctionsPath)) !== false;
+
+    if ($migrationOk) {
+        $migrationOk = $db->execQuery(
+            "SELECT chim_meta.sync_schema_sequences('public')"
+        ) !== false;
+    }
+
+    if ($migrationOk) {
+        $updateVersion("playthrough_schema", 20260723001);
+        Logger::info("Applied patch playthrough_schema 20260723001");
+    } else {
+        Logger::error("Failed to apply patch playthrough_schema 20260723001");
+    }
+}
 
 // master Packages update 
 if ($checkVersion("master_packages")<20260716002) {
@@ -7497,6 +7557,36 @@ if ($checkVersion("master_packages")<20260716002) {
         Logger::error("Failed to apply patch master_packages 20260716001");
     }
 
+}
+if ($checkVersion("master_packages")<20260724001) {
+    if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607-2.sql"))) {
+       $updateVersion("master_packages", 20260724001);
+       Logger::info("Applied patch master_packages 20260724001");
+    } else {
+        Logger::error("Failed to apply patch master_packages 20260724001");
+    }
+
+}
+
+
+//----------------------------------------------------
+// VISUAL CONTEXT - Persistent image descriptions
+// Version 20260718001
+//----------------------------------------------------
+
+if ($checkVersion("visual_context") < 20260718001) {
+    Logger::debug("Applying visual_context 20260718001 - add persistent visual descriptions");
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'visual_context.php');
+
+    $b_ok = chimEnsureVisualContextTable();
+    if ($b_ok) {
+        chimSetGeneralSetting('VISUAL_CONTEXT_SCENE_TTL_MINUTES', 10, chimGetSchemaDescription('VISUAL_CONTEXT_SCENE_TTL_MINUTES'));
+        chimSetGeneralSetting('VISUAL_CONTEXT_PROMPT_MAX_CHARS', 1800, chimGetSchemaDescription('VISUAL_CONTEXT_PROMPT_MAX_CHARS'));
+        $updateVersion("visual_context", 20260718001);
+        Logger::info("Applied patch visual_context 20260718001");
+    } else {
+        Logger::error("Failed to apply patch visual_context 20260718001");
+    }
 }
 
 Logger::info(__FILE__." update file processed");

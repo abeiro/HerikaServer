@@ -2355,7 +2355,6 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     Logger::info("diary_narrator: Direct narrator diary request received");
     
     if (empty($GLOBALS["NARRATOR_DIARY_ENABLED"])) {
-        echo "The Narrator|rolecommand|DebugNotification@Narrator diary is disabled." . PHP_EOL;
         Logger::warn("diary_narrator: Narrator diary is disabled");
         terminate();
     }

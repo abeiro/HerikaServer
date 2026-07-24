@@ -110,6 +110,8 @@
   "POWER_AWARENESS_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"NPCs will be aware of relative power levels (based on character level) and react appropriately to threats.","_title":"Power Awareness System"},
   "CLEAN_CONTEXT_FOCUS_CHAT_HISTORY": {"userlvl":"basic","type": "integer","description": "Context history length with only conversations. Ideally set it to 20-30.","scope":"global"},
   "BGL_TRIGGER_HOURS": {"userlvl":"basic","type": "number","default": 24,"description": "Number of in-game hours between Background Life events. NPCs will generate thoughts and take actions based on this interval. Default: 24 hours. Range: 1-720 hours.","scope":"global"},
+  "VISUAL_CONTEXT_SCENE_TTL_MINUTES": {"userlvl":"basic","type":"integer","default":10,"description":"Minutes before an unlocked visual scene description expires from prompt context. Locked records do not expire.","scope":"global"},
+  "VISUAL_CONTEXT_PROMPT_MAX_CHARS": {"userlvl":"pro","type":"integer","default":1800,"description":"Maximum number of visual context characters included in each roleplay prompt.","scope":"global"},
   "CONNECTOR": {
     "_title":"AI/LLM Connectors",
     "openrouterjson": {
@@ -550,7 +552,7 @@
     "MEMORY_EMBEDDING": {
       "_title":"Memory Settings",
       "ENABLED": {"type":"boolean","description":"Enable long-term memory recall. The system injects relevant memory summaries into AI context for responses."},
-      "TXTAI_URL": {"type":"url","description":"TXT2VEC from DwemerDistro. Make sure its set to http://127.0.0.1:8082"},
+      "TXTAI_URL": {"type":"url","description":"MiniMe/TXT2VEC service base URL. Use http://127.0.0.1:8082 for the local DwemerDistro service, or set the reachable URL of a remote service."},
       "USE_TEXT2VEC": {"type":"boolean","description":"Use TXT2VEC to create embeddings for memories. These are more accurate than keywords."},
       "MEMORY_TIME_DELAY": {"type":"integer","description":"Time in minutes to delay before using a memory in a prompt. Used to avoid pushing recent dialogues as memories."},
       "MEMORY_CONTEXT_SIZE": {"type":"integer","description":"The amount of the most relevant memory records that will be injected into the prompt."},

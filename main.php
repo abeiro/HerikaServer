@@ -2044,6 +2044,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         // Change name of functions here
         // Function clone and renaming
         // ExchangeItems (trade with player) will be modified to TradeItems (roleplayed trade)
+        /*
         if ($rechatActionWasEnabled("TradeItems") && isset($GLOBALS["BASE_FUNCTIONS"]["OpenInventory"])) {
             $NEWFUNCTION=$GLOBALS["BASE_FUNCTIONS"]["OpenInventory"];
             $NEWFUNCTION["name"]="TradeItems";
@@ -2053,6 +2054,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
             $GLOBALS["ENABLED_FUNCTIONS"][]="TradeItems";
             $GLOBALS["F_NAMES"]["TradeItems"]="TradeItems";
         }
+        */
 
         if ($GLOBALS["IS_NPC"] && $rechatActionWasEnabled("TravelTo") && isset($GLOBALS["BASE_FUNCTIONS"]["TravelTo"])) {
             // TravelTo (lead the way to for player) will be modified to TravelTo (TravelTo) if no follower

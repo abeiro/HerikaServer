@@ -82,7 +82,7 @@ $spawnNpcFormData = [
     'speech_style' => '',
     'disposition' => 'friendly',
     'goal' => '',
-    'starting_point' => '0x0002b0dd',
+    'starting_point' => '',
     'gold_qty' => '100',
     'iron_ore_qty' => '10',
     'gold_ore_qty' => '5',
@@ -666,9 +666,17 @@ if (!function_exists('race_icon_web_path')) {
             echo json_encode(['ok' => false, 'message' => 'NPC name required']);
             return;
         }
-        
+        $npcMaster=new NpcMaster();
+        $npcData=$npcMaster->getByName($npcName);
+        $extendedData=$npcMaster->getExtendedData($npcData);
+        if (!isset($extendedData['background_life_commands']) || $extendedData['background_life_commands']===false) {
+            `php $enginePath/debug/simple_llm_request_with_context_life.php "$npcName" full forceaction`;
+        } else {
+            `php $enginePath/debug/simple_llm_request_with_context_life_v2.php "$npcName" full forceaction`;
+        }
+
         // Add your handler code here
-        `php $enginePath/debug/simple_llm_request_with_context_life_v2.php "$npcName" full forceaction`;
+        
 
         echo json_encode(['ok' => true, 'message' => "Action request processed for $npcName"]);
     }
@@ -2871,7 +2879,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     <input id="npc_disposition" name="npc_disposition" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['disposition'] ?? 'friendly'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
                 </div>
                 <div>
-                    <label for="npc_starting_point" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Starting Point (FormID)</label>
+                    <label for="npc_starting_point" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Starting Point (FormID) (will use location if empty)</label>
                     <input id="npc_starting_point" name="npc_starting_point" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['starting_point'] ?? '0x0002b0dd'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
                 </div>
                 <div>

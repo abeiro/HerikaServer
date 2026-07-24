@@ -74,6 +74,7 @@ $gsSections = [
     ],
     'Memory' => [
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@TXTAI_URL', 'type' => 'url' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
     ],
@@ -119,6 +120,9 @@ function pretty_label(string $flatName): string
     if (strpos($flatName, 'FEATURES@MEMORY_EMBEDDING@') === 0) {
         $parts = explode('@', $flatName);
         $last = end($parts) ?: $flatName;
+        if (strtoupper(trim($last)) === 'TXTAI_URL') {
+            return 'MiniMe / TXT2VEC URL';
+        }
         return ucwords(str_replace('_', ' ', strtolower(trim($last))));
     }
     if (strpos($flatName, 'TRANSLATION@settings@') === 0) {
@@ -145,7 +149,7 @@ function pretty_label(string $flatName): string
     $customLabels = [
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
         'CORE_CONNECTOR_SUMMARY' => 'Summaries',
-        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
+        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory',
         'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
         'SCENE_CLASSIFIER_ENABLED' => 'Scene Classifier',
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',

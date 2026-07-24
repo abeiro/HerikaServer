@@ -8,6 +8,7 @@ class ProfileLLMMode
         'middle_term_memory' => 'MIDDLE_TERM_MEMORY_ENABLED',
         'auto_diary' => 'AUTO_DIARY_ENABLED',
         'auto_diary_wait' => 'AUTO_DIARY_WAIT_ENABLED',
+        'physical_diary' => 'MATERIALIZE_DIARY_ENABLED',
     ];
     public const CONNECTOR_SLOTS = [
         1 => ['key' => 'standard', 'label' => 'Standard', 'field' => 'llm_primary_id'],
