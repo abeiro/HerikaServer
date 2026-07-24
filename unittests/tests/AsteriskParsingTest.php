@@ -254,12 +254,12 @@ final class AsteriskParsingTest extends TestCase
         );
     }
 
-    public function testIntimateModeUsesPrivateTargetAndPeopleScope(): void
+    public function testCloseModeUsesPrivateTargetAndPeopleScope(): void
     {
         $GLOBALS['PLAYER_NAME'] = 'Rangroo';
-        $GLOBALS['CHIM_EXECUTION_MODE'] = 'INTIMATE';
+        $GLOBALS['CHIM_EXECUTION_MODE'] = 'CLOSE';
 
-        $this->assertTrue(isIntimateExecutionMode());
+        $this->assertTrue(isCloseExecutionMode());
         $this->assertTrue(isPrivateConversationExecutionMode());
         $this->assertSame(
             '(speaking privately to Corpulus Vinius)',

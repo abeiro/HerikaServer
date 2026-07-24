@@ -11,7 +11,7 @@
 // * Whisper (WHISPER)
 //      Uses the plugin-provided reduced routing radius and private server context.
 //
-// * Intimate (INTIMATE)
+// * Close (CLOSE)
 //      Uses the plugin-provided 200-unit private routing scope. Only the player
 //      and resolved responder are admitted to the conversation context.
 //
@@ -64,7 +64,7 @@ if ($EXECUTION_MODE=="STANDARD") {
 } else if ($EXECUTION_MODE=="WHISPER") {
     // Routing distance is request-local and supplied by the CHIM plugin.
 
-} else if ($EXECUTION_MODE=="INTIMATE") {
+} else if ($EXECUTION_MODE=="CLOSE") {
     // Routing distance and private audience are supplied by the CHIM plugin.
 
 } else if ($EXECUTION_MODE=="NARRATOR") {

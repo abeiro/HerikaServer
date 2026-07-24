@@ -163,7 +163,7 @@ if (isset($gameRequest[3]) && is_string($gameRequest[3]) &&
     in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext", "chat", "prechat", "rechat", "continue", "continue_group"], true)) {
     if ($chimExecutionMode === "WHISPER") {
         $gameRequest[3] = convertTalkingTagsToWhispering($gameRequest[3]);
-    } elseif ($chimExecutionMode === "INTIMATE") {
+    } elseif ($chimExecutionMode === "CLOSE") {
         $gameRequest[3] = convertTalkingTagsToPrivately($gameRequest[3]);
     } elseif ($chimExecutionMode === "SHOUT") {
         $gameRequest[3] = convertTalkingTagsToShouting($gameRequest[3]);
@@ -1084,7 +1084,7 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 if (in_array($gameRequest[0],["rechat","narration"]) ) {
     $configuredChimMode = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
     $configuredChimMode = strtoupper(trim((string)($configuredChimMode["value"] ?? "")));
-    if (in_array($configuredChimMode, ["WHISPER", "INTIMATE"], true)) {
+    if (in_array($configuredChimMode, ["WHISPER", "CLOSE"], true)) {
         Logger::info("[RECHAT_SELECT] {$configuredChimMode} mode is active; terminating private rechat/narration request");
         terminate();
     }
@@ -1720,14 +1720,14 @@ if (isWhisperExecutionMode() && in_array($gameRequest[0] ?? "", $playerInputEven
         $directiveFallbackPeople = "";
         Logger::info("Scoped CACHE_PEOPLE for WHISPER {$gameRequest[0]}: " . $whisperPrivatePeople);
     }
-} elseif (isIntimateExecutionMode() &&
+} elseif (isCloseExecutionMode() &&
           in_array($gameRequest[0] ?? "", $playerInputEventTypes, true) &&
           $authoritativePeople === "") {
-    $intimatePrivatePeople = buildPrivateConversationPeople($GLOBALS["HERIKA_NAME"] ?? "");
-    if ($intimatePrivatePeople !== "") {
-        $authoritativePeople = $intimatePrivatePeople;
+    $closePrivatePeople = buildPrivateConversationPeople($GLOBALS["HERIKA_NAME"] ?? "");
+    if ($closePrivatePeople !== "") {
+        $authoritativePeople = $closePrivatePeople;
         $directiveFallbackPeople = "";
-        Logger::info("Scoped CACHE_PEOPLE for INTIMATE {$gameRequest[0]} from private fallback: " . $intimatePrivatePeople);
+        Logger::info("Scoped CACHE_PEOPLE for CLOSE {$gameRequest[0]} from private fallback: " . $closePrivatePeople);
     }
 }
 
@@ -2009,11 +2009,11 @@ if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_
         $GLOBALS["COMMAND_PROMPT"] = "";
     }
     $GLOBALS["COMMAND_PROMPT"] .= "\n\n[Whisper mode is active. {$GLOBALS["PLAYER_NAME"]} is whispering to you. Reply by whispering back in a quiet, discreet, close-range tone and keep the delivery private.]";
-} elseif (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_EXECUTION_MODE"]) === "INTIMATE") {
+} elseif (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_EXECUTION_MODE"]) === "CLOSE") {
     if (!isset($GLOBALS["COMMAND_PROMPT"]) || !is_string($GLOBALS["COMMAND_PROMPT"])) {
         $GLOBALS["COMMAND_PROMPT"] = "";
     }
-    $GLOBALS["COMMAND_PROMPT"] .= "\n\n[Intimate mode is active. {$GLOBALS["PLAYER_NAME"]} is speaking privately to you at close range. Respond only to {$GLOBALS["PLAYER_NAME"]}; do not assume any bystanders can hear or participate.]";
+    $GLOBALS["COMMAND_PROMPT"] .= "\n\n[Close mode is active. {$GLOBALS["PLAYER_NAME"]} is speaking privately to you at close range. Respond only to {$GLOBALS["PLAYER_NAME"]}; do not assume any bystanders can hear or participate.]";
 }
 
 

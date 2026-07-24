@@ -2893,15 +2893,15 @@ function isWhisperExecutionMode()
     return ($mode === "WHISPER");
 }
 
-function isIntimateExecutionMode()
+function isCloseExecutionMode()
 {
     $mode = isset($GLOBALS["CHIM_EXECUTION_MODE"]) ? strtoupper(trim((string)$GLOBALS["CHIM_EXECUTION_MODE"])) : "";
-    return ($mode === "INTIMATE");
+    return ($mode === "CLOSE");
 }
 
 function isPrivateConversationExecutionMode()
 {
-    return isWhisperExecutionMode() || isIntimateExecutionMode();
+    return isWhisperExecutionMode() || isCloseExecutionMode();
 }
 
 function buildPrivateConversationPeople($listenerName = "")
@@ -2945,7 +2945,7 @@ function buildDialogueTargetSuffix($listenerName, $isSpeakingLoudly = false)
         return "(speaking loudly to {$listenerName} from far away)";
     }
 
-    if (isIntimateExecutionMode()) {
+    if (isCloseExecutionMode()) {
         return "(speaking privately to {$listenerName})";
     }
 
