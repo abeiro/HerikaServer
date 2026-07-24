@@ -111,15 +111,32 @@ BEGIN
     -- Clone sequences with their current values
     -- Must happen AFTER table data is copied to ensure sync
     FOR obj IN
-        SELECT sequencename FROM pg_sequences WHERE schemaname = source_schema
+        SELECT sequencename, increment_by
+        FROM pg_sequences
+        WHERE schemaname = source_schema
     LOOP
         DECLARE
             table_name text;
-            max_val bigint := 0;
-            source_val bigint := 0;
+            column_name text;
+            boundary_value bigint;
+            table_next_value bigint;
+            source_last_value bigint;
+            source_is_called boolean;
+            source_next_value bigint;
         BEGIN
-            -- Get current sequence value from source
-            EXECUTE format('SELECT last_value FROM %I.%I', source_schema, obj.sequencename) INTO source_val;
+            -- Preserve the source's actual next value. last_value itself is
+            -- still pending when is_called is false.
+            EXECUTE format(
+                'SELECT last_value, is_called FROM %I.%I',
+                source_schema,
+                obj.sequencename
+            ) INTO source_last_value, source_is_called;
+            source_next_value := CASE
+                WHEN source_is_called
+                    THEN source_last_value + obj.increment_by
+                ELSE source_last_value
+            END;
+            seq_val := source_next_value;
             
             -- Create sequence in destination if it doesn't exist
             EXECUTE format('CREATE SEQUENCE IF NOT EXISTS %I.%I', dest_schema, obj.sequencename);
@@ -130,50 +147,37 @@ BEGIN
                 -- Extract table name and column name from sequence name
                 IF obj.sequencename LIKE '%_rowid_seq' THEN
                     table_name := regexp_replace(obj.sequencename, '_rowid_seq$', '');
-                    
-                    -- Try to get max rowid from the destination table
-                    BEGIN
-                        EXECUTE format('SELECT COALESCE(MAX(rowid), 0) FROM %I.%I', dest_schema, table_name) INTO max_val;
-                        
-                        -- Use the greater of: source sequence value or table max + 1
-                        IF max_val >= source_val THEN
-                            seq_val := max_val + 1;
-                            RAISE NOTICE 'Sequence % adjusted: source=% tablemax=% final=%', 
-                                        obj.sequencename, source_val, max_val, seq_val;
-                        ELSE
-                            seq_val := source_val;
-                        END IF;
-                    EXCEPTION WHEN OTHERS THEN
-                        -- Table might not exist or have a 'rowid' column, just use source value
-                        seq_val := source_val;
-                    END;
+                    column_name := 'rowid';
                 ELSIF obj.sequencename LIKE '%_id_seq' THEN
                     table_name := regexp_replace(obj.sequencename, '_id_seq$', '');
-                    
-                    -- Try to get max id from the destination table
-                    BEGIN
-                        EXECUTE format('SELECT COALESCE(MAX(id), 0) FROM %I.%I', dest_schema, table_name) INTO max_val;
-                        
-                        -- Use the greater of: source sequence value or table max + 1
-                        IF max_val >= source_val THEN
-                            seq_val := max_val + 1;
-                            RAISE NOTICE 'Sequence % adjusted: source=% tablemax=% final=%', 
-                                        obj.sequencename, source_val, max_val, seq_val;
-                        ELSE
-                            seq_val := source_val;
-                        END IF;
-                    EXCEPTION WHEN OTHERS THEN
-                        -- Table might not exist or have an 'id' column, just use source value
-                        seq_val := source_val;
-                    END;
+                    column_name := 'id';
                 END IF;
-            ELSE
-                -- Not a table sequence, just copy the value
-                seq_val := source_val;
+
+                BEGIN
+                    EXECUTE format(
+                        'SELECT %s(%I)::bigint FROM %I.%I',
+                        CASE WHEN obj.increment_by > 0 THEN 'MAX' ELSE 'MIN' END,
+                        column_name,
+                        dest_schema,
+                        table_name
+                    ) INTO boundary_value;
+
+                    IF boundary_value IS NOT NULL THEN
+                        table_next_value := boundary_value + obj.increment_by;
+                        IF (obj.increment_by > 0 AND table_next_value > seq_val)
+                            OR (obj.increment_by < 0 AND table_next_value < seq_val) THEN
+                            seq_val := table_next_value;
+                            RAISE NOTICE 'Sequence % adjusted: source_next=% table_boundary=% final=%',
+                                obj.sequencename, source_next_value, boundary_value, seq_val;
+                        END IF;
+                    END IF;
+                EXCEPTION WHEN OTHERS THEN
+                    -- Table might not exist or use the conventional column.
+                    seq_val := source_next_value;
+                END;
             END IF;
             
-            -- seq_val represents the next value to issue, so leave is_called
-            -- false. Marking it called would skip an extra ID.
+            -- seq_val is the exact next value to issue.
             EXECUTE format('SELECT setval(''%I.%I'', %s, false)', dest_schema, obj.sequencename, seq_val);
         END;
     END LOOP;

@@ -52,6 +52,18 @@ SQL;
             'PERFORM chim_meta.sync_schema_sequences(dest_schema)',
             $sql
         );
+        $this->assertStringContainsString(
+            'SELECT last_value, is_called FROM %I.%I',
+            $sql
+        );
+        $this->assertStringContainsString(
+            'THEN source_last_value + obj.increment_by',
+            $sql
+        );
+        $this->assertStringContainsString(
+            "SELECT setval(''%I.%I'', %s, false)",
+            $sql
+        );
     }
 
     public function testDatabaseUpdateRepairsExistingPublicSequences(): void
