@@ -26,12 +26,28 @@ final class DiaryMemoryRecallTest extends TestCase
 
     protected function tearDown(): void
     {
-        unset($GLOBALS['db']);
+        unset($GLOBALS['db'], $GLOBALS['NARRATOR_ONLY_DIARY_ACCESS']);
     }
 
-    public function testNarratorSearchesTheGlobalMemoryBank(): void
+    public function testNarratorSearchesTheGlobalMemoryBankByDefault(): void
     {
         $this->assertSame('TRUE', dataGetMemoryCompanionConditionSql(''));
+    }
+
+    public function testNarratorCanBeRestrictedToItsOwnDiary(): void
+    {
+        $GLOBALS['NARRATOR_ONLY_DIARY_ACCESS'] = true;
+
+        $this->assertSame(
+            "(COALESCE(memory_summary.classifier, '') NOT IN ('diary','auto_diary','backgroundlife_diary')"
+                . " OR memory_summary.companions LIKE '%|The Narrator|%'"
+                . " OR memory_summary.companions='The Narrator')",
+            dataGetMemoryCompanionConditionSql(
+                '',
+                'memory_summary.companions',
+                'memory_summary.classifier'
+            )
+        );
     }
 
     public function testDiaryPackingWritesCanonicalOwnerFormat(): void

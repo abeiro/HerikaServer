@@ -4815,12 +4815,26 @@ function dataGetMemoryScopeConditionSql($npcName)
     return "(scope IS NULL OR scope='global')";
 }
 
-function dataGetMemoryCompanionConditionSql($npcName, string $column = 'companions'): string
+function dataGetMemoryCompanionConditionSql(
+    $npcName,
+    string $column = 'companions',
+    string $classifierColumn = 'classifier'
+): string
 {
     $npcName = trim((string)$npcName);
     if ($npcName === '') {
-        // The narrator intentionally searches the global memory bank.
-        return 'TRUE';
+        $narratorOnlyDiaryAccess = filter_var(
+            $GLOBALS['NARRATOR_ONLY_DIARY_ACCESS'] ?? false,
+            FILTER_VALIDATE_BOOLEAN
+        );
+        if (!$narratorOnlyDiaryAccess) {
+            // By default, the narrator searches every NPC diary in the global memory bank.
+            return 'TRUE';
+        }
+
+        $narratorName = $GLOBALS['db']->escape('The Narrator');
+        return "(COALESCE($classifierColumn, '') NOT IN ('diary','auto_diary','backgroundlife_diary')"
+            . " OR $column LIKE '%|$narratorName|%' OR $column='$narratorName')";
     }
 
     $npcEsc = $GLOBALS['db']->escape($npcName);
@@ -4944,7 +4958,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
     
     
     $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
-    $companionConditionSql = dataGetMemoryCompanionConditionSql($npcfilter, 'A.companions');
+    $companionConditionSql = dataGetMemoryCompanionConditionSql($npcfilter, 'A.companions', 'A.classifier');
 
     $memory=$GLOBALS["db"]->fetchAll("
         SELECT summary,gamets_truncated,
