@@ -23,7 +23,7 @@ class ApiBadge {
 			$filtered['id'] = (int)$filtered['id'];
 		}
         
-        return $this->db->insert($this->table, $filtered);
+        return $this->db->insertReturningId($this->table, $filtered);
     }
 
     // Read by ID
@@ -69,6 +69,10 @@ class ApiBadge {
     // Truncate the table
     public function truncate($restart = false, $cascade = false) {
         return $this->db->truncate($this->table, $restart, $cascade);
+    }
+
+    public function getLastError() {
+        return $this->db->GetLastError();
     }
 
     // Upsert using ON CONFLICT (requires UNIQUE or PRIMARY constraint)

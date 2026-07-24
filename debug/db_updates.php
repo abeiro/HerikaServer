@@ -7527,6 +7527,27 @@ if ($checkVersion("physical_npc_diaries") < 20260719002) {
     Logger::info("Applied patch physical_npc_diaries 20260719002");
 }
 
+if ($checkVersion("playthrough_schema") < 20260723001) {
+    Logger::debug("Applying playthrough_schema 20260723001 - repair stale database sequences");
+
+    $schemaFunctionsPath = __DIR__ . "/../lib/schema_clone_function.sql";
+    $migrationOk = is_readable($schemaFunctionsPath)
+        && $db->execQuery(file_get_contents($schemaFunctionsPath)) !== false;
+
+    if ($migrationOk) {
+        $migrationOk = $db->execQuery(
+            "SELECT chim_meta.sync_schema_sequences('public')"
+        ) !== false;
+    }
+
+    if ($migrationOk) {
+        $updateVersion("playthrough_schema", 20260723001);
+        Logger::info("Applied patch playthrough_schema 20260723001");
+    } else {
+        Logger::error("Failed to apply patch playthrough_schema 20260723001");
+    }
+}
+
 // master Packages update 
 if ($checkVersion("master_packages")<20260716002) {
     if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607.sql"))) {

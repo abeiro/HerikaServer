@@ -10,11 +10,13 @@
 require_once(__DIR__ . DIRECTORY_SEPARATOR . 'logger.php');
 
 /**
- * Check whether the installed clone function includes identity-column support.
+ * Check whether the installed clone function includes identity-column and
+ * ownership-based sequence synchronization support.
  */
 function pts_clone_function_is_current($definition): bool {
     return is_string($definition)
-        && stripos($definition, 'OVERRIDING SYSTEM VALUE') !== false;
+        && stripos($definition, 'OVERRIDING SYSTEM VALUE') !== false
+        && stripos($definition, 'sync_schema_sequences(dest_schema)') !== false;
 }
 
 /**
