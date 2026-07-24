@@ -21,8 +21,8 @@ BEGIN
         EXECUTE format('CREATE TABLE IF NOT EXISTS %I.%I (LIKE %I.%I INCLUDING ALL)',
                        dest_schema, obj.tablename, source_schema, obj.tablename);
         
-        -- Copy all data
-        EXECUTE format('INSERT INTO %I.%I SELECT * FROM %I.%I ON CONFLICT DO NOTHING',
+        -- Copy all data, preserving values from GENERATED ALWAYS identity columns.
+        EXECUTE format('INSERT INTO %I.%I OVERRIDING SYSTEM VALUE SELECT * FROM %I.%I ON CONFLICT DO NOTHING',
                        dest_schema, obj.tablename, source_schema, obj.tablename);
     END LOOP;
 
