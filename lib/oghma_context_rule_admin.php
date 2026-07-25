@@ -47,7 +47,7 @@ function oghma_context_rule_condition_text(array $conditions, string $field): st
 
 function oghma_context_rule_preview_context_from_post(array $post): array
 {
-    $context = [];
+    $rawContext = [];
     foreach ([
         'npc',
         'nearby_actor',
@@ -60,9 +60,9 @@ function oghma_context_rule_preview_context_from_post(array $post): array
         'weather',
         'event_type',
     ] as $field) {
-        $context[$field] = oghma_context_rule_values($post['preview_' . $field] ?? '');
+        $rawContext[$field] = oghma_context_rule_values($post['preview_' . $field] ?? '');
     }
-    return $context;
+    return chimOghmaBuildContextRulePreviewContext($rawContext);
 }
 
 function oghma_context_rule_preview_articles($conn, string $schema, array $rule): array

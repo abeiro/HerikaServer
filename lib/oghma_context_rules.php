@@ -73,6 +73,58 @@ if (!function_exists('chimOghmaWeatherSignals')) {
     }
 }
 
+if (!function_exists('chimOghmaBuildContextRulePreviewContext')) {
+    function chimOghmaBuildContextRulePreviewContext(array $rawContext): array
+    {
+        $context = [];
+        foreach (['npc', 'nearby_actor', 'faction', 'profile', 'event_type'] as $field) {
+            $context[$field] = chimOghmaRuleValues($rawContext[$field] ?? []);
+        }
+
+        $raceSignals = [];
+        foreach (chimOghmaRuleValues($rawContext['race'] ?? []) as $race) {
+            $raceSignals = array_merge($raceSignals, chimOghmaRaceSignals($race));
+        }
+        $context['race'] = chimOghmaUniqueSignals($raceSignals);
+
+        $locationSignals = [];
+        foreach (chimOghmaRuleValues($rawContext['location'] ?? []) as $location) {
+            $locationSignals = array_merge($locationSignals, chimOghmaLocationNameSignals($location));
+        }
+        $context['location'] = chimOghmaUniqueSignals($locationSignals);
+
+        $holdSignals = [];
+        foreach (chimOghmaRuleValues($rawContext['hold'] ?? []) as $hold) {
+            $holdSignals = array_merge($holdSignals, chimOghmaHoldSignals($hold));
+        }
+        $context['hold'] = chimOghmaUniqueSignals($holdSignals);
+
+        $weatherSignals = [];
+        $weatherValues = $rawContext['weather'] ?? [];
+        if (!is_array($weatherValues)) {
+            $weatherValues = [$weatherValues];
+        }
+        foreach ($weatherValues as $weather) {
+            $weatherSignals = array_merge($weatherSignals, chimOghmaWeatherSignals($weather));
+        }
+        $context['weather'] = chimOghmaUniqueSignals($weatherSignals);
+
+        $environment = [];
+        foreach (chimOghmaRuleValues($rawContext['environment'] ?? []) as $value) {
+            if (in_array($value, ['outdoor', 'outdoors', 'outside', 'exterior'], true)) {
+                $environment[] = 'exterior';
+            } elseif (in_array($value, ['indoor', 'indoors', 'inside', 'interior'], true)) {
+                $environment[] = 'interior';
+            } else {
+                $environment[] = $value;
+            }
+        }
+        $context['environment'] = chimOghmaUniqueSignals($environment);
+
+        return $context;
+    }
+}
+
 if (!function_exists('chimOghmaBuildContextRuleContext')) {
     function chimOghmaBuildContextRuleContext($db, $npcMaster = null): array
     {

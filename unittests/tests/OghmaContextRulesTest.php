@@ -137,4 +137,22 @@ final class OghmaContextRulesTest extends TestCase
             chimOghmaWeatherSignals('Outdoors it is rainy, foggy')
         );
     }
+
+    public function testPreviewContextUsesRuntimeAliasesAndEnvironmentTerms(): void
+    {
+        $context = chimOghmaBuildContextRulePreviewContext([
+            'race' => ['Dark Elf'],
+            'location' => ['Riverwood Trader'],
+            'hold' => ['Whiterun Hold'],
+            'environment' => ['Outdoors'],
+            'weather' => ['Outdoors it is Rainy, Foggy'],
+        ]);
+
+        $this->assertSame(['dark elf', 'dunmer'], $context['race']);
+        $this->assertSame(['riverwood trader', 'riverwood'], $context['location']);
+        $this->assertContains('whiterun', $context['hold']);
+        $this->assertSame(['exterior'], $context['environment']);
+        $this->assertContains('rainy', $context['weather']);
+        $this->assertContains('foggy', $context['weather']);
+    }
 }
