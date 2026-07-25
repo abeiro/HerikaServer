@@ -55,6 +55,8 @@ final class OghmaContextRulesTest extends TestCase
             'OGHMA_KNOWLEDGE',
             'OGHMA_HINT',
             'OGHMA_INJECTED_TOPICS',
+            'CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS',
+            'CACHE_LAST_KNOWN_LOCATION_HUMAN',
         ] as $key) {
             unset($GLOBALS[$key]);
         }
@@ -94,6 +96,15 @@ final class OghmaContextRulesTest extends TestCase
         $GLOBALS['OGHMA_KNOWLEDGE'] = 'knowall';
         $GLOBALS['OGHMA_HINT'] = '';
         $GLOBALS['OGHMA_INJECTED_TOPICS'] = [];
+        $GLOBALS['CACHE_LAST_KNOWN_LOCATION_CONTEXT_PARTS'] = [
+            'location' => '',
+            'location_base' => '',
+            'hold_raw' => '',
+        ];
+        $GLOBALS['CACHE_LAST_KNOWN_LOCATION_HUMAN'] = [
+            'HOLD_CANONICAL' => '',
+            'WEATHER' => '',
+        ];
 
         $db = new OghmaContextRuleFakeDb();
         $this->assertSame(1, chimOghmaInjectContextRules($db));
