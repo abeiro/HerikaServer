@@ -1639,7 +1639,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 )
             )
             AND (r.match_mods IS NULL OR r.match_mods <@ $modsArray)
-            ORDER BY r.priority DESC
+            -- Apply lower-priority rules first so higher-priority rules win last.
+            ORDER BY r.priority ASC, r.id ASC
         ";
 
 
