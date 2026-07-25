@@ -163,6 +163,8 @@ if (isset($gameRequest[3]) && is_string($gameRequest[3]) &&
     in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext", "chat", "prechat", "rechat", "continue", "continue_group"], true)) {
     if ($chimExecutionMode === "WHISPER") {
         $gameRequest[3] = convertTalkingTagsToWhispering($gameRequest[3]);
+    } elseif ($chimExecutionMode === "CLOSE") {
+        $gameRequest[3] = convertTalkingTagsToPrivately($gameRequest[3]);
     } elseif ($chimExecutionMode === "SHOUT") {
         $gameRequest[3] = convertTalkingTagsToShouting($gameRequest[3]);
     }
@@ -278,7 +280,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
         $player_rewrite_speech=cleanResponse($player_rewrite_speech);
         $player_rewrite_speech=sanitizePlayerRespeechText($player_rewrite_speech, $GLOBALS["PLAYER_NAME"] ?? null);
         $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$player_rewrite_speech";
-        $GLOBALS["CHIM_EXECUTION_MODE"] = "AUTOCHAT"; //required when using STANDARD/WHISPER and ** prefix triggers speech database fix
+        $GLOBALS["CHIM_EXECUTION_MODE"] = "AUTOCHAT"; // Required when a conversation mode uses the ** player rewrite prefix.
     }
 }
 
@@ -498,7 +500,7 @@ if (isset($_GET["profile"])) {
             $currentProfileData = null;
 
             // Highest-confidence target extraction from player text payload.
-            if ($requestText !== "" && preg_match('/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $requestText, $matches)) {
+            if ($requestText !== "" && preg_match('/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+(?:loudly|privately)\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $requestText, $matches)) {
                 $candidate = trim($matches[1]);
                 if ($candidate !== "") {
                     $fallbackNpcName = $candidate;
@@ -517,6 +519,7 @@ if (isset($_GET["profile"])) {
                 || stripos($requestText, '(Talking to The Narrator)') !== false
                 || stripos($requestText, '(Whispering to The Narrator)') !== false
                 || stripos($requestText, '(Shouting to The Narrator)') !== false
+                || stripos($requestText, '(Speaking privately to The Narrator)') !== false
                 || ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") === 0);
 
             if ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") !== 0) {
@@ -1081,8 +1084,8 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 if (in_array($gameRequest[0],["rechat","narration"]) ) {
     $configuredChimMode = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
     $configuredChimMode = strtoupper(trim((string)($configuredChimMode["value"] ?? "")));
-    if ($configuredChimMode === "WHISPER") {
-        Logger::info("[RECHAT_SELECT] WHISPER mode is active; terminating private rechat/narration request");
+    if (in_array($configuredChimMode, ["WHISPER", "CLOSE"], true)) {
+        Logger::info("[RECHAT_SELECT] {$configuredChimMode} mode is active; terminating private rechat/narration request");
         terminate();
     }
     
@@ -1678,7 +1681,14 @@ if (!isset($GLOBALS["CACHE_PARTY"])) {
     $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 } 
 
-if (in_array($gameRequest[0],["inputtext_s"]) && chimDecodeAudienceSnapshotField($gameRequest[4] ?? "") === "") {    // Stealth-targeted follower: scope to target NPC only
+$requestRoutingSnapshot = chimDecodePlayerRoutingSnapshotField($gameRequest[4] ?? "");
+$requestAudienceSnapshot = (string)($requestRoutingSnapshot["audience"] ?? "");
+$requestPresentActorsSnapshot = chimSetCurrentTurnPresentActorsSnapshot(
+    $requestRoutingSnapshot["present_actors"] ?? []
+);
+$requestPresentPeople = chimPresentActorsPeoplePipe($requestPresentActorsSnapshot);
+
+if (in_array($gameRequest[0],["inputtext_s"]) && $requestAudienceSnapshot === "") {    // Stealth-targeted follower: scope to target NPC only
     $GLOBALS["CACHE_PEOPLE"]=$GLOBALS["HERIKA_NAME"];
 }
 
@@ -1695,7 +1705,6 @@ error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime
 $playerInputEventTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
 $directiveDialogueEventTypes = ["instruction", "suggestion"];
 $turnPeopleSnapshotEventTypes = array_merge($playerInputEventTypes, $directiveDialogueEventTypes);
-$requestAudienceSnapshot = chimDecodeAudienceSnapshotField($gameRequest[4] ?? "");
 $hasAuthoritativeRequestAudience = (
     in_array($gameRequest[0] ?? "", $turnPeopleSnapshotEventTypes, true) &&
     $requestAudienceSnapshot !== ""
@@ -1717,6 +1726,20 @@ if (isWhisperExecutionMode() && in_array($gameRequest[0] ?? "", $playerInputEven
         $directiveFallbackPeople = "";
         Logger::info("Scoped CACHE_PEOPLE for WHISPER {$gameRequest[0]}: " . $whisperPrivatePeople);
     }
+} elseif (isCloseExecutionMode() &&
+          in_array($gameRequest[0] ?? "", $playerInputEventTypes, true) &&
+          $authoritativePeople === "") {
+    $closePrivatePeople = buildPrivateConversationPeople($GLOBALS["HERIKA_NAME"] ?? "");
+    if ($closePrivatePeople !== "") {
+        $authoritativePeople = $closePrivatePeople;
+        $directiveFallbackPeople = "";
+        Logger::info("Scoped CACHE_PEOPLE for CLOSE {$gameRequest[0]} from private fallback: " . $closePrivatePeople);
+    }
+}
+if (isPrivateConversationExecutionMode() &&
+    in_array($gameRequest[0] ?? "", $playerInputEventTypes, true)) {
+    $requestPresentActorsSnapshot = chimSetCurrentTurnPresentActorsSnapshot([]);
+    $requestPresentPeople = "";
 }
 
 if ($authoritativePeople !== "") {
@@ -1801,6 +1824,11 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
             if (!empty($eventPeople)) {
                 $GLOBALS["CACHE_PEOPLE"] = $eventPeople;
             }
+        }
+        if ($requestPresentPeople !== "" &&
+            in_array($gameRequest[0] ?? "", $playerInputEventTypes, true)) {
+            $eventPeople = chimMergePeoplePipeLists($eventPeople, $requestPresentPeople);
+            Logger::info("Added physical presence to event people for {$gameRequest[0]}: " . $requestPresentPeople);
         }
 
         if (in_array($gameRequest[0], $turnPeopleSnapshotEventTypes, true)) {
@@ -1997,6 +2025,11 @@ if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_
         $GLOBALS["COMMAND_PROMPT"] = "";
     }
     $GLOBALS["COMMAND_PROMPT"] .= "\n\n[Whisper mode is active. {$GLOBALS["PLAYER_NAME"]} is whispering to you. Reply by whispering back in a quiet, discreet, close-range tone and keep the delivery private.]";
+} elseif (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_EXECUTION_MODE"]) === "CLOSE") {
+    if (!isset($GLOBALS["COMMAND_PROMPT"]) || !is_string($GLOBALS["COMMAND_PROMPT"])) {
+        $GLOBALS["COMMAND_PROMPT"] = "";
+    }
+    $GLOBALS["COMMAND_PROMPT"] .= "\n\n[Close mode is active. {$GLOBALS["PLAYER_NAME"]} is speaking privately to you at close range. Respond only to {$GLOBALS["PLAYER_NAME"]}; do not assume any bystanders can hear or participate.]";
 }
 
 
@@ -2125,7 +2158,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]); // // assistant vs user war
         
-        $pattern = '/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)/i';
+        $pattern = '/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+(?:loudly|privately)\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
         
         if (!in_array($gameRequest[0],["rechat","instruction"]) ) {// Dont use minime command force on rechat.

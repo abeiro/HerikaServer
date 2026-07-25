@@ -51,14 +51,14 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                 // Remove NPC name prefix pattern (e.g., "Irileth: ")
                 $INPUT_TEXT = preg_replace('/^[^:]+:\s*/', '', $INPUT_TEXT);
                 // Remove talking to pattern
-                $pattern = '/\(talking to [^()]+\)/i';
+                $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
                 $INPUT_TEXT = preg_replace($pattern, '', $INPUT_TEXT);
                 
             } else {
                 $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
                 $replacement = "";
                 $INPUT_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]);
-                $pattern = '/\(talking to [^()]+\)/i';
+                $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
                 $INPUT_TEXT = preg_replace($pattern, '', $INPUT_TEXT);
                 $INPUT_TEXT = strtr($INPUT_TEXT, ["."=>" ", "{$GLOBALS["PLAYER_NAME"]}:"=>""]);
             }

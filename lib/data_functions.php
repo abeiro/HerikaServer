@@ -1299,6 +1299,12 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
         $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
     }
+    if (function_exists("chimBuildCurrentTurnPresentPeoplePrompt")) {
+        $peoplePresentPrompt = chimBuildCurrentTurnPresentPeoplePrompt();
+        if ($peoplePresentPrompt !== "") {
+            $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $peoplePresentPrompt;
+        }
+    }
     $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<nearby_actors>\n# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange\n</nearby_actors>";
     
     // Add faction descriptions section if any factions were found
@@ -2004,7 +2010,7 @@ function DataQuestJournal($quest)
 }
 
 function removeTalkingToOccurrences($input) {
-    $pattern = '/\((?:talking|whispering|shouting)\s+to\s+[^()]+\)/i';
+    $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
     preg_match_all($pattern, $input, $matches, PREG_OFFSET_CAPTURE);
 
     // Get all positions of the matches
@@ -2035,7 +2041,7 @@ function moveDialogueTargetSuffixToEnd($input) {
         return "";
     }
 
-    $pattern = '/\s*(\((?:talking|whispering|shouting)\s+to [^()]+?\)|\(speaking loudly to [^()]+?\))\s*/i';
+    $pattern = '/\s*(\((?:(?:talking|whispering|shouting)|speaking privately)\s+to [^()]+?\)|\(speaking loudly to [^()]+?\))\s*/i';
     if (preg_match_all($pattern, $input, $matches) !== 1 || empty($matches[1])) {
         return trim(preg_replace('/\s+/', ' ', $input));
     }
@@ -4280,16 +4286,16 @@ function DataRechatHistory()
 
 function extractDialogueTarget($string) {
     // Check if the string contains a directed-dialogue tag.
-    if ($string && preg_match('/\((?:talking|whispering|shouting)\s+to\s+/i', $string)) {
+    if ($string && preg_match('/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+/i', $string)) {
         // Extract the target's name using regular expression
-        preg_match('/\((?:talking|whispering|shouting)\s+to\s+([^\)]+)\)/i', $string, $matches);
+        preg_match('/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+([^\)]+)\)/i', $string, $matches);
         
         // Check if a match is found and extract the target's name
         if (isset($matches[1])) {
             $target = $matches[1];
 
             // Remove the directed-dialogue tag from the original string
-            $cleanedString = preg_replace('/\((?:talking|whispering|shouting)\s+to\s+[^\)]+\)/i', '', $string);
+            $cleanedString = preg_replace('/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^\)]+\)/i', '', $string);
             if (strpos($cleanedString,"{$GLOBALS["HERIKA_NAME"]}:")===0) {
                 $cleanedString=str_replace("{$GLOBALS["HERIKA_NAME"]}:","",$cleanedString);
             }
@@ -4672,6 +4678,25 @@ function DataItemsInCloseRange()
     return "";
 }
 
+function chimNormalizeExplicitActorRefTarget($target)
+{
+    $target = trim((string)$target);
+    if ($target === "") {
+        return "";
+    }
+
+    $pattern = '/\s*\[\s*RefID\s*:\s*(?:0x)?([0-9A-Fa-f]{1,8})\s*\]\s*/i';
+    if (!preg_match($pattern, $target, $matches)) {
+        return "";
+    }
+
+    $refId = strtoupper(str_pad($matches[1], 8, "0", STR_PAD_LEFT));
+    $fallbackName = trim((string)preg_replace($pattern, " ", $target));
+    $fallbackName = trim($fallbackName, " \t\n\r\0\x0B,;");
+
+    return ($fallbackName !== "" ? $fallbackName . " " : "") . "[RefID: " . $refId . "]";
+}
+
 // Find actor name with closest name, useful to sanitize actions parameters
 function FindClosestActorName($actorName)
 {
@@ -4862,13 +4887,17 @@ function DataSearchMemory($rawstring,$npcfilter) {
         // MiniMe keyword extraction
         Logger::info("Using minime-t5 context");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+        $rawstring=strtr($rawstring,[
+            "Talking to The Narrator"=>"",
+            "Whispering to The Narrator"=>"",
+            "Speaking privately to The Narrator"=>""
+        ]);
 
         $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
                     
-        $pattern = '/\(talking to [^()]+\)/i';
+        $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
         $keywords=minimeExtract($TEST_TEXT);
@@ -4935,13 +4964,17 @@ function DataSearchMemory($rawstring,$npcfilter) {
     if (empty($kwStringAll)) {
         Logger::info("Using dumb context");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+        $rawstring=strtr($rawstring,[
+            "Talking to The Narrator"=>"",
+            "Whispering to The Narrator"=>"",
+            "Speaking privately to The Narrator"=>""
+        ]);
 
         $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
                     
-        $pattern = '/\(talking to [^()]+\)/i';
+        $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
         $keywords=hashtagifySentences($TEST_TEXT);
@@ -5038,13 +5071,17 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
             Logger::info("Using minime-t5 context");
             error_log("[DataSearchMemoryByVector] Using minime-t5 context");
             $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-            $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+            $rawstring=strtr($rawstring,[
+                "Talking to The Narrator"=>"",
+                "Whispering to The Narrator"=>"",
+                "Speaking privately to The Narrator"=>""
+            ]);
 
             $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
             $replacement = "";
             $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
                         
-            $pattern = '/\(talking to [^()]+\)/i';
+            $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
             $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
             error_log("[DataSearchMemoryByVector start] minimeExtract : " . (microtime(true) - $localStartTime) . " seconds");
@@ -5126,13 +5163,17 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
         if (sizeof($result)<1) {
             Logger::info("Using dumb context");
             $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-            $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+            $rawstring=strtr($rawstring,[
+                "Talking to The Narrator"=>"",
+                "Whispering to The Narrator"=>"",
+                "Speaking privately to The Narrator"=>""
+            ]);
 
             $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
             $replacement = "";
             $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
                         
-            $pattern = '/\(talking to [^()]+\)/i';
+            $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
             $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
             $keywords=strtr($TEST_TEXT,["."=>" ",","=>" ","'"=>" "]);
@@ -5307,13 +5348,17 @@ function DataSearchOghmaByVector($rawstring,$currentOghmaTopic,$locationCtx,$con
     
     Logger::info("Using DataSearchOghmaByVector");
     $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-    $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+    $rawstring=strtr($rawstring,[
+        "Talking to The Narrator"=>"",
+        "Whispering to The Narrator"=>"",
+        "Speaking privately to The Narrator"=>""
+    ]);
 
     $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
     $replacement = "";
     $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
                 
-    $pattern = '/\(talking to [^()]+\)/i';
+    $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
     $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
    
@@ -5574,7 +5619,7 @@ function call_llm_internal() {
         "message"=>"lines of dialogue",
         "mood"=>"One of :".implode("|",normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "")),
         "action"=>"One of :".implode("|",$GLOBALS["FUNC_LIST"]),
-        "target"=>"action target actor|action destination location name",
+        "target"=>"action target actor (prefer exact Name [RefID: XXXXXXXX] from people_present, otherwise use actor name)|action destination location name",
         "item"=>"item identifier (REQUIRED for GiveItemTo: use exact BaseID:ItemName from inventory; for PickupItem: use exact RefID:ItemName from nearby_items)",
         "lang"=>"language used, (es|en|fr|...)"]);
 
@@ -5931,6 +5976,19 @@ function call_llm_internal() {
                     
                     if (isset($actionParts2[1])) {
                         // Parameter part 
+                        $explicitActorRefTarget = chimNormalizeExplicitActorRefTarget($actionParts2[1]);
+                        $refAwarePlainActions = [
+                            "Attack", "GiveItemTo", "GiveGoldTo", "TradeItems",
+                            "Follow", "MoveTo", "Brawl"
+                        ];
+                        if ($explicitActorRefTarget !== "" &&
+                            in_array($actionParts2[0], $refAwarePlainActions, true) &&
+                            substr(trim($actionParts2[1]), 0, 1) !== "{") {
+                            $actions[$n] = "{$actionParts[0]}|{$actionParts[1]}|{$actionParts2[0]}@{$explicitActorRefTarget}";
+                            error_log("[ACTION POSTFILTER {$actionParts2[0]}] Preserving explicit actor target {$explicitActorRefTarget}");
+                            continue;
+                        }
+
                         if ($actionParts2[0]=="Attack") {
                             // Lets polish the parameters
                             $localtarget=$actionParts2[1];
