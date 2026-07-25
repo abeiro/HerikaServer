@@ -44,6 +44,14 @@ if (!$conn) {
     exit;
 }
 
+require_once $rootPath . 'lib' . DIRECTORY_SEPARATOR . 'oghma_context_rule_admin.php';
+$message .= oghma_context_rule_handle_post(
+    $conn,
+    $schema,
+    $_POST,
+    $_SERVER['REQUEST_METHOD'] ?? 'GET'
+);
+
 /********************************************************************
  *  1) SINGLE TOPIC UPLOAD
  ********************************************************************/
@@ -1406,6 +1414,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             align-self: center;
         }
     }
+
 </style>
 
 <?php if ($isEmbed): ?>
@@ -1481,6 +1490,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <p>It is currently empty by default. We need your help adding more entries!</p>
                 <p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?gid=243486711#gid=243486711" style="color: yellow;" target="_blank" rel="noopener noreferrer">Would you like to know more?</a></p>
             </div>
+
+            <div id="rules-header-content" style="display: none;">
+                <p><b>Context Rules</b> inject selected Oghma articles when the current NPC and scene match your conditions.</p>
+                <p>Rules are deterministic, preserve each article's knowledge permissions, and never replace normal Oghma topic search.</p>
+            </div>
         </div>
     </div>
 
@@ -1491,6 +1505,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         </button>
         <button class="tab-button" onclick="switchTab('dynamic-tab')">
             &#x26A1; Dynamic Oghma
+        </button>
+        <button class="tab-button" onclick="switchTab('rules-tab')">
+            &#x1F3AF; Context Rules
         </button>
     </div>
 
@@ -1941,6 +1958,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         </div>
     </div>
 
+    <?php include __DIR__ . DIRECTORY_SEPARATOR . 'tmpl' . DIRECTORY_SEPARATOR . 'oghma_context_rules_panel.php'; ?>
+
 <div id="editModal" class="modal-backdrop">
     <div class="modal-container">
         <div class="modal-header">
@@ -2190,10 +2209,12 @@ function updateHeaderContent(tabId) {
     const titleText = document.getElementById('title-text');
     const oghmaContent = document.getElementById('oghma-header-content');
     const dynamicContent = document.getElementById('dynamic-header-content');
+    const rulesContent = document.getElementById('rules-header-content');
     
     // Fade out current content
     oghmaContent.style.opacity = '0';
     dynamicContent.style.opacity = '0';
+    rulesContent.style.opacity = '0';
     
     setTimeout(() => {
         if (tabId === 'dynamic-tab') {
@@ -2201,16 +2222,27 @@ function updateHeaderContent(tabId) {
             titleText.textContent = 'Dynamic Oghma';
             oghmaContent.style.display = 'none';
             dynamicContent.style.display = 'block';
+            rulesContent.style.display = 'none';
             
             // Fade in new content
             setTimeout(() => {
                 dynamicContent.style.opacity = '1';
+            }, 50);
+        } else if (tabId === 'rules-tab') {
+            titleText.textContent = 'Oghma Context Rules';
+            oghmaContent.style.display = 'none';
+            dynamicContent.style.display = 'none';
+            rulesContent.style.display = 'block';
+
+            setTimeout(() => {
+                rulesContent.style.opacity = '1';
             }, 50);
         } else {
             // Switch to regular Oghma
             titleText.textContent = 'Oghma Infinium';
             oghmaContent.style.display = 'block';
             dynamicContent.style.display = 'none';
+            rulesContent.style.display = 'none';
             
             // Fade in new content
             setTimeout(() => {
