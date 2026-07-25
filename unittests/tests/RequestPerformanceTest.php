@@ -12,7 +12,8 @@ final class RequestPerformanceTest extends TestCase
             $GLOBALS['CHIM_REQUEST_PERFORMANCE'],
             $GLOBALS['CHIM_REQUEST_PERFORMANCE_CLOCK'],
             $GLOBALS['DB_EXECUTION_TIME'],
-            $GLOBALS['runid']
+            $GLOBALS['runid'],
+            $GLOBALS['ERROR_TRIGGERED']
         );
     }
 
@@ -51,5 +52,16 @@ final class RequestPerformanceTest extends TestCase
 
         $this->assertSame($first, $second);
         $this->assertSame('complete', $second['status']);
+    }
+
+    public function testTerminalStatusRecognizesFatalErrorsButNotWarnings(): void
+    {
+        $this->assertSame('error', chimRequestPerformanceTerminalStatus(['type' => E_ERROR]));
+        $this->assertSame('error', chimRequestPerformanceTerminalStatus(['type' => E_PARSE]));
+        $this->assertSame('complete', chimRequestPerformanceTerminalStatus(['type' => E_WARNING]));
+        $this->assertSame('complete', chimRequestPerformanceTerminalStatus(null));
+
+        $GLOBALS['ERROR_TRIGGERED'] = true;
+        $this->assertSame('error', chimRequestPerformanceTerminalStatus(null));
     }
 }

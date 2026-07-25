@@ -3,9 +3,7 @@ require_once __DIR__ . '/request_performance.php';
 chimRequestPerformanceInitialize();
 
 function aiff_audit_end() {
-    chimRequestPerformanceFinish(
-        !empty($GLOBALS['ERROR_TRIGGERED']) ? 'error' : 'complete'
-    );
+    chimRequestPerformanceFinish(chimRequestPerformanceTerminalStatus(error_get_last()));
 
     $endTime = microtime(true);
     $startTime = $GLOBALS["AUDIT_START_TIME"];

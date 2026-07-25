@@ -53,6 +53,25 @@ function chimRequestPerformanceMark(string $phase): void
     $state['last_mark_at'] = $now;
 }
 
+function chimRequestPerformanceTerminalStatus(?array $lastError = null): string
+{
+    if (!empty($GLOBALS['ERROR_TRIGGERED'])) {
+        return 'error';
+    }
+
+    $fatalTypes = [
+        E_ERROR,
+        E_PARSE,
+        E_CORE_ERROR,
+        E_COMPILE_ERROR,
+        E_USER_ERROR,
+        E_RECOVERABLE_ERROR,
+    ];
+    $lastErrorType = intval($lastError['type'] ?? 0);
+
+    return in_array($lastErrorType, $fatalTypes, true) ? 'error' : 'complete';
+}
+
 function chimRequestPerformanceFinish(string $status = 'complete', bool $emit = true): ?array
 {
     if (!isset($GLOBALS['CHIM_REQUEST_PERFORMANCE'])) {
