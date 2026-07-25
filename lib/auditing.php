@@ -1,5 +1,12 @@
 <?php
+require_once __DIR__ . '/request_performance.php';
+chimRequestPerformanceInitialize();
+
 function aiff_audit_end() {
+    chimRequestPerformanceFinish(
+        !empty($GLOBALS['ERROR_TRIGGERED']) ? 'error' : 'complete'
+    );
+
     $endTime = microtime(true);
     $startTime = $GLOBALS["AUDIT_START_TIME"];
     $elapsedTime = $endTime - $startTime;

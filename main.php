@@ -137,6 +137,8 @@ $startTime = microtime(true);
 $GLOBALS["AUDIT_RUNID_REQUEST"]=$gameRequest[0];
 
 $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
+chimRequestPerformanceSetRequestType($gameRequest[0]);
+chimRequestPerformanceMark('request_parsed');
 
 // Handle deprecated events now processed by gamedata.php
 if (in_array($gameRequest[0], ['updateequipment', 'updateinventory', 'updateskills', 'updatestats'])) {
@@ -222,6 +224,7 @@ if (!in_array($gameRequest[0],$fast_commands)) {
     }
     Logger::info("Audit:Lock acquired by {$gameRequest[0]}");
 } 
+chimRequestPerformanceMark('lock_ready');
 
 // adnpc has its custom semaphore, as it write files
 if (in_array($gameRequest[0],["addnpc"])) {
@@ -1918,6 +1921,7 @@ if (isset($GLOBALS["NARRATOR_TALKS"])&&($GLOBALS["NARRATOR_TALKS"]==false)) {
 }
 
 // Use diary-specific context history if this is a diary request and CONTEXT_HISTORY_DIARY is set
+chimRequestPerformanceMark('profile_ready');
 if (($gameRequest[0] == "diary" || $gameRequest[0] == "diary_followers") && isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) && $GLOBALS["CONTEXT_HISTORY_DIARY"] > 0) {
     $lastNDataForContext = $GLOBALS["CONTEXT_HISTORY_DIARY"];
 } else {
@@ -1952,6 +1956,7 @@ $contextDataWorld = DataLastInfoFor("", -2,true);
 if (!is_array($contextDataWorld)) {
     $contextDataWorld = [];
 }
+chimRequestPerformanceMark('context_history_ready');
 
 // Add current motto to COMMAND_PROMPT
 if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[0] != "diary") {
@@ -1989,6 +1994,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 } else
      $memoryInjectionCtx=[];
 
+chimRequestPerformanceMark('memory_ready');
 error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 // Whisper-mode speaking behavior: make the NPC explicitly treat this exchange as whispered.
@@ -2197,6 +2203,7 @@ if (($minimeEnabled || $oghmaCustomEnabled || $racialOghmaEnabled || $locationOg
         $GLOBALS["OGHMA_CALLED"] = true;
     }
 }
+chimRequestPerformanceMark('oghma_ready');
 
 error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
@@ -2570,6 +2577,7 @@ if ($gameRequest[0] == "funcret") {
     $contextData = array_merge($head, ($contextDataFull), $prompt);
     
 }
+chimRequestPerformanceMark('prompt_ready');
 
 
 if (microtime(true) - $startTime > 0.25) {
@@ -2609,6 +2617,7 @@ audit_log(__FILE__." [PRE LLM CALL]  ".__LINE__);
 pipeline_status_set('llm', true);
 
 $outputWasValid = call_llm();
+chimRequestPerformanceMark('llm_complete');
 
 // Clear LLM processing status
 pipeline_status_set('llm', false);
