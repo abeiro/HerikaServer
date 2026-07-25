@@ -77,7 +77,13 @@ final class PromptCompositionTest extends TestCase
         $followerStart = strpos($diary, 'function generateFollowerDiary');
         $this->assertNotFalse($followerStart);
         $followerSource = substr($diary, $followerStart);
-        $logPosition = strpos($followerSource, "chimLogPromptComposition(\n        'diary'");
+        $matched = preg_match(
+            "/chimLogPromptComposition\\s*\\(\\s*'diary'/",
+            $followerSource,
+            $logMatch,
+            PREG_OFFSET_CAPTURE
+        );
+        $logPosition = $matched === 1 ? $logMatch[0][1] : false;
         $requestPosition = strpos($followerSource, '$connectionHandler->fast_request($contextData');
 
         $this->assertNotFalse($logPosition);
