@@ -3,14 +3,16 @@
 --
 -- Data for Name: master_packages; Type: TABLE DATA; Schema: public; Owner: dwemer
 --
+ALTER TABLE ONLY public.master_packages
+    ADD CONSTRAINT master_packages_pk PRIMARY KEY (formid);
 
 INSERT INTO public.master_packages (
-    plugin_name,
+    mod,
     formid,
-    editor_id,
-    description,
-    condition,
-    notes
+    "name",
+    "start",
+    "change",
+    "end"
 )
 VALUES (
     'AIAgent.esp',
