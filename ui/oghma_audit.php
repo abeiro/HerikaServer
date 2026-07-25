@@ -10,6 +10,7 @@ chimRuntimeBootstrap($enginePath, [
 ]);
 
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
+require_once(__DIR__ . DIRECTORY_SEPARATOR . "profile_loader.php");
 
 function h(mixed $value): string
 {
@@ -48,9 +49,42 @@ function oghmaAuditParseKeyValueString(string $raw, string $separator): array
     return $pairs;
 }
 
+function oghmaAuditHasRecallCandidatesColumn(): bool
+{
+    static $hasColumn = null;
+    if (is_bool($hasColumn)) {
+        return $hasColumn;
+    }
+
+    $db = $GLOBALS['db'] ?? null;
+    if (!$db) {
+        return false;
+    }
+
+    try {
+        $row = $db->fetchOne(
+            "SELECT 1 AS available
+               FROM information_schema.columns
+              WHERE table_schema = 'public'
+                AND table_name = 'audit_memory'
+                AND column_name = 'recall_candidates'
+              LIMIT 1"
+        );
+        $hasColumn = !empty($row['available']);
+    } catch (Throwable $exception) {
+        $hasColumn = false;
+    }
+
+    return $hasColumn;
+}
+
 function oghmaAuditBuildWhereClause(bool $matchedOnly): string
 {
     if ($matchedOnly) {
+        if (oghmaAuditHasRecallCandidatesColumn()) {
+            return "WHERE COALESCE(memory, '') LIKE '%selected=%'
+                OR jsonb_array_length(COALESCE(recall_candidates, '[]'::jsonb)) > 0";
+        }
         return "WHERE COALESCE(memory, '') LIKE '%selected=%'";
     }
     return '';
@@ -84,8 +118,11 @@ function oghmaAuditFetchRows(int $limit = 50, int $offset = 0, bool $matchedOnly
     $safeOffset = max(0, $offset);
     try {
         $whereSql = oghmaAuditBuildWhereClause($matchedOnly);
+        $candidateSelect = oghmaAuditHasRecallCandidatesColumn()
+            ? 'recall_candidates'
+            : 'NULL::jsonb AS recall_candidates';
         return $db->fetchAll(
-            'SELECT created_at, input, keywords, rank_any, rank_all, memory, "time"
+            'SELECT created_at, input, keywords, rank_any, rank_all, memory, "time", ' . $candidateSelect . '
              FROM audit_memory
              ' . $whereSql . '
              ORDER BY created_at DESC
@@ -176,7 +213,7 @@ $rangeEnd = min($offset + $perPage, $totalRows);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oghma Audit</title>
+    <title>Oghma and Memory Audit</title>
     <link rel="icon" type="image/x-icon" href="/HerikaServer/ui/images/favicon.ico">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="css/main.css">
@@ -273,8 +310,32 @@ $rangeEnd = min($offset + $perPage, $totalRows);
             background:#111; color:#f2f2f2; border:1px solid #4a4a4a; border-radius:8px; padding:6px 8px;
         }
         .empty-state { padding: 20px; text-align:center; color:#aaa; }
+        .candidate-list {
+            display: grid;
+            gap: 7px;
+        }
+        .candidate-row {
+            display: grid;
+            grid-template-columns: 70px 100px 120px 110px minmax(240px, 1fr);
+            gap: 10px;
+            align-items: start;
+            padding: 8px 10px;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 7px;
+            background: rgba(255,255,255,.025);
+        }
+        .candidate-row.selected {
+            border-color: rgba(76,143,99,.9);
+            background: rgba(76,143,99,.10);
+        }
+        .candidate-label {
+            color: #b8b8b8;
+            font-size: .75rem;
+            text-transform: uppercase;
+        }
         @media (max-width: 850px) {
             .toolbar-wrap { grid-template-columns: 1fr; }
+            .candidate-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -284,8 +345,8 @@ $rangeEnd = min($offset + $perPage, $totalRows);
 <?php endif; ?>
 <main class="page-wrap container-fluid">
     <div class="page-header">
-        <h1>Oghma Audit</h1>
-        <div>Review Oghma retrieval attempts, selected topics, ranks, and captured search signals.</div>
+        <h1>Oghma and Memory Audit</h1>
+        <div>Review Oghma retrieval attempts and memory recall candidate scoring.</div>
     </div>
 
     <div class="toolbar-wrap">
@@ -346,6 +407,16 @@ $rangeEnd = min($offset + $perPage, $totalRows);
                 $rank = strval($row['rank_any'] ?? '0');
                 $elapsed = strval($row['time'] ?? '');
                 $created = strval($row['created_at'] ?? '');
+                $recallCandidates = json_decode(strval($row['recall_candidates'] ?? '[]'), true);
+                $recallCandidates = is_array($recallCandidates) ? $recallCandidates : [];
+                $isMemoryRecall = count($recallCandidates) > 0;
+                $selectedRecallCandidate = null;
+                foreach ($recallCandidates as $recallCandidate) {
+                    if (is_array($recallCandidate) && !empty($recallCandidate['selected'])) {
+                        $selectedRecallCandidate = $recallCandidate;
+                        break;
+                    }
+                }
                 $keywordMap = oghmaAuditParseKeyValueString($keywords, ' | ');
                 $memoryMap = oghmaAuditParseKeyValueString($memory, ' / ');
                 $selected = oghmaAuditSelectedTopic($memoryMap, $memory);
@@ -358,16 +429,29 @@ $rangeEnd = min($offset + $perPage, $totalRows);
                 $signals = oghmaAuditSignalTrace(strval($keywordMap['signals'] ?? ($memoryMap['signals'] ?? '')), $memory);
                 $context = strval($memoryMap['context'] ?? '');
                 $location = strval($memoryMap['location'] ?? '');
-                $status = $selected !== '' ? 'Matched' : 'No Match';
-                $searchBlob = strtolower(implode(' ', [$input, $selected, $topics, $notes, $signals, $context, $location, $created, $npcName, $eventType]));
+                $status = $isMemoryRecall
+                    ? (is_array($selectedRecallCandidate) ? 'Memory Selected' : 'No Memory')
+                    : ($selected !== '' ? 'Matched' : 'No Match');
+                $auditType = $isMemoryRecall ? 'Memory Recall' : 'Oghma';
+                $selectedResult = $isMemoryRecall
+                    ? strval($selectedRecallCandidate['rowid'] ?? '')
+                    : $selected;
+                $displayRank = $isMemoryRecall
+                    ? strval($selectedRecallCandidate['hybrid_score'] ?? $rank)
+                    : $rank;
+                $candidateSearchText = $isMemoryRecall
+                    ? json_encode($recallCandidates, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+                    : '';
+                $searchBlob = strtolower(implode(' ', [$input, $selectedResult, $topics, $notes, $signals, $context, $location, $created, $npcName, $eventType, $candidateSearchText]));
             ?>
             <section class="audit-card" data-search="<?= h($searchBlob) ?>">
                 <div class="meta-grid">
+                    <div class="meta-pill"><div class="meta-label">Audit Type</div><div class="meta-value"><?= h($auditType) ?></div></div>
                     <div class="meta-pill"><div class="meta-label">Status</div><div class="meta-value"><?= h($status) ?></div></div>
                     <div class="meta-pill"><div class="meta-label">NPC</div><div class="meta-value"><?= h($npcName !== '' ? $npcName : '(unknown)') ?></div></div>
                     <div class="meta-pill"><div class="meta-label">Event</div><div class="meta-value"><?= h($eventType !== '' ? $eventType : '(unknown)') ?></div></div>
-                    <div class="meta-pill"><div class="meta-label">Selected Topic</div><div class="meta-value"><?= h($selected !== '' ? $selected : '(none)') ?></div></div>
-                    <div class="meta-pill"><div class="meta-label">Rank</div><div class="meta-value"><?= h($rank) ?></div></div>
+                    <div class="meta-pill"><div class="meta-label"><?= $isMemoryRecall ? 'Selected Memory ID' : 'Selected Topic' ?></div><div class="meta-value"><?= h($selectedResult !== '' ? $selectedResult : '(none)') ?></div></div>
+                    <div class="meta-pill"><div class="meta-label"><?= $isMemoryRecall ? 'Hybrid Score' : 'Rank' ?></div><div class="meta-value"><?= h($displayRank) ?></div></div>
                     <div class="meta-pill"><div class="meta-label">Mode</div><div class="meta-value"><?= h($selectedMode !== '' ? $selectedMode : '(n/a)') ?></div></div>
                     <div class="meta-pill"><div class="meta-label">Entry ID</div><div class="meta-value"><?= h($entryId !== '' ? $entryId : '(n/a)') ?></div></div>
                     <div class="meta-pill"><div class="meta-label">Created</div><div class="meta-value"><?= h($created) ?></div></div>
@@ -376,6 +460,22 @@ $rangeEnd = min($offset + $perPage, $totalRows);
 
                 <div class="section-label">Input</div>
                 <div class="trace-box"><?= h($input) ?></div>
+
+                <?php if ($isMemoryRecall): ?>
+                    <div class="section-label" style="margin-top:10px;">Memory Recall Candidates</div>
+                    <div class="candidate-list">
+                        <?php foreach ($recallCandidates as $recallCandidate): ?>
+                            <?php if (!is_array($recallCandidate)) { continue; } ?>
+                            <div class="candidate-row <?= !empty($recallCandidate['selected']) ? 'selected' : '' ?>">
+                                <div><div class="candidate-label">Memory ID</div><?= h(strval($recallCandidate['rowid'] ?? '')) ?></div>
+                                <div><div class="candidate-label">Semantic</div><?= h(strval($recallCandidate['semantic_distance'] ?? '')) ?></div>
+                                <div><div class="candidate-label">Keyword</div><?= h(strval($recallCandidate['keyword_score'] ?? '')) ?></div>
+                                <div><div class="candidate-label">Hybrid</div><?= h(strval($recallCandidate['hybrid_score'] ?? '')) ?></div>
+                                <div><div class="candidate-label"><?= !empty($recallCandidate['selected']) ? 'Selected Memory' : 'Memory Preview' ?></div><?= h(strval($recallCandidate['memory_preview'] ?? '')) ?></div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
 
                 <div class="section-label" style="margin-top:10px;">Extracted Topics</div>
                 <div class="trace-box"><?= h($topics !== '' ? $topics : '(none)') ?></div>

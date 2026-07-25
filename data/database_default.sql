@@ -540,6 +540,7 @@ CREATE TABLE public.audit_memory (
     rank_all numeric(20,10),
     memory text,
     "time" text,
+    recall_candidates jsonb,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
