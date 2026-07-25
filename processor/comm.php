@@ -1460,6 +1460,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     if ($currentNpcData) {
         $currentNpcData["base"]=$splitNameBase[1] ?? "";
+        $factionList = [];
         if (sizeof($splitNameBase)>1) {
       
             $currentNpcData["gender"]=$splitNameBase[2] ?? "";
@@ -1545,7 +1546,6 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             // You cannot use | as separator, because it's already used as primary request separator.
 
             $factionString = isset($splitNameBase[42]) ? $splitNameBase[42] : '';
-            $factionList = [];
             $formIds=[];
             error_log("*TRACE: [ADDNPC] Processing factions for $localName: {$factionString}");
             if (!empty($factionString)) {

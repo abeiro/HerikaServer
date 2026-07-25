@@ -35,5 +35,11 @@ final class ProfileImportRuleFactionTest extends TestCase
         $this->assertStringContainsString("formData.append('match_faction'", $ui);
         $this->assertStringContainsString('FROM unnest($factionsArray) AS npc_faction(name)', $runtime);
         $this->assertStringContainsString('npc_faction.name ~ r.match_faction', $runtime);
+        $npcDataBlock = substr($runtime, strpos($runtime, '$currentNpcData["base"]'));
+        $this->assertLessThan(
+            strpos($npcDataBlock, 'if (sizeof($splitNameBase)>1)'),
+            strpos($npcDataBlock, '$factionList = [];'),
+            'Faction matching must default to an empty list for reduced addnpc payloads.'
+        );
     }
 }
