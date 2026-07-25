@@ -44,163 +44,13 @@ if (!$conn) {
     exit;
 }
 
-function oghma_context_rule_values($value): array {
-    $values = preg_split('/\s*,\s*/u', trim((string)$value)) ?: [];
-    return array_values(array_filter(array_map('trim', $values), static function ($entry) {
-        return $entry !== '';
-    }));
-}
-
-function oghma_context_rule_conditions_from_post(): array {
-    $conditions = [];
-    foreach (['npc', 'nearby_actor', 'race', 'faction', 'profile', 'location', 'hold', 'environment', 'weather', 'event_type'] as $field) {
-        $values = oghma_context_rule_values($_POST['condition_' . $field] ?? '');
-        if (!empty($values)) {
-            $conditions[$field] = $values;
-        }
-    }
-    return $conditions;
-}
-
-function oghma_context_rule_condition_text(array $conditions, string $field): string {
-    $values = $conditions[$field] ?? [];
-    if (!is_array($values)) {
-        return trim((string)$values);
-    }
-    return implode(', ', array_map('strval', $values));
-}
-
-function oghma_render_context_rule_form(array $rule, bool $isNew = false): void {
-    $conditions = $rule['conditions'] ?? [];
-    if (is_string($conditions)) {
-        $conditions = json_decode($conditions, true);
-    }
-    if (!is_array($conditions)) {
-        $conditions = [];
-    }
-    $ruleId = (int)($rule['id'] ?? 0);
-    $enabledValue = strtolower(trim((string)($rule['enabled'] ?? '')));
-    $enabled = $isNew || in_array($enabledValue, ['1', 't', 'true', 'on', 'yes'], true);
-    $fields = [
-        'npc' => ['NPC Name', 'Current speaking NPC name.'],
-        'nearby_actor' => ['Nearby Actor', 'Any actor listed as present.'],
-        'race' => ['Race', 'Current NPC race, including common aliases.'],
-        'faction' => ['Faction', 'Current NPC faction name, editor ID, or form ID.'],
-        'profile' => ['Profile ID', 'Current NPC profile ID.'],
-        'location' => ['Location or Region', 'Current location, parent location, or region.'],
-        'hold' => ['Hold', 'Current canonical or reported hold.'],
-        'environment' => ['Environment', 'Use interior or exterior.'],
-        'weather' => ['Weather', 'Current weather description.'],
-        'event_type' => ['Event Type', 'Current request type, such as inputtext or combat.'],
-    ];
-    ?>
-    <form method="post" class="context-rule-card">
-        <input type="hidden" name="save_context_rule" value="1">
-        <input type="hidden" name="context_rule_id" value="<?php echo $ruleId; ?>">
-        <h3><?php echo $isNew ? 'Create Context Rule' : htmlspecialchars((string)($rule['label'] ?? 'Context Rule'), ENT_QUOTES, 'UTF-8'); ?></h3>
-        <div class="context-rule-grid">
-            <div class="context-rule-field">
-                <label>Rule Name</label>
-                <small>Human-readable label used in audit logs.</small>
-                <input type="text" name="context_rule_label" required value="<?php echo htmlspecialchars((string)($rule['label'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
-            </div>
-            <div class="context-rule-field">
-                <label>Selector Type</label>
-                <small>Choose how this rule finds Oghma articles.</small>
-                <select name="context_rule_selector_type">
-                    <?php foreach (['topic' => 'Exact Topic', 'tag' => 'Tag', 'category' => 'Category'] as $value => $label): ?>
-                        <option value="<?php echo $value; ?>" <?php echo (($rule['selector_type'] ?? 'topic') === $value) ? 'selected' : ''; ?>><?php echo $label; ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="context-rule-field">
-                <label>Selector Value</label>
-                <small>Exact topic alias, tag, or category to inject.</small>
-                <input type="text" name="context_rule_selector_value" required value="<?php echo htmlspecialchars((string)($rule['selector_value'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
-            </div>
-            <div class="context-rule-field">
-                <label>Priority</label>
-                <small>Lower numbers run first.</small>
-                <input type="number" name="context_rule_priority" value="<?php echo (int)($rule['priority'] ?? 100); ?>">
-            </div>
-            <div class="context-rule-field">
-                <label>Maximum Articles</label>
-                <small>Limits tag and category selectors to 1-5 articles.</small>
-                <input type="number" name="context_rule_max_articles" min="1" max="5" value="<?php echo max(1, min(5, (int)($rule['max_articles'] ?? 1))); ?>">
-            </div>
-            <?php foreach ($fields as $field => [$label, $description]): ?>
-                <div class="context-rule-field">
-                    <label><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></label>
-                    <small><?php echo htmlspecialchars($description, ENT_QUOTES, 'UTF-8'); ?> Separate alternatives with commas.</small>
-                    <input type="text" name="condition_<?php echo $field; ?>" value="<?php echo htmlspecialchars(oghma_context_rule_condition_text($conditions, $field), ENT_QUOTES, 'UTF-8'); ?>">
-                </div>
-            <?php endforeach; ?>
-        </div>
-        <div class="context-rule-actions">
-            <label class="context-rule-enabled">
-                <input type="checkbox" name="context_rule_enabled" value="1" <?php echo $enabled ? 'checked' : ''; ?>>
-                Enabled
-            </label>
-            <button type="submit" class="btn-save"><?php echo $isNew ? 'Create Rule' : 'Save Rule'; ?></button>
-            <?php if (!$isNew): ?>
-                <button
-                    type="submit"
-                    name="delete_context_rule"
-                    value="1"
-                    class="btn-danger"
-                    onclick="return confirm('Delete this context rule?');"
-                >Delete</button>
-            <?php endif; ?>
-        </div>
-    </form>
-    <?php
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_context_rule']) && !isset($_POST['delete_context_rule'])) {
-    $ruleId = max(0, (int)($_POST['context_rule_id'] ?? 0));
-    $label = trim((string)($_POST['context_rule_label'] ?? ''));
-    $enabled = isset($_POST['context_rule_enabled']) && $_POST['context_rule_enabled'] === '1';
-    $priority = (int)($_POST['context_rule_priority'] ?? 100);
-    $selectorType = strtolower(trim((string)($_POST['context_rule_selector_type'] ?? 'topic')));
-    $selectorValue = trim((string)($_POST['context_rule_selector_value'] ?? ''));
-    $maxArticles = max(1, min(5, (int)($_POST['context_rule_max_articles'] ?? 1)));
-    $conditionsJson = json_encode(oghma_context_rule_conditions_from_post(), JSON_UNESCAPED_UNICODE);
-
-    if ($label === '' || $selectorValue === '' || !in_array($selectorType, ['topic', 'tag', 'category'], true)) {
-        $message .= '<p>Context rule name, selector type, and selector value are required.</p>';
-    } elseif ($ruleId > 0) {
-        $result = pg_query_params(
-            $conn,
-            "UPDATE {$schema}.oghma_context_rule
-                SET label = $1, enabled = $2, priority = $3, selector_type = $4,
-                    selector_value = $5, conditions = $6::jsonb, max_articles = $7, updated_at = NOW()
-              WHERE id = $8",
-            [$label, $enabled ? 't' : 'f', $priority, $selectorType, $selectorValue, $conditionsJson, $maxArticles, $ruleId]
-        );
-        $message .= $result ? '<p>Context rule updated.</p>' : '<p>Unable to update context rule.</p>';
-    } else {
-        $result = pg_query_params(
-            $conn,
-            "INSERT INTO {$schema}.oghma_context_rule
-                (label, enabled, priority, selector_type, selector_value, conditions, max_articles)
-             VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)",
-            [$label, $enabled ? 't' : 'f', $priority, $selectorType, $selectorValue, $conditionsJson, $maxArticles]
-        );
-        $message .= $result ? '<p>Context rule created.</p>' : '<p>Unable to create context rule.</p>';
-    }
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_context_rule'])) {
-    $ruleId = max(0, (int)($_POST['context_rule_id'] ?? 0));
-    if ($ruleId > 0) {
-        $result = pg_query_params(
-            $conn,
-            "DELETE FROM {$schema}.oghma_context_rule WHERE id = $1",
-            [$ruleId]
-        );
-        $message .= $result ? '<p>Context rule deleted.</p>' : '<p>Unable to delete context rule.</p>';
-    }
-}
+require_once $rootPath . 'lib' . DIRECTORY_SEPARATOR . 'oghma_context_rule_admin.php';
+$message .= oghma_context_rule_handle_post(
+    $conn,
+    $schema,
+    $_POST,
+    $_SERVER['REQUEST_METHOD'] ?? 'GET'
+);
 
 /********************************************************************
  *  1) SINGLE TOPIC UPLOAD
@@ -1565,73 +1415,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 
-    .context-rule-intro {
-        margin-bottom: 16px;
-    }
-
-    .context-rule-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
-    }
-
-    .context-rule-card {
-        border: 1px solid #4a4a4a;
-        border-radius: 6px;
-        background: #242424;
-        padding: 14px;
-        margin-bottom: 14px;
-    }
-
-    .context-rule-card h3 {
-        margin: 0 0 12px;
-        color: rgb(242, 124, 17);
-    }
-
-    .context-rule-field label {
-        display: block;
-        margin-bottom: 4px;
-        font-weight: 600;
-    }
-
-    .context-rule-field small {
-        display: block;
-        min-height: 34px;
-        margin-bottom: 5px;
-        color: #b8b8b8;
-    }
-
-    .context-rule-field input,
-    .context-rule-field select {
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    .context-rule-actions {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 12px;
-    }
-
-    .context-rule-enabled {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        margin-right: auto;
-    }
-
-    @media (max-width: 1100px) {
-        .context-rule-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-    }
-
-    @media (max-width: 700px) {
-        .context-rule-grid {
-            grid-template-columns: 1fr;
-        }
-    }
 </style>
 
 <?php if ($isEmbed): ?>
@@ -2175,43 +1958,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         </div>
     </div>
 
-    <div id="rules-tab" class="tab-content">
-        <div class="full-width-section">
-            <div class="context-rule-intro">
-                <h2>&#x1F3AF; Oghma Context Rules</h2>
-                <p>All populated conditions on a rule must match. Comma-separated values within one condition are alternatives. Leave every condition blank to create an always-on rule.</p>
-                <p>Normal Oghma search and the existing Force Racial Oghma and Force Location Oghma settings continue to work alongside these rules.</p>
-            </div>
-
-            <?php
-            oghma_render_context_rule_form([
-                'priority' => 100,
-                'selector_type' => 'topic',
-                'max_articles' => 1,
-                'conditions' => [],
-            ], true);
-
-            $contextRulesResult = pg_query(
-                $conn,
-                "SELECT id, label, enabled, priority, selector_type, selector_value, conditions, max_articles
-                   FROM {$schema}.oghma_context_rule
-                  ORDER BY priority, id"
-            );
-            if ($contextRulesResult) {
-                $contextRuleCount = 0;
-                while ($contextRule = pg_fetch_assoc($contextRulesResult)) {
-                    oghma_render_context_rule_form($contextRule, false);
-                    $contextRuleCount++;
-                }
-                if ($contextRuleCount === 0) {
-                    echo '<p>No context rules have been created.</p>';
-                }
-            } else {
-                echo '<p>Unable to load context rules. Apply database updates, then refresh this page.</p>';
-            }
-            ?>
-        </div>
-    </div>
+    <?php include __DIR__ . DIRECTORY_SEPARATOR . 'tmpl' . DIRECTORY_SEPARATOR . 'oghma_context_rules_panel.php'; ?>
 
 <div id="editModal" class="modal-backdrop">
     <div class="modal-container">
