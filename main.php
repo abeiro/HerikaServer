@@ -2377,6 +2377,7 @@ if (function_exists('chimQuestEngineApplyActionSuppressionsForTurn')) {
 
 // Ensure actions and nearby sections are added to PROMPT_HEAD before building system prompt
 require_once(__DIR__.DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+require_once(__DIR__.DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."prompt_composition.php");
 
 if (
     $gameRequest[0] === "narrator_inputtext"
@@ -2481,6 +2482,19 @@ $systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
     "\n\n<general_instructions>\n" . $GLOBALS["COMMAND_PROMPT"] .
     "\n</general_instructions>" . $actionsList . $nearbySections . $promptBottomInjections . $paralinguisticTagsPrompt .
     "\n" . $rumorsText . "\n";
+
+$promptCompositionSections = [
+    'roleplay_instructions' => $GLOBALS["PROMPT_HEAD"] ?? '',
+    'world' => $worldPrompt ?? '',
+    'character' => ($GLOBALS["HERIKA_PERS"] ?? '') . ($dynamicBiography ?? '') . ($characterBottomInjections ?? ''),
+    'knowledge' => $knowledgeSection ?? '',
+    'general_instructions' => $GLOBALS["COMMAND_PROMPT"] ?? '',
+    'actions' => $actionsList ?? '',
+    'nearby_actors' => $nearbySections ?? '',
+    'plugin_injections' => $promptBottomInjections ?? '',
+    'paralinguistic_tags' => $paralinguisticTagsPrompt ?? '',
+    'rumors' => $rumorsText ?? '',
+];
 
 $systemPrompt = chimFormatPromptXmlSections(
     strtr(
@@ -2625,6 +2639,20 @@ chimRequestPerformanceMark('prompt_ready');
 if (microtime(true) - $startTime > 0.25) {
     error_log("*TRACE SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
     error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
+}
+
+if (($gameRequest[0] ?? '') !== 'diary') {
+    chimLogPromptComposition(
+        $gameRequest[0] ?? '',
+        array_merge(
+            $promptCompositionSections ?? [],
+            [
+            'history' => $contextDataFull ?? [],
+            'memory_injection' => $memoryInjectionCtx ?? [],
+            ]
+        ),
+        $contextData ?? []
+    );
 }
 
 //returnLines(["Mmm..let me think"]);
