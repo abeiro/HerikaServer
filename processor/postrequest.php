@@ -160,7 +160,7 @@ if ($minimeEnabled) {
             if ($connectionHandler) {
                 $buffer = $connectionHandler->fast_request(
                     $prompt,
-                    ["MAX_TOKENS" => 64],
+                    ["MAX_TOKENS" => 256],
                     "sceneclassifier"
                 );
             }
