@@ -7552,18 +7552,18 @@ if ($checkVersion("playthrough_schema") < 20260723001) {
 if ($checkVersion("master_packages")<20260716002) {
     if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607.sql"))) {
        $updateVersion("master_packages", 20260716002);
-       Logger::info("Applied patch master_packages 20260716001");
+       Logger::info("Applied patch master_packages 20260716002");
     } else {
-        Logger::error("Failed to apply patch master_packages 20260716001");
+        Logger::error("Failed to apply patch master_packages 20260716002");
     }
 
 }
-if ($checkVersion("master_packages")<20260724001) {
+if ($checkVersion("master_packages")<20260724002) {
     if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607-2.sql"))) {
-       $updateVersion("master_packages", 20260724001);
-       Logger::info("Applied patch master_packages 20260724001");
+       $updateVersion("master_packages", 20260724002);
+       Logger::info("Applied patch master_packages 20260724002");
     } else {
-        Logger::error("Failed to apply patch master_packages 20260724001");
+        Logger::error("Failed to apply patch master_packages 20260724002");
     }
 
 }
