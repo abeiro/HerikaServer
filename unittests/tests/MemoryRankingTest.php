@@ -63,4 +63,15 @@ final class MemoryRankingTest extends TestCase
     {
         $this->assertNull(chimSelectBestHybridMemoryCandidate([]));
     }
+
+    public function testDatabaseCandidatePoolUsesHybridOrdering(): void
+    {
+        $source = file_get_contents(__DIR__ . '/../../lib/data_functions.php');
+
+        $this->assertIsString($source);
+        $this->assertMatchesRegularExpression(
+            '/ORDER BY\s+mixed_distance ASC,\s+distance ASC,\s+gamets_truncated DESC,\s+rowid DESC\s+LIMIT 50/s',
+            $source
+        );
+    }
 }

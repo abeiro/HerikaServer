@@ -5242,9 +5242,11 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                     and $companionConditionSql
                     and (gamets_truncated<$timeThreshold or $timeThreshold=0)
                     
-                    ORDER BY 
-                        round((embedding <-> $vectorString)::numeric, 2) ASC,
-                        $rankCombinedSql DESC
+                    ORDER BY
+                        mixed_distance ASC,
+                        distance ASC,
+                        gamets_truncated DESC,
+                        rowid DESC
                     LIMIT 50 OFFSET 0
                 ";    
             $memory=$GLOBALS["db"]->fetchAll($finalQuery);
