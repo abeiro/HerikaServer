@@ -16,6 +16,7 @@ require_once(__DIR__."/core/core_profiles.class.php");
 require_once(__DIR__."/prompt_injections.php");
 require_once(__DIR__."/vr_items.php");
 require_once(__DIR__."/visual_context.php");
+require_once(__DIR__."/memory_ranking.php");
 
 
 function ChangeHerikaName($new_name="") {
@@ -5232,8 +5233,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                         embedding <-> $vectorString as distance,
                          $rankAnySql AS rank_any_fts_raw,
                          $rankAllSql AS rank_all_fts_raw,
-                         $rankCombinedSql AS rank_any_fts,
-                         $rankCombinedSql AS rank_all_fts,
+                         $rankCombinedSql AS rank_fts,
                          (embedding <-> $vectorString) - $rankCombinedSql AS mixed_distance,
                          summary
                     FROM public.memory_summary 
@@ -5248,24 +5248,16 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                     LIMIT 50 OFFSET 0
                 ";    
             $memory=$GLOBALS["db"]->fetchAll($finalQuery);
-            //error_log($finalQuery);
-            $singleMemory = null;
-            $maxRankAny = -INF;
-
-            foreach ($memory as $entry) {
-                if (isset($entry['rank_any_fts']) && $entry['rank_any_fts'] > $maxRankAny) {
-                    $maxRankAny = $entry['rank_any_fts'];
-                    $singleMemory = $entry;
-                }
-            }
+            $singleMemory = chimSelectBestHybridMemoryCandidate($memory);
          
             if (!isset($singleMemory)) {
-                $singleMemory=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
-                $singleMemory["distance"]=1.4;
-            }
-            else {
-                 $singleMemory['rank_any']=(($singleMemory["rank_any_fts"])+($singleMemory["rank_all_fts"])/2);
-                 $singleMemory['rank_all']=($singleMemory["rank_all_fts"]);
+                $singleMemory = [
+                    "rank_any" => null,
+                    "rank_all" => null,
+                    "summary" => null,
+                    "distance" => 1.4,
+                    "mixed_distance" => 1.4,
+                ];
             }
             
             /*error_log("
