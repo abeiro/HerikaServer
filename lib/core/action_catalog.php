@@ -1830,55 +1830,64 @@ function herikaActionCatalogMatchesActivityRequirements($requirements, $status)
     return true;
 }
 
-function herikaActionCatalogRequirementsMatch($requirements, $context)
+function herikaActionCatalogInspectRequirements($requirements, $context)
 {
     $requirements = herikaActionCatalogDecodeJson($requirements, []);
     if (!is_array($requirements) || count($requirements) === 0) {
-        return true;
+        return [
+            'available' => true,
+            'reasons' => [],
+        ];
     }
 
     $context = is_array($context) ? $context : herikaActionCatalogGetRuntimeRequirementContext();
+    $reasons = [];
 
     if (isset($requirements['requires_rolemaster'])) {
         $expectedRolemaster = herikaActionCatalogToBool($requirements['requires_rolemaster']);
         if (herikaActionCatalogToBool($context['is_rolemastered'] ?? false) !== $expectedRolemaster) {
-            return false;
+            $reasons[] = $expectedRolemaster
+                ? 'Requires rolemaster control.'
+                : 'Unavailable while rolemaster control is active.';
         }
     }
 
     if (isset($requirements['requires_training_service'])) {
         $hasTrainingService = !empty($context['npc_extended']['class']['teaches']);
-        if ($hasTrainingService !== herikaActionCatalogToBool($requirements['requires_training_service'])) {
-            return false;
+        $expectedTrainingService = herikaActionCatalogToBool($requirements['requires_training_service']);
+        if ($hasTrainingService !== $expectedTrainingService) {
+            $reasons[] = $expectedTrainingService
+                ? 'Requires an NPC that offers training.'
+                : 'Unavailable for NPCs that offer training.';
         }
     }
 
     if (!empty($requirements['hide_in_rechat']) && !empty($context['is_rechat'])) {
-        return false;
+        $reasons[] = 'Hidden during rechat requests.';
     }
     if (!empty($requirements['show_only_in_rechat']) && empty($context['is_rechat'])) {
-        return false;
+        $reasons[] = 'Only available during rechat requests.';
     }
 
     $requestTypesAny = herikaActionCatalogNormalizeRequirementStringList($requirements['request_types_any'] ?? []);
     if (count($requestTypesAny) > 0 && !in_array(strtolower(trim(strval($context['request_type'] ?? ''))), $requestTypesAny, true)) {
-        return false;
+        $reasons[] = 'Request type must be one of: ' . implode(', ', $requestTypesAny) . '.';
     }
 
     $requestTypesNone = herikaActionCatalogNormalizeRequirementStringList($requirements['request_types_none'] ?? []);
     if (count($requestTypesNone) > 0 && in_array(strtolower(trim(strval($context['request_type'] ?? ''))), $requestTypesNone, true)) {
-        return false;
+        $reasons[] = 'Unavailable for request type: ' . strtolower(trim(strval($context['request_type'] ?? ''))) . '.';
     }
 
     $npcNamesAny = herikaActionCatalogNormalizeRequirementStringList($requirements['npc_names_any'] ?? []);
     if (count($npcNamesAny) > 0 && !in_array(strtolower(trim(strval($context['npc_name'] ?? ''))), $npcNamesAny, true)) {
-        return false;
+        $reasons[] = 'NPC name must be one of: ' . implode(', ', $npcNamesAny) . '.';
     }
 
     if (isset($requirements['npc_name_in_config_list'])) {
         $allowedNpcNames = herikaActionCatalogGetConfigListValues($requirements['npc_name_in_config_list']);
         if (count($allowedNpcNames) > 0 && !in_array(strtolower(trim(strval($context['npc_name'] ?? ''))), $allowedNpcNames, true)) {
-            return false;
+            $reasons[] = 'NPC is not included in the required configured name list.';
         }
     }
 
@@ -1888,7 +1897,7 @@ function herikaActionCatalogRequirementsMatch($requirements, $context)
             $requirements['npc_name_in_action_config_list']
         );
         if (count($allowedNpcNames) > 0 && !in_array(strtolower(trim(strval($context['npc_name'] ?? ''))), $allowedNpcNames, true)) {
-            return false;
+            $reasons[] = 'NPC is not included in this action configuration list.';
         }
     }
 
@@ -1898,7 +1907,7 @@ function herikaActionCatalogRequirementsMatch($requirements, $context)
         $requirements['npc_factions_any'] ?? [],
         false
     )) {
-        return false;
+        $reasons[] = 'NPC does not match any required faction.';
     }
 
     if (!herikaActionCatalogNpcMatchesFactionRequirement(
@@ -1907,14 +1916,57 @@ function herikaActionCatalogRequirementsMatch($requirements, $context)
         $requirements['npc_factions_all'] ?? [],
         true
     )) {
-        return false;
+        $reasons[] = 'NPC does not match all required factions.';
     }
 
     if (!herikaActionCatalogMatchesActivityRequirements($requirements['activity'] ?? [], $context['activity_status'] ?? [])) {
-        return false;
+        $reasons[] = 'NPC activity state does not meet this action requirement.';
     }
 
-    return true;
+    return [
+        'available' => count($reasons) === 0,
+        'reasons' => $reasons,
+    ];
+}
+
+function herikaActionCatalogRequirementsMatch($requirements, $context)
+{
+    $inspection = herikaActionCatalogInspectRequirements($requirements, $context);
+    return !empty($inspection['available']);
+}
+
+function herikaActionCatalogInspectRowAvailability($row, $context = null)
+{
+    if (!is_array($row)) {
+        return [
+            'available' => true,
+            'reasons' => [],
+        ];
+    }
+
+    $reasons = [];
+    if (!herikaActionCatalogToBool($row['is_activated'] ?? false)) {
+        $reasons[] = 'Action is disabled in the Action Editor.';
+    }
+
+    $metadata = herikaActionCatalogDecodeJson($row['metadata'] ?? [], []);
+    $context = is_array($context) ? $context : herikaActionCatalogGetRuntimeRequirementContext();
+    $context['action_config'] = function_exists('herikaActionCatalogGetResolvedCustomConfig')
+        ? herikaActionCatalogGetResolvedCustomConfig($row['code_name'] ?? '', $row)
+        : [];
+
+    $inspection = herikaActionCatalogInspectRequirements($metadata['requirements'] ?? [], $context);
+    $reasons = array_merge($reasons, $inspection['reasons'] ?? []);
+
+    $cooldownSeconds = intval($metadata['cooldown_seconds'] ?? 0);
+    return [
+        'available' => count($reasons) === 0,
+        'reasons' => $reasons,
+        'cooldown_seconds' => $cooldownSeconds,
+        'cooldown_note' => $cooldownSeconds > 0
+            ? "Runtime cooldown is {$cooldownSeconds} seconds and is checked when the action is issued."
+            : '',
+    ];
 }
 
 function herikaActionCatalogGetLastActionsIssuedMap()

@@ -784,6 +784,55 @@ final class ActionCatalogTest extends TestCase
         }
     }
 
+    public function testRequirementInspectionExplainsFilteredActions(): void
+    {
+        $inspection = herikaActionCatalogInspectRequirements([
+            'requires_rolemaster' => true,
+            'hide_in_rechat' => true,
+            'request_types_any' => ['inputtext', 'ginputtext'],
+            'npc_names_any' => ['Hilde'],
+            'activity' => ['is_in_combat' => true],
+        ], [
+            'is_rolemastered' => false,
+            'is_rechat' => true,
+            'request_type' => 'rechat',
+            'npc_name' => 'Alvor',
+            'activity_status' => [
+                'available' => true,
+                'is_in_combat' => false,
+            ],
+        ]);
+
+        $this->assertFalse($inspection['available']);
+        $this->assertContains('Requires rolemaster control.', $inspection['reasons']);
+        $this->assertContains('Hidden during rechat requests.', $inspection['reasons']);
+        $this->assertContains('Request type must be one of: inputtext, ginputtext.', $inspection['reasons']);
+        $this->assertContains('NPC name must be one of: hilde.', $inspection['reasons']);
+        $this->assertContains('NPC activity state does not meet this action requirement.', $inspection['reasons']);
+        $this->assertFalse(herikaActionCatalogRequirementsMatch([
+            'requires_rolemaster' => true,
+        ], [
+            'is_rolemastered' => false,
+        ]));
+    }
+
+    public function testRowInspectionReportsDisabledStateAndCooldownWithoutExecutingIt(): void
+    {
+        $inspection = herikaActionCatalogInspectRowAvailability([
+            'code_name' => 'FollowPlayer',
+            'is_activated' => false,
+            'metadata' => [
+                'requirements' => [],
+                'cooldown_seconds' => 30,
+            ],
+        ], []);
+
+        $this->assertFalse($inspection['available']);
+        $this->assertSame(['Action is disabled in the Action Editor.'], $inspection['reasons']);
+        $this->assertSame(30, $inspection['cooldown_seconds']);
+        $this->assertStringContainsString('30 seconds', $inspection['cooldown_note']);
+    }
+
     public function testActionCatalogRowIsAvailableInCurrentMode_UsesNarratorScopeForNarrator(): void
     {
         $previousHerikaName = $GLOBALS['HERIKA_NAME'] ?? null;

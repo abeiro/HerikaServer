@@ -851,6 +851,27 @@ $rows = [];
 $countAll = 0;
 $countEnabled = 0;
 $countDisabled = 0;
+$availabilityInspectionRequested = ($_SERVER["REQUEST_METHOD"] === "POST"
+    && strval($_POST["action"] ?? "") === "inspect_action_availability");
+$availabilityInspectionContext = [
+    "npc_name" => functionEditorTrim($_POST["inspector_npc_name"] ?? ""),
+    "request_type" => strtolower(functionEditorTrim($_POST["inspector_request_type"] ?? "inputtext")),
+    "is_rechat" => functionEditorToBool($_POST["inspector_is_rechat"] ?? "0"),
+    "is_rolemastered" => functionEditorToBool($_POST["inspector_is_rolemastered"] ?? "0"),
+    "npc_extended" => [
+        "class" => [
+            "teaches" => functionEditorToBool($_POST["inspector_training_service"] ?? "0") ? "training" : "",
+        ],
+    ],
+    "activity_status" => [
+        "available" => true,
+        "fresh" => true,
+        "is_in_combat" => functionEditorToBool($_POST["inspector_is_in_combat"] ?? "0"),
+        "is_moving" => functionEditorToBool($_POST["inspector_is_moving"] ?? "0"),
+        "is_sitting" => functionEditorToBool($_POST["inspector_is_sitting"] ?? "0"),
+    ],
+];
+$availabilityInspectionRows = [];
 $activeActionScopeGroups = functionEditorCreateActiveScopeGroups();
 $catalogReady = function_exists("herikaActionCatalogDbReady") && herikaActionCatalogDbReady();
 
@@ -947,6 +968,32 @@ if ($catalogReady) {
         ORDER BY LOWER(v.action_name), LOWER(v.code_name)
     ");
     $activeActionScopeGroups = functionEditorBuildActiveScopeGroups($activeActionRows);
+
+    if ($availabilityInspectionRequested) {
+        $inspectionRows = $GLOBALS["db"]->fetchAll("
+            SELECT
+                v.code_name,
+                v.action_name,
+                v.is_activated,
+                v.metadata
+            FROM public.combined_core_action v
+            ORDER BY LOWER(v.action_name), LOWER(v.code_name)
+        ");
+
+        foreach ($inspectionRows as $inspectionRow) {
+            $inspection = herikaActionCatalogInspectRowAvailability(
+                $inspectionRow,
+                $availabilityInspectionContext
+            );
+            $availabilityInspectionRows[] = [
+                "code_name" => strval($inspectionRow["code_name"] ?? ""),
+                "action_name" => strval($inspectionRow["action_name"] ?? ""),
+                "available" => !empty($inspection["available"]),
+                "reasons" => is_array($inspection["reasons"] ?? null) ? $inspection["reasons"] : [],
+                "cooldown_note" => strval($inspection["cooldown_note"] ?? ""),
+            ];
+        }
+    }
 }
 
 ob_start();
@@ -1047,6 +1094,68 @@ if (!$isEmbed) {
         margin-bottom: 15px;
         font-size: 1.6em;
         text-align: center;
+    }
+    .availability-inspector-form {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(180px, 1fr));
+        gap: 12px;
+        align-items: end;
+    }
+    .availability-inspector-field {
+        display: grid;
+        gap: 6px;
+    }
+    .availability-inspector-field label {
+        color: #e6b76c;
+        font-weight: 700;
+    }
+    .availability-inspector-checks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 18px;
+        grid-column: 1 / -1;
+    }
+    .availability-inspector-checks label {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: #d0d6df;
+    }
+    .availability-results {
+        margin-top: 16px;
+        display: grid;
+        gap: 8px;
+    }
+    .availability-result {
+        display: grid;
+        grid-template-columns: minmax(180px, 0.8fr) 110px minmax(280px, 2fr);
+        gap: 12px;
+        align-items: start;
+        padding: 10px 12px;
+        border: 1px solid #3a3a3a;
+        border-radius: 6px;
+        background: #20242a;
+    }
+    .availability-result-state {
+        font-weight: 700;
+    }
+    .availability-result-state.available {
+        color: #72c68a;
+    }
+    .availability-result-state.filtered {
+        color: #e18b8b;
+    }
+    .availability-result-reasons {
+        color: #cbd1da;
+        line-height: 1.4;
+    }
+    @media (max-width: 900px) {
+        .availability-inspector-form {
+            grid-template-columns: 1fr;
+        }
+        .availability-result {
+            grid-template-columns: 1fr;
+        }
     }
     .stat-line {
         margin: 8px 0;
@@ -1965,6 +2074,105 @@ if (!$isEmbed) {
                     <strong>Disable</strong> to control whether the AI may use it. Confirmation rules, return messages,
                     parameters, and technical settings are available under <strong>Advanced Options</strong>.
                 </p>
+            </div>
+
+            <div class="content-section full-width-section">
+                <div class="section-header">
+                    <h2>Action Availability Inspector</h2>
+                </div>
+                <p style="margin:0 0 16px; color:#d0d6df; line-height:1.45;">
+                    Preview which actions would be offered for a simulated request. This does not execute an action,
+                    contact an LLM, or change configuration. Runtime cooldowns remain checked only when an action is issued.
+                </p>
+                <form method="post" class="availability-inspector-form">
+                    <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+                    <input type="hidden" name="action" value="inspect_action_availability">
+                    <div class="availability-inspector-field">
+                        <label for="inspector-npc-name">NPC Name</label>
+                        <input
+                            type="text"
+                            id="inspector-npc-name"
+                            name="inspector_npc_name"
+                            value="<?php echo h($availabilityInspectionContext["npc_name"]); ?>"
+                            placeholder="Hilde"
+                        >
+                    </div>
+                    <div class="availability-inspector-field">
+                        <label for="inspector-request-type">Request Type</label>
+                        <input
+                            type="text"
+                            id="inspector-request-type"
+                            name="inspector_request_type"
+                            value="<?php echo h($availabilityInspectionContext["request_type"]); ?>"
+                            placeholder="inputtext"
+                        >
+                    </div>
+                    <div>
+                        <button type="submit" class="btn-save">Inspect Actions</button>
+                    </div>
+                    <div class="availability-inspector-checks">
+                        <?php
+                        $inspectorChecks = [
+                            "inspector_is_rechat" => ["Rechat request", $availabilityInspectionContext["is_rechat"]],
+                            "inspector_is_rolemastered" => ["Rolemaster active", $availabilityInspectionContext["is_rolemastered"]],
+                            "inspector_training_service" => ["NPC offers training", !empty($availabilityInspectionContext["npc_extended"]["class"]["teaches"])],
+                            "inspector_is_in_combat" => ["NPC in combat", !empty($availabilityInspectionContext["activity_status"]["is_in_combat"])],
+                            "inspector_is_moving" => ["NPC moving", !empty($availabilityInspectionContext["activity_status"]["is_moving"])],
+                            "inspector_is_sitting" => ["NPC sitting", !empty($availabilityInspectionContext["activity_status"]["is_sitting"])],
+                        ];
+                        ?>
+                        <?php foreach ($inspectorChecks as $checkName => $checkDefinition): ?>
+                            <label>
+                                <input type="checkbox" name="<?php echo h($checkName); ?>" value="1" <?php echo !empty($checkDefinition[1]) ? "checked" : ""; ?>>
+                                <?php echo h($checkDefinition[0]); ?>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </form>
+
+                <?php if ($availabilityInspectionRequested): ?>
+                    <?php
+                    $availableInspectionCount = count(array_filter(
+                        $availabilityInspectionRows,
+                        static function ($row) {
+                            return !empty($row["available"]);
+                        }
+                    ));
+                    ?>
+                    <div class="availability-results">
+                        <div class="filter-summary">
+                            <?php echo h($availableInspectionCount); ?> available,
+                            <?php echo h(count($availabilityInspectionRows) - $availableInspectionCount); ?> filtered
+                        </div>
+                        <?php foreach ($availabilityInspectionRows as $inspectionRow): ?>
+                            <?php
+                            $inspectionName = trim(strval($inspectionRow["action_name"] ?? ""));
+                            $inspectionCode = strval($inspectionRow["code_name"] ?? "");
+                            $inspectionReasons = $inspectionRow["reasons"] ?? [];
+                            $inspectionCooldownNote = trim(strval($inspectionRow["cooldown_note"] ?? ""));
+                            ?>
+                            <div class="availability-result">
+                                <div>
+                                    <strong><?php echo h($inspectionName !== "" ? $inspectionName : $inspectionCode); ?></strong><br>
+                                    <code><?php echo h($inspectionCode); ?></code>
+                                </div>
+                                <div class="availability-result-state <?php echo !empty($inspectionRow["available"]) ? "available" : "filtered"; ?>">
+                                    <?php echo !empty($inspectionRow["available"]) ? "Available" : "Filtered"; ?>
+                                </div>
+                                <div class="availability-result-reasons">
+                                    <?php if (count($inspectionReasons) === 0): ?>
+                                        All configured requirements match.
+                                    <?php else: ?>
+                                        <?php echo h(implode(" ", $inspectionReasons)); ?>
+                                    <?php endif; ?>
+                                    <?php if ($inspectionCooldownNote !== ""): ?>
+                                        <div><?php echo h($inspectionCooldownNote); ?></div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <div id="activeActionsModal" class="action-modal" hidden>
