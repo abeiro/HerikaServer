@@ -833,6 +833,25 @@ final class ActionCatalogTest extends TestCase
         $this->assertStringContainsString('30 seconds', $inspection['cooldown_note']);
     }
 
+    public function testInspectorLoadsNamedNpcDataForFactionRequirements(): void
+    {
+        $source = file_get_contents(dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'ui' . DIRECTORY_SEPARATOR . 'function_editor.php');
+
+        $this->assertIsString($source);
+        $this->assertStringContainsString(
+            '$inspectionNpcData = $inspectionNpcMaster->getByName($availabilityInspectionContext["npc_name"]);',
+            $source
+        );
+        $this->assertStringContainsString(
+            '$availabilityInspectionContext["npc_master"] = $inspectionNpcMaster;',
+            $source
+        );
+        $this->assertStringContainsString(
+            '$availabilityInspectionContext["npc_data"] = $inspectionNpcData;',
+            $source
+        );
+    }
+
     public function testActionCatalogRowIsAvailableInCurrentMode_UsesNarratorScopeForNarrator(): void
     {
         $previousHerikaName = $GLOBALS['HERIKA_NAME'] ?? null;

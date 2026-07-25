@@ -871,6 +871,15 @@ $availabilityInspectionContext = [
         "is_sitting" => functionEditorToBool($_POST["inspector_is_sitting"] ?? "0"),
     ],
 ];
+
+if ($availabilityInspectionContext["npc_name"] !== "" && class_exists("NpcMaster")) {
+    $inspectionNpcMaster = new NpcMaster();
+    $inspectionNpcData = $inspectionNpcMaster->getByName($availabilityInspectionContext["npc_name"]);
+    if (is_array($inspectionNpcData) && count($inspectionNpcData) > 0) {
+        $availabilityInspectionContext["npc_master"] = $inspectionNpcMaster;
+        $availabilityInspectionContext["npc_data"] = $inspectionNpcData;
+    }
+}
 $availabilityInspectionRows = [];
 $activeActionScopeGroups = functionEditorCreateActiveScopeGroups();
 $catalogReady = function_exists("herikaActionCatalogDbReady") && herikaActionCatalogDbReady();
