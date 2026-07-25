@@ -1602,11 +1602,24 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $npcGender = $GLOBALS["db"]->escape($currentNpcData["gender"]);
         $npcBase = $GLOBALS["db"]->escape($currentNpcData["base"]);
         $npcMods = $meta["mods"]; 
+        $npcFactionNames = array_values(array_unique(array_filter(array_map(
+            static function ($faction) {
+                return trim((string)($faction["name"] ?? ""));
+            },
+            $factionList
+        ), static function ($name) {
+            return $name !== "" && $name !== "Unknown Faction";
+        })));
 
         if (is_array($npcMods)) {
             $modsArray = "ARRAY['" . implode("','", array_map([$GLOBALS["db"], 'escape'], $npcMods)) . "']";
         } else {
             $modsArray = "ARRAY['']";
+        }
+        if (!empty($npcFactionNames)) {
+            $factionsArray = "ARRAY['" . implode("','", array_map([$GLOBALS["db"], 'escape'], $npcFactionNames)) . "']::text[]";
+        } else {
+            $factionsArray = "ARRAY[]::text[]";
         }
 
         $sql = "
@@ -1617,6 +1630,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             AND (NULLIF(BTRIM(r.match_race), '') IS NULL OR '$npcRace' ~ r.match_race)
             AND (NULLIF(BTRIM(r.match_gender), '') IS NULL OR '$npcGender' ~ r.match_gender)
             AND (NULLIF(BTRIM(r.match_base), '') IS NULL OR '$npcBase' ~ r.match_base)
+            AND (
+                NULLIF(BTRIM(r.match_faction), '') IS NULL
+                OR EXISTS (
+                    SELECT 1
+                    FROM unnest($factionsArray) AS npc_faction(name)
+                    WHERE npc_faction.name ~ r.match_faction
+                )
+            )
             AND (r.match_mods IS NULL OR r.match_mods <@ $modsArray)
             ORDER BY r.priority DESC
         ";
