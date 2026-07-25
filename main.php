@@ -2591,17 +2591,19 @@ if (microtime(true) - $startTime > 0.25) {
     error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
 }
 
-chimLogPromptComposition(
-    $gameRequest[0] ?? '',
-    array_merge(
-        $promptCompositionSections ?? [],
-        [
-        'history' => $contextDataFull ?? [],
-        'memory_injection' => $memoryInjectionCtx ?? [],
-        ]
-    ),
-    $contextData ?? []
-);
+if (($gameRequest[0] ?? '') !== 'diary') {
+    chimLogPromptComposition(
+        $gameRequest[0] ?? '',
+        array_merge(
+            $promptCompositionSections ?? [],
+            [
+            'history' => $contextDataFull ?? [],
+            'memory_injection' => $memoryInjectionCtx ?? [],
+            ]
+        ),
+        $contextData ?? []
+    );
+}
 
 //returnLines(["Mmm..let me think"]);
 

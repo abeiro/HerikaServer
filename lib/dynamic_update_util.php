@@ -1,4 +1,6 @@
-<?php 
+<?php
+
+require_once(__DIR__ . DIRECTORY_SEPARATOR . "prompt_composition.php");
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'physical_npc_diaries.php';
 
 // Function to process diary entries for all nearby NPCs (triggered by C++ with 400 unit range)
@@ -140,6 +142,16 @@ function generateNearbyDiary($npcName, $gameRequest, $eventType) {
         } else {
             $maxTokens = 2048;
         }
+
+        chimLogPromptComposition(
+            'diary',
+            [
+                'character_head' => $head,
+                'history' => !empty($contextDataHistoric) ? $prompt[0] : [],
+                'diary_instruction' => $diaryPrompt,
+            ],
+            $contextData
+        );
 
         // Pass provider-agnostic MAX_TOKENS override so connectors map to correct API field
         $connectionHandler->open($contextData, ["MAX_TOKENS" => $maxTokens]);
@@ -417,6 +429,16 @@ function generatePlayerDiary($gameRequest, $eventType)
         $defaultDiaryConnector = chimResolvePlayerDiaryConnectorFromDefaultProfile();
         $coreConnectorId = intval($defaultDiaryConnector['connector_id'] ?? 0);
         $currentConnectorData = $defaultDiaryConnector['connector_data'] ?? null;
+
+        chimLogPromptComposition(
+            'diary_player',
+            [
+                'character_head' => $head,
+                'history' => !empty($contextDataHistoric) ? $prompt[0] : [],
+                'diary_instruction' => $prompt[count($prompt) - 1] ?? [],
+            ],
+            $contextData
+        );
 
         if (!empty($currentConnectorData)) {
             $profileLabel = trim((string)($defaultDiaryConnector['profile_label'] ?? 'Default Profile'));
@@ -1200,6 +1222,15 @@ function generateFollowerDiary($followerName, $gameRequest, $eventType) {
 
     $overrideParameters["MAX_TOKENS"] = $maxTokens;
     $connectionHandler = $connector->getConnector($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]);
+    chimLogPromptComposition(
+        'diary',
+        [
+            'character_head' => $head,
+            'history' => !empty($contextDataHistoric) ? $prompt[0] : [],
+            'diary_instruction' => $diaryPrompt,
+        ],
+        $contextData
+    );
     $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,"diary");
 
     // Restore previous FORCE_MAX_TOKENS if it existed

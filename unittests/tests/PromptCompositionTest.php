@@ -62,4 +62,26 @@ final class PromptCompositionTest extends TestCase
         $this->assertSame($expectedCharacters, $measurement['characters']);
         $this->assertSame(intval(ceil($expectedCharacters / 4)), $measurement['estimated_tokens']);
     }
+
+    public function testDiaryCompositionMeasuresTheConnectorBoundPrompt(): void
+    {
+        $main = file_get_contents(dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'main.php');
+        $diary = file_get_contents(
+            dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'dynamic_update_util.php'
+        );
+
+        $this->assertIsString($main);
+        $this->assertIsString($diary);
+        $this->assertStringContainsString("if ((\$gameRequest[0] ?? '') !== 'diary')", $main);
+
+        $followerStart = strpos($diary, 'function generateFollowerDiary');
+        $this->assertNotFalse($followerStart);
+        $followerSource = substr($diary, $followerStart);
+        $logPosition = strpos($followerSource, "chimLogPromptComposition(\n        'diary'");
+        $requestPosition = strpos($followerSource, '$connectionHandler->fast_request($contextData');
+
+        $this->assertNotFalse($logPosition);
+        $this->assertNotFalse($requestPosition);
+        $this->assertLessThan($requestPosition, $logPosition);
+    }
 }
