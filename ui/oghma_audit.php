@@ -10,6 +10,7 @@ chimRuntimeBootstrap($enginePath, [
 ]);
 
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
+require_once(__DIR__ . DIRECTORY_SEPARATOR . "profile_loader.php");
 
 function h(mixed $value): string
 {
