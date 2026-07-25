@@ -1776,6 +1776,11 @@ if (!$existsColumn[0]["column_name"]) {
     echo '<script>alert("A patch (0.1.5p1) has been applied to Database")</script>';
 }
 
+$db->execQuery(
+    "ALTER TABLE IF EXISTS public.audit_memory
+     ADD COLUMN IF NOT EXISTS recall_candidates jsonb"
+);
+
 // Memory ts
 $query = "
     SELECT column_name 

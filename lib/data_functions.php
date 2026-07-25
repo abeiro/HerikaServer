@@ -5249,6 +5249,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                 ";    
             $memory=$GLOBALS["db"]->fetchAll($finalQuery);
             $singleMemory = chimSelectBestHybridMemoryCandidate($memory);
+            $recallCandidates = chimBuildMemoryRecallAuditCandidates($memory, $singleMemory, 10);
          
             if (!isset($singleMemory)) {
                 $singleMemory = [
@@ -5280,7 +5281,11 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
                         'rank_any'=> (1.40-$singleMemory["mixed_distance"]),// Try to mimic FTS query rank
                         'rank_all'=> (1.40-$singleMemory["distance"]),// Try to mimic FTS query rank
                         'memory'=>$singleMemory["summary"],
-                        'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
+                        'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)",
+                        'recall_candidates'=>json_encode(
+                            $recallCandidates,
+                            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+                        )
                     )
                 );
             
