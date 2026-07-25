@@ -4678,6 +4678,25 @@ function DataItemsInCloseRange()
     return "";
 }
 
+function chimNormalizeExplicitActorRefTarget($target)
+{
+    $target = trim((string)$target);
+    if ($target === "") {
+        return "";
+    }
+
+    $pattern = '/\s*\[\s*RefID\s*:\s*(?:0x)?([0-9A-Fa-f]{1,8})\s*\]\s*/i';
+    if (!preg_match($pattern, $target, $matches)) {
+        return "";
+    }
+
+    $refId = strtoupper(str_pad($matches[1], 8, "0", STR_PAD_LEFT));
+    $fallbackName = trim((string)preg_replace($pattern, " ", $target));
+    $fallbackName = trim($fallbackName, " \t\n\r\0\x0B,;");
+
+    return ($fallbackName !== "" ? $fallbackName . " " : "") . "[RefID: " . $refId . "]";
+}
+
 // Find actor name with closest name, useful to sanitize actions parameters
 function FindClosestActorName($actorName)
 {
@@ -5600,7 +5619,7 @@ function call_llm_internal() {
         "message"=>"lines of dialogue",
         "mood"=>"One of :".implode("|",normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "")),
         "action"=>"One of :".implode("|",$GLOBALS["FUNC_LIST"]),
-        "target"=>"action target actor|action destination location name",
+        "target"=>"action target actor (prefer exact Name [RefID: XXXXXXXX] from people_present, otherwise use actor name)|action destination location name",
         "item"=>"item identifier (REQUIRED for GiveItemTo: use exact BaseID:ItemName from inventory; for PickupItem: use exact RefID:ItemName from nearby_items)",
         "lang"=>"language used, (es|en|fr|...)"]);
 
@@ -5957,6 +5976,19 @@ function call_llm_internal() {
                     
                     if (isset($actionParts2[1])) {
                         // Parameter part 
+                        $explicitActorRefTarget = chimNormalizeExplicitActorRefTarget($actionParts2[1]);
+                        $refAwarePlainActions = [
+                            "Attack", "GiveItemTo", "GiveGoldTo", "TradeItems",
+                            "Follow", "MoveTo", "Brawl"
+                        ];
+                        if ($explicitActorRefTarget !== "" &&
+                            in_array($actionParts2[0], $refAwarePlainActions, true) &&
+                            substr(trim($actionParts2[1]), 0, 1) !== "{") {
+                            $actions[$n] = "{$actionParts[0]}|{$actionParts[1]}|{$actionParts2[0]}@{$explicitActorRefTarget}";
+                            error_log("[ACTION POSTFILTER {$actionParts2[0]}] Preserving explicit actor target {$explicitActorRefTarget}");
+                            continue;
+                        }
+
                         if ($actionParts2[0]=="Attack") {
                             // Lets polish the parameters
                             $localtarget=$actionParts2[1];

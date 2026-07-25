@@ -60,7 +60,7 @@ final class PlayerPresenceSnapshotTest extends TestCase
         );
     }
 
-    public function testPresencePromptMarksUnmanagedActorsAsContextOnly(): void
+    public function testPresencePromptAllowsUnmanagedActorActionTargets(): void
     {
         chimSetCurrentTurnPresentActorsSnapshot([
             ['form_id' => 0x13475, 'name' => 'Alvor', 'managed' => false],
@@ -72,7 +72,8 @@ final class PlayerPresenceSnapshotTest extends TestCase
         $this->assertStringContainsString('<people_present>', $prompt);
         $this->assertStringContainsString('## Alvor [RefID: 00013475] (present, not CHIM-active)', $prompt);
         $this->assertStringContainsString('## Lydia [RefID: 000A2C8E]', $prompt);
-        $this->assertStringContainsString('cannot respond or receive AI actions', $prompt);
+        $this->assertStringContainsString('cannot respond, but may be targeted by gameplay actions', $prompt);
+        $this->assertStringContainsString('Prefer the displayed RefID', $prompt);
     }
 
     public function testLegacyAudienceSnapshotRemainsSupported(): void

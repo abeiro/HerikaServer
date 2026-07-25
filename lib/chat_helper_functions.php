@@ -2858,7 +2858,7 @@ function chimBuildCurrentTurnPresentPeoplePrompt()
     }
 
     return "<people_present>\n"
-        . "# Physically present actors. Entries marked not CHIM-active are context only and cannot respond or receive AI actions.\n"
+        . "# Physically present actors. Entries marked not CHIM-active cannot respond, but may be targeted by gameplay actions. Prefer the displayed RefID when selecting an actor target.\n"
         . implode("\n", $lines)
         . "\n</people_present>";
 }

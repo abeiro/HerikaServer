@@ -1226,7 +1226,7 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "Target NPC, Actor, or being",
+                    "description" => "Target NPC, actor, or being. Prefer exact Name [RefID: XXXXXXXX] from people_present; otherwise use the actor name.",
                 ],
             ],
             "required" => ["target"],
@@ -1240,7 +1240,7 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "Target NPC, Actor, or being",
+                    "description" => "Target NPC, actor, or being. Prefer exact Name [RefID: XXXXXXXX] from people_present; otherwise use the actor name.",
                 ],
             ],
             "required" => ["target"],
@@ -1705,7 +1705,7 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "Target NPC, Actor, or being",
+                    "description" => "Target NPC, actor, or being. Prefer exact Name [RefID: XXXXXXXX] from people_present; otherwise use the actor name.",
                 ],
             ],
             "required" => ["target"],
@@ -1733,7 +1733,7 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "Target NPC, Actor, or being to receive gold",
+                    "description" => "Target NPC, actor, or being to receive gold. Prefer exact Name [RefID: XXXXXXXX] from people_present; otherwise use the actor name.",
                 ],
                 "item" => [
                     "type" => "string",
@@ -1751,7 +1751,7 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "Target NPC, Actor, or being to receive the item",
+                    "description" => "Target NPC, actor, or being to receive the item. Prefer exact Name [RefID: XXXXXXXX] from people_present; otherwise use the actor name.",
                 ],
                 "item" => [
                     "type" => "string",
@@ -1819,7 +1819,7 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "Target actor name, or 'self' for self-cast spells",
+                    "description" => "Target actor. Prefer exact Name [RefID: XXXXXXXX] from people_present; otherwise use the actor name. Use 'self' for self-cast spells.",
                 ],
                 "item" => [
                     "type" => "string",
