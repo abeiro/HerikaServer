@@ -95,6 +95,22 @@ final class MemoryRankingTest extends TestCase
         $this->assertSame(2, $selected['rowid']);
     }
 
+    public function testRecallAuditUsesTheSameNewerMemoryTieBreakAsSelection(): void
+    {
+        $candidates = [
+            ['rowid' => 10, 'distance' => 0.25, 'mixed_distance' => 0.10, 'gamets_truncated' => 100],
+            ['rowid' => 5, 'distance' => 0.25, 'mixed_distance' => 0.10, 'gamets_truncated' => 200],
+        ];
+        $selected = chimSelectBestHybridMemoryCandidate($candidates);
+
+        $audit = chimBuildMemoryRecallAuditCandidates($candidates, $selected, 1);
+
+        $this->assertCount(1, $audit);
+        $this->assertSame('5', $audit[0]['rowid']);
+        $this->assertTrue($audit[0]['selected']);
+        $this->assertSame(200.0, $audit[0]['game_time']);
+    }
+
     public function testFallbackComputesMixedDistanceFromKeywordRank(): void
     {
         $selected = chimSelectBestHybridMemoryCandidate([

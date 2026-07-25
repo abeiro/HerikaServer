@@ -83,6 +83,7 @@ function chimBuildMemoryRecallAuditCandidates(array $candidates, ?array $selecte
 
         $distance = chimMemoryCandidateNumber($candidate, 'distance', INF);
         $keywordScore = chimMemoryCandidateNumber($candidate, 'rank_fts', 0.0);
+        $gameTime = chimMemoryCandidateNumber($candidate, 'gamets_truncated', -INF);
         $mixedDistance = chimMemoryCandidateMixedDistance($candidate);
         if (!is_finite($distance) || !is_finite($mixedDistance)) {
             continue;
@@ -102,6 +103,7 @@ function chimBuildMemoryRecallAuditCandidates(array $candidates, ?array $selecte
             'keyword_score' => $keywordScore,
             'hybrid_score' => 1.4 - $mixedDistance,
             'hybrid_distance' => $mixedDistance,
+            'game_time' => is_finite($gameTime) ? $gameTime : null,
             'selected' => $selectedRowId !== '' && $rowId === $selectedRowId,
             'memory_preview' => $summary,
         ];
@@ -116,6 +118,11 @@ function chimBuildMemoryRecallAuditCandidates(array $candidates, ?array $selecte
         $distanceCompare = ($left['semantic_distance'] ?? INF) <=> ($right['semantic_distance'] ?? INF);
         if ($distanceCompare !== 0) {
             return $distanceCompare;
+        }
+
+        $gameTimeCompare = ($right['game_time'] ?? -INF) <=> ($left['game_time'] ?? -INF);
+        if ($gameTimeCompare !== 0) {
+            return $gameTimeCompare;
         }
 
         return intval($right['rowid'] ?? 0) <=> intval($left['rowid'] ?? 0);
