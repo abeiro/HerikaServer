@@ -45,6 +45,106 @@ function oghma_context_rule_condition_text(array $conditions, string $field): st
     return implode(', ', array_map('strval', $values));
 }
 
+function oghma_context_rule_preview_context_from_post(array $post): array
+{
+    $context = [];
+    foreach ([
+        'npc',
+        'nearby_actor',
+        'race',
+        'faction',
+        'profile',
+        'location',
+        'hold',
+        'environment',
+        'weather',
+        'event_type',
+    ] as $field) {
+        $context[$field] = oghma_context_rule_values($post['preview_' . $field] ?? '');
+    }
+    return $context;
+}
+
+function oghma_context_rule_preview_articles($conn, string $schema, array $rule): array
+{
+    $selectorType = strtolower(trim((string)($rule['selector_type'] ?? '')));
+    $selectorValue = chimOghmaNormalizeLookupLabel($rule['selector_value'] ?? '');
+    if ($selectorValue === '' || !in_array($selectorType, ['topic', 'tag', 'category'], true)) {
+        return [];
+    }
+
+    if ($selectorType === 'topic') {
+        $condition = "EXISTS (
+            SELECT 1
+              FROM regexp_split_to_table(topic, E'\\\\s*,\\\\s*') AS selector_value
+             WHERE regexp_replace(replace(lower(selector_value), '_', ' '), '[^a-z0-9]+', ' ', 'g') = $1
+        )";
+    } elseif ($selectorType === 'tag') {
+        $condition = "EXISTS (
+            SELECT 1
+              FROM regexp_split_to_table(coalesce(tags, ''), E'\\\\s*,\\\\s*') AS selector_value
+             WHERE regexp_replace(replace(lower(selector_value), '_', ' '), '[^a-z0-9]+', ' ', 'g') = $1
+        )";
+    } else {
+        $condition = "regexp_replace(replace(lower(coalesce(category, '')), '_', ' '), '[^a-z0-9]+', ' ', 'g') = $1";
+    }
+
+    $limit = max(1, min(5, (int)($rule['max_articles'] ?? 1)));
+    $result = pg_query_params(
+        $conn,
+        "SELECT topic, category, tags
+           FROM {$schema}.oghma
+          WHERE {$condition}
+          ORDER BY topic
+          LIMIT {$limit}",
+        [$selectorValue]
+    );
+    if (!$result) {
+        return [];
+    }
+
+    $rows = pg_fetch_all($result);
+    return is_array($rows) ? $rows : [];
+}
+
+function oghma_context_rule_build_preview($conn, string $schema, array $post): ?array
+{
+    $ruleId = max(0, (int)($post['preview_context_rule_id'] ?? 0));
+    if ($ruleId <= 0) {
+        return null;
+    }
+
+    $result = pg_query_params(
+        $conn,
+        "SELECT id, label, selector_type, selector_value, conditions, max_articles
+           FROM {$schema}.oghma_context_rule
+          WHERE id = $1",
+        [$ruleId]
+    );
+    $rule = $result ? pg_fetch_assoc($result) : false;
+    if (!is_array($rule)) {
+        return null;
+    }
+
+    $conditions = json_decode((string)($rule['conditions'] ?? '{}'), true);
+    if (!is_array($conditions)) {
+        $conditions = [];
+    }
+    $context = oghma_context_rule_preview_context_from_post($post);
+    $inspection = chimOghmaInspectContextRuleConditions($conditions, $context);
+    $articles = !empty($inspection['matches'])
+        ? oghma_context_rule_preview_articles($conn, $schema, $rule)
+        : [];
+
+    return [
+        'rule' => $rule,
+        'context' => $context,
+        'matches' => !empty($inspection['matches']),
+        'conditions' => $inspection['conditions'] ?? [],
+        'articles' => $articles,
+    ];
+}
+
 function oghma_context_rule_handle_post($conn, string $schema, array $post, string $method): string
 {
     if ($method !== 'POST') {

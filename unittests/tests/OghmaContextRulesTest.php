@@ -81,6 +81,27 @@ final class OghmaContextRulesTest extends TestCase
         ], $context));
     }
 
+    public function testRuleInspectionReportsEveryConditionWithoutChangingMatchSemantics(): void
+    {
+        $inspection = chimOghmaInspectContextRuleConditions([
+            'race' => ['Nord', 'Dunmer'],
+            'hold' => ['The Rift'],
+            'event_type' => ['inputtext'],
+        ], [
+            'race' => ['Dunmer'],
+            'hold' => ['Whiterun'],
+            'event_type' => ['inputtext'],
+        ]);
+
+        $this->assertFalse($inspection['matches']);
+        $this->assertCount(3, $inspection['conditions']);
+        $this->assertTrue($inspection['conditions'][0]['matches']);
+        $this->assertSame(['dunmer'], $inspection['conditions'][0]['matched']);
+        $this->assertFalse($inspection['conditions'][1]['matches']);
+        $this->assertSame(['whiterun'], $inspection['conditions'][1]['actual']);
+        $this->assertTrue($inspection['conditions'][2]['matches']);
+    }
+
     public function testContextRuleInjectionUsesExistingPermissionAndDeduplicationPath(): void
     {
         $GLOBALS['CHIM_CORE_CURRENT_NPC_DATA'] = [

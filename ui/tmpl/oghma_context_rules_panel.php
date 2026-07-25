@@ -146,6 +146,54 @@ function oghma_render_context_rule_form(array $rule, bool $isNew = false): void
         margin-right: auto;
     }
 
+    .context-rule-preview {
+        border: 1px solid #4a4a4a;
+        border-radius: 6px;
+        background: #1f2328;
+        padding: 14px;
+        margin: 16px 0;
+    }
+
+    .context-rule-preview h3 {
+        margin: 0 0 12px;
+        color: rgb(242, 124, 17);
+    }
+
+    .context-rule-preview-result {
+        margin-top: 14px;
+        padding: 12px;
+        border: 1px solid #4a4a4a;
+        border-radius: 5px;
+    }
+
+    .context-rule-preview-result.matches {
+        border-color: #4c8f63;
+    }
+
+    .context-rule-preview-result.filtered {
+        border-color: #9b4d4d;
+    }
+
+    .context-rule-preview-condition {
+        display: grid;
+        grid-template-columns: 120px 90px 1fr;
+        gap: 10px;
+        padding: 7px 0;
+        border-bottom: 1px solid #363636;
+    }
+
+    .context-rule-preview-condition:last-child {
+        border-bottom: 0;
+    }
+
+    .context-rule-preview-state.matches {
+        color: #72c68a;
+    }
+
+    .context-rule-preview-state.filtered {
+        color: #e18b8b;
+    }
+
     @media (max-width: 1100px) {
         .context-rule-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -154,6 +202,9 @@ function oghma_render_context_rule_form(array $rule, bool $isNew = false): void
 
     @media (max-width: 700px) {
         .context-rule-grid {
+            grid-template-columns: 1fr;
+        }
+        .context-rule-preview-condition {
             grid-template-columns: 1fr;
         }
     }
@@ -165,6 +216,116 @@ function oghma_render_context_rule_form(array $rule, bool $isNew = false): void
             <h2>&#x1F3AF; Oghma Context Rules</h2>
             <p>All populated conditions on a rule must match. Comma-separated values within one condition are alternatives. Leave every condition blank to create an always-on rule.</p>
             <p>Normal Oghma search and the existing Force Racial Oghma and Force Location Oghma settings continue to work alongside these rules.</p>
+        </div>
+
+        <div class="context-rule-preview">
+            <h3>Preview Saved Rule</h3>
+            <p>Test a rule against simulated context. Previewing does not save a rule or inject articles into a prompt.</p>
+            <form method="post">
+                <input type="hidden" name="preview_context_rule" value="1">
+                <div class="context-rule-grid">
+                    <div class="context-rule-field">
+                        <label>Saved Rule</label>
+                        <small>Select the rule to inspect.</small>
+                        <select name="preview_context_rule_id" required>
+                            <option value="">Select a rule</option>
+                            <?php
+                            $previewRuleOptions = pg_query(
+                                $conn,
+                                "SELECT id, label
+                                   FROM {$schema}.oghma_context_rule
+                                  ORDER BY priority, id"
+                            );
+                            if ($previewRuleOptions):
+                                while ($previewRuleOption = pg_fetch_assoc($previewRuleOptions)):
+                                    $previewRuleId = (int)($previewRuleOption['id'] ?? 0);
+                                    $previewRuleSelected = $previewRuleId === (int)($_POST['preview_context_rule_id'] ?? 0);
+                                    ?>
+                                    <option value="<?php echo $previewRuleId; ?>" <?php echo $previewRuleSelected ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars((string)($previewRuleOption['label'] ?? 'Unnamed rule'), ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
+                                    <?php
+                                endwhile;
+                            endif;
+                            ?>
+                        </select>
+                    </div>
+                    <?php
+                    $previewFields = [
+                        'npc' => 'NPC Name',
+                        'nearby_actor' => 'Nearby Actor',
+                        'race' => 'Race',
+                        'faction' => 'Faction',
+                        'profile' => 'Profile ID',
+                        'location' => 'Location or Region',
+                        'hold' => 'Hold',
+                        'environment' => 'Environment',
+                        'weather' => 'Weather',
+                        'event_type' => 'Event Type',
+                    ];
+                    ?>
+                    <?php foreach ($previewFields as $previewField => $previewLabel): ?>
+                        <div class="context-rule-field">
+                            <label><?php echo htmlspecialchars($previewLabel, ENT_QUOTES, 'UTF-8'); ?></label>
+                            <small>Comma-separated simulated values.</small>
+                            <input
+                                type="text"
+                                name="preview_<?php echo $previewField; ?>"
+                                value="<?php echo htmlspecialchars((string)($_POST['preview_' . $previewField] ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                            >
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <div class="context-rule-actions">
+                    <button type="submit" class="btn-save">Preview Rule</button>
+                </div>
+            </form>
+
+            <?php if (is_array($contextRulePreviewResult ?? null)): ?>
+                <div class="context-rule-preview-result <?php echo !empty($contextRulePreviewResult['matches']) ? 'matches' : 'filtered'; ?>">
+                    <strong>
+                        <?php echo htmlspecialchars((string)($contextRulePreviewResult['rule']['label'] ?? 'Rule'), ENT_QUOTES, 'UTF-8'); ?>:
+                        <?php echo !empty($contextRulePreviewResult['matches']) ? 'Matched' : 'Filtered'; ?>
+                    </strong>
+
+                    <?php if (empty($contextRulePreviewResult['conditions'])): ?>
+                        <p>No conditions are configured, so this rule always matches.</p>
+                    <?php else: ?>
+                        <?php foreach ($contextRulePreviewResult['conditions'] as $conditionResult): ?>
+                            <?php $conditionMatches = !empty($conditionResult['matches']); ?>
+                            <div class="context-rule-preview-condition">
+                                <strong><?php echo htmlspecialchars((string)($conditionResult['field'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></strong>
+                                <span class="context-rule-preview-state <?php echo $conditionMatches ? 'matches' : 'filtered'; ?>">
+                                    <?php echo $conditionMatches ? 'Matched' : 'Failed'; ?>
+                                </span>
+                                <span>
+                                    Expected: <?php echo htmlspecialchars(implode(', ', $conditionResult['expected'] ?? []), ENT_QUOTES, 'UTF-8'); ?>.
+                                    Actual: <?php echo htmlspecialchars(implode(', ', $conditionResult['actual'] ?? []), ENT_QUOTES, 'UTF-8'); ?>.
+                                    <?php if ($conditionMatches): ?>
+                                        Matched: <?php echo htmlspecialchars(implode(', ', $conditionResult['matched'] ?? []), ENT_QUOTES, 'UTF-8'); ?>.
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+
+                    <?php if (!empty($contextRulePreviewResult['matches'])): ?>
+                        <p>
+                            Selected articles:
+                            <?php if (empty($contextRulePreviewResult['articles'])): ?>
+                                none found for this selector.
+                            <?php else: ?>
+                                <?php echo htmlspecialchars(implode(', ', array_map(
+                                    static function ($article) {
+                                        return (string)($article['topic'] ?? '');
+                                    },
+                                    $contextRulePreviewResult['articles']
+                                )), ENT_QUOTES, 'UTF-8'); ?>.
+                            <?php endif; ?>
+                        </p>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
         </div>
 
         <?php

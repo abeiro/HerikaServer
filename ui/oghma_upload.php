@@ -45,12 +45,16 @@ if (!$conn) {
 }
 
 require_once $rootPath . 'lib' . DIRECTORY_SEPARATOR . 'oghma_context_rule_admin.php';
+require_once $rootPath . 'lib' . DIRECTORY_SEPARATOR . 'oghma_forced_context.php';
 $message .= oghma_context_rule_handle_post(
     $conn,
     $schema,
     $_POST,
     $_SERVER['REQUEST_METHOD'] ?? 'GET'
 );
+$contextRulePreviewResult = isset($_POST['preview_context_rule'])
+    ? oghma_context_rule_build_preview($conn, $schema, $_POST)
+    : null;
 
 /********************************************************************
  *  1) SINGLE TOPIC UPLOAD

@@ -113,22 +113,50 @@ if (!function_exists('chimOghmaBuildContextRuleContext')) {
 }
 
 if (!function_exists('chimOghmaContextRuleMatches')) {
-    function chimOghmaContextRuleMatches(array $conditions, array $context, ?array &$reasons = null): bool
+    function chimOghmaInspectContextRuleConditions(array $conditions, array $context): array
     {
-        $reasons = [];
+        $conditionResults = [];
+        $matchesAll = true;
+
         foreach ($conditions as $field => $expectedValues) {
             $expected = chimOghmaRuleValues($expectedValues);
             if (empty($expected)) {
                 continue;
             }
+
             $actual = chimOghmaRuleValues($context[$field] ?? []);
             $matched = array_values(array_intersect($expected, $actual));
-            if (empty($matched)) {
-                return false;
+            $matches = !empty($matched);
+            if (!$matches) {
+                $matchesAll = false;
             }
-            $reasons[] = $field . '=' . implode('|', $matched);
+
+            $conditionResults[] = [
+                'field' => (string) $field,
+                'expected' => $expected,
+                'actual' => $actual,
+                'matched' => $matched,
+                'matches' => $matches,
+            ];
         }
-        return true;
+
+        return [
+            'matches' => $matchesAll,
+            'conditions' => $conditionResults,
+        ];
+    }
+
+    function chimOghmaContextRuleMatches(array $conditions, array $context, ?array &$reasons = null): bool
+    {
+        $inspection = chimOghmaInspectContextRuleConditions($conditions, $context);
+        $reasons = [];
+        foreach ($inspection['conditions'] as $condition) {
+            if (empty($condition['matches'])) {
+                continue;
+            }
+            $reasons[] = $condition['field'] . '=' . implode('|', $condition['matched']);
+        }
+        return !empty($inspection['matches']);
     }
 }
 
