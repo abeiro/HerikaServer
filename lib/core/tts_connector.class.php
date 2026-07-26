@@ -407,10 +407,26 @@ class TTSConnector
         );
 
         if ($this->isFemaleGender($gender)) {
-            return trim(strval($metadata['fallback_female'] ?? self::$sharedMetadataDefaultMap['fallback_female']));
+            return $this->resolveFallbackVoiceMetadata(
+                $metadata['fallback_female'] ?? null,
+                self::$sharedMetadataDefaultMap['fallback_female']
+            );
         }
 
-        return trim(strval($metadata['fallback_male'] ?? self::$sharedMetadataDefaultMap['fallback_male']));
+        return $this->resolveFallbackVoiceMetadata(
+            $metadata['fallback_male'] ?? null,
+            self::$sharedMetadataDefaultMap['fallback_male']
+        );
+    }
+
+    private function resolveFallbackVoiceMetadata($value, string $default): string
+    {
+        // Legacy seed rows stored field schemas instead of resolved values.
+        if (is_array($value)) {
+            $value = $value['default'] ?? $default;
+        }
+
+        return is_scalar($value) ? trim(strval($value)) : $default;
     }
 
     public function resolveNpcVoiceForConnector(array $currentNpcData, $connectorData = null): array
