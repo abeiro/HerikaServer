@@ -7633,6 +7633,18 @@ if ($checkVersion("visual_context") < 20260718001) {
     }
 }
 
+if ($checkVersion("chim_systems_harness") < 20260725001) {
+    Logger::debug("Applying chim_systems_harness 20260725001 - add local systems harness state");
+
+    $schemaPath = __DIR__ . "/../lib/core/database_schema/chim_systems_harness.sql";
+    if (is_readable($schemaPath) && $db->execQuery(file_get_contents($schemaPath)) !== false) {
+        $updateVersion("chim_systems_harness", 20260725001);
+        Logger::info("Applied patch chim_systems_harness 20260725001");
+    } else {
+        Logger::error("Failed to apply patch chim_systems_harness 20260725001");
+    }
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------

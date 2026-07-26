@@ -1,0 +1,79 @@
+{
+  "generated_variety": {
+    "label": "Generated NPC Variety",
+    "description": "Spawns three CHIM-owned NPCs near the player with different races, jobs, personalities, and goals.",
+    "generated": [
+      {
+        "key": "nord_guard",
+        "name": "CHIMTEST_{RUN}_Sigrid",
+        "gender": "female",
+        "race": "Nord",
+        "class": "soldier",
+        "location": "nearby",
+        "background": "A disciplined retired hold guard who values duty, local history, and practical solutions.",
+        "speech_style": "Direct, concise, and observant.",
+        "goal": "Protect travelers and learn what threats are developing nearby.",
+        "disposition": "friendly"
+      },
+      {
+        "key": "khajiit_merchant",
+        "name": "CHIMTEST_{RUN}_J'zara",
+        "gender": "male",
+        "race": "Khajiit",
+        "class": "merchant",
+        "location": "nearby",
+        "background": "A patient caravan trader who tracks rumors, prices, and relationships between settlements.",
+        "speech_style": "Warm, curious, and metaphorical without being evasive.",
+        "goal": "Build a safe trade route and remember useful promises.",
+        "disposition": "friendly"
+      },
+      {
+        "key": "argonian_mage",
+        "name": "CHIMTEST_{RUN}_Reads-Reeds",
+        "gender": "female",
+        "race": "Argonian",
+        "class": "mage",
+        "location": "nearby",
+        "background": "A traveling natural philosopher interested in ruins, regional lore, and how memories change behavior.",
+        "speech_style": "Thoughtful, precise, and quietly skeptical.",
+        "goal": "Compare local knowledge with lived evidence and record contradictions.",
+        "disposition": "neutral"
+      }
+    ]
+  },
+  "existing_soak": {
+    "label": "Existing NPC Soak",
+    "description": "Temporarily activates selected existing NPCs for Background Life without renaming them.",
+    "generated": []
+  },
+  "mixed_soak": {
+    "label": "Mixed Generated and Existing",
+    "description": "Spawns two varied test NPCs and temporarily activates selected existing NPCs in the same run.",
+    "generated": [
+      {
+        "key": "imperial_scholar",
+        "name": "CHIMTEST_{RUN}_Cassian",
+        "gender": "male",
+        "race": "Imperial",
+        "class": "mage",
+        "location": "nearby",
+        "background": "An itinerant scholar who compares official histories with the testimony of ordinary people.",
+        "speech_style": "Measured, analytical, and willing to revise conclusions.",
+        "goal": "Collect reliable accounts about the current hold and its inhabitants.",
+        "disposition": "neutral"
+      },
+      {
+        "key": "dunmer_worker",
+        "name": "CHIMTEST_{RUN}_Dravyn",
+        "gender": "male",
+        "race": "Dunmer",
+        "class": "farmer",
+        "location": "nearby",
+        "background": "A displaced laborer who judges people by whether they keep promises and share burdens.",
+        "speech_style": "Dry, candid, and grounded in daily work.",
+        "goal": "Find stable work and decide who can be trusted.",
+        "disposition": "friendly"
+      }
+    ]
+  }
+}

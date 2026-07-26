@@ -1944,6 +1944,24 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
+} elseif ($gameRequest[0] === "harness_status") {
+    $db->insert(
+        'eventlog',
+        [
+            'ts' => $gameRequest[1] ?? time(),
+            'gamets' => $gameRequest[2] ?? 0,
+            'type' => 'harness_status',
+            'data' => (string)($gameRequest[3] ?? ''),
+            'sess' => 'systems-harness',
+            'localts' => time(),
+            'people' => '',
+            'location' => '',
+            'party' => '',
+        ]
+    );
+    Logger::info("[SYSTEMS-HARNESS] CHIM acknowledgement: " . (string)($gameRequest[3] ?? ''));
+    $MUST_END = true;
+
 } elseif (strpos($gameRequest[0], "enable_bg")===0) {    // util_location_name 
     
     $npcMaster = new NpcMaster();

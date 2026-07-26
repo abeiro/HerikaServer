@@ -148,6 +148,7 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
                 <div class="tab-buttons" role="tablist" aria-label="Monitoring pages">
                     <button class="tab-button" data-tab="audit"><span class="tab-icon" aria-hidden="true">&#x1F4CA;</span><span class="tab-label">Cost Breakdown</span></button>
                     <button class="tab-button" data-tab="responses"><span class="tab-icon" aria-hidden="true">&#x1F4AC;</span><span class="tab-label">Response Queue</span></button>
+                    <button class="tab-button" data-tab="harness"><span class="tab-icon" aria-hidden="true">&#x1F9EA;</span><span class="tab-label">Systems Harness</span></button>
                 </div>
             </section>
             <section class="tab-group" data-category="data-tools">
@@ -189,6 +190,11 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
     <div id="responses" class="tab-content">
         <div class="embed-wrap">
             <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/index.php?table=responselog&embed=1"></iframe>
+        </div>
+    </div>
+    <div id="harness" class="tab-content">
+        <div class="embed-wrap">
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/chim_systems_harness.php?embed=1"></iframe>
         </div>
     </div>
     <div id="rellogs" class="tab-content">
