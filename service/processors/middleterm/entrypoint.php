@@ -129,11 +129,6 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
     $bglTriggerHoursAgoGamets = $maxRow - ($bglTriggerHours / 0.0000024);
 
-    $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
-    $bglTriggerDays = $bglTriggerHours/24;
-    $bglTriggerDaysAgoGamets=$maxRow - ( (24 * $bglTriggerDays) / 0.0000024);
-
-
     // BgL tracking coords, in-game daily
 
     $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->>'last_coords' IS NOT NULL AND metadata->'last_coords'->>'pending' IS NULL ");
@@ -178,7 +173,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
 
 
     // BgL content
-    // In-game based on configured days
+    // In-game based on the configured hours
 
     error_log("[BGL] Checking passive events NPCs");
     $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND (extended_data->>'background_life_commands' = 'false' or extended_data->>'background_life_commands'  IS NULL)");
@@ -198,7 +193,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         $mwdata = json_decode($npc["extended_data"], true);
         // Trigger if never updated, or if last update is older than configured threshold
         $mustInstructBypassBgl=false;
-        if (chimIsBackgroundLifeDue($mwdata["background_life_last_updated"] ?? null, $bglTriggerDaysAgoGamets)) {
+        if (chimIsBackgroundLifeDue($mwdata["background_life_last_updated"] ?? null, $bglTriggerHoursAgoGamets)) {
             error_log("[BGL]  Passive event for {$npc["npc_name"]}");
 
 
@@ -272,11 +267,11 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         }
 
         // Trigger if never updated, or if last update is older than configured threshold
-        if (chimIsBackgroundLifeDue($mwdata["background_life_last_updated"] ?? null, $bglTriggerDaysAgoGamets)) {
+        if (chimIsBackgroundLifeDue($mwdata["background_life_last_updated"] ?? null, $bglTriggerHoursAgoGamets)) {
             $lastUpdated = (float) ($mwdata["background_life_last_updated"] ?? 0);
             $presenceDelta = (int) ($mwdata["background_life_last_updated_presence_delta"] ?? 0);
-            $delta = ($lastUpdated - $bglTriggerDaysAgoGamets) * 0.0000024;
-            error_log("[BGL] Event for {$npc["npc_name"]}, last updated: {$lastUpdated}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}, presence delta: {$presenceDelta}");
+            $delta = ($lastUpdated - $bglTriggerHoursAgoGamets) * 0.0000024;
+            error_log("[BGL] Event for {$npc["npc_name"]}, last updated: {$lastUpdated}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours}, delta: {$delta}, presence delta: {$presenceDelta}");
 
             if ($mustInstructBypassBgl){
                 error_log("[BGL] {$npc["npc_name"]} has been near a player for more than 10 checks. Issuing INSTRUCTION");
