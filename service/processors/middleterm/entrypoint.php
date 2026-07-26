@@ -16,6 +16,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     require_once($enginePath . "lib/data_functions.php");
     require_once($enginePath . "lib/rolemaster_helpers.php");
     require_once($enginePath . "lib/utils_game_timestamp.php");
+    require_once($enginePath . "lib/background_life_tracking.php");
     require_once($enginePath . "lib/middleterm_worker_lock.php");
 
     require_once $enginePath . "lib/core/npc_master.class.php";
@@ -133,6 +134,10 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
 
     $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->>'last_coords' IS NOT NULL AND metadata->'last_coords'->>'pending' IS NULL ");
     foreach ($allEnabledBgLNpc as $npc) {
+        if (chimIsBackgroundNpcInRange((string) $npc["npc_name"])) {
+            continue;
+        }
+
         $mwdata = json_decode($npc["metadata"], true);
         if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] || $mwdata["last_coords"]["last_updated"] < ($oneDayAgoGamets)) {
             logger::info("[BGL] Daily Tracking {$npc["npc_name"]}");
@@ -157,6 +162,10 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->'gps_track' = 'true' AND metadata->'last_coords'->>'pending' IS NULL AND (metadata->'last_coords'->>'last_updated')::numeric < $oneHourAgoGamets ");
 
     foreach ($allEnabledBgLNpc as $npc) {
+        if (chimIsBackgroundNpcInRange((string) $npc["npc_name"])) {
+            continue;
+        }
+
         $mwdata = json_decode($npc["metadata"], true);
         if (
             !isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"]

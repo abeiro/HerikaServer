@@ -82,6 +82,17 @@ final class BackgroundLifeConcurrencyTest extends TestCase
         self::assertFalse(chimIsBackgroundNpcInRange(''));
     }
 
+    public function testSchedulerSkipsNearbyActorsBeforeLaunchingTrackCommands(): void
+    {
+        $source = file_get_contents(__DIR__ . '/../../service/processors/middleterm/entrypoint.php');
+
+        self::assertIsString($source);
+        self::assertGreaterThanOrEqual(
+            2,
+            substr_count($source, 'if (chimIsBackgroundNpcInRange((string) $npc["npc_name"]))')
+        );
+    }
+
     public function testMiddletermLockUsesDedicatedAdvisoryLock(): void
     {
         $db = new BackgroundLifeConcurrencyDb();
