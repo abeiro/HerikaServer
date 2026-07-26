@@ -2258,14 +2258,11 @@ $contextDataHistoric = filterHistoricContextForNarratorVisibility(
     $contextDataHistoric,
     $GLOBALS["HERIKA_NAME"] ?? ""
 );
+$compactHistoryBlock = '';
 if (chimShouldCompactNpcContextHistory($GLOBALS["HERIKA_NAME"] ?? "")) {
     $compactHistoryBlock = chimFormatCompactNpcContextHistory(
         $contextDataHistoric,
         (string)($GLOBALS["HERIKA_NAME"] ?? "")
-    );
-    $contextDataWorld = chimAppendCompactHistoryToPrompt(
-        $contextDataWorld,
-        $compactHistoryBlock
     );
     $contextDataHistoric = [];
 }
@@ -2516,6 +2513,7 @@ $systemPrompt = chimFormatPromptXmlSections(
 $systemPrompt = chimApplyPromptContextOptionsToSystemPrompt($systemPrompt);
 
 $head[] = array('role' => 'system', 'content' => $systemPrompt);
+$head = chimAppendCompactHistoryToPrompt($head, $compactHistoryBlock);
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
     //avoid reinjecting command prompt that we have already appended
