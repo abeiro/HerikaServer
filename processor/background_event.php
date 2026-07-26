@@ -173,7 +173,7 @@ if (is_array($bgevent)) {
                 $npcManager->updateByArray($npcData);
 
                 // Also, lets track coords.
-                if ($npcData["refid"]) {
+                if ($npcData["refid"] && !chimIsBackgroundNpcInRange((string) $npcData["npc_name"])) {
                     chimQueueBackgroundTrack(
                         $npcData,
                         $GLOBALS["db"],

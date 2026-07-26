@@ -14,6 +14,23 @@ function chimNormalizeBackgroundTrackRefId($refId): ?string
 }
 
 /**
+ * Check the exact pipe-delimited presence list before requesting coordinates.
+ *
+ * Nearby NPC coordinates are already refreshed by normal game presence data,
+ * so sending an additional BackgroundCmd Track request only creates redundant
+ * server and plugin work.
+ */
+function chimIsBackgroundNpcInRange(string $npcName): bool
+{
+    $npcName = trim($npcName);
+    if ($npcName === '' || !function_exists('DataBeingsInRange')) {
+        return false;
+    }
+
+    return str_contains((string) DataBeingsInRange(), '|' . $npcName . '|');
+}
+
+/**
  * Atomically claim and queue a coordinate update for one Background Life NPC.
  *
  * The pending flag and response command are written in one statement. Competing

@@ -5,6 +5,14 @@ use PHPUnit\Framework\TestCase;
 require_once __DIR__ . '/../../lib/background_life_tracking.php';
 require_once __DIR__ . '/../../lib/middleterm_worker_lock.php';
 
+$GLOBALS['BACKGROUND_LIFE_TEST_BEINGS_IN_RANGE'] = '';
+if (!function_exists('DataBeingsInRange')) {
+    function DataBeingsInRange(): string
+    {
+        return (string) ($GLOBALS['BACKGROUND_LIFE_TEST_BEINGS_IN_RANGE'] ?? '');
+    }
+}
+
 final class BackgroundLifeConcurrencyDb
 {
     public array $queries = [];
@@ -62,6 +70,16 @@ final class BackgroundLifeConcurrencyTest extends TestCase
         self::assertFalse(chimQueueBackgroundTrack(['id' => 0, 'refid' => '1347A'], $db));
         self::assertFalse(chimQueueBackgroundTrack(['id' => 1, 'refid' => 'not-a-ref'], $db));
         self::assertSame([], $db->queries);
+    }
+
+    public function testNearbyCheckMatchesWholeActorNamesOnly(): void
+    {
+        $GLOBALS['BACKGROUND_LIFE_TEST_BEINGS_IN_RANGE'] = '|RANGROO|Sven|Sigrid|';
+
+        self::assertTrue(chimIsBackgroundNpcInRange('Sven'));
+        self::assertTrue(chimIsBackgroundNpcInRange('Sigrid'));
+        self::assertFalse(chimIsBackgroundNpcInRange('Sven the Bard'));
+        self::assertFalse(chimIsBackgroundNpcInRange(''));
     }
 
     public function testMiddletermLockUsesDedicatedAdvisoryLock(): void

@@ -91,9 +91,8 @@ if ($cmds[0] == "TrackAll") {
 
     // Check if NPC is around using DataBeingsInRange
 
-    $npcsInRange = DataBeingsInRange();
-    if (strpos($npcsInRange, $GLOBALS["HERIKA_NAME"]) !== false) {
-        logger::info("[BGL] NPC {$argv[1]} is in range, skipping background life processing.");
+    if (chimIsBackgroundNpcInRange((string) $GLOBALS["HERIKA_NAME"])) {
+        logger::debug("[BGL] NPC {$argv[1]} is in range, skipping background life processing.");
         return;
     }
     
