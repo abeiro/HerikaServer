@@ -148,7 +148,10 @@ if (!function_exists('chimOghmaFindRowsForRuleSelector')) {
         if ($selectorType === 'topic') {
             $condition = "EXISTS (
                 SELECT 1
-                  FROM regexp_split_to_table(topic, E'\\\\s*,\\\\s*') AS selector_value
+                  FROM regexp_split_to_table(
+                        concat_ws(',', topic, coalesce(aliases, '')),
+                        E'\\\\s*,\\\\s*'
+                  ) AS selector_value
                  WHERE regexp_replace(replace(lower(selector_value), '_', ' '), '[^a-z0-9]+', ' ', 'g') = '{$escaped}'
             )";
         } elseif ($selectorType === 'tag') {
@@ -163,7 +166,7 @@ if (!function_exists('chimOghmaFindRowsForRuleSelector')) {
 
         $limit = max(1, min(5, $limit));
         $rows = $db->fetchAll(
-            "SELECT topic, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic
+            "SELECT topic, aliases, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic
                FROM public.oghma
               WHERE {$condition}
               ORDER BY topic

@@ -177,11 +177,11 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                                     CASE WHEN native_vector @@ to_tsquery('$locationCtxQuery') THEN 2.0 ELSE 1.0 END +
                                 ts_rank(native_vector, to_tsquery('$contextKeywordsQuery')) *
                                     CASE WHEN native_vector @@ to_tsquery('$contextKeywordsQuery') THEN 1.0 ELSE 0.0 END +
-                                -- Strong boost for alias match in the topic column (commas/underscores normalized)
+                                -- Strong boost for canonical topic or alias matches.
                                 ts_rank(
                                     to_tsvector('simple',
                                         regexp_replace(
-                                            replace(lower(topic), '_',' '),
+                                            replace(lower(concat_ws(' ', topic, coalesce(aliases, ''))), '_',' '),
                                             ',', ' ', 'g'
                                         )
                                     ),
@@ -190,7 +190,7 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                                 CASE WHEN
                                     to_tsvector('simple',
                                         regexp_replace(
-                                            replace(lower(topic), '_',' '),
+                                            replace(lower(concat_ws(' ', topic, coalesce(aliases, ''))), '_',' '),
                                             ',', ' ', 'g'
                                         )
                                     ) @@ to_tsquery('$currentInputTopicQuery')
@@ -204,7 +204,7 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                                 native_vector @@ to_tsquery('$contextKeywordsQuery') OR
                                 to_tsvector('simple',
                                     regexp_replace(
-                                        replace(lower(topic), '_',' '),
+                                        replace(lower(concat_ws(' ', topic, coalesce(aliases, ''))), '_',' '),
                                         ',', ' ', 'g'
                                     )
                                 ) @@ to_tsquery('$currentInputTopicQuery')

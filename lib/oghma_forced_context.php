@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'oghma_aliases.php';
+
 if (!function_exists('chimOghmaNormalizeLookupLabel')) {
     function chimOghmaNormalizeLookupLabel($value): string
     {
@@ -200,9 +202,12 @@ if (!function_exists('chimOghmaCollectLocationSignals')) {
 }
 
 if (!function_exists('chimOghmaTopicAliases')) {
-    function chimOghmaTopicAliases($topic): array
+    function chimOghmaTopicAliases($topic, $aliases = ''): array
     {
-        return chimOghmaUniqueSignals(preg_split('/\s*,\s*/u', (string) $topic) ?: []);
+        return chimOghmaUniqueSignals(array_merge(
+            preg_split('/\s*,\s*/u', (string) $topic) ?: [],
+            chimOghmaSplitAliases($aliases)
+        ));
     }
 }
 
@@ -216,11 +221,14 @@ if (!function_exists('chimOghmaFindRowsForSignals')) {
 
         $quoted = array_map(static fn($signal) => "'" . $db->escape($signal) . "'", $signals);
         $rows = $db->fetchAll(
-            "SELECT topic, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic
+            "SELECT topic, aliases, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic
                FROM public.oghma
               WHERE EXISTS (
                     SELECT 1
-                      FROM regexp_split_to_table(topic, E'\\\\s*,\\\\s*') AS topic_alias
+                      FROM regexp_split_to_table(
+                            concat_ws(',', topic, coalesce(aliases, '')),
+                            E'\\\\s*,\\\\s*'
+                      ) AS topic_alias
                      WHERE regexp_replace(replace(lower(topic_alias), '_', ' '), '[^a-z0-9]+', ' ', 'g')
                            IN (" . implode(',', $quoted) . ")
               )"
@@ -230,11 +238,11 @@ if (!function_exists('chimOghmaFindRowsForSignals')) {
         $priorities = array_flip($signals);
         usort($rows, static function ($left, $right) use ($priorities) {
             $leftPriority = PHP_INT_MAX;
-            foreach (chimOghmaTopicAliases($left['topic'] ?? '') as $alias) {
+            foreach (chimOghmaTopicAliases($left['topic'] ?? '', $left['aliases'] ?? '') as $alias) {
                 $leftPriority = min($leftPriority, $priorities[$alias] ?? PHP_INT_MAX);
             }
             $rightPriority = PHP_INT_MAX;
-            foreach (chimOghmaTopicAliases($right['topic'] ?? '') as $alias) {
+            foreach (chimOghmaTopicAliases($right['topic'] ?? '', $right['aliases'] ?? '') as $alias) {
                 $rightPriority = min($rightPriority, $priorities[$alias] ?? PHP_INT_MAX);
             }
             return $leftPriority <=> $rightPriority;
