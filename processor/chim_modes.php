@@ -154,8 +154,8 @@ if ($EXECUTION_MODE=="STANDARD") {
 
 $CONTEXT_MODE=$db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_context_mode'");
 if (isset($CONTEXT_MODE["value"]) && $CONTEXT_MODE["value"]==1) 
-    $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]=true;
+    $GLOBALS["FOCUS_CHAT_MODE"]=true;
 else
-    $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]=false;
+    $GLOBALS["FOCUS_CHAT_MODE"]=false;
 
 ?>

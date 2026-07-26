@@ -34,7 +34,6 @@ $OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More 
 $PLAYER_RESPEECH=true; //Use default diary connector AI to rewrite player speech. Currently only triggers when starting speech with **.
 $PLAYER_SPEECH_STYLE=""; //Instructions for how the player character speaks and communicates. Used as context when rewriting player dialogue.
 $PROMPT_TIMESTAMP=false; //Add rough timestamp subdividers to event context (e.g., 'Moments Ago', 'A while ago') to help the LLM understand temporal relationships.
-$COMPACT_NPC_CONTEXT_HISTORY=false; //Use a compact plaintext conversation history for NPC prompts while preserving user/assistant roles.
 $use_emotions_expression = false; //Add emotions support. Changes the affect context/json object offered to LLM must be false by default.
 
 //[Advanced Configuration]
@@ -45,7 +44,6 @@ $BORED_EVENT=30; //Bored Event Probability. Chance of an NPC starting a random c
 $CONTEXT_HISTORY="50"; //Amount of context history (dialogue and events) that will be sent to LLM.
 $CONTEXT_HISTORY_DIARY="100"; //Amount of context history specifically for diary entries. Set to 0 to use regular CONTEXT_HISTORY value.
 $CONTEXT_HISTORY_DYNAMIC_PROFILE="50"; //Amount of context history specifically for dynamic profile updates. Set to 0 to use regular CONTEXT_HISTORY value.
-$CLEAN_CONTEXT_FOCUS_CHAT_HISTORY=25; //Amount of context history specifically for clean context focus chat. Set to 0 to use regular CONTEXT_HISTORY value.
 $HTTP_TIMEOUT=15; //Timeout for AI requests.
 $CORE_LANG=""; //Custom languages. - language folder
 $ALIVE_MESSAGE=false; //Leave as is - read only

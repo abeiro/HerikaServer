@@ -8,20 +8,23 @@ final class CompactNpcContextHistoryTest extends TestCase
 {
     protected function tearDown(): void
     {
-        unset($GLOBALS['COMPACT_NPC_CONTEXT_HISTORY'], $GLOBALS['HERIKA_NAME']);
+        unset(
+            $GLOBALS['FOCUS_CHAT_MODE'],
+            $GLOBALS['HERIKA_NAME']
+        );
     }
 
     public function testSettingIsDisabledByDefault(): void
     {
         $GLOBALS['HERIKA_NAME'] = 'Lucan Valerius';
 
-        $this->assertFalse(chimCompactNpcContextHistoryEnabled());
+        $this->assertFalse(chimFocusChatContextEnabled());
         $this->assertFalse(chimShouldCompactNpcContextHistory());
     }
 
     public function testNarratorIsExcludedWhenSettingIsEnabled(): void
     {
-        $GLOBALS['COMPACT_NPC_CONTEXT_HISTORY'] = true;
+        $GLOBALS['FOCUS_CHAT_MODE'] = true;
 
         $this->assertFalse(chimShouldCompactNpcContextHistory('The Narrator'));
         $this->assertTrue(chimShouldCompactNpcContextHistory('Lucan Valerius'));
@@ -43,7 +46,6 @@ final class CompactNpcContextHistoryTest extends TestCase
 
         $formatted = chimFormatCompactNpcContextHistory($history, 'Lucan Valerius');
 
-        $this->assertSame('user', $formatted[0]['role']);
         $this->assertSame(
             implode("\n", [
                 '# Lucan Valerius, speaking to RANGROO: Good evening. Looking for something in particular?',
@@ -52,9 +54,9 @@ final class CompactNpcContextHistoryTest extends TestCase
                 '# Lucan Valerius: Oh, a bit of this and a bit of that.',
                 '# After 11 hours, it is now Tirdas, 7:19 AM, 19 Last Seed, 4E 201; the current scene is at Riverwood Trader in Whiterun Hold.',
             ]),
-            $formatted[0]['content']
+            $formatted
         );
-        $this->assertCount(1, $formatted);
+        $this->assertStringNotContainsString('{"character"', $formatted);
     }
 
     public function testKeepsHistoricActionsInPlaintext(): void
@@ -66,25 +68,58 @@ final class CompactNpcContextHistoryTest extends TestCase
 
         $formatted = chimFormatCompactNpcContextHistory($history, 'Lucan Valerius');
 
-        $this->assertSame('user', $formatted[0]['role']);
         $this->assertSame(
             '# Lucan Valerius, speaking to RANGROO: Come with me. [Action: Follow, targeting RANGROO]',
-            $formatted[0]['content']
+            $formatted
         );
     }
 
-    public function testPreservesToolMessagesOutsidePlaintextHistoryBlock(): void
+    public function testConvertsToolHistoryToPlaintext(): void
     {
         $history = [
             ['role' => 'user', 'content' => 'RANGROO: Wait here. (Talking to Lucan Valerius)'],
-            ['role' => 'assistant', 'content' => null, 'tool_calls' => [['id' => 'call_1']]],
+            [
+                'role' => 'assistant',
+                'content' => null,
+                'tool_calls' => [[
+                    'id' => 'call_1',
+                    'function' => ['name' => 'WaitHere'],
+                ]],
+            ],
             ['role' => 'tool', 'content' => 'WaitHere completed.'],
         ];
 
         $formatted = chimFormatCompactNpcContextHistory($history, 'Lucan Valerius');
 
-        $this->assertSame('# RANGROO, speaking to Lucan Valerius: Wait here.', $formatted[0]['content']);
-        $this->assertSame($history[1], $formatted[1]);
-        $this->assertSame($history[2], $formatted[2]);
+        $this->assertSame(
+            implode("\n", [
+                '# RANGROO, speaking to Lucan Valerius: Wait here.',
+                '# Requested action: WaitHere.',
+                '# Tool result: WaitHere completed.',
+            ]),
+            $formatted
+        );
+    }
+
+    public function testAppendsHistoryInsideTheSystemPromptWithoutAddingMessages(): void
+    {
+        $worldContext = [[
+            'role' => 'system',
+            'content' => '<actors_nearby>Lucan Valerius</actors_nearby>',
+        ]];
+
+        $result = chimAppendCompactHistoryToPrompt(
+            $worldContext,
+            "# After 11 hours, it is now Tirdas, 7:19 AM.\n# RANGROO, speaking to Hilde: hello"
+        );
+
+        $this->assertCount(1, $result);
+        $this->assertSame('system', $result[0]['role']);
+        $this->assertSame(
+            "<actors_nearby>Lucan Valerius</actors_nearby>\n\n"
+                . "# After 11 hours, it is now Tirdas, 7:19 AM.\n"
+                . "# RANGROO, speaking to Hilde: hello",
+            $result[0]['content']
+        );
     }
 }

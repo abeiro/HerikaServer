@@ -1966,10 +1966,6 @@ if (($gameRequest[0] == "diary" || $gameRequest[0] == "diary_followers") && isse
     $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 }
 
-if ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==1) {
-    $lastNDataForContext=$GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT_HISTORY"];
-}
-
 // Historic context (last dialogues, events,...)
 //if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator"))
 if (($GLOBALS["HERIKA_NAME"]=="The Narrator"))
@@ -2258,17 +2254,20 @@ if (sizeof($memoryInjectionCtx)>0) {
     logEvent($gameRequestCopy,$GLOBALS["HERIKA_NAME"]);// Memory log only avaibale to current NPC.
 }
 
-$contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
-
 $contextDataHistoric = filterHistoricContextForNarratorVisibility(
     $contextDataHistoric,
     $GLOBALS["HERIKA_NAME"] ?? ""
 );
 if (chimShouldCompactNpcContextHistory($GLOBALS["HERIKA_NAME"] ?? "")) {
-    $contextDataHistoric = chimFormatCompactNpcContextHistory(
+    $compactHistoryBlock = chimFormatCompactNpcContextHistory(
         $contextDataHistoric,
         (string)($GLOBALS["HERIKA_NAME"] ?? "")
     );
+    $contextDataWorld = chimAppendCompactHistoryToPrompt(
+        $contextDataWorld,
+        $compactHistoryBlock
+    );
+    $contextDataHistoric = [];
 }
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 

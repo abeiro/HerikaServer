@@ -47,7 +47,6 @@ $gsSections = [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
-        [ 'name' => 'COMPACT_NPC_CONTEXT_HISTORY', 'type' => 'boolean', 'default' => false ],
     ],
     'Oghma' => [
         [ 'name' => 'OGHMA_INFINIUM', 'type' => 'boolean' ],
@@ -66,7 +65,6 @@ $gsSections = [
         [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
         [ 'name' => 'BGL_TRIGGER_HOURS', 'type' => 'number', 'min' => 1, 'max' => 720, 'step' => 0.1, 'default' => 24 ],
         [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
-        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
     ],
     'Quests' => [
         [ 'name' => 'CHIM_AI_QUEST_PROGRESSION', 'type' => 'boolean' ],
@@ -165,11 +163,9 @@ function pretty_label(string $flatName): string
         'LOCATION_OGHMA' => 'Force Location Oghma',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
         'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time',
-        'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
         'CHIM_AI_QUEST_PROGRESSION' => 'CHIM AI Quest Progression (Beta)',
         'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
         'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 'Item Pickup Detection Value',
-        'COMPACT_NPC_CONTEXT_HISTORY' => 'Compact NPC Context History',
     ];
     if (isset($customLabels[$flatName])) {
         return $customLabels[$flatName];
@@ -192,7 +188,6 @@ function icon_for_field(string $flatName): string
     if ($u === 'PROMPT_HEAD') return '🔝';
     if ($u === 'EMOTEMOODS') return '🎭';
     if ($u === 'PROMPT_TIMESTAMP') return '🕐';
-    if ($u === 'COMPACT_NPC_CONTEXT_HISTORY') return '🗜️';
     if (strpos($u, 'CORE_CONNECTOR_') === 0) {
         if ($u === 'CORE_CONNECTOR_PLAYER') return '🎮';
         if ($u === 'CORE_CONNECTOR_SUMMARY') return '📝';

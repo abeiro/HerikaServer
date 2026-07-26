@@ -1,15 +1,15 @@
 <?php
 
 /**
- * Experimental compact formatting for NPC conversation history.
+ * Compact formatting for NPC conversation history while Focus Chat is enabled.
  *
  * Live response JSON and action schemas are intentionally handled elsewhere.
  */
 
-if (!function_exists('chimCompactNpcContextHistoryEnabled')) {
-    function chimCompactNpcContextHistoryEnabled(): bool
+if (!function_exists('chimFocusChatContextEnabled')) {
+    function chimFocusChatContextEnabled(): bool
     {
-        $value = $GLOBALS['COMPACT_NPC_CONTEXT_HISTORY'] ?? false;
+        $value = $GLOBALS['FOCUS_CHAT_MODE'] ?? false;
         if (is_bool($value)) {
             return $value;
         }
@@ -21,7 +21,7 @@ if (!function_exists('chimCompactNpcContextHistoryEnabled')) {
 if (!function_exists('chimShouldCompactNpcContextHistory')) {
     function chimShouldCompactNpcContextHistory(?string $actorName = null): bool
     {
-        if (!chimCompactNpcContextHistoryEnabled()) {
+        if (!chimFocusChatContextEnabled()) {
             return false;
         }
 
@@ -144,43 +144,69 @@ if (!function_exists('chimCompactUserHistoryEntry')) {
     }
 }
 
-if (!function_exists('chimFormatCompactNpcContextHistory')) {
-    function chimFormatCompactNpcContextHistory(array $history, string $actorName): array
+if (!function_exists('chimCompactToolHistoryEntry')) {
+    function chimCompactToolHistoryEntry(array $entry): string
     {
-        $formatted = [];
-        $lines = [];
+        $content = $entry['content'] ?? '';
+        if (is_string($content) || is_scalar($content)) {
+            $content = chimCompactHistoryWhitespace((string)$content);
+            if ($content !== '') {
+                return 'Tool result: ' . $content;
+            }
+        }
 
-        $flushLines = static function () use (&$formatted, &$lines): void {
-            if ($lines === []) {
-                return;
+        $toolCalls = $entry['tool_calls'] ?? [];
+        if (!is_array($toolCalls)) {
+            return '';
+        }
+
+        $calls = [];
+        foreach ($toolCalls as $toolCall) {
+            if (!is_array($toolCall)) {
+                continue;
             }
 
-            $formatted[] = [
-                'role' => 'user',
-                'content' => implode("\n", array_map(
-                    static fn(string $line): string => '# ' . $line,
-                    $lines
-                )),
-            ];
-            $lines = [];
-        };
+            $function = $toolCall['function'] ?? [];
+            if (!is_array($function)) {
+                continue;
+            }
+
+            $name = chimCompactHistoryWhitespace((string)($function['name'] ?? ''));
+            if ($name !== '') {
+                $calls[] = $name;
+            }
+        }
+
+        return $calls === [] ? '' : 'Requested action: ' . implode(', ', $calls) . '.';
+    }
+}
+
+if (!function_exists('chimFormatCompactNpcContextHistory')) {
+    function chimFormatCompactNpcContextHistory(array $history, string $actorName): string
+    {
+        $lines = [];
 
         foreach ($history as $entry) {
-            if (!is_array($entry) || !isset($entry['role'], $entry['content'])) {
-                $flushLines();
-                $formatted[] = $entry;
+            if (!is_array($entry) || !isset($entry['role'])) {
                 continue;
             }
 
             $role = (string)$entry['role'];
             if ($role === 'assistant') {
-                if (isset($entry['tool_calls']) || (!is_string($entry['content']) && !is_scalar($entry['content']))) {
-                    $flushLines();
-                    $formatted[] = $entry;
+                if (isset($entry['tool_calls'])) {
+                    $content = chimCompactToolHistoryEntry($entry);
+                    if ($content !== '') {
+                        $lines[] = $content;
+                    }
                     continue;
                 }
 
-                $content = chimCompactAssistantHistoryEntry((string)$entry['content'], $actorName);
+                $entryContent = $entry['content'] ?? '';
+                if (!is_string($entryContent) && !is_scalar($entryContent)) {
+                    continue;
+                }
+
+                $content = chimCompactAssistantHistoryEntry((string)$entryContent, $actorName);
                 if ($content !== '') {
                     $lines[] = $content;
                 }
@@ -188,13 +214,12 @@ if (!function_exists('chimFormatCompactNpcContextHistory')) {
             }
 
             if ($role === 'user') {
-                if (!is_string($entry['content']) && !is_scalar($entry['content'])) {
-                    $flushLines();
-                    $formatted[] = $entry;
+                $entryContent = $entry['content'] ?? '';
+                if (!is_string($entryContent) && !is_scalar($entryContent)) {
                     continue;
                 }
 
-                $content = chimCompactUserHistoryEntry((string)$entry['content']);
+                $content = chimCompactUserHistoryEntry((string)$entryContent);
                 if ($content !== '') {
                     $lastIndex = count($lines) - 1;
                     if (
@@ -212,11 +237,54 @@ if (!function_exists('chimFormatCompactNpcContextHistory')) {
                 continue;
             }
 
-            $flushLines();
-            $formatted[] = $entry;
+            if ($role === 'tool') {
+                $content = chimCompactToolHistoryEntry($entry);
+            } else {
+                $entryContent = $entry['content'] ?? '';
+                $content = (is_string($entryContent) || is_scalar($entryContent))
+                    ? chimCompactHistoryWhitespace((string)$entryContent)
+                    : '';
+            }
+
+            if ($content !== '') {
+                $lines[] = $content;
+            }
         }
 
-        $flushLines();
-        return $formatted;
+        return implode("\n", array_map(
+            static fn(string $line): string => '# ' . $line,
+            $lines
+        ));
+    }
+}
+
+if (!function_exists('chimAppendCompactHistoryToPrompt')) {
+    function chimAppendCompactHistoryToPrompt(array $worldContext, string $historyBlock): array
+    {
+        $historyBlock = trim($historyBlock);
+        if ($historyBlock === '') {
+            return $worldContext;
+        }
+
+        foreach ($worldContext as &$entry) {
+            if (
+                is_array($entry)
+                && ($entry['role'] ?? '') === 'system'
+                && isset($entry['content'])
+                && (is_string($entry['content']) || is_scalar($entry['content']))
+            ) {
+                $entry['content'] = rtrim((string)$entry['content']) . "\n\n" . $historyBlock;
+                unset($entry);
+                return $worldContext;
+            }
+        }
+        unset($entry);
+
+        array_unshift($worldContext, [
+            'role' => 'system',
+            'content' => $historyBlock,
+        ]);
+
+        return $worldContext;
     }
 }
