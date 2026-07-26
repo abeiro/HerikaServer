@@ -43,6 +43,7 @@ require_once($path . "lib/model_dynmodel.php");
 require_once($path . "lib/minimet5_service.php");
 require_once($path . "lib/data_functions.php");
 require_once($path . "lib/chat_helper_functions.php");
+require_once($path . "lib/compact_context_history.php");
 require_once($path . "lib/lazy_xml.php");
 require_once($path . "lib/memory_helper_vectordb.php");
 require_once($path . "lib/llm_randomizer.php");
@@ -1965,10 +1966,6 @@ if (($gameRequest[0] == "diary" || $gameRequest[0] == "diary_followers") && isse
     $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
 }
 
-if ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==1) {
-    $lastNDataForContext=$GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT_HISTORY"];
-}
-
 // Historic context (last dialogues, events,...)
 //if ((!$GLOBALS["IS_NPC"])||($GLOBALS["HERIKA_NAME"]=="The Narrator"))
 if (($GLOBALS["HERIKA_NAME"]=="The Narrator"))
@@ -2257,12 +2254,18 @@ if (sizeof($memoryInjectionCtx)>0) {
     logEvent($gameRequestCopy,$GLOBALS["HERIKA_NAME"]);// Memory log only avaibale to current NPC.
 }
 
-$contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
-
 $contextDataHistoric = filterHistoricContextForNarratorVisibility(
     $contextDataHistoric,
     $GLOBALS["HERIKA_NAME"] ?? ""
 );
+$compactHistoryBlock = '';
+if (chimShouldCompactNpcContextHistory($GLOBALS["HERIKA_NAME"] ?? "")) {
+    $compactHistoryBlock = chimFormatCompactNpcContextHistory(
+        $contextDataHistoric,
+        (string)($GLOBALS["HERIKA_NAME"] ?? "")
+    );
+    $contextDataHistoric = [];
+}
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
 // audit_log(__FILE__." [OGHMA]  ".__LINE__);
@@ -2510,6 +2513,7 @@ $systemPrompt = chimFormatPromptXmlSections(
 $systemPrompt = chimApplyPromptContextOptionsToSystemPrompt($systemPrompt);
 
 $head[] = array('role' => 'system', 'content' => $systemPrompt);
+$head = chimAppendCompactHistoryToPrompt($head, $compactHistoryBlock);
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
     //avoid reinjecting command prompt that we have already appended

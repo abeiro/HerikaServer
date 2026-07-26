@@ -48,7 +48,7 @@ header('Content-Type: application/json');
 $modeResult = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
 $currentMode = isset($modeResult['value']) ? strtoupper(trim($modeResult['value'])) : 'STANDARD';
 
-// Get focus chat setting
+// Get Compact Chat setting
 $focusChatResult = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_context_mode'");
 $focusChat = isset($focusChatResult['value']) && $focusChatResult['value'] == '1';
 

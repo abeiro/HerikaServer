@@ -44,7 +44,6 @@ $BORED_EVENT=30; //Bored Event Probability. Chance of an NPC starting a random c
 $CONTEXT_HISTORY="50"; //Amount of context history (dialogue and events) that will be sent to LLM.
 $CONTEXT_HISTORY_DIARY="100"; //Amount of context history specifically for diary entries. Set to 0 to use regular CONTEXT_HISTORY value.
 $CONTEXT_HISTORY_DYNAMIC_PROFILE="50"; //Amount of context history specifically for dynamic profile updates. Set to 0 to use regular CONTEXT_HISTORY value.
-$CLEAN_CONTEXT_FOCUS_CHAT_HISTORY=25; //Amount of context history specifically for clean context focus chat. Set to 0 to use regular CONTEXT_HISTORY value.
 $HTTP_TIMEOUT=15; //Timeout for AI requests.
 $CORE_LANG=""; //Custom languages. - language folder
 $ALIVE_MESSAGE=false; //Leave as is - read only

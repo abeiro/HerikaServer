@@ -2621,9 +2621,6 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     
     $lastTimeCategory = null; // Track last timestamp category for PROMPT_TIMESTAMP feature
 
-    $focusOnChat=($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"] ?? false);
-
-
     foreach ($orderedData as $n=>$row) {
         $rowData = $row["data"];
         
@@ -2696,78 +2693,44 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             $speaker = "narratorchat";
             
         } else if ($row["subtype"]=="BACKDIAG") {
-            if ($focusOnChat)
-                continue;
             $speaker = "backgroundchat";
             
         } else if ($row["subtype"]=="BGLCHAT") {
             $speaker = "backgroundchat";
             
         } else if ($row["subtype"]=="BOOKEVT") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="CONTEXTI") {
             if (strpos($rowData,"should not be visible")!==false)
                 continue;
-            if ($focusOnChat) {
-                if (strpos($rowData," uses ")!==false) 
-                    continue;
-                if (strpos($rowData," casts ")!==false) 
-                    continue;
-                if (strpos($rowData," engages combat ")!==false) 
-                    continue;
-                if (strpos($rowData," has defeated ")!==false) 
-                    continue;
-                if (strpos($rowData," activates ")!==false) 
-                    continue;
-            }
             
          
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="QUEST") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="ITEM") {
-            if ($focusOnChat) {
-                if (strpos($rowData,"{$GLOBALS["HERIKA_NAME"]}")===false) // This NPC's item transactions conserved
-                    continue;
-            }
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_WORD") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_LVL") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_SPAWN") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_SHOUT") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_DEATH") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             $rowData = strtoupper($rowData);
             
         } else if ($row["subtype"]=="RPG_DEFEAT") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             $rowData = strtoupper($rowData);
             
@@ -5555,135 +5518,18 @@ function call_llm_internal() {
         terminate();
     }
 
-    if (isset($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) && $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) {
+    /*
+    Player TTS
 
-         /* *****
-        Player TTS
-
-        Player TTS. We overwrite some confs an then restore them.
-        */
-        // Only process player TTS on the first attempt, not during fallback retry
-        if (!isset($GLOBALS["IN_FALLBACK_MODE"]) && in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && !Translation::isSavePlayerTranslationEnabled()) {
-            require(__DIR__."/../processor/player_tts.php");
-        }
-        $currentConnectorData=$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"];
-        error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
-
-
-        if ($gameRequest[0] === "narrator_inputtext") {
-            require_once($GLOBALS["ENGINE_PATH"]."/functions".DIRECTORY_SEPARATOR."json_response.php");
-            if (function_exists('chimEnsureNarratorJsonResponseState')) {
-                chimEnsureNarratorJsonResponseState('DATA_FUNCTIONS_FAST_STANDARD');
-            }
-            if (
-                !empty($GLOBALS["PROMPT_ACTIONS_LIST"])
-                && isset($contextData[0]["content"])
-                && strpos($contextData[0]["content"], '<available_actions_list>') === false
-            ) {
-                $contextData[0]["content"] .= "\n" . $GLOBALS["PROMPT_ACTIONS_LIST"];
-            }
-        }
-
-        $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,'standard');
-        snapshot_response_prompt_debug_data($currentConnectorData);
-        $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
-        $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
-        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
-            $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
-        }
-        if ($inlineNarrationMode === 'disabled' && !$preserveAsterisksInContext) {
-            $buffer = preg_replace('/\*([^*]*\s+[^*]*)\*/', '', $buffer);
-        }
-
-        error_log("[STEP 1] Elapsed time: " . (microtime(true) - $startTime) . " seconds");
-
-        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            require_once($GLOBALS["ENGINE_PATH"]."/functions".DIRECTORY_SEPARATOR."json_response.php");
-            $GLOBALS["COMMAND_PROMPT"]="";
-
-            setActions();
-        } else {
-            $GLOBALS["FUNC_LIST"][]="Talk";
-            $GLOBALS["COMMAND_PROMPT"]="";
-
-        }
-
-        $jsonformat= json_encode(["character"=>$GLOBALS["HERIKA_NAME"],
-        "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
-        "message"=>"lines of dialogue",
-        "mood"=>"One of :".implode("|",normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "")),
-        "action"=>"One of :".implode("|",$GLOBALS["FUNC_LIST"]),
-        "target"=>"action target actor (prefer exact Name [RefID: XXXXXXXX] from people_present, otherwise use actor name)|action destination location name",
-        "item"=>"item identifier (REQUIRED for GiveItemTo: use exact BaseID:ItemName from inventory; for PickupItem: use exact RefID:ItemName from nearby_items)",
-        "lang"=>"language used, (es|en|fr|...)"]);
-
-
-        $minimalContextData = array_slice($contextData, -5);
-        $minimalContext=[];
-        foreach ($minimalContextData as $ele) {
-            if (strpos($ele["content"],"#MEMORY")===false) {
-                $minimalContext[]="{$ele["content"]}";
-            }
-        }
-        array_pop($minimalContext);
-
-        $minimalContext[]="$buffer";// Add whole generated content.
-
-        $buffer=preg_replace('/\([^)]*\)/', '', $buffer);//Remove text between space.
-        $contextData2=[
-            array('role' => 'system', 'content' => "Create a JSON object with this format: $jsonformat , using a 'Generated dialogue line' as source. "),
-            array('role' => 'user', 'content' => "* Available actions:\n".$GLOBALS["COMMAND_PROMPT"]),
-            array('role' => 'user', 'content' => "* Historic context information:\n".implode("\n",$minimalContext)),
-            array('role' => 'user', 'content' => "* Generated dialogue line: <$buffer>"),
-            array('role' => 'user', 'content' => "Convert the '* Generated dialogue line' , and ONLY the  '* Generated dialogue line' section, to a JSON object with this format: $jsonformat\n.You must infer some properties like action (check Available actions list ) and mood from context"),
-        ];
-
-        $connector=new LLMConnector();
-        $formatterConnectorId = class_exists('LLMRandomizer')
-            ? LLMRandomizer::getConnectorIdForField($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"], "llm_formatter_id")
-            : ($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]["llm_formatter_id"] ?? null);
-        $currentConnectorData=$connector->getById($formatterConnectorId);
-
-
-
-        $connector->setOldGlobals($currentConnectorData);
-
-        $connectionHandler = $connector->getConnector($currentConnectorData);
-
-        $buffer2=$connectionHandler->fast_request($contextData2,[],'formatter');
-        unset($GLOBALS["_JSON_BUFFER"]);
-        $finalRes=__jpd_decode_lazy($buffer2);
-        file_put_contents(__DIR__."/../log/output_from_llm_fast_step_2.log", $buffer2, FILE_APPEND);
-        file_put_contents(__DIR__."/../log/output_from_llm_fast_step_2.log", print_r($finalRes,true), FILE_APPEND);
-        unset($GLOBALS["_JSON_BUFFER"]);
-        $fakeObject["choices"][0]=[
-            "index"=>0,
-            "delta"=>["role"=>"assistant","content"=>json_encode($finalRes)]
-        ];
-
-        $connectionHandler->primary_handler=fopen("php://memory", "r+");// Total hack, we're emulating streaming mode.
-        $fakedStream='data: '.json_encode($fakeObject);
-        fwrite($connectionHandler->primary_handler,$fakedStream);
-        rewind($connectionHandler->primary_handler);
-
-        error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}" );
-
-    } else {
-
-        
-            /* *****
-        Player TTS
-
-        Player TTS. We overwrite some confs an then restore them.
-        */
-        // Only process player TTS on the first attempt, not during fallback retry
-        if (!isset($GLOBALS["IN_FALLBACK_MODE"]) && in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && !Translation::isSavePlayerTranslationEnabled()) {
-            require(__DIR__."/../processor/player_tts.php");
-        }
-
-        $connectionHandler->open($contextData,$overrideParameters);
-        snapshot_response_prompt_debug_data();
+    Player TTS. We overwrite some confs an then restore them.
+    */
+    // Only process player TTS on the first attempt, not during fallback retry
+    if (!isset($GLOBALS["IN_FALLBACK_MODE"]) && in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && !Translation::isSavePlayerTranslationEnabled()) {
+        require(__DIR__."/../processor/player_tts.php");
     }
+
+    $connectionHandler->open($contextData,$overrideParameters);
+    snapshot_response_prompt_debug_data();
     error_log("[FALLBACK DEBUG] Checking primary_handler status: " . ($connectionHandler->primary_handler === false ? "FALSE" : "OK"));
     
     if ($connectionHandler->primary_handler === false) {
@@ -6401,10 +6247,7 @@ function call_llm_internal() {
         }
     }
     
-    if (isset($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) && $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) {
-        ;//Was a faked stream
-    } else 
-        $connectionHandler->close('standard');
+    $connectionHandler->close('standard');
     //fwrite($fileLog, $totalBuffer . PHP_EOL); // Write the line to the file with a line break // DEBUG CODE
 
 
