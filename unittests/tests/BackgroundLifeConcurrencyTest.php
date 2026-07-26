@@ -32,6 +32,44 @@ final class BackgroundLifeConcurrencyDb
 
 final class BackgroundLifeConcurrencyTest extends TestCase
 {
+    public function testNewerBackgroundEventLocationOverridesStaleCoordinates(): void
+    {
+        self::assertSame(
+            'Riverwood',
+            chimSelectCurrentBackgroundLocation(
+                'Sleeping Giant Inn (Interior)',
+                77000000,
+                'Riverwood',
+                77088888
+            )
+        );
+    }
+
+    public function testNewerCoordinatesRemainAuthoritative(): void
+    {
+        self::assertSame(
+            'Sleeping Giant Inn (Interior)',
+            chimSelectCurrentBackgroundLocation(
+                'Sleeping Giant Inn (Interior)',
+                77100000,
+                'Riverwood',
+                77088888
+            )
+        );
+    }
+
+    public function testLocationSelectionFallsBackWhenEitherSourceIsMissing(): void
+    {
+        self::assertSame(
+            'Riverwood',
+            chimSelectCurrentBackgroundLocation('', 0, 'Riverwood', 77088888)
+        );
+        self::assertSame(
+            'Sleeping Giant Inn',
+            chimSelectCurrentBackgroundLocation('Sleeping Giant Inn', 77000000, '', 0)
+        );
+    }
+
     public function testTrackClaimAndQueueUseOneAtomicStatement(): void
     {
         $db = new BackgroundLifeConcurrencyDb();

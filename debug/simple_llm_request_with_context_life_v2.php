@@ -494,6 +494,7 @@ foreach (array_reverse($actionsRows) as $row) {
 
 $bgEvents = [];
 $lastEventParsed = [];   // Tracks the most recent valid background event for location context
+$lastEventGamets = 0;
 
 $lastLocRow['location'] = $lastLocRow['location'] ?? '';
 
@@ -524,6 +525,7 @@ foreach ($backgroundEventRows as $event) {
         'type' => 'event',
     ];
     $lastEventParsed = $eventParsed;   // Keep last matching event for location reference
+    $lastEventGamets = (float) $event['gamets'];
 
     // Update daysPassed to reflect the latest background event if it's older than the last interactions
     $daysPassed = round(($last_gamets - $event['gamets']) * GAMETS_TO_HOURS / 24, 2);
@@ -563,6 +565,12 @@ if (isset($metadata['last_coords']) && !empty($metadata['last_coords'][3])) {
     }
 }
 
+$LAST_REPORTED_LOCATION = chimSelectCurrentBackgroundLocation(
+    $LAST_REPORTED_LOCATION,
+    $metadata['last_coords']['last_updated'] ?? 0,
+    (string) ($lastEventParsed['location'] ?? ''),
+    $lastEventGamets
+);
 
 if (isset($metadata['low_process_actors'])) {
 

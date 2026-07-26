@@ -31,6 +31,35 @@ function chimIsBackgroundNpcInRange(string $npcName): bool
 }
 
 /**
+ * Prefer the newest reliable location source for a Background Life decision.
+ *
+ * Coordinate tracking can lag immediately after travel completes. A newer
+ * background-action event reflects the actor's current package location and
+ * must win over stale coordinates from before the journey.
+ */
+function chimSelectCurrentBackgroundLocation(
+    string $coordinateLocation,
+    $coordinateGamets,
+    string $eventLocation,
+    $eventGamets
+): string {
+    $coordinateLocation = trim($coordinateLocation);
+    $eventLocation = trim($eventLocation);
+
+    if ($eventLocation === '') {
+        return $coordinateLocation;
+    }
+    if ($coordinateLocation === '') {
+        return $eventLocation;
+    }
+
+    $coordinateGamets = is_numeric($coordinateGamets) ? (float) $coordinateGamets : 0.0;
+    $eventGamets = is_numeric($eventGamets) ? (float) $eventGamets : 0.0;
+
+    return $eventGamets >= $coordinateGamets ? $eventLocation : $coordinateLocation;
+}
+
+/**
  * Atomically claim and queue a coordinate update for one Background Life NPC.
  *
  * The pending flag and response command are written in one statement. Competing
