@@ -196,6 +196,21 @@ final class QuestAssetLibraryTest extends TestCase
         $this->assertSame([hexdec('01001234')], $weapons['guard']);
     }
 
+    public function testRuntimeFormIdsUseSignedPapyrusWireValues(): void
+    {
+        $this->assertSame(0, quest_reference_formid_for_papyrus(0));
+        $this->assertSame(2147483647, quest_reference_formid_for_papyrus('0x7FFFFFFF'));
+        $this->assertSame(-2147483648, quest_reference_formid_for_papyrus('0x80000000'));
+        $this->assertSame(-1493017151, quest_reference_formid_for_papyrus('0xA7025DC1'));
+        $this->assertSame(-1, quest_reference_formid_for_papyrus('0xFFFFFFFF'));
+    }
+
+    public function testFullPluginRuntimeFormIdsBecomePluginLocalValues(): void
+    {
+        $this->assertSame(0x0025DC1, quest_reference_formid_for_full_plugin_file('0xA7025DC1'));
+        $this->assertSame(0x00013989, quest_reference_formid_for_full_plugin_file('0x00013989'));
+    }
+
     public function testOfficialPackContainsOnlyApprovedOfficialRecords(): void
     {
         $manifest = quest_asset_manifest_validate($this->manifest('skyrim_official.json'))['manifest'];

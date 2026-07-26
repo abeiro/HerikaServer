@@ -670,6 +670,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
 
     $humanoidRaces = quest_reference_playable_races();
     $parm1 = quest_reference_pick_safe_spawn_base($masterData, $gender, $race, $dclass);
+    $usesChimOwnedSpawnBase = $parm1 !== 0;
     if ($parm1 === 0) {
         if (in_array($race, $humanoidRaces, true)) {
             Logger::warn("[npcProfileBase] Aborting humanoid spawn: no CHIM-owned base for {$classTemplateKey}");
@@ -766,6 +767,16 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
 
     }
 
+    // SpawnAgent resolves CHIM-owned humanoid bases with GetFormFromFile,
+    // which requires AIAgent.esp's local FormID rather than its runtime prefix.
+    $wireParm1 = $usesChimOwnedSpawnBase
+        ? quest_reference_formid_for_full_plugin_file($parm1)
+        : quest_reference_formid_for_papyrus($parm1);
+    $wireParm2 = quest_reference_formid_for_papyrus($parm2);
+    $wireParm3 = quest_reference_formid_for_papyrus($parm3);
+    $wireParm4 = quest_reference_formid_for_papyrus($parm4);
+    $wireParm5 = quest_reference_formid_for_papyrus($parm5);
+
     $GLOBALS["db"]->insert(
         'responselog',
         [
@@ -773,7 +784,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|spawnCharacter@{$name}@$parm1@$parm2@$parm3@$parm4@$patchedTaskid@$parm5",
+            'action' => "rolecommand|spawnCharacter@{$name}@$wireParm1@$wireParm2@$wireParm3@$wireParm4@$patchedTaskid@$wireParm5",
             'tag' => "",
         ]
     );
