@@ -134,8 +134,19 @@ try {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_narrator.sql"));
         $db->execQuery("SET search_path TO public");
     }
+    if ($checkTableExists("oghma_context_rule") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/oghma_context_rule.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
 } catch (Exception $e) {
     Logger::warn("Bootstrap core tables: " . $e->getMessage());
+}
+
+if ($checkVersion("oghma_context_rule") < 20260724001) {
+    Logger::debug("Applying oghma_context_rule 20260724001 - add deterministic Oghma context rules");
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/oghma_context_rule.sql"));
+    $updateVersion("oghma_context_rule", 20260724001);
+    Logger::info("Applied patch oghma_context_rule 20260724001");
 }
 
 if ($checkVersion("core_action") < 20260426001) {
@@ -4256,6 +4267,16 @@ if ($checkTableExists("import_rules") == -1) {
 } else
     Logger::info(__FILE__." import_rules exists");
 
+if ($checkVersion("import_rules") < 20260725001) {
+    try {
+        $db->execQuery("ALTER TABLE public.import_rules ADD COLUMN IF NOT EXISTS match_faction text");
+        $updateVersion("import_rules", 20260725001);
+        Logger::info("Applied patch import_rules 20260725001 - add faction matching");
+    } catch (Exception $e) {
+        Logger::error("Failed to apply patch import_rules 20260725001: " . $e->getMessage());
+    }
+}
+
 // Usage column
 $db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS usage jsonb");
 
@@ -7552,18 +7573,18 @@ if ($checkVersion("playthrough_schema") < 20260723001) {
 if ($checkVersion("master_packages")<20260716002) {
     if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607.sql"))) {
        $updateVersion("master_packages", 20260716002);
-       Logger::info("Applied patch master_packages 20260716001");
+       Logger::info("Applied patch master_packages 20260716002");
     } else {
-        Logger::error("Failed to apply patch master_packages 20260716001");
+        Logger::error("Failed to apply patch master_packages 20260716002");
     }
 
 }
-if ($checkVersion("master_packages")<20260724001) {
+if ($checkVersion("master_packages")<20260724002) {
     if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607-2.sql"))) {
-       $updateVersion("master_packages", 20260724001);
-       Logger::info("Applied patch master_packages 20260724001");
+       $updateVersion("master_packages", 20260724002);
+       Logger::info("Applied patch master_packages 20260724002");
     } else {
-        Logger::error("Failed to apply patch master_packages 20260724001");
+        Logger::error("Failed to apply patch master_packages 20260724002");
     }
 
 }

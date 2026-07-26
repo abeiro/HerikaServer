@@ -340,6 +340,8 @@ if (!function_exists('chimOghmaAppendForcedRows')) {
     }
 }
 
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'oghma_context_rules.php';
+
 if (!function_exists('chimOghmaInjectForcedContext')) {
     function chimOghmaInjectForcedContext($db, $npcMaster = null): int
     {
@@ -385,6 +387,8 @@ if (!function_exists('chimOghmaInjectForcedContext')) {
                 1
             );
         }
+
+        $added += chimOghmaInjectContextRules($db, $npcMaster);
 
         return $added;
     }

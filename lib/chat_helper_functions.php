@@ -888,7 +888,7 @@ function cleanupDisplayText($text, $speakerName = null) {
 function formatPlayerSubtitleText($text, $speakerName = null) {
     $speakerName = $speakerName ?? ($GLOBALS["PLAYER_NAME"] ?? null);
     $subtitleText = preg_replace(
-        '/\s*\((?:(?:Talking|Whispering|Shouting) to [^)]+|speaking loudly to [^)]+ from far away)\)\s*$/i',
+        '/\s*\((?:(?:Talking|Whispering|Shouting) to [^)]+|speaking (?:loudly|privately) to [^)]+(?: from far away)?)\)\s*$/i',
         '',
         $text
     );
@@ -1225,8 +1225,8 @@ function returnLines($lines,$writeOutput=true)
         // regardless of inline narration mode.
         $isPlayerSpeech = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "Player") === 0;
         if ($inlineNarrationEnabled || $isPlayerSpeech) {
-            $sentence = preg_replace('/\s*\((?:Talking|Whispering|Shouting)\s+to\s+[^)]+\)\s*$/i', '', $sentence);
-            $sentenceForSubtitles = preg_replace('/\s*\((?:Talking|Whispering|Shouting)\s+to\s+[^)]+\)\s*$/i', '', $sentenceForSubtitles);
+            $sentence = preg_replace('/\s*\((?:(?:Talking|Whispering|Shouting)|Speaking privately)\s+to\s+[^)]+\)\s*$/i', '', $sentence);
+            $sentenceForSubtitles = preg_replace('/\s*\((?:(?:Talking|Whispering|Shouting)|Speaking privately)\s+to\s+[^)]+\)\s*$/i', '', $sentenceForSubtitles);
         }
 
         // Check if we should split narration to The Narrator BEFORE unmoodSentence strips asterisks
@@ -2714,32 +2714,153 @@ function parsePeoplePipeList($peoplePipe)
     return $cleanPeople;
 }
 
-function chimDecodeAudienceSnapshotField($rawField)
+function chimNormalizePresentActors($actors)
 {
+    if (!is_array($actors)) {
+        return [];
+    }
+
+    $normalized = [];
+    $seenNames = [];
+    foreach ($actors as $actor) {
+        if (is_string($actor)) {
+            $actor = ["name" => $actor];
+        }
+        if (!is_array($actor)) {
+            continue;
+        }
+
+        $name = trim((string)($actor["name"] ?? ""));
+        $name = trim($name, "|");
+        if ($name === "" || !shouldIncludeActorNameInPeopleList($name)) {
+            continue;
+        }
+
+        $nameKey = mb_strtolower($name, "UTF-8");
+        if (isset($seenNames[$nameKey])) {
+            continue;
+        }
+        $seenNames[$nameKey] = true;
+
+        $normalized[] = [
+            "name" => $name,
+            "form_id" => (int)($actor["form_id"] ?? 0),
+            "managed" => !empty($actor["managed"]),
+            "creature" => !empty($actor["creature"]),
+            "distance" => (float)($actor["distance"] ?? 0.0),
+        ];
+        if (count($normalized) >= 32) {
+            break;
+        }
+    }
+
+    return $normalized;
+}
+
+function chimDecodePlayerRoutingSnapshotField($rawField)
+{
+    $result = [
+        "audience" => "",
+        "present_actors" => [],
+    ];
     $rawField = trim((string)$rawField);
     if ($rawField === "") {
-        return "";
+        return $result;
     }
 
     $decoded = base64_decode($rawField, true);
     if ($decoded === false || $decoded === "") {
-        return "";
+        return $result;
     }
 
     $payload = json_decode($decoded, true);
     if (!is_array($payload)) {
-        return "";
+        return $result;
     }
 
     if (!empty($payload["people"]) && is_string($payload["people"])) {
-        return normalizePeoplePipeList(parsePeoplePipeList($payload["people"]));
+        $result["audience"] = normalizePeoplePipeList(parsePeoplePipeList($payload["people"]));
+    } elseif (!empty($payload["companions"]) && is_array($payload["companions"])) {
+        $result["audience"] = normalizePeoplePipeList($payload["companions"]);
     }
 
-    if (!empty($payload["companions"]) && is_array($payload["companions"])) {
-        return normalizePeoplePipeList($payload["companions"]);
+    $result["present_actors"] = chimNormalizePresentActors($payload["present_actors"] ?? []);
+    return $result;
+}
+
+function chimDecodeAudienceSnapshotField($rawField)
+{
+    $snapshot = chimDecodePlayerRoutingSnapshotField($rawField);
+    return (string)($snapshot["audience"] ?? "");
+}
+
+function chimDecodePresentActorsSnapshotField($rawField)
+{
+    $snapshot = chimDecodePlayerRoutingSnapshotField($rawField);
+    return chimNormalizePresentActors($snapshot["present_actors"] ?? []);
+}
+
+function chimPresentActorsPeoplePipe($actors)
+{
+    $names = [];
+    foreach (chimNormalizePresentActors($actors) as $actor) {
+        $names[] = $actor["name"];
+    }
+    return normalizePeoplePipeList($names);
+}
+
+function chimMergePeoplePipeLists()
+{
+    $names = [];
+    foreach (func_get_args() as $peoplePipe) {
+        foreach (parsePeoplePipeList($peoplePipe) as $name) {
+            $names[] = $name;
+        }
+    }
+    return normalizePeoplePipeList($names);
+}
+
+function chimSetCurrentTurnPresentActorsSnapshot($actors)
+{
+    $normalized = chimNormalizePresentActors($actors);
+    if (empty($normalized)) {
+        unset($GLOBALS["CHIM_TURN_PRESENT_ACTORS_SNAPSHOT"]);
+        return [];
     }
 
-    return "";
+    $GLOBALS["CHIM_TURN_PRESENT_ACTORS_SNAPSHOT"] = $normalized;
+    return $normalized;
+}
+
+function chimGetCurrentTurnPresentActorsSnapshot()
+{
+    return chimNormalizePresentActors($GLOBALS["CHIM_TURN_PRESENT_ACTORS_SNAPSHOT"] ?? []);
+}
+
+function chimBuildCurrentTurnPresentPeoplePrompt()
+{
+    $actors = chimGetCurrentTurnPresentActorsSnapshot();
+    if (empty($actors)) {
+        return "";
+    }
+
+    $lines = [];
+    foreach ($actors as $actor) {
+        $name = htmlspecialchars($actor["name"], ENT_QUOTES | ENT_XML1, "UTF-8");
+        $formId = (int)($actor["form_id"] ?? 0);
+        if ($formId > 0) {
+            $name .= " [RefID: " . strtoupper(str_pad(dechex($formId), 8, "0", STR_PAD_LEFT)) . "]";
+        }
+        if (empty($actor["managed"])) {
+            $name .= " (present, not CHIM-active)";
+        }
+        $lines[] = "## " . $name;
+    }
+
+    return "<people_present>\n"
+        . "# Physically present actors. Entries marked not CHIM-active cannot respond, but may be targeted by gameplay actions. Prefer the displayed RefID when selecting an actor target.\n"
+        . implode("\n", $lines)
+        . "\n</people_present>";
 }
 
 function chimSetCurrentTurnPeopleSnapshot($peoplePipe)
@@ -2893,7 +3014,18 @@ function isWhisperExecutionMode()
     return ($mode === "WHISPER");
 }
 
-function buildWhisperPrivatePeople($listenerName = "")
+function isCloseExecutionMode()
+{
+    $mode = isset($GLOBALS["CHIM_EXECUTION_MODE"]) ? strtoupper(trim((string)$GLOBALS["CHIM_EXECUTION_MODE"])) : "";
+    return ($mode === "CLOSE");
+}
+
+function isPrivateConversationExecutionMode()
+{
+    return isWhisperExecutionMode() || isCloseExecutionMode();
+}
+
+function buildPrivateConversationPeople($listenerName = "")
 {
     $participants = [];
 
@@ -2907,6 +3039,11 @@ function buildWhisperPrivatePeople($listenerName = "")
     }
 
     return normalizePeoplePipeList($participants);
+}
+
+function buildWhisperPrivatePeople($listenerName = "")
+{
+    return buildPrivateConversationPeople($listenerName);
 }
 
 function buildDialogueTargetSuffix($listenerName, $isSpeakingLoudly = false)
@@ -2927,6 +3064,10 @@ function buildDialogueTargetSuffix($listenerName, $isSpeakingLoudly = false)
 
     if ($isSpeakingLoudly) {
         return "(speaking loudly to {$listenerName} from far away)";
+    }
+
+    if (isCloseExecutionMode()) {
+        return "(speaking privately to {$listenerName})";
     }
 
     if (isWhisperExecutionMode()) {
@@ -3425,7 +3566,7 @@ function convertDirectedDialogueTagsToVerb($eventData, $verb)
     }
 
     return preg_replace_callback(
-        '/\(\s*([Tt]alking|[Ww]hispering|[Ss]houting)\s+to\s+([^()]+?)\s*\)/u',
+        '/\(\s*([Tt]alking|[Ww]hispering|[Ss]houting|[Ss]peaking\s+privately)\s+to\s+([^()]+?)\s*\)/u',
         static function ($matches) use ($verb) {
             $prefix = ctype_upper(substr((string)$matches[1], 0, 1)) ? $verb : strtolower($verb);
             $target = trim((string)$matches[2]);
@@ -3438,6 +3579,11 @@ function convertDirectedDialogueTagsToVerb($eventData, $verb)
 function convertTalkingTagsToWhispering($eventData)
 {
     return convertDirectedDialogueTagsToVerb($eventData, 'Whispering');
+}
+
+function convertTalkingTagsToPrivately($eventData)
+{
+    return convertDirectedDialogueTagsToVerb($eventData, 'Speaking privately');
 }
 
 function convertTalkingTagsToShouting($eventData)
@@ -3458,7 +3604,7 @@ function extractTalkTargetMetadata($eventData)
         return $metadata;
     }
 
-    if (!preg_match('/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $eventData, $matches)) {
+    if (!preg_match('/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+(?:loudly|privately)\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $eventData, $matches)) {
         return $metadata;
     }
 
@@ -3589,7 +3735,7 @@ function extractCoreUtteranceFromChatEvent($eventData)
         $eventData = trim((string)$matches[1]);
     }
 
-    $eventData = preg_replace('/\s*\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+[^)]*\)\s*$/iu', '', $eventData);
+    $eventData = preg_replace('/\s*\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+(?:loudly|privately)\s+to)\s+[^)]*\)\s*$/iu', '', $eventData);
     return trim((string)$eventData);
 }
 
@@ -4096,7 +4242,8 @@ function buildNarratorSharedPeopleForEvent($eventType, $eventData, $listenerName
         return "";
     }
 
-    if (stripos((string)$eventData, '(whispering to ') !== false) {
+    if (stripos((string)$eventData, '(whispering to ') !== false ||
+        stripos((string)$eventData, '(speaking privately to ') !== false) {
         return "";
     }
 
@@ -4705,7 +4852,7 @@ function filterHistoricContextForNarratorVisibility(array $contextDataHistoric, 
         }
 
         $content = isset($entry["content"]) ? (string)$entry["content"] : "";
-        if (preg_match('/\(\s*(?:Talking|Whispering|Shouting|Speaking loudly)\s+to\s+The Narrator(?:\s+from\s+far\s+away)?\s*\)/i', $content) === 1) {
+        if (preg_match('/\(\s*(?:Talking|Whispering|Shouting|Speaking loudly|Speaking privately)\s+to\s+The Narrator(?:\s+from\s+far\s+away)?\s*\)/i', $content) === 1) {
             return false;
         }
 
