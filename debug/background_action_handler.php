@@ -120,6 +120,37 @@ function normalizeBglInventoryActions($actions): array
 }
 
 /**
+ * Claim the inventory settlement for one idle action.
+ *
+ * The conditional UPDATE makes the claim atomic across worker processes. The
+ * marker is written before any game inventory command, favoring a missed
+ * settlement over applying a destructive consume/produce action twice.
+ */
+function claimBglInventorySettlement(string $npcName, int $idleGamets, $db): bool
+{
+    if ($idleGamets <= 0) {
+        return false;
+    }
+
+    $npcNameEsc = $db->escape($npcName);
+    $markerKey = 'background_life_inventory_last_processed_idle_gamets';
+    $claimed = $db->fetchOne(
+        "UPDATE core_npc_master
+         SET extended_data = jsonb_set(
+             COALESCE(extended_data, '{}'::jsonb),
+             '{$markerKey}',
+             to_jsonb({$idleGamets}::bigint),
+             true
+         )
+         WHERE npc_name='{$npcNameEsc}'
+           AND COALESCE(NULLIF(extended_data->>'{$markerKey}', '')::bigint, 0) < {$idleGamets}
+         RETURNING id"
+    );
+
+    return is_array($claimed) && !empty($claimed['id']);
+}
+
+/**
  * Resolve a TravelTo location using exact + fuzzy matching and optional coord distance.
  *
  * @param string $location

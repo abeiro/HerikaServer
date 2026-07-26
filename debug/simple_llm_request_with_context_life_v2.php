@@ -771,8 +771,19 @@ $isIdleAction = !empty($lastBackgroundAction)
 
 $idleGamets = (int) ($lastBackgroundAction['gamets'] ?? 0);
 $idleHours = max(0, round(($last_gamets - $idleGamets) * GAMETS_TO_HOURS, 2));
+$inventorySettlementClaimed = false;
 
-if ($isIdleAction && $idleHours > 1) {// If last Idle was Socialize, there a chance of a follow up.
+if ($isIdleAction && $idleHours > 1) {
+    $inventorySettlementClaimed = claimBglInventorySettlement($npcName, $idleGamets, $db);
+    if (!$inventorySettlementClaimed) {
+        error_log(
+            "[BGL RUN] $npcNameEscBg - inventory settlement for idle action $idleGamets "
+            . 'was already claimed; skipping duplicate inventory processing.'
+        );
+    }
+}
+
+if ($inventorySettlementClaimed) {// If last Idle was Socialize, there a chance of a follow up.
     $intent = explode(':', (string) ($lastBackgroundAction['fullcall'] ?? ''));
     $lastIntent = $intent[2] ?? '';
     $lastIntentBasedHint = "";
