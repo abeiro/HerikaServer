@@ -92,4 +92,18 @@ final class BackgroundLifeCooldownTest extends TestCase
         $this->assertStringNotContainsString('1-day HARDCODED RULE', $source);
         $this->assertStringNotContainsString("\$GLOBALS['BGL_TRIGGER_DAYS']", $source);
     }
+
+    public function testSchedulerDoesNotWriteRoutineSkipDiagnosticsToServiceLog(): void
+    {
+        $source = file_get_contents(
+            __DIR__ . '/../../service/processors/middleterm/entrypoint.php'
+        );
+
+        $this->assertIsString($source);
+        $this->assertStringNotContainsString('error_log("[BGL] Checking', $source);
+        $this->assertStringNotContainsString('error_log("[BGL] Skipping', $source);
+        $this->assertStringNotContainsString('error_log("[BGL] (Passive) Skipping', $source);
+        $this->assertStringContainsString('error_log("[BGL] Event for', $source);
+        $this->assertStringContainsString('error_log("[BGL] {$npc["npc_name"]} has been near a player for more than 10 checks. Issuing INSTRUCTION")', $source);
+    }
 }

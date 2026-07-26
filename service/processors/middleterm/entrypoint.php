@@ -157,8 +157,6 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         $oneHourAgoGamets = $maxRow;
     }
 
-    error_log("[BGL] Checking tracked NPCs");
-
     $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND metadata->'gps_track' = 'true' AND metadata->'last_coords'->>'pending' IS NULL AND (metadata->'last_coords'->>'last_updated')::numeric < $oneHourAgoGamets ");
 
     foreach ($allEnabledBgLNpc as $npc) {
@@ -184,7 +182,6 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     // BgL content
     // In-game based on the configured hours
 
-    error_log("[BGL] Checking passive events NPCs");
     $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND (extended_data->>'background_life_commands' = 'false' or extended_data->>'background_life_commands'  IS NULL)");
     foreach ($allEnabledBgLNpc as $npc) {
 
@@ -193,8 +190,6 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
 
 
         if (isset($npcIsNearToPlayer) && $npcIsNearToPlayer["n"] > 0) {
-            $localDelta = ($npcIsNearToPlayer["n"] - $oneHourAgoGamets) * 0.0000024;
-            error_log("[BGL] Skipping Passive event for {$npc["npc_name"]}, is NEAR TO PLAYER, delta: {$localDelta}");
             continue;
            
         }
@@ -215,17 +210,12 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
             $npcMaster->updateExtendedKeysByName($npc["npc_name"], $extdata);
 
             break;  // One per iteration - break after processing
-        } else {
-            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerHoursAgoGamets) * 0.0000024;
-            error_log("[BGL] (Passive) Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours},delta: {$delta}");
         }
     }
 
     // Process delayed events for BgL NPCs
     processDelayedEvents($GLOBALS["db"], $enginePath);
 
-    error_log("[BGL] Checking active events NPCs");
-    
     // BgL commands
     $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' ");
     foreach ($allEnabledBgLNpc as $npc) {
@@ -235,8 +225,6 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
             type='infonpc' and data like '%" . ($GLOBALS["db"]->escape($npc["npc_name"])) . "%' and gamets > $oneHourAgoGamets");
 
         if (isset($npcIsNearToPlayer) && $npcIsNearToPlayer["n"] > 0) {
-            $localDelta = ($npcIsNearToPlayer["n"] - $oneHourAgoGamets) * 0.0000024;
-
             $npcManager = new NpcMaster();
             $npcData = $npcManager->getByName($npc["npc_name"]);
             $extended = json_decode($npcData["extended_data"], true);
@@ -248,8 +236,6 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
             $npcData = $npcManager->setExtendedData($npcData, $extended);
 
             if ($extended["background_life_last_updated_presence_delta"] > 10) {
-                error_log("[BGL] {$npc["npc_name"]} has been near a player for more than 10 checks. Issuing instructions if needed");
-                
                 // $extended["background_life_last_updated"] = $maxRow;
                 $mustInstructBypassBgl=true;
                 $npcData = $npcManager->setExtendedData($npcData, $extended);
@@ -258,7 +244,6 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
             } else {
                 $npcData = $npcManager->setExtendedData($npcData, $extended);
                 $npcManager->updateByArray($npcData);
-                error_log("[BGL] Skipping Passive event for {$npc["npc_name"]}, is NEAR TO PLAYER, delta: {$localDelta}, Presence retries: {$extended["background_life_last_updated_presence_delta"]}");
                 continue;
             }
 
@@ -302,14 +287,11 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }
             break;  // One per iteration - break after processing
-        } else {
-            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerHoursAgoGamets) * 0.0000024;
-            error_log("[BGL] Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours}, delta: {$delta}");
         }
     }
 
     if (sizeof($allEnabledBgLNpc) === 0) {
-        error_log("[BGL] No NPCs with background life enabled");
+        Logger::debug("[BGL] No NPCs with background life enabled");
     }
 
 
