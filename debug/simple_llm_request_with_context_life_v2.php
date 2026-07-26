@@ -1626,9 +1626,9 @@ if ($innerThoughtBuffer && $recordInnerThoughts) {
             'sess' => $momentum,
             'localts' => time(),
         ]);
-    }
 
-    logMemory($GLOBALS['HERIKA_NAME'], $GLOBALS['HERIKA_NAME'], trim($innerThoughtBuffer), $momentum, $last_gamets, 'backgroundlife_diary', $last_ts);
+        logMemory($GLOBALS['HERIKA_NAME'], $GLOBALS['HERIKA_NAME'], trim($innerThoughtBuffer), $momentum, $last_gamets, 'backgroundlife_diary', $last_ts);
+    }
 
 }
 // ─── Mark NPC as Background-Life Enabled ─────────────────────────────────────
