@@ -1723,6 +1723,33 @@ function DataPosibleMoveToTargets()
     return $GLOBALS["CACHE_POSIBLE_MOVETO_TARGETS"];
 }
 
+function chimResolveMoveToActorTarget($target, array $candidateTargets, $playerName = '', $closestTarget = '')
+{
+    $target = trim((string) $target);
+    if ($target === '') {
+        return '';
+    }
+
+    $playerName = trim((string) $playerName);
+    if ($playerName !== '' && strcasecmp($target, $playerName) === 0) {
+        return $playerName;
+    }
+
+    foreach ($candidateTargets as $candidateTarget) {
+        $candidateTarget = trim((string) $candidateTarget);
+        if ($candidateTarget !== '' && strcasecmp($target, $candidateTarget) === 0) {
+            return $candidateTarget;
+        }
+    }
+
+    $closestTarget = trim((string) $closestTarget);
+    if ($closestTarget !== '' && levenshtein(strtolower($target), strtolower($closestTarget)) <= 3) {
+        return $closestTarget;
+    }
+
+    return '';
+}
+
 function DataPosibleLocationsToGoWide()
 {
     if (isset($GLOBALS["CACHE_POSIBLE_LOCATIONS_TO_GO_WIDE"])) {
@@ -6019,30 +6046,17 @@ function call_llm_internal() {
                             $mang4=explode("--",$mang3[0]);
                             
                             $target=trim($mang4[0]);
-                            $resolvedTarget="";
-
-                            if ($target !== "" && isset($GLOBALS["PLAYER_NAME"]) && strcasecmp($target, $GLOBALS["PLAYER_NAME"]) === 0) {
-                                $resolvedTarget=$GLOBALS["PLAYER_NAME"];
-                            }
-
-                            if ($resolvedTarget === "") {
-                                foreach (DataPosibleMoveToTargets() as $candidateTarget) {
-                                    if (strcasecmp($target, $candidateTarget) === 0) {
-                                        $resolvedTarget=$candidateTarget;
-                                        break;
-                                    }
-                                }
-                            }
+                            $resolvedTarget=chimResolveMoveToActorTarget(
+                                $target,
+                                DataPosibleMoveToTargets(),
+                                $GLOBALS["PLAYER_NAME"] ?? '',
+                                FindClosestActorName($target)
+                            );
 
                             if ($resolvedTarget === "") {
-                                $closestTarget=FindClosestActorName($target);
-                                if ($closestTarget !== "" && levenshtein(strtolower($target), strtolower($closestTarget)) <= 3) {
-                                    $resolvedTarget=$closestTarget;
-                                }
-                            }
-
-                            if ($resolvedTarget === "") {
-                                $resolvedTarget=$target;
+                                error_log("[ACTION POSTFILTER MoveTo] Dropping unresolved actor target: $localtarget");
+                                unset($actions[$n]);
+                                continue;
                             }
 
                             error_log("[ACTION POSTFILTER MoveTo] $localtarget => $target => $resolvedTarget");
