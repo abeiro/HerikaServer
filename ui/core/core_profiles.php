@@ -2835,59 +2835,63 @@ const saveAllBtn = document.getElementById('btn_save_all');
     overflow: hidden;
     z-index: 10001;
 }
-#import_rules_modal .modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2; }
-#import_rules_modal .modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 6px; font-size: 1.6em; }
-#import_rules_modal .modal-body { background:#2a2a2a; overflow:auto; max-height: calc(90vh - 60px); }
-#import_rules_modal .modal-close { background:#3a3a3a; color:#fff; border:1px solid rgba(138,155,182,.35); border-radius:8px; padding:8px 14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700; }
+#import_rules_modal .modal-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2; }
+#import_rules_modal .modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 8px; font-size: 2em; }
+#import_rules_modal .modal-body { background:#2a2a2a; overflow:auto; max-height: calc(90vh - 68px); font-family:'Futura CondensedLight', Arial, sans-serif; font-size:16px; }
+#import_rules_modal .modal-close { background:#3a3a3a; color:#fff; border:1px solid rgba(138,155,182,.35); border-radius:8px; padding:10px 16px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:7px; font-size:15px; font-weight:700; }
 #import_rules_modal .modal-close:hover { background:#4a4a4a; }
 #import_rules_modal .modal-actions { display:flex; gap:8px; align-items:center; }
 
 /* Rule card styling */
-.rule-help { display:flex; gap:8px; align-items:baseline; margin-bottom:16px; padding:10px 12px; background:#202020; border:1px solid #424242; border-radius:7px; color:#cfd5df; }
+.rule-help { display:flex; gap:10px; align-items:baseline; margin-bottom:18px; padding:14px 16px; background:#202020; border:1px solid #424242; border-radius:8px; color:#cfd5df; font-size:15px; line-height:1.45; }
 .rule-help strong { color:#fff; white-space:nowrap; }
-.rule-card { background: #242424; border: 1px solid #454545; border-radius: 8px; padding: 12px; }
+.rule-card { background: #242424; border: 1px solid #454545; border-radius: 8px; padding: 16px; }
 .rule-card.editing { border-color: rgb(242, 124, 17); }
 .rule-header { display: flex; justify-content: space-between; align-items: center; gap:12px; }
 .rule-title-row { display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; }
-.rule-title { font-weight: 700; color: #fff; font-size: 1.05em; }
+.rule-title { font-family:'Futura CondensedLight', Arial, sans-serif; font-weight:700; color:#fff; font-size:20px; letter-spacing:.2px; }
 .rule-actions { display: flex; gap: 6px; }
-.rule-status, .rule-advanced-badge { border:1px solid #505050; border-radius:999px; padding:2px 7px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.rule-status, .rule-advanced-badge { border:1px solid #505050; border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
 .rule-status.enabled { color:#8ee2aa; border-color:#2f7749; background:#193323; }
 .rule-status.disabled { color:#aaa; }
 .rule-advanced-badge { color:#ffbf76; border-color:#795122; background:#382613; }
-.rule-summary { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:9px; color:#cfd5df; font-size:12px; }
+.rule-summary { display:flex; align-items:center; flex-wrap:wrap; gap:7px; margin-top:11px; color:#cfd5df; font-size:14px; }
 .rule-summary-target { color:#fff; font-weight:700; margin-right:4px; }
-.rule-chip { display:inline-flex; align-items:center; gap:4px; border:1px solid #4b4b4b; background:#1c1c1c; border-radius:999px; padding:3px 8px; }
-.rule-edit-core { display:grid; grid-template-columns:minmax(220px, 1.4fr) minmax(220px, 1fr) auto; gap:12px; align-items:end; margin-top:12px; }
-.rule-field label, .rule-picker-label { display:block; color:#c4ccd8; font-size:11px; font-weight:700; margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em; }
+.rule-chip { display:inline-flex; align-items:center; gap:4px; border:1px solid #4b4b4b; background:#1c1c1c; border-radius:999px; padding:4px 9px; font-size:13px; }
+.rule-edit-core { display:grid; grid-template-columns:minmax(240px, 1.4fr) minmax(240px, 1fr) auto; gap:14px; align-items:end; margin-top:14px; }
+.rule-field label, .rule-picker-label { display:block; color:#d5dbe4; font-size:14px; font-weight:700; margin-bottom:7px; text-transform:uppercase; letter-spacing:.04em; }
+.rule-picker-label { display:flex; align-items:center; gap:7px; }
+.rule-picker-icon { font-size:17px; line-height:1; text-transform:none; }
 .rule-enabled-field { min-width:92px; padding-bottom:7px; }
-.rule-enabled-field label { display:flex; align-items:center; gap:8px; margin:0; color:#fff; text-transform:none; font-size:13px; }
-.rule-simple-heading { margin:14px 0 8px; color:#fff; font-weight:700; }
-.rule-simple-note { color:#929cab; font-size:11px; font-weight:400; margin-left:6px; }
-.rule-simple-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
-.rule-picker { background:#1d1d1d; border:1px solid #404040; border-radius:7px; padding:8px; min-width:0; }
+.rule-enabled-field label { display:flex; align-items:center; gap:9px; margin:0; color:#fff; text-transform:none; font-size:15px; }
+.rule-simple-heading { margin:18px 0 10px; color:#fff; font-family:'MagicCards', serif; font-size:20px; word-spacing:5px; }
+.rule-simple-note { color:#aab3c0; font-family:'Futura CondensedLight', Arial, sans-serif; font-size:13px; font-weight:400; margin-left:7px; word-spacing:normal; }
+.rule-simple-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+.rule-picker { background:#1d1d1d; border:1px solid #404040; border-radius:8px; padding:12px; min-width:0; }
 .rule-picker-controls { display:flex; gap:6px; }
-.rule-picker-custom { min-width:0; width:100%; background:#151515; border:1px solid #464646; border-radius:5px; color:#e9efff; padding:6px 7px; }
-.rule-picker-tags { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; min-height:20px; }
-.rule-picker-empty { color:#6f7884; font-size:11px; padding:2px 0; }
-.rule-picker-tag { display:inline-flex; align-items:center; gap:5px; border:1px solid #5a4a35; background:#30271d; color:#f2d1aa; border-radius:999px; padding:2px 7px; font-size:11px; }
+.rule-picker-select, .rule-picker-custom { min-width:0; width:100%; background:#343434; border:1px solid #555; border-radius:6px; color:#f8f9fa; padding:9px 10px; font-family:'Futura CondensedLight', Arial, sans-serif; font-size:15px; }
+.rule-picker-select { cursor:pointer; }
+.rule-picker-custom:focus, .rule-picker-select:focus { border-color:rgb(242, 124, 17); outline:none; }
+.rule-picker-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; min-height:24px; }
+.rule-picker-empty { color:#818b99; font-size:13px; padding:3px 0; }
+.rule-picker-tag { display:inline-flex; align-items:center; gap:6px; border:1px solid #5a4a35; background:#30271d; color:#f2d1aa; border-radius:999px; padding:4px 9px; font-size:13px; }
 .rule-picker-remove { border:0; background:transparent; color:#f2d1aa; cursor:pointer; padding:0; line-height:1; }
-.rule-custom-row { display:flex; gap:6px; }
-.rule-small-btn, .rule-advanced-toggle { background:#333; color:#fff; border:1px solid #505050; border-radius:6px; padding:5px 9px; cursor:pointer; font-size:11px; font-weight:700; }
+.rule-custom-row { display:flex; gap:7px; margin-top:7px; }
+.rule-small-btn, .rule-advanced-toggle { background:#333; color:#fff; border:1px solid #505050; border-radius:7px; padding:8px 12px; cursor:pointer; font-size:14px; font-weight:700; white-space:nowrap; }
 .rule-small-btn:hover, .rule-advanced-toggle:hover { background:#414141; }
-.rule-advanced-toggle { margin-top:12px; }
-.rule-advanced-panel { display:none; margin-top:10px; padding:10px; border:1px solid #51422e; border-radius:7px; background:#201d19; }
+.rule-advanced-toggle { margin-top:14px; }
+.rule-advanced-panel { display:none; margin-top:12px; padding:14px; border:1px solid #51422e; border-radius:8px; background:#201d19; }
 .rule-advanced-panel.open { display:block; }
-.rule-advanced-note { color:#c8ad8b; font-size:11px; margin-bottom:9px; }
+.rule-advanced-note { color:#d3b995; font-size:14px; line-height:1.4; margin-bottom:12px; }
 .rule-grid { display: grid; grid-template-columns: 180px 1fr; gap: 8px 12px; align-items: start; }
-.rule-label { color: #b8c1ce; font-weight: 600; padding-top: 6px; }
+.rule-label { color:#c9d0da; font-size:14px; font-weight:700; padding-top:9px; }
 .rule-value { color: #e9efff; }
 .rule-value.empty { color: #666; font-style: italic; }
-.rule-input { width: 100%; background: #1a1a1a; border: 1px solid #4a4a4a; border-radius: 6px; padding: 6px 8px; color: #e9efff; }
+.rule-input { width:100%; background:#343434; border:1px solid #555; border-radius:6px; padding:9px 10px; color:#f8f9fa; font-family:'Futura CondensedLight', Arial, sans-serif; font-size:15px; }
 .rule-input:focus { border-color: rgb(242, 124, 17); outline: none; }
 .rule-input.json { font-family: monospace; min-height: 60px; }
 .rule-checkbox { accent-color: #2f9e58; transform: scale(1.2); cursor: pointer; }
-.btn-rule-edit, .btn-rule-save, .btn-rule-cancel, .btn-rule-delete { color:#fff; border:1px solid rgba(138,155,182,.35); border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:700; font-size:12px; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+.btn-rule-edit, .btn-rule-save, .btn-rule-cancel, .btn-rule-delete { color:#fff; border:1px solid rgba(138,155,182,.35); border-radius:8px; padding:9px 14px; cursor:pointer; font-weight:700; font-size:14px; display:inline-flex; align-items:center; justify-content:center; gap:7px; }
 .btn-rule-edit { background:#204e7a; }
 .btn-rule-edit:hover { background:#285c8f; }
 .btn-rule-save { background:#247a49; }
@@ -2994,27 +2998,40 @@ const saveAllBtn = document.getElementById('btn_save_all');
         return options;
     }
 
-    function renderPicker(pickerId, name, label, selectedValues, availableValues, customHint, note = '') {
+    function renderPicker(pickerId, name, label, selectedValues, availableValues, customHint, note = '', icon = '', explicitDropdown = false) {
         const selected = Array.from(new Set((selectedValues || []).map(String).filter(Boolean)));
         const available = Array.from(new Set([...(availableValues || []), ...selected]))
             .filter(Boolean)
             .sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }));
-        const choices = available
+        const remaining = available
             .filter(value => !selected.includes(value))
-            .map(value => `<option value="${escapeHtml(value)}"></option>`)
-            .join('');
+        const choices = remaining.map(value => `<option value="${escapeHtml(value)}"></option>`).join('');
+        const selectOptions = remaining.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
         const tags = selected.length
             ? selected.map(value => renderPickerTag(value)).join('')
             : '<span class="rule-picker-empty">Any</span>';
         const listId = `rule-options-${String(pickerId).replace(/[^a-zA-Z0-9_-]/g, '-')}-${name}`;
+        const inputControls = explicitDropdown
+            ? `<div class="rule-picker-controls">
+                    <select class="rule-picker-select" aria-label="Select detected ${escapeHtml(label)}">
+                        <option value="">Select a detected ${escapeHtml(label.toLowerCase())}</option>
+                        ${selectOptions}
+                    </select>
+                    <button type="button" class="rule-small-btn" data-action="add-selected">＋ Add</button>
+               </div>
+               <div class="rule-custom-row">
+                    <input type="text" class="rule-picker-custom" aria-label="Type custom ${escapeHtml(label)}" placeholder="${escapeHtml(customHint)}">
+                    <button type="button" class="rule-small-btn" data-action="add-custom">＋ Add Typed</button>
+               </div>`
+            : `<div class="rule-custom-row">
+                    <input type="text" class="rule-picker-custom" list="${listId}" aria-label="${escapeHtml(customHint)}" placeholder="${escapeHtml(customHint)}">
+                    <button type="button" class="rule-small-btn" data-action="add-custom">＋ Add</button>
+               </div>
+               <datalist id="${listId}">${choices}</datalist>`;
 
         return `<div class="rule-picker" data-picker-name="${name}">
-            <span class="rule-picker-label">${escapeHtml(label)}${note ? `<span class="rule-simple-note">(${escapeHtml(note)})</span>` : ''}</span>
-            <div class="rule-custom-row">
-                <input type="text" class="rule-picker-custom" list="${listId}" placeholder="${escapeHtml(customHint)}">
-                <button type="button" class="rule-small-btn" data-action="add-custom" aria-label="Add ${escapeHtml(label)}">Add</button>
-            </div>
-            <datalist id="${listId}">${choices}</datalist>
+            <span class="rule-picker-label">${icon ? `<span class="rule-picker-icon" aria-hidden="true">${icon}</span>` : ''}${escapeHtml(label)}${note ? `<span class="rule-simple-note">(${escapeHtml(note)})</span>` : ''}</span>
+            ${inputControls}
             <div class="rule-picker-tags">${tags}</div>
         </div>`;
     }
@@ -3101,11 +3118,11 @@ const saveAllBtn = document.getElementById('btn_save_all');
                     </div>
                     <div class="rule-actions">
                         ${!isEditing ? `
-                            <button type="button" class="btn-rule-edit" data-action="edit">Edit</button>
-                            <button type="button" class="btn-rule-delete" data-action="delete">Delete</button>
+                            <button type="button" class="btn-rule-edit" data-action="edit">✎ Edit</button>
+                            <button type="button" class="btn-rule-delete" data-action="delete">× Delete</button>
                         ` : `
-                            <button type="button" class="btn-rule-save" data-action="save">Save</button>
-                            <button type="button" class="btn-rule-cancel" data-action="cancel">Cancel</button>
+                            <button type="button" class="btn-rule-save" data-action="save">✓ Save</button>
+                            <button type="button" class="btn-rule-cancel" data-action="cancel">× Cancel</button>
                         `}
                     </div>
                 </div>
@@ -3126,13 +3143,13 @@ const saveAllBtn = document.getElementById('btn_save_all');
                     <div class="rule-simple-section"${isAdvanced ? ' style="display:none;"' : ''}>
                         <div class="rule-simple-heading">Match NPCs When <span class="rule-simple-note">Any value inside a field; all populated fields must match.</span></div>
                         <div class="rule-simple-grid">
-                            ${renderPicker(rule.id, 'name', 'NPC Name', simpleValues(rule, 'name'), editorOptions.names, 'Search or enter an NPC name')}
-                            ${renderPicker(rule.id, 'race', 'Race', simpleValues(rule, 'race'), editorOptions.races, 'Search or enter a race')}
-                            ${renderPicker(rule.id, 'gender', 'Gender', simpleValues(rule, 'gender'), editorOptions.genders, 'Search or enter a gender')}
-                            ${renderPicker(rule.id, 'faction', 'Faction', simpleValues(rule, 'faction'), editorOptions.factions, 'Search or enter a faction')}
-                            ${renderPicker(rule.id, 'mods', 'Source Mods', ruleMods(rule), editorOptions.mods, 'Search or enter PluginName.esp', 'all selected are required')}
+                            ${renderPicker(rule.id, 'name', 'NPC Name', simpleValues(rule, 'name'), editorOptions.names, 'Search or enter an NPC name', '', '👤')}
+                            ${renderPicker(rule.id, 'race', 'Race', simpleValues(rule, 'race'), editorOptions.races, 'Search or enter a race', '', '🧬')}
+                            ${renderPicker(rule.id, 'gender', 'Gender', simpleValues(rule, 'gender'), editorOptions.genders, 'Search or enter a gender', '', '⚧')}
+                            ${renderPicker(rule.id, 'faction', 'Faction', simpleValues(rule, 'faction'), editorOptions.factions, 'Type a custom faction name', '', '⚔', true)}
+                            ${renderPicker(rule.id, 'mods', 'Source Mods', ruleMods(rule), editorOptions.mods, 'Type PluginName.esp', 'all selected are required', '🧩', true)}
                         </div>
-                        <button type="button" class="rule-advanced-toggle" data-action="open-advanced">Advanced Rules</button>
+                        <button type="button" class="rule-advanced-toggle" data-action="open-advanced">⚙ Advanced Rules</button>
                     </div>
                     <div class="rule-advanced-panel${isAdvanced ? ' open' : ''}">
                         <div class="rule-advanced-note">Raw regex and action fields are for advanced users. Blank match fields match every NPC. Higher priority rules override lower priority rules.</div>
@@ -3371,6 +3388,13 @@ const saveAllBtn = document.getElementById('btn_save_all');
             card.dataset.editorMode = 'advanced';
             card.querySelector('.rule-simple-section').style.display = 'none';
             card.querySelector('.rule-advanced-panel').classList.add('open');
+            return;
+        }
+        if (action === 'add-selected') {
+            const picker = btn.closest('.rule-picker');
+            const select = picker.querySelector('.rule-picker-select');
+            addPickerValue(picker, select.value);
+            select.value = '';
             return;
         }
         if (action === 'add-custom') {
