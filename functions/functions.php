@@ -2,6 +2,7 @@
 
 // Functions to be provided to OpenAI
 $startTime=$GLOBALS["startTime"] ?? microtime(true);
+require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'function_parameter_normalization.php';
 
 if (!function_exists('chimTraceFunctionsIncludePhase')) {
     function chimTraceFunctionsIncludePhase($line, $label, $startTime)
@@ -2418,6 +2419,8 @@ function functionExecutionParameterValueIsEmpty($parameterValue)
 function buildFunctionParameterValueFromResponse($functionDef, $parsedResponse)
 {
     $properties = $functionDef["parameters"]["properties"] ?? [];
+    $normalizedResponse = herikaNormalizeFunctionResponseArguments($properties, $parsedResponse);
+
     $requiredParameters = [];
     foreach (($functionDef["parameters"]["required"] ?? []) as $requiredParameter) {
         $requiredParameter = trim(strval($requiredParameter));
@@ -2428,7 +2431,7 @@ function buildFunctionParameterValueFromResponse($functionDef, $parsedResponse)
 
     $missingRequiredParameters = [];
     foreach ($requiredParameters as $requiredParameter) {
-        if (!array_key_exists($requiredParameter, $parsedResponse) || $parsedResponse[$requiredParameter] === "" || $parsedResponse[$requiredParameter] === null) {
+        if (!array_key_exists($requiredParameter, $normalizedResponse) || $normalizedResponse[$requiredParameter] === "" || $normalizedResponse[$requiredParameter] === null) {
             $missingRequiredParameters[] = $requiredParameter;
         }
     }
@@ -2436,8 +2439,8 @@ function buildFunctionParameterValueFromResponse($functionDef, $parsedResponse)
     if (count($properties) > 1) {
         $parameters = [];
         foreach ($properties as $parameterName => $parameterSchema) {
-            if (array_key_exists($parameterName, $parsedResponse)) {
-                $parameters[$parameterName] = normalizeFunctionParameterValueFromSchema($parameterSchema, $parsedResponse[$parameterName]);
+            if (array_key_exists($parameterName, $normalizedResponse)) {
+                $parameters[$parameterName] = normalizeFunctionParameterValueFromSchema($parameterSchema, $normalizedResponse[$parameterName]);
             }
         }
 
@@ -2448,7 +2451,7 @@ function buildFunctionParameterValueFromResponse($functionDef, $parsedResponse)
     }
 
     return [
-        "parameter_value" => getSingleFunctionParameterValue($functionDef, $parsedResponse),
+        "parameter_value" => getSingleFunctionParameterValue($functionDef, $normalizedResponse),
         "missing_required" => $missingRequiredParameters,
     ];
 }
