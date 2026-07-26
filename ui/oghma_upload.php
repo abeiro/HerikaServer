@@ -6,6 +6,7 @@ if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+require_once(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'oghma_aliases.php');
 
 $TITLE = "&#x1F4D9; CHIM - Oghma Infinium";
 
@@ -52,23 +53,54 @@ $message .= oghma_context_rule_handle_post(
     $_SERVER['REQUEST_METHOD'] ?? 'GET'
 );
 
+function oghma_filter_alias_input($conn, string $topic, string $aliases): array
+{
+    static $canonicalOwners = null;
+    static $aliasOwners = null;
+    if ($canonicalOwners === null || $aliasOwners === null) {
+        $result = pg_query($conn, "SELECT topic, coalesce(aliases, '') AS aliases FROM public.oghma");
+        $rows = [];
+        if ($result) {
+            while ($row = pg_fetch_assoc($result)) {
+                $rows[] = $row;
+            }
+        }
+        [$canonicalOwners, $aliasOwners] = chimOghmaBuildAliasOwnerMaps($rows);
+    }
+
+    $filtered = chimOghmaFilterAliases($topic, $aliases, $canonicalOwners, $aliasOwners);
+    $canonicalOwners[chimOghmaComparableAliasKey($topic)] = $topic;
+    foreach (chimOghmaSplitAliases($filtered['aliases']) as $alias) {
+        $aliasOwners[chimOghmaComparableAliasKey($alias)][$topic] = true;
+    }
+    return $filtered;
+}
+
 /********************************************************************
  *  1) SINGLE TOPIC UPLOAD
  ********************************************************************/
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual'])) {
     // Collect and sanitize form inputs
     $topic                = htmlspecialchars($_POST['topic']                ?? '');
+    $aliases              = trim((string) ($_POST['aliases']                ?? ''));
     $topic_desc           = htmlspecialchars($_POST['topic_desc']           ?? '');
     $knowledge_class      = htmlspecialchars($_POST['knowledge_class']      ?? '');
     $topic_desc_basic     = htmlspecialchars($_POST['topic_desc_basic']     ?? '');
     $knowledge_class_basic= htmlspecialchars($_POST['knowledge_class_basic']?? '');
     $tags                 = htmlspecialchars($_POST['tags']                 ?? '');
     $category             = htmlspecialchars($_POST['category']             ?? '');
+    $filteredAliases      = oghma_filter_alias_input($conn, $topic, $aliases);
+    $aliases              = $filteredAliases['aliases'];
+    foreach ($filteredAliases['rejected'] as $rejectedAlias) {
+        $message .= '<p>Alias skipped: ' . htmlspecialchars($rejectedAlias['alias'])
+            . ' (' . htmlspecialchars($rejectedAlias['reason']) . ')</p>';
+    }
 
     if (!empty($topic) && !empty($topic_desc)) {
         $query = "
             INSERT INTO $schema.oghma (
-                topic, 
+                topic,
+                aliases,
                 topic_desc, 
                 knowledge_class, 
                 topic_desc_basic, 
@@ -76,9 +108,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 tags, 
                 category
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (topic)
             DO UPDATE SET
+                aliases              = EXCLUDED.aliases,
                 topic_desc           = EXCLUDED.topic_desc,
                 knowledge_class      = EXCLUDED.knowledge_class,
                 topic_desc_basic     = EXCLUDED.topic_desc_basic,
@@ -88,6 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
         ";
         $result = pg_query_params($conn, $query, [
             $topic,
+            $aliases,
             $topic_desc,
             $knowledge_class,
             $topic_desc_basic,
@@ -103,7 +137,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
             $update_query = "
                 UPDATE $schema.oghma
                 SET native_vector = 
-                      setweight(to_tsvector(coalesce(topic, '')), 'A')
+                      setweight(to_tsvector('simple', coalesce(topic, '')), 'A')
+                    || setweight(to_tsvector('simple', coalesce(aliases, '')), 'A')
                     || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
                     || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
                 WHERE topic = $1
@@ -168,6 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                 }
 
                 $hasNamedColumns = isset($headerMap['topic']);
+                $hasAliasesColumn = isset($headerMap['aliases']);
                 $requiredColumns = ['topic', 'topic_desc', 'knowledge_class', 'topic_desc_basic', 'knowledge_class_basic'];
                 $missingColumns = array_values(array_filter($requiredColumns, static function ($column) use ($headerMap) {
                     return !isset($headerMap[$column]);
@@ -190,11 +226,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                     $knowledge_class_basic= oghma_csv_value($data, $headerMap, 'knowledge_class_basic', 4);
                     $tags                 = oghma_csv_value($data, $headerMap, 'tags', 5);
                     $category             = oghma_csv_value($data, $headerMap, 'category', 6);
+                    $aliases              = $hasAliasesColumn
+                        ? oghma_csv_value($data, $headerMap, 'aliases')
+                        : '';
+                    if ($hasAliasesColumn) {
+                        $filteredAliases = oghma_filter_alias_input($conn, $topic, $aliases);
+                        $aliases = $filteredAliases['aliases'];
+                    }
 
                     if (!empty($topic) && !empty($topic_desc)) {
                         $query = "
                             INSERT INTO $schema.oghma (
                                 topic,
+                                aliases,
                                 topic_desc,
                                 knowledge_class,
                                 topic_desc_basic,
@@ -202,9 +246,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 tags,
                                 category
                             )
-                            VALUES ($1, $2, $3, $4, $5, $6, $7)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                             ON CONFLICT (topic)
                             DO UPDATE SET
+                                aliases              = CASE
+                                    WHEN $9::boolean THEN EXCLUDED.aliases
+                                    ELSE oghma.aliases
+                                END,
                                 topic_desc           = EXCLUDED.topic_desc,
                                 knowledge_class      = EXCLUDED.knowledge_class,
                                 topic_desc_basic     = EXCLUDED.topic_desc_basic,
@@ -214,12 +262,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                         ";
                         $result = pg_query_params($conn, $query, [
                             $topic,
+                            $aliases,
                             $topic_desc,
                             $knowledge_class,
                             $topic_desc_basic,
                             $knowledge_class_basic,
                             $tags,
-                            $category
+                            $category,
+                            $hasAliasesColumn ? 'true' : 'false'
                         ]);
 
                         if ($result) {
@@ -228,7 +278,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $update_query = "
                                 UPDATE $schema.oghma
                                 SET native_vector = 
-                                      setweight(to_tsvector(coalesce(topic, '')), 'A')
+                                      setweight(to_tsvector('simple', coalesce(topic, '')), 'A')
+                                    || setweight(to_tsvector('simple', coalesce(aliases, '')), 'A')
                                     || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
                                     || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
                                 WHERE topic = $1
@@ -456,12 +507,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     // Sanitize and read posted fields - use htmlspecialchars_decode to convert HTML entities back
     $topic_original       = $_POST['topic_original'] ?? '';
     $topic_new           = htmlspecialchars_decode($_POST['topic_new'] ?? '');
+    $aliases_new         = htmlspecialchars_decode($_POST['aliases_new'] ?? '');
     $topic_desc_new      = htmlspecialchars_decode($_POST['topic_desc_new'] ?? '');
     $knowledge_class_new = htmlspecialchars_decode($_POST['knowledge_class_new'] ?? '');
     $topic_desc_basic_new = htmlspecialchars_decode($_POST['topic_desc_basic_new'] ?? '');
     $knowledge_class_basic_new = htmlspecialchars_decode($_POST['knowledge_class_basic_new'] ?? '');
     $tags_new            = htmlspecialchars_decode($_POST['tags_new'] ?? '');
     $category_new        = htmlspecialchars_decode($_POST['category_new'] ?? '');
+    $filteredAliases     = oghma_filter_alias_input($conn, $topic_new, $aliases_new);
+    $aliases_new         = $filteredAliases['aliases'];
+    foreach ($filteredAliases['rejected'] as $rejectedAlias) {
+        $message .= '<p>Alias skipped: ' . htmlspecialchars($rejectedAlias['alias'])
+            . ' (' . htmlspecialchars($rejectedAlias['reason']) . ')</p>';
+    }
 
     if (!empty($topic_new) && !empty($topic_desc_new)) {
         // Perform the update
@@ -469,17 +527,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             UPDATE $schema.oghma
             SET 
                 topic = $1,
-                topic_desc = $2,
-                knowledge_class = $3,
-                topic_desc_basic = $4,
-                knowledge_class_basic = $5,
-                tags = $6,
-                category = $7
-            WHERE topic = $8
+                aliases = $2,
+                topic_desc = $3,
+                knowledge_class = $4,
+                topic_desc_basic = $5,
+                knowledge_class_basic = $6,
+                tags = $7,
+                category = $8
+            WHERE topic = $9
         ";
 
         $update_result = pg_query_params($conn, $update_sql, [
             $topic_new,
+            $aliases_new,
             $topic_desc_new,
             $knowledge_class_new,
             $topic_desc_basic_new,
@@ -496,7 +556,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $vector_sql = "
                 UPDATE $schema.oghma
                 SET native_vector = 
-                      setweight(to_tsvector(coalesce(topic, '')), 'A')
+                      setweight(to_tsvector('simple', coalesce(topic, '')), 'A')
+                    || setweight(to_tsvector('simple', coalesce(aliases, '')), 'A')
                     || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
                     || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
                 WHERE topic = $1
@@ -1620,86 +1681,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
 
             <?php
-            // Build query
-            $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
-
-            if ($selectedCategory && $letter && $searchTerm) {
-                $query = "
-                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-                           knowledge_class_basic, tags, category
-                    FROM $schema.oghma
-                    WHERE category = $1
-                      AND topic ILIKE $2
-                      AND topic ILIKE $3
-                    ORDER BY topic $order
-                ";
-                $params = [$selectedCategory, $letter . '%', '%' . $searchTerm . '%'];
-            } elseif ($selectedCategory && $searchTerm) {
-                $query = "
-                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-                           knowledge_class_basic, tags, category
-                    FROM $schema.oghma
-                    WHERE category = $1
-                      AND topic ILIKE $2
-                    ORDER BY topic $order
-                ";
-                $params = [$selectedCategory, '%' . $searchTerm . '%'];
-            } elseif ($letter && $searchTerm) {
-                $query = "
-                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-                           knowledge_class_basic, tags, category
-                    FROM $schema.oghma
-                    WHERE topic ILIKE $1
-                      AND topic ILIKE $2
-                    ORDER BY topic $order
-                ";
-                $params = [$letter . '%', '%' . $searchTerm . '%'];
-            } elseif ($searchTerm) {
-                $query = "
-                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-                           knowledge_class_basic, tags, category
-                    FROM $schema.oghma
-                    WHERE topic ILIKE $1
-                    ORDER BY topic $order
-                ";
-                $params = ['%' . $searchTerm . '%'];
-            } elseif ($selectedCategory && $letter) {
-                $query = "
-                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-                           knowledge_class_basic, tags, category
-                    FROM $schema.oghma
-                    WHERE category = $1
-                      AND topic ILIKE $2
-                    ORDER BY topic $order
-                ";
-                $params = [$selectedCategory, $letter . '%'];
-            } elseif ($selectedCategory) {
-                $query = "
-                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-                           knowledge_class_basic, tags, category
-                    FROM $schema.oghma
-                    WHERE category = $1
-                    ORDER BY topic $order
-                ";
-                $params = [$selectedCategory];
-            } elseif ($letter) {
-                $query = "
-                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-                           knowledge_class_basic, tags, category
-                    FROM $schema.oghma
-                    WHERE topic ILIKE $1
-                    ORDER BY topic $order
-                ";
-                $params = [$letter . '%'];
-            } else {
-                $query = "
-                    SELECT topic, topic_desc, knowledge_class, topic_desc_basic,
-                           knowledge_class_basic, tags, category
-                    FROM $schema.oghma
-                    ORDER BY topic $order
-                ";
-                $params = [];
+            // Build query. Letter filters remain canonical-topic based; free text searches aliases too.
+            $searchTerm = isset($_GET['search']) ? trim((string) $_GET['search']) : '';
+            $conditions = [];
+            $params = [];
+            if ($selectedCategory) {
+                $params[] = $selectedCategory;
+                $conditions[] = 'category = $' . count($params);
             }
+            if ($letter) {
+                $params[] = $letter . '%';
+                $conditions[] = 'topic ILIKE $' . count($params);
+            }
+            if ($searchTerm !== '') {
+                $params[] = '%' . $searchTerm . '%';
+                $placeholder = '$' . count($params);
+                $conditions[] = "(topic ILIKE {$placeholder} OR coalesce(aliases, '') ILIKE {$placeholder})";
+            }
+            $whereSql = empty($conditions) ? '' : 'WHERE ' . implode(' AND ', $conditions);
+            $query = "
+                SELECT topic, aliases, topic_desc, knowledge_class, topic_desc_basic,
+                       knowledge_class_basic, tags, category
+                FROM $schema.oghma
+                $whereSql
+                ORDER BY topic $order
+            ";
 
             $result = pg_query_params($conn, $query, $params);
 
@@ -1708,6 +1714,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             echo '<table>';
             echo '<tr>
                     <th>Topic</th>
+                    <th>Aliases</th>
                     <th>Topic Description (Advanced)</th>
                     <th>Knowledge Class (Advanced)</th>
                     <th>Topic Description (Basic)</th>
@@ -1721,6 +1728,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $rowCount = 0;
                 while ($row = pg_fetch_assoc($result)) {
                     $topic                = htmlspecialchars($row['topic']                ?? '');
+                    $aliases              = htmlspecialchars($row['aliases']              ?? '');
                     $topic_desc           = htmlspecialchars($row['topic_desc']           ?? '');
                     $knowledge_class      = htmlspecialchars($row['knowledge_class']      ?? '');
                     $topic_desc_basic     = htmlspecialchars($row['topic_desc_basic']     ?? '');
@@ -1731,6 +1739,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     // Normal row display
                     echo '<tr>';
                     echo '<td>' . $topic . '</td>';
+                    echo '<td>' . ($aliases !== '' ? $aliases : '<span style="color:#888;">None</span>') . '</td>';
                     echo '<td>' . nl2br($topic_desc) . '</td>';
                     
                     // Knowledge Class column with badge styling
@@ -1774,6 +1783,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     echo '<button onclick="openEditModal(' . 
                         htmlspecialchars(json_encode([
                             'topic' => $topic,
+                            'aliases' => $aliases,
                             'topic_desc' => $topic_desc,
                             'knowledge_class' => $knowledge_class,
                             'topic_desc_basic' => $topic_desc_basic,
@@ -1973,7 +1983,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <label for="edit_topic">Topic:</label>
                 <small>Topic name for keyword searching.</small>
                 <input type="text" name="topic_new" id="edit_topic" required>
-                
+
+                <label for="edit_aliases">Aliases:</label>
+                <small>Alternate names that should find this article. Separate aliases with commas.</small>
+                <input type="text" name="aliases_new" id="edit_aliases">
 
                 <label for="edit_topic_desc">Topic Description:</label>
                 <small>Advanced knowledge information on the subject.</small>
@@ -2023,6 +2036,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <label for="topic">Topic (required):</label>
                 <small>Topic name for keyword searching.</small>
                 <input type="text" name="topic" id="topic" required>
+
+                <label for="aliases">Aliases:</label>
+                <small>Alternate names that should find this article. Separate aliases with commas.</small>
+                <input type="text" name="aliases" id="aliases">
 
                 <label for="topic_desc">Topic Description (required):</label>
                 <small>Advanced knowledge information on the subject.</small>
@@ -2306,6 +2323,7 @@ function openEditModal(data) {
 
         document.getElementById("edit_topic_original").value = decodeHTML(data.topic);
         document.getElementById("edit_topic").value = decodeHTML(data.topic);
+        document.getElementById("edit_aliases").value = decodeHTML(data.aliases || '');
         document.getElementById("edit_topic_desc").value = decodeHTML(data.topic_desc);
         document.getElementById("edit_knowledge_class").value = decodeHTML(data.knowledge_class);
         document.getElementById("edit_topic_desc_basic").value = decodeHTML(data.topic_desc_basic);

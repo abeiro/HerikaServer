@@ -2,6 +2,7 @@
 
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/logger.php");
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/settings.php");
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/oghma_aliases.php");
 
 $checkVersion = function($tablename) {
     global $db;
@@ -7112,6 +7113,28 @@ if ($checkVersion("oghma") < 20260625001) {
 
     $updateVersion("oghma", 20260625001);
     Logger::info("Applied patch oghma 20260625001");
+}
+
+if ($checkVersion("oghma_aliases") < 20260725001) {
+    Logger::debug("Applying oghma_aliases 20260725001 - add static Oghma aliases and rebuild search vectors");
+
+    $db->execQuery("ALTER TABLE public.oghma ADD COLUMN IF NOT EXISTS aliases text DEFAULT '' NOT NULL");
+    $db->execQuery('UPDATE public.oghma SET native_vector = ' . chimOghmaNativeVectorSql());
+    $db->execQuery('CREATE INDEX IF NOT EXISTS oghma_native_vector_idx ON public.oghma USING gin (native_vector)');
+
+    $aliasSeed = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'oghma_aliases.csv';
+    if (is_file($aliasSeed)) {
+        $stats = chimOghmaApplyAliasSeed($db, $aliasSeed);
+        Logger::info(
+            'Oghma alias seed applied: matched=' . $stats['matched']
+            . ', updated=' . $stats['updated']
+            . ', reindexed=' . $stats['reindexed']
+            . ', rejected=' . $stats['rejected']
+        );
+    }
+
+    $updateVersion("oghma_aliases", 20260725001);
+    Logger::info("Applied patch oghma_aliases 20260725001");
 }
 
 if ($checkVersion("core_tts_connector_pockettts_audiocpp") < 20260628001) {
