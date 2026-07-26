@@ -420,6 +420,7 @@ function profileConnectorTestsTestLlm(int $connectorId): array
         $GLOBALS["DEBUG_DATA"] = [];
         $GLOBALS["FUNCTIONS_ARE_ENABLED"] = false;
         $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"] = false;
+        $GLOBALS["COMMAND_PROMPT"] = '';
         $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"] = '';
 
         $llm->setOldGlobals($connector);
