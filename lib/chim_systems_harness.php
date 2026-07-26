@@ -1031,87 +1031,22 @@ if (!function_exists('chimHarnessCollectMetrics')) {
     }
 }
 
-if (!function_exists('chimHarnessRestoreExistingNpc')) {
-    function chimHarnessRestoreExistingNpc(array $actor): void
+if (!function_exists('chimHarnessRetainActorAfterRun')) {
+    function chimHarnessRetainActorAfterRun(array $actor, int $runId): void
     {
-        $snapshot = chimHarnessDecodeJson($actor['snapshot'] ?? null);
-        $npcId = intval($snapshot['npc_id'] ?? $actor['npc_id'] ?? 0);
-        if ($npcId <= 0) {
-            return;
-        }
-        $GLOBALS['db']->updateRow('core_npc_master', [
-            'profile_id' => $snapshot['profile_id'] ?? null,
-            'lock_profile' => $snapshot['lock_profile'] ?? null,
-            'metadata' => chimHarnessEncodeJson($snapshot['metadata'] ?? []),
-            'extended_data' => chimHarnessEncodeJson($snapshot['extended_data'] ?? []),
-        ], "id={$npcId}");
-    }
-}
-
-if (!function_exists('chimHarnessBeginActorCleanup')) {
-    function chimHarnessBeginActorCleanup(array $actor, int $runId): void
-    {
-        if (in_array($actor['status'] ?? '', ['cleanup_queued', 'restored'], true)) {
-            return;
-        }
-        $snapshot = chimHarnessDecodeJson($actor['snapshot'] ?? null);
-        $wasTracked = !empty($snapshot['was_background_enabled']);
-        $refId = chimHarnessNormalizeRefId($actor['refid'] ?? '');
-        if (!$wasTracked && $refId !== '') {
-            chimHarnessQueueRoleCommand(
-                "UntrackBackgroundNPC@0x{$refId}@{$actor['actor_name']}@{$runId}"
-            );
-            chimHarnessSetActorStatus(intval($actor['id']), 'cleanup_queued', [
-                'metrics' => chimHarnessEncodeJson(array_merge(
-                    chimHarnessDecodeJson($actor['metrics'] ?? null),
-                    ['cleanup_queued_at' => time()]
-                )),
-            ]);
+        if (($actor['status'] ?? '') === 'restored') {
             return;
         }
 
-        if (($actor['source'] ?? '') === 'existing') {
-            chimHarnessRestoreExistingNpc($actor);
-        }
         chimHarnessSetActorStatus(intval($actor['id']), 'restored');
-    }
-}
-
-if (!function_exists('chimHarnessFinishActorCleanup')) {
-    function chimHarnessFinishActorCleanup(array $actor, int $runId): void
-    {
-        if (($actor['status'] ?? '') !== 'cleanup_queued') {
-            return;
-        }
-        $refId = chimHarnessNormalizeRefId($actor['refid'] ?? '');
-        $metrics = chimHarnessDecodeJson($actor['metrics'] ?? null);
-        if (chimHarnessHasPluginAck($runId, 'untracked', $refId)
-            || time() - intval($metrics['cleanup_queued_at'] ?? time()) > 45) {
-            if (($actor['source'] ?? '') === 'existing') {
-                chimHarnessRestoreExistingNpc($actor);
-            } else {
-                $npcId = intval($actor['npc_id'] ?? 0);
-                if ($npcId > 0) {
-                    $npc = $GLOBALS['db']->fetchOne("SELECT * FROM core_npc_master WHERE id={$npcId} LIMIT 1");
-                    if ($npc) {
-                        require_once __DIR__ . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'npc_master.class.php';
-                        $npcMaster = new NpcMaster();
-                        $extended = $npcMaster->getExtendedData($npc);
-                        $extended['background_life_enabled'] = false;
-                        unset($extended['chim_harness_run_id']);
-                        $metadata = $npcMaster->getMetadata($npc);
-                        unset($metadata['chim_harness_run_id']);
-                        $npc = $npcMaster->setExtendedData($npc, $extended);
-                        $npc = $npcMaster->setMetadata($npc, $metadata);
-                        $npcMaster->updateByArray($npc);
-                    }
-                }
-            }
-            chimHarnessSetActorStatus(intval($actor['id']), 'restored');
-            chimHarnessEvent($runId, 'restore', "Restored {$actor['actor_name']}.", [
-                'plugin_ack' => chimHarnessHasPluginAck($runId, 'untracked', $refId),
-            ], 'info', intval($actor['id']));
-        }
+        chimHarnessEvent(
+            $runId,
+            'retain',
+            "Retained {$actor['actor_name']} in Background Life after the run.",
+            [],
+            'info',
+            intval($actor['id'])
+        );
     }
 }
 
@@ -1214,10 +1149,7 @@ if (!function_exists('chimHarnessTick')) {
             if ($status === 'stopping' || $status === 'restoring') {
                 chimHarnessSetRunStatus($runId, 'restoring');
                 foreach (chimHarnessGetActors($runId) as $actor) {
-                    chimHarnessBeginActorCleanup($actor, $runId);
-                }
-                foreach (chimHarnessGetActors($runId) as $actor) {
-                    chimHarnessFinishActorCleanup($actor, $runId);
+                    chimHarnessRetainActorAfterRun($actor, $runId);
                 }
                 $counts = $GLOBALS['db']->fetchOne(
                     "SELECT count(*) AS total,
@@ -1234,8 +1166,8 @@ if (!function_exists('chimHarnessTick')) {
                         $runId,
                         $finalStatus === 'failed' ? 'failed' : 'complete',
                         $finalStatus === 'failed'
-                            ? 'Run failed, but server-side NPC state and temporary settings were restored.'
-                            : 'Run completed and server-side NPC state was restored.',
+                            ? 'Run failed. Test NPCs remain in Background Life; temporary settings were restored.'
+                            : 'Run completed. Test NPCs remain in Background Life; temporary settings were restored.',
                         $metrics,
                         $finalStatus === 'failed' ? 'error' : 'info'
                     );
