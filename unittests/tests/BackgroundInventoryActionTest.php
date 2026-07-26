@@ -64,6 +64,10 @@ final class BackgroundInventoryActionTest extends TestCase
             "background_life_inventory_last_processed_idle_gamets",
             $db->lastQuery
         );
+        self::assertStringContainsString(
+            "ARRAY['background_life_inventory_last_processed_idle_gamets']::text[]",
+            $db->lastQuery
+        );
         self::assertStringContainsString('< 37136115', $db->lastQuery);
     }
 

@@ -139,7 +139,7 @@ function claimBglInventorySettlement(string $npcName, int $idleGamets, $db): boo
         "UPDATE core_npc_master
          SET extended_data = jsonb_set(
              COALESCE(extended_data, '{}'::jsonb),
-             '{$markerKey}',
+             ARRAY['{$markerKey}']::text[],
              to_jsonb({$idleGamets}::bigint),
              true
          )
