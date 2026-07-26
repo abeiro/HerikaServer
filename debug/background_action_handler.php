@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../lib/background_life_tracking.php';
 
 /**
  * Force-trigger an NPC background life update on the next mid-term BGL check.
@@ -428,25 +429,10 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
     return true;
 }
 
-//sends a track signal, NPC should report coords
-function handleTrack($currentNpcData, $db)
+// Sends one track signal so the NPC reports its current coordinates.
+function handleTrack($currentNpcData, $db, string $tag = '')
 {
-    $refHexString = convertSignedToUnsignedHex(hexdec($currentNpcData["refid"]));
-
-    // Insert response log entry with return home command
-    $db->insert(
-        'responselog',
-        [
-            'localts' => time(),
-            'sent' => 0,
-            'actor' => "rolemaster",
-            'text' => "",
-            'action' => "rolecommand|BackgroundCmd@$refHexString@Track/",
-            'tag' => '',
-        ]
-    );
-
-    return true;
+    return chimQueueBackgroundTrack($currentNpcData, $db, $tag);
 }
 
 /**

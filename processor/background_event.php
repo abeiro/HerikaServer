@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../lib/background_life_tracking.php';
 
 
 function convertSignedToUnsignedHexTrunc($signedInt)
@@ -173,16 +174,10 @@ if (is_array($bgevent)) {
 
                 // Also, lets track coords.
                 if ($npcData["refid"]) {
-                    $GLOBALS["db"]->insert(
-                        'responselog',
-                        [
-                            'localts' => time(),
-                            'sent' => 0,
-                            'actor' => "rolemaster",
-                            'text' => "",
-                            'action' => "rolecommand|BackgroundCmd@0x{$npcData['refid']}@Track/",
-                            'tag' => "requested after background event {$bgevent["name"]}",
-                        ]
+                    chimQueueBackgroundTrack(
+                        $npcData,
+                        $GLOBALS["db"],
+                        "requested after background event {$bgevent["name"]}"
                     );
                 }
             }

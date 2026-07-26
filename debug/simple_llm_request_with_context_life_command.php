@@ -123,20 +123,10 @@ if ($cmds[0] == "TravelTo") {
 } else if ($cmds[0] == "ReturnHome") {
     handleReturnHome($cmds[1], $currentNpcData, $GLOBALS["HERIKA_NAME"], $last_ts, $last_gamets, $momentum, $db);
 } else if ($cmds[0] == "Track") {
-    $metadata = $npcMaster->getMetadata($currentNpcData);
-    $metadata["last_coords"]["pending"] = true;
-    $npcMaster->updateByArray($npcMaster->setMetadata($currentNpcData, $metadata));
     handleTrack($currentNpcData, $db);
 } else if ($cmds[0] == "TrackAll") {
     $allBglNPC = $db->fetchAll("select * from public.core_npc_master WHERE (extended_data ->> 'background_life_enabled')::boolean = true");
     foreach ($allBglNPC as $npc) {
-        
-        // handleTrack only needs refid
-        $currentNpcData = $npcMaster->getByName($npc["npc_name"]);
-        $metadata = $npcMaster->getMetadata($currentNpcData);
-        $metadata["last_coords"]["pending"] = true;
-        $npcMaster->updateByArray($npcMaster->setMetadata($currentNpcData, $metadata));
-
         handleTrack($npc, $db);
     }
 }

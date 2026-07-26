@@ -16,11 +16,29 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     require_once($enginePath . "lib/data_functions.php");
     require_once($enginePath . "lib/rolemaster_helpers.php");
     require_once($enginePath . "lib/utils_game_timestamp.php");
+    require_once($enginePath . "lib/middleterm_worker_lock.php");
 
     require_once $enginePath . "lib/core/npc_master.class.php";
     require_once $enginePath . "lib/core/api_badge.class.php";
     require_once $enginePath . "lib/core/core_profiles.class.php";
     require_once $enginePath . "lib/core/llm_connector.class.php";
+
+    if (!chimTryAcquireMiddletermWorkerLock($GLOBALS["db"])) {
+        Logger::debug("[MIDDLETERM] Another worker is active; skipping overlapping run");
+        return;
+    }
+
+    $middletermLockHeld = true;
+    register_shutdown_function(
+        static function () use (&$middletermLockHeld) {
+            if (!$middletermLockHeld || !isset($GLOBALS["db"])) {
+                return;
+            }
+
+            chimReleaseMiddletermWorkerLock($GLOBALS["db"]);
+            $middletermLockHeld = false;
+        }
+    );
 
     /**
      * Process delayed events waiting for TTS to finish
@@ -309,7 +327,8 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 2>/dev/null");
     }
 
-    //unset($GLOBALS["db"]);
+    chimReleaseMiddletermWorkerLock($GLOBALS["db"]);
+    $middletermLockHeld = false;
 
 }
     ?>
