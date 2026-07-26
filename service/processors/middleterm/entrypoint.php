@@ -194,7 +194,12 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
                 }
             }
 
-            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" ");
+            $runner = $enginePath . 'service/background_life_runner.php';
+            $shellResult = shell_exec(
+                escapeshellarg(PHP_BINARY) . ' ' .
+                escapeshellarg($runner) . ' ' .
+                escapeshellarg((string)$npc['npc_name'])
+            );
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }
@@ -282,7 +287,13 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
                 $npcManager->updateByArray($npcData);
                 
             } else {
-                $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_v2.php \"{$npc["npc_name"]}\" full forceaction");
+                $runner = $enginePath . 'service/background_life_runner_v2.php';
+                $shellResult = shell_exec(
+                    escapeshellarg(PHP_BINARY) . ' ' .
+                    escapeshellarg($runner) . ' ' .
+                    escapeshellarg((string)$npc['npc_name']) .
+                    ' full forceaction'
+                );
             }
             
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {

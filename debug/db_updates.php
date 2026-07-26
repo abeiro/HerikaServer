@@ -5222,7 +5222,7 @@ if ($checkVersion("prompts")<20260118001) {
         VALUES (
             'background_life_letter',
             '$bglLetterStyle',
-            'Writing style instructions for background life letters/notifications. This is embedded into the notification field instructions. Contains placeholders: {HERIKA_NAME}, {PLAYER_NAME}. Used in: debug/simple_llm_request_with_context_life.php'
+            'Writing style instructions for background life letters/notifications. This is embedded into the notification field instructions. Contains placeholders: {HERIKA_NAME}, {PLAYER_NAME}. Used in: service/background_life_runner.php'
         )
         ON CONFLICT (prompt_key) DO UPDATE SET
             default_prompt = EXCLUDED.default_prompt,
@@ -5241,7 +5241,7 @@ if ($checkVersion("prompts")<20260118001) {
         VALUES (
             'background_life_innerthought',
             '$bglInnerThoughtStyle',
-            'Introduction/framing style for processing background life inner thoughts and monologues. This appears at the start of the system prompt. Contains no placeholders. Used in: debug/simple_llm_request_with_context_life.php'
+            'Introduction/framing style for processing background life inner thoughts and monologues. This appears at the start of the system prompt. Contains no placeholders. Used in: service/background_life_runner.php'
         )
         ON CONFLICT (prompt_key) DO UPDATE SET
             default_prompt = EXCLUDED.default_prompt,
