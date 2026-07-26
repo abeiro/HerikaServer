@@ -4,9 +4,30 @@ PORT=12345
 SERVICE_LOG="/var/www/html/HerikaServer/log/service.log"
 FALLBACK_SERVICE_LOG="/tmp/herika_service.log"
 LOG_DIR="$(dirname "$SERVICE_LOG")"
+LOCK_FILE="/tmp/herika_background_processor.lock"
 
 # Ensure new files are group-readable/writable for dwemer + www-data workflows.
 umask 0002
+
+# The TCP probe alone is racy: concurrent auto-start requests can all pass
+# before any listener binds. Hold this lock for the daemon's entire lifetime.
+if ! command -v flock >/dev/null 2>&1; then
+    echo "Cannot start background processor: flock is unavailable."
+    exit 1
+fi
+touch "$LOCK_FILE" 2>/dev/null || {
+    echo "Cannot create background processor lock file: $LOCK_FILE"
+    exit 1
+}
+chmod 0666 "$LOCK_FILE" 2>/dev/null || true
+exec 9>"$LOCK_FILE" || {
+    echo "Cannot open background processor lock file: $LOCK_FILE"
+    exit 1
+}
+if ! flock -n 9; then
+    echo "An instance of the background processor is already running."
+    exit 0
+fi
 
 mkdir -p "$LOG_DIR" 2>/dev/null
 if ! touch "$SERVICE_LOG" 2>/dev/null; then
