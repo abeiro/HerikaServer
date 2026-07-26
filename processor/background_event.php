@@ -21,6 +21,26 @@ function convertSignedToUnsignedHexLocal($signedInt, $preprend0x = true)
     return $preprend0x ? "0x" . $hex : $hex;
 }
 
+function extractBackgroundActionDestination($action)
+{
+    foreach (["fullcall", "original"] as $field) {
+        $value = trim((string)($action[$field] ?? ""));
+        if ($value === "") {
+            continue;
+        }
+
+        if (preg_match('/^(?:TravelTo(?:Raw)?|MoveTo)\s*:\s*(.+)$/i', $value, $matches)) {
+            return trim($matches[1]);
+        }
+
+        if (preg_match('/(?:^|\|)(?:TravelTo(?:Raw)?|MoveTo)@([^|\r\n]+)/i', $value, $matches)) {
+            return trim($matches[1]);
+        }
+    }
+
+    return "";
+}
+
 // Handle npc_reanimated event
 if ($gameRequest[0] === 'npc_reanimated') {
     // Event format: npc_reanimated|timestamp|gametime|target_name
@@ -146,7 +166,11 @@ if (is_array($bgevent)) {
                         $bgevent["server_processed"] = true;
 
                         if ($bgevent["name"] == "TravelTo" || $bgevent["name"] == "MoveTo") {
-                            $message="{$npcData["npc_name"]} reaches destination";
+                            $destination = extractBackgroundActionDestination($lastAction);
+                            $message = "{$npcData["npc_name"]} reaches destination";
+                            if ($destination !== "") {
+                                $message .= ": {$destination}";
+                            }
                         } else {
                             $message="{$npcData["npc_name"]} {$bgevent["event"]} {$bgevent["name"]}";
                         }
