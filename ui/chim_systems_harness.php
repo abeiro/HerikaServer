@@ -263,6 +263,8 @@ th { color:#cfcfcf; background:#1b1b1b; position:sticky; top:0; }
                         'memory_events' => 'Memory events',
                         'memory_summaries' => 'Summaries',
                         'oghma_hits' => 'Oghma hits',
+                        'oghma_unique_contexts' => 'Oghma contexts',
+                        'data_quality_alerts' => 'Data alerts',
                         'llm_requests' => 'LLM requests',
                     ] as $key => $label): ?>
                         <div class="metric"><span><?php echo chimHarnessHtml($label); ?></span><strong><?php echo intval($runMetrics[$key] ?? 0); ?></strong></div>

@@ -21,6 +21,13 @@ if (!function_exists('chimHarnessTerminalStatuses')) {
     }
 }
 
+if (!function_exists('chimHarnessFinalStatus')) {
+    function chimHarnessFinalStatus(array $run): string
+    {
+        return trim((string)($run['error'] ?? '')) !== '' ? 'failed' : 'completed';
+    }
+}
+
 if (!function_exists('chimHarnessDecodeJson')) {
     function chimHarnessDecodeJson($value): array
     {
@@ -74,6 +81,14 @@ if (!function_exists('chimHarnessNormalizeDuration')) {
     function chimHarnessNormalizeDuration($minutes): int
     {
         return max(5, min(480, intval($minutes)));
+    }
+}
+
+if (!function_exists('chimHarnessNormalizeBglTriggerHours')) {
+    function chimHarnessNormalizeBglTriggerHours($hours): float
+    {
+        $value = is_numeric($hours) ? floatval($hours) : 24.0;
+        return max(1.0, min(24.0, $value));
     }
 }
 
@@ -269,6 +284,9 @@ if (!function_exists('chimHarnessStartRun')) {
             'created_by' => 'local-control-panel',
             'max_actors' => 8,
             'metrics_interval_seconds' => 15,
+            'bgl_trigger_hours' => chimHarnessNormalizeBglTriggerHours(
+                $scenarios[$scenarioKey]['bgl_trigger_hours'] ?? 24
+            ),
         ];
         $runId = $GLOBALS['db']->insertReturningId('chim_harness_run', [
             'name' => (string)($scenarios[$scenarioKey]['label'] ?? $scenarioKey),
@@ -336,6 +354,251 @@ if (!function_exists('chimHarnessStartRun')) {
 
         chimHarnessEvent($runId, 'create', "Created {$mode} run with {$actorCount} actor(s).", $config);
         return ['ok' => true, 'run_id' => $runId, 'message' => 'Harness run created.'];
+    }
+}
+
+if (!function_exists('chimHarnessApplyRunSettings')) {
+    function chimHarnessApplyRunSettings(array $run): array
+    {
+        $snapshot = chimHarnessDecodeJson($run['snapshot'] ?? null);
+        if (!empty($snapshot['test_settings']['attempted'])) {
+            return $run;
+        }
+
+        require_once __DIR__ . DIRECTORY_SEPARATOR . 'settings.php';
+        $setting = $GLOBALS['db']->fetchOne(
+            "SELECT value, description FROM public.general_settings WHERE id='BGL_TRIGGER_HOURS' LIMIT 1"
+        );
+        $config = chimHarnessDecodeJson($run['config'] ?? null);
+        $testHours = chimHarnessNormalizeBglTriggerHours($config['bgl_trigger_hours'] ?? 24);
+        $snapshot['test_settings'] = [
+            'attempted' => true,
+            'BGL_TRIGGER_HOURS' => [
+                'existed' => !empty($setting),
+                'value' => $setting['value'] ?? null,
+                'description' => $setting['description'] ?? null,
+                'test_value' => $testHours,
+            ],
+        ];
+
+        $applied = chimSetGeneralSetting(
+            'BGL_TRIGGER_HOURS',
+            $testHours,
+            isset($setting['description']) ? (string)$setting['description'] : null
+        );
+        $snapshot['test_settings']['applied'] = $applied;
+        $GLOBALS['db']->updateRow('chim_harness_run', [
+            'snapshot' => chimHarnessEncodeJson($snapshot),
+            'last_tick_at' => time(),
+        ], 'id=' . intval($run['id']));
+        $run['snapshot'] = chimHarnessEncodeJson($snapshot);
+
+        chimHarnessEvent(
+            intval($run['id']),
+            'settings',
+            $applied
+                ? "Temporarily set Background Life trigger time to {$testHours} game-hours."
+                : 'Could not apply the temporary Background Life trigger time; continuing with the user setting.',
+            ['bgl_trigger_hours' => $testHours],
+            $applied ? 'info' : 'warn'
+        );
+        return $run;
+    }
+}
+
+if (!function_exists('chimHarnessTemporaryActionRestoreEntries')) {
+    function chimHarnessTemporaryActionRestoreEntries(array $snapshot): array
+    {
+        $entries = [];
+        foreach (($snapshot['temporary_action_overrides'] ?? []) as $codeName => $override) {
+            if (!is_array($override)
+                || empty($override['restore_required'])
+                || !empty($override['restored_at'])
+                || ($override['table'] ?? '') !== 'core_action_custom'
+                || intval($override['id'] ?? 0) <= 0
+                || !is_array($override['metadata'] ?? null)) {
+                continue;
+            }
+
+            $entries[(string)$codeName] = [
+                'table' => 'core_action_custom',
+                'id' => intval($override['id']),
+                'metadata' => $override['metadata'],
+            ];
+        }
+
+        return $entries;
+    }
+}
+
+if (!function_exists('chimHarnessApplyTemporaryActionOverrides')) {
+    function chimHarnessApplyTemporaryActionOverrides(array $run): array
+    {
+        $snapshot = chimHarnessDecodeJson($run['snapshot'] ?? null);
+        if (!empty($snapshot['temporary_action_override_setup']['attempted_at'])) {
+            return $run;
+        }
+
+        $rows = $GLOBALS['db']->fetchAll(
+            "SELECT id, code_name, metadata
+             FROM public.core_action_custom
+             WHERE lower(code_name) IN ('moveto', 'travelto')"
+        );
+        $overrides = [];
+        foreach ($rows as $row) {
+            $metadata = chimHarnessDecodeJson($row['metadata'] ?? null);
+            $confirmationRequired = strtolower(trim(strval(
+                $metadata['custom_config']['confirmation_required'] ?? false
+            )));
+            if (!in_array($confirmationRequired, ['1', 'true', 't', 'yes', 'on'], true)) {
+                continue;
+            }
+
+            $codeName = trim((string)($row['code_name'] ?? ''));
+            $id = intval($row['id'] ?? 0);
+            if ($codeName === '' || $id <= 0) {
+                continue;
+            }
+
+            if (empty($snapshot['temporary_action_overrides'][$codeName])) {
+                $snapshot['temporary_action_overrides'][$codeName] = [
+                    'table' => 'core_action_custom',
+                    'id' => $id,
+                    'metadata' => $metadata,
+                    'restore_required' => true,
+                ];
+            }
+            $overrides[$codeName] = [
+                'id' => $id,
+                'metadata' => $metadata,
+            ];
+        }
+
+        $snapshot['temporary_action_override_setup'] = [
+            'attempted_at' => time(),
+            'actions' => array_keys($overrides),
+        ];
+        $GLOBALS['db']->updateRow('chim_harness_run', [
+            'snapshot' => chimHarnessEncodeJson($snapshot),
+            'last_tick_at' => time(),
+        ], 'id=' . intval($run['id']));
+
+        $disabled = [];
+        foreach ($overrides as $codeName => $override) {
+            $metadata = $override['metadata'];
+            $metadata['custom_config']['confirmation_required'] = false;
+            $updated = $GLOBALS['db']->updateRow(
+                'core_action_custom',
+                ['metadata' => chimHarnessEncodeJson($metadata)],
+                'id=' . $override['id']
+            ) !== false;
+            if ($updated) {
+                $disabled[] = $codeName;
+            } else {
+                chimHarnessEvent(
+                    intval($run['id']),
+                    'settings',
+                    "Could not temporarily disable confirmation for {$codeName}.",
+                    [],
+                    'error'
+                );
+            }
+        }
+
+        $snapshot['temporary_action_override_setup']['disabled'] = $disabled;
+        $GLOBALS['db']->updateRow('chim_harness_run', [
+            'snapshot' => chimHarnessEncodeJson($snapshot),
+            'last_tick_at' => time(),
+        ], 'id=' . intval($run['id']));
+        $run['snapshot'] = chimHarnessEncodeJson($snapshot);
+
+        if ($disabled) {
+            chimHarnessEvent(
+                intval($run['id']),
+                'settings',
+                'Temporarily disabled movement action confirmation for unattended testing.',
+                ['actions' => $disabled]
+            );
+        }
+
+        return $run;
+    }
+}
+
+if (!function_exists('chimHarnessRestoreRunSettings')) {
+    function chimHarnessRestoreRunSettings(array $run): void
+    {
+        $snapshot = chimHarnessDecodeJson($run['snapshot'] ?? null);
+        $runId = intval($run['id']);
+        $snapshotChanged = false;
+
+        if (!empty($snapshot['test_settings']['applied'])
+            && empty($snapshot['test_settings']['restored_at'])) {
+            require_once __DIR__ . DIRECTORY_SEPARATOR . 'settings.php';
+            $original = $snapshot['test_settings']['BGL_TRIGGER_HOURS'] ?? [];
+            if (!empty($original['existed'])) {
+                $restored = chimSetGeneralSetting(
+                    'BGL_TRIGGER_HOURS',
+                    $original['value'] ?? 24,
+                    array_key_exists('description', $original) ? $original['description'] : null
+                );
+            } else {
+                $restored = $GLOBALS['db']->execQuery(
+                    "DELETE FROM public.general_settings WHERE id='BGL_TRIGGER_HOURS'"
+                ) !== false;
+            }
+
+            if ($restored) {
+                $snapshot['test_settings']['restored_at'] = time();
+                $snapshotChanged = true;
+                chimHarnessEvent(
+                    $runId,
+                    'restore',
+                    'Restored the original Background Life trigger time.'
+                );
+            } else {
+                chimHarnessEvent(
+                    $runId,
+                    'restore',
+                    'Could not restore the original Background Life trigger time.',
+                    [],
+                    'error'
+                );
+            }
+        }
+
+        foreach (chimHarnessTemporaryActionRestoreEntries($snapshot) as $codeName => $override) {
+            $restored = $GLOBALS['db']->updateRow(
+                $override['table'],
+                ['metadata' => chimHarnessEncodeJson($override['metadata'])],
+                'id=' . $override['id']
+            ) !== false;
+
+            if ($restored) {
+                $snapshot['temporary_action_overrides'][$codeName]['restored_at'] = time();
+                $snapshotChanged = true;
+                chimHarnessEvent(
+                    $runId,
+                    'restore',
+                    "Restored the original {$codeName} action configuration."
+                );
+            } else {
+                chimHarnessEvent(
+                    $runId,
+                    'restore',
+                    "Could not restore the original {$codeName} action configuration.",
+                    [],
+                    'error'
+                );
+            }
+        }
+
+        if ($snapshotChanged) {
+            $GLOBALS['db']->updateRow('chim_harness_run', [
+                'snapshot' => chimHarnessEncodeJson($snapshot),
+                'last_tick_at' => time(),
+            ], 'id=' . $runId);
+        }
     }
 }
 
@@ -555,6 +818,39 @@ if (!function_exists('chimHarnessCheckTrackingActor')) {
     }
 }
 
+if (!function_exists('chimHarnessMetricActorScope')) {
+    function chimHarnessMetricActorScope(array $actors): array
+    {
+        $names = [];
+        foreach ($actors as $actor) {
+            $name = trim((string)($actor['actor_name'] ?? ''));
+            if ($name !== '' && !in_array($name, $names, true)) {
+                $names[] = $name;
+            }
+        }
+
+        if (!$names) {
+            return [
+                'names' => [],
+                'memory' => 'FALSE',
+                'summaries' => 'FALSE',
+            ];
+        }
+
+        $quotedNames = array_map(
+            static fn(string $name): string => "'" . $GLOBALS['db']->escape($name) . "'",
+            $names
+        );
+        $nameList = implode(', ', $quotedNames);
+
+        return [
+            'names' => $names,
+            'memory' => "(speaker IN ({$nameList}) OR listener IN ({$nameList}))",
+            'summaries' => "string_to_array(trim(both '|' FROM COALESCE(companions, '')), '|') && ARRAY[{$nameList}]::text[]",
+        ];
+    }
+}
+
 if (!function_exists('chimHarnessCollectActorMetrics')) {
     function chimHarnessCollectActorMetrics(array $actor, array $run): array
     {
@@ -577,7 +873,9 @@ if (!function_exists('chimHarnessCollectActorMetrics')) {
         );
         $summaries = $GLOBALS['db']->fetchOne(
             "SELECT count(*) AS n, max(gamets_truncated) AS last FROM memory_summary
-             WHERE companions ILIKE '%{$safeName}%'
+             WHERE '{$safeName}' = ANY(
+                       string_to_array(trim(both '|' FROM COALESCE(companions, '')), '|')
+                   )
                AND rowid>" . intval($baseline['summary_rowid'] ?? 0)
         );
         $requests = $GLOBALS['db']->fetchOne(
@@ -588,7 +886,10 @@ if (!function_exists('chimHarnessCollectActorMetrics')) {
         $oghma = $GLOBALS['db']->fetchOne(
             "SELECT count(*) AS n, max(created_at) AS last FROM audit_memory
              WHERE created_at>=to_timestamp({$runStartedAt})
-               AND memory LIKE '%selected=%'
+               AND keywords IN (
+                   'oghma keyword offered',
+                   'oghma keyword already injected from scene context'
+               )
                AND (input ILIKE '%{$safeName}%' OR keywords ILIKE '%{$safeName}%')"
         );
         return [
@@ -633,7 +934,9 @@ if (!function_exists('chimHarnessCollectMetrics')) {
             'collected_at' => time(),
         ];
 
-        foreach (chimHarnessGetActors(intval($run['id'])) as $actor) {
+        $actors = chimHarnessGetActors(intval($run['id']));
+        $actorScope = chimHarnessMetricActorScope($actors);
+        foreach ($actors as $actor) {
             $metrics = array_merge(
                 chimHarnessDecodeJson($actor['metrics'] ?? null),
                 chimHarnessCollectActorMetrics($actor, $run)
@@ -645,22 +948,81 @@ if (!function_exists('chimHarnessCollectMetrics')) {
             $totals['actors']++;
             $totals['active_actors'] += (($actor['status'] ?? '') === 'active') ? 1 : 0;
             $totals['failed_actors'] += (($actor['status'] ?? '') === 'failed') ? 1 : 0;
-            foreach (['bgl_events', 'actions', 'memory_events', 'memory_summaries', 'llm_requests'] as $key) {
+            foreach (['bgl_events', 'actions'] as $key) {
                 $totals[$key] += intval($metrics[$key] ?? 0);
             }
         }
 
+        $memory = $GLOBALS['db']->fetchOne(
+            "SELECT count(*) AS n,
+                    count(*) FILTER (WHERE btrim(COALESCE(message, ''))='') AS blank
+             FROM memory
+             WHERE rowid>" . intval($baseline['memory_rowid'] ?? 0) . "
+               AND ({$actorScope['memory']})"
+        );
+        $memoryDuplicates = $GLOBALS['db']->fetchOne(
+            "SELECT count(*) AS n
+             FROM (
+                 SELECT 1
+                 FROM memory
+                 WHERE rowid>" . intval($baseline['memory_rowid'] ?? 0) . "
+                   AND ({$actorScope['memory']})
+                 GROUP BY speaker, listener, event, message, gamets
+                 HAVING count(*)>1
+             ) duplicate_groups"
+        );
+        $summaries = $GLOBALS['db']->fetchOne(
+            "SELECT count(*) AS n,
+                    count(*) FILTER (WHERE btrim(COALESCE(summary, ''))='') AS blank
+             FROM memory_summary
+             WHERE rowid>" . intval($baseline['summary_rowid'] ?? 0) . "
+               AND ({$actorScope['summaries']})"
+        );
+        $summaryDuplicates = $GLOBALS['db']->fetchOne(
+            "SELECT count(*) AS n
+             FROM (
+                 SELECT 1
+                 FROM memory_summary
+                 WHERE rowid>" . intval($baseline['summary_rowid'] ?? 0) . "
+                   AND ({$actorScope['summaries']})
+                 GROUP BY gamets_truncated, companions, classifier, scope, summary
+                 HAVING count(*)>1
+             ) duplicate_groups"
+        );
+        $totals['memory_events'] = intval($memory['n'] ?? 0);
+        $totals['memory_summaries'] = intval($summaries['n'] ?? 0);
+        $totals['blank_memory_rows'] = intval($memory['blank'] ?? 0);
+        $totals['duplicate_memory_groups'] = intval($memoryDuplicates['n'] ?? 0);
+        $totals['blank_summary_rows'] = intval($summaries['blank'] ?? 0);
+        $totals['duplicate_summary_groups'] = intval($summaryDuplicates['n'] ?? 0);
+        $totals['data_quality_alerts'] =
+            $totals['blank_memory_rows']
+            + $totals['duplicate_memory_groups']
+            + $totals['blank_summary_rows']
+            + $totals['duplicate_summary_groups'];
+
+        $requests = $GLOBALS['db']->fetchOne(
+            "SELECT count(*) AS n FROM audit_request
+             WHERE rowid>" . intval($baseline['request_rowid'] ?? 0)
+        );
+        $totals['llm_requests'] = intval($requests['n'] ?? 0);
         $pending = $GLOBALS['db']->fetchOne(
             "SELECT count(*) AS n FROM responselog
              WHERE sent=0 AND rowid>" . intval($baseline['response_rowid'] ?? 0)
         );
         $totals['pending_responses'] = intval($pending['n'] ?? 0);
         $oghma = $GLOBALS['db']->fetchOne(
-            "SELECT count(*) AS n FROM audit_memory
+            "SELECT count(*) AS n,
+                    count(DISTINCT md5(COALESCE(memory, ''))) AS unique_contexts
+             FROM audit_memory
              WHERE created_at>=to_timestamp({$startedAt})
-               AND memory LIKE '%selected=%'"
+               AND keywords IN (
+                   'oghma keyword offered',
+                   'oghma keyword already injected from scene context'
+               )"
         );
         $totals['oghma_hits'] = intval($oghma['n'] ?? 0);
+        $totals['oghma_unique_contexts'] = intval($oghma['unique_contexts'] ?? 0);
         $GLOBALS['db']->updateRow('chim_harness_run', [
             'metrics' => chimHarnessEncodeJson($totals),
             'last_tick_at' => time(),
@@ -791,6 +1153,7 @@ if (!function_exists('chimHarnessTick')) {
                     }
                     return;
                 }
+                $run = chimHarnessApplyRunSettings($run);
                 chimHarnessSetRunStatus($runId, 'provisioning', ['started_at' => time()]);
                 chimHarnessEvent($runId, 'preflight', 'Preflight passed.', $heartbeat);
                 return;
@@ -818,10 +1181,16 @@ if (!function_exists('chimHarnessTick')) {
                 $done = intval($counts['active'] ?? 0) + intval($counts['failed'] ?? 0);
                 if ($total > 0 && $done === $total) {
                     if (intval($counts['active'] ?? 0) === 0) {
-                        chimHarnessSetRunStatus($runId, 'failed', [
+                        chimHarnessSetRunStatus($runId, 'stopping', [
                             'error' => 'No actors were successfully activated.',
-                            'ended_at' => time(),
                         ]);
+                        chimHarnessEvent(
+                            $runId,
+                            'stop',
+                            'No actors were successfully activated. Restoring test state before failing the run.',
+                            [],
+                            'error'
+                        );
                     } else {
                         chimHarnessSetRunStatus($runId, 'running');
                         chimHarnessEvent($runId, 'running', 'Soak run is active. Leave Skyrim running normally.');
@@ -831,6 +1200,8 @@ if (!function_exists('chimHarnessTick')) {
             }
 
             if ($status === 'running') {
+                $run = chimHarnessApplyRunSettings($run);
+                $run = chimHarnessApplyTemporaryActionOverrides($run);
                 $metrics = chimHarnessCollectMetrics($run);
                 $durationSeconds = chimHarnessNormalizeDuration($config['duration_minutes'] ?? 30) * 60;
                 if (time() - intval($run['started_at'] ?? time()) >= $durationSeconds) {
@@ -856,18 +1227,40 @@ if (!function_exists('chimHarnessTick')) {
                 if (intval($counts['total'] ?? 0) === intval($counts['restored'] ?? -1)) {
                     $run = chimHarnessGetRun($runId);
                     $metrics = chimHarnessCollectMetrics($run, true);
-                    chimHarnessSetRunStatus($runId, 'completed', ['ended_at' => time()]);
-                    chimHarnessEvent($runId, 'complete', 'Run completed and server-side NPC state was restored.', $metrics);
+                    chimHarnessRestoreRunSettings($run);
+                    $finalStatus = chimHarnessFinalStatus($run);
+                    chimHarnessSetRunStatus($runId, $finalStatus, ['ended_at' => time()]);
+                    chimHarnessEvent(
+                        $runId,
+                        $finalStatus === 'failed' ? 'failed' : 'complete',
+                        $finalStatus === 'failed'
+                            ? 'Run failed, but server-side NPC state and temporary settings were restored.'
+                            : 'Run completed and server-side NPC state was restored.',
+                        $metrics,
+                        $finalStatus === 'failed' ? 'error' : 'info'
+                    );
                 }
             }
         } catch (Throwable $e) {
             $run = isset($run) && is_array($run) ? $run : [];
             $runId = intval($run['id'] ?? 0);
             if ($runId > 0) {
-                chimHarnessSetRunStatus($runId, 'failed', [
-                    'error' => $e->getMessage(),
-                    'ended_at' => time(),
-                ]);
+                $currentRun = chimHarnessGetRun($runId);
+                $currentStatus = (string)($currentRun['status'] ?? $run['status'] ?? '');
+                $snapshot = chimHarnessDecodeJson($currentRun['snapshot'] ?? $run['snapshot'] ?? null);
+                $cleanupRequired = in_array(
+                    $currentStatus,
+                    ['provisioning', 'running', 'stopping', 'restoring'],
+                    true
+                ) || !empty($snapshot['test_settings']['applied']);
+                chimHarnessSetRunStatus(
+                    $runId,
+                    $cleanupRequired ? 'stopping' : 'failed',
+                    array_merge(
+                        ['error' => $e->getMessage()],
+                        $cleanupRequired ? [] : ['ended_at' => time()]
+                    )
+                );
                 chimHarnessEvent($runId, 'error', $e->getMessage(), [], 'error');
             }
             if (class_exists('Logger')) {

@@ -16,10 +16,10 @@
         "disposition": "friendly"
       },
       {
-        "key": "khajiit_merchant",
-        "name": "CHIMTEST_{RUN}_J'zara",
-        "gender": "male",
-        "race": "Khajiit",
+        "key": "redguard_merchant",
+        "name": "CHIMTEST_{RUN}_Nadira",
+        "gender": "female",
+        "race": "Redguard",
         "class": "merchant",
         "location": "nearby",
         "background": "A patient caravan trader who tracks rumors, prices, and relationships between settlements.",
@@ -63,10 +63,10 @@
         "disposition": "neutral"
       },
       {
-        "key": "dunmer_worker",
-        "name": "CHIMTEST_{RUN}_Dravyn",
+        "key": "breton_worker",
+        "name": "CHIMTEST_{RUN}_Garrick",
         "gender": "male",
-        "race": "Dunmer",
+        "race": "Breton",
         "class": "farmer",
         "location": "nearby",
         "background": "A displaced laborer who judges people by whether they keep promises and share burdens.",
