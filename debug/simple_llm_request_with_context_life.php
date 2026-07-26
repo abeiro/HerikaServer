@@ -33,6 +33,7 @@ chimRuntimeBootstrap($enginePath, [
 require_once $enginePath . 'lib/model_dynmodel.php';
 require_once $enginePath . 'lib/chat_helper_functions.php';
 require_once $enginePath . 'lib/data_functions.php';
+require_once $enginePath . 'lib/background_life_connector.php';
 require_once $enginePath . 'lib/logger.php';
 require_once $enginePath . 'lib/utils_game_timestamp.php';
 require_once $enginePath . 'lib/rolemaster_helpers.php';
@@ -126,11 +127,39 @@ function loadBGLStylePrompt($promptKey, $replacements = [])
 $npcMaster = new NpcMaster();
 
 $connector = new LLMConnector();
-$currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_BGL"]);
 $currentNpcData = $npcMaster->getByName($argv[1]);
 
 $profile = new CoreProfile();
-$currentProfileData = $profile->getById($currentNpcData["profile_id"]);
+$currentProfileData = is_array($currentNpcData)
+    ? $profile->getById($currentNpcData["profile_id"] ?? 0)
+    : false;
+$defaultProfileData = $profile->getDefaultNpc();
+
+if (!is_array($currentNpcData)) {
+    error_log("[BGL RUN] {$argv[1]} - NPC profile data was not found.");
+    exit(1);
+}
+
+if (!is_array($currentProfileData)) {
+    $currentProfileData = is_array($defaultProfileData) ? $defaultProfileData : [];
+}
+
+try {
+    $resolvedConnector = chimResolveBackgroundLifeConnector(
+        $GLOBALS["CORE_CONNECTOR_BGL"] ?? null,
+        $currentProfileData,
+        is_array($defaultProfileData) ? $defaultProfileData : [],
+        static fn(int $id) => $connector->getById($id)
+    );
+} catch (RuntimeException $e) {
+    error_log("[BGL RUN] {$argv[1]} - {$e->getMessage()}");
+    exit(1);
+}
+
+$currentConnectorData = $resolvedConnector['data'];
+error_log(
+    "[BGL RUN] {$argv[1]} - using connector {$currentConnectorData['id']} from {$resolvedConnector['source']}."
+);
 $connector->setOldGlobals($currentConnectorData);
 $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 
@@ -481,8 +510,10 @@ this location and its current task
 - intent can be: Work, Rest, Relax, Socialize, Sleep, Study, Guard.
 - Remain at the current location to work, rest, relax, socialize, or perform ongoing activities.
 - This is the default action when the NPC should remain where they are.
-- At an inn: rest, relax, socialize with patrons. E.G StayAtPlace:Inn:Relax
-- At home: rest, relax, socialize with companions,sleep. e.g StayAtPlace:Breezehome:Sleep
+- <Place> must be the exact current location name from context, never a generic label such as Home or Inn.
+- At an inn: rest, relax, or socialize with patrons. E.G StayAtPlace:Sleeping Giant Inn:Relax
+- At home: rest, relax, socialize with companions, or sleep. E.G StayAtPlace:Alvor and Sigrid's House:Sleep
+- Use TravelTo when the character should go somewhere other than the exact current location.
 
 TravelTo:<Place>
 - Travel to another location.
@@ -504,8 +535,9 @@ this location and its current task
 - intent can be: Work, Rest, Relax, Socialize, Sleep, Study, Guard.
 - Remain at the current location to work, rest, relax, socialize, or perform ongoing activities.
 - This is the default action when the NPC should remain where they are.
-- At an inn: rest, relax, socialize with patrons. E.G StayAtPlace:Inn:Relax
-- At home: rest, relax, socialize with companions,sleep. e.g StayAtPlace:Breezehome:Sleep
+- <Place> must be the exact current location name from context, never a generic label such as Home or Inn.
+- At an inn: rest, relax, or socialize with patrons. E.G StayAtPlace:Sleeping Giant Inn:Relax
+- At home: rest, relax, socialize with companions, or sleep. E.G StayAtPlace:Alvor and Sigrid's House:Sleep
 
 SpreadRumor - Character activities generate rumors, also, character can explictly create a rumor. 
 E.G. If character's goal or activity is to enforce local trade, create a rumor about local trading being enhanced.

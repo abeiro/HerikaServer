@@ -45,6 +45,7 @@ chimRuntimeBootstrap($enginePath, [
 require_once $enginePath . 'lib/model_dynmodel.php';
 require_once $enginePath . 'lib/chat_helper_functions.php';
 require_once $enginePath . 'lib/data_functions.php';
+require_once $enginePath . 'lib/background_life_connector.php';
 require_once $enginePath . 'lib/logger.php';
 require_once $enginePath . 'lib/utils_game_timestamp.php';
 require_once $enginePath . 'lib/rolemaster_helpers.php';
@@ -184,10 +185,38 @@ $npcMaster = new NpcMaster();
 $connector = new LLMConnector();
 
 $currentNpcData = $npcMaster->getByName($npcName);
-$currentConnectorData = $connector->getById($GLOBALS['CORE_CONNECTOR_BGL']);
 
 $profile = new CoreProfile();
-$currentProfileData = $profile->getById($currentNpcData['profile_id']);
+$currentProfileData = is_array($currentNpcData)
+    ? $profile->getById($currentNpcData['profile_id'] ?? 0)
+    : false;
+$defaultProfileData = $profile->getDefaultNpc();
+
+if (!is_array($currentNpcData)) {
+    error_log("[BGL RUN] $npcName - NPC profile data was not found.");
+    exit(1);
+}
+
+if (!is_array($currentProfileData)) {
+    $currentProfileData = is_array($defaultProfileData) ? $defaultProfileData : [];
+}
+
+try {
+    $resolvedConnector = chimResolveBackgroundLifeConnector(
+        $GLOBALS['CORE_CONNECTOR_BGL'] ?? null,
+        $currentProfileData,
+        is_array($defaultProfileData) ? $defaultProfileData : [],
+        static fn(int $id) => $connector->getById($id)
+    );
+} catch (RuntimeException $e) {
+    error_log("[BGL RUN] $npcName - {$e->getMessage()}");
+    exit(1);
+}
+
+$currentConnectorData = $resolvedConnector['data'];
+error_log(
+    "[BGL RUN] $npcName - using connector {$currentConnectorData['id']} from {$resolvedConnector['source']}."
+);
 
 $connector->setOldGlobals($currentConnectorData);
 $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
@@ -225,9 +254,16 @@ $lastIssuedAction = $db->fetchOne(
      ORDER BY gamets DESC, ts ASC"
 );
 
-if ($lastIssuedAction["gamets"] && ($lastIssuedAction["action"] == "TravelTo" || $lastIssuedAction["action"] == "MoveTo")) {
+if (!is_array($lastIssuedAction)) {
+    $lastIssuedAction = [];
+}
+
+if (
+    !empty($lastIssuedAction['gamets'])
+    && in_array((string) ($lastIssuedAction['action'] ?? ''), ['TravelTo', 'MoveTo'], true)
+) {
     $npcIsTravelling = true;
-    $npcIsTravellingStarted = $lastIssuedAction["gamets"];
+    $npcIsTravellingStarted = $lastIssuedAction['gamets'];
 } else {
     $npcIsTravelling = false;
     $npcIsTravellingStarted = 0;
@@ -243,7 +279,7 @@ $lastInteractionRow = $db->fetchOne(
 );
 
 if (empty($lastInteractionRow['gamets'])) {
-    if ($extdata["background_life_player_unattached"]) {
+    if (!empty($extdata['background_life_player_unattached'])) {
         error_log('[BGL RUN] No prior interaction found but background_life_player_unattached is true');
     } else {
         error_log('[BGL RUN] No prior interaction found, but background_life_player_unattached is false — skipping.');
@@ -796,7 +832,7 @@ Rules:
    - Produced goods will be added to the character's inventory in the future, so they will not be present in the current inventory.
 
 3. No activity
-   - If neither is a working or relaxing scenario (e.g. {$GLOBALS["HERIKA_NAME"]} was sleeping), return the `DoNothing` action.
+   - If neither is a working nor relaxing scenario (e.g. {$GLOBALS["HERIKA_NAME"]} was sleeping), return an empty action array.
 
 Requirements
 
@@ -819,8 +855,7 @@ Format:
 {
   \"action\": [
     \"Consume:itemid:qty\",
-    \"Produced:itemid:qty\",
-    \"DoNothing\"
+    \"Produced:itemid:qty\"
   ],
   \"reasoning\": \"optional one-sentence explanation\"
 }
@@ -830,7 +865,6 @@ Rules:
 - Only include valid actions in this exact string format:
   Consume:itemid:qty
   Produced:itemid:qty
-  DoNothing
 - itemid must match in-game inventory identifiers.
 - qty must be an integer.
 - You may include multiple actions if needed.
@@ -853,9 +887,9 @@ Rules:
     }
 
     if (isset($parsedResponse['action']) && is_array($parsedResponse['action'])) {
-        $action = ($parsedResponse['action']);
+        $action = normalizeBglInventoryActions($parsedResponse['action']);
     } else {
-        $action = '';
+        $action = [];
     }
     if (isset($parsedResponse['reasoning'])) {
         $reasoning = $parsedResponse['reasoning'];
@@ -865,6 +899,7 @@ Rules:
 
 
     if ($action) {
+        $actionText = [];
         $actionTextDescription = [];
         foreach ($action as $singleAction) {
             error_log("[BGL RUN] $npcNameEsc — Idle production/consumption detected: $singleAction. Reasoning: $reasoning");
@@ -872,7 +907,7 @@ Rules:
             $skyrimCmd = new SkyrimCommandBuilder();
             $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
             // Parse action string
-            list($actionType, $itemId, $count) = explode(':', $singleAction);
+            list($actionType, $itemId, $count) = explode(':', $singleAction, 3);
             $itemId = strtr(strtolower($itemId), ["0x" => ""]); // Remove 0x prefix if present
 
             $count = (int) $count;
@@ -967,6 +1002,10 @@ $lastBackgroundAction = $db->fetchOne(
      LIMIT 1"
 );
 
+if (!is_array($lastBackgroundAction)) {
+    $lastBackgroundAction = [];
+}
+
 $isSpeakAction = !empty($lastBackgroundAction)
     && (
         strcasecmp((string) ($lastBackgroundAction['action'] ?? ''), 'SpeakTo') === 0
@@ -981,10 +1020,13 @@ $lang = (($npcMetadata['CORE_LANG'] ?? '') === 'es' || ($profileMetadata['CORE_L
 
 
 // Hinter
-error_log(date("YMd H:i:s") . " [BGL RUN] HINT $npcNameEsc — last action: {$lastBackgroundAction['action']}, last event: <{$lastIssuedBgEvent['name']}> <{$lastIssuedBgEvent['event']}>, npcIsTravelling: " . ($npcIsTravelling ? 'true' : 'false'));
+$lastBackgroundActionName = (string) ($lastBackgroundAction['action'] ?? '');
+$lastIssuedBgEventName = strtolower((string) ($lastIssuedBgEvent['name'] ?? ''));
+$lastIssuedBgEventState = strtolower((string) ($lastIssuedBgEvent['event'] ?? ''));
+error_log(date("YMd H:i:s") . " [BGL RUN] HINT $npcNameEsc — last action: $lastBackgroundActionName, last event: <$lastIssuedBgEventName> <$lastIssuedBgEventState>, npcIsTravelling: " . ($npcIsTravelling ? 'true' : 'false'));
 if (
-    strtolower($lastIssuedBgEvent["name"]) == "sandbox" && $lastIssuedBgEvent["event"] == "start" && $npcIsTravelling
-    || strtolower($lastIssuedBgEvent["name"]) == "travelto" && $lastIssuedBgEvent["event"] == "end" && $npcIsTravelling
+    $lastIssuedBgEventName === "sandbox" && $lastIssuedBgEventState === "start" && $npcIsTravelling
+    || $lastIssuedBgEventName === "travelto" && $lastIssuedBgEventState === "end" && $npcIsTravelling
 ) {
     // Last action was MoveTo or TravelTo.
     // Last event was a Sandbox event. This means the NPC reached destination
@@ -998,7 +1040,7 @@ if (
 // Avoid too much transactions.
 
 $byspassTradingActions = false;
-if ($lastBackgroundAction['action'] === 'BuyItem' || $lastBackgroundAction['action'] === 'SellItem') {
+if ($lastBackgroundActionName === 'BuyItem' || $lastBackgroundActionName === 'SellItem') {
     // Last action was BuyItem or SellItem.
     // Avoid repeated trading actions in the same turn, as it can lead to infinite loops of buying/selling items.
     // 
@@ -1049,8 +1091,10 @@ if (
 
 // IF last action was less than half an hour ago, skip inner thoughts and go directly to action decision suggestion.
 $action_parts = explode(":", $lastBackgroundAction['fullcall'] ?? '');
-$localHoursPassed = round(($last_gamets - $lastBackgroundAction['gamets']) * GAMETS_TO_HOURS, 2);
-if ($localHoursPassed < 0.5 && !$wasSocializeIntentAction) {
+$localHoursPassed = isset($lastBackgroundAction['gamets'])
+    ? round(($last_gamets - (float) $lastBackgroundAction['gamets']) * GAMETS_TO_HOURS, 2)
+    : null;
+if ($localHoursPassed !== null && $localHoursPassed < 0.5 && !$wasSocializeIntentAction) {
 
     $bypassInnerThoughts = true;
     $innerThoughtBufferForced = "{$GLOBALS['HERIKA_NAME']}'s inner thought: Let’s see where this takes us";
@@ -1218,8 +1262,10 @@ StayAtPlace:<Place>:<intent>
 - intent can be: Work, Rest, Relax, Socialize, Sleep, Study, Guard.
 - Remain at the current location to work, rest, relax, socialize, or perform ongoing activities.
 - This is the default action when the NPC should remain where they are.
-- At an inn: rest, relax, socialize with patrons. E.G StayAtPlace:Inn:Relax, StayAtPlace:Inn:Socialize (Socialize is preferred if there are other NPCs present)
-- At home: rest, relax, socialize with companions,sleep. e.g StayAtPlace:Breezehome:Sleep
+- <Place> must be the exact current location name from context, never a generic label such as Home or Inn.
+- At an inn: rest, relax, or socialize with patrons. E.G StayAtPlace:Sleeping Giant Inn:Relax, StayAtPlace:Sleeping Giant Inn:Socialize (Socialize is preferred if there are other NPCs present)
+- At home: rest, relax, socialize with companions, or sleep. E.G StayAtPlace:Alvor and Sigrid's House:Sleep
+- Use TravelTo when the NPC should go somewhere other than the exact current location.
 - If gathering information or spreading rumors, remain for at least 24 hours.
 - After arriving somewhere, prefer interacting (SpeakTo, BuyItem, SellItem) before choosing StayAtPlace again, unless there is no meaningful interaction available.
 
@@ -1312,8 +1358,8 @@ PROMPT3;
 // Hinter
 
 if (
-    (strtolower($lastIssuedBgEvent["name"]) == "sandbox" && $lastIssuedBgEvent["event"] == "start" && $npcIsTravelling)
-    || (strtolower($lastIssuedBgEvent["name"]) == "travelto" && $lastIssuedBgEvent["event"] == "end" && $npcIsTravelling)
+    ($lastIssuedBgEventName === "sandbox" && $lastIssuedBgEventState === "start" && $npcIsTravelling)
+    || ($lastIssuedBgEventName === "travelto" && $lastIssuedBgEventState === "end" && $npcIsTravelling)
 ) {
 
     // Last action was MoveTo or TravelTo.
@@ -1376,9 +1422,9 @@ For example:
 * To Sell/Buy Item to a trader that maybe is not present: MoveTo:<NPC/Actor name> ->(next iteration) SpeakTo:<NPC/Actor name> ->(next iteration) SellItem:.. 
 * To gift items without taking money: SpeakTo:<NPC/Actor name> ->(next iteration) GiveItemTo:<NPC/Actor name>:<itemid>:<count>
 * To give money without trading items: SpeakTo:<NPC/Actor name> ->(next iteration) GiveGoldTo:<NPC/Actor name>:<amount>
-* Buy food at an inn: SpeakTo:<NPC innkeeper> ->(next iteration),BuyItem:<NPC/Actor name> ->(next iteration) StayAtPlace:Inn 
-* Relax/Socialize at an inn: SpeakTo:<NPC/Actor name> ->(next iteration) ->(next iteration) StayAtPlace:Inn 
-* Relax at home: SpeakTo:<NPC/Actor name> ->(next iteration) StayAtPlace:Home:Sleep
+* Buy food at an inn: SpeakTo:<NPC innkeeper> ->(next iteration),BuyItem:<NPC/Actor name> ->(next iteration) StayAtPlace:<exact current inn name>:Relax
+* Relax/Socialize at an inn: SpeakTo:<NPC/Actor name> ->(next iteration) StayAtPlace:<exact current inn name>:Socialize
+* Relax at home: SpeakTo:<NPC/Actor name> ->(next iteration) StayAtPlace:<exact current home name>:Sleep
 * Generally speaking, try to Speak to an NPC before trading with him/her, unless the NPC is not present. If the NPC is not present, use MoveTo:<NPC name> to reach him/her first.
 
 
@@ -1549,8 +1595,10 @@ if ($innerThoughtBuffer && $recordInnerThoughts) {
     ]);
     $cnName = $db->escape($GLOBALS['HERIKA_NAME']);
     $checkLatestDiaryEntry = $db->fetchOne("SELECT * FROM diarylog WHERE topic='Journal Note' AND people='$cnName' ORDER BY gamets DESC, ts DESC LIMIT 1");
-    $latestDiaryGamets = (float) $checkLatestDiaryEntry['gamets'];
-    if ($last_gamets - $latestDiaryGamets < (1 / GAMETS_TO_HOURS) * 4) {
+    $latestDiaryGamets = is_array($checkLatestDiaryEntry)
+        ? (float) ($checkLatestDiaryEntry['gamets'] ?? 0)
+        : 0;
+    if ($latestDiaryGamets > 0 && $last_gamets - $latestDiaryGamets < (1 / GAMETS_TO_HOURS) * 4) {
         // If the last diary entry was less than 4 hours ago, we skip adding a new diary entry to avoid cluttering the diary with too many entries in a short time.
         $recordDiaryEntry = false;
     }

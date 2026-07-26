@@ -62,4 +62,19 @@ final class BackgroundLifeCooldownTest extends TestCase
         $this->assertSame(1.0, chimNormalizeBackgroundLifeTriggerHours(0));
         $this->assertSame(720.0, chimNormalizeBackgroundLifeTriggerHours(1000));
     }
+
+    public function testMissingOrNonPositiveTimestampIsDueImmediately(): void
+    {
+        $this->assertTrue(chimIsBackgroundLifeDue(null, -1000.0));
+        $this->assertTrue(chimIsBackgroundLifeDue('', -1000.0));
+        $this->assertTrue(chimIsBackgroundLifeDue(0, -1000.0));
+        $this->assertTrue(chimIsBackgroundLifeDue(-1, -1000.0));
+    }
+
+    public function testPositiveTimestampUsesConfiguredThreshold(): void
+    {
+        $this->assertTrue(chimIsBackgroundLifeDue(500, 1000.0));
+        $this->assertFalse(chimIsBackgroundLifeDue(1000, 1000.0));
+        $this->assertFalse(chimIsBackgroundLifeDue(1500, 1000.0));
+    }
 }

@@ -56,6 +56,70 @@ function getNpcLastCoordsPoint($currentNpcData)
 }
 
 /**
+ * Resolve the NPC's latest reported location marker.
+ */
+function resolveNpcCurrentLocation($currentNpcData, $db)
+{
+    $metadata = $currentNpcData['metadata'] ?? null;
+    if (is_string($metadata)) {
+        $metadata = json_decode($metadata, true);
+    }
+
+    $locationFormId = is_array($metadata)
+        ? ($metadata['last_coords']['location_formid'] ?? null)
+        : null;
+    if (!is_numeric($locationFormId)) {
+        return null;
+    }
+
+    $formId = $db->escape((string) $locationFormId);
+    $location = $db->fetchOne(
+        "SELECT name, region, hold, formid, coords, 1::float AS sim, 4 AS exact_rank
+         FROM locations
+         WHERE formid='$formId'
+         LIMIT 1"
+    );
+
+    return is_array($location) ? $location : null;
+}
+
+function isResolvedTravelLocationConfident($location): bool
+{
+    if (!is_array($location) || empty($location['formid'])) {
+        return false;
+    }
+
+    return (int) ($location['exact_rank'] ?? 0) > 0
+        || (float) ($location['sim'] ?? 0) >= 0.8;
+}
+
+/**
+ * Keep only inventory actions that can be safely translated into game commands.
+ */
+function normalizeBglInventoryActions($actions): array
+{
+    if (!is_array($actions)) {
+        return [];
+    }
+
+    $normalized = [];
+    foreach ($actions as $action) {
+        if (!is_string($action)) {
+            continue;
+        }
+
+        $action = trim($action);
+        if (preg_match('/^(Consume|Produced):(?:0x)?[0-9a-fA-F]{1,8}:[1-9][0-9]*$/', $action) !== 1) {
+            continue;
+        }
+
+        $normalized[] = $action;
+    }
+
+    return $normalized;
+}
+
+/**
  * Resolve a TravelTo location using exact + fuzzy matching and optional coord distance.
  *
  * @param string $location
@@ -105,7 +169,7 @@ function resolveTravelLocation($location, $currentNpcData, $db)
                 END AS exact_rank
          FROM locations
          WHERE formid IS NOT NULL
-         ORDER BY exact_rank DESC$orderByDistanceSql, sim DESC
+         ORDER BY exact_rank DESC, sim DESC$orderByDistanceSql
          LIMIT 1"
     );
 
@@ -140,7 +204,10 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
         error_log("[handleTravelToAction] requested='$requestedLocation' resolved='{$resolvedLocation}' formid='{$locId['formid']}'$sim$dist");
     }
 
-    if (!isset($locId["formid"]) || (isset($locId['sim']) && $locId['sim'] < 0.8)) {
+    if (
+        strcasecmp($requestedLocation, 'random') !== 0
+        && !isResolvedTravelLocationConfident($locId)
+    ) {
         $db->insert('eventlog', [
             'ts' => $last_ts,
             'gamets' => $last_gamets + 10,
@@ -234,12 +301,13 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
 {
     $locId = resolveTravelLocation($location, $currentNpcData, $db);
     $requestedLocation = $db->escape($location);
-    $resolvedLocation = $locId['name'] ?? $requestedLocation;
     $intent = trim((string) $intent);
     $intentSuffix = $intent !== '' ? ":$intent" : '';
     $intentText = $intent !== '' ? " with intent '$intent'" : '';
+    $isRandomLocation = strcasecmp($requestedLocation, 'random') === 0;
+    $resolvedLocation = $locId['name'] ?? $requestedLocation;
 
-    if (strcasecmp($requestedLocation, 'random') === 0) {
+    if ($isRandomLocation) {
         error_log("[handleStayAtPlaceAction] random picked: " . print_r($locId, true));
     }
 
@@ -249,10 +317,24 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
         error_log("[handleStayAtPlaceAction] requested='$requestedLocation' resolved='{$resolvedLocation}' formid='{$locId['formid']}'$sim$dist");
     }
 
+    if (!$isRandomLocation && !isResolvedTravelLocationConfident($locId)) {
+        $fallbackLocation = resolveNpcCurrentLocation($currentNpcData, $db);
+        if (is_array($fallbackLocation)) {
+            error_log(
+                "[handleStayAtPlaceAction] requested='$requestedLocation' was not a confident match; "
+                . "using current location '{$fallbackLocation['name']}'."
+            );
+            $locId = $fallbackLocation;
+        } else {
+            $locId = null;
+        }
+    }
+
     if (!isset($locId["formid"])) {
         return false;
     }
 
+    $resolvedLocation = $locId['name'] ?? $requestedLocation;
     $refHexString = convertSignedToUnsignedHex(hexdec($currentNpcData["refid"]));
     $locHexString = (convertHex($locId["formid"]));
 

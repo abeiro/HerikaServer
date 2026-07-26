@@ -179,6 +179,18 @@ if (!function_exists('chimGetBackgroundLifeTriggerHours')) {
     }
 }
 
+if (!function_exists('chimIsBackgroundLifeDue')) {
+    function chimIsBackgroundLifeDue($lastUpdated, float $thresholdGamets): bool
+    {
+        if (!is_numeric($lastUpdated)) {
+            return true;
+        }
+
+        $lastUpdatedGamets = floatval($lastUpdated);
+        return $lastUpdatedGamets <= 0 || $lastUpdatedGamets < $thresholdGamets;
+    }
+}
+
 if (!function_exists('chimGetManagedGeneralSettingIds')) {
     function chimGetManagedGeneralSettingIds(): array
     {

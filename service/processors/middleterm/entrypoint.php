@@ -180,7 +180,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         $mwdata = json_decode($npc["extended_data"], true);
         // Trigger if never updated, or if last update is older than configured threshold
         $mustInstructBypassBgl=false;
-        if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < ($bglTriggerDaysAgoGamets)) {
+        if (chimIsBackgroundLifeDue($mwdata["background_life_last_updated"] ?? null, $bglTriggerDaysAgoGamets)) {
             error_log("[BGL]  Passive event for {$npc["npc_name"]}");
 
 
@@ -254,9 +254,11 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         }
 
         // Trigger if never updated, or if last update is older than configured threshold
-        if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < ($bglTriggerDaysAgoGamets)) {
-            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerDaysAgoGamets) * 0.0000024;
-            error_log("[BGL] Event for {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}, presence delta: {$mwdata["background_life_last_updated_presence_delta"]}");
+        if (chimIsBackgroundLifeDue($mwdata["background_life_last_updated"] ?? null, $bglTriggerDaysAgoGamets)) {
+            $lastUpdated = (float) ($mwdata["background_life_last_updated"] ?? 0);
+            $presenceDelta = (int) ($mwdata["background_life_last_updated_presence_delta"] ?? 0);
+            $delta = ($lastUpdated - $bglTriggerDaysAgoGamets) * 0.0000024;
+            error_log("[BGL] Event for {$npc["npc_name"]}, last updated: {$lastUpdated}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}, presence delta: {$presenceDelta}");
 
             if ($mustInstructBypassBgl){
                 error_log("[BGL] {$npc["npc_name"]} has been near a player for more than 10 checks. Issuing INSTRUCTION");
