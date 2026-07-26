@@ -1284,7 +1284,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     'sent' => 0,
                     'actor' => "rolemaster",
                     'text' => '',
-                    'action' => "rolecommand|DebugNotification@Focus on Chat mode ".($vars[1]?"enabled":"disabled"),
+                    'action' => "rolecommand|DebugNotification@Compact Chat mode ".($vars[1]?"enabled":"disabled"),
                     'tag' => ""
                 )
             );

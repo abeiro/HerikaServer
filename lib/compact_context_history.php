@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Compact formatting for NPC conversation history while Focus Chat is enabled.
+ * Compact formatting for NPC conversation history while Compact Chat is enabled.
  *
  * Live response JSON and action schemas are intentionally handled elsewhere.
  */
