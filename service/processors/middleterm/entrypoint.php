@@ -205,17 +205,6 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         if (chimIsBackgroundLifeDue($mwdata["background_life_last_updated"] ?? null, $bglTriggerHoursAgoGamets)) {
             error_log("[BGL]  Passive event for {$npc["npc_name"]}");
 
-
-            if (isset($mwdata["background_life_last_updated"]))  {
-                if ($mwdata["background_life_last_updated"] > ($oneDayAgoGamets)) {
-                    
-                    $delta = ($mwdata["background_life_last_updated"] - $oneDayAgoGamets) * 0.0000024;
-                    error_log("[BGL]  {$npc["npc_name"]} Avoiding by 1-day HARDCODED RULE. Last updated: {$mwdata["background_life_last_updated"]}, threshold: {$oneDayAgoGamets }, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}");
-                    continue;
-                
-                }
-            }
-
             $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" ");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);

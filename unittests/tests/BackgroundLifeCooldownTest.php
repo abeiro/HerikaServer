@@ -77,4 +77,19 @@ final class BackgroundLifeCooldownTest extends TestCase
         $this->assertFalse(chimIsBackgroundLifeDue(1000, 1000.0));
         $this->assertFalse(chimIsBackgroundLifeDue(1500, 1000.0));
     }
+
+    public function testSchedulerUsesConfiguredHoursWithoutLegacyOneDayMinimum(): void
+    {
+        $source = file_get_contents(
+            __DIR__ . '/../../service/processors/middleterm/entrypoint.php'
+        );
+
+        $this->assertIsString($source);
+        $this->assertGreaterThanOrEqual(
+            2,
+            substr_count($source, 'chimIsBackgroundLifeDue($mwdata["background_life_last_updated"] ?? null, $bglTriggerHoursAgoGamets)')
+        );
+        $this->assertStringNotContainsString('1-day HARDCODED RULE', $source);
+        $this->assertStringNotContainsString("\$GLOBALS['BGL_TRIGGER_DAYS']", $source);
+    }
 }
