@@ -16,5 +16,3 @@ conf/conf_*.php
 /data/voices/*
 !/data/voices/TheNarrator.wav
 */Zone.Identifier
-/tools/oghma/.local/
-/tools/oghma/__pycache__/
