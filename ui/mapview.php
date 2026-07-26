@@ -2764,51 +2764,66 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         }
     }
 
-    // Query Background Life history entries
-    $bglHistoryQuery = "SELECT rowid,npc,gamets,convert_gamets2skyrim_date(gamets) as gamedate,to_timestamp(localts) as localdate,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 50";
-    $bglHistoryResult = pg_query($adminConn, $bglHistoryQuery);
-    $bglHistoryRows = [];
-    if ($bglHistoryResult) {
-        while ($row = pg_fetch_assoc($bglHistoryResult)) {
-            $bglHistoryRows[] = $row;
-        }
-    }
     ?>
-    
-     <!-- Background Life History -->
-    <div class="info-panel" style="margin-top: 30px;">
-        <h3>📚 Background Life History</h3>
-        <?php if (empty($bglHistoryRows)): ?>
-            <p style="color: #888; font-style: italic;">No history rows found</p>
-        <?php else: ?>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                    <thead>
-                        <tr style="background: #1a1a1a; border-bottom: 2px solid rgb(242, 124, 17);">
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">rowid</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">npc</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">gamets</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">gamedate</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">localdate</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">data</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($bglHistoryRows as $historyRow): ?>
-                            <tr style="border-bottom: 1px solid #333;">
-                                <td style="padding: 12px; color: #ddd; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['rowid'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #ddd; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['npc'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['gamets'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['gamedate'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['localdate'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #fff;"><?php echo nl2br(htmlspecialchars((string) ($historyRow['data'] ?? ''))); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($webRoot); ?>/ui/css/background_life_history.css">
+    <div
+        class="info-panel bgl-history-panel"
+        id="bgl-history-panel"
+        data-api-url="<?php echo htmlspecialchars($webRoot); ?>/ui/api/background_life_history.php">
+        <div class="bgl-history-header">
+            <div>
+                <h3>📚 Background Life History</h3>
+                <div class="bgl-history-subtitle">Recent NPC activity, decisions, travel, and routines.</div>
             </div>
-        <?php endif; ?>
+            <div class="bgl-history-status" id="bgl-history-status" aria-live="polite"></div>
+        </div>
+
+        <div class="bgl-history-toolbar">
+            <select class="bgl-history-control" id="bgl-history-npc-filter" aria-label="Filter by NPC">
+                <option value="">All NPCs</option>
+            </select>
+            <input
+                class="bgl-history-control"
+                id="bgl-history-search"
+                type="search"
+                placeholder="Search Background Life activity"
+                aria-label="Search Background Life activity">
+            <select class="bgl-history-control" id="bgl-history-limit" aria-label="Activities per page">
+                <option value="25">25 rows</option>
+                <option value="50" selected>50 rows</option>
+                <option value="100">100 rows</option>
+            </select>
+            <div style="display: flex; gap: 8px;">
+                <button class="bgl-history-button" id="bgl-history-refresh" type="button">Refresh</button>
+                <button class="bgl-history-button" id="bgl-history-live" type="button">Auto Refresh</button>
+            </div>
+        </div>
+
+        <div class="bgl-history-table-wrap">
+            <table class="bgl-history-table">
+                <thead>
+                    <tr>
+                        <th>Tamrielic Time</th>
+                        <th>NPC</th>
+                        <th>Activity</th>
+                    </tr>
+                </thead>
+                <tbody id="bgl-history-body">
+                    <tr>
+                        <td class="bgl-history-empty" colspan="3">Loading Background Life history...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="bgl-history-pagination">
+            <button class="bgl-history-button" id="bgl-history-previous" type="button">Previous</button>
+            <span class="bgl-history-page-label" id="bgl-history-page-label">Page 1 of 1</span>
+            <button class="bgl-history-button" id="bgl-history-next" type="button">Next</button>
+        </div>
     </div>
+    <script src="<?php echo htmlspecialchars($webRoot); ?>/ui/js/background_life_history.js"></script>
 
     <div class="info-panel collapsible-panel <?php echo !empty($spawnNpcFlash['message']) ? '' : 'collapsed'; ?>" id="create-background-npc" style="margin-top: 30px;">
         <h3>🧬 Create Background Life NPC</h3>
