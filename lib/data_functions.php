@@ -962,12 +962,12 @@ function DataLastDataFor($actor, $lastNelements = -10)
 /**
  * Get context for actor to send to llm
  */
-function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
+function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false,$excludeFarAway=false)
 {
     
     $lastDialog = array(); // Initialize the return array
     $followers=[];
-    $actorsInRangeList=DataBeingsInCloseRange();
+    $actorsInRangeList=DataBeingsInCloseRange($excludeFarAway);
     $actorsInRange=strtr($actorsInRangeList,["|"=>"\n* "]);
     $actorDetailedList=explode("|",$actorsInRangeList);
     // Not always the same order
@@ -1549,7 +1549,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         
     // This is intended to give info about nearby actors, ALL actors (dead ones included).
 
-    $nearbyActors=DataBeingsOrDeathsInRangeExcluding("",true);
+    $nearbyActors=$excludeFarAway ? trim($actorsInRangeList, "|") : DataBeingsOrDeathsInRangeExcluding("",true);
     $nearbyActorsList=[];
     if ($nearbyActors) {
         foreach (explode("|",$nearbyActors) as $k=>$v) {

@@ -25,6 +25,11 @@ $GLOBALS["CURRENT_CONNECTOR"]=$currentConnectorData["driver"];
 
 $connector->setOldGlobals($currentConnectorData);
 
+$isBoredInstruction = (($GLOBALS["argv"][4] ?? "") === "bored");
+$boredSeedActor = trim((string)($GLOBALS["argv"][5] ?? ""));
+$GLOBALS["ROLEMASTER_BORED_MODE"] = $isBoredInstruction;
+$GLOBALS["ROLEMASTER_BORED_SEED"] = $boredSeedActor;
+$GLOBALS["ROLEMASTER_BORED_ALLOWED_ACTORS"] = [];
 
 if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
         logMsg("Choose a LLM model and connector. Used connector: '{$GLOBALS["CORE_CONNECTOR_DIRECTOR"]}'",S_LOG_CRITICAL);
@@ -34,7 +39,8 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
     
         $sqlfilter=" and type not in ('prechat','backgroundaction','addnpc','addbgnpc','travelcancel','innerchat') ";
 
-        $contextDataHistoric = DataLastDataExpandedFor($GLOBALS["PLAYER_NAME"], -50,$sqlfilter);    // Full context
+        $historyActor = ($isBoredInstruction && $boredSeedActor !== "") ? $boredSeedActor : $GLOBALS["PLAYER_NAME"];
+        $contextDataHistoric = DataLastDataExpandedFor($historyActor, -50,$sqlfilter);    // Full context
         
         foreach ($contextDataHistoric as $element) {
             // We should clean here background events entries
@@ -42,7 +48,15 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
         
         $contextDataHistoric =array_merge([["role"=>"user","content"=>"# HISTORIC DIALOGUE AND EVENTS IN CHRONOLOGICAL ORDER"]], $contextDataHistoric);
 
-        $contextDataWorld = DataLastInfoFor("", -2,$addNPCDescriptions=true,$excludeBusy=true)??[];
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
+        $contextDataWorld = DataLastInfoFor(
+            "",
+            -2,
+            $addNPCDescriptions=true,
+            $excludeBusy=true,
+            $excludeFarAway=$isBoredInstruction
+        )??[];
+        $nearbySceneContext = trim((string)($GLOBALS["PROMPT_NEARBY_SECTIONS"] ?? ""));
         $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
         $historyData="";
 
@@ -51,6 +65,9 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
         
             $historyData.=trim("{$element["content"]}").PHP_EOL.PHP_EOL;
             
+        }
+        if ($nearbySceneContext !== "") {
+            $historyData .= $nearbySceneContext . PHP_EOL.PHP_EOL;
         }
         
         $recap=$GLOBALS["db"]->fetchOne("SELECT * FROM rolemaster where type='story_summary' ORDER BY rowid DESC LIMIT 1");
@@ -61,8 +78,19 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
 
         // Inject relationship context for director awareness
         // Get nearby NPCs from DataBeingsInCloseRange (same source as DataLastInfoFor uses)
-        $nearbyNpcsRaw = DataBeingsInCloseRange();
+        $nearbyNpcsRaw = DataBeingsInCloseRange($isBoredInstruction);
         $nearbyNpcsList = array_filter(array_map('trim', explode('|', $nearbyNpcsRaw)));
+        if ($isBoredInstruction) {
+            $allowedActorMap = chimRolemasterBoredActorMap(
+                $nearbyNpcsRaw,
+                (string)$GLOBALS["PLAYER_NAME"],
+                $boredSeedActor
+            );
+            $GLOBALS["ROLEMASTER_BORED_ALLOWED_ACTORS"] = $allowedActorMap;
+            $historyData .= "# BORED EVENT SCENE\n";
+            $historyData .= "Selected initiating actor: " . ($boredSeedActor !== "" ? $boredSeedActor : "not provided") . "\n";
+            $historyData .= "Nearby eligible actors: " . implode(", ", array_values($allowedActorMap)) . "\n\n";
+        }
 
         // Build relationship context for these NPCs
         $relContext = RelationshipManager::buildDirectorContext($nearbyNpcsList);
@@ -189,6 +217,17 @@ user request: actor \"a\" leaves the place
             [$GLOBALS["PLAYER_NAME"], $functionList],
             $directorInstructionRules
         );
+        if ($isBoredInstruction) {
+            $directorInstructionRules .= "\n\n# Bored event rules";
+            if ($boredSeedActor !== "") {
+                $directorInstructionRules .= "\n* The first instruction must use the selected initiating actor: {$boredSeedActor}.";
+            }
+            $directorInstructionRules .= "\n* Only use speakers from the Nearby eligible actors list."
+                . "\n* Do not invent distant or off-scene actors."
+                . "\n* Do not target or comment on {$GLOBALS["PLAYER_NAME"]} merely because time passed or the player is idle."
+                . "\n* Prefer a natural NPC-to-NPC interaction or scene action. Involve the player only when recent player activity clearly requires a response."
+                . "\n* When an instruction targets another nearby actor, direct the dialogue to that actor.";
+        }
         
         // Database Prompt (Director)
         $prompt[] = array('role' => 'user', 'content' => "$sysprompt\n$directorInstructionRules\n$userprompt");
@@ -246,6 +285,12 @@ user request: actor \"a\" leaves the place
             $characterName = trim($response["character"] ?? 'Unknown');
             $instructionText = trim($response["instruction"] ?? 'No instruction text');
             $action = !empty($response["action"]) ? "{$response["action"]} " . ($response["target"] ?? "") : "";
+            if (!empty($GLOBALS["ROLEMASTER_BORED_MODE"])) {
+                $instructionText .= chimRolemasterBoredListenerRequirement(
+                    (string)($response["target"] ?? ""),
+                    $GLOBALS["ROLEMASTER_BORED_ALLOWED_ACTORS"] ?? []
+                );
+            }
         
             if (!$characterName || !$instructionText) {
                 return false;
@@ -310,7 +355,20 @@ user request: actor \"a\" leaves the place
             $response=$response[0];
 
         if (isset($response["instructions"]) && is_array($response["instructions"])) {
-            $allOk=true;
+            if ($isBoredInstruction) {
+                $originalInstructionCount = count($response["instructions"]);
+                $response["instructions"] = chimRolemasterFilterBoredInstructions(
+                    $response["instructions"],
+                    $GLOBALS["ROLEMASTER_BORED_ALLOWED_ACTORS"] ?? [],
+                    $boredSeedActor
+                );
+                if (empty($response["instructions"])) {
+                    Logger::warn("Discarded bored rolemaster response because it omitted the selected actor or used no eligible nearby actors");
+                } elseif (count($response["instructions"]) !== $originalInstructionCount) {
+                    Logger::warn("Removed invalid or off-scene actors from bored rolemaster response");
+                }
+            }
+            $allOk=!empty($response["instructions"]);
             foreach ($response["instructions"] as $r) {
                 $allOk=$allOk && parseInstruction($r);
                 parseSceneNote($r);

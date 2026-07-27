@@ -996,8 +996,18 @@ if (in_array($gameRequest[0],["bored"])) {
     if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"])) {
         Logger::info("[NARRATOR_BORED] Using narrator bored flow");
     } elseif ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
-        Logger::info("Redirecting bored event to rolemaster");
-        `php service/manager.php rolemaster instruction ""`;
+        $boredSeedActor = trim((string)($gameRequest[4] ?? $GLOBALS["HERIKA_NAME"] ?? ""));
+        Logger::info("Redirecting bored event to rolemaster with seed actor '{$boredSeedActor}'");
+        $phpCli = PHP_BINDIR . DIRECTORY_SEPARATOR . "php";
+        $managerPath = __DIR__ . DIRECTORY_SEPARATOR . "service" . DIRECTORY_SEPARATOR . "manager.php";
+        $command = escapeshellarg($phpCli)
+            . " " . escapeshellarg($managerPath)
+            . " rolemaster instruction " . escapeshellarg("")
+            . " bored " . escapeshellarg($boredSeedActor);
+        exec($command, $output, $returnCode);
+        if ($returnCode !== 0) {
+            Logger::warn("Failed to start bored rolemaster request (exit code {$returnCode})");
+        }
         terminate();
 
     }
