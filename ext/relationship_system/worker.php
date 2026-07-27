@@ -121,13 +121,13 @@ try {
         if ($playerRow && !empty($playerRow['value'])) {
             $GLOBALS['PLAYER_NAME'] = trim((string)$playerRow['value']);
         }
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         @file_put_contents($logFile, date('[Y-m-d H:i:s]') . " WARN: Failed to load PLAYER_NAME: " . $e->getMessage() . "\n", FILE_APPEND);
     }
 
     Logger::info("[REL-WORKER] Starting relationship worker" . ($daemon ? " in daemon mode" : ""));
-} catch (Exception $e) {
-    $msg = date('[Y-m-d H:i:s]') . " BOOTSTRAP ERROR: " . $e->getMessage() . "\n";
+} catch (Throwable $e) {
+    $msg = date('[Y-m-d H:i:s]') . " BOOTSTRAP ERROR: " . get_class($e) . ": " . $e->getMessage() . "\n";
     @file_put_contents($logFile, $msg, FILE_APPEND);
     exit(1);
 }
@@ -173,15 +173,22 @@ if ($daemon) {
             if ($processed === 0) {
                 sleep($interval);
             }
-        } catch (Exception $e) {
-            @file_put_contents($logFile, date('[Y-m-d H:i:s]') . " DAEMON: Exception: " . $e->getMessage() . "\n", FILE_APPEND);
-            Logger::error("[REL-WORKER] Error: " . $e->getMessage());
+        } catch (Throwable $e) {
+            $error = get_class($e) . ": " . $e->getMessage();
+            @file_put_contents($logFile, date('[Y-m-d H:i:s]') . " DAEMON: Failure: " . $error . "\n", FILE_APPEND);
+            Logger::error("[REL-WORKER] Error: " . $error);
             sleep($interval * 2); // Wait longer on error
         }
     }
 } else {
     // One-shot mode - process once and exit
-    $processed = processOneBatch();
-    echo "Processed: {$processed}\n";
-    exit($processed > 0 ? 0 : 1);
+    try {
+        $processed = processOneBatch();
+        echo "Processed: {$processed}\n";
+        exit($processed > 0 ? 0 : 1);
+    } catch (Throwable $e) {
+        $error = get_class($e) . ": " . $e->getMessage();
+        @file_put_contents($logFile, date('[Y-m-d H:i:s]') . " ONE-SHOT: Failure: " . $error . "\n", FILE_APPEND);
+        exit(2);
+    }
 }
