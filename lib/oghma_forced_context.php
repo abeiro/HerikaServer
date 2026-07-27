@@ -320,6 +320,32 @@ if (!function_exists('chimOghmaMarkTopicInjected')) {
     }
 }
 
+if (!function_exists('chimOghmaPayloadFingerprint')) {
+    function chimOghmaPayloadFingerprint($description): string
+    {
+        $normalized = trim((string) preg_replace('/\s+/u', ' ', trim((string) $description)));
+        return $normalized === '' ? '' : hash('sha256', strtolower($normalized));
+    }
+}
+
+if (!function_exists('chimOghmaPayloadWasInjected')) {
+    function chimOghmaPayloadWasInjected($description): bool
+    {
+        $fingerprint = chimOghmaPayloadFingerprint($description);
+        return $fingerprint !== '' && !empty($GLOBALS['OGHMA_INJECTED_PAYLOADS'][$fingerprint]);
+    }
+}
+
+if (!function_exists('chimOghmaMarkPayloadInjected')) {
+    function chimOghmaMarkPayloadInjected($description): void
+    {
+        $fingerprint = chimOghmaPayloadFingerprint($description);
+        if ($fingerprint !== '') {
+            $GLOBALS['OGHMA_INJECTED_PAYLOADS'][$fingerprint] = true;
+        }
+    }
+}
+
 if (!function_exists('chimOghmaAppendForcedRows')) {
     function chimOghmaAppendForcedRows(array $rows, array $knowledgeTags, string $source, int $limit): int
     {
@@ -334,10 +360,19 @@ if (!function_exists('chimOghmaAppendForcedRows')) {
             }
 
             $topic = trim((string) ($row['topic'] ?? ''));
+            if (chimOghmaPayloadWasInjected($payload['description'])) {
+                chimOghmaMarkTopicInjected($topic);
+                if (class_exists('Logger')) {
+                    Logger::info("[OGHMA] Skipped duplicate {$source} article content: {$topic}");
+                }
+                continue;
+            }
+
             $levelText = $payload['level'] === 'advanced'
                 ? 'You have advanced knowledge on this subject, you can use it in your dialogue'
                 : 'You only have basic knowledge on this subject, you can use it in your dialogue';
             $GLOBALS['OGHMA_HINT'] .= " \n#Lore Information ({$levelText}): {$topic}\n\"{$payload['description']}\"";
+            chimOghmaMarkPayloadInjected($payload['description']);
             chimOghmaMarkTopicInjected($topic);
             $added++;
             if (class_exists('Logger')) {

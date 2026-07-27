@@ -42,6 +42,30 @@ final class OghmaForcedContextTest extends TestCase
         $this->assertFalse(chimOghmaTopicWasInjected('bosmer'));
     }
 
+    public function testDifferentTopicsWithIdenticalLoreAreInjectedOnlyOnce(): void
+    {
+        $GLOBALS['OGHMA_HINT'] = '';
+        $GLOBALS['OGHMA_INJECTED_TOPICS'] = [];
+        $GLOBALS['OGHMA_INJECTED_PAYLOADS'] = [];
+        $rows = [
+            [
+                'topic' => 'bosmer',
+                'topic_desc' => 'Wood Elves are native to Valenwood.',
+                'knowledge_class' => '',
+            ],
+            [
+                'topic' => 'wood_elf',
+                'topic_desc' => "  Wood Elves are native\n to Valenwood.  ",
+                'knowledge_class' => '',
+            ],
+        ];
+
+        $this->assertSame(1, chimOghmaAppendForcedRows($rows, [], 'racial', 4));
+        $this->assertSame(1, substr_count($GLOBALS['OGHMA_HINT'], 'Wood Elves are native'));
+        $this->assertTrue(chimOghmaTopicWasInjected('bosmer'));
+        $this->assertTrue(chimOghmaTopicWasInjected('wood elf'));
+    }
+
     public function testCanonicalHoldSignalsIncludeTheLoreTopicAlias(): void
     {
         $this->assertSame(
