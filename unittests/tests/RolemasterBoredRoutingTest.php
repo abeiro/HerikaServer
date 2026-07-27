@@ -55,4 +55,48 @@ final class RolemasterBoredRoutingTest extends TestCase
         $this->assertSame('', chimRolemasterBoredListenerRequirement('RANGROO', $actors));
         $this->assertSame('', chimRolemasterBoredListenerRequirement('everyone', $actors));
     }
+
+    public function testBoredEventRulesRenderPromptManagerPlaceholders(): void
+    {
+        $actors = chimRolemasterBoredActorMap(
+            '|Camilla Valerius|Lucan Valerius|',
+            'RANGROO',
+            'Camilla Valerius'
+        );
+
+        $rules = chimRolemasterRenderBoredEventRules(
+            chimRolemasterDefaultBoredEventRules(),
+            'Camilla Valerius',
+            'RANGROO',
+            $actors
+        );
+
+        $this->assertStringContainsString(
+            'The first instruction must use the selected initiating actor: Camilla Valerius.',
+            $rules
+        );
+        $this->assertStringContainsString(
+            'Camilla Valerius, Lucan Valerius',
+            $rules
+        );
+        $this->assertStringContainsString(
+            'Do not target or comment on RANGROO',
+            $rules
+        );
+        $this->assertStringNotContainsString('{SEED_ACTOR_RULE}', $rules);
+        $this->assertStringNotContainsString('{NEARBY_ACTORS}', $rules);
+        $this->assertStringNotContainsString('{PLAYER_NAME}', $rules);
+    }
+
+    public function testBoredEventRulesAllowCustomPromptWithoutSeed(): void
+    {
+        $rules = chimRolemasterRenderBoredEventRules(
+            "Actors: {NEARBY_ACTORS}\n{SEED_ACTOR_RULE}\nPlayer: {PLAYER_NAME}",
+            '',
+            'RANGROO',
+            ['lucan valerius' => 'Lucan Valerius']
+        );
+
+        $this->assertSame("Actors: Lucan Valerius\n\nPlayer: RANGROO", $rules);
+    }
 }

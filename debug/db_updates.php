@@ -7531,6 +7531,34 @@ if ($checkVersion("prompts") < 20260719001) {
     Logger::info("Applied patch prompts 20260719001 - improved book reading prompt");
 }
 
+if ($checkVersion("prompts") < 20260727001) {
+    Logger::debug("Applying prompts 20260727001 - add bored event director rules");
+
+    require_once(__DIR__ . "/../lib/rolemaster_bored.php");
+    $boredEventRules = $db->escape(chimRolemasterDefaultBoredEventRules());
+    $description = $db->escape(
+        "Additional Rolemaster rules used only for autonomous bored events. "
+        . "Supports {SEED_ACTOR_RULE}, {SEED_ACTOR}, {NEARBY_ACTORS}, and {PLAYER_NAME} placeholders. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_rules', '{$boredEventRules}', '{$description}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260727001);
+        Logger::info("Applied patch prompts 20260727001 - added bored event director rules");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260727001");
+    }
+}
+
 if ($checkVersion("memory_summary") < 20260721001) {
     Logger::debug("Applying memory_summary 20260721001 - normalize diary memory owners");
 

@@ -218,15 +218,29 @@ user request: actor \"a\" leaves the place
             $directorInstructionRules
         );
         if ($isBoredInstruction) {
-            $directorInstructionRules .= "\n\n# Bored event rules";
-            if ($boredSeedActor !== "") {
-                $directorInstructionRules .= "\n* The first instruction must use the selected initiating actor: {$boredSeedActor}.";
+            $boredEventRules = null;
+            try {
+                $promptData = $GLOBALS["db"]->fetchOne(
+                    "SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'director_bored_event_rules'"
+                );
+                if ($promptData) {
+                    $boredEventRules = !empty($promptData['custom_prompt'])
+                        ? $promptData['custom_prompt']
+                        : $promptData['default_prompt'];
+                }
+            } catch (Exception $e) {
+                Logger::warn(
+                    "Failed to load director_bored_event_rules from database, using hardcoded fallback: "
+                    . $e->getMessage()
+                );
             }
-            $directorInstructionRules .= "\n* Only use speakers from the Nearby eligible actors list."
-                . "\n* Do not invent distant or off-scene actors."
-                . "\n* Do not target or comment on {$GLOBALS["PLAYER_NAME"]} merely because time passed or the player is idle."
-                . "\n* Prefer a natural NPC-to-NPC interaction or scene action. Involve the player only when recent player activity clearly requires a response."
-                . "\n* When an instruction targets another nearby actor, direct the dialogue to that actor.";
+
+            $directorInstructionRules .= "\n\n" . chimRolemasterRenderBoredEventRules(
+                (string)$boredEventRules,
+                $boredSeedActor,
+                (string)$GLOBALS["PLAYER_NAME"],
+                $GLOBALS["ROLEMASTER_BORED_ALLOWED_ACTORS"] ?? []
+            );
         }
         
         // Database Prompt (Director)
