@@ -106,6 +106,10 @@ try {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_connector.sql"));
         $db->execQuery("SET search_path TO public");
     }
+    if ($checkTableExists("core_tts_fallback") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_fallback.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
     if ($checkTableExists("core_llm_connector") == -1) {
         // ensure api_badge for FK first
         if ($checkTableExists("core_api_badge") == -1) {
@@ -3753,6 +3757,7 @@ try {
         ["name"=>"core_api_badge",   "file"=>__DIR__."/../lib/core/database_schema/core_api_badge.sql"],
         ["name"=>"core_llm_connector","file"=>__DIR__."/../lib/core/database_schema/core_llm_connector.sql"],
         ["name"=>"core_tts_connector","file"=>__DIR__."/../lib/core/database_schema/core_tts_connector.sql"],
+        ["name"=>"core_tts_fallback","file"=>__DIR__."/../lib/core/database_schema/core_tts_fallback.sql"],
         ["name"=>"core_stt_connector","file"=>__DIR__."/../lib/core/database_schema/core_stt_connector.sql"],
         ["name"=>"core_profiles",     "file"=>__DIR__."/../lib/core/database_schema/core_profiles.sql"],
         ["name"=>"core_npc_master",   "file"=>__DIR__."/../lib/core/database_schema/core_npc_master.sql"]
@@ -7630,6 +7635,18 @@ if ($checkVersion("visual_context") < 20260718001) {
         Logger::info("Applied patch visual_context 20260718001");
     } else {
         Logger::error("Failed to apply patch visual_context 20260718001");
+    }
+}
+
+if ($checkVersion("core_tts_fallback") < 20260727001) {
+    Logger::debug("Applying core_tts_fallback 20260727001 - add global race and gender voice fallbacks");
+
+    $schemaPath = __DIR__ . "/../lib/core/database_schema/core_tts_fallback.sql";
+    if ($db->execQuery(file_get_contents($schemaPath)) !== false) {
+        $updateVersion("core_tts_fallback", 20260727001);
+        Logger::info("Applied patch core_tts_fallback 20260727001");
+    } else {
+        Logger::error("Failed to apply patch core_tts_fallback 20260727001");
     }
 }
 

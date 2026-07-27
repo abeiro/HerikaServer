@@ -40,14 +40,45 @@ function callConfiguredTts($textString, $mood, $stringforhash)
     return $GLOBALS["TTS_IN_USE"]($textString, $mood, $stringforhash);
 }
 
+function getNpcTtsFallbackCandidates(): array
+{
+    $configured = $GLOBALS["TTS_NPC_FALLBACK_VOICES"] ?? [];
+    if (!is_array($configured)) {
+        $configured = [$configured];
+    }
+    if (empty($configured)) {
+        $configured = [$GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''];
+    }
+
+    $currentVoice = trim(strval(
+        $GLOBALS["PATCH_OVERRIDE_VOICE"]
+        ?? $GLOBALS["TTS_NPC_RESOLVED_VOICE"]
+        ?? ''
+    ));
+    $candidates = [];
+    foreach ($configured as $voice) {
+        $voice = trim(strval($voice));
+        if ($voice === '' || strcasecmp($voice, $currentVoice) === 0) {
+            continue;
+        }
+        $duplicate = array_filter(
+            $candidates,
+            fn($candidate) => strcasecmp($candidate, $voice) === 0
+        );
+        if (empty($duplicate)) {
+            $candidates[] = $voice;
+        }
+    }
+
+    return $candidates;
+}
+
 function canRetryNpcTtsWithFallback(): bool
 {
     $currentNpcData = $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] ?? null;
     $currentName = trim(strval($GLOBALS["HERIKA_NAME"] ?? ''));
-    $originalVoice = trim(strval($GLOBALS["TTS_NPC_ORIGINAL_VOICE"] ?? ''));
-    $fallbackVoice = trim(strval($GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''));
 
-    if (!is_array($currentNpcData) || $currentName === '' || $originalVoice === '' || $fallbackVoice === '') {
+    if (!is_array($currentNpcData) || $currentName === '') {
         return false;
     }
     if (strcasecmp($currentName, 'The Narrator') === 0) {
@@ -57,7 +88,7 @@ function canRetryNpcTtsWithFallback(): bool
         return false;
     }
 
-    return strcasecmp($originalVoice, $fallbackVoice) !== 0;
+    return !empty(getNpcTtsFallbackCandidates());
 }
 
 function callNpcTtsWithFallback($textString, $mood, $stringforhash)
@@ -71,20 +102,16 @@ function callNpcTtsWithFallback($textString, $mood, $stringforhash)
         return $ttsOutput;
     }
 
-    $fallbackVoice = trim(strval($GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''));
     $originalVoice = $GLOBALS["PATCH_OVERRIDE_VOICE"] ?? null;
-    if ($fallbackVoice === '') {
-        return $ttsOutput;
-    }
+    foreach (getNpcTtsFallbackCandidates() as $fallbackVoice) {
+        Logger::warn("[TTS FALLBACK] Retrying NPC TTS for {$GLOBALS["HERIKA_NAME"]} with fallback voice '{$fallbackVoice}' after synthesis failure.");
 
-    Logger::warn("[TTS FALLBACK] Retrying NPC TTS for {$GLOBALS["HERIKA_NAME"]} with fallback voice '{$fallbackVoice}' after initial synthesis failure.");
-
-    $GLOBALS["PATCH_OVERRIDE_VOICE"] = $fallbackVoice;
-    $retryOutput = callConfiguredTts($textString, $mood, $stringforhash);
-
-    if ($retryOutput) {
-        $GLOBALS["TTS_NPC_RESOLVED_VOICE"] = $fallbackVoice;
-        return $retryOutput;
+        $GLOBALS["PATCH_OVERRIDE_VOICE"] = $fallbackVoice;
+        $retryOutput = callConfiguredTts($textString, $mood, $stringforhash);
+        if ($retryOutput) {
+            $GLOBALS["TTS_NPC_RESOLVED_VOICE"] = $fallbackVoice;
+            return $retryOutput;
+        }
     }
 
     if ($originalVoice === null || trim(strval($originalVoice)) === '') {
