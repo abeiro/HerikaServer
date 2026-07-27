@@ -2,6 +2,7 @@
 
 $GLOBALS["OGHMA_HINT"] = "";
 $GLOBALS["OGHMA_INJECTED_TOPICS"] = [];
+$GLOBALS["OGHMA_INJECTED_PAYLOADS"] = [];
 
 // Helper function to properly check boolean values (handles string "false" from form submissions)
 // Guard against redeclaration when oghma.php is included multiple times (e.g., during rechat)
@@ -268,7 +269,14 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
 
                                 if ($advancedAllowed) {
                                     // The user can access advanced lore
-                                    $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information (You have advanced knowledge on this subject, you can use it in your dialogue):{$topTopic["topic"]}\n\"".trim($topTopic["topic_desc"])."\"";
+                                    $description = trim((string) ($topTopic["topic_desc"] ?? ''));
+                                    if (!chimOghmaPayloadWasInjected($description)) {
+                                        $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information (You have advanced knowledge on this subject, you can use it in your dialogue):{$topTopic["topic"]}\n\"{$description}\"";
+                                        chimOghmaMarkPayloadInjected($description);
+                                    } else {
+                                        $msg = "oghma keyword duplicate content already injected";
+                                        chimOghmaMarkTopicInjected($topTopic["topic"] ?? '');
+                                    }
                                 } else {
                                     // -----------------------------
                                     // 2) Check basic article
@@ -303,7 +311,14 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                                     }
 
                                     if ($basicAllowed) {
-                                        $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information (You only have basic knowledge on this subject, you can use it in your dialogue): {$topTopic["topic"]}\n\"".trim($topTopic["topic_desc_basic"])."\"";
+                                        $description = trim((string) ($topTopic["topic_desc_basic"] ?? ''));
+                                        if (!chimOghmaPayloadWasInjected($description)) {
+                                            $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information (You only have basic knowledge on this subject, you can use it in your dialogue): {$topTopic["topic"]}\n\"{$description}\"";
+                                            chimOghmaMarkPayloadInjected($description);
+                                        } else {
+                                            $msg = "oghma keyword duplicate content already injected";
+                                            chimOghmaMarkTopicInjected($topTopic["topic"] ?? '');
+                                        }
                                     } else {
                                         $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information\nYou do not know ANYTHING about {$topTopic["topic"]}";
                                     }
