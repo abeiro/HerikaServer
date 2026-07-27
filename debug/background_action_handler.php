@@ -194,7 +194,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
         'actions_issued',
         [
             'action' => "TravelTo",
-            'fullcall' => "TravelTo:$resolvedLocation",
+            'fullcall' => "TravelTo:$resolvedLocation:{$GLOBALS["LAST_REASON"]}",
             'actorname' => $npcName,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
