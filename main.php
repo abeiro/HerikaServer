@@ -1739,7 +1739,18 @@ if (($gameRequest[0] ?? "") === "rechat" && isset($GLOBALS["RECHAT_RESOLVED_TARG
 $authoritativePeople = $hasAuthoritativeRequestAudience ? $requestAudienceSnapshot : $resolvedRechatPeople;
 $directiveFallbackPeople = "";
 if ($authoritativePeople === "" && in_array($gameRequest[0] ?? "", $directiveDialogueEventTypes, true)) {
-    $directiveFallbackPeople = DataBeingsInCloseRange(true);
+    // Busy actors remain physically present even though Rolemaster must not
+    // select them as new speakers.
+    $directiveSpeakerName = trim((string)(
+        $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"]["npc_name"]
+        ?? $GLOBALS["HERIKA_NAME"]
+        ?? ""
+    ));
+    $directiveFallbackPeople = chimBuildDirectivePeoplePipe(
+        DataBeingsInCloseRange(true, true),
+        $directiveSpeakerName,
+        $gameRequest[3] ?? ""
+    );
 }
 
 if (isWhisperExecutionMode() && in_array($gameRequest[0] ?? "", $playerInputEventTypes, true)) {

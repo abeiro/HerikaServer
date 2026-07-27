@@ -2820,6 +2820,41 @@ function chimMergePeoplePipeLists()
     return normalizePeoplePipeList($names);
 }
 
+function chimBuildDirectivePeoplePipe($nearbyPeople, $speakerName, $instructionText)
+{
+    $speakerPeople = normalizePeoplePipeList([(string)$speakerName]);
+    $listenerPeople = "";
+    $listenerName = "";
+
+    if (preg_match(
+        '/\bThe dialogue listener must be\s+([^\r\n.]+)\.(?:\s|$)/iu',
+        (string)$instructionText,
+        $matches
+    )) {
+        $listenerName = html_entity_decode(
+            trim((string)($matches[1] ?? "")),
+            ENT_QUOTES | ENT_HTML5,
+            "UTF-8"
+        );
+    } elseif (preg_match(
+        '/\(must use ACTION\s+(?:JustTalk|Talk)\s+([^)]+)\)/iu',
+        (string)$instructionText,
+        $matches
+    )) {
+        $listenerName = html_entity_decode(
+            trim((string)($matches[1] ?? "")),
+            ENT_QUOTES | ENT_HTML5,
+            "UTF-8"
+        );
+    }
+
+    if ($listenerName !== "" && strcasecmp($listenerName, "everyone") !== 0) {
+        $listenerPeople = normalizePeoplePipeList([$listenerName]);
+    }
+
+    return chimMergePeoplePipeLists($nearbyPeople, $speakerPeople, $listenerPeople);
+}
+
 function chimSetCurrentTurnPresentActorsSnapshot($actors)
 {
     $normalized = chimNormalizePresentActors($actors);

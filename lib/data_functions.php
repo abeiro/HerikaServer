@@ -4530,7 +4530,7 @@ function chimDataStripActorStateSuffix($name)
     return trim((string)$name);
 }
 
-function chimDataActorStatusBlocksCloseRange($token)
+function chimDataActorStatusBlocksCloseRange($token, $includeBusy = false)
 {
     if (!preg_match('/\s*\(([^()]*)\)\s*$/u', (string)$token, $matches)) {
         return false;
@@ -4545,10 +4545,14 @@ function chimDataActorStatusBlocksCloseRange($token)
         return false;
     }
 
+    if ($includeBusy && $status === "busy") {
+        return false;
+    }
+
     return preg_match('/^(?:busy|hostile|in combat|far away|too far away|restrained|dead|disabled|unavailable|checking|can[\'"]?t hear you|no target|no crosshair target)/i', $status) === 1;
 }
 
-function DataBeingsInCloseRange($excludeFarAway=false)
+function DataBeingsInCloseRange($excludeFarAway=false, $includeBusy=false)
 {
 
     global $db;
@@ -4572,7 +4576,7 @@ function DataBeingsInCloseRange($excludeFarAway=false)
         $beingsArrayNew=[];
         foreach ($beingsArray as $k=>$v) {
             $v = trim((string)$v);
-            if ($excludeFarAway && chimDataActorStatusBlocksCloseRange($v))
+            if ($excludeFarAway && chimDataActorStatusBlocksCloseRange($v, $includeBusy))
                 continue;
             if (preg_match('/\((?:dead|disabled)\)\s*$/i', $v)) //??
                 continue;
