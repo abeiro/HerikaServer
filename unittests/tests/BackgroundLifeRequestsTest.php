@@ -175,9 +175,9 @@ final class BackgroundLifeRequestsTest extends TestCase
     {
         $enginePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR .
             'chim-bgl-request-' . bin2hex(random_bytes(6));
-        $servicePath = $enginePath . DIRECTORY_SEPARATOR . 'service';
-        mkdir($servicePath, 0777, true);
-        $runnerPath = $servicePath . DIRECTORY_SEPARATOR . 'background_life_runner_v2.php';
+        $debugPath = $enginePath . DIRECTORY_SEPARATOR . 'debug';
+        mkdir($debugPath, 0777, true);
+        $runnerPath = $debugPath . DIRECTORY_SEPARATOR . 'simple_llm_request_with_context_life_v2.php';
         file_put_contents(
             $runnerPath,
             '<?php echo json_encode($argv, JSON_THROW_ON_ERROR);'
@@ -215,8 +215,8 @@ final class BackgroundLifeRequestsTest extends TestCase
             if (is_file($runnerPath)) {
                 unlink($runnerPath);
             }
-            if (is_dir($servicePath)) {
-                rmdir($servicePath);
+            if (is_dir($debugPath)) {
+                rmdir($debugPath);
             }
             if (is_dir($enginePath)) {
                 rmdir($enginePath);

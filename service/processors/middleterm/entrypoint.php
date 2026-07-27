@@ -194,7 +194,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
                 }
             }
 
-            $runner = $enginePath . 'service/background_life_runner.php';
+            $runner = $enginePath . 'debug/simple_llm_request_with_context_life.php';
             $shellResult = shell_exec(
                 escapeshellarg(PHP_BINARY) . ' ' .
                 escapeshellarg($runner) . ' ' .
@@ -287,7 +287,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
                 $npcManager->updateByArray($npcData);
                 
             } else {
-                $runner = $enginePath . 'service/background_life_runner_v2.php';
+                $runner = $enginePath . 'debug/simple_llm_request_with_context_life_v2.php';
                 $shellResult = shell_exec(
                     escapeshellarg(PHP_BINARY) . ' ' .
                     escapeshellarg($runner) . ' ' .

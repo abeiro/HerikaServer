@@ -213,13 +213,13 @@ function chimBglRunQueuedRequest(
 
     $instruction = chimBglNormalizeInstruction($instruction);
     if ($requestType === 'letter') {
-        $script = 'service/background_life_runner.php';
+        $script = 'debug/simple_llm_request_with_context_life.php';
         $arguments = [$npcName, 'forceletter'];
     } elseif (chimBglBoolean($extendedData['background_life_commands'] ?? false)) {
-        $script = 'service/background_life_runner_v2.php';
+        $script = 'debug/simple_llm_request_with_context_life_v2.php';
         $arguments = [$npcName, 'full', 'forceaction'];
     } else {
-        $script = 'service/background_life_runner.php';
+        $script = 'debug/simple_llm_request_with_context_life.php';
         $arguments = [$npcName, 'full', 'forceaction'];
     }
     if ($requestType === 'instruction') {
