@@ -690,13 +690,15 @@ class RelationshipManager {
         // Save if changed
         if ($changed) {
             $extended['relationships'] = $rels;
-            chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
+            $result = chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
                 return $npcMaster->updateByArray([
                     'id' => $npcData['id'],
                     'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
                 ]);
             });
-            if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcData['id']); }
+            if ($result !== false && function_exists('chimRelationshipTimelineStamp')) {
+                chimRelationshipTimelineStamp($npcData['id']);
+            }
         }
 
         // Strip commands before TTS
@@ -734,13 +736,15 @@ class RelationshipManager {
         }
 
         $extended['relationships'] = $rels;
-        chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
+        $result = chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
             return $npcMaster->updateByArray([
                 'id' => $npcData['id'],
                 'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             ]);
         });
-        if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcData['id']); }
+        if ($result !== false && function_exists('chimRelationshipTimelineStamp')) {
+            chimRelationshipTimelineStamp($npcData['id']);
+        }
 
         error_log("[REL] Set $npcName -> $targetName: " . $rels[$targetName]['aff'] .
                   " (" . $rels[$targetName]['type'] . ")");

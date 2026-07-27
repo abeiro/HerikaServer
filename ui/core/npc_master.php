@@ -591,10 +591,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
             return $npc->update($_POST["id"], $_POST);
         };
         if (chimNpcRelationshipSaveNeedsLock()) {
-            chimRunWithRelationshipExtendedDataWrite($saveNpc);
+            $saveResult = chimRunWithRelationshipExtendedDataWrite($saveNpc);
             // Anchor editor relationship saves to the last known game time (see Create branch) -
             // without this a NULL-stamped row loses its manual entries on the next reconnect.
-            if (function_exists('chimRelationshipTimelineStamp')) {
+            if ($saveResult !== false && function_exists('chimRelationshipTimelineStamp')) {
                 chimRelationshipTimelineStamp((int)($_POST["id"] ?? 0));
             }
         } else {
@@ -713,7 +713,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
             if (chimNpcRelationshipSaveNeedsLock()) {
                 $ok = chimRunWithRelationshipExtendedDataWrite($saveNpc);
                 // Stamp BEFORE the manual backup below so the snapshot captures the anchored row.
-                if (function_exists('chimRelationshipTimelineStamp')) {
+                if ($ok !== false && function_exists('chimRelationshipTimelineStamp')) {
                     chimRelationshipTimelineStamp((int)$id);
                 }
             } else {
