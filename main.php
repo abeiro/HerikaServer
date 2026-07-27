@@ -2461,6 +2461,14 @@ $promptInjectionContext = [
 $characterBottomInjections = function_exists('chimRenderPromptInjections')
     ? chimRenderPromptInjections("character_bottom", $promptInjectionContext)
     : "";
+$latestDiaryContext = function_exists('chimBuildLatestDiaryContextBlock')
+    ? chimBuildLatestDiaryContextBlock(
+        strval($GLOBALS["HERIKA_NAME"] ?? ''),
+        is_array($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] ?? null)
+            ? $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]
+            : []
+    )
+    : "";
 $promptBottomInjections = function_exists('chimRenderPromptInjections')
     ? chimRenderPromptInjections("prompt_bottom", $promptInjectionContext)
     : "";
@@ -2480,7 +2488,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
 
 $systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
     "\n</roleplay_instructions>" . $worldPrompt .
-    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography . $characterBottomInjections .
+    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography . $latestDiaryContext . $characterBottomInjections .
     "\n</character>" . $knowledgeSection .
     "\n\n<general_instructions>\n" . $GLOBALS["COMMAND_PROMPT"] .
     "\n</general_instructions>" . $actionsList . $nearbySections . $promptBottomInjections . $paralinguisticTagsPrompt .
@@ -2489,7 +2497,7 @@ $systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
 $promptCompositionSections = [
     'roleplay_instructions' => $GLOBALS["PROMPT_HEAD"] ?? '',
     'world' => $worldPrompt ?? '',
-    'character' => ($GLOBALS["HERIKA_PERS"] ?? '') . ($dynamicBiography ?? '') . ($characterBottomInjections ?? ''),
+    'character' => ($GLOBALS["HERIKA_PERS"] ?? '') . ($dynamicBiography ?? '') . ($latestDiaryContext ?? '') . ($characterBottomInjections ?? ''),
     'knowledge' => $knowledgeSection ?? '',
     'general_instructions' => $GLOBALS["COMMAND_PROMPT"] ?? '',
     'actions' => $actionsList ?? '',
