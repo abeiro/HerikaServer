@@ -836,7 +836,7 @@ Rules:
 - You may include multiple actions if needed.
 - reasoning must be short (one sentence)
 - Do not add any keys other than 'action' and 'reasoning'.
-- 1 gold coin (or septim) is represented as itemid 0000000F.
+- 1 gold coin (or septim) is represented as itemid 0000000F. 9 gold coins would be represented as 0000000F:9, 900 gold coins would be represented as 0000000F:900, and so on.
 "
         ]
     ];
