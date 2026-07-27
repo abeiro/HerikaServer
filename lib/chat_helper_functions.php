@@ -1753,7 +1753,12 @@ function returnLines($lines,$writeOutput=true)
                 $addonlistener="";
             }
             $originalRequest[3]="{$outBuffer["actor"]}: $responseForContext $addonlistener";
-            logEvent($originalRequest);
+            $dialogueEventPeople = chimBuildDialogueEventPeoplePipe(
+                chimGetCurrentTurnPeopleSnapshot(),
+                $outBuffer["actor"] ?? "",
+                $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"] ?? ""
+            );
+            logEvent($originalRequest, $dialogueEventPeople);
             
             // Log chat here, because  function return comes back out of sync.
             $originalRequest[0]="chat";
@@ -1778,7 +1783,7 @@ function returnLines($lines,$writeOutput=true)
                 'utterance_id' => $GLOBALS["SCRIPTLINE_UTTERANCE_ID"] ?? chimGenerateUtteranceId(),
                 'delivery_state' => 'emitted'
             ];
-            logEvent($originalRequest);
+            logEvent($originalRequest, $dialogueEventPeople);
         }
         
     }
@@ -2853,6 +2858,14 @@ function chimBuildDirectivePeoplePipe($nearbyPeople, $speakerName, $instructionT
     }
 
     return chimMergePeoplePipeLists($nearbyPeople, $speakerPeople, $listenerPeople);
+}
+
+function chimBuildDialogueEventPeoplePipe($turnPeople, $speakerName, $listenerName)
+{
+    return chimMergePeoplePipeLists(
+        $turnPeople,
+        normalizePeoplePipeList([(string)$speakerName, (string)$listenerName])
+    );
 }
 
 function chimSetCurrentTurnPresentActorsSnapshot($actors)

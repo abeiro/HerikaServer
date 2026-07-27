@@ -137,4 +137,18 @@ final class PlayerPresenceSnapshotTest extends TestCase
 
         $this->assertSame('|Lisette|RANGROO|Eris|', $people);
     }
+
+    public function testDialogueEventPeopleAlwaysIncludeActualSpeakerAndListener(): void
+    {
+        $people = chimBuildDialogueEventPeoplePipe(
+            '|Octieve San|Lisette|RANGROO|',
+            'Octieve San',
+            'Minette Vinius'
+        );
+
+        $this->assertSame(
+            '|Octieve San|Lisette|RANGROO|Minette Vinius|',
+            $people
+        );
+    }
 }
