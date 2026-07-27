@@ -1,5 +1,6 @@
 <?php
 
+// Normalize Skyrim reference IDs to the eight-digit form used by NPC storage.
 function chimBglNormalizeRefId(string $refid): string
 {
     $refid = strtoupper(trim($refid));
@@ -15,6 +16,7 @@ function chimBglNormalizeRefId(string $refid): string
     return str_pad($refid, 8, '0', STR_PAD_LEFT);
 }
 
+// Interpret the boolean forms returned by PostgreSQL, JSON, and HTTP requests.
 function chimBglBoolean($value): bool
 {
     return $value === true ||
@@ -25,6 +27,7 @@ function chimBglBoolean($value): bool
         $value === 'on';
 }
 
+// Prefer the stable reference ID, with the NPC name kept as a legacy fallback.
 function chimBglResolveNpc(NpcMaster $npcMaster, string $refid = '', string $npcName = ''): ?array
 {
     $normalizedRefId = chimBglNormalizeRefId($refid);
@@ -46,6 +49,7 @@ function chimBglResolveNpc(NpcMaster $npcMaster, string $refid = '', string $npc
     return null;
 }
 
+// Build the control-panel status shape from an NPC and its stored metadata.
 function chimBglNpcStatus(NpcMaster $npcMaster, ?array $npc, string $requestedRefId = '', string $requestedName = ''): array
 {
     if (!$npc) {
@@ -76,6 +80,7 @@ function chimBglNpcStatus(NpcMaster $npcMaster, ?array $npc, string $requestedRe
     ];
 }
 
+// Update one supported control while preserving unrelated NPC data.
 function chimBglUpdateNpcSetting(NpcMaster $npcMaster, array $npc, string $setting, bool $value): array
 {
     $settingMap = [
@@ -112,6 +117,7 @@ function chimBglUpdateNpcSetting(NpcMaster $npcMaster, array $npc, string $setti
     return $status;
 }
 
+// Toggle Background Life enrollment without replacing other extended metadata.
 function chimBglSetEnabled(NpcMaster $npcMaster, array $npc, bool $enabled): array
 {
     $extendedData = $npcMaster->getExtendedData($npc);
@@ -132,6 +138,7 @@ function chimBglSetEnabled(NpcMaster $npcMaster, array $npc, bool $enabled): arr
     return $status;
 }
 
+// Remove unsafe control characters and enforce the direct-instruction limit.
 function chimBglNormalizeInstruction(string $instruction): string
 {
     $instruction = preg_replace(
@@ -150,6 +157,7 @@ function chimBglNormalizeInstruction(string $instruction): string
     return $instruction;
 }
 
+// Persist a one-shot request for the background worker to execute asynchronously.
 function chimBglQueueRequest(
     $db,
     array $npc,
@@ -194,6 +202,7 @@ function chimBglQueueRequest(
     return $queueId;
 }
 
+// Select the NPC's configured runner and capture its process result for retries.
 function chimBglRunQueuedRequest(
     string $enginePath,
     array $npc,
@@ -265,6 +274,7 @@ function chimBglRunQueuedRequest(
     ];
 }
 
+// Drain a bounded queue batch under one advisory lock and retry failures safely.
 function chimBglProcessRequestQueue($db, string $enginePath, int $limit = 2): array
 {
     $result = [
