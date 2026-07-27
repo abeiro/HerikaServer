@@ -57,6 +57,7 @@ require_once $enginePath . 'lib/core/llm_connector.class.php';
 require_once $enginePath . 'lib/core/tts_connector.class.php';
 require_once $enginePath . 'lib/lazy_xml.php';
 require_once $enginePath . 'lib/background_action_handler.php';
+require_once $enginePath . 'lib/background_life_requests.php';
 
 // ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -136,6 +137,13 @@ function getBGLStyleFallback(string $promptKey): string
 $npcName = $argv[1];
 $argMode = $argv[2] ?? '';   // dryrun | forceletter | forceaction | full
 $argMode3 = $argv[3] ?? '';   // optional third arg (forceaction)
+$directInstruction = '';
+if (isset($argv[4]) && $argv[4] !== '') {
+    $decodedInstruction = base64_decode((string)$argv[4], true);
+    if ($decodedInstruction !== false) {
+        $directInstruction = chimBglNormalizeInstruction($decodedInstruction);
+    }
+}
 
 // Simple non-blocking process lock to avoid concurrent runs for the same NPC.
 $lockKeyRaw = $npcName ?: 'global';
@@ -663,6 +671,14 @@ $history .= "\nCurrent date and hour: " . convert_gamets2skyrim_long_date($last_
 // ─── Check last Idles  ───────────────────────────────────
 
 $lastMinuteNotes = "\n";
+if ($directInstruction !== '') {
+    $escapedInstruction = htmlspecialchars(
+        $directInstruction,
+        ENT_QUOTES | ENT_SUBSTITUTE,
+        'UTF-8'
+    );
+    $lastMinuteNotes .= "\n<direct_instruction>{$escapedInstruction}</direct_instruction>\n";
+}
 $fortyEightHoursAgo = $last_gamets - 48 / GAMETS_TO_HOURS;
 $actionIdleRows = $db->fetchAll(
     "SELECT action,actorname,gamets,fullcall FROM actions_issued
@@ -1193,6 +1209,9 @@ $step2Content = "You are responsible for deciding a single action"
     . " based on the character's inner thoughts and the provided context.\n"
     . "Character's name is {$GLOBALS['HERIKA_NAME']}.\n"
     . "$dynamicBiography\n\n";
+if ($directInstruction !== '') {
+    $step2Content .= "Treat <direct_instruction> as the highest-priority one-shot request for this Background Life turn, while still choosing a valid available action.\n\n";
+}
 
 if ($isFullMode) {
     $step2Content .= "<context_history>\nContext History (chronological order)\n$history\n</context_history>{$lastMinuteNotes}\n\n";

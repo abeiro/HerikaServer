@@ -45,6 +45,7 @@ require_once $enginePath . 'lib/core/llm_connector.class.php';
 require_once $enginePath . 'lib/core/tts_connector.class.php';
 require_once $enginePath . 'lib/lazy_xml.php';
 require_once $enginePath . 'lib/background_action_handler.php';
+require_once $enginePath . 'lib/background_life_requests.php';
 
 // ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -207,7 +208,18 @@ if (($last_gamets - $lastItNumber) < ($bglTriggerHours / GAMETS_TO_HOURS)) {
 
 }
 
-$task = "";
+$directInstruction = '';
+if (isset($argv[4]) && $argv[4] !== '') {
+    $decodedInstruction = base64_decode((string)$argv[4], true);
+    if ($decodedInstruction !== false) {
+        $directInstruction = chimBglNormalizeInstruction($decodedInstruction);
+    }
+}
+$task = $directInstruction !== ''
+    ? "\n<direct_instruction>" .
+        htmlspecialchars($directInstruction, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
+        "</direct_instruction>\n"
+    : "";
 $history = "\n<last_dialogue>\n";
 $sqlfilter = " and gamets<$lastItNumber and type<>'prechat' and type<>'itemfound' and type<>'infoaction' and type<>'npcspellcast' and data not like '%inner thoughts%' ";
 $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", 50 * -1, $sqlfilter);
@@ -460,6 +472,9 @@ $letterStyle = loadBGLStylePrompt('background_life_letter', [
 $promptContent = "You are responsible for deciding an action, creating a rumor, and writing a letter based on the character's inner thoughts and the provided context.\n";
 $promptContent .= "Character's name is {$GLOBALS["HERIKA_NAME"]}.\n";
 $promptContent .= "$dynamicBiography\n\n";
+if ($directInstruction !== '') {
+    $promptContent .= "Treat <direct_instruction> as the highest-priority one-shot request for this Background Life turn, while still choosing a valid available action.\n\n";
+}
 
 // Add context history for full mode
 if ($fullMode) {

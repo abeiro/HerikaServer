@@ -112,10 +112,56 @@ function chimBglUpdateNpcSetting(NpcMaster $npcMaster, array $npc, string $setti
     return $status;
 }
 
-function chimBglQueueRequest($db, array $npc, string $requestType): string
+function chimBglSetEnabled(NpcMaster $npcMaster, array $npc, bool $enabled): array
 {
-    if (!in_array($requestType, ['action', 'letter'], true)) {
+    $extendedData = $npcMaster->getExtendedData($npc);
+    $extendedData['background_life_enabled'] = $enabled;
+    $npc = $npcMaster->setExtendedData($npc, $extendedData);
+    $npcMaster->updateByArray($npc);
+
+    $updatedNpc = $npcMaster->getById((int)$npc['id']);
+    if (!is_array($updatedNpc)) {
+        throw new RuntimeException('Could not read saved Background Life enrollment');
+    }
+
+    $status = chimBglNpcStatus($npcMaster, $updatedNpc);
+    if ($status['background_life_enabled'] !== $enabled) {
+        throw new RuntimeException('Could not save Background Life enrollment');
+    }
+
+    return $status;
+}
+
+function chimBglNormalizeInstruction(string $instruction): string
+{
+    $instruction = preg_replace(
+        '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u',
+        '',
+        $instruction
+    ) ?? '';
+    $instruction = trim($instruction);
+    $instructionLength = function_exists('mb_strlen')
+        ? mb_strlen($instruction, 'UTF-8')
+        : strlen($instruction);
+    if ($instructionLength > 1000) {
+        throw new InvalidArgumentException('Instruction must be 1000 characters or fewer');
+    }
+
+    return $instruction;
+}
+
+function chimBglQueueRequest(
+    $db,
+    array $npc,
+    string $requestType,
+    string $instruction = ''
+): string {
+    if (!in_array($requestType, ['action', 'letter', 'instruction'], true)) {
         throw new InvalidArgumentException('Unsupported Background Life request');
+    }
+    $instruction = chimBglNormalizeInstruction($instruction);
+    if ($requestType === 'instruction' && $instruction === '') {
+        throw new InvalidArgumentException('Direct instruction is required');
     }
 
     $queueId = 'background_life_request_queue_' .
@@ -129,6 +175,9 @@ function chimBglQueueRequest($db, array $npc, string $requestType): string
         'npc_name' => trim((string)($npc['npc_name'] ?? '')),
         'refid' => chimBglNormalizeRefId((string)($npc['refid'] ?? '')),
     ];
+    if ($requestType === 'instruction') {
+        $payload['instruction'] = $instruction;
+    }
 
     $encoded = json_encode(
         $payload,
@@ -145,7 +194,12 @@ function chimBglQueueRequest($db, array $npc, string $requestType): string
     return $queueId;
 }
 
-function chimBglRunQueuedRequest(string $enginePath, array $npc, string $requestType): array
+function chimBglRunQueuedRequest(
+    string $enginePath,
+    array $npc,
+    string $requestType,
+    string $instruction = ''
+): array
 {
     $npcName = trim((string)($npc['npc_name'] ?? ''));
     if ($npcName === '') {
@@ -157,6 +211,7 @@ function chimBglRunQueuedRequest(string $enginePath, array $npc, string $request
         $extendedData = [];
     }
 
+    $instruction = chimBglNormalizeInstruction($instruction);
     if ($requestType === 'letter') {
         $script = 'service/background_life_runner.php';
         $arguments = [$npcName, 'forceletter'];
@@ -166,6 +221,12 @@ function chimBglRunQueuedRequest(string $enginePath, array $npc, string $request
     } else {
         $script = 'service/background_life_runner.php';
         $arguments = [$npcName, 'full', 'forceaction'];
+    }
+    if ($requestType === 'instruction') {
+        if ($instruction === '') {
+            throw new RuntimeException('Queued direct instruction is empty');
+        }
+        $arguments[] = base64_encode($instruction);
     }
 
     $scriptPath = rtrim($enginePath, '/\\') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $script);
@@ -260,7 +321,8 @@ function chimBglProcessRequestQueue($db, string $enginePath, int $limit = 2): ar
                 $requestResult = chimBglRunQueuedRequest(
                     $enginePath,
                     $npc,
-                    (string)($payload['request_type'] ?? '')
+                    (string)($payload['request_type'] ?? ''),
+                    (string)($payload['instruction'] ?? '')
                 );
                 if ((int)$requestResult['exit_code'] !== 0) {
                     throw new RuntimeException(

@@ -154,4 +154,90 @@ final class BackgroundLifeRequestsTest extends TestCase
         $this->assertSame('Camilla Valerius', $payload['npc_name']);
         $this->assertSame('00013488', $payload['refid']);
     }
+
+    public function testDirectInstructionIsNormalizedAndQueued(): void
+    {
+        $db = new BackgroundLifeQueueDbStub();
+
+        $queueId = chimBglQueueRequest(
+            $db,
+            $this->npc(),
+            'instruction',
+            "  Travel to Riverwood.\x00  "
+        );
+        $payload = json_decode($db->rows[$queueId], true, 512, JSON_THROW_ON_ERROR);
+
+        $this->assertSame('instruction', $payload['request_type']);
+        $this->assertSame('Travel to Riverwood.', $payload['instruction']);
+    }
+
+    public function testDirectInstructionIsPassedToTheConfiguredRunner(): void
+    {
+        $enginePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR .
+            'chim-bgl-request-' . bin2hex(random_bytes(6));
+        $servicePath = $enginePath . DIRECTORY_SEPARATOR . 'service';
+        mkdir($servicePath, 0777, true);
+        $runnerPath = $servicePath . DIRECTORY_SEPARATOR . 'background_life_runner_v2.php';
+        file_put_contents(
+            $runnerPath,
+            '<?php echo json_encode($argv, JSON_THROW_ON_ERROR);'
+        );
+
+        try {
+            $npc = $this->npc([
+                'extended_data' => json_encode([
+                    'background_life_enabled' => true,
+                    'background_life_commands' => true,
+                ], JSON_THROW_ON_ERROR),
+            ]);
+            $result = chimBglRunQueuedRequest(
+                $enginePath,
+                $npc,
+                'instruction',
+                'Travel to Riverwood.'
+            );
+            $arguments = json_decode(
+                $result['stdout'],
+                true,
+                512,
+                JSON_THROW_ON_ERROR
+            );
+
+            $this->assertSame(0, $result['exit_code']);
+            $this->assertSame('Camilla Valerius', $arguments[1]);
+            $this->assertSame('full', $arguments[2]);
+            $this->assertSame('forceaction', $arguments[3]);
+            $this->assertSame(
+                'Travel to Riverwood.',
+                base64_decode($arguments[4], true)
+            );
+        } finally {
+            if (is_file($runnerPath)) {
+                unlink($runnerPath);
+            }
+            if (is_dir($servicePath)) {
+                rmdir($servicePath);
+            }
+            if (is_dir($enginePath)) {
+                rmdir($enginePath);
+            }
+        }
+    }
+
+    public function testBackgroundLifeCanBeDisabledWithoutLosingOtherData(): void
+    {
+        $npcMaster = new BackgroundLifeNpcMasterStub();
+        $npcMaster->npcsById[7] = $this->npc();
+
+        $status = chimBglSetEnabled($npcMaster, $npcMaster->npcsById[7], false);
+        $saved = json_decode(
+            (string)$npcMaster->npcsById[7]['extended_data'],
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+
+        $this->assertFalse($status['background_life_enabled']);
+        $this->assertSame('extended', $saved['preserve_me']);
+    }
 }

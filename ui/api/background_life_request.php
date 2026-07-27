@@ -41,11 +41,12 @@ try {
     $refid = trim((string)($_POST['refid'] ?? ''));
     $npcName = trim((string)($_POST['npc_name'] ?? ''));
     $requestType = trim((string)($_POST['request_type'] ?? ''));
+    $instruction = trim((string)($_POST['instruction'] ?? ''));
     if ($refid === '' && $npcName === '') {
         throw new InvalidArgumentException('NPC RefID or name is required');
     }
-    if (!in_array($requestType, ['action', 'letter'], true)) {
-        throw new InvalidArgumentException('Request type must be action or letter');
+    if (!in_array($requestType, ['action', 'letter', 'instruction'], true)) {
+        throw new InvalidArgumentException('Request type must be action, letter, or instruction');
     }
 
     $npc = chimBglResolveNpc($npcMaster, $refid, $npcName);
@@ -60,12 +61,15 @@ try {
         throw new DomainException('Enable Background Life before requesting an action');
     }
 
-    $queueId = chimBglQueueRequest($GLOBALS['db'], $npc, $requestType);
+    $queueId = chimBglQueueRequest($GLOBALS['db'], $npc, $requestType, $instruction);
+    $messages = [
+        'letter' => 'Letter request queued',
+        'instruction' => 'Direct Background Life instruction queued',
+        'action' => 'Background action queued',
+    ];
     echo json_encode([
         'success' => true,
-        'message' => $requestType === 'letter'
-            ? 'Letter request queued'
-            : 'Background action queued',
+        'message' => $messages[$requestType],
         'queue_id' => $queueId,
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 } catch (InvalidArgumentException $error) {

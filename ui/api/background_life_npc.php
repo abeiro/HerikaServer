@@ -29,11 +29,53 @@ require_once LIB_PATH . DIRECTORY_SEPARATOR . 'logger.php';
 require_once LIB_PATH . DIRECTORY_SEPARATOR . "{$GLOBALS['DBDRIVER']}.class.php";
 require_once LIB_PATH . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'npc_master.class.php';
 require_once LIB_PATH . DIRECTORY_SEPARATOR . 'background_life_requests.php';
+require_once LIB_PATH . DIRECTORY_SEPARATOR . 'utils_game_timestamp.php';
 
 $GLOBALS['db'] = new sql();
 $npcMaster = new NpcMaster();
 
 try {
+    $operation = trim((string)($_REQUEST['operation'] ?? ''));
+    if ($_SERVER['REQUEST_METHOD'] === 'GET' && $operation === 'list') {
+        $rows = $GLOBALS['db']->fetchAll(
+            "SELECT master.id,
+                    master.npc_name,
+                    master.refid,
+                    latest.data AS latest_activity,
+                    latest.gamets AS latest_gamets
+             FROM core_npc_master master
+             LEFT JOIN LATERAL (
+                 SELECT history.data, history.gamets
+                 FROM bgl_history history
+                 WHERE history.npc = master.npc_name
+                 ORDER BY history.gamets DESC, history.ts DESC, history.rowid DESC
+                 LIMIT 1
+             ) latest ON TRUE
+             WHERE COALESCE(master.extended_data->>'background_life_enabled', 'false') = 'true'
+             ORDER BY LOWER(master.npc_name) ASC"
+        );
+
+        $roster = array_map(static function (array $row): array {
+            $gamets = (int)($row['latest_gamets'] ?? 0);
+            return [
+                'npc_id' => (int)($row['id'] ?? 0),
+                'name' => trim((string)($row['npc_name'] ?? '')),
+                'refid' => chimBglNormalizeRefId((string)($row['refid'] ?? '')),
+                'activity' => trim((string)($row['latest_activity'] ?? '')),
+                'tamrielic_time' => $gamets > 0
+                    ? convert_gamets2skyrim_long_date2($gamets)
+                    : '',
+                'gamets' => $gamets,
+            ];
+        }, $rows);
+
+        echo json_encode([
+            'success' => true,
+            'roster' => $roster,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     $refid = trim((string)($_REQUEST['refid'] ?? ''));
     $npcName = trim((string)($_REQUEST['npc_name'] ?? ''));
     if ($refid === '' && $npcName === '') {
@@ -42,7 +84,21 @@ try {
 
     $npc = chimBglResolveNpc($npcMaster, $refid, $npcName);
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        if (($_POST['operation'] ?? '') !== 'toggle') {
+        if ($operation === 'disable') {
+            if (!$npc) {
+                http_response_code(404);
+                throw new RuntimeException('NPC has not been discovered by CHIM');
+            }
+
+            $status = chimBglSetEnabled($npcMaster, $npc, false);
+            echo json_encode([
+                'success' => true,
+                'message' => 'NPC removed from Background Life',
+                'data' => $status,
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        if ($operation !== 'toggle') {
             throw new InvalidArgumentException('Unsupported operation');
         }
         if (!$npc) {
