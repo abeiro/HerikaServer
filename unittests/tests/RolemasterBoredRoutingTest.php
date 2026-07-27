@@ -56,4 +56,3 @@ final class RolemasterBoredRoutingTest extends TestCase
         $this->assertSame('', chimRolemasterBoredListenerRequirement('everyone', $actors));
     }
 }
-
