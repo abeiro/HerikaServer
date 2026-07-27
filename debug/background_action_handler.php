@@ -113,14 +113,14 @@ function resolveTravelLocation($location, $currentNpcData, $db)
 }
 /**
  * Handle TravelTo action for NPC background life
- *
+ * 
  * @param string $location The location to travel to
  * @param array $currentNpcData The NPC data array containing refid
  * @param string $npcName The NPC character name
  * @param int $last_ts The last timestamp
  * @param int $last_gamets The last game timestamp
  * @param int $momentum The current momentum/session timestamp
- * @param array $locationSrc The source location of the event
+ * @param array $locationSrc The source location of the event 
  * @param object $db The database connection object
  * @return bool True if action was successfully processed, false otherwise
  */
@@ -220,7 +220,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
 
 /**
  * Handle StayAtPlace action for NPC background life
- *
+ * 
  * @param string $location The location where the NPC stays
  * @param array $currentNpcData The NPC data array containing refid
  * @param string $npcName The NPC character name
@@ -472,7 +472,7 @@ function handleSendLetter($letterContent, $currentNpcData, $npcName, $last_ts, $
 
 /**
  * Handle returnHome action for NPC background life
- *
+ * 
  * @param string $location The location where the NPC stays
  * @param array $currentNpcData The NPC data array containing refid
  * @param string $npcName The NPC character name
@@ -737,7 +737,7 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
     ]);
 
     // Lets check if we have vendor factions for this NPC
-    // If the NPC belongs to any vendor factions, we can assume it's a trader
+    // If the NPC belongs to any vendor factions, we can assume it's a trader 
     // We can check and publish stock later
     $npcMaster = new NpcMaster();
     $targetNpcData = $npcMaster->getByName($resolvedName);
@@ -941,7 +941,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
 
     if ($targetNpc === null) {
         error_log("[handleSpeakToAction] Target NPC not found: $targetNpcName, trying to create profile.");
-        // This can happen if player didn't visit the NPC yet, so the NPC is not in the core_npc_master table.
+        // This can happen if player didn't visit the NPC yet, so the NPC is not in the core_npc_master table. 
         // Try to create profile
         $retVal = createProfile($targetNpcName, [], false, $targetNpcName); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
         $resolvedName = $targetNpcName;
@@ -969,7 +969,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
     }
 
     // Lets check if we have vendor factions for this NPC
-    // If the NPC belongs to any vendor factions, we can assume it's a trader
+    // If the NPC belongs to any vendor factions, we can assume it's a trader 
     // We can check and publish stock later
     $npcMaster = new NpcMaster();
     $targetNpcData = $npcMaster->getByName($resolvedName);
