@@ -43,10 +43,12 @@ $promptContextOptionFields = [
 ];
 
 $gsSections = [
-    'Prompt' => [
+    'Prompt & Rechat' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
         [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
+        [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
+        [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
     ],
     'Oghma' => [
         [ 'name' => 'OGHMA_INFINIUM', 'type' => 'boolean' ],
@@ -54,10 +56,6 @@ $gsSections = [
         [ 'name' => 'RACIAL_OGHMA', 'type' => 'boolean' ],
         [ 'name' => 'LOCATION_OGHMA', 'type' => 'boolean' ],
         [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
-    ],
-    'Rechat' => [
-        [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
-        [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
     ],
     'Misc' => [
         [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
@@ -75,6 +73,7 @@ $gsSections = [
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@TXTAI_URL', 'type' => 'url' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
         [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
+        [ 'name' => 'PLAYER_WORST_MEMORY_GAME_DAYS', 'type' => 'integer', 'min' => 0, 'max' => 365, 'default' => 7, 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.' ],
     ],
     'Global Connectors' => [
         [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
@@ -85,7 +84,6 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_BGL', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'PLAYER_WORST_MEMORY_GAME_DAYS', 'type' => 'integer', 'min' => 0, 'max' => 365, 'default' => 7, 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.' ],
     ],
     'Context' => [
         [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
@@ -111,6 +109,32 @@ $gsSections = [
         [ 'name' => 'TRANSLATION@DeepL@player_source_language', 'type' => 'string' ],
         [ 'name' => 'TRANSLATION@DeepL@player_target_language', 'type' => 'string' ],
     ],
+];
+
+$settingsTabs = [
+    'prompt-rechat' => 'Prompt & Rechat',
+    'ai-memory' => 'AI & Memory',
+    'context-knowledge' => 'Context & Knowledge',
+    'general' => 'General',
+];
+
+$sectionTabs = [
+    'Prompt & Rechat' => 'prompt-rechat',
+    'Memory' => 'ai-memory',
+    'Global Connectors' => 'ai-memory',
+    'Oghma' => 'context-knowledge',
+    'Context' => 'context-knowledge',
+    $promptContextSectionTitle => 'context-knowledge',
+    'Misc' => 'general',
+    'Quests' => 'general',
+    'Translation' => 'general',
+];
+
+$tabControlPanels = [
+    'prompt-rechat' => 'settings-panel-prompt-rechat-prompt-rechat',
+    'ai-memory' => 'settings-panel-ai-memory-memory',
+    'context-knowledge' => 'settings-panel-context-knowledge-oghma',
+    'general' => 'settings-panel-general-misc',
 ];
 
 function pretty_label(string $flatName): string
@@ -487,6 +511,45 @@ h1.gs-title {
     font-size: 13px;
 }
 
+.settings-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 8px;
+    border: 1px solid #3a3a3a;
+    border-radius: 10px;
+    background: rgba(30, 30, 30, 0.92);
+}
+
+.settings-tab {
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #444;
+    border-radius: 7px;
+    background: #303030;
+    color: #ddd;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.settings-tab:hover {
+    border-color: rgba(242, 124, 17, 0.55);
+    background: #383838;
+}
+
+.settings-tab.is-active {
+    border-color: rgb(242,124,17);
+    color: #fff;
+    background: #3b3028;
+    box-shadow: inset 0 0 0 1px rgba(242, 124, 17, 0.18);
+}
+
+.settings-tab:focus-visible {
+    outline: 2px solid rgb(242,124,17);
+    outline-offset: 2px;
+}
+
 .content-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -540,6 +603,24 @@ h1.gs-title {
     grid-template-columns: minmax(220px, 280px) minmax(420px, 720px) minmax(200px, 1fr);
     gap: 12px 16px;
     align-items: center;
+}
+
+.connector-section .provider-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.connector-section .provider-card {
+    grid-template-columns: 1fr;
+    align-content: start;
+    align-items: start;
+}
+
+.connector-section .provider-body {
+    width: 100%;
+}
+
+.connector-section .provider-help {
+    margin-top: 0;
 }
 
 .provider-head {
@@ -1159,6 +1240,11 @@ h1.gs-title {
 }
 
 @media (max-width: 900px) {
+    .settings-tabs,
+    .connector-section .provider-grid {
+        grid-template-columns: 1fr;
+    }
+
     main {
         padding-left: 5%;
         padding-right: 5%;
@@ -1225,10 +1311,36 @@ h1.gs-title {
         <div class="result-ok" style="margin-bottom: 16px;">Global settings saved to the database.</div>
     <?php endif; ?>
 
+    <div class="settings-tabs" role="tablist" aria-label="Global settings categories">
+        <?php foreach ($settingsTabs as $tabId => $tabLabel): ?>
+            <button
+                type="button"
+                class="settings-tab<?php echo $tabId === 'prompt-rechat' ? ' is-active' : ''; ?>"
+                id="settings-tab-<?php echo htmlspecialchars($tabId); ?>"
+                role="tab"
+                aria-selected="<?php echo $tabId === 'prompt-rechat' ? 'true' : 'false'; ?>"
+                aria-controls="<?php echo htmlspecialchars($tabControlPanels[$tabId]); ?>"
+                data-settings-tab="<?php echo htmlspecialchars($tabId); ?>"
+            ><?php echo htmlspecialchars($tabLabel); ?></button>
+        <?php endforeach; ?>
+    </div>
+
     <form method="post" action="" id="gs_form">
         <div class="content-grid">
             <?php foreach ($gsSections as $sectionTitle => $fields): ?>
-                <div class="content-section">
+                <?php
+                $sectionTab = $sectionTabs[$sectionTitle] ?? 'general';
+                $isInitialTab = $sectionTab === 'prompt-rechat';
+                $sectionClasses = 'content-section' . ($sectionTitle === 'Global Connectors' ? ' connector-section' : '');
+                ?>
+                <div
+                    class="<?php echo htmlspecialchars($sectionClasses); ?>"
+                    id="settings-panel-<?php echo htmlspecialchars($sectionTab); ?>-<?php echo htmlspecialchars(preg_replace('/[^a-z0-9]+/i', '-', strtolower($sectionTitle))); ?>"
+                    role="tabpanel"
+                    aria-labelledby="settings-tab-<?php echo htmlspecialchars($sectionTab); ?>"
+                    data-settings-panel="<?php echo htmlspecialchars($sectionTab); ?>"
+                    <?php echo $isInitialTab ? '' : 'hidden'; ?>
+                >
                     <h2><?php echo htmlspecialchars($sectionTitle); ?></h2>
                     <div class="provider-grid">
                         <?php if ($sectionTitle === $promptContextSectionTitle): ?>
@@ -1308,6 +1420,8 @@ h1.gs-title {
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
+                            </div>
+                            </div>
                             </div>
                             <?php continue; ?>
                         <?php endif; ?>
@@ -1447,6 +1561,78 @@ h1.gs-title {
             <?php endforeach; ?>
         </div>
     </form>
+
+    <script>
+    (() => {
+        const storageKey = 'herika-global-settings-tab';
+        const tabs = Array.from(document.querySelectorAll('[data-settings-tab]'));
+        const panels = Array.from(document.querySelectorAll('[data-settings-panel]'));
+        const form = document.getElementById('gs_form');
+        const validTabs = new Set(tabs.map((tab) => tab.dataset.settingsTab));
+
+        function activateTab(tabId, focusTab = false) {
+            if (!validTabs.has(tabId)) {
+                tabId = 'prompt-rechat';
+            }
+
+            tabs.forEach((tab) => {
+                const active = tab.dataset.settingsTab === tabId;
+                tab.classList.toggle('is-active', active);
+                tab.setAttribute('aria-selected', active ? 'true' : 'false');
+                tab.tabIndex = active ? 0 : -1;
+                if (active && focusTab) {
+                    tab.focus();
+                }
+            });
+
+            panels.forEach((panel) => {
+                panel.hidden = panel.dataset.settingsPanel !== tabId;
+            });
+
+            try {
+                sessionStorage.setItem(storageKey, tabId);
+            } catch (error) {
+                // Storage can be unavailable in privacy-restricted browsers.
+            }
+        }
+
+        tabs.forEach((tab, index) => {
+            tab.addEventListener('click', () => activateTab(tab.dataset.settingsTab));
+            tab.addEventListener('keydown', (event) => {
+                let nextIndex = null;
+                if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                    nextIndex = (index + 1) % tabs.length;
+                } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                    nextIndex = (index - 1 + tabs.length) % tabs.length;
+                } else if (event.key === 'Home') {
+                    nextIndex = 0;
+                } else if (event.key === 'End') {
+                    nextIndex = tabs.length - 1;
+                }
+
+                if (nextIndex !== null) {
+                    event.preventDefault();
+                    activateTab(tabs[nextIndex].dataset.settingsTab, true);
+                }
+            });
+        });
+
+        form?.addEventListener('invalid', (event) => {
+            const panel = event.target.closest('[data-settings-panel]');
+            if (panel) {
+                activateTab(panel.dataset.settingsPanel);
+            }
+        }, true);
+
+        let initialTab = 'prompt-rechat';
+        try {
+            initialTab = sessionStorage.getItem(storageKey) || initialTab;
+        } catch (error) {
+            // Keep the default tab when storage is unavailable.
+        }
+        activateTab(initialTab);
+    })();
+    </script>
 
     <div id="global-connector-test-modal" class="global-test-modal" aria-hidden="true">
         <div class="global-test-shell" role="dialog" aria-modal="true" aria-labelledby="global-connector-test-title">
