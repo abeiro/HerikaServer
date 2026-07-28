@@ -318,7 +318,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 ?>
 <!-- Ensure main.css is loaded after any reboot.css -->
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/diary_adventure.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/diary_adventure.css?v=<?php echo (int) @filemtime(__DIR__ . '/css/diary_adventure.css'); ?>">
 <style>
     @font-face {
         font-family: 'MagicCards';
@@ -780,7 +780,7 @@ if ($shouldFetchEvents) {
             foreach ($currentCsvParams as $key => $value) {
                 echo "<input type='hidden' name='" . htmlspecialchars($key) . "' value='" . htmlspecialchars($value) . "'>";
             }
-            echo "<button type='submit' class='btn-base btn-save'>Download Current Date</button>";
+        echo "<button type='submit' class='btn-base btn-save log-action-button'>Download Current Date</button>";
             echo "</form>";
 
             $allCsvParams = ['export' => 'all_csv'];
@@ -797,7 +797,7 @@ if ($shouldFetchEvents) {
             foreach ($allCsvParams as $key => $value) {
                 echo "<input type='hidden' name='" . htmlspecialchars($key) . "' value='" . htmlspecialchars($value) . "'>";
             }
-            echo "<button type='submit' class='btn-base btn-save'>Download Entire Adventure Log</button>";
+    echo "<button type='submit' class='btn-base btn-save log-action-button'>Download Entire Adventure Log</button>";
             echo "</form>";
 
             echo "</div>";

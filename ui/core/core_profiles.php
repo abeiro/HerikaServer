@@ -44,7 +44,7 @@ ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 ?>
 
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css?v=<?php echo (int) @filemtime(dirname(__DIR__) . '/css/main.css'); ?>">
 <style>
 /* Match Oghma/Connectors spacing and title styling */
 @font-face {
@@ -1377,14 +1377,14 @@ $ittById = $byId($ittRows);
 
 <div class="llm-layout">
     <div class="llm-left">
-        <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
-            <form method="get" action="core_profiles.php" style="display:inline">
+        <div class="sidebar-action-grid">
+            <form method="get" action="core_profiles.php">
                 <input type="hidden" name="create_blank" value="1">
-                <button type="submit" class="btn-save">New Profile</button>
+                <button type="submit" class="btn-save">New</button>
             </form>
-            <button type="button" id="import_profile_btn" class="btn-primary">Import Profile</button>
-            <button type="button" id="open_import_rules_btn" class="btn-primary">Profile Rules</button>
-            <button type="button" id="profile_test_all_btn" class="btn-primary">Test All Profiles</button>
+            <button type="button" id="import_profile_btn" class="btn-primary">Import</button>
+            <button type="button" id="open_import_rules_btn" class="btn-primary">Rules</button>
+            <button type="button" id="profile_test_all_btn" class="btn-primary">Test</button>
         </div>
         <div id="profiles_list" class="conn-list"></div>
         <script>
