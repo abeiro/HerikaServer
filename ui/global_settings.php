@@ -113,30 +113,28 @@ $gsSections = [
 
 $settingsTabs = [
     'prompt-rechat' => '💬 Prompt & Rechat',
-    'global-connectors' => '🔌 Global Connectors',
-    'ai-memory' => '🧠 AI & Memory',
+    'ai-memory' => '🧠 Memory & Others',
     'context-knowledge' => '📚 Context & Knowledge',
-    'general' => '⚙️ General',
+    'global-connectors' => '🔌 Global Connectors',
 ];
 
 $sectionTabs = [
     'Prompt & Rechat' => 'prompt-rechat',
     'Memory' => 'ai-memory',
-    'Global Connectors' => 'global-connectors',
+    'Misc' => 'ai-memory',
+    'Quests' => 'ai-memory',
+    'Translation' => 'ai-memory',
     'Oghma' => 'context-knowledge',
     'Context' => 'context-knowledge',
     $promptContextSectionTitle => 'context-knowledge',
-    'Misc' => 'general',
-    'Quests' => 'general',
-    'Translation' => 'general',
+    'Global Connectors' => 'global-connectors',
 ];
 
 $tabControlPanels = [
     'prompt-rechat' => 'settings-panel-prompt-rechat-prompt-rechat',
-    'global-connectors' => 'settings-panel-global-connectors-global-connectors',
     'ai-memory' => 'settings-panel-ai-memory-memory',
     'context-knowledge' => 'settings-panel-context-knowledge-oghma',
-    'general' => 'settings-panel-general-misc',
+    'global-connectors' => 'settings-panel-global-connectors-global-connectors',
 ];
 
 function pretty_label(string $flatName): string
