@@ -206,12 +206,57 @@ function pretty_label(string $flatName): string
 function icon_for_field(string $flatName): string
 {
     $u = strtoupper($flatName);
-    if ($u === 'PLAYER_WORST_MEMORY_GAME_DAYS') return '💔';
-    if (strpos($u, 'FEATURES@MEMORY_EMBEDDING@') === 0 || strpos($u, 'MEMORY_') !== false) return '💭';
-    if ($u === 'PLAYER_NAME') return '🏷️';
-    if ($u === 'PROMPT_HEAD') return '🔝';
-    if ($u === 'EMOTEMOODS') return '🎭';
-    if ($u === 'PROMPT_TIMESTAMP') return '🕐';
+    $icons = [
+        'PLAYER_NAME' => '🏷️',
+        'PROMPT_HEAD' => '🔝',
+        'EMOTEMOODS' => '🎭',
+        'RECHAT_MODE' => '🔁',
+        'ENFORCE_STRICT_RECHAT_RESPONSE' => '🎯',
+        'OGHMA_INFINIUM' => '📚',
+        'OGHMA_AMOUNT' => '🔢',
+        'RACIAL_OGHMA' => '🧬',
+        'LOCATION_OGHMA' => '📍',
+        'FEATURES@MEMORY_EMBEDDING@ENABLED' => '🧠',
+        'FEATURES@MEMORY_EMBEDDING@TXTAI_URL' => '🔗',
+        'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC' => '🔤',
+        'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL' => '⏱️',
+        'PLAYER_WORST_MEMORY_GAME_DAYS' => '💔',
+        'AUTO_LOCK_PROFILE' => '🔒',
+        'AUTOFILL_CUSTOM_PROFILES' => '✨',
+        'AUTOFILL_CUSTOM_PROFILES_TRIGGER' => '🎯',
+        'BGL_TRIGGER_HOURS' => '🌍',
+        'END_CONVERSATION_COOLDOWN' => '⏳',
+        'CHIM_AI_QUEST_PROGRESSION' => '🗺️',
+        'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => '🧍',
+        'SCENE_CLASSIFIER_ENABLED' => '🎭',
+        'RELATIONSHIP_SYSTEM_ENABLED' => '💞',
+        'RELLLM_CONNECTOR' => '🔗',
+        'DETECT_MAGIC_EVENT' => '✨',
+        'GROUND_ITEMS_DESCRIPTIONS_ONLY' => '🪨',
+        'INVENTORY_ITEMS_DESCRIPTIONS_ONLY' => '🎒',
+        'HIDE_AMBIENT_COMBAT' => '🕊️',
+        'DISABLE_REANIMATION_TRACKING' => '🧟',
+        'TRANSFORMATION_DETECTION' => '🐺',
+        'POWER_AWARENESS_ENABLED' => '⚔️',
+        'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => '💰',
+        'PROMPT_TIMESTAMP' => '🕐',
+        'MAGIC_EVENT_BLACKLIST' => '🪄',
+        'LOCATION_BLACKLIST' => '📍',
+        'ITEM_BLACKLIST' => '📦',
+        'EVENT_TYPE_FILTER' => '🔍',
+        'TRANSLATION_FUNCTION' => '🌐',
+        'TRANSLATION@SETTINGS@TRANSLATE_AUDIO' => '🎧',
+        'TRANSLATION@SETTINGS@TRANSLATE_TEXT' => '📝',
+        'TRANSLATION@SETTINGS@SAVE_TRANSLATED_TEXT' => '💾',
+        'TRANSLATION@SETTINGS@TRANSLATE_PLAYER_AUDIO' => '🎙️',
+        'TRANSLATION@SETTINGS@SAVE_TRANSLATED_PLAYER_TEXT' => '💾',
+        'TRANSLATION@DEEPL@SOURCE_LANGUAGE' => '🗣️',
+        'TRANSLATION@DEEPL@TARGET_LANGUAGE' => '🌍',
+        'TRANSLATION@DEEPL@URL' => '🔗',
+        'TRANSLATION@DEEPL@PLAYER_SOURCE_LANGUAGE' => '🎤',
+        'TRANSLATION@DEEPL@PLAYER_TARGET_LANGUAGE' => '🌎',
+    ];
+    if (isset($icons[$u])) return $icons[$u];
     if (strpos($u, 'CORE_CONNECTOR_') === 0) {
         if ($u === 'CORE_CONNECTOR_PLAYER') return '🎮';
         if ($u === 'CORE_CONNECTOR_SUMMARY') return '📝';
@@ -220,20 +265,18 @@ function icon_for_field(string $flatName): string
         if ($u === 'CORE_CONNECTOR_PROFILES') return '👥';
         if ($u === 'CORE_CONNECTOR_DIRECTOR') return '🎬';
         if ($u === 'CORE_CONNECTOR_BGL') return '⏱️';
-        if ($u === 'CORE_CONNECTOR_OGHMA_CUSTOM') return '🐙';
+        if ($u === 'CORE_CONNECTOR_OGHMA_CUSTOM') return '📖';
         return '🔌';
     }
-    if ($u === 'SCENE_CLASSIFIER_ENABLED') return '🎭';
-    if ($u === 'RELATIONSHIP_SYSTEM_ENABLED') return '💞';
-    if ($u === 'RELLLM_CONNECTOR') return '🔗';
-    if ($u === 'POWER_AWARENESS_ENABLED') return '⚔️';
     if (strpos($u, 'RESPEECH') !== false) return '🦜';
     if (strpos($u, 'SPEECH_STYLE') !== false) return '🦜';
-    if (strpos($u, 'SUMMARY_PROMPT') === 0) return '🎭';
-    if (strpos($u, 'DYNAMIC_PROMPT_') === 0) return '🎭';
+    if (strpos($u, 'SUMMARY_PROMPT') === 0) return '📝';
+    if (strpos($u, 'DYNAMIC_PROMPT_') === 0) return '👥';
     if (strpos($u, 'DIARY') !== false) return '📙';
     if (strpos($u, 'NARRATOR') !== false) return '🗣️';
-    return '⚙️';
+    if (strpos($u, 'MEMORY') !== false) return '🧠';
+    if (strpos($u, 'COOLDOWN') !== false || strpos($u, 'INTERVAL') !== false) return '⏱️';
+    return '🧩';
 }
 
 function select_option_label(string $fieldName, string $optionValue): string
