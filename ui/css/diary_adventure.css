@@ -1,3 +1,10 @@
+:root {
+    --log-accent: #f27c11;
+    --log-accent-hover: #ca5c0a;
+    --log-accent-soft: rgba(242, 124, 17, 0.2);
+    --log-button-text: #ffffff;
+}
+
 /* ==========================================================================
    Combined Diary and Adventure Log Styles
    ========================================================================== */
@@ -51,9 +58,9 @@
 }
 
 .calendar td.has-event a {
-    background-color: rgb(212, 94, 0, 0.9);
-    color: white;
-    border: 2px solid rgb(172, 76, 0);
+    background-color: var(--log-accent);
+    color: var(--log-button-text);
+    border: 2px solid var(--log-accent-hover);
     border-radius: 5px;
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
     transition: all 0.3s ease-in-out;
@@ -67,10 +74,10 @@
 }
 
 .calendar td.has-event a:hover {
-    background-color: rgb(172, 76, 0, 0.95);
+    background-color: var(--log-accent-hover);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    color: white;
+    color: var(--log-button-text);
 }
 
 .calendar td.has-event a:hover::after {
@@ -80,7 +87,7 @@
     left: 50%;
     transform: translateX(-50%);
     background-color: #333;
-    color: white;
+    color: var(--log-button-text);
     padding: 5px 10px;
     border-radius: 5px;
     font-size: 12px;
@@ -90,14 +97,14 @@
 
 .calendar td.current-date a {
     background-color: #28a745;
-    color: white;
+    color: var(--log-button-text);
     border: 2px solid #1e7e34;
     font-weight: bold;
 }
 
 .calendar td.current-date.has-event a {
     background-color: #28a745;
-    color: white;
+    color: var(--log-button-text);
     border: 2px solid #1e7e34;
 }
 
@@ -130,14 +137,14 @@
     padding: 8px 15px;
     text-decoration: none;
     border-radius: 5px;
-    background-color: rgb(212, 94, 0, 0.9);
-    color: white;
-    border: 2px solid rgb(172, 76, 0);
+    background-color: var(--log-accent);
+    color: var(--log-button-text);
+    border: 2px solid var(--log-accent-hover);
     transition: all 0.3s ease;
 }
 
 .calendar-navigation a:hover {
-    background-color: rgb(172, 76, 0, 0.95);
+    background-color: var(--log-accent-hover);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
@@ -158,14 +165,14 @@
 }
 
 .calendar-mode-toggle .btn-primary {
-    background-color: rgb(212, 94, 0, 0.9);
-    color: white;
-    border: 2px solid rgb(172, 76, 0);
+    background-color: var(--log-accent);
+    color: var(--log-button-text);
+    border: 2px solid var(--log-accent-hover);
 }
 
 .calendar-mode-toggle .btn-secondary {
     background-color: #6c757d;
-    color: white;
+    color: var(--log-button-text);
     border: 2px solid #545b62;
 }
 
@@ -175,7 +182,7 @@
 }
 
 .calendar-mode-toggle .btn-primary:hover {
-    background-color: rgb(172, 76, 0, 0.95);
+    background-color: var(--log-accent-hover);
 }
 
 /* CSV Buttons Container */
@@ -190,6 +197,20 @@
 
 .csv-buttons button {
     min-width: 200px;
+}
+
+.csv-buttons .btn-save,
+body .csv-buttons button.log-action-button[type="submit"] {
+    background: var(--log-accent) !important;
+    background-image: none !important;
+    border-color: var(--log-accent-hover) !important;
+    color: var(--log-button-text) !important;
+}
+
+.csv-buttons .btn-save:hover,
+body .csv-buttons button.log-action-button[type="submit"]:hover {
+    background: var(--log-accent-hover) !important;
+    color: var(--log-button-text) !important;
 }
 
 /* Event Table Styles */
@@ -216,7 +237,7 @@
 }
 
 .event-table .entry-cell:hover {
-    background-color: rgba(212, 94, 0, 0.2);
+    background-color: var(--log-accent-soft);
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -288,7 +309,7 @@ main.container {
 
 .people-search:focus {
     outline: none;
-    border-color: rgb(212, 94, 0);
+    border-color: var(--log-accent);
 }
 
 .people-list form {
@@ -320,13 +341,13 @@ main.container {
 
 .people-item:hover {
     background-color: #555555;
-    border-color: rgb(212, 94, 0);
+    border-color: var(--log-accent);
     transform: translateX(5px);
 }
 
 .people-count {
-    background-color: rgb(212, 94, 0);
-    color: white;
+    background-color: var(--log-accent);
+    color: var(--log-button-text);
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 14px;
@@ -335,10 +356,10 @@ main.container {
 
 .pdf-export-btn {
     padding: 10px 18px;
-    background-color: rgb(212, 94, 0);
-    border: 2px solid rgb(172, 76, 0);
+    background-color: var(--log-accent);
+    border: 2px solid var(--log-accent-hover);
     border-radius: 6px;
-    color: #fff;
+    color: var(--log-button-text);
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
@@ -352,7 +373,7 @@ main.container {
 }
 
 .pdf-export-btn:hover {
-    background-color: rgb(172, 76, 0);
+    background-color: var(--log-accent-hover);
     transform: translateY(-1px);
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
@@ -476,7 +497,7 @@ body.modal-open {
 }
 
 #entryModal .entry-content::-webkit-scrollbar-thumb {
-    background: rgba(212, 94, 0, 0.5);
+    background: rgba(242, 124, 17, 0.5);
     border-radius: 4px;
 }
 

@@ -582,7 +582,7 @@ if (!$isEmbed) {
 }
 ?>
 
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css?v=<?php echo (int) @filemtime(dirname(__DIR__) . '/css/main.css'); ?>">
 <style>
 @font-face {
     font-family: 'MagicCards';
@@ -653,9 +653,9 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
 
         <div class="layout">
             <div class="left-col">
-                <div class="btn-row">
-                    <a class="btn-save" href="<?php echo h(ttsPageUrl(['create_blank' => 1])); ?>">New Connector</a>
-                    <form method="post" action="<?php echo h(ttsPageUrl()); ?>" enctype="multipart/form-data" id="tts_import_form" style="display:inline;">
+                <div class="btn-row sidebar-action-grid">
+                    <a class="btn-save" href="<?php echo h(ttsPageUrl(['create_blank' => 1])); ?>">New</a>
+                    <form method="post" action="<?php echo h(ttsPageUrl()); ?>" enctype="multipart/form-data" id="tts_import_form">
                         <input type="hidden" name="import" value="1">
                         <input type="file" name="import_file[]" id="tts_import_file" accept=".csv" multiple style="display:none;">
                         <button type="button" class="btn-primary" id="tts_import_btn">Import</button>
