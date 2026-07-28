@@ -2054,7 +2054,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 
     <div class="npc-editor-tabs" role="tablist" aria-label="NPC editor categories" data-npc-editor-tabs data-storage-key="herika-npc-editor-tab">
     <button type="button" class="npc-editor-tab is-active" role="tab" aria-selected="true" data-npc-editor-tab="general">🧭 General</button>
-    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="bios">📖 Bios</button>
+    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="bios">📖 Roleplay</button>
     <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="relationships">🤝 Relationships</button>
     <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="info">🛠️ Info</button>
 </div>
