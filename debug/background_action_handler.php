@@ -22,6 +22,47 @@ function triggerNpcUpdate($npcName, $error_count = 0)
     $npcManager->updateExtendedKeysByName($npcName, $extended);
 }
 
+
+function updateLastLLMCall($npcName)
+{
+    $npcManager = new NpcMaster();
+    $currentData=$npcManager->getByName($npcName);
+    $extended = $npcManager->getExtendedData($currentData);
+    $extendedCopy["background_life_last_llm_call"]=$extended["background_life_last_llm_call"] ?? [];
+    $extendedCopy["background_life_last_llm_call"][] = time();
+    $extendedCopy["background_life_last_llm_call"]=array_slice($extendedCopy["background_life_last_llm_call"], -5); // keep only last 5 calls
+
+    $extended["background_life_last_llm_call"] = $extendedCopy["background_life_last_llm_call"];
+
+    $npcManager->updateExtendedKeysByName($npcName, $extended);
+}
+
+function markAsErrored($npcName)
+{
+    $npcManager = new NpcMaster();
+    
+    $extended["background_life_last_llm_call_suspended"] = true;
+
+    $npcManager->updateExtendedKeysByName($npcName, $extended);
+}
+
+function checkLastCallsFor($npcName)
+{
+    // Check if the last 6 calls were made within the last 2 minutes
+    $npcManager = new NpcMaster();
+    $currentData=$npcManager->getByName($npcName);
+    $extended = $npcManager->getExtendedData($currentData);
+    $lastCalls = $extended["background_life_last_llm_call"] ?? [];
+    if (isset($extended["background_life_last_llm_call_suspended"]) && $extended["background_life_last_llm_call_suspended"] === true) {
+        return true; // Suspended, treat as exceeded
+    }
+    $now = time();
+    $recentCalls = array_filter($lastCalls, function($ts) use ($now) {
+        return ($now - $ts) <= 120; // last 2 minutes
+    });
+    return count($recentCalls) >= 6;
+}
+
 /**
  * Build a PostgreSQL point literal from NPC metadata last_coords.
  *
@@ -391,6 +432,7 @@ function handleSendLetter($letterContent, $currentNpcData, $npcName, $last_ts, $
     ];
 
     $dialogueBuffer = $connectionHandler->fast_request($dialoguePrompt, ['MAX_TOKENS' => 512], 'backgroundlife');
+    updateLastLLMCall($GLOBALS['HERIKA_NAME']);
     // This is going to create a picture with the letter.
     if ($dialogueBuffer === null || trim($dialogueBuffer) === '') {
         error_log("[handleSendLetter] Failed to generate letter content for NPC: $npcName");
@@ -1090,6 +1132,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
         ];
 
         $dialogueBuffer = $connectionHandler->fast_request($dialoguePrompt, ['MAX_TOKENS' => 512], 'backgroundlife');
+        updateLastLLMCall($GLOBALS["HERIKA_NAME"]);
 
         if (!empty($dialogueBuffer)) {
             error_log("[handleSpeakToAction] Generated dialogue between $npcName and $resolvedName.");
