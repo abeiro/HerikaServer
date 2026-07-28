@@ -2092,15 +2092,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-editor-tab:focus-visible { outline:2px solid rgb(242,124,17); outline-offset:2px; }
 .npc-editor-panels { display:block; }
 .npc-editor-panel[hidden] { display:none !important; }
+.npc-editor-panel[data-npc-editor-panel="bios"] { grid-template-columns:minmax(0, 1fr); }
 @media (max-width:700px) { .npc-editor-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 </style>
 <script>
 (function(){
     const fieldSections = {
         general: new Set(['npc_name','profile_id','lock_profile','npc_favorite','gender','race','base','refid','oghma_knowledge_tags','worldknowledge_tags','world_knowledge_tags','voiceid','faction','dynamic_profile','middle_term_enabled','individual_memory_enabled','auto_diary_enabled','auto_diary_wait_enabled','salutation_after_a_while','prompt_head']),
-        bios: new Set(['core','npc_static_bio','appearance','personality','occupation','speechstyle','goals']),
-        relationships: new Set(['relationships','relationships_jsonb']),
-        info: new Set(['skills','emote_moods','middle_term_latest','metadata','extended_data'])
+        bios: new Set(['core','npc_static_bio','appearance','personality','occupation','skills','speechstyle','goals']),
+        relationships: new Set(['relationships','relationships_jsonb','middle_term_latest']),
+        info: new Set(['emote_moods','metadata','extended_data'])
     };
 
     function initNpcEditorTabs(){
