@@ -497,7 +497,8 @@ function chimFormatInventoryPromptLines(
     array $inventory,
     ?callable $getItemDescription = null,
     array &$describedBaseids = [],
-    bool $descriptionsOnly = false
+    bool $descriptionsOnly = false,
+    bool $showGoldValue = false
 ): array {
     $lines = [];
 
@@ -508,6 +509,7 @@ function chimFormatInventoryPromptLines(
         }
 
         $count = max(0, intval($item['count'] ?? 0));
+        $goldValue = max(0, intval($item['goldvalue'] ?? 0));
         $rawBaseId = trim((string) ($item['baseid'] ?? ''));
         $baseId = chimNormalizePromptFormId($rawBaseId);
         $baseIdKey = $baseId ?? '';
@@ -527,6 +529,9 @@ function chimFormatInventoryPromptLines(
         $safeName = chimEscapePromptItemText($itemName);
         $identifier = $baseId !== null ? "`{$baseId}:{$safeName}`" : $safeName;
         $line = "- {$identifier} ({$count})";
+        if ($showGoldValue) {
+            $line .= " - Gold Value: {$goldValue}";
+        }
         if ($description) {
             $line .= ' - ' . chimEscapePromptItemText($description);
         }
