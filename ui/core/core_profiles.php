@@ -399,7 +399,10 @@ h1.api-title {
 }
 .profile-prompt-field { margin-top:10px; }
 .profile-prompt-field textarea { min-height:82px; }
-.profile-toggle-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; margin-top:10px; }
+.profile-toggle-groups { display:grid; gap:9px; margin-top:10px; }
+.profile-toggle-group { padding:9px; border:1px solid #3f3f3f; border-radius:7px; background:#202020; }
+.profile-toggle-group-title { margin:0 0 7px; color:#f27c11; font-family:'MagicCards', serif; font-size:1em; letter-spacing:0.4px; word-spacing:4px; }
+.profile-toggle-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; }
 .profile-toggle-card {
     display:block !important;
     min-height:78px;
@@ -1831,6 +1834,7 @@ $ittById = $byId($ittRows);
         $autoDiaryEnabled = !empty($profileMetadata['AUTO_DIARY_ENABLED']);
         $autoDiaryWaitEnabled = !empty($profileMetadata['AUTO_DIARY_WAIT_ENABLED']);
         $physicalDiaryEnabled = !empty($profileMetadata['MATERIALIZE_DIARY_ENABLED']);
+        $latestDiaryContextEnabled = !empty($profileMetadata['LATEST_DIARY_CONTEXT_ENABLED']);
         $randomizerEnabled = !empty($profileMetadata['LLM_RANDOMIZER_ENABLED']);
         $fallbackEnabled = !empty($profileMetadata['LLM_FALLBACK_ENABLED']);
 
@@ -1840,14 +1844,30 @@ $ittById = $byId($ittRows);
         $currentId = (int)($editItem['id'] ?? 0);
         $currentSlot = isset($editItem['slot']) ? (int)$editItem['slot'] : 0;
 
-        $profileToggleCards = [
-            ['key' => 'DYNAMIC_PROFILE_ENABLED', 'icon' => '&#x267B;&#xFE0F;', 'title' => 'Dynamic Profile', 'enabled' => $dynamicProfileEnabled, 'short' => 'Allow gameplay events to evolve NPC profiles.', 'help' => 'Allow systems to evolve NPC profiles based on gameplay events. NPCs using this profile will have dynamic profile enabled by default.'],
-            ['key' => 'MIDDLE_TERM_MEMORY_ENABLED', 'icon' => '&#x1F4C3;', 'title' => 'Middle Term Memory', 'enabled' => $mtmEnabled, 'short' => 'Include periodic middle-term memory summaries.', 'help' => 'Saves a list of recent events after every 10 memory summaries. NPCs using this profile will have MTM enabled by default.'],
-            ['key' => 'AUTO_DIARY_ENABLED', 'icon' => '&#x1F4D9;', 'title' => 'Auto Diary', 'enabled' => $autoDiaryEnabled, 'short' => 'Generate nearby NPC diaries during sleep or wait.', 'help' => 'Automatically generate diary entries when NPCs are nearby during sleep/wait events. NPCs using this profile will have auto diary enabled by default.'],
-            ['key' => 'AUTO_DIARY_WAIT_ENABLED', 'icon' => '&#x23F3;', 'title' => 'Auto Diary Wait', 'enabled' => $autoDiaryWaitEnabled, 'short' => 'Include wait events when Auto Diary is enabled.', 'help' => 'When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.'],
-            ['key' => 'MATERIALIZE_DIARY_ENABLED', 'icon' => '&#x1F4D5;', 'title' => 'Physical Diary', 'enabled' => $physicalDiaryEnabled, 'short' => 'Create a physical ingame diary that can be read.', 'help' => 'Automatically creates one physical diary in each NPC\'s inventory when they write a diary entry, then refreshes that same book after future entries.'],
-            ['key' => 'LLM_RANDOMIZER_ENABLED', 'icon' => '&#x1F3B2;', 'title' => 'LLM Randomizer', 'enabled' => $randomizerEnabled, 'short' => 'Rotate among the four profile LLM connectors.', 'help' => 'Randomly switches between the 4 LLM connectors for NPCs using this profile. Will roughly switch every 2-3 responses per NPC.'],
-            ['key' => 'LLM_FALLBACK_ENABLED', 'icon' => '&#x1F504;', 'title' => 'LLM Fallback', 'enabled' => $fallbackEnabled, 'short' => 'Retry failed requests with the fallback connector.', 'help' => 'Automatically retry with the fallback connector when the primary connector fails. Response time will be longer when fallback is used.'],
+        $profileToggleGroups = [
+            [
+                'title' => 'Profiles & Memories',
+                'cards' => [
+                    ['key' => 'DYNAMIC_PROFILE_ENABLED', 'icon' => '&#x267B;&#xFE0F;', 'title' => 'Dynamic Profile', 'enabled' => $dynamicProfileEnabled, 'short' => 'Allow gameplay events to evolve NPC profiles.', 'help' => 'Allow systems to evolve NPC profiles based on gameplay events. NPCs using this profile will have dynamic profile enabled by default.'],
+                    ['key' => 'MIDDLE_TERM_MEMORY_ENABLED', 'icon' => '&#x1F4C3;', 'title' => 'Middle Term Memory', 'enabled' => $mtmEnabled, 'short' => 'Include periodic middle-term memory summaries.', 'help' => 'Saves a list of recent events after every 10 memory summaries. NPCs using this profile will have MTM enabled by default.'],
+                ],
+            ],
+            [
+                'title' => 'Diary',
+                'cards' => [
+                    ['key' => 'AUTO_DIARY_ENABLED', 'icon' => '&#x1F4D9;', 'title' => 'Auto Diary', 'enabled' => $autoDiaryEnabled, 'short' => 'Generate nearby NPC diaries during sleep or wait.', 'help' => 'Automatically generate diary entries when NPCs are nearby during sleep/wait events. NPCs using this profile will have auto diary enabled by default.'],
+                    ['key' => 'AUTO_DIARY_WAIT_ENABLED', 'icon' => '&#x23F3;', 'title' => 'Auto Diary Wait', 'enabled' => $autoDiaryWaitEnabled, 'short' => 'Include wait events when Auto Diary is enabled.', 'help' => 'When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.'],
+                    ['key' => 'MATERIALIZE_DIARY_ENABLED', 'icon' => '&#x1F4D5;', 'title' => 'Physical Diary', 'enabled' => $physicalDiaryEnabled, 'short' => 'Create a physical ingame diary that can be read.', 'help' => 'Automatically creates one physical diary in each NPC\'s inventory when they write a diary entry, then refreshes that same book after future entries.'],
+                    ['key' => 'LATEST_DIARY_CONTEXT_ENABLED', 'icon' => '&#x1F4D6;', 'title' => 'Include Latest Diary Entry', 'enabled' => $latestDiaryContextEnabled, 'short' => 'Include the NPC\'s latest diary entry in response context.', 'help' => 'Adds the latest diary entry written by an NPC to the character section of every response prompt.'],
+                ],
+            ],
+            [
+                'title' => 'LLM',
+                'cards' => [
+                    ['key' => 'LLM_RANDOMIZER_ENABLED', 'icon' => '&#x1F3B2;', 'title' => 'LLM Randomizer', 'enabled' => $randomizerEnabled, 'short' => 'Rotate among the four profile LLM connectors.', 'help' => 'Randomly switches between the 4 LLM connectors for NPCs using this profile. Will roughly switch every 2-3 responses per NPC.'],
+                    ['key' => 'LLM_FALLBACK_ENABLED', 'icon' => '&#x1F504;', 'title' => 'LLM Fallback', 'enabled' => $fallbackEnabled, 'short' => 'Retry failed requests with the fallback connector.', 'help' => 'Automatically retry with the fallback connector when the primary connector fails. Response time will be longer when fallback is used.'],
+                ],
+            ],
         ];
     ?>
 
@@ -1904,26 +1924,33 @@ $ittById = $byId($ittRows);
             <small class="hint">Optional profile-specific system instructions appended to requests.</small>
         </div>
 
-        <div class="profile-toggle-grid">
-            <?php foreach ($profileToggleCards as $toggleCard): ?>
-                <label class="profile-toggle-card" title="<?= htmlspecialchars($toggleCard['help']) ?>">
-                    <span class="profile-toggle-heading">
-                        <span><?= $toggleCard['icon'] ?> <?= htmlspecialchars($toggleCard['title']) ?></span>
-                        <span class="profile-toggle-control">
-                            <input type="hidden" name="meta_vis[<?= htmlspecialchars($toggleCard['key']) ?>]" value="">
-                            <input type="checkbox" name="meta_vis[<?= htmlspecialchars($toggleCard['key']) ?>]" value="1" <?= $toggleCard['enabled'] ? "checked" : "" ?>>
-                            <span class="toggle-text"><?= $toggleCard['enabled'] ? 'On' : 'Off' ?></span>
-                        </span>
-                    </span>
-                    <span class="profile-toggle-description"><?= htmlspecialchars($toggleCard['short']) ?></span>
-                </label>
+        <div class="profile-toggle-groups">
+            <?php foreach ($profileToggleGroups as $toggleGroup): ?>
+                <section class="profile-toggle-group">
+                    <h3 class="profile-toggle-group-title"><?= htmlspecialchars($toggleGroup['title']) ?></h3>
+                    <div class="profile-toggle-grid">
+                        <?php foreach ($toggleGroup['cards'] as $toggleCard): ?>
+                            <label class="profile-toggle-card" title="<?= htmlspecialchars($toggleCard['help']) ?>">
+                                <span class="profile-toggle-heading">
+                                    <span><?= $toggleCard['icon'] ?> <?= htmlspecialchars($toggleCard['title']) ?></span>
+                                    <span class="profile-toggle-control">
+                                        <input type="hidden" name="meta_vis[<?= htmlspecialchars($toggleCard['key']) ?>]" value="">
+                                        <input type="checkbox" name="meta_vis[<?= htmlspecialchars($toggleCard['key']) ?>]" value="1" <?= $toggleCard['enabled'] ? "checked" : "" ?>>
+                                        <span class="toggle-text"><?= $toggleCard['enabled'] ? 'On' : 'Off' ?></span>
+                                    </span>
+                                </span>
+                                <span class="profile-toggle-description"><?= htmlspecialchars($toggleCard['short']) ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
             <?php endforeach; ?>
         </div>
     </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', function(){
-        const names = ['default_npc','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]','meta_vis[MATERIALIZE_DIARY_ENABLED]'];
+        const names = ['default_npc','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]','meta_vis[MATERIALIZE_DIARY_ENABLED]','meta_vis[LATEST_DIARY_CONTEXT_ENABLED]'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -2172,7 +2199,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 'mode' => 'profile',
                 'fieldName' => 'metadata',
                 'settingsCatalog' => $profileOverrideCatalog,
-                'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'AUTO_DIARY_ENABLED', 'AUTO_DIARY_WAIT_ENABLED', 'MATERIALIZE_DIARY_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
+                'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'AUTO_DIARY_ENABLED', 'AUTO_DIARY_WAIT_ENABLED', 'MATERIALIZE_DIARY_ENABLED', 'LATEST_DIARY_CONTEXT_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
                 'currentData' => $currentProfileOverrides,
                 'systemFields' => [],
             ];

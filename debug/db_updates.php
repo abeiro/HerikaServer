@@ -7650,6 +7650,22 @@ if ($checkVersion("core_tts_fallback") < 20260727001) {
     }
 }
 
+if ($checkVersion("latest_diary_context") < 20260727001) {
+    Logger::debug("Applying latest_diary_context 20260727001 - index latest NPC diary lookups");
+
+    $migrationOk = $db->execQuery(
+        "CREATE INDEX IF NOT EXISTS idx_diarylog_people_gamets
+         ON public.diarylog (lower(trim(people)), gamets DESC, localts DESC, rowid DESC)"
+    ) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("latest_diary_context", 20260727001);
+        Logger::info("Applied patch latest_diary_context 20260727001");
+    } else {
+        Logger::error("Failed to apply patch latest_diary_context 20260727001");
+    }
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------
