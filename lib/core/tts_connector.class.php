@@ -1,5 +1,7 @@
 <?php
 
+require_once(__DIR__ . DIRECTORY_SEPARATOR . 'tts_fallback.class.php');
+
 class TTSConnector
 {
     private $table = "core_tts_connector";
@@ -432,12 +434,39 @@ class TTSConnector
     public function resolveNpcVoiceForConnector(array $currentNpcData, $connectorData = null): array
     {
         $originalVoice = trim(strval($currentNpcData['voiceid'] ?? ''));
-        $fallbackVoice = $this->getFallbackVoiceForGender($connectorData, $currentNpcData['gender'] ?? '');
+        $raceFallbackVoice = (new TTSFallback())->getVoice(
+            $currentNpcData['race'] ?? '',
+            $currentNpcData['gender'] ?? ''
+        );
+        $connectorFallbackVoice = $this->getFallbackVoiceForGender(
+            $connectorData,
+            $currentNpcData['gender'] ?? ''
+        );
+
+        $fallbackVoices = [];
+        foreach ([$raceFallbackVoice, $connectorFallbackVoice] as $candidate) {
+            $candidate = trim(strval($candidate));
+            if ($candidate === '' || strcasecmp($candidate, $originalVoice) === 0) {
+                continue;
+            }
+            $alreadyAdded = array_filter(
+                $fallbackVoices,
+                fn($voice) => strcasecmp($voice, $candidate) === 0
+            );
+            if (empty($alreadyAdded)) {
+                $fallbackVoices[] = $candidate;
+            }
+        }
+
+        $fallbackVoice = $fallbackVoices[0] ?? '';
         $resolvedVoice = $originalVoice !== '' ? $originalVoice : $fallbackVoice;
 
         return [
             'original_voice' => $originalVoice,
             'fallback_voice' => $fallbackVoice,
+            'fallback_voices' => $fallbackVoices,
+            'race_fallback_voice' => $raceFallbackVoice,
+            'connector_fallback_voice' => $connectorFallbackVoice,
             'resolved_voice' => $resolvedVoice,
             'used_fallback' => ($originalVoice === '' && $fallbackVoice !== ''),
         ];
