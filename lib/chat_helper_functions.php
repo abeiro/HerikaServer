@@ -1828,7 +1828,12 @@ function returnLines($lines,$writeOutput=true)
                 $addonlistener="";
             }
             $originalRequest[3]="{$outBuffer["actor"]}: $responseForContext $addonlistener";
-            logEvent($originalRequest);
+            $dialogueEventPeople = chimBuildDialogueEventPeoplePipe(
+                chimGetCurrentTurnPeopleSnapshot(),
+                $outBuffer["actor"] ?? "",
+                $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"] ?? ""
+            );
+            logEvent($originalRequest, $dialogueEventPeople);
             
             // Log chat here, because  function return comes back out of sync.
             $originalRequest[0]="chat";
@@ -1853,7 +1858,7 @@ function returnLines($lines,$writeOutput=true)
                 'utterance_id' => $GLOBALS["SCRIPTLINE_UTTERANCE_ID"] ?? chimGenerateUtteranceId(),
                 'delivery_state' => 'emitted'
             ];
-            logEvent($originalRequest);
+            logEvent($originalRequest, $dialogueEventPeople);
         }
         
     }
@@ -2893,6 +2898,49 @@ function chimMergePeoplePipeLists()
         }
     }
     return normalizePeoplePipeList($names);
+}
+
+function chimBuildDirectivePeoplePipe($nearbyPeople, $speakerName, $instructionText)
+{
+    $speakerPeople = normalizePeoplePipeList([(string)$speakerName]);
+    $listenerPeople = "";
+    $listenerName = "";
+
+    if (preg_match(
+        '/\bThe dialogue listener must be\s+([^\r\n.]+)\.(?:\s|$)/iu',
+        (string)$instructionText,
+        $matches
+    )) {
+        $listenerName = html_entity_decode(
+            trim((string)($matches[1] ?? "")),
+            ENT_QUOTES | ENT_HTML5,
+            "UTF-8"
+        );
+    } elseif (preg_match(
+        '/\(must use ACTION\s+(?:JustTalk|Talk)\s+([^)]+)\)/iu',
+        (string)$instructionText,
+        $matches
+    )) {
+        $listenerName = html_entity_decode(
+            trim((string)($matches[1] ?? "")),
+            ENT_QUOTES | ENT_HTML5,
+            "UTF-8"
+        );
+    }
+
+    if ($listenerName !== "" && strcasecmp($listenerName, "everyone") !== 0) {
+        $listenerPeople = normalizePeoplePipeList([$listenerName]);
+    }
+
+    return chimMergePeoplePipeLists($nearbyPeople, $speakerPeople, $listenerPeople);
+}
+
+function chimBuildDialogueEventPeoplePipe($turnPeople, $speakerName, $listenerName)
+{
+    return chimMergePeoplePipeLists(
+        $turnPeople,
+        normalizePeoplePipeList([(string)$speakerName, (string)$listenerName])
+    );
 }
 
 function chimSetCurrentTurnPresentActorsSnapshot($actors)
