@@ -46,7 +46,6 @@ $gsSections = [
     'Prompt & Rechat' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
-        [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
         [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
     ],
@@ -56,6 +55,13 @@ $gsSections = [
         [ 'name' => 'RACIAL_OGHMA', 'type' => 'boolean' ],
         [ 'name' => 'LOCATION_OGHMA', 'type' => 'boolean' ],
         [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
+    ],
+    'Memory' => [
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@TXTAI_URL', 'type' => 'url' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
+        [ 'name' => 'PLAYER_WORST_MEMORY_GAME_DAYS', 'type' => 'integer', 'min' => 0, 'max' => 365, 'default' => 7, 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.' ],
     ],
     'Misc' => [
         [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
@@ -68,13 +74,6 @@ $gsSections = [
         [ 'name' => 'CHIM_AI_QUEST_PROGRESSION', 'type' => 'boolean' ],
         [ 'name' => 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT', 'type' => 'boolean' ],
     ],
-    'Memory' => [
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@TXTAI_URL', 'type' => 'url' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
-        [ 'name' => 'PLAYER_WORST_MEMORY_GAME_DAYS', 'type' => 'integer', 'min' => 0, 'max' => 365, 'default' => 7, 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.' ],
-    ],
     'Global Connectors' => [
         [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
@@ -86,6 +85,7 @@ $gsSections = [
         [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
     'Context' => [
+        [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
@@ -640,7 +640,8 @@ body .settings-tabs .settings-tab.is-active {
     gap: 10px;
     color: #e0e0e0;
     min-width: 0;
-    flex-wrap: wrap;
+    width: 100%;
+    flex-wrap: nowrap;
 }
 
 .provider-icon {
@@ -667,6 +668,14 @@ body .settings-tabs .settings-tab.is-active {
     gap: 10px;
     width: 100%;
     min-width: 0;
+}
+
+.filter-setting-card {
+    grid-template-columns: minmax(180px, 0.65fr) minmax(420px, 1.7fr) minmax(180px, 0.65fr);
+}
+
+.filter-setting-card .provider-body {
+    width: 100%;
 }
 
 .btn-filter-browse {
@@ -724,9 +733,10 @@ body .settings-tabs .settings-tab.is-active {
 }
 
 .provider-toggle {
-    margin-left: 10px;
+    margin-left: auto;
     display: flex;
     align-items: center;
+    flex: 0 0 auto;
 }
 
 .provider-toggle input[type="checkbox"] {
@@ -1382,7 +1392,7 @@ body .settings-tabs .settings-tab.is-active {
                                             $isReadonly = isset($schemaDefinition['readonly']) && $schemaDefinition['readonly'] === true;
                                             $readonlyAttr = $isReadonly ? 'readonly' : '';
                                             ?>
-                                            <div class="provider-card">
+                                            <div class="provider-card<?php echo isset($filterBrowseFieldConfigs[$fieldName]) ? ' filter-setting-card' : ''; ?>">
                                                 <div class="provider-head">
                                                     <div class="provider-title">
                                                         <div class="provider-icon"><?php echo icon_for_field($fieldName); ?></div>
@@ -1415,10 +1425,10 @@ body .settings-tabs .settings-tab.is-active {
                                                             <textarea name="<?php echo htmlspecialchars($fieldName); ?>" rows="4" <?php echo $readonlyAttr; ?>><?php echo htmlspecialchars(strval($current)); ?></textarea>
                                                         <?php endif; ?>
                                                     <?php endif; ?>
-                                                    <?php if (!empty($help)): ?>
-                                                        <p class="provider-help"><?php echo render_provider_help($fieldName, $help, $webRoot); ?></p>
-                                                    <?php endif; ?>
                                                 </div>
+                                                <?php if (!empty($help)): ?>
+                                                    <p class="provider-help"><?php echo render_provider_help($fieldName, $help, $webRoot); ?></p>
+                                                <?php endif; ?>
                                             </div>
                                         <?php endforeach; ?>
                                     </div>
@@ -1458,7 +1468,7 @@ body .settings-tabs .settings-tab.is-active {
                             $isReadonly = isset($schemaDefinition['readonly']) && $schemaDefinition['readonly'] === true;
                             $readonlyAttr = $isReadonly ? 'readonly' : '';
                             ?>
-                            <div class="provider-card">
+                            <div class="provider-card<?php echo isset($filterBrowseFieldConfigs[$fieldName]) ? ' filter-setting-card' : ''; ?>">
                                 <div class="provider-head">
                                     <div class="provider-title">
                                         <div class="provider-icon"><?php echo icon_for_field($fieldName); ?></div>
