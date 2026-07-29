@@ -71,7 +71,7 @@ function chimBglHistoryUtcDate(int $localts): string
 }
 
 try {
-    $limit = max(10, min(100, (int)($_GET['limit'] ?? 50)));
+    $limit = max(10, min(100, (int)($_GET['limit'] ?? 20)));
     $page = max(1, (int)($_GET['page'] ?? 1));
     $offset = ($page - 1) * $limit;
     $npc = trim((string)($_GET['npc'] ?? ''));

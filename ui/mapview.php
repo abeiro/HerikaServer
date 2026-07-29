@@ -2697,8 +2697,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 placeholder="Search Background Life activity"
                 aria-label="Search Background Life activity">
             <select class="bgl-history-control" id="bgl-history-limit" aria-label="Activities per page">
-                <option value="25">25 rows</option>
-                <option value="50" selected>50 rows</option>
+                <option value="20" selected>20 rows</option>
+                <option value="50">50 rows</option>
                 <option value="100">100 rows</option>
             </select>
             <div style="display: flex; gap: 8px;">
