@@ -261,15 +261,6 @@ if (isset($_GET['spawn_npc_status']) && isset($_GET['spawn_npc_message'])) {
 }
 
 $npcCreationOptions = chimBglNpcCreationOptions();
-$npcLocationOptions = array_map(static function (array $location): array {
-    return [
-        $location['formid'],
-        $location['name'],
-        $location['is_interior'],
-        $location['region'],
-        $location['hold'],
-    ];
-}, $npcCreationOptions['locations']);
 
 // Helper function to resolve NPC portrait path (same as npc_master.php)
 if (!function_exists('race_icon_web_path')) {
@@ -1529,9 +1520,64 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .bgl-create-form-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(180px, 1fr));
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
         gap: 14px;
         margin-top: 16px;
+    }
+
+    .bgl-create-field {
+        min-width: 0;
+    }
+
+    .bgl-create-field-wide {
+        grid-column: 1 / -1;
+    }
+
+    .bgl-create-field label {
+        display: block;
+        margin-bottom: 8px;
+        color: #f2c48f;
+        font-weight: 600;
+    }
+
+    .bgl-create-field input,
+    .bgl-create-field select,
+    .bgl-create-field textarea {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px 12px;
+        border: 1px solid #444;
+        border-radius: 8px;
+        background: #171717;
+        color: #f5f5f5;
+    }
+
+    .bgl-create-field textarea {
+        resize: vertical;
+    }
+
+    .bgl-create-advanced {
+        margin-top: 18px;
+        border: 1px solid #3b3b3b;
+        border-radius: 8px;
+        background: #1b1b1b;
+    }
+
+    .bgl-create-advanced summary {
+        padding: 12px 14px;
+        color: #f2c48f;
+        font-weight: 700;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .bgl-create-advanced[open] summary {
+        border-bottom: 1px solid #333;
+    }
+
+    .bgl-create-advanced .bgl-create-form-grid {
+        margin: 0;
+        padding: 14px;
     }
 
     body.bgl-modal-open {
@@ -2853,33 +2899,22 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         <form method="post" action="">
             <input type="hidden" name="action" value="create_background_npc">
             <div class="bgl-create-form-grid">
-                <div>
-                    <label for="npc_name" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Name</label>
-                    <input id="npc_name" name="npc_name" type="text" required value="<?php echo htmlspecialchars($spawnNpcFormData['name'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field">
+                    <label for="npc_name">Name</label>
+                    <input id="npc_name" name="npc_name" type="text" required value="<?php echo htmlspecialchars($spawnNpcFormData['name'] ?? ''); ?>">
                 </div>
-                <div>
-                    <label for="npc_gender" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Gender</label>
-                    <select id="npc_gender" name="npc_gender" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field">
+                    <label for="npc_gender">Gender</label>
+                    <select id="npc_gender" name="npc_gender" required>
                         <?php $npcGenderValue = (string) ($spawnNpcFormData['gender'] ?? 'male'); ?>
                         <?php foreach ($npcCreationOptions['genders'] as $npcGenderOption): ?>
                             <option value="<?php echo htmlspecialchars($npcGenderOption); ?>" <?php echo ($npcGenderValue === $npcGenderOption) ? 'selected' : ''; ?>><?php echo htmlspecialchars($npcGenderOption); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div>
-                    <label for="npc_class" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Class</label>
-                    <select id="npc_class" name="npc_class" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                        <?php
-                            $npcClassValue = (string) ($spawnNpcFormData['class'] ?? 'farmer');
-                            foreach ($npcCreationOptions['classes'] as $npcClassOption):
-                        ?>
-                            <option value="<?php echo htmlspecialchars($npcClassOption); ?>" <?php echo ($npcClassValue === $npcClassOption) ? 'selected' : ''; ?>><?php echo htmlspecialchars($npcClassOption); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div>
-                    <label for="npc_race" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Race</label>
-                    <select id="npc_race" name="npc_race" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field">
+                    <label for="npc_race">Race</label>
+                    <select id="npc_race" name="npc_race" required>
                         <?php
                             $npcRaceValue = (string) ($spawnNpcFormData['race'] ?? 'Nord');
                             foreach ($npcCreationOptions['races'] as $npcRaceOption):
@@ -2888,52 +2923,68 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div>
-                    <label for="npc_location" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Location</label>
-                    <input id="npc_location" name="npc_location" type="text" list="npc-location-options" required value="<?php echo htmlspecialchars($spawnNpcFormData['location'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                    <datalist id="npc-location-options">
-                        <?php foreach ($npcLocationOptions as $npcLocationOption): ?>
-                            <option value="<?php echo htmlspecialchars($npcLocationOption[0]); ?>" label="<?php echo htmlspecialchars($npcLocationOption[1] . ' (' . ($npcLocationOption[2] ? 'Interior' : 'Exterior') . ' ' . $npcLocationOption[3] . ', ' . $npcLocationOption[4] . ')'); ?>"></option>
+                <div class="bgl-create-field">
+                    <label for="npc_class">Class</label>
+                    <select id="npc_class" name="npc_class" required>
+                        <?php
+                            $npcClassValue = (string) ($spawnNpcFormData['class'] ?? 'farmer');
+                            foreach ($npcCreationOptions['classes'] as $npcClassOption):
+                        ?>
+                            <option value="<?php echo htmlspecialchars($npcClassOption); ?>" <?php echo ($npcClassValue === $npcClassOption) ? 'selected' : ''; ?>><?php echo htmlspecialchars($npcClassOption); ?></option>
                         <?php endforeach; ?>
-                    </datalist>
+                    </select>
                 </div>
-                <div>
-                    <label for="npc_disposition" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Disposition</label>
-                    <input id="npc_disposition" name="npc_disposition" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['disposition'] ?? 'friendly'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field bgl-create-field-wide">
+                    <label for="npc_location">Location</label>
+                    <select id="npc_location" name="npc_location" required>
+                        <?php $npcLocationValue = (string) ($spawnNpcFormData['location'] ?? ''); ?>
+                        <option value="">Select discovered location</option>
+                        <?php foreach ($npcCreationOptions['locations'] as $npcLocationOption): ?>
+                            <option value="<?php echo htmlspecialchars($npcLocationOption['formid']); ?>" <?php echo ($npcLocationValue === (string) $npcLocationOption['formid']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($npcLocationOption['label']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
-                <div>
-                    <label for="npc_starting_point" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Starting Point (FormID) (will use location if empty)</label>
-                    <input id="npc_starting_point" name="npc_starting_point" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['starting_point'] ?? '0x0002b0dd'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field bgl-create-field-wide">
+                    <label for="npc_background">Background</label>
+                    <textarea id="npc_background" name="npc_background" rows="3" required><?php echo htmlspecialchars($spawnNpcFormData['background'] ?? ''); ?></textarea>
                 </div>
-                <div>
-                    <label for="npc_inventory_gold" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Gold Qty (0x0000000F)</label>
-                    <input id="npc_inventory_gold" name="npc_inventory_gold" type="number" min="0" step="1" value="<?php echo htmlspecialchars($spawnNpcFormData['gold_qty'] ?? '100'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field">
+                    <label for="npc_speech_style">Speech Style</label>
+                    <input id="npc_speech_style" name="npc_speech_style" type="text" required value="<?php echo htmlspecialchars($spawnNpcFormData['speech_style'] ?? ''); ?>">
                 </div>
-                <div>
-                    <label for="npc_inventory_iron_ore" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Iron Ore Qty (0x00071cf3)</label>
-                    <input id="npc_inventory_iron_ore" name="npc_inventory_iron_ore" type="number" min="0" step="1" value="<?php echo htmlspecialchars($spawnNpcFormData['iron_ore_qty'] ?? '10'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field bgl-create-field-wide">
+                    <label for="npc_goal">Goals</label>
+                    <textarea id="npc_goal" name="npc_goal" rows="3" required><?php echo htmlspecialchars($spawnNpcFormData['goal'] ?? ''); ?></textarea>
                 </div>
             </div>
 
-            <div style="margin-top: 16px;">
-                <label for="npc_appearance" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Appearance</label>
-                <input id="npc_appearance" name="npc_appearance" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['appearance'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-            </div>
-
-            <div style="margin-top: 16px;">
-                <label for="npc_speech_style" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Speech Style</label>
-                <input id="npc_speech_style" name="npc_speech_style" type="text" required value="<?php echo htmlspecialchars($spawnNpcFormData['speech_style'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-            </div>
-
-            <div style="margin-top: 16px;">
-                <label for="npc_background" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Background</label>
-                <textarea id="npc_background" name="npc_background" rows="3" required style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($spawnNpcFormData['background'] ?? ''); ?></textarea>
-            </div>
-
-            <div style="margin-top: 16px;">
-                <label for="npc_goal" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Goals</label>
-                <textarea id="npc_goal" name="npc_goal" rows="12" required style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($spawnNpcFormData['goal'] ?? ''); ?></textarea>
-            </div>
+            <details class="bgl-create-advanced">
+                <summary>Advanced Options</summary>
+                <div class="bgl-create-form-grid">
+                    <div class="bgl-create-field bgl-create-field-wide">
+                        <label for="npc_appearance">Appearance</label>
+                        <input id="npc_appearance" name="npc_appearance" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['appearance'] ?? ''); ?>">
+                    </div>
+                    <div class="bgl-create-field">
+                        <label for="npc_disposition">Disposition</label>
+                        <input id="npc_disposition" name="npc_disposition" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['disposition'] ?? 'friendly'); ?>">
+                    </div>
+                    <div class="bgl-create-field">
+                        <label for="npc_starting_point">Starting Point FormID</label>
+                        <input id="npc_starting_point" name="npc_starting_point" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['starting_point'] ?? ''); ?>" placeholder="Uses location when empty">
+                    </div>
+                    <div class="bgl-create-field">
+                        <label for="npc_inventory_gold">Gold</label>
+                        <input id="npc_inventory_gold" name="npc_inventory_gold" type="number" min="0" step="1" value="<?php echo htmlspecialchars($spawnNpcFormData['gold_qty'] ?? '100'); ?>">
+                    </div>
+                    <div class="bgl-create-field">
+                        <label for="npc_inventory_iron_ore">Iron Ore</label>
+                        <input id="npc_inventory_iron_ore" name="npc_inventory_iron_ore" type="number" min="0" step="1" value="<?php echo htmlspecialchars($spawnNpcFormData['iron_ore_qty'] ?? '10'); ?>">
+                    </div>
+                </div>
+            </details>
 
             <div style="margin-top: 18px; display: flex; justify-content: flex-end;">
                 <button type="submit" style="padding: 10px 18px; border-radius: 8px; border: 1px solid rgb(242, 124, 17); background: rgb(242, 124, 17); color: #121212; font-weight: 700; cursor: pointer;">

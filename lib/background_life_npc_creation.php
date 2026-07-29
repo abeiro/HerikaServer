@@ -55,7 +55,18 @@ function chimBglNpcCreationOptions(): array
         'defaults' => chimBglNpcCreationDefaults(),
         'genders' => ['male', 'female'],
         'classes' => ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'forsworn'],
-        'races' => ['Nord', 'Imperial', 'Argonian', 'RedGuard', 'Orc', 'Breton'],
+        'races' => [
+            'Nord',
+            'Imperial',
+            'RedGuard',
+            'Breton',
+            'Altmer',
+            'Bosmer',
+            'Dunmer',
+            'Orc',
+            'Argonian',
+            'Khajiit',
+        ],
         'locations' => $locations,
     ];
 }
