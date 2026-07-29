@@ -1138,7 +1138,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-left: 4px solid rgb(242, 124, 17);
         border-radius: 8px;
         border: 1px solid #4a4a4a;
-        max-height: calc(100vh - 450px);
+        max-height: calc(100vh - 300px);
         overflow-y: auto;
         overflow-x: hidden;
     }
@@ -1204,7 +1204,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         width: 100%;
         box-sizing: border-box;
         position: relative;
-        
+        cursor: pointer;
+        transition: border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .marker-item:hover,
+    .marker-item:focus-visible {
+        background-color: #202020;
+        border-color: rgb(242, 124, 17);
+        outline: none;
     }
 
     .marker-item::before {
@@ -1242,6 +1250,26 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         font-family: 'MagicCards', serif;
         display: inline-block;
         vertical-align: text-top;
+    }
+
+    .marker-npc-events,
+    .marker-map-focus {
+        display: inline;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+    }
+
+    .marker-npc-events:hover,
+    .marker-npc-events:focus-visible,
+    .marker-map-focus:hover,
+    .marker-map-focus:focus-visible {
+        color: #fff;
+        outline: none;
+        text-decoration: underline;
     }
 
     .marker-item-coords {
@@ -1506,6 +1534,63 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     .bgl-modal-close:hover {
         border-color: rgb(242, 124, 17);
         color: rgb(242, 124, 17);
+    }
+
+    .bgl-recent-events-dialog {
+        width: min(820px, 100%);
+    }
+
+    .bgl-recent-events-status {
+        min-height: 20px;
+        margin-bottom: 12px;
+        color: #aaa;
+        font-size: 13px;
+    }
+
+    .bgl-recent-events-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .bgl-recent-event {
+        padding: 13px 15px;
+        border: 1px solid #444;
+        border-left: 3px solid rgb(242, 124, 17);
+        border-radius: 6px;
+        background: #1a1a1a;
+    }
+
+    .bgl-recent-event-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 7px;
+        color: #aaa;
+        font-size: 12px;
+    }
+
+    .bgl-recent-event-category {
+        padding: 2px 7px;
+        border: 1px solid #5a5a5a;
+        border-radius: 999px;
+        color: #ddd;
+        text-transform: capitalize;
+    }
+
+    .bgl-recent-event-text {
+        color: #eee;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+    }
+
+    .bgl-recent-events-empty {
+        padding: 24px;
+        border: 1px dashed #4a4a4a;
+        border-radius: 6px;
+        color: #aaa;
+        text-align: center;
     }
 
     .bgl-create-npc-notice {
@@ -2264,11 +2349,17 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     
                     <div class="marker-list">
                         <?php foreach ($translatedMarkers as $marker) {?>
-                            <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>);background-position-y: top;" >
+                            <div
+                                id="dtl_<?php echo $marker['id'] ?>"
+                                class="marker-item"
+                                data-npc-name="<?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                title="View recent events for <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                style="border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>);background-position-y: top;">
                                 <h4>
                                     <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
                                     <!--<a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?> &nbsp; ↗️</a> -->
-                                    <span onclick="pulseAnimation('mkr_<?php echo $marker['id'] ?>')" style="cursor:pointer"><?php echo $marker['name']; ?> &nbsp; ↗️</span>
+                                    <span class="marker-npc-events" data-npc-events role="button" tabindex="0"><?php echo $marker['name']; ?></span>
+                                    <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="event.stopPropagation(); pulseAnimation('mkr_<?php echo $marker['id'] ?>')" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map">&nbsp;↗️</span>
                                 </h4>
                                 <div class="marker-item-coords">
                                     <ul>
@@ -2298,7 +2389,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                                data-setting="bg_life_commands" 
                                                <?php echo $marker['bg_life_commands'] ? 'checked' : ''; ?>
                                                onchange="toggleBgLifeSetting(this)">
-                                        <span class="toggle-text">🎮 Auto Actions</span>
+                                        <span class="toggle-text">🎮 Actions</span>
                                     </label>
                                     <label class="toggle-label-inline">
                                         <input type="checkbox" 
@@ -2307,7 +2398,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                                data-setting="bg_life_letters" 
                                                <?php echo $marker['bg_life_letters'] ? 'checked' : ''; ?>
                                                onchange="toggleBgLifeSetting(this)">
-                                        <span class="toggle-text">✉️ Send Letters</span>
+                                        <span class="toggle-text">✉️ Letters</span>
                                     </label>
                                     <label class="toggle-label-inline">
                                         <input type="checkbox" 
@@ -2316,7 +2407,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                                data-setting="gps_track" 
                                                <?php echo $marker['gps_track'] ? 'checked' : ''; ?>
                                                onchange="toggleBgLifeSetting(this)">
-                                        <span class="toggle-text">📍 Hourly Tracking</span>
+                                        <span class="toggle-text">📍 Tracking</span>
                                     </label>
                                 </div>
                             </div>
@@ -2581,6 +2672,114 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             }
         }
 
+        let npcRecentEventsController = null;
+
+        function renderNpcRecentEvents(entries) {
+            const list = document.getElementById('npc-recent-events-list');
+            list.replaceChildren();
+
+            if (!entries || entries.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'bgl-recent-events-empty';
+                empty.textContent = 'No recent Background Life events have been recorded for this NPC.';
+                list.appendChild(empty);
+                return;
+            }
+
+            entries.forEach(function (entry) {
+                const eventItem = document.createElement('article');
+                eventItem.className = 'bgl-recent-event';
+
+                const meta = document.createElement('div');
+                meta.className = 'bgl-recent-event-meta';
+
+                const time = document.createElement('span');
+                time.textContent = entry.tamrielic_time || 'Unknown time';
+                meta.appendChild(time);
+
+                const category = document.createElement('span');
+                category.className = 'bgl-recent-event-category';
+                category.textContent = entry.category || 'activity';
+                meta.appendChild(category);
+
+                const activity = document.createElement('div');
+                activity.className = 'bgl-recent-event-text';
+                activity.textContent = entry.activity || 'No details recorded';
+
+                eventItem.appendChild(meta);
+                eventItem.appendChild(activity);
+                list.appendChild(eventItem);
+            });
+        }
+
+        async function openNpcRecentEvents(npcName) {
+            const modal = document.getElementById('npc-recent-events');
+            const title = document.getElementById('npc-recent-events-title');
+            const status = document.getElementById('npc-recent-events-status');
+            const list = document.getElementById('npc-recent-events-list');
+            if (!modal || !title || !status || !list) {
+                return;
+            }
+
+            title.textContent = npcName + ' Recent Events';
+            status.textContent = 'Loading recent events...';
+            status.style.color = '';
+            list.replaceChildren();
+            openBglModal('npc-recent-events');
+
+            if (npcRecentEventsController) {
+                npcRecentEventsController.abort();
+            }
+            npcRecentEventsController = new AbortController();
+
+            const params = new URLSearchParams({
+                npc: npcName,
+                page: '1',
+                limit: '20'
+            });
+
+            try {
+                const response = await fetch(modal.dataset.apiUrl + '?' + params.toString(), {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    signal: npcRecentEventsController.signal
+                });
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+
+                const payload = await response.json();
+                if (!payload.success) {
+                    throw new Error(payload.error || 'Unable to load recent events');
+                }
+
+                renderNpcRecentEvents(payload.entries);
+                const totalRecords = payload.pagination ? payload.pagination.total_records : payload.entries.length;
+                if (totalRecords > payload.entries.length) {
+                    status.textContent = 'Showing the latest ' + payload.entries.length + ' of ' + totalRecords + ' recorded events.';
+                } else {
+                    status.textContent = totalRecords === 1
+                        ? '1 recorded event'
+                        : totalRecords + ' recorded events, newest first';
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    return;
+                }
+                renderNpcRecentEvents([]);
+                status.textContent = 'Recent events could not be loaded.';
+                status.style.color = '#e88989';
+            }
+        }
+
+        function closeNpcRecentEvents() {
+            if (npcRecentEventsController) {
+                npcRecentEventsController.abort();
+                npcRecentEventsController = null;
+            }
+            closeBglModal('npc-recent-events');
+        }
+
         function openCreateNpcModal() {
             openBglModal('create-background-npc', 'npc_name');
         }
@@ -2607,12 +2806,47 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             if (rumorModal && rumorModal.dataset.autoOpen === '1') {
                 openCreateRumorModal();
             }
+
+            document.querySelectorAll('.marker-item[data-npc-name]').forEach(function (card) {
+                card.addEventListener('click', function (event) {
+                    if (event.target.closest('button, a, input, label, [data-map-focus]')) {
+                        return;
+                    }
+                    openNpcRecentEvents(card.dataset.npcName);
+                });
+            });
+
+            document.querySelectorAll('[data-npc-events]').forEach(function (button) {
+                button.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    const card = button.closest('.marker-item[data-npc-name]');
+                    if (card) {
+                        openNpcRecentEvents(card.dataset.npcName);
+                    }
+                });
+                button.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        button.click();
+                    }
+                });
+            });
+
+            document.querySelectorAll('[data-map-focus]').forEach(function (control) {
+                control.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        control.click();
+                    }
+                });
+            });
         });
 
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 closeCreateNpcModal();
                 closeCreateRumorModal();
+                closeNpcRecentEvents();
             }
         });
 
@@ -2890,6 +3124,22 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     </div>
     </section>
     <script src="<?php echo htmlspecialchars($webRoot); ?>/ui/js/background_life_history.js"></script>
+
+    <div
+        class="bgl-modal"
+        id="npc-recent-events"
+        data-api-url="<?php echo htmlspecialchars($webRoot); ?>/ui/api/background_life_history.php"
+        aria-hidden="true"
+        onclick="if (event.target === this) closeNpcRecentEvents()">
+        <div class="bgl-modal-dialog bgl-recent-events-dialog" role="dialog" aria-modal="true" aria-labelledby="npc-recent-events-title">
+            <div class="bgl-modal-header">
+                <h3 id="npc-recent-events-title">Recent Events</h3>
+                <button type="button" class="bgl-modal-close" onclick="closeNpcRecentEvents()" aria-label="Close recent events modal">&times;</button>
+            </div>
+            <div class="bgl-recent-events-status" id="npc-recent-events-status" aria-live="polite"></div>
+            <div class="bgl-recent-events-list" id="npc-recent-events-list"></div>
+        </div>
+    </div>
 
     <div
         class="bgl-modal"
