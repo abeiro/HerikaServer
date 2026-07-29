@@ -995,28 +995,55 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .map-section {
-        flex: 0 0 75%;
+        flex: 0 0 35%;
+        min-width: 0;
+    }
+
+    .map-viewport {
+        position: relative;
+        width: 100%;
+        height: clamp(520px, 72vh, 820px);
+        overflow: hidden;
+        background: #111;
+        border: 3px solid rgb(242, 124, 17);
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(242, 124, 17, 0.3);
+        box-sizing: border-box;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+    }
+
+    .map-viewport.is-dragging {
+        cursor: grabbing;
     }
 
     .sidebar-section {
-        flex: 0 0 calc(25% - 20px);
+        flex: 0 0 20%;
         display: flex;
         flex-direction: column;
         gap: 10px;
     }
 
+    .npc-list-section {
+        flex: 0 0 calc(45% - 40px);
+        min-width: 0;
+    }
+
     .map-container {
         position: relative;
-        display: inline-block;
+        display: block;
         background: #1a1a1a;
         padding: 15px;
-        border: 3px solid rgb(242, 124, 17);
-        box-shadow: 0 0 20px rgba(242, 124, 17, 0.3);
-        margin: 0 auto;
+        border: 0;
+        box-shadow: none;
+        margin: 0;
         width: 100%;
         box-sizing: border-box;
-        border-radius: 8px;
+        border-radius: 0;
         overflow: visible;
+        transform-origin: 0 0;
+        will-change: transform;
     }
 
     .map-container img {
@@ -1025,13 +1052,65 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         height: auto;
         border: 1px solid #4a4a4a;
         border-radius: 4px;
+        pointer-events: none;
+        -webkit-user-drag: none;
+    }
+
+    .map-navigation-controls {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        z-index: 500;
+        display: grid;
+        width: 42px;
+        overflow: hidden;
+        border: 1px solid rgba(242, 124, 17, 0.7);
+        border-radius: 7px;
+        background: rgba(24, 24, 24, 0.94);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    }
+
+    .map-navigation-controls button,
+    .map-navigation-controls output {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        min-height: 38px;
+        box-sizing: border-box;
+        border: 0;
+        border-bottom: 1px solid #454545;
+        background: transparent;
+        color: #f2f2f2;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .map-navigation-controls button {
+        cursor: pointer;
+    }
+
+    .map-navigation-controls button:hover,
+    .map-navigation-controls button:focus-visible {
+        background: rgba(242, 124, 17, 0.22);
+        color: #ffd2a8;
+        outline: none;
+    }
+
+    .map-navigation-controls output {
+        min-height: 30px;
+        color: #bbb;
+        font-size: 10px;
+    }
+
+    .map-navigation-controls > :last-child {
+        border-bottom: 0;
     }
 
     .marker {
         position: absolute;
         transform: translate(-50%, -50%);
         cursor: pointer;
-        z-index:10;
+        z-index: 40;
     }
 
     .marker-dot {
@@ -1104,7 +1183,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .marker:hover {
-        z-index: 200;
+        z-index: 300;
     }
 
     .marker:hover .marker-label {
@@ -1138,7 +1217,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-left: 4px solid rgb(242, 124, 17);
         border-radius: 8px;
         border: 1px solid #4a4a4a;
-        max-height: calc(100vh - 450px);
+        max-height: calc(100vh - 300px);
         overflow-y: auto;
         overflow-x: hidden;
     }
@@ -1187,37 +1266,35 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .marker-list {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        align-items: start;
     }
 
     .marker-item {
         background-color: #1a1a1a;
-        padding: 15px;
+        padding: 10px;
         border-left: 4px solid;
         border-radius: 8px;
-        background-size: 100px;
-        background-repeat: no-repeat;
-        background-position: right 10px center;
         border: 1px solid #4a4a4a;
         width: 100%;
+        min-width: 0;
         box-sizing: border-box;
         position: relative;
-        
+        cursor: pointer;
+        transition: border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .marker-item:hover,
+    .marker-item:focus-visible {
+        background-color: #202020;
+        border-color: rgb(242, 124, 17);
+        outline: none;
     }
 
     .marker-item::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(to right, #1a1a1a 60%, transparent 100%);
-        border-radius: 8px;
-        pointer-events: none;
-        z-index: 1;
+        display: none;
     }
 
     .marker-item > * {
@@ -1227,39 +1304,123 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .marker-item-color {
         display: inline-block;
-        width: 20px;
-        height: 20px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
         vertical-align: middle;
-        margin-right: 10px;
-        border: 2px solid white;
+        margin-right: 0;
+        border: 1px solid white;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        flex: 0 0 auto;
+    }
+
+    .marker-card-identity {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .marker-card-portrait {
+        width: 44px;
+        height: 44px;
+        border: 1px solid #555;
+        border-radius: 6px;
+        object-fit: cover;
+        background: #111;
     }
 
     .marker-item h4 {
-        margin: 8px 0;
+        margin: 0;
         color: rgb(242, 124, 17);
         font-family: 'MagicCards', serif;
-        display: inline-block;
-        vertical-align: text-top;
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        min-width: 0;
+        font-size: 13px;
+        line-height: 1.2;
     }
 
-    .marker-item-coords {
-        font-size: 12px;
-        color: #bbb;
-        margin: 5px 0;
+    .marker-npc-events,
+    .marker-map-focus {
+        display: block;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
     }
 
-    .marker-item-coords ul {
-        padding-left: 15px;
+    .marker-npc-events {
+        flex: 1 1 auto;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
     }
 
-    .marker-item-coords li {
-        margin: 3px 0;
+    .marker-map-focus {
+        margin-left: auto;
+        flex: 0 0 auto;
+        font-size: 16px;
+        line-height: 1;
+        transform-origin: center;
+        transition: color 0.15s ease, transform 0.15s ease;
+    }
+
+    .marker-npc-events:hover,
+    .marker-npc-events:focus-visible {
+        color: #fff;
+        outline: none;
+        text-decoration: underline;
+    }
+
+    .marker-map-focus:hover,
+    .marker-map-focus:focus-visible {
+        color: #fff;
+        outline: none;
+        text-decoration: none;
+        transform: scale(1.1);
     }
 
     #mapImage {
         opacity: 1;
+    }
+
+    .marker-card-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+        gap: 4px;
+    }
+
+    .marker-card-actions .marker-action-btn,
+    .marker-card-actions .marker-action-btn-trans {
+        width: 100%;
+        min-width: 0;
+        padding: 6px 4px;
+        font-size: 10px;
+    }
+
+    .marker-card-toggles {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+        margin-top: 6px;
+    }
+
+    .marker-card-toggles .toggle-label-inline {
+        justify-content: center;
+        gap: 3px;
+        min-width: 0;
+        padding: 4px;
+        font-size: 14px;
+    }
+
+    .marker-card-toggles .toggle-text {
+        line-height: 1;
     }
 
     .marker-item a {
@@ -1406,7 +1567,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         justify-content: center;
         min-height: 42px;
         padding: 8px 12px;
-        color: #ddd;
+        color: #fff !important;
         background: #2d2d2d;
         border: 1px solid #474747;
         border-radius: 6px;
@@ -1691,41 +1852,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         margin-top: 10px;
     }
 
-    .map-width-controls {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        margin-bottom: 15px;
-        padding: 12px;
-        background: #2a2a2a;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
-    }
-
-    .map-width-controls label {
-        color: rgb(242, 124, 17);
-        font-weight: bold;
-        font-size: 12px;
-        white-space: nowrap;
-    }
-
-    .map-width-slider {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .map-width-slider input[type="range"] {
-        flex: 1;
-        height: 6px;
-        border-radius: 3px;
-        background: #3a3a3a;
-        outline: none;
-        -webkit-appearance: none;
-        appearance: none;
-    }
-
     .bgl-settings-card {
         display: grid;
         gap: 10px;
@@ -1801,47 +1927,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-color: rgba(255, 80, 80, 0.45);
         background: rgba(255, 80, 80, 0.12);
         color: #ffb8b8;
-    }
-
-    .map-width-slider input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: rgb(242, 124, 17);
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(242, 124, 17, 0.5);
-        transition: all 0.2s ease;
-    }
-
-    .map-width-slider input[type="range"]::-webkit-slider-thumb:hover {
-        box-shadow: 0 0 8px rgba(242, 124, 17, 0.8);
-        transform: scale(1.2);
-    }
-
-    .map-width-slider input[type="range"]::-moz-range-thumb {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: rgb(242, 124, 17);
-        cursor: pointer;
-        border: none;
-        box-shadow: 0 2px 4px rgba(242, 124, 17, 0.5);
-        transition: all 0.2s ease;
-    }
-
-    .map-width-slider input[type="range"]::-moz-range-thumb:hover {
-        box-shadow: 0 0 8px rgba(242, 124, 17, 0.8);
-        transform: scale(1.2);
-    }
-
-    .map-width-value {
-        color: #ddd;
-        font-weight: bold;
-        font-size: 12px;
-        min-width: 35px;
-        text-align: right;
     }
 
     img.thumb {
@@ -1959,7 +2044,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .location-marker:hover {
-        z-index: 250;
+        z-index: 20;
     }
 
     .location-marker:hover .location-marker-label {
@@ -2023,6 +2108,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
         .sidebar-section {
             flex: 0 0 100%;
+            width: 100%;
+        }
+
+        .npc-list-section {
+            flex: 0 0 100%;
+            width: 100%;
         }
 
         .npc-list-container {
@@ -2042,6 +2133,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
         .npc-list-container {
             max-height: 400px;
+        }
+
+        .map-viewport {
+            height: 62vh;
+            min-height: 420px;
         }
     }
 
@@ -2096,8 +2192,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     <div class="container">
         <div class="content-wrapper">
             <div class="map-section">
-               
-                <div class="map-container" >
+                <div
+                    class="map-viewport"
+                    id="bglMapViewport"
+                    tabindex="0"
+                    aria-label="Interactive Skyrim map. Drag to pan and use the mouse wheel or controls to zoom.">
+                <div class="map-container" id="bglMapCanvas">
                     <img src="<?php echo $mapImageUrl; ?>" alt="Skyrim Map" id="mapImage">
 
             <?php
@@ -2109,9 +2209,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     // Apply grid offset
                     $offsetX = $marker['offset_x'];
                     $offsetY = $marker['offset_y'];
+                    $markerName = htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8');
 
                     echo '<div class="marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%; transform: translate(calc(-50% + ' . $offsetX . 'px), calc(-50% + ' . $offsetY . 'px));">';
-                    echo '<div class="marker-dot" id="mkr_' . $marker['id'] . '" style="width: ' . ($marker['size'] * 2) . 'px; height: ' . ($marker['size'] * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.8;">';
+                    echo '<div class="marker-dot" id="mkr_' . $marker['id'] . '" data-npc-name="' . $markerName . '" role="button" tabindex="0" title="View recent events for ' . $markerName . '" aria-label="View recent events for ' . $markerName . '" style="width: ' . ($marker['size'] * 2) . 'px; height: ' . ($marker['size'] * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.8;">';
                     echo '</div>';
                     echo '<div class="marker-label">' . PHP_EOL;
                     echo "<a style='color:white;text-decoration:none' href='#dtl_{$marker["id"]}'>{$marker["name"]} &nbsp; ↗️</a></br>";
@@ -2174,6 +2275,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 }
             ?>
                 </div>
+                <div class="map-navigation-controls" role="group" aria-label="Map controls">
+                    <button type="button" data-map-zoom-in aria-label="Zoom in" title="Zoom in">+</button>
+                    <output id="bglMapZoomValue" aria-live="polite">100%</output>
+                    <button type="button" data-map-zoom-out aria-label="Zoom out" title="Zoom out">&minus;</button>
+                    <button type="button" data-map-reset aria-label="Fit Skyrim in view" title="Fit Skyrim in view">&#8962;</button>
+                </div>
+                </div>
             </div>
 
             <div class="sidebar-section">
@@ -2220,13 +2328,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     </div>
                     <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
                 </div>
-                <div class="map-width-controls">
-                    <label>Map Width:</label>
-                    <div class="map-width-slider">
-                        <input type="range" id="mapWidthSlider" min="30" max="100" value="100" onchange="updateMapWidthFromSlider()" oninput="updateMapWidthFromSlider()">
-                        <span class="map-width-value"><span id="widthValue">100</span>%</span>
-                    </div>
-                </div>
                 <form id="background-life-settings" class="bgl-settings-card" method="post">
                     <input type="hidden" name="action" value="save_bgl_settings">
                     <h3>Background Life Settings</h3>
@@ -2242,81 +2343,78 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     <div class="bgl-settings-help">Controls how many in-game hours pass before eligible Background Life NPCs automatically run their next update.</div>
                     <button type="submit" class="bgl-settings-save">Save</button>
                 </form>
+                <div class="bgl-settings-card">
+                    <h3>📍 NPC Markers</h3>
+                    <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
+                        <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?><br/>
+                        <strong>Current Ingame Date:</strong> <?php echo $currentDate?><br/>
+                        <em style="color: #ffa500;">For traveling to work you must click "Send All Locations" in the CHIM MCM under Tools to add them to Background Life<br/></em>
+                    </div>
+                    <label class="toggle-label-inline" style="margin-top:8px;" title="When enabled, shows all NPCs that have tracked coordinates, regardless of Background Life status">
+                        <input type="checkbox" class="toggle-checkbox" id="showAllCoordsChk"
+                            <?php echo $showAllCoords ? 'checked' : ''; ?>
+                            onchange="toggleShowAllCoords(this.checked)">
+                        <span class="toggle-text">🗺️ Show all NPCs with coords</span>
+                    </label>
+                    <button onclick="updateAllCoords()" class="update-all-coords-btn">📍 Update All NPC Coords</button>
+                </div>
                 <div class="bgl-action-toolbar">
                     <button type="button" class="chim-btn-primary bgl-action-button" onclick="openCreateNpcModal()">Create NPC</button>
                 </div>
-                <div class="npc-list-header">
-                        <h3>📍 NPC Markers</h3>
-                        <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
-                            <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?><br/>
-                            <strong>Current Ingame Date:</strong> <?php echo $currentDate?><br/>
-                            <em style="color: #ffa500;">For traveling to work you must click "Send All Locations" in the CHIM MCM under Tools to add them to Background Life<br/></em>
-                        </div>
-                        <label class="toggle-label-inline" style="margin-top:8px;" title="When enabled, shows all NPCs that have tracked coordinates, regardless of Background Life status">
-                            <input type="checkbox" class="toggle-checkbox" id="showAllCoordsChk"
-                                <?php echo $showAllCoords ? 'checked' : ''; ?>
-                                onchange="toggleShowAllCoords(this.checked)">
-                            <span class="toggle-text">🗺️ Show all NPCs with coords</span>
-                        </label>
-                        <button onclick="updateAllCoords()" class="update-all-coords-btn">📍 Update All NPC Coords</button>
-                </div>
+            </div>
+            <div class="npc-list-section">
                 <div class="npc-list-container">
-                    
                     <div class="marker-list">
                         <?php foreach ($translatedMarkers as $marker) {?>
-                            <div id="dtl_<?php echo $marker['id'] ?>" class="marker-item" style="border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>);background-position-y: top;" >
-                                <h4>
-                                    <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
-                                    <!--<a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?> &nbsp; ↗️</a> -->
-                                    <span onclick="pulseAnimation('mkr_<?php echo $marker['id'] ?>')" style="cursor:pointer"><?php echo $marker['name']; ?> &nbsp; ↗️</span>
-                                </h4>
-                                <div class="marker-item-coords">
-                                    <ul>
-                                    <li><strong>In-game:</strong> x=<?php echo $marker['ingame_x']; ?>, y=<?php echo $marker['ingame_y']; ?>, z=<?php echo $marker['ingame_z']; ?></li>
-                                    <li><strong>Map:</strong> (<?php echo $marker['x']; ?>,<?php echo $marker['y']; ?>)</li>
-                                    <li><strong>RefId:</strong> (<?php echo $marker['refid']; ?>)</li>
-                                    <li><strong>Last Position Timestamp:</strong> (<?php echo $marker['last_pos_ts']; ?>)</li>
-                                    <li><strong>Last Reported:</strong>
-                                        <span title="<?php echo htmlentities($marker['last_letter']); ?>">
-                                            (<?php echo $marker['last_report']; ?>)
-                                            <?php if (isset($marker['last_letter'])) echo "<span style='cursor:help'>📜</span>";?>
-                                    </span>
-                                    </li>
-                                    </ul>
+                            <div
+                                id="dtl_<?php echo $marker['id'] ?>"
+                                class="marker-item"
+                                data-npc-name="<?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                title="View recent events for <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                style="border-left-color:<?php echo $marker['color']; ?>;">
+                                <div class="marker-card-identity">
+                                    <img class="marker-card-portrait" src="<?php echo htmlspecialchars($marker['figure'], ENT_QUOTES, 'UTF-8'); ?>" alt="" loading="lazy">
+                                    <h4>
+                                        <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
+                                        <span class="marker-npc-events" data-npc-events role="button" tabindex="0"><?php echo $marker['name']; ?></span>
+                                        <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="event.stopPropagation(); pulseAnimation('mkr_<?php echo $marker['id'] ?>')" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map" title="Show on map">🗺️</span>
+                                    </h4>
                                 </div>
-                                <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
-                                    <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">🚶‍➡️Trigger Action</button>
-                                    <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">✉️ Request Letter</button>
+                                <div class="marker-card-actions">
+                                    <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Request a Background Life action from <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>">Action</button>
+                                    <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Request a letter from <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>" style="background: #4488ff;">Letter</button>
                                     <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" style="border: 2px solid #00ff00; background: #44ff44;">📍</button>
-                                    <button onclick="viewDiary('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #8844ff;" title="View letters & inner thoughts">✉️💭 View</button>
                                 </div>
-                                <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
-                                    <label class="toggle-label-inline">
+                                <div class="marker-card-toggles">
+                                    <label class="toggle-label-inline" title="Toggle automatic actions">
                                         <input type="checkbox" 
                                                class="toggle-checkbox" 
+                                               aria-label="Automatic actions"
                                                data-npc-id="<?php echo $marker['id']; ?>" 
                                                data-setting="bg_life_commands" 
                                                <?php echo $marker['bg_life_commands'] ? 'checked' : ''; ?>
                                                onchange="toggleBgLifeSetting(this)">
-                                        <span class="toggle-text">🎮 Auto Actions</span>
+                                        <span class="toggle-text">🎮</span>
                                     </label>
-                                    <label class="toggle-label-inline">
+                                    <label class="toggle-label-inline" title="Toggle automatic letters">
                                         <input type="checkbox" 
                                                class="toggle-checkbox" 
+                                               aria-label="Automatic letters"
                                                data-npc-id="<?php echo $marker['id']; ?>" 
                                                data-setting="bg_life_letters" 
                                                <?php echo $marker['bg_life_letters'] ? 'checked' : ''; ?>
                                                onchange="toggleBgLifeSetting(this)">
-                                        <span class="toggle-text">✉️ Send Letters</span>
+                                        <span class="toggle-text">✉️</span>
                                     </label>
-                                    <label class="toggle-label-inline">
+                                    <label class="toggle-label-inline" title="Toggle hourly tracking">
                                         <input type="checkbox" 
                                                class="toggle-checkbox" 
+                                               aria-label="Hourly tracking"
                                                data-npc-id="<?php echo $marker['id']; ?>" 
                                                data-setting="gps_track" 
                                                <?php echo $marker['gps_track'] ? 'checked' : ''; ?>
                                                onchange="toggleBgLifeSetting(this)">
-                                        <span class="toggle-text">📍 Hourly Tracking</span>
+                                        <span class="toggle-text">📍</span>
                                     </label>
                                 </div>
                             </div>
@@ -2331,7 +2429,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     </section>
     <script>
         // NPC Diary Data - embedded directly in page
-        const npcDiaryData = <?php echo json_encode(array_combine(
+        window.npcDiaryData = <?php echo json_encode(array_combine(
             array_column($translatedMarkers, 'name'),
             array_map(function($m) {
                 return [
@@ -2356,43 +2454,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             }
             window.location.href = url.toString();
         }
-
-        function updateMapWidthFromSlider() {
-            const slider = document.getElementById('mapWidthSlider');
-            const widthPercent = slider.value + '%';
-            const mapContainer = document.querySelector('.map-container');
-            mapContainer.style.width = widthPercent;
-            
-            // Update the displayed value
-            document.getElementById('widthValue').textContent = slider.value;
-            
-            // Save preference to localStorage
-            localStorage.setItem('mapViewWidth', widthPercent);
-        }
-
-        function setMapWidth(width) {
-            const mapContainer = document.querySelector('.map-container');
-            mapContainer.style.width = width;
-            
-            // Extract numeric value from width (e.g., "100%" -> 100)
-            const numericValue = parseInt(width);
-            const slider = document.getElementById('mapWidthSlider');
-            if (slider) {
-                slider.value = numericValue;
-                document.getElementById('widthValue').textContent = numericValue;
-            }
-            
-            // Save preference to localStorage
-            localStorage.setItem('mapViewWidth', width);
-        }
-
-        // Restore saved width preference on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedWidth = localStorage.getItem('mapViewWidth');
-            if (savedWidth) {
-                setMapWidth(savedWidth);
-            }
-        });
 
         function requestAction(npcName) {
             const formData = new FormData();
@@ -2607,6 +2668,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             if (rumorModal && rumorModal.dataset.autoOpen === '1') {
                 openCreateRumorModal();
             }
+
+            document.querySelectorAll('[data-map-focus]').forEach(function (control) {
+                control.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        control.click();
+                    }
+                });
+            });
         });
 
         document.addEventListener('keydown', function (event) {
@@ -2643,6 +2713,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     var processingMessage;
         function pulseAnimation(id) {
             const el = document.getElementById(id);
+            if (!el) {
+                return;
+            }
+
+            if (typeof window.focusBglMapMarker === 'function') {
+                window.focusBglMapMarker(el);
+            }
 
             el.classList.add("pulsing");
 
@@ -2651,62 +2728,34 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             }, 5000); // 3 seconds
         }
 
-        // Letters & Thoughts Modal Functions
-        let currentDiaryTab = 'letters';
-        
-        function viewDiary(npcName) {
-            const modal = document.getElementById('diaryModal');
-            const modalContent = document.getElementById('diaryModalContent');
-            const modalTitle = document.getElementById('diaryModalTitle');
-            
-            // Show modal
-            modal.style.display = 'block';
-            modalTitle.textContent = npcName + "'s Letters & Thoughts";
-            
-            // Get data from embedded npcDiaryData
-            const data = npcDiaryData[npcName];
-            
-            if (data) {
-                renderDiaryContent(data);
-            } else {
-                modalContent.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">💭</p><p>No data found for this NPC</p></div>';
-            }
-        }
-
+        // Render written history into the dedicated letters and thoughts panels.
         function renderDiaryContent(data) {
-            const modalContent = document.getElementById('diaryModalContent');
-            
-            let html = '';
-            
-            // Tab buttons
-            html += '<div style="display: flex; border-bottom: 2px solid #3a3a3a; margin-bottom: 20px;">';
-            html += '<button id="lettersTab" onclick="switchDiaryTab(\'letters\')" style="flex: 1; padding: 12px; background: ' + (currentDiaryTab === 'letters' ? '#8844ff' : '#2a2a2a') + '; border: none; color: white; cursor: pointer; font-size: 1em; transition: background 0.3s;">✉️ Letters (' + data.letter_count + ')</button>';
-            html += '<button id="thoughtsTab" onclick="switchDiaryTab(\'thoughts\')" style="flex: 1; padding: 12px; background: ' + (currentDiaryTab === 'thoughts' ? '#8844ff' : '#2a2a2a') + '; border: none; color: white; cursor: pointer; font-size: 1em; transition: background 0.3s;">💭 Inner Thoughts (' + data.thought_count + ')</button>';
-            html += '</div>';
-            
-            // Letters content
-            html += '<div id="lettersContent" style="display: ' + (currentDiaryTab === 'letters' ? 'block' : 'none') + '; max-height: 55vh; overflow-y: auto;">';
+            const lettersContent = document.getElementById('npc-letter-history-content');
+            const thoughtsContent = document.getElementById('npc-thought-history-content');
+            if (!lettersContent || !thoughtsContent) {
+                return;
+            }
+
+            let lettersHtml = '';
             if (data.letters && data.letters.length > 0) {
                 data.letters.forEach((entry) => {
-                    html += renderEntry(entry, '#4488ff');
+                    lettersHtml += renderEntry(entry, '#4488ff');
                 });
             } else {
-                html += '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">✉️</p><p>No letters found</p></div>';
+                lettersHtml = '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">✉️</p><p>No letters found</p></div>';
             }
-            html += '</div>';
-            
-            // Thoughts content
-            html += '<div id="thoughtsContent" style="display: ' + (currentDiaryTab === 'thoughts' ? 'block' : 'none') + '; max-height: 55vh; overflow-y: auto;">';
+
+            let thoughtsHtml = '';
             if (data.thoughts && data.thoughts.length > 0) {
                 data.thoughts.forEach((entry) => {
-                    html += renderEntry(entry, '#8844ff');
+                    thoughtsHtml += renderEntry(entry, '#8844ff');
                 });
             } else {
-                html += '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">💭</p><p>No inner thoughts found</p></div>';
+                thoughtsHtml = '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">💭</p><p>No inner thoughts found</p></div>';
             }
-            html += '</div>';
-            
-            modalContent.innerHTML = html;
+
+            lettersContent.innerHTML = lettersHtml;
+            thoughtsContent.innerHTML = thoughtsHtml;
         }
 
         function renderEntry(entry, borderColor) {
@@ -2733,76 +2782,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             return html;
         }
 
-        function switchDiaryTab(tab) {
-            currentDiaryTab = tab;
-            
-            const lettersContent = document.getElementById('lettersContent');
-            const thoughtsContent = document.getElementById('thoughtsContent');
-            const lettersTab = document.getElementById('lettersTab');
-            const thoughtsTab = document.getElementById('thoughtsTab');
-            
-            if (tab === 'letters') {
-                lettersContent.style.display = 'block';
-                thoughtsContent.style.display = 'none';
-                lettersTab.style.background = '#8844ff';
-                thoughtsTab.style.background = '#2a2a2a';
-            } else {
-                lettersContent.style.display = 'none';
-                thoughtsContent.style.display = 'block';
-                lettersTab.style.background = '#2a2a2a';
-                thoughtsTab.style.background = '#8844ff';
-            }
-        }
-
-        function closeDiaryModal() {
-            const modal = document.getElementById('diaryModal');
-            modal.style.display = 'none';
-        }
-
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('diaryModal');
-            if (event.target == modal) {
-                closeDiaryModal();
-            }
-        }
+        window.renderNpcDiaryContent = renderDiaryContent;
     </script>
-
-    <!-- Letters & Thoughts Modal -->
-    <div id="diaryModal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(5px);">
-        <div style="background-color: #1a1a1a; margin: 5% auto; padding: 0; border: 2px solid #8844ff; width: 80%; max-width: 900px; border-radius: 12px; box-shadow: 0 4px 20px rgba(136, 68, 255, 0.3);">
-            <div style="background: linear-gradient(135deg, #8844ff 0%, #6622cc 100%); padding: 20px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center;">
-                <h2 id="diaryModalTitle" style="margin: 0; color: white; font-family: 'MagicCards', sans-serif; letter-spacing: 1.5px;">💭✉️ Letters & Thoughts</h2>
-                <span onclick="closeDiaryModal()" style="color: white; font-size: 32px; font-weight: bold; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">&times;</span>
-            </div>
-            <div id="diaryModalContent" style="padding: 20px; color: #fff;">
-                Loading...
-            </div>
-        </div>
-    </div>
-
-    <style>
-        .loading-spinner {
-            border: 4px solid #2a2a2a;
-            border-top: 4px solid #8844ff;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
 
     <?php
     // Rumors section
@@ -2830,7 +2817,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     ?>
 
-    <link rel="stylesheet" href="<?php echo htmlspecialchars($webRoot); ?>/ui/css/background_life_history.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($webRoot); ?>/ui/css/background_life_history.css?v=<?php echo (int) @filemtime(__DIR__ . '/css/background_life_history.css'); ?>">
     <section class="bgl-page-panel" id="bgl-tab-history" <?php echo $activeBglTab === 'history' ? '' : 'hidden'; ?>>
     <div
         class="info-panel bgl-history-panel"
@@ -2889,7 +2876,36 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         </div>
     </div>
     </section>
-    <script src="<?php echo htmlspecialchars($webRoot); ?>/ui/js/background_life_history.js"></script>
+    <script src="<?php echo htmlspecialchars($webRoot); ?>/ui/js/background_life_history.js?v=<?php echo (int) @filemtime(__DIR__ . '/js/background_life_history.js'); ?>"></script>
+
+    <div
+        class="bgl-modal"
+        id="npc-recent-events"
+        data-api-url="<?php echo htmlspecialchars($webRoot); ?>/ui/api/background_life_history.php"
+        aria-hidden="true"
+        onclick="if (event.target === this) closeNpcRecentEvents()">
+        <div class="bgl-modal-dialog bgl-recent-events-dialog" role="dialog" aria-modal="true" aria-labelledby="npc-recent-events-title">
+            <div class="bgl-modal-header">
+                <h3 id="npc-recent-events-title">NPC History</h3>
+                <button type="button" class="bgl-modal-close" onclick="closeNpcRecentEvents()" aria-label="Close recent events modal">&times;</button>
+            </div>
+            <div class="bgl-npc-history-tabs" role="tablist" aria-label="NPC history sections">
+                <button type="button" class="bgl-npc-history-tab active" data-npc-history-tab="events" role="tab" aria-selected="true">📚 Event History</button>
+                <button type="button" class="bgl-npc-history-tab" data-npc-history-tab="letters" role="tab" aria-selected="false">✉️ Letters</button>
+                <button type="button" class="bgl-npc-history-tab" data-npc-history-tab="thoughts" role="tab" aria-selected="false">💭 Inner Thoughts</button>
+            </div>
+            <section class="bgl-npc-history-panel" id="npc-event-history-panel">
+                <div class="bgl-recent-events-status" id="npc-recent-events-status" aria-live="polite"></div>
+                <div class="bgl-recent-events-list" id="npc-recent-events-list"></div>
+            </section>
+            <section class="bgl-npc-history-panel" id="npc-letters-history-panel" hidden>
+                <div id="npc-letter-history-content"></div>
+            </section>
+            <section class="bgl-npc-history-panel" id="npc-thoughts-history-panel" hidden>
+                <div id="npc-thought-history-content"></div>
+            </section>
+        </div>
+    </div>
 
     <div
         class="bgl-modal"

@@ -216,6 +216,102 @@
     opacity: 0.65;
 }
 
+.bgl-recent-events-dialog {
+    width: min(820px, 100%);
+}
+
+.bgl-recent-events-status {
+    min-height: 20px;
+    margin-bottom: 12px;
+    color: #aaa;
+    font-size: 13px;
+}
+
+.bgl-npc-history-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.bgl-npc-history-tab {
+    min-height: 40px;
+    padding: 9px 14px;
+    border: 1px solid #4b4b4b;
+    border-radius: 6px;
+    background: #303030;
+    color: #ddd;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.bgl-npc-history-tab:hover {
+    border-color: rgba(242, 124, 17, 0.75);
+}
+
+.bgl-npc-history-tab.active {
+    border-color: rgb(242, 124, 17);
+    background: rgba(242, 124, 17, 0.18);
+    color: #ffd2a8;
+}
+
+.bgl-npc-history-panel[hidden] {
+    display: none;
+}
+
+#npc-letter-history-content,
+#npc-thought-history-content {
+    color: #fff;
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
+.bgl-recent-events-list {
+    display: grid;
+    gap: 10px;
+}
+
+.bgl-recent-event {
+    padding: 13px 15px;
+    border: 1px solid #444;
+    border-left: 3px solid rgb(242, 124, 17);
+    border-radius: 6px;
+    background: #1a1a1a;
+}
+
+.bgl-recent-event-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 7px;
+    color: #aaa;
+    font-size: 12px;
+}
+
+.bgl-recent-event-category {
+    padding: 2px 7px;
+    border: 1px solid #5a5a5a;
+    border-radius: 999px;
+    color: #ddd;
+    text-transform: capitalize;
+}
+
+.bgl-recent-event-text {
+    color: #eee;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.bgl-recent-events-empty {
+    padding: 24px;
+    border: 1px dashed #4a4a4a;
+    border-radius: 6px;
+    color: #aaa;
+    text-align: center;
+}
+
 @media (max-width: 900px) {
     .bgl-history-toolbar {
         grid-template-columns: 1fr 1fr;
