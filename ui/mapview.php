@@ -2979,10 +2979,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         <label for="npc_inventory_gold">Gold</label>
                         <input id="npc_inventory_gold" name="npc_inventory_gold" type="number" min="0" step="1" value="<?php echo htmlspecialchars($spawnNpcFormData['gold_qty'] ?? '100'); ?>">
                     </div>
-                    <div class="bgl-create-field">
-                        <label for="npc_inventory_iron_ore">Iron Ore</label>
-                        <input id="npc_inventory_iron_ore" name="npc_inventory_iron_ore" type="number" min="0" step="1" value="<?php echo htmlspecialchars($spawnNpcFormData['iron_ore_qty'] ?? '10'); ?>">
-                    </div>
                 </div>
             </details>
 
