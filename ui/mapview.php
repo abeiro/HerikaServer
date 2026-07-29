@@ -2289,7 +2289,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     <div class="bgl-settings-help">Controls how many in-game hours pass before eligible Background Life NPCs automatically run their next update.</div>
                     <button type="submit" class="bgl-settings-save">Save</button>
                 </form>
-                <div class="npc-list-header">
+                <div class="bgl-settings-card">
                     <h3>📍 NPC Markers</h3>
                     <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
                         <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?><br/>
