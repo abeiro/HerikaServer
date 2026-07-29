@@ -2694,44 +2694,34 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             }, 5000); // 3 seconds
         }
 
-        // Render letters and thoughts inside the unified NPC history modal.
-        let currentDiaryTab = 'letters';
-
+        // Render written history into the dedicated letters and thoughts panels.
         function renderDiaryContent(data) {
-            const modalContent = document.getElementById('npc-letter-history-content');
-            currentDiaryTab = 'letters';
-            
-            let html = '';
-            
-            // Tab buttons
-            html += '<div style="display: flex; border-bottom: 2px solid #3a3a3a; margin-bottom: 20px;">';
-            html += '<button id="lettersTab" onclick="switchDiaryTab(\'letters\')" style="flex: 1; padding: 12px; background: ' + (currentDiaryTab === 'letters' ? '#8844ff' : '#2a2a2a') + '; border: none; color: white; cursor: pointer; font-size: 1em; transition: background 0.3s;">✉️ Letters (' + data.letter_count + ')</button>';
-            html += '<button id="thoughtsTab" onclick="switchDiaryTab(\'thoughts\')" style="flex: 1; padding: 12px; background: ' + (currentDiaryTab === 'thoughts' ? '#8844ff' : '#2a2a2a') + '; border: none; color: white; cursor: pointer; font-size: 1em; transition: background 0.3s;">💭 Inner Thoughts (' + data.thought_count + ')</button>';
-            html += '</div>';
-            
-            // Letters content
-            html += '<div id="lettersContent" style="display: ' + (currentDiaryTab === 'letters' ? 'block' : 'none') + '; max-height: 55vh; overflow-y: auto;">';
+            const lettersContent = document.getElementById('npc-letter-history-content');
+            const thoughtsContent = document.getElementById('npc-thought-history-content');
+            if (!lettersContent || !thoughtsContent) {
+                return;
+            }
+
+            let lettersHtml = '';
             if (data.letters && data.letters.length > 0) {
                 data.letters.forEach((entry) => {
-                    html += renderEntry(entry, '#4488ff');
+                    lettersHtml += renderEntry(entry, '#4488ff');
                 });
             } else {
-                html += '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">✉️</p><p>No letters found</p></div>';
+                lettersHtml = '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">✉️</p><p>No letters found</p></div>';
             }
-            html += '</div>';
-            
-            // Thoughts content
-            html += '<div id="thoughtsContent" style="display: ' + (currentDiaryTab === 'thoughts' ? 'block' : 'none') + '; max-height: 55vh; overflow-y: auto;">';
+
+            let thoughtsHtml = '';
             if (data.thoughts && data.thoughts.length > 0) {
                 data.thoughts.forEach((entry) => {
-                    html += renderEntry(entry, '#8844ff');
+                    thoughtsHtml += renderEntry(entry, '#8844ff');
                 });
             } else {
-                html += '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">💭</p><p>No inner thoughts found</p></div>';
+                thoughtsHtml = '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">💭</p><p>No inner thoughts found</p></div>';
             }
-            html += '</div>';
-            
-            modalContent.innerHTML = html;
+
+            lettersContent.innerHTML = lettersHtml;
+            thoughtsContent.innerHTML = thoughtsHtml;
         }
 
         function renderEntry(entry, borderColor) {
@@ -2756,27 +2746,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             html += '</div>';
             
             return html;
-        }
-
-        function switchDiaryTab(tab) {
-            currentDiaryTab = tab;
-            
-            const lettersContent = document.getElementById('lettersContent');
-            const thoughtsContent = document.getElementById('thoughtsContent');
-            const lettersTab = document.getElementById('lettersTab');
-            const thoughtsTab = document.getElementById('thoughtsTab');
-            
-            if (tab === 'letters') {
-                lettersContent.style.display = 'block';
-                thoughtsContent.style.display = 'none';
-                lettersTab.style.background = '#8844ff';
-                thoughtsTab.style.background = '#2a2a2a';
-            } else {
-                lettersContent.style.display = 'none';
-                thoughtsContent.style.display = 'block';
-                lettersTab.style.background = '#2a2a2a';
-                thoughtsTab.style.background = '#8844ff';
-            }
         }
 
         function escapeHtml(text) {
@@ -2888,7 +2857,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             </div>
             <div class="bgl-npc-history-tabs" role="tablist" aria-label="NPC history sections">
                 <button type="button" class="bgl-npc-history-tab active" data-npc-history-tab="events" role="tab" aria-selected="true">📚 Event History</button>
-                <button type="button" class="bgl-npc-history-tab" data-npc-history-tab="letters" role="tab" aria-selected="false">✉️ Letters & Thoughts</button>
+                <button type="button" class="bgl-npc-history-tab" data-npc-history-tab="letters" role="tab" aria-selected="false">✉️ Letters</button>
+                <button type="button" class="bgl-npc-history-tab" data-npc-history-tab="thoughts" role="tab" aria-selected="false">💭 Inner Thoughts</button>
             </div>
             <section class="bgl-npc-history-panel" id="npc-event-history-panel">
                 <div class="bgl-recent-events-status" id="npc-recent-events-status" aria-live="polite"></div>
@@ -2896,6 +2866,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             </section>
             <section class="bgl-npc-history-panel" id="npc-letters-history-panel" hidden>
                 <div id="npc-letter-history-content"></div>
+            </section>
+            <section class="bgl-npc-history-panel" id="npc-thoughts-history-panel" hidden>
+                <div id="npc-thought-history-content"></div>
             </section>
         </div>
     </div>

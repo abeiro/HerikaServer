@@ -229,7 +229,7 @@
 
 .bgl-npc-history-tabs {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     margin-bottom: 14px;
 }
@@ -259,8 +259,11 @@
     display: none;
 }
 
-#npc-letter-history-content {
+#npc-letter-history-content,
+#npc-thought-history-content {
     color: #fff;
+    max-height: 55vh;
+    overflow-y: auto;
 }
 
 .bgl-recent-events-list {

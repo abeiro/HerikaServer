@@ -276,15 +276,18 @@
     }
 
     function setNpcHistoryTab(tabName) {
-        const showEvents = tabName === 'events';
-        const eventsPanel = document.getElementById('npc-event-history-panel');
-        const lettersPanel = document.getElementById('npc-letters-history-panel');
-        if (!eventsPanel || !lettersPanel) {
+        const panels = {
+            events: document.getElementById('npc-event-history-panel'),
+            letters: document.getElementById('npc-letters-history-panel'),
+            thoughts: document.getElementById('npc-thoughts-history-panel')
+        };
+        if (!panels.events || !panels.letters || !panels.thoughts || !panels[tabName]) {
             return;
         }
 
-        eventsPanel.hidden = !showEvents;
-        lettersPanel.hidden = showEvents;
+        Object.entries(panels).forEach(function ([name, panel]) {
+            panel.hidden = name !== tabName;
+        });
         document.querySelectorAll('[data-npc-history-tab]').forEach(function (tab) {
             const selected = tab.dataset.npcHistoryTab === tabName;
             tab.classList.toggle('active', selected);
@@ -292,9 +295,10 @@
         });
     }
 
-    function renderNpcLetters(npcName) {
-        const content = document.getElementById('npc-letter-history-content');
-        if (!content) {
+    function renderNpcWrittenHistory(npcName) {
+        const lettersContent = document.getElementById('npc-letter-history-content');
+        const thoughtsContent = document.getElementById('npc-thought-history-content');
+        if (!lettersContent || !thoughtsContent) {
             return;
         }
 
@@ -304,10 +308,15 @@
             return;
         }
 
-        content.replaceChildren(createElement(
+        lettersContent.replaceChildren(createElement(
             'div',
             'bgl-recent-events-empty',
-            'No letters or inner thoughts have been recorded for this NPC.'
+            'No letters have been recorded for this NPC.'
+        ));
+        thoughtsContent.replaceChildren(createElement(
+            'div',
+            'bgl-recent-events-empty',
+            'No inner thoughts have been recorded for this NPC.'
         ));
     }
 
@@ -325,7 +334,7 @@
         status.style.color = '';
         list.replaceChildren();
         setNpcHistoryTab('events');
-        renderNpcLetters(npcName);
+        renderNpcWrittenHistory(npcName);
         openBglModal('npc-recent-events');
 
         if (npcRecentEventsController) {
