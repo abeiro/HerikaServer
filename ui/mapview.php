@@ -2137,9 +2137,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     // Apply grid offset
                     $offsetX = $marker['offset_x'];
                     $offsetY = $marker['offset_y'];
+                    $markerName = htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8');
 
                     echo '<div class="marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%; transform: translate(calc(-50% + ' . $offsetX . 'px), calc(-50% + ' . $offsetY . 'px));">';
-                    echo '<div class="marker-dot" id="mkr_' . $marker['id'] . '" style="width: ' . ($marker['size'] * 2) . 'px; height: ' . ($marker['size'] * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.8;">';
+                    echo '<div class="marker-dot" id="mkr_' . $marker['id'] . '" data-npc-name="' . $markerName . '" role="button" tabindex="0" title="View recent events for ' . $markerName . '" aria-label="View recent events for ' . $markerName . '" style="width: ' . ($marker['size'] * 2) . 'px; height: ' . ($marker['size'] * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.8;">';
                     echo '</div>';
                     echo '<div class="marker-label">' . PHP_EOL;
                     echo "<a style='color:white;text-decoration:none' href='#dtl_{$marker["id"]}'>{$marker["name"]} &nbsp; ↗️</a></br>";

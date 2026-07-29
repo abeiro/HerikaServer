@@ -352,6 +352,18 @@
         });
     });
 
+    document.querySelectorAll('.marker-dot[data-npc-name]').forEach(function (marker) {
+        marker.addEventListener('click', function () {
+            openNpcRecentEvents(marker.dataset.npcName);
+        });
+        marker.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openNpcRecentEvents(marker.dataset.npcName);
+            }
+        });
+    });
+
     document.querySelectorAll('[data-npc-events]').forEach(function (control) {
         control.addEventListener('click', function (event) {
             event.stopPropagation();
