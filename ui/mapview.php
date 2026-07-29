@@ -1370,12 +1370,17 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .marker-npc-events:hover,
-    .marker-npc-events:focus-visible,
+    .marker-npc-events:focus-visible {
+        color: #fff;
+        outline: none;
+        text-decoration: underline;
+    }
+
     .marker-map-focus:hover,
     .marker-map-focus:focus-visible {
         color: #fff;
         outline: none;
-        text-decoration: underline;
+        text-decoration: none;
     }
 
     #mapImage {
@@ -2373,8 +2378,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     </h4>
                                 </div>
                                 <div class="marker-card-actions">
-                                    <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">Action</button>
-                                    <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">Letter</button>
+                                    <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Request a Background Life action from <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>">Action</button>
+                                    <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Request a letter from <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>" style="background: #4488ff;">Letter</button>
                                     <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" style="border: 2px solid #00ff00; background: #44ff44;">📍</button>
                                 </div>
                                 <div class="marker-card-toggles">
