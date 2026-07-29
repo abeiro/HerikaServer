@@ -275,6 +275,42 @@
         });
     }
 
+    function setNpcHistoryTab(tabName) {
+        const showEvents = tabName === 'events';
+        const eventsPanel = document.getElementById('npc-event-history-panel');
+        const lettersPanel = document.getElementById('npc-letters-history-panel');
+        if (!eventsPanel || !lettersPanel) {
+            return;
+        }
+
+        eventsPanel.hidden = !showEvents;
+        lettersPanel.hidden = showEvents;
+        document.querySelectorAll('[data-npc-history-tab]').forEach(function (tab) {
+            const selected = tab.dataset.npcHistoryTab === tabName;
+            tab.classList.toggle('active', selected);
+            tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+        });
+    }
+
+    function renderNpcLetters(npcName) {
+        const content = document.getElementById('npc-letter-history-content');
+        if (!content) {
+            return;
+        }
+
+        const data = window.npcDiaryData ? window.npcDiaryData[npcName] : null;
+        if (data && typeof window.renderNpcDiaryContent === 'function') {
+            window.renderNpcDiaryContent(data);
+            return;
+        }
+
+        content.replaceChildren(createElement(
+            'div',
+            'bgl-recent-events-empty',
+            'No letters or inner thoughts have been recorded for this NPC.'
+        ));
+    }
+
     async function openNpcRecentEvents(npcName) {
         const modal = document.getElementById('npc-recent-events');
         const title = document.getElementById('npc-recent-events-title');
@@ -284,10 +320,12 @@
             return;
         }
 
-        title.textContent = npcName + ' Recent Events';
+        title.textContent = npcName + ' History';
         status.textContent = 'Loading recent events...';
         status.style.color = '';
         list.replaceChildren();
+        setNpcHistoryTab('events');
+        renderNpcLetters(npcName);
         openBglModal('npc-recent-events');
 
         if (npcRecentEventsController) {
@@ -378,6 +416,13 @@
                 control.click();
             }
         });
+    });
+
+    document.addEventListener('click', function (event) {
+        const tab = event.target.closest('[data-npc-history-tab]');
+        if (tab) {
+            setNpcHistoryTab(tab.dataset.npcHistoryTab);
+        }
     });
 
     document.addEventListener('keydown', function (event) {

@@ -1031,7 +1031,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         position: absolute;
         transform: translate(-50%, -50%);
         cursor: pointer;
-        z-index:10;
+        z-index: 40;
     }
 
     .marker-dot {
@@ -1104,7 +1104,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .marker:hover {
-        z-index: 200;
+        z-index: 300;
     }
 
     .marker:hover .marker-label {
@@ -1987,7 +1987,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .location-marker:hover {
-        z-index: 250;
+        z-index: 20;
     }
 
     .location-marker:hover .location-marker-label {
@@ -2323,7 +2323,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">🚶‍➡️Trigger Action</button>
                                     <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">✉️ Request Letter</button>
                                     <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" style="border: 2px solid #00ff00; background: #44ff44;">📍</button>
-                                    <button onclick="viewDiary('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #8844ff;" title="View letters & inner thoughts">✉️💭 View</button>
                                 </div>
                                 <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
                                     <label class="toggle-label-inline">
@@ -2366,7 +2365,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     </section>
     <script>
         // NPC Diary Data - embedded directly in page
-        const npcDiaryData = <?php echo json_encode(array_combine(
+        window.npcDiaryData = <?php echo json_encode(array_combine(
             array_column($translatedMarkers, 'name'),
             array_map(function($m) {
                 return [
@@ -2695,30 +2694,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             }, 5000); // 3 seconds
         }
 
-        // Letters & Thoughts Modal Functions
+        // Render letters and thoughts inside the unified NPC history modal.
         let currentDiaryTab = 'letters';
-        
-        function viewDiary(npcName) {
-            const modal = document.getElementById('diaryModal');
-            const modalContent = document.getElementById('diaryModalContent');
-            const modalTitle = document.getElementById('diaryModalTitle');
-            
-            // Show modal
-            modal.style.display = 'block';
-            modalTitle.textContent = npcName + "'s Letters & Thoughts";
-            
-            // Get data from embedded npcDiaryData
-            const data = npcDiaryData[npcName];
-            
-            if (data) {
-                renderDiaryContent(data);
-            } else {
-                modalContent.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">💭</p><p>No data found for this NPC</p></div>';
-            }
-        }
 
         function renderDiaryContent(data) {
-            const modalContent = document.getElementById('diaryModalContent');
+            const modalContent = document.getElementById('npc-letter-history-content');
+            currentDiaryTab = 'letters';
             
             let html = '';
             
@@ -2798,55 +2779,14 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             }
         }
 
-        function closeDiaryModal() {
-            const modal = document.getElementById('diaryModal');
-            modal.style.display = 'none';
-        }
-
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('diaryModal');
-            if (event.target == modal) {
-                closeDiaryModal();
-            }
-        }
+        window.renderNpcDiaryContent = renderDiaryContent;
     </script>
-
-    <!-- Letters & Thoughts Modal -->
-    <div id="diaryModal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(5px);">
-        <div style="background-color: #1a1a1a; margin: 5% auto; padding: 0; border: 2px solid #8844ff; width: 80%; max-width: 900px; border-radius: 12px; box-shadow: 0 4px 20px rgba(136, 68, 255, 0.3);">
-            <div style="background: linear-gradient(135deg, #8844ff 0%, #6622cc 100%); padding: 20px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center;">
-                <h2 id="diaryModalTitle" style="margin: 0; color: white; font-family: 'MagicCards', sans-serif; letter-spacing: 1.5px;">💭✉️ Letters & Thoughts</h2>
-                <span onclick="closeDiaryModal()" style="color: white; font-size: 32px; font-weight: bold; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">&times;</span>
-            </div>
-            <div id="diaryModalContent" style="padding: 20px; color: #fff;">
-                Loading...
-            </div>
-        </div>
-    </div>
-
-    <style>
-        .loading-spinner {
-            border: 4px solid #2a2a2a;
-            border-top: 4px solid #8844ff;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
 
     <?php
     // Rumors section
@@ -2943,11 +2883,20 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         onclick="if (event.target === this) closeNpcRecentEvents()">
         <div class="bgl-modal-dialog bgl-recent-events-dialog" role="dialog" aria-modal="true" aria-labelledby="npc-recent-events-title">
             <div class="bgl-modal-header">
-                <h3 id="npc-recent-events-title">Recent Events</h3>
+                <h3 id="npc-recent-events-title">NPC History</h3>
                 <button type="button" class="bgl-modal-close" onclick="closeNpcRecentEvents()" aria-label="Close recent events modal">&times;</button>
             </div>
-            <div class="bgl-recent-events-status" id="npc-recent-events-status" aria-live="polite"></div>
-            <div class="bgl-recent-events-list" id="npc-recent-events-list"></div>
+            <div class="bgl-npc-history-tabs" role="tablist" aria-label="NPC history sections">
+                <button type="button" class="bgl-npc-history-tab active" data-npc-history-tab="events" role="tab" aria-selected="true">📚 Event History</button>
+                <button type="button" class="bgl-npc-history-tab" data-npc-history-tab="letters" role="tab" aria-selected="false">✉️ Letters & Thoughts</button>
+            </div>
+            <section class="bgl-npc-history-panel" id="npc-event-history-panel">
+                <div class="bgl-recent-events-status" id="npc-recent-events-status" aria-live="polite"></div>
+                <div class="bgl-recent-events-list" id="npc-recent-events-list"></div>
+            </section>
+            <section class="bgl-npc-history-panel" id="npc-letters-history-panel" hidden>
+                <div id="npc-letter-history-content"></div>
+            </section>
         </div>
     </div>
 
