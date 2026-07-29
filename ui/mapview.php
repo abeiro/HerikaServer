@@ -2289,27 +2289,27 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     <div class="bgl-settings-help">Controls how many in-game hours pass before eligible Background Life NPCs automatically run their next update.</div>
                     <button type="submit" class="bgl-settings-save">Save</button>
                 </form>
+                <div class="npc-list-header">
+                    <h3>📍 NPC Markers</h3>
+                    <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
+                        <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?><br/>
+                        <strong>Current Ingame Date:</strong> <?php echo $currentDate?><br/>
+                        <em style="color: #ffa500;">For traveling to work you must click "Send All Locations" in the CHIM MCM under Tools to add them to Background Life<br/></em>
+                    </div>
+                    <label class="toggle-label-inline" style="margin-top:8px;" title="When enabled, shows all NPCs that have tracked coordinates, regardless of Background Life status">
+                        <input type="checkbox" class="toggle-checkbox" id="showAllCoordsChk"
+                            <?php echo $showAllCoords ? 'checked' : ''; ?>
+                            onchange="toggleShowAllCoords(this.checked)">
+                        <span class="toggle-text">🗺️ Show all NPCs with coords</span>
+                    </label>
+                    <button onclick="updateAllCoords()" class="update-all-coords-btn">📍 Update All NPC Coords</button>
+                </div>
                 <div class="bgl-action-toolbar">
                     <button type="button" class="chim-btn-primary bgl-action-button" onclick="openCreateNpcModal()">Create NPC</button>
                 </div>
             </div>
             <div class="npc-list-section">
                 <div class="npc-list-container">
-                    <div class="npc-list-header">
-                        <h3>📍 NPC Markers</h3>
-                        <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
-                            <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?><br/>
-                            <strong>Current Ingame Date:</strong> <?php echo $currentDate?><br/>
-                            <em style="color: #ffa500;">For traveling to work you must click "Send All Locations" in the CHIM MCM under Tools to add them to Background Life<br/></em>
-                        </div>
-                        <label class="toggle-label-inline" style="margin-top:8px;" title="When enabled, shows all NPCs that have tracked coordinates, regardless of Background Life status">
-                            <input type="checkbox" class="toggle-checkbox" id="showAllCoordsChk"
-                                <?php echo $showAllCoords ? 'checked' : ''; ?>
-                                onchange="toggleShowAllCoords(this.checked)">
-                            <span class="toggle-text">🗺️ Show all NPCs with coords</span>
-                        </label>
-                        <button onclick="updateAllCoords()" class="update-all-coords-btn">📍 Update All NPC Coords</button>
-                    </div>
                     <div class="marker-list">
                         <?php foreach ($translatedMarkers as $marker) {?>
                             <div
