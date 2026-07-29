@@ -7525,6 +7525,58 @@ if ($checkVersion("quest_asset_library") < 20260719001) {
     }
 }
 
+if ($checkVersion("quest_asset_library") < 20260729001) {
+    Logger::debug("Applying quest_asset_library 20260729001 - restore shipped playable race NPC templates");
+
+    require_once __DIR__ . "/../lib/quest_asset_library.php";
+    require_once __DIR__ . "/../lib/quest_reference_data.php";
+
+    $migrationOk = true;
+    $manifestPath = __DIR__ . "/../data/quest_assets/chim_spawn_templates.json";
+    $result = quest_asset_import_manifest_file($manifestPath);
+    if (empty($result["success"])) {
+        $migrationOk = false;
+        Logger::error(
+            "Failed importing playable race NPC templates: "
+            . implode("; ", $result["errors"] ?? ["unknown error"])
+        );
+    }
+
+    if ($migrationOk) {
+        $manifest = json_decode((string) file_get_contents($manifestPath), true);
+        $spawnTemplates = [];
+        foreach (($manifest["groups"] ?? []) as $group) {
+            if (strtolower(trim((string) ($group["dataset"] ?? ""))) !== "npc_own_templates") {
+                continue;
+            }
+
+            $groupKey = strtolower(trim((string) ($group["key"] ?? "")));
+            if ($groupKey === "") {
+                continue;
+            }
+
+            foreach (($group["members"] ?? []) as $member) {
+                $stableRef = trim((string) ($member["stable_ref"] ?? ""));
+                if ($stableRef !== "") {
+                    $spawnTemplates[$groupKey][] = $stableRef;
+                }
+            }
+        }
+
+        $migrationOk = quest_reference_add_missing_dataset_entries(
+            "npc_own_templates",
+            $spawnTemplates
+        ) !== false;
+    }
+
+    if ($migrationOk) {
+        $updateVersion("quest_asset_library", 20260729001);
+        Logger::info("Applied patch quest_asset_library 20260729001");
+    } else {
+        Logger::error("Failed to apply quest_asset_library 20260729001");
+    }
+}
+
 if ($checkVersion("prompts") < 20260719001) {
     Logger::debug("Applying prompts 20260719001 - improve book reading prompt");
 
