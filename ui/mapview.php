@@ -34,7 +34,6 @@ require_once $enginePath . 'lib/core/llm_connector.class.php';
 require_once $enginePath . 'lib/core/tts_connector.class.php';
 require_once $enginePath . 'lib/lazy_xml.php';
 require_once $enginePath . 'debug/background_action_handler.php';
-require_once $enginePath . 'lib/background_life_requests.php';
 
 require_once $enginePath . "lib/scriptproxy_papyrus.php";
 require_once $enginePath . "lib/core/activity_status.php";
@@ -660,51 +659,41 @@ if (!function_exists('race_icon_web_path')) {
     }
 
     function handleRequestAction() {
-        $npcName = trim((string)($_POST['npc_name'] ?? ''));
-        if ($npcName === '') {
+        global $enginePath;
+        $npcName = isset($_POST['npc_name']) ? $_POST['npc_name'] : null;
+        
+        if (!$npcName) {
             echo json_encode(['ok' => false, 'message' => 'NPC name required']);
             return;
         }
-
-        try {
-            $npcMaster = new NpcMaster();
-            $npcData = chimBglResolveNpc($npcMaster, '', $npcName);
-            if (!$npcData) {
-                throw new RuntimeException('NPC not found');
-            }
-            if (!chimBglNpcStatus($npcMaster, $npcData)['background_life_enabled']) {
-                throw new RuntimeException('Background Life is disabled for this NPC');
-            }
-
-            chimBglQueueRequest($GLOBALS['db'], $npcData, 'action');
-            echo json_encode(['ok' => true, 'message' => "Action request queued for $npcName"]);
-        } catch (Throwable $error) {
-            echo json_encode(['ok' => false, 'message' => $error->getMessage()]);
+        $npcMaster=new NpcMaster();
+        $npcData=$npcMaster->getByName($npcName);
+        $extendedData=$npcMaster->getExtendedData($npcData);
+        if (!isset($extendedData['background_life_commands']) || $extendedData['background_life_commands']===false) {
+            `php $enginePath/debug/simple_llm_request_with_context_life.php "$npcName" full forceaction`;
+        } else {
+            `php $enginePath/debug/simple_llm_request_with_context_life_v2.php "$npcName" full forceaction`;
         }
+
+        // Add your handler code here
+        
+
+        echo json_encode(['ok' => true, 'message' => "Action request processed for $npcName"]);
     }
 
     function handleRequestReporting() {
-        $npcName = trim((string)($_POST['npc_name'] ?? ''));
-        if ($npcName === '') {
+        global $enginePath;
+        $npcName = isset($_POST['npc_name']) ? $_POST['npc_name'] : null;
+        
+        if (!$npcName) {
             echo json_encode(['ok' => false, 'message' => 'NPC name required']);
             return;
         }
-
-        try {
-            $npcMaster = new NpcMaster();
-            $npcData = chimBglResolveNpc($npcMaster, '', $npcName);
-            if (!$npcData) {
-                throw new RuntimeException('NPC not found');
-            }
-            if (!chimBglNpcStatus($npcMaster, $npcData)['background_life_enabled']) {
-                throw new RuntimeException('Background Life is disabled for this NPC');
-            }
-
-            chimBglQueueRequest($GLOBALS['db'], $npcData, 'letter');
-            echo json_encode(['ok' => true, 'message' => "Letter request queued for $npcName"]);
-        } catch (Throwable $error) {
-            echo json_encode(['ok' => false, 'message' => $error->getMessage()]);
-        }
+        
+        // Add your handler code here
+           // Add your handler code here
+        `php $enginePath/debug/simple_llm_request_with_context_life.php "$npcName" forceletter`;
+        echo json_encode(['ok' => true, 'message' => "Reporting request processed for $npcName"]);
     }
 
     function handleUpdateCoords() {
@@ -730,43 +719,72 @@ if (!function_exists('race_icon_web_path')) {
     }
 
     function handleToggleBgLifeSetting() {
+        global $adminConn;
+        
         $npcId = isset($_POST['npc_id']) ? intval($_POST['npc_id']) : 0;
-        $setting = trim((string)($_POST['setting'] ?? ''));
+        $setting = isset($_POST['setting']) ? $_POST['setting'] : '';
         $value = isset($_POST['value']) ? filter_var($_POST['value'], FILTER_VALIDATE_BOOLEAN) : false;
-
+        
         if (!$npcId || !$setting) {
             echo json_encode(['ok' => false, 'message' => 'Invalid parameters']);
             return;
         }
-
-        $settingMap = [
-            'bg_life_commands' => ['api' => 'auto_actions', 'label' => 'Autonomous Actions'],
-            'bg_life_letters' => ['api' => 'send_letters', 'label' => 'Send Letters'],
-            'gps_track' => ['api' => 'hourly_tracking', 'label' => 'Hourly Tracking'],
-        ];
-        if (!isset($settingMap[$setting])) {
-            echo json_encode(['ok' => false, 'message' => 'Invalid setting']);
+        
+        // Get current NPC data
+        $query = "SELECT metadata, extended_data FROM core_npc_master WHERE id = $1";
+        $result = pg_query_params($adminConn, $query, [$npcId]);
+        
+        if (!$result || pg_num_rows($result) === 0) {
+            echo json_encode(['ok' => false, 'message' => 'NPC not found']);
             return;
         }
-
-        try {
-            $npcMaster = new NpcMaster();
-            $npcData = $npcMaster->getById($npcId);
-            if (!$npcData) {
-                throw new RuntimeException('NPC not found');
+        
+        $row = pg_fetch_assoc($result);
+        
+        if ($setting === 'bg_life_commands') {
+            // Update extended_data
+            $extData = json_decode($row['extended_data'], true) ?: [];
+            $extData['background_life_commands'] = $value;
+            $extDataJson = json_encode($extData);
+            
+            $updateQuery = "UPDATE core_npc_master SET extended_data = $1 WHERE id = $2";
+            $updateResult = pg_query_params($adminConn, $updateQuery, [$extDataJson, $npcId]);
+            
+            if ($updateResult) {
+                echo json_encode(['ok' => true, 'message' => 'Autonomous Actions ' . ($value ? 'enabled' : 'disabled')]);
+            } else {
+                echo json_encode(['ok' => false, 'message' => 'Update failed']);
             }
-            if (!chimBglNpcStatus($npcMaster, $npcData)['background_life_enabled']) {
-                throw new RuntimeException('Background Life is disabled for this NPC');
+        } elseif ($setting === 'bg_life_letters') {
+            // Update extended_data
+            $extData = json_decode($row['extended_data'], true) ?: [];
+            $extData['background_life_letters'] = $value;
+            $extDataJson = json_encode($extData);
+            
+            $updateQuery = "UPDATE core_npc_master SET extended_data = $1 WHERE id = $2";
+            $updateResult = pg_query_params($adminConn, $updateQuery, [$extDataJson, $npcId]);
+            
+            if ($updateResult) {
+                echo json_encode(['ok' => true, 'message' => 'Send Letters ' . ($value ? 'enabled' : 'disabled')]);
+            } else {
+                echo json_encode(['ok' => false, 'message' => 'Update failed']);
             }
-
-            $mapped = $settingMap[$setting];
-            chimBglUpdateNpcSetting($npcMaster, $npcData, $mapped['api'], $value);
-            echo json_encode([
-                'ok' => true,
-                'message' => $mapped['label'] . ' ' . ($value ? 'enabled' : 'disabled'),
-            ]);
-        } catch (Throwable $error) {
-            echo json_encode(['ok' => false, 'message' => $error->getMessage()]);
+        } elseif ($setting === 'gps_track') {
+            // Update metadata
+            $metadata = json_decode($row['metadata'], true) ?: [];
+            $metadata['gps_track'] = $value;
+            $metadataJson = json_encode($metadata);
+            
+            $updateQuery = "UPDATE core_npc_master SET metadata = $1 WHERE id = $2";
+            $updateResult = pg_query_params($adminConn, $updateQuery, [$metadataJson, $npcId]);
+            
+            if ($updateResult) {
+                echo json_encode(['ok' => true, 'message' => 'Hourly Tracking ' . ($value ? 'enabled' : 'disabled')]);
+            } else {
+                echo json_encode(['ok' => false, 'message' => 'Update failed']);
+            }
+        } else {
+            echo json_encode(['ok' => false, 'message' => 'Invalid setting']);
         }
     }
 

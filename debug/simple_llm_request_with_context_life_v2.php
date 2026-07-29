@@ -57,7 +57,6 @@ require_once $enginePath . 'lib/core/llm_connector.class.php';
 require_once $enginePath . 'lib/core/tts_connector.class.php';
 require_once $enginePath . 'lib/lazy_xml.php';
 require_once $enginePath . 'debug/background_action_handler.php';
-require_once $enginePath . 'lib/background_life_requests.php';
 
 // ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -137,13 +136,6 @@ function getBGLStyleFallback(string $promptKey): string
 $npcName = $argv[1];
 $argMode = $argv[2] ?? '';   // dryrun | forceletter | forceaction | full
 $argMode3 = $argv[3] ?? '';   // optional third arg (forceaction)
-$directInstruction = '';
-if (isset($argv[4]) && $argv[4] !== '') {
-    $decodedInstruction = base64_decode((string)$argv[4], true);
-    if ($decodedInstruction !== false) {
-        $directInstruction = chimBglNormalizeInstruction($decodedInstruction);
-    }
-}
 
 // Simple non-blocking process lock to avoid concurrent runs for the same NPC.
 $lockKeyRaw = $npcName ?: 'global';
@@ -229,7 +221,7 @@ $npcNameEsc = $db->escape($npcName);
 
 $lastIssuedAction = $db->fetchOne(
     "SELECT gamets, action FROM actions_issued
-     WHERE actorname='$npcNameEsc'
+     WHERE actorname='$npcNameEsc' 
      ORDER BY gamets DESC, ts ASC"
 );
 
@@ -275,7 +267,7 @@ if (empty($lastInteractionRow['gamets'])) {
 
 }
 
-// Default behaviour is to get the events... from last interaction with player gamets
+// Default behaviour is to get the events... from last interaction with player gamets 
 // This can lead to too long context history.
 
 $lastItGamets = (int) $lastInteractionRow['gamets'];
@@ -292,7 +284,7 @@ $diaryEntryRowsCheck = $db->fetchAll(
 
 if (sizeof($diaryEntryRowsCheck) > 10) {
     // If there are more than 10 journal notes since last interaction
-    // lastItGamets will be updated to the gamets of the last diary entry
+    // lastItGamets will be updated to the gamets of the last diary entry 
     $diaryEntryRowsCheck = array_reverse($diaryEntryRowsCheck);
     $lastItGamets = (int) $diaryEntryRowsCheck[0]['gamets'];
     error_log("[BGL RUN] $npcNameEsc — gamets limit updated to last diary entry gamets: $lastItGamets");
@@ -619,7 +611,7 @@ if ($LAST_REPORTED_LOCATION) {
     $rumorRows = $db->fetchAll(
         "SELECT gamets, content FROM rumors
          WHERE (
-            hold LIKE '%{$locationEsc}%'
+            hold LIKE '%{$locationEsc}%' 
             or hold IN (SELECT distinct(hold) FROM locations where name='$locationEsc')
             or hold IN (SELECT distinct(region) FROM locations where name in (SELECT distinct(hold) FROM locations where name='$locationEsc'))
             )
@@ -682,14 +674,6 @@ $history .= "\nCurrent date and hour: " . convert_gamets2skyrim_long_date($last_
 // ─── Check last Idles  ───────────────────────────────────
 
 $lastMinuteNotes = "\n";
-if ($directInstruction !== '') {
-    $escapedInstruction = htmlspecialchars(
-        $directInstruction,
-        ENT_QUOTES | ENT_SUBSTITUTE,
-        'UTF-8'
-    );
-    $lastMinuteNotes .= "\n<direct_instruction>{$escapedInstruction}</direct_instruction>\n";
-}
 $fortyEightHoursAgo = $last_gamets - 48 / GAMETS_TO_HOURS;
 $actionIdleRows = $db->fetchAll(
     "SELECT action,actorname,gamets,fullcall FROM actions_issued
@@ -1017,7 +1001,7 @@ if (
 ) {
     // Last action was MoveTo or TravelTo.
     // Last event was a Sandbox event. This means the NPC reached destination
-    //
+    // 
     error_log(date("YMd H:i:s") . " [BGL RUN] HINT bypassInnerThoughts: true");
     $bypassInnerThoughts = true;
 } else {
@@ -1030,7 +1014,7 @@ $byspassTradingActions = false;
 if ($lastBackgroundAction['action'] === 'BuyItem' || $lastBackgroundAction['action'] === 'SellItem') {
     // Last action was BuyItem or SellItem.
     // Avoid repeated trading actions in the same turn, as it can lead to infinite loops of buying/selling items.
-    //
+    // 
     error_log(date("YMd H:i:s") . " [BGL RUN] HINT bypass Trading actions: true");
     $bypassTradingActions = true;
 } else {
@@ -1125,7 +1109,7 @@ if (!isset($goldFound)) {
 
 // ─── Step 1: Inner-Thought Soliloquy ─────────────────────────────────────────
 if ($wasSocializeIntentAction && !$bypassInnerThoughts) {
-    // If last action was a socialize intent, we will generate inner thoughts,
+    // If last action was a socialize intent, we will generate inner thoughts, 
     // but we will add a note to the inner thoughts that the NPC is socializing.
     $innerThoughtEnforceSocialice = "* Also, as last action was a socialize intent, simulate that {$GLOBALS['HERIKA_NAME']} has been talking with other characters (E.G. I've talked to X about <topic>, and Y about <topic>)";
     error_log(date("YMd H:i:s") . " [BGL RUN] HINT inner thoughts: enforced socialize/conversation prompt");
@@ -1151,7 +1135,7 @@ Based on all this information, generate an inner-thought soliloquy for {$GLOBALS
 Take into account the <speech_style> section for the writing style, and particularly
 <inner_thought_guidance> if present.
 
-This soliloquy should reflect what the character might have done over the last {$hoursPassed} hours(s),
+This soliloquy should reflect what the character might have done over the last {$hoursPassed} hours(s), 
 and after last inner thoughts presented in the <context_history>:
 
 * Intimate thoughts.
@@ -1223,9 +1207,6 @@ $step2Content = "You are responsible for deciding a single action"
     . " based on the character's inner thoughts and the provided context.\n"
     . "Character's name is {$GLOBALS['HERIKA_NAME']}.\n"
     . "$dynamicBiography\n\n";
-if ($directInstruction !== '') {
-    $step2Content .= "Treat <direct_instruction> as the highest-priority one-shot request for this Background Life turn, while still choosing a valid available action.\n\n";
-}
 
 if ($isFullMode) {
     $step2Content .= "<context_history>\nContext History (chronological order)\n$history\n</context_history>{$lastMinuteNotes}\n\n";
@@ -1351,7 +1332,7 @@ if (
 
     // Last action was MoveTo or TravelTo.
     // Last event was a Sandbox event. This means the NPC reached destination
-    //
+    // 
     $actionChoiceDesc = "Hint: Character just reached destination. Preferred actions should be:
     * SpeakTo (talk with another nearby character)
     * FindNPC (if wanting to talk to a specific character and is not present)
@@ -1405,12 +1386,12 @@ Rules:
 - The action must be consistent with the context_history, memories, and current location.
 - Previous actions are present at the context_history, prevent repetition, use previous actions on history to figure out if main goal is achieved or not, and decide accordingly.
 For example:
-* To Sell/Buy Item to a trader: SpeakTo:<NPC/Actor name> ->(next iteration) SellItem:..
-* To Sell/Buy Item to a trader that maybe is not present: MoveTo:<NPC/Actor name> ->(next iteration) SpeakTo:<NPC/Actor name> ->(next iteration) SellItem:..
+* To Sell/Buy Item to a trader: SpeakTo:<NPC/Actor name> ->(next iteration) SellItem:.. 
+* To Sell/Buy Item to a trader that maybe is not present: MoveTo:<NPC/Actor name> ->(next iteration) SpeakTo:<NPC/Actor name> ->(next iteration) SellItem:.. 
 * To gift items without taking money: SpeakTo:<NPC/Actor name> ->(next iteration) GiveItemTo:<NPC/Actor name>:<itemid>:<count>
 * To give money without trading items: SpeakTo:<NPC/Actor name> ->(next iteration) GiveGoldTo:<NPC/Actor name>:<amount>
-* Buy food at an inn: SpeakTo:<NPC innkeeper> ->(next iteration),BuyItem:<NPC/Actor name> ->(next iteration) StayAtPlace:Inn
-* Relax/Socialize at an inn: SpeakTo:<NPC/Actor name> ->(next iteration) ->(next iteration) StayAtPlace:Inn
+* Buy food at an inn: SpeakTo:<NPC innkeeper> ->(next iteration),BuyItem:<NPC/Actor name> ->(next iteration) StayAtPlace:Inn 
+* Relax/Socialize at an inn: SpeakTo:<NPC/Actor name> ->(next iteration) ->(next iteration) StayAtPlace:Inn 
 * Relax at home: SpeakTo:<NPC/Actor name> ->(next iteration) StayAtPlace:Home:Sleep
 * Generally speaking, try to Speak to an NPC before trading with him/her, unless the NPC is not present. If the NPC is not present, use MoveTo:<NPC name> to reach him/her first.
 

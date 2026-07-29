@@ -45,7 +45,6 @@ require_once $enginePath . 'lib/core/llm_connector.class.php';
 require_once $enginePath . 'lib/core/tts_connector.class.php';
 require_once $enginePath . 'lib/lazy_xml.php';
 require_once $enginePath . 'debug/background_action_handler.php';
-require_once $enginePath . 'lib/background_life_requests.php';
 
 // ─── Database ─────────────────────────────────────────────────────────────────
 
@@ -81,7 +80,7 @@ require_once $enginePath . "debug" . DIRECTORY_SEPARATOR . "background_action_ha
 
 /**
  * Load a background life style prompt from database
- *
+ * 
  * @param string $promptKey The prompt key to load ('background_life_letter' or 'background_life_innerthought')
  * @param array $replacements Associative array of placeholder => value pairs
  * @return string The prompt content with replacements
@@ -178,7 +177,7 @@ $lastIt = $db->fetchOne($query);
 
 if (!$lastIt["gamets"]) {
 
-
+    
     $extdata["background_life_last_updated"] = $last_gamets;
     $npcMaster->updateExtendedKeysByName($GLOBALS["HERIKA_NAME"], $extdata);
 
@@ -198,28 +197,17 @@ if (($last_gamets - $lastItNumber) < ($bglTriggerHours / GAMETS_TO_HOURS)) {
 
     if (isset($argv[2]) && $argv[2] == "forceletter")
         error_log("[BGL RUN] $npcNameEsc Bypassing interaction cooldown via forceletter");
-
+    
     else if (isset($argv[3]) && $argv[3] == "forceaction")
         error_log("[BGL RUN] $npcNameEsc Bypassing interaction cooldown via forceaction");
     else {
         error_log("[BGL RUN] $npcNameEsc Interaction cooldown active...suspended: ".implode("|",$argv));
         return;
     }
-
+        
 }
 
-$directInstruction = '';
-if (isset($argv[4]) && $argv[4] !== '') {
-    $decodedInstruction = base64_decode((string)$argv[4], true);
-    if ($decodedInstruction !== false) {
-        $directInstruction = chimBglNormalizeInstruction($decodedInstruction);
-    }
-}
-$task = $directInstruction !== ''
-    ? "\n<direct_instruction>" .
-        htmlspecialchars($directInstruction, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
-        "</direct_instruction>\n"
-    : "";
+$task = "";
 $history = "\n<last_dialogue>\n";
 $sqlfilter = " and gamets<$lastItNumber and type<>'prechat' and type<>'itemfound' and type<>'infoaction' and type<>'npcspellcast' and data not like '%inner thoughts%' ";
 $contextDataHistoric = DataLastDataExpandedFor("{$GLOBALS["HERIKA_NAME"]}", 50 * -1, $sqlfilter);
@@ -411,7 +399,7 @@ Take into account the <speech_style> section for the writing style, and particul
 
 This soliloquy should reflect what the character might have done over the last $daysPassed day(s):
 
- * Details of set tasks if given
+ * Details of set tasks if given 
  * What activities they have engaged in. Detailed list.
  * What possible events or encounters might have occurred.
  * Intimate thoughts.
@@ -472,9 +460,6 @@ $letterStyle = loadBGLStylePrompt('background_life_letter', [
 $promptContent = "You are responsible for deciding an action, creating a rumor, and writing a letter based on the character's inner thoughts and the provided context.\n";
 $promptContent .= "Character's name is {$GLOBALS["HERIKA_NAME"]}.\n";
 $promptContent .= "$dynamicBiography\n\n";
-if ($directInstruction !== '') {
-    $promptContent .= "Treat <direct_instruction> as the highest-priority one-shot request for this Background Life turn, while still choosing a valid available action.\n\n";
-}
 
 // Add context history for full mode
 if ($fullMode) {
@@ -490,7 +475,7 @@ if ($fullMode) {
     $promptContent .= "Possible actions (check character's goals section):\n";
     $promptContent .= "
 StayAtPlace:<Place>:<intent>
-The character remains in their current location, performing activities locally (intent). Take into account how much time character has been at
+The character remains in their current location, performing activities locally (intent). Take into account how much time character has been at 
 this location and its current task
 
 - intent can be: Work, Rest, Relax, Socialize, Sleep, Study, Guard.
@@ -503,17 +488,17 @@ TravelTo:<Place>
 - Travel to another location.
 - Use only when the destination is different from the current location and travel is necessary.
 
-ReturnHome
-Character returns to its base location, probably to meet {$GLOBALS["PLAYER_NAME"]} .
+ReturnHome 
+Character returns to its base location, probably to meet {$GLOBALS["PLAYER_NAME"]} . 
 Use when no further action is needed or all goals have been accomplished.
 
 ";
-
+  
 } else {
     $promptContent .= "Possible actions:\n";
     $promptContent .= "
 StayAtPlace:<Place>:<intent>
-The character remains in their current location, performing activities locally (intent). Take into account how much time character has been at
+The character remains in their current location, performing activities locally (intent). Take into account how much time character has been at 
 this location and its current task
 
 - intent can be: Work, Rest, Relax, Socialize, Sleep, Study, Guard.
@@ -522,7 +507,7 @@ this location and its current task
 - At an inn: rest, relax, socialize with patrons. E.G StayAtPlace:Inn:Relax
 - At home: rest, relax, socialize with companions,sleep. e.g StayAtPlace:Breezehome:Sleep
 
-SpreadRumor - Character activities generate rumors, also, character can explictly create a rumor.
+SpreadRumor - Character activities generate rumors, also, character can explictly create a rumor. 
 E.G. If character's goal or activity is to enforce local trade, create a rumor about local trading being enhanced.
 
 ";
@@ -651,7 +636,7 @@ if (is_array($parsed)) {
                 'data' => "{$GLOBALS["HERIKA_NAME"]} sends a letter to {$GLOBALS["PLAYER_NAME"]}",
             ]
         );
-
+        
         $db->insert(
             'diarylog',
             [

@@ -21,8 +21,6 @@ function convertSignedToUnsignedHexLocal($signedInt, $preprend0x = true)
     return $preprend0x ? "0x" . $hex : $hex;
 }
 
-require_once __DIR__ . '/../lib/background_life_history.php';
-
 // Handle npc_reanimated event
 if ($gameRequest[0] === 'npc_reanimated') {
     // Event format: npc_reanimated|timestamp|gametime|target_name
@@ -148,11 +146,7 @@ if (is_array($bgevent)) {
                         $bgevent["server_processed"] = true;
 
                         if ($bgevent["name"] == "TravelTo" || $bgevent["name"] == "MoveTo") {
-                            $destination = chimBglResolveActionDestination($lastAction, $GLOBALS["db"]);
-                            $message = "{$npcData["npc_name"]} reaches destination";
-                            if ($destination !== "") {
-                                $message .= ": {$destination}";
-                            }
+                            $message="{$npcData["npc_name"]} reaches destination";
                         } else {
                             $message="{$npcData["npc_name"]} {$bgevent["event"]} {$bgevent["name"]}";
                         }

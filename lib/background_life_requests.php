@@ -138,81 +138,16 @@ function chimBglSetEnabled(NpcMaster $npcMaster, array $npc, bool $enabled): arr
     return $status;
 }
 
-// Remove unsafe control characters and enforce the direct-instruction limit.
-function chimBglNormalizeInstruction(string $instruction): string
+// Invoke the same one-shot action and letter runners used by the existing map UI.
+function chimBglRunRequest(string $enginePath, array $npc, string $requestType): array
 {
-    $instruction = preg_replace(
-        '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u',
-        '',
-        $instruction
-    ) ?? '';
-    $instruction = trim($instruction);
-    $instructionLength = function_exists('mb_strlen')
-        ? mb_strlen($instruction, 'UTF-8')
-        : strlen($instruction);
-    if ($instructionLength > 1000) {
-        throw new InvalidArgumentException('Instruction must be 1000 characters or fewer');
-    }
-
-    return $instruction;
-}
-
-// Persist a one-shot request for the background worker to execute asynchronously.
-function chimBglQueueRequest(
-    $db,
-    array $npc,
-    string $requestType,
-    string $instruction = ''
-): string {
-    if (!in_array($requestType, ['action', 'letter', 'instruction'], true)) {
+    if (!in_array($requestType, ['action', 'letter'], true)) {
         throw new InvalidArgumentException('Unsupported Background Life request');
     }
-    $instruction = chimBglNormalizeInstruction($instruction);
-    if ($requestType === 'instruction' && $instruction === '') {
-        throw new InvalidArgumentException('Direct instruction is required');
-    }
 
-    $queueId = 'background_life_request_queue_' .
-        time() . '_' .
-        bin2hex(random_bytes(6));
-    $payload = [
-        'created_at' => time(),
-        'attempts' => 0,
-        'request_type' => $requestType,
-        'npc_id' => (int)($npc['id'] ?? 0),
-        'npc_name' => trim((string)($npc['npc_name'] ?? '')),
-        'refid' => chimBglNormalizeRefId((string)($npc['refid'] ?? '')),
-    ];
-    if ($requestType === 'instruction') {
-        $payload['instruction'] = $instruction;
-    }
-
-    $encoded = json_encode(
-        $payload,
-        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
-    );
-    $saved = $db->upsertRowOnConflict('conf_opts', [
-        'id' => $queueId,
-        'value' => $encoded,
-    ], 'id');
-    if ($saved === false) {
-        throw new RuntimeException('Could not queue Background Life request');
-    }
-
-    return $queueId;
-}
-
-// Select the NPC's configured runner and capture its process result for retries.
-function chimBglRunQueuedRequest(
-    string $enginePath,
-    array $npc,
-    string $requestType,
-    string $instruction = ''
-): array
-{
     $npcName = trim((string)($npc['npc_name'] ?? ''));
     if ($npcName === '') {
-        throw new RuntimeException('Queued Background Life request has no NPC name');
+        throw new RuntimeException('Background Life request has no NPC name');
     }
 
     $extendedData = json_decode((string)($npc['extended_data'] ?? '{}'), true);
@@ -220,7 +155,6 @@ function chimBglRunQueuedRequest(
         $extendedData = [];
     }
 
-    $instruction = chimBglNormalizeInstruction($instruction);
     if ($requestType === 'letter') {
         $script = 'debug/simple_llm_request_with_context_life.php';
         $arguments = [$npcName, 'forceletter'];
@@ -230,12 +164,6 @@ function chimBglRunQueuedRequest(
     } else {
         $script = 'debug/simple_llm_request_with_context_life.php';
         $arguments = [$npcName, 'full', 'forceaction'];
-    }
-    if ($requestType === 'instruction') {
-        if ($instruction === '') {
-            throw new RuntimeException('Queued direct instruction is empty');
-        }
-        $arguments[] = base64_encode($instruction);
     }
 
     $scriptPath = rtrim($enginePath, '/\\') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $script);
@@ -272,104 +200,4 @@ function chimBglRunQueuedRequest(
         'stdout' => $exitCode === 0 ? $output : '',
         'stderr' => $exitCode === 0 ? '' : $output,
     ];
-}
-
-// Drain a bounded queue batch under one advisory lock and retry failures safely.
-function chimBglProcessRequestQueue($db, string $enginePath, int $limit = 2): array
-{
-    $result = [
-        'locked' => false,
-        'processed' => 0,
-        'failed' => 0,
-    ];
-    $lockRows = $db->fetchAll(
-        "SELECT pg_try_advisory_lock(hashtext('herika_background_life_request_worker')) AS acquired"
-    );
-    if (empty($lockRows) || !chimBglBoolean($lockRows[0]['acquired'] ?? false)) {
-        return $result;
-    }
-
-    $result['locked'] = true;
-    $npcMaster = new NpcMaster();
-
-    try {
-        $limit = max(1, min(5, $limit));
-        $rows = $db->fetchAll(
-            "SELECT id, value
-             FROM conf_opts
-             WHERE id LIKE 'background_life_request_queue_%'
-             ORDER BY id
-             LIMIT {$limit}"
-        );
-
-        foreach ($rows as $row) {
-            $queueId = (string)($row['id'] ?? '');
-            $payload = json_decode((string)($row['value'] ?? ''), true);
-            if ($queueId === '' || !is_array($payload)) {
-                if ($queueId !== '') {
-                    $db->delete('conf_opts', "id = '" . $db->escape($queueId) . "'");
-                }
-                $result['failed']++;
-                continue;
-            }
-
-            try {
-                $npc = chimBglResolveNpc(
-                    $npcMaster,
-                    (string)($payload['refid'] ?? ''),
-                    (string)($payload['npc_name'] ?? '')
-                );
-                if (!$npc) {
-                    throw new RuntimeException('NPC no longer exists');
-                }
-
-                $status = chimBglNpcStatus($npcMaster, $npc);
-                if (!$status['background_life_enabled']) {
-                    throw new RuntimeException('Background Life is disabled for this NPC');
-                }
-
-                $requestResult = chimBglRunQueuedRequest(
-                    $enginePath,
-                    $npc,
-                    (string)($payload['request_type'] ?? ''),
-                    (string)($payload['instruction'] ?? '')
-                );
-                if ((int)$requestResult['exit_code'] !== 0) {
-                    throw new RuntimeException(
-                        $requestResult['stderr'] !== ''
-                            ? $requestResult['stderr']
-                            : 'Background Life request processor failed'
-                    );
-                }
-
-                $db->delete('conf_opts', "id = '" . $db->escape($queueId) . "'");
-                $result['processed']++;
-                Logger::info(
-                    "[BGL REQUEST] Processed {$payload['request_type']} request for {$npc['npc_name']}"
-                );
-            } catch (Throwable $error) {
-                $payload['attempts'] = (int)($payload['attempts'] ?? 0) + 1;
-                $payload['last_error'] = substr($error->getMessage(), 0, 500);
-                if ($payload['attempts'] >= 3) {
-                    $db->delete('conf_opts', "id = '" . $db->escape($queueId) . "'");
-                } else {
-                    $db->upsertRowOnConflict('conf_opts', [
-                        'id' => $queueId,
-                        'value' => json_encode(
-                            $payload,
-                            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-                        ),
-                    ], 'id');
-                }
-                $result['failed']++;
-                Logger::error("[BGL REQUEST] {$queueId} failed: " . $error->getMessage());
-            }
-        }
-    } finally {
-        $db->fetchAll(
-            "SELECT pg_advisory_unlock(hashtext('herika_background_life_request_worker'))"
-        );
-    }
-
-    return $result;
 }
