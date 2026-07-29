@@ -15,7 +15,6 @@ function chimBglNpcCreationDefaults(): array
         'goal' => '',
         'starting_point' => '',
         'gold_qty' => '100',
-        'iron_ore_qty' => '10',
         'gold_ore_qty' => '5',
     ];
 }
@@ -88,7 +87,6 @@ function chimBglNpcCreationFormData(array $input): array
         'goal' => trim((string)($input['npc_goal'] ?? $input['goal'] ?? $defaults['goal'])),
         'starting_point' => trim((string)($input['npc_starting_point'] ?? $input['starting_point'] ?? $defaults['starting_point'])),
         'gold_qty' => (string)max(0, (int)($input['npc_inventory_gold'] ?? $input['gold_qty'] ?? $defaults['gold_qty'])),
-        'iron_ore_qty' => (string)max(0, (int)($input['npc_inventory_iron_ore'] ?? $input['iron_ore_qty'] ?? $defaults['iron_ore_qty'])),
         'gold_ore_qty' => (string)max(0, (int)($input['npc_inventory_gold_ore'] ?? $input['gold_ore_qty'] ?? 0)),
     ];
 }
@@ -195,7 +193,6 @@ function chimBglCreateNpc(array $input): array
     $inventoryItems = [];
     foreach ([
         ['key' => 'gold_qty', 'refid' => '0x0000000F'],
-        ['key' => 'iron_ore_qty', 'refid' => '0x00071cf3'],
         ['key' => 'gold_ore_qty', 'refid' => '0x0005acde'],
     ] as $inventoryDefinition) {
         $quantity = (int)$formData[$inventoryDefinition['key']];
