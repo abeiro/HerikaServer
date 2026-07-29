@@ -1371,39 +1371,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         display: none;
     }
 
-    .collapsible-panel .collapsible-body {
-        display: block;
-    }
-
-    .collapsible-panel.collapsed .collapsible-body {
-        display: none;
-    }
-
-    .toggle-panel-btn {
-        width: 100%;
-        margin-top: 10px;
-        background: #3a3a3a;
-        color: #ddd;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: bold;
-        font-size: 12px;
-        transition: all 0.3s ease;
-    }
-
-    .toggle-panel-btn:hover {
-        background: #4a4a4a;
-        color: rgb(242, 124, 17);
-    }
-
-    .bgl-create-npc-toolbar {
+    .bgl-action-toolbar {
         display: flex;
         margin: 0 0 12px;
     }
 
-    .bgl-create-npc-button {
+    .bgl-action-button {
         width: 100%;
         padding: 10px 14px;
         border: 1px solid rgb(242, 124, 17);
@@ -1414,11 +1387,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         font-weight: 700;
     }
 
-    .bgl-create-npc-button:hover {
+    .bgl-action-button:hover {
         background: #ff9138;
     }
 
-    .bgl-create-npc-modal {
+    .bgl-modal {
         display: none;
         position: fixed;
         z-index: 10020;
@@ -1430,11 +1403,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         box-sizing: border-box;
     }
 
-    .bgl-create-npc-modal.open {
+    .bgl-modal.open {
         display: flex;
     }
 
-    .bgl-create-npc-dialog {
+    .bgl-modal-dialog {
         width: min(1050px, 100%);
         max-height: calc(100vh - 36px);
         overflow-y: auto;
@@ -1446,7 +1419,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         box-sizing: border-box;
     }
 
-    .bgl-create-npc-header {
+    .bgl-modal-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -1456,11 +1429,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-bottom: 1px solid #444;
     }
 
-    .bgl-create-npc-header h3 {
+    .bgl-modal-header h3 {
         margin: 0;
     }
 
-    .bgl-create-npc-close {
+    .bgl-modal-close {
         width: 36px;
         height: 36px;
         border: 1px solid #555;
@@ -1472,7 +1445,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         line-height: 1;
     }
 
-    .bgl-create-npc-close:hover {
+    .bgl-modal-close:hover {
         border-color: rgb(242, 124, 17);
         color: rgb(242, 124, 17);
     }
@@ -1503,11 +1476,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             grid-template-columns: 1fr;
         }
 
-        .bgl-create-npc-modal {
+        .bgl-modal {
             padding: 8px;
         }
 
-        .bgl-create-npc-dialog {
+        .bgl-modal-dialog {
             max-height: calc(100vh - 16px);
             padding: 14px;
         }
@@ -2098,8 +2071,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     <div class="bgl-settings-help">Controls how many in-game hours pass before eligible Background Life NPCs automatically run their next update.</div>
                     <button type="submit" class="bgl-settings-save">Save</button>
                 </form>
-                <div class="bgl-create-npc-toolbar">
-                    <button type="button" class="bgl-create-npc-button" onclick="openCreateNpcModal()">Create NPC</button>
+                <div class="bgl-action-toolbar">
+                    <button type="button" class="chim-btn-primary bgl-action-button" onclick="openCreateNpcModal()">Create NPC</button>
                 </div>
                 <div class="npc-list-header">
                         <h3>📍 NPC Markers</h3>
@@ -2407,20 +2380,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             }
         }
 
-        function togglePanel(panelId, button) {
-            const panel = document.getElementById(panelId);
-            if (!panel) {
-                return;
-            }
-
-            panel.classList.toggle('collapsed');
-            if (button) {
-                button.textContent = panel.classList.contains('collapsed') ? 'Show Form' : 'Hide Form';
-            }
-        }
-
-        function openCreateNpcModal() {
-            const modal = document.getElementById('create-background-npc');
+        function openBglModal(modalId, focusId) {
+            const modal = document.getElementById(modalId);
             if (!modal) {
                 return;
             }
@@ -2429,33 +2390,57 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             modal.setAttribute('aria-hidden', 'false');
             document.body.classList.add('bgl-modal-open');
 
-            const nameInput = document.getElementById('npc_name');
-            if (nameInput) {
-                nameInput.focus();
+            const focusTarget = document.getElementById(focusId);
+            if (focusTarget) {
+                focusTarget.focus();
             }
         }
 
-        function closeCreateNpcModal() {
-            const modal = document.getElementById('create-background-npc');
+        function closeBglModal(modalId) {
+            const modal = document.getElementById(modalId);
             if (!modal) {
                 return;
             }
 
             modal.classList.remove('open');
             modal.setAttribute('aria-hidden', 'true');
-            document.body.classList.remove('bgl-modal-open');
+            if (!document.querySelector('.bgl-modal.open')) {
+                document.body.classList.remove('bgl-modal-open');
+            }
+        }
+
+        function openCreateNpcModal() {
+            openBglModal('create-background-npc', 'npc_name');
+        }
+
+        function closeCreateNpcModal() {
+            closeBglModal('create-background-npc');
+        }
+
+        function openCreateRumorModal() {
+            openBglModal('create-rumor', 'rumor_hold');
+        }
+
+        function closeCreateRumorModal() {
+            closeBglModal('create-rumor');
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            const modal = document.getElementById('create-background-npc');
-            if (modal && modal.dataset.autoOpen === '1') {
+            const npcModal = document.getElementById('create-background-npc');
+            if (npcModal && npcModal.dataset.autoOpen === '1') {
                 openCreateNpcModal();
+            }
+
+            const rumorModal = document.getElementById('create-rumor');
+            if (rumorModal && rumorModal.dataset.autoOpen === '1') {
+                openCreateRumorModal();
             }
         });
 
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 closeCreateNpcModal();
+                closeCreateRumorModal();
             }
         });
 
@@ -2733,15 +2718,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     <script src="<?php echo htmlspecialchars($webRoot); ?>/ui/js/background_life_history.js"></script>
 
     <div
-        class="bgl-create-npc-modal"
+        class="bgl-modal"
         id="create-background-npc"
         data-auto-open="<?php echo !empty($spawnNpcFlash['message']) ? '1' : '0'; ?>"
         aria-hidden="true"
         onclick="if (event.target === this) closeCreateNpcModal()">
-        <div class="bgl-create-npc-dialog" role="dialog" aria-modal="true" aria-labelledby="create-background-npc-title">
-        <div class="bgl-create-npc-header">
+        <div class="bgl-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="create-background-npc-title">
+        <div class="bgl-modal-header">
             <h3 id="create-background-npc-title">🧬 Create Background Life NPC</h3>
-            <button type="button" class="bgl-create-npc-close" onclick="closeCreateNpcModal()" aria-label="Close Create NPC modal">&times;</button>
+            <button type="button" class="bgl-modal-close" onclick="closeCreateNpcModal()" aria-label="Close Create NPC modal">&times;</button>
         </div>
         <div class="bgl-create-npc-notice">
             <strong>Skyrim must be running and connected to CHIM.</strong>
@@ -2857,6 +2842,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         <div class="page-header" style="margin-bottom: 20px;">
             <h1>📰 Rumors</h1>
         </div>
+        <div class="bgl-action-toolbar">
+            <button type="button" class="chim-btn-primary bgl-action-button" onclick="openCreateRumorModal()">
+                <?php echo ($editingRumorId > 0) ? 'Edit Rumor' : 'Create Rumor'; ?>
+            </button>
+        </div>
         
         <?php if (!empty($rumorFlash['message'])): ?>
             <?php
@@ -2968,16 +2958,23 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
        
 
-        <div class="info-panel collapsible-panel <?php echo ($editingRumorId > 0 || (($rumorFlash['type'] ?? '') === 'error')) ? '' : 'collapsed'; ?>" id="create-rumor" style="margin-top: 30px;">
-            <h3><?php echo ($editingRumorId > 0) ? 'Edit Rumor' : 'Create Rumor'; ?></h3>
-            <button type="button" class="toggle-panel-btn" onclick="togglePanel('create-rumor', this)"><?php echo ($editingRumorId > 0 || (($rumorFlash['type'] ?? '') === 'error')) ? 'Hide Form' : 'Show Form'; ?></button>
-            <div class="collapsible-body">
+        <div
+            class="bgl-modal"
+            id="create-rumor"
+            data-auto-open="<?php echo ($editingRumorId > 0 || (($rumorFlash['type'] ?? '') === 'error')) ? '1' : '0'; ?>"
+            aria-hidden="true"
+            onclick="if (event.target === this) closeCreateRumorModal()">
+            <div class="bgl-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="create-rumor-title">
+            <div class="bgl-modal-header">
+                <h3 id="create-rumor-title"><?php echo ($editingRumorId > 0) ? 'Edit Rumor' : 'Create Rumor'; ?></h3>
+                <button type="button" class="bgl-modal-close" onclick="closeCreateRumorModal()" aria-label="Close rumor modal">&times;</button>
+            </div>
             <form method="post" action="">
                 <input type="hidden" name="action" value="<?php echo ($editingRumorId > 0) ? 'update_rumor' : 'create_rumor'; ?>">
                 <?php if ($editingRumorId > 0): ?>
                     <input type="hidden" name="rumor_id" value="<?php echo (int) $editingRumorId; ?>">
                 <?php endif; ?>
-                <div style="display: grid; grid-template-columns: minmax(220px, 280px) minmax(200px, 1fr) minmax(160px, 180px); gap: 18px; margin-top: 16px;">
+                <div class="bgl-create-form-grid">
                     <div>
                         <label for="rumor_hold" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Hold</label>
                         <select id="rumor_hold" name="rumor_hold" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px;">
@@ -3024,7 +3021,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 </div>
                 <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 12px;">
                     <?php if ($editingRumorId > 0): ?>
-                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '#create-rumor'); ?>" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #555; background: #242424; color: #f2f2f2; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
+                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '#rumors-section'); ?>" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #555; background: #242424; color: #f2f2f2; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
                             Cancel Edit
                         </a>
                     <?php endif; ?>
