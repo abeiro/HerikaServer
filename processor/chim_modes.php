@@ -21,9 +21,6 @@
 // * Director. (DIRECTOR)
 //      Call instruction directly.
 //
-// * Spawn Character (SPAWN)
-//      Call spawn character directly.
-//
 // * Cheat Mode (CHEATMODE)
 //      Processes ALL user input through cheatmode function (no # prefix required).
 //      Sends input wrapped in <> brackets directly to LLM with functions enabled.
@@ -50,6 +47,19 @@ $EXECUTION_MODE_=$db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'
 $EXECUTION_MODE=isset($EXECUTION_MODE_["value"])?$EXECUTION_MODE_["value"]:"STANDARD";
 
 $EXECUTION_MODE=strtoupper($EXECUTION_MODE);
+
+// Retire the old free-form Spawn mode without leaving upgraded installs stuck in it.
+if ($EXECUTION_MODE === "SPAWN") {
+    $db->upsertRow(
+        'conf_opts',
+        [
+            'id' => 'chim_mode',
+            'value' => 'STANDARD',
+        ],
+        "id='chim_mode'"
+    );
+    $EXECUTION_MODE = "STANDARD";
+}
 
 if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"])) {
     $EXECUTION_MODE="STANDARD";
@@ -91,37 +101,6 @@ if ($EXECUTION_MODE=="STANDARD") {
         "id='chim_mode'"
     );
     exec("php /var/www/html/HerikaServer/service/manager.php rolemaster instruction \"$instruction\" notify", $output, $returnCode);
-    terminate();
-
-} else if ($EXECUTION_MODE=="SPAWN") {
-    ignore_user_abort(true);
-
-    // Expected format input|ts|gamets|PLAYER_NAME::
-    $gameRequest = explode("|", $receivedData);
-    
-    $userWish=explode(":",$gameRequest[3]);
-    $output='';
-    $instruction=escapeshellarg("{$userWish[1]}");
-    $db->upsertRow(
-        'conf_opts',
-        array(
-            'id' => 'chim_mode',
-            'value' => 'STANDARD'
-        ),
-        "id='chim_mode'"
-    );
-    $GLOBALS["db"]->insert(
-        'responselog',
-            array(
-                'localts' => time(),
-                'sent' => 0,
-                'actor' => "rolemaster",
-                'text' => '',
-                'action' => "rolecommand|DebugNotification@Spawn instruction processed, back to standard mode",
-                'tag' => ""
-            )
-        );
-    exec("php /var/www/html/HerikaServer/service/manager.php rolemaster spawn \"$instruction\"", $output, $returnCode);
     terminate();
 
 } else if ($EXECUTION_MODE=="CHEATMODE") {

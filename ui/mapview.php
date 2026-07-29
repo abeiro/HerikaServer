@@ -26,6 +26,8 @@ require_once $enginePath . 'lib/logger.php';
 require_once $enginePath . 'lib/utils_game_timestamp.php';
 require_once $enginePath . 'lib/rolemaster_helpers.php';
 require_once $enginePath . 'lib/scriptproxy_papyrus.php';
+require_once $enginePath . 'lib/background_life_requests.php';
+require_once $enginePath . 'lib/background_life_npc_creation.php';
 require_once $enginePath . 'lib/core/player.class.php';
 require_once $enginePath . 'lib/core/npc_master.class.php';
 require_once $enginePath . 'lib/core/api_badge.class.php';
@@ -71,22 +73,7 @@ $rumorFormData = [
     'content' => '',
     'length_days' => '7',
 ];
-$spawnNpcFormData = [
-    'name' => '',
-    'gender' => 'male',
-    'class' => 'farmer',
-    'race' => 'Nord',
-    'location' => '',
-    'appearance' => '',
-    'background' => '',
-    'speech_style' => '',
-    'disposition' => 'friendly',
-    'goal' => '',
-    'starting_point' => '',
-    'gold_qty' => '100',
-    'iron_ore_qty' => '10',
-    'gold_ore_qty' => '5',
-];
+$spawnNpcFormData = chimBglNpcCreationDefaults();
 $editingRumorId = 0;
 
 function getRumorPagePath() {
@@ -234,255 +221,17 @@ function handleDeleteRumor() {
 }
 
 function handleCreateBackgroundNpc() {
-    global $enginePath;
-
-    $name = trim((string) ($_POST['npc_name'] ?? ''));
-    $gender = trim((string) ($_POST['npc_gender'] ?? ''));
-    $class = trim((string) ($_POST['npc_class'] ?? ''));
-    $race = trim((string) ($_POST['npc_race'] ?? ''));
-    $location = trim((string) ($_POST['npc_location'] ?? ''));
-    $appearance = trim((string) ($_POST['npc_appearance'] ?? ''));
-    $background = trim((string) ($_POST['npc_background'] ?? ''));
-    $speechStyle = trim((string) ($_POST['npc_speech_style'] ?? ''));
-    $disposition = trim((string) ($_POST['npc_disposition'] ?? ''));
-    $goal = trim((string) ($_POST['npc_goal'] ?? ''));
-    $startingPoint = trim((string) ($_POST['npc_starting_point'] ?? ''));
-
-    $goldQty = (int) ($_POST['npc_inventory_gold'] ?? 0);
-    $ironOreQty = (int) ($_POST['npc_inventory_iron_ore'] ?? 0);
-    $goldOreQty = (int) ($_POST['npc_inventory_gold_ore'] ?? 0);
-
-    $formData = [
-        'name' => $name,
-        'gender' => $gender,
-        'class' => $class,
-        'race' => $race,
-        'location' => $location,
-        'appearance' => $appearance,
-        'background' => $background,
-        'speech_style' => $speechStyle,
-        'disposition' => $disposition,
-        'goal' => $goal,
-        'starting_point' => $startingPoint,
-        'gold_qty' => (string) $goldQty,
-        'iron_ore_qty' => (string) $ironOreQty,
-        'gold_ore_qty' => (string) $goldOreQty,
-    ];
-
-    if ($name === '' || $gender === '' || $class === '' || $race === '' || $location === '' || $background === '' || $speechStyle === '' || $goal === '' ) {
+    $result = chimBglCreateNpc($_POST);
+    $formData = $result['form_data'] ?? chimBglNpcCreationFormData($_POST);
+    if (!($result['ok'] ?? false)) {
         return [[
             'type' => 'error',
-            'message' => 'Missing required fields for NPC creation.',
+            'message' => $result['message'] ?? 'Failed to create NPC.',
         ], $formData];
     }
 
-    $locationName = $GLOBALS['db']->fetchOne("select name from locations where formid='$location' limit 1")['name'] ?? '';
-    $npcProfile = [
-        'name' => $name,
-        'gender' => $gender,
-        'class' => $class,
-        'race' => $race,
-        'location' => $locationName,
-        'appearance' => $appearance,
-        'background' => $background,
-        'speechStyle' => $speechStyle,
-        'disposition' => $disposition,
-        'goal' => $goal,
-    ];
-
-    $inventoryItems = [];
-    if ($goldQty > 0) {
-        $inventoryItems[] = ['refid' => '0x0000000F', 'qty' => $goldQty];
-    }
-    if ($ironOreQty > 0) {
-        $inventoryItems[] = ['refid' => '0x00071cf3', 'qty' => $ironOreQty];
-    }
-    if ($goldOreQty > 0) {
-        $inventoryItems[] = ['refid' => '0x0005acde', 'qty' => $goldOreQty];
-    }
-
-    if (!$startingPoint) {
-        $startingPoint = resolveFormIdToDecimal($location);
-    }
-
-    spawnBackgroundLifeNpc($npcProfile, $startingPoint, $inventoryItems);
-
-    redirectToSpawnNpcSection('success', "NPC '$name' spawned successfully.");
+    redirectToSpawnNpcSection('success', $result['message'] ?? 'NPC created successfully.');
 }
-
-function resolveFormIdToDecimal($formId)
-{
-    if (is_int($formId)) {
-        return $formId;
-    }
-
-    $raw = trim((string) $formId);
-    if ($raw === '') {
-        return 0;
-    }
-
-    if (stripos($raw, '0x') === 0) {
-        return (int) hexdec(substr($raw, 2));
-    }
-
-    return (int) $raw;
-}
-
-function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
-{
-    if (!is_array($npc_profile) || empty($npc_profile['name'])) {
-        error_log('[ERROR] Invalid npc profile provided to spawnBackgroundLifeNpc');
-        return false;
-    }
-
-    $startingPointDec = resolveFormIdToDecimal($startingPoint);
-    if ($startingPointDec <= 0) {
-        error_log('[ERROR] Invalid starting point provided for ' . ($npc_profile['name'] ?? 'unknown npc'));
-        return false;
-    }
-
-    npcProfileBase(
-        $npc_profile['name'],
-        $npc_profile['class'],
-        $npc_profile['race'],
-        $npc_profile['gender'],
-        $npc_profile['location'],
-        '0',
-        $npc_profile['additional_data'] ?? []
-    );
-
-    $spawned = false;
-    $cnName = $GLOBALS['db']->escape($npc_profile['name']);
-    $last_gamets = null;
-    $last_ts = null;
-
-    while (!$spawned) {
-        sleep(1);
-        error_log('[DEBUG] Checking if ' . $npc_profile['name'] . ' spawned: ' . time() . PHP_EOL);
-        $res = $GLOBALS['db']->fetchOne("select count(*) as n, max(gamets) as gamets,max(ts) as ts from eventlog where type='status_msg' and data like '%spawned@$cnName@%'");
-        $spawned = $res['n'] > 0;
-        $last_gamets = $res['gamets'];
-        $last_ts = $res['ts'];
-    }
-
-    $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName($npc_profile['name']);
-    $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
-    $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
-    $npc['speechstyle'] = $npc_profile['speechStyle'];
-    $npc['goals'] = $npc_profile['goal'];
-    $npc['lock_profile'] = null;
-
-    $metadata = $npcMaster->getExtendedData($npc);
-    $metadata['gps_track'] = true;
-    $npc = $npcMaster->setMetadata($npc, $metadata);
-    $npcMaster->updateByArray($npc);
-
-    $refid = isset($npc['refid']) ? $npc['refid'] : null;
-    if (empty($refid)) {
-        error_log('[DEBUG] Waiting to refid to be populated for ' . $npc_profile['name'] . '...' . PHP_EOL);
-
-        $maxRetries = 30;
-        $retryCount = 0;
-        while (empty($refid) && $retryCount < $maxRetries) {
-            sleep(1);
-            $retryCount++;
-            $npcMaster = new NpcMaster();
-            $npc = $npcMaster->getByName($npc_profile['name']);
-            $refid = isset($npc['refid']) ? $npc['refid'] : null;
-            error_log('[DEBUG] Waiting to refid to be populated for ' . $npc_profile['name'] . "... $retryCount of $maxRetries" . PHP_EOL);
-        }
-
-        if (empty($refid)) {
-            error_log('[ERROR] Refid was not populated for ' . $npc_profile['name'] . " after {$maxRetries} retries. Exiting." . PHP_EOL);
-            return false;
-        }
-
-        $npcMaster = new NpcMaster();
-        $npc = $npcMaster->getByName($npc_profile['name']);
-    }
-
-    sleep(1);
-    $GLOBALS['db']->insert(
-        'responselog',
-        [
-            'localts' => time(),
-            'sent' => 0,
-            'actor' => 'rolemaster',
-            'text' => '',
-            'action' => "rolecommand|RenameNPC@0x$refid@$cnName",
-            'tag' => '',
-        ]
-    );
-
-    sleep(1);
-    $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName($npc_profile['name']);
-    $extended_data = $npcMaster->getExtendedData($npc);
-    $extended_data['background_life_commands'] = true;
-    $extended_data['background_life_enabled'] = true;
-    $extended_data['background_life_last_updated'] = $last_gamets;
-    $extended_data['background_life_player_unattached'] = true;
-    $extended_data['middle_term_enabled'] = 1;
-    
-
-    $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
-    $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
-    $npc['speechstyle'] = $npc_profile['speechStyle'];
-    $npc['goals'] = $npc_profile['goal'];
-    $npc['lock_profile'] = null;
-
-    $metadata = $npcMaster->getExtendedData($npc);
-    $metadata['gps_track'] = true;
-    $npc = $npcMaster->setMetadata($npc, $metadata);
-    $npc = $npcMaster->setExtendedData($npc, $extended_data);
-    $npcMaster->updateByArray($npc);
-
-    $skyrimCmd = new SkyrimCommandBuilder();
-    foreach ($inventoryItems as $itemEntry) {
-        if (!is_array($itemEntry)) {
-            continue;
-        }
-
-        $itemRefId = isset($itemEntry['refid']) ? (string) $itemEntry['refid'] : '';
-        $itemQty = isset($itemEntry['qty']) ? (int) $itemEntry['qty'] : 0;
-        if ($itemRefId === '' || $itemQty <= 0) {
-            continue;
-        }
-
-        $json = $skyrimCmd->ObjectReference->AddItem("0x{$npc['refid']}", $itemRefId, $itemQty, true);
-        $skyrimCmd->send(cmd: $json);
-    }
-
-    $GLOBALS['db']->insert(
-        'responselog',
-        [
-            'localts' => time(),
-            'sent' => 0,
-            'actor' => 'rolemaster',
-            'text' => '',
-            'action' => "rolecommand|BackgroundCmd@$refid@TravelTo/$startingPointDec",
-            'tag' => __FILE__ . ':' . __LINE__,
-        ]
-    );
-
-    $res = $GLOBALS['db']->fetchOne('select max(gamets) as gamets,max(ts) as ts from eventlog order by gamets desc,ts desc limit 1');
-    $last_gamets = $res['gamets'];
-    $last_ts = $res['ts'];
-
-    $GLOBALS['db']->insert('actions_issued', [
-        'action' => 'TravelTo',
-        'fullcall' => 'TravelTo',
-        'actorname' => $npc['npc_name'],
-        'ts' => $last_ts,
-        'gamets' => $last_gamets,
-        'localts' => time(),
-        'original' => 'backgroundaction',
-    ]);
-
-    return true;
-}
-
 
 if (isset($_GET['rumor_status']) && isset($_GET['rumor_message'])) {
     $rumorFlash = [
@@ -505,16 +254,16 @@ if (isset($_GET['spawn_npc_status']) && isset($_GET['spawn_npc_message'])) {
     ];
 }
 
-$npcLocationOptions = [];
-$npcLocationResult = pg_query($adminConn, 'SELECT formid,name,is_interior,region,hold FROM "public"."locations" ORDER BY name ASC');
-if ($npcLocationResult) {
-    while ($locationRow = pg_fetch_assoc($npcLocationResult)) {
-        $locationName = trim((string) ($locationRow['name'] ?? ''));
-        if ($locationName !== '') {
-            $npcLocationOptions[] = [$locationRow['formid'], $locationName, (bool) $locationRow['is_interior'], $locationRow['region'], $locationRow['hold']];
-        }
-    }
-}
+$npcCreationOptions = chimBglNpcCreationOptions();
+$npcLocationOptions = array_map(static function (array $location): array {
+    return [
+        $location['formid'],
+        $location['name'],
+        $location['is_interior'],
+        $location['region'],
+        $location['hold'],
+    ];
+}, $npcCreationOptions['locations']);
 
 // Helper function to resolve NPC portrait path (same as npc_master.php)
 if (!function_exists('race_icon_web_path')) {
@@ -2852,8 +2601,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     <label for="npc_gender" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Gender</label>
                     <select id="npc_gender" name="npc_gender" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
                         <?php $npcGenderValue = (string) ($spawnNpcFormData['gender'] ?? 'male'); ?>
-                        <option value="male" <?php echo ($npcGenderValue === 'male') ? 'selected' : ''; ?>>male</option>
-                        <option value="female" <?php echo ($npcGenderValue === 'female') ? 'selected' : ''; ?>>female</option>
+                        <?php foreach ($npcCreationOptions['genders'] as $npcGenderOption): ?>
+                            <option value="<?php echo htmlspecialchars($npcGenderOption); ?>" <?php echo ($npcGenderValue === $npcGenderOption) ? 'selected' : ''; ?>><?php echo htmlspecialchars($npcGenderOption); ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div>
@@ -2861,8 +2611,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     <select id="npc_class" name="npc_class" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
                         <?php
                             $npcClassValue = (string) ($spawnNpcFormData['class'] ?? 'farmer');
-                            $npcClassOptions = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'forsworn'];
-                            foreach ($npcClassOptions as $npcClassOption):
+                            foreach ($npcCreationOptions['classes'] as $npcClassOption):
                         ?>
                             <option value="<?php echo htmlspecialchars($npcClassOption); ?>" <?php echo ($npcClassValue === $npcClassOption) ? 'selected' : ''; ?>><?php echo htmlspecialchars($npcClassOption); ?></option>
                         <?php endforeach; ?>
@@ -2873,8 +2622,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     <select id="npc_race" name="npc_race" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
                         <?php
                             $npcRaceValue = (string) ($spawnNpcFormData['race'] ?? 'Nord');
-                            $npcRaceOptions = ['Nord', 'Imperial', 'Argonian', 'RedGuard', 'Orc', 'Breton'];
-                            foreach ($npcRaceOptions as $npcRaceOption):
+                            foreach ($npcCreationOptions['races'] as $npcRaceOption):
                         ?>
                             <option value="<?php echo htmlspecialchars($npcRaceOption); ?>" <?php echo ($npcRaceValue === $npcRaceOption) ? 'selected' : ''; ?>><?php echo htmlspecialchars($npcRaceOption); ?></option>
                         <?php endforeach; ?>
