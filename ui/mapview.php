@@ -995,7 +995,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .map-section {
-        flex: 0 0 75%;
+        flex: 0 0 70%;
         min-width: 0;
     }
 
@@ -1019,7 +1019,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .sidebar-section {
-        flex: 0 0 calc(25% - 20px);
+        flex: 0 0 calc(30% - 20px);
         display: flex;
         flex-direction: column;
         gap: 10px;
