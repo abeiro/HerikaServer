@@ -516,6 +516,11 @@ if (!in_array($activeTab, $validTabs, true)) {
     $activeTab = 'eventlog';
 }
 
+$backgroundLifeSubTab = strtolower(trim((string) ($_GET['bgl_tab'] ?? 'background')));
+if (!in_array($backgroundLifeSubTab, ['background', 'history', 'rumors'], true)) {
+    $backgroundLifeSubTab = 'background';
+}
+
 if ($activeTab === 'responselog') {
     $redirectParams = [];
     if (isset($_GET['page'])) {
@@ -1885,7 +1890,7 @@ function getTimeColor($time) {
         </div>
 
         <div id="backgroundlife-tab" class="tab-content embed-tab <?php echo $activeTab === 'backgroundlife' ? 'active' : ''; ?>">
-            <iframe class="embed-frame" title="Background Life" <?php echo $activeTab === 'backgroundlife' ? 'src' : 'data-src'; ?>="<?php echo $webRoot; ?>/ui/mapview.php"></iframe>
+            <iframe class="embed-frame" title="Background Life" <?php echo $activeTab === 'backgroundlife' ? 'src' : 'data-src'; ?>="<?php echo $webRoot; ?>/ui/mapview.php?bgl_tab=<?php echo urlencode($backgroundLifeSubTab); ?>"></iframe>
         </div>
     </div>
 </div>

@@ -88,6 +88,8 @@ function redirectToRumorSection($status, $message, $anchor = 'create-rumor') {
     $path = getRumorPagePath();
 
     $query = http_build_query([
+        'tab' => 'backgroundlife',
+        'bgl_tab' => 'rumors',
         'rumor_status' => $status,
         'rumor_message' => $message,
     ]);
@@ -104,6 +106,8 @@ function redirectToRumorSection($status, $message, $anchor = 'create-rumor') {
 function redirectToBglSettings($status, $message) {
     $path = getRumorPagePath();
     $query = http_build_query([
+        'tab' => 'backgroundlife',
+        'bgl_tab' => 'background',
         'bgl_settings_status' => $status,
         'bgl_settings_message' => $message,
     ]);
@@ -115,6 +119,8 @@ function redirectToBglSettings($status, $message) {
 function redirectToSpawnNpcSection($status, $message, $anchor = 'create-background-npc') {
     $path = getRumorPagePath();
     $query = http_build_query([
+        'tab' => 'backgroundlife',
+        'bgl_tab' => 'background',
         'spawn_npc_status' => $status,
         'spawn_npc_message' => $message,
     ]);
@@ -406,6 +412,21 @@ if (!function_exists('race_icon_web_path')) {
     } elseif (isset($rumorFormData['id'])) {
         $editingRumorId = (int) $rumorFormData['id'];
     }
+
+    $activeBglTab = strtolower(trim((string) ($_GET['bgl_tab'] ?? 'background')));
+    if (!in_array($activeBglTab, ['background', 'history', 'rumors'], true)) {
+        $activeBglTab = 'background';
+    }
+    if ($editingRumorId > 0 || !empty($rumorFlash['message'])) {
+        $activeBglTab = 'rumors';
+    } elseif (!empty($spawnNpcFlash['message']) || !empty($bglSettingsFlash['message'])) {
+        $activeBglTab = 'background';
+    }
+
+    $rumorsTabUrl = getRumorPagePath() . '?' . http_build_query(['tab' => 'backgroundlife', 'bgl_tab' => 'rumors']);
+    $backgroundPageTabUrl = $webRoot . '/ui/events-memories.php?' . http_build_query(['tab' => 'backgroundlife', 'bgl_tab' => 'background']);
+    $historyPageTabUrl = $webRoot . '/ui/events-memories.php?' . http_build_query(['tab' => 'backgroundlife', 'bgl_tab' => 'history']);
+    $rumorsPageTabUrl = $webRoot . '/ui/events-memories.php?' . http_build_query(['tab' => 'backgroundlife', 'bgl_tab' => 'rumors']);
 
     function handleRequestAction() {
         global $enginePath;
@@ -1376,6 +1397,52 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         margin: 0 0 12px;
     }
 
+    .bgl-page-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        max-width: 900px;
+        margin: 0 auto 20px;
+        padding: 8px;
+        background: #1d1d1d;
+        border: 1px solid #3d3d3d;
+        border-radius: 8px;
+    }
+
+    .bgl-page-tab {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 8px 12px;
+        color: #ddd;
+        background: #2d2d2d;
+        border: 1px solid #474747;
+        border-radius: 6px;
+        font-weight: 700;
+        text-align: center;
+        text-decoration: none;
+        box-sizing: border-box;
+    }
+
+    .bgl-page-tab:hover {
+        color: #fff;
+        background: #363636;
+        border-color: #777;
+        text-decoration: none;
+    }
+
+    .bgl-page-tab.active {
+        color: #fff;
+        background: rgba(169, 81, 9, 0.28);
+        border-color: rgb(242, 124, 17);
+        box-shadow: inset 0 -2px 0 rgb(242, 124, 17);
+    }
+
+    .bgl-page-panel[hidden] {
+        display: none !important;
+    }
+
     .bgl-action-button {
         width: 100%;
         padding: 10px 14px;
@@ -1483,6 +1550,17 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         .bgl-modal-dialog {
             max-height: calc(100vh - 16px);
             padding: 14px;
+        }
+
+        .bgl-page-tabs {
+            gap: 5px;
+            padding: 5px;
+        }
+
+        .bgl-page-tab {
+            min-height: 38px;
+            padding: 7px 5px;
+            font-size: 12px;
         }
     }
 
@@ -1923,6 +2001,31 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 </style>
 
 <main>
+    <nav class="bgl-page-tabs" aria-label="Background Life sections">
+        <a
+            class="bgl-page-tab <?php echo $activeBglTab === 'background' ? 'active' : ''; ?>"
+            href="<?php echo htmlspecialchars($backgroundPageTabUrl); ?>"
+            target="_parent"
+            <?php echo $activeBglTab === 'background' ? 'aria-current="page"' : ''; ?>>
+            🌍 Background Life
+        </a>
+        <a
+            class="bgl-page-tab <?php echo $activeBglTab === 'history' ? 'active' : ''; ?>"
+            href="<?php echo htmlspecialchars($historyPageTabUrl); ?>"
+            target="_parent"
+            <?php echo $activeBglTab === 'history' ? 'aria-current="page"' : ''; ?>>
+            📚 History
+        </a>
+        <a
+            class="bgl-page-tab <?php echo $activeBglTab === 'rumors' ? 'active' : ''; ?>"
+            href="<?php echo htmlspecialchars($rumorsPageTabUrl); ?>"
+            target="_parent"
+            <?php echo $activeBglTab === 'rumors' ? 'aria-current="page"' : ''; ?>>
+            📰 Rumors
+        </a>
+    </nav>
+
+    <section class="bgl-page-panel" id="bgl-tab-background" <?php echo $activeBglTab === 'background' ? '' : 'hidden'; ?>>
     <div class="container">
         <div class="content-wrapper">
             <div class="map-section">
@@ -2157,6 +2260,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     </div>
     <span class="open-new-window" onclick="openInNewWindow()" title="Open in new window">↗️</span>
     <span class="open-new-window-2" onclick="location.href='mapview.php'" title="Refresh">🔄</span>
+    </section>
     <script>
         // NPC Diary Data - embedded directly in page
         const npcDiaryData = <?php echo json_encode(array_combine(
@@ -2659,6 +2763,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     ?>
 
     <link rel="stylesheet" href="<?php echo htmlspecialchars($webRoot); ?>/ui/css/background_life_history.css">
+    <section class="bgl-page-panel" id="bgl-tab-history" <?php echo $activeBglTab === 'history' ? '' : 'hidden'; ?>>
     <div
         class="info-panel bgl-history-panel"
         id="bgl-history-panel"
@@ -2715,6 +2820,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             <button class="bgl-history-button" id="bgl-history-next" type="button">Next</button>
         </div>
     </div>
+    </section>
     <script src="<?php echo htmlspecialchars($webRoot); ?>/ui/js/background_life_history.js"></script>
 
     <div
@@ -2838,7 +2944,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         </div>
     </div>
 
-    <div id="rumors-section" style="margin-top: 40px;">
+    <section
+        class="bgl-page-panel"
+        id="rumors-section"
+        <?php echo $activeBglTab === 'rumors' ? '' : 'hidden'; ?>>
         <div class="page-header" style="margin-bottom: 20px;">
             <h1>📰 Rumors</h1>
         </div>
@@ -2893,7 +3002,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <td style="padding: 12px; color: #bbb; font-size: 12px; white-space: nowrap;"><?php echo htmlspecialchars($rumorDate); ?></td>
                                     <td style="padding: 12px; color: #888; font-size: 12px; white-space: nowrap;"><?php echo $hoursAgo; ?> hours ago</td>
                                     <td style="padding: 12px;">
-                                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '?edit_rumor_id=' . urlencode((string)($rumor['id'] ?? '')) . '#create-rumor'); ?>" style="color: rgb(242, 124, 17); font-weight: 600; text-decoration: none;">Edit</a>
+                                        <a href="<?php echo htmlspecialchars($rumorsTabUrl . '&edit_rumor_id=' . urlencode((string)($rumor['id'] ?? '')) . '#create-rumor'); ?>" style="color: rgb(242, 124, 17); font-weight: 600; text-decoration: none;">Edit</a>
                                         <form method="post" action="" style="display: inline; margin-left: 12px;" onsubmit="return confirm('Delete this rumor?');">
                                             <input type="hidden" name="action" value="delete_rumor">
                                             <input type="hidden" name="rumor_id" value="<?php echo (int) ($rumor['id'] ?? 0); ?>">
@@ -2941,7 +3050,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <td style="padding: 12px; color: #777; font-size: 12px; white-space: nowrap;"><?php echo htmlspecialchars($rumorDate); ?></td>
                                     <td style="padding: 12px; color: #666; font-size: 12px; white-space: nowrap;"><?php echo $hoursAgo; ?> hours ago</td>
                                     <td style="padding: 12px;">
-                                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '?edit_rumor_id=' . urlencode((string)($rumor['id'] ?? '')) . '#create-rumor'); ?>" style="color: #bbb; font-weight: 600; text-decoration: none;">Edit</a>
+                                        <a href="<?php echo htmlspecialchars($rumorsTabUrl . '&edit_rumor_id=' . urlencode((string)($rumor['id'] ?? '')) . '#create-rumor'); ?>" style="color: #bbb; font-weight: 600; text-decoration: none;">Edit</a>
                                         <form method="post" action="" style="display: inline; margin-left: 12px;" onsubmit="return confirm('Delete this rumor?');">
                                             <input type="hidden" name="action" value="delete_rumor">
                                             <input type="hidden" name="rumor_id" value="<?php echo (int) ($rumor['id'] ?? 0); ?>">
@@ -3021,7 +3130,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 </div>
                 <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 12px;">
                     <?php if ($editingRumorId > 0): ?>
-                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '#rumors-section'); ?>" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #555; background: #242424; color: #f2f2f2; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
+                        <a href="<?php echo htmlspecialchars($rumorsTabUrl . '#rumors-section'); ?>" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #555; background: #242424; color: #f2f2f2; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
                             Cancel Edit
                         </a>
                     <?php endif; ?>
@@ -3032,7 +3141,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             </form>
             </div>
         </div>
-    </div>
+    </section>
 </main>
 
 <?php
