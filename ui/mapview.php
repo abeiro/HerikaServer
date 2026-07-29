@@ -995,7 +995,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .map-section {
-        flex: 0 0 70%;
+        flex: 0 0 52%;
         min-width: 0;
     }
 
@@ -1019,10 +1019,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .sidebar-section {
-        flex: 0 0 calc(30% - 20px);
+        flex: 0 0 20%;
         display: flex;
         flex-direction: column;
         gap: 10px;
+    }
+
+    .npc-list-section {
+        flex: 0 0 calc(28% - 40px);
+        min-width: 0;
     }
 
     .map-container {
@@ -2049,6 +2054,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
         .sidebar-section {
             flex: 0 0 100%;
+            width: 100%;
+        }
+
+        .npc-list-section {
+            flex: 0 0 100%;
+            width: 100%;
         }
 
         .npc-list-container {
@@ -2281,7 +2292,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 <div class="bgl-action-toolbar">
                     <button type="button" class="chim-btn-primary bgl-action-button" onclick="openCreateNpcModal()">Create NPC</button>
                 </div>
-                <div class="npc-list-header">
+            </div>
+            <div class="npc-list-section">
+                <div class="npc-list-container">
+                    <div class="npc-list-header">
                         <h3>📍 NPC Markers</h3>
                         <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
                             <strong>Tracked NPCs:</strong> <?php echo sizeof($translatedMarkers); ?><br/>
@@ -2295,9 +2309,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <span class="toggle-text">🗺️ Show all NPCs with coords</span>
                         </label>
                         <button onclick="updateAllCoords()" class="update-all-coords-btn">📍 Update All NPC Coords</button>
-                </div>
-                <div class="npc-list-container">
-                    
+                    </div>
                     <div class="marker-list">
                         <?php foreach ($translatedMarkers as $marker) {?>
                             <div

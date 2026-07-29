@@ -298,11 +298,7 @@
     initBackgroundLifeMap();
 
     const panel = document.getElementById('bgl-history-panel');
-    if (!panel) {
-        return;
-    }
-
-    const apiUrl = panel.dataset.apiUrl;
+    const apiUrl = panel ? panel.dataset.apiUrl : '';
     const tableBody = document.getElementById('bgl-history-body');
     const status = document.getElementById('bgl-history-status');
     const npcFilter = document.getElementById('bgl-history-npc-filter');
@@ -738,31 +734,33 @@
 
     window.closeNpcRecentEvents = closeNpcRecentEvents;
 
-    npcFilter.addEventListener('change', function () {
-        currentPage = 1;
-        loadHistory();
-    });
-    searchInput.addEventListener('input', scheduleSearch);
-    limitSelect.addEventListener('change', function () {
-        currentPage = 1;
-        loadHistory();
-    });
-    refreshButton.addEventListener('click', loadHistory);
-    liveButton.addEventListener('click', function () {
-        setLive(!liveTimer);
-    });
-    previousButton.addEventListener('click', function () {
-        if (currentPage > 1) {
-            currentPage -= 1;
+    if (panel) {
+        npcFilter.addEventListener('change', function () {
+            currentPage = 1;
             loadHistory();
-        }
-    });
-    nextButton.addEventListener('click', function () {
-        if (currentPage < totalPages) {
-            currentPage += 1;
+        });
+        searchInput.addEventListener('input', scheduleSearch);
+        limitSelect.addEventListener('change', function () {
+            currentPage = 1;
             loadHistory();
-        }
-    });
+        });
+        refreshButton.addEventListener('click', loadHistory);
+        liveButton.addEventListener('click', function () {
+            setLive(!liveTimer);
+        });
+        previousButton.addEventListener('click', function () {
+            if (currentPage > 1) {
+                currentPage -= 1;
+                loadHistory();
+            }
+        });
+        nextButton.addEventListener('click', function () {
+            if (currentPage < totalPages) {
+                currentPage += 1;
+                loadHistory();
+            }
+        });
 
-    loadHistory();
+        loadHistory();
+    }
 })();
