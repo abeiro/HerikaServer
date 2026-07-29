@@ -574,7 +574,7 @@ if (!function_exists('race_icon_web_path')) {
     $mapHeight = 1625;
 
     // Map file path (relative to web root)
-$mapImageUrl = '../data/maps/Map_of_Skyrim_dark.png?v=2';
+$mapImageUrl = '../data/maps/Map_of_Skyrim_dark.png?v=3';
 
     // Function to translate in-game coordinates to map coordinates
     function translateCoords($ingameX, $ingameY, $mapWidth, $mapHeight, $worldXMin, $worldXMax, $worldYMin, $worldYMax)
