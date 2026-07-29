@@ -574,7 +574,7 @@ if (!function_exists('race_icon_web_path')) {
     $mapHeight = 1625;
 
     // Map file path (relative to web root)
-$mapImageUrl = '../data/maps/Map_of_Skyrim_dark.png?v=3';
+$mapImageUrl = '../data/maps/Map_of_Skyrim_dark.png?v=4';
 
     // Function to translate in-game coordinates to map coordinates
     function translateCoords($ingameX, $ingameY, $mapWidth, $mapHeight, $worldXMin, $worldXMax, $worldYMin, $worldYMax)
@@ -1914,6 +1914,23 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border: none;
     }
 
+    .location-marker-caption {
+        position: absolute;
+        top: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #ece7dc;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1;
+        white-space: nowrap;
+        pointer-events: none;
+        text-shadow:
+            0 1px 2px #000,
+            0 0 5px rgba(0, 0, 0, 0.95);
+        opacity: 0.88;
+    }
+
     .location-marker:hover .location-marker-icon {
         opacity: 1;
         transform: scale(1.3);
@@ -1947,6 +1964,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .location-marker:hover .location-marker-label {
         display: block;
+    }
+
+    .location-marker:hover .location-marker-caption {
+        opacity: 0;
     }
 
     .location-marker-label .location-name {
@@ -2139,6 +2160,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     echo '<div class="location-marker-icon">';
                     echo '<img src="' . htmlspecialchars($iconPath) . '" alt="' . htmlspecialchars($location['name']) . '" />';
                     echo '</div>';
+                    echo '<div class="location-marker-caption">' . htmlspecialchars($location['name']) . '</div>';
                     echo '<div class="location-marker-label">';
                     echo '<div class="location-name">' . htmlspecialchars($location['name']) . '</div>';
                     echo '<div class="location-desc">' . htmlspecialchars($location['description']) . '</div>';
