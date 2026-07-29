@@ -1508,7 +1508,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         justify-content: center;
         min-height: 42px;
         padding: 8px 12px;
-        color: #ddd;
+        color: #fff !important;
         background: #2d2d2d;
         border: 1px solid #474747;
         border-radius: 6px;
