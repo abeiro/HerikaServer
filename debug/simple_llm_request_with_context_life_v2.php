@@ -946,6 +946,7 @@ Rules:
                 'gamets' => $last_gamets - 10,
                 'localts' => time(),
                 'data' => "$npcName produced/consumed items while idle: $actionTextFinal $actionTextDescriptionFinal. Reasoning: $reasoning",
+                'category' => 'produce_consume'
             ]
         );
 
@@ -1276,10 +1277,10 @@ BuyItem:<NPC name>:<itemid>:<count>:<total_gold_spent>,<NPC name>:<itemid>:<coun
 - Required after a previously agreed trade so inventories can be updated.
 - total_gold_spent is <item price>*<count>, the total amount of gold spent for that item, including any haggling or discounts.
 
-SellItem:<NPC name>:<itemid>:<count>:<total_gold_received>,<NPC name>:<itemid>:<count>:<total_gold_received>,...
+SellItem:<NPC name>:<itemid>:<count>:<total_gold_amount>,<NPC name>:<itemid>:<count>:<total_gold_amount>,...
 - Sell items to another NPC.
 - Required after a previously agreed trade so inventories can be updated.
-- total_gold_received is <item price>*<count>, the total amount of gold received for that item, including any haggling or discounts (price*count).
+- total_gold_amount is <item price>*<count>, the total amount of gold received for that item, including any haggling or discounts (price*count).
 
 GiveItemTo:<NPC name>:<itemid>:<count>,<NPC name>:<itemid>:<count>
 - Give items directly to one or more NPCs with no gold exchange.

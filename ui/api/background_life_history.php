@@ -94,7 +94,7 @@ try {
     $whereSql = implode(' AND ', $where);
 
     $rows = $db->fetchAll(
-        "SELECT rowid, npc, gamets, ts, localts, data
+        "SELECT rowid, npc, gamets, ts, localts, data,category
          FROM bgl_history
          WHERE {$whereSql}
          ORDER BY gamets DESC, ts DESC, rowid DESC
@@ -126,7 +126,7 @@ try {
             'rowid' => (int)($row['rowid'] ?? 0),
             'npc' => trim((string)($row['npc'] ?? 'Unknown NPC')),
             'activity' => $activity,
-            'category' => chimBglHistoryCategory($activity),
+            'category' => $row['category'] ?? chimBglHistoryCategory($activity),
             'tamrielic_time' => chimBglHistoryTamrielicDate($gamets),
             'server_time' => chimBglHistoryUtcDate($localts),
             'gamets' => $gamets,

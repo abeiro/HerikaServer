@@ -159,12 +159,26 @@
     white-space: nowrap;
 }
 
+.bgl-history-activity-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .bgl-history-details td {
     padding: 0;
     border-bottom: 1px solid #303030;
 }
 
 .bgl-history-details-content {
+    padding: 12px 16px 14px 424px;
+    background: #151515;
+    color: #c8c8c8;
+    line-height: 1.5;
+}
+
+.bgl-history-details-content-text {
     padding: 12px 16px 14px 424px;
     background: #151515;
     color: #c8c8c8;

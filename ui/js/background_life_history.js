@@ -35,6 +35,13 @@
         return element;
     }
 
+    function nl2br(value) {
+        if (value === null || value === undefined) {
+            return '';
+        }
+        return String(value).replace(/\r\n|\r|\n/g, '<br>');
+    }
+
     function setLoading(loading) {
         panel.classList.toggle('bgl-history-loading', loading);
         refreshButton.disabled = loading;
@@ -102,19 +109,34 @@
             detailsRow.hidden = true;
             const detailsCell = document.createElement('td');
             detailsCell.colSpan = 3;
-            const detailsContent = createElement(
-                'div',
-                'bgl-history-details-content',
-                entry.activity || 'No details recorded'
-            );
-            const detailsMeta = createElement(
-                'div',
-                'bgl-history-details-meta',
-                [entry.server_time, entry.rowid ? 'History ID ' + entry.rowid : ''].filter(Boolean).join(' | ')
-            );
-            detailsContent.appendChild(detailsMeta);
-            detailsCell.appendChild(detailsContent);
-            detailsRow.appendChild(detailsCell);
+            
+            if (entry.category == 'dialogue') {
+                const detailsContent = createElement('div', 'bgl-history-details-content-text');
+                detailsContent.innerHTML = nl2br(entry.activity) || 'No details recorded';
+                const detailsMeta = createElement(
+                    'div',
+                    'bgl-history-details-meta',
+                    [entry.server_time, entry.rowid ? 'History ID ' + entry.rowid : ''].filter(Boolean).join(' | ')
+                );
+                detailsContent.appendChild(detailsMeta);
+                detailsCell.appendChild(detailsContent);
+                detailsRow.appendChild(detailsCell);
+
+            } else {
+                const detailsContent = createElement(
+                    'div',
+                    'bgl-history-details-content',
+                    entry.activity || 'No details recorded'
+                );
+                const detailsMeta = createElement(
+                    'div',
+                    'bgl-history-details-meta',
+                    [entry.server_time, entry.rowid ? 'History ID ' + entry.rowid : ''].filter(Boolean).join(' | ')
+                );
+                detailsContent.appendChild(detailsMeta);
+                detailsCell.appendChild(detailsContent);
+                detailsRow.appendChild(detailsCell);
+            }
 
             function toggleDetails() {
                 const expanded = detailsRow.hidden;
@@ -183,8 +205,8 @@
             renderPagination(payload.pagination || {});
             setStatus(
                 (payload.pagination ? payload.pagination.total_records : payload.entries.length) +
-                    ' activit' +
-                    ((payload.pagination ? payload.pagination.total_records : payload.entries.length) === 1 ? 'y' : 'ies'),
+                ' activit' +
+                ((payload.pagination ? payload.pagination.total_records : payload.entries.length) === 1 ? 'y' : 'ies'),
                 false
             );
         } catch (error) {

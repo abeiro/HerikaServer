@@ -7055,6 +7055,18 @@ if ($checkVersion("bgl_history") < 20260623001) {
 
 }
 
+if ($checkVersion("bgl_history") < 20260729001) {
+    Logger::debug("Applying bgl_history 20260729001 - create BgL history table");
+
+    $db->execQuery("
+        ALTER TABLE public.bgl_history ADD COLUMN category TEXT DEFAULT NULL
+    ");
+
+    $updateVersion("bgl_history", 20260729001);
+    Logger::info("Applied patch bgl_history 20260729001");
+
+}
+
 if ($checkVersion("oghma") < 20260625001) {
     Logger::debug("Applying oghma 20260625001 - ensure topic has a unique constraint for upserts");
 

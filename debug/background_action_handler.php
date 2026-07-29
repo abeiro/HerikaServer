@@ -253,6 +253,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'gamets' => $last_gamets,
             'localts' => time(),
             'data' => ($location == $resolvedLocation) ? "$npcName starts travelling to $location. Reason: {$GLOBALS["LAST_REASON"]}" : "$npcName starts travelling to $location (resolved as $resolvedLocation). Reason: {$GLOBALS["LAST_REASON"]}",
+            'category' => 'travel',
         ]
     );
 
@@ -320,6 +321,7 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
             'data' => "$npcName stays at current location ($requestedLocation, resolved as $resolvedLocation)$intentText. Reason: {$GLOBALS["LAST_REASON"]}",
+            'category' => $intent,
         ]
     );
 
@@ -491,6 +493,7 @@ function handleSendLetter($letterContent, $currentNpcData, $npcName, $last_ts, $
             'gamets' => $last_gamets + 1,
             'localts' => time(),
             'data' => "{$GLOBALS["HERIKA_NAME"]} sends a letter to {$GLOBALS["PLAYER_NAME"]}",
+            'category' => 'letter',
         ]
     );
 
@@ -574,7 +577,8 @@ function handleReturnHome($location, $currentNpcData, $npcName, $last_ts, $last_
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName returns back to {$GLOBALS['PLAYER_NAME']}. Reason: {$GLOBALS['LAST_REASON']}"
+            'data' => "$npcName returns back to {$GLOBALS['PLAYER_NAME']}. Reason: {$GLOBALS['LAST_REASON']}",
+            'category' => 'return_home',
         ]
     );
 
@@ -724,7 +728,8 @@ function handleMoveToAction($targetNpcName, $currentNpcData, $npcName, $last_ts,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName moves towards $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
+            'data' => "$npcName moves towards $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}",
+            'category' => 'move',
         ]
     );
 
@@ -830,7 +835,8 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName looks for $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
+            'data' => "$npcName looks for $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}",
+            'category' => 'find',
         ]
     );
 
@@ -910,7 +916,8 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                 'ts' => $last_ts,
                 'gamets' => $last_gamets,
                 'localts' => time(),
-                'data' => "$npcName moves toward $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
+                'data' => "$npcName moves toward $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'move',
             ]
         );
 
@@ -1159,7 +1166,8 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                 'ts' => $last_ts,
                 'gamets' => $last_gamets + 20,
                 'localts' => time(),
-                'data' => "$npcName has a conversation with $resolvedName\nDialogue: $dialogueBuffer\nReason: {$GLOBALS["LAST_REASON"]}"
+                'data' => "$npcName has a conversation with $resolvedName\nDialogue: $dialogueBuffer\nReason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'dialogue',
             ]
         );
     }
@@ -1255,7 +1263,8 @@ function handleGiveGoldToAction($actionArgument, $currentNpcData, $npcName, $las
                 'ts' => $last_ts,
                 'gamets' => $last_gamets,
                 'localts' => time(),
-                'data' => "$npcName gives $gold gold to $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
+                'data' => "$npcName gives $gold gold to $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'give',
             ]
         );
 
@@ -1418,7 +1427,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
             'ts' => $last_ts,
             'gamets' => $last_gamets + 10,
             'type' => 'innerchat',
-            'data' => "The Narrator: $npcName " . ($tradeType === 'BuyItem' ? 'buys items from' : ($tradeType === 'SellItem' ? 'sells items to' : 'gives items to')) . " $resolvedName $itemNameResolved. Inventories updated!",
+            'data' => "The Narrator: $npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:" . ($tradeType === 'GiveItemTo' ? 0 : $gold) . "), item description:$itemNameResolved\nReason: \"{$GLOBALS["LAST_REASON"]}\"",
             'sess' => $momentum,
             'localts' => time(),
             'people' => "|$npcName|$resolvedName|",
@@ -1443,7 +1452,8 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
                 'ts' => $last_ts,
                 'gamets' => $last_gamets,
                 'localts' => time(),
-                'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:" . ($tradeType === 'GiveItemTo' ? 0 : $gold) . "), item description:$itemNameResolved\nReason: {$GLOBALS["LAST_REASON"]}"
+                'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:" . ($tradeType === 'GiveItemTo' ? 0 : $gold) . "), item description:$itemNameResolved\nReason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'trade',
             ]
         );
 
