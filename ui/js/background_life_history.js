@@ -23,6 +23,7 @@
     let liveTimer = null;
     let searchTimer = null;
     let requestController = null;
+    let npcRecentEventsController = null;
 
     function createElement(tagName, className, text) {
         const element = document.createElement(tagName);
@@ -244,6 +245,136 @@
             }, 10000);
         }
     }
+
+    function renderNpcRecentEvents(entries) {
+        const list = document.getElementById('npc-recent-events-list');
+        list.replaceChildren();
+
+        if (!entries || entries.length === 0) {
+            const empty = createElement(
+                'div',
+                'bgl-recent-events-empty',
+                'No recent Background Life events have been recorded for this NPC.'
+            );
+            list.appendChild(empty);
+            return;
+        }
+
+        entries.forEach(function (entry) {
+            const eventItem = createElement('article', 'bgl-recent-event');
+            const meta = createElement('div', 'bgl-recent-event-meta');
+            meta.appendChild(createElement('span', '', entry.tamrielic_time || 'Unknown time'));
+            meta.appendChild(createElement('span', 'bgl-recent-event-category', entry.category || 'activity'));
+            eventItem.appendChild(meta);
+            eventItem.appendChild(createElement(
+                'div',
+                'bgl-recent-event-text',
+                entry.activity || 'No details recorded'
+            ));
+            list.appendChild(eventItem);
+        });
+    }
+
+    async function openNpcRecentEvents(npcName) {
+        const modal = document.getElementById('npc-recent-events');
+        const title = document.getElementById('npc-recent-events-title');
+        const status = document.getElementById('npc-recent-events-status');
+        const list = document.getElementById('npc-recent-events-list');
+        if (!modal || !title || !status || !list) {
+            return;
+        }
+
+        title.textContent = npcName + ' Recent Events';
+        status.textContent = 'Loading recent events...';
+        status.style.color = '';
+        list.replaceChildren();
+        openBglModal('npc-recent-events');
+
+        if (npcRecentEventsController) {
+            npcRecentEventsController.abort();
+        }
+        npcRecentEventsController = new AbortController();
+
+        const params = new URLSearchParams({
+            npc: npcName,
+            page: '1',
+            limit: '20'
+        });
+
+        try {
+            const response = await fetch(modal.dataset.apiUrl + '?' + params.toString(), {
+                cache: 'no-store',
+                credentials: 'same-origin',
+                signal: npcRecentEventsController.signal
+            });
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+
+            const payload = await response.json();
+            if (!payload.success) {
+                throw new Error(payload.error || 'Unable to load recent events');
+            }
+
+            renderNpcRecentEvents(payload.entries);
+            const totalRecords = payload.pagination ? payload.pagination.total_records : payload.entries.length;
+            if (totalRecords > payload.entries.length) {
+                status.textContent = 'Showing the latest ' + payload.entries.length + ' of ' + totalRecords + ' recorded events.';
+            } else {
+                status.textContent = totalRecords === 1
+                    ? '1 recorded event'
+                    : totalRecords + ' recorded events, newest first';
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                return;
+            }
+            renderNpcRecentEvents([]);
+            status.textContent = 'Recent events could not be loaded.';
+            status.style.color = '#e88989';
+        }
+    }
+
+    function closeNpcRecentEvents() {
+        if (npcRecentEventsController) {
+            npcRecentEventsController.abort();
+            npcRecentEventsController = null;
+        }
+        closeBglModal('npc-recent-events');
+    }
+
+    document.querySelectorAll('.marker-item[data-npc-name]').forEach(function (card) {
+        card.addEventListener('click', function (event) {
+            if (event.target.closest('button, a, input, label, [data-map-focus], [data-npc-events]')) {
+                return;
+            }
+            openNpcRecentEvents(card.dataset.npcName);
+        });
+    });
+
+    document.querySelectorAll('[data-npc-events]').forEach(function (control) {
+        control.addEventListener('click', function (event) {
+            event.stopPropagation();
+            const card = control.closest('.marker-item[data-npc-name]');
+            if (card) {
+                openNpcRecentEvents(card.dataset.npcName);
+            }
+        });
+        control.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                control.click();
+            }
+        });
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeNpcRecentEvents();
+        }
+    });
+
+    window.closeNpcRecentEvents = closeNpcRecentEvents;
 
     npcFilter.addEventListener('change', function () {
         currentPage = 1;

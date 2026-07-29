@@ -1536,63 +1536,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         color: rgb(242, 124, 17);
     }
 
-    .bgl-recent-events-dialog {
-        width: min(820px, 100%);
-    }
-
-    .bgl-recent-events-status {
-        min-height: 20px;
-        margin-bottom: 12px;
-        color: #aaa;
-        font-size: 13px;
-    }
-
-    .bgl-recent-events-list {
-        display: grid;
-        gap: 10px;
-    }
-
-    .bgl-recent-event {
-        padding: 13px 15px;
-        border: 1px solid #444;
-        border-left: 3px solid rgb(242, 124, 17);
-        border-radius: 6px;
-        background: #1a1a1a;
-    }
-
-    .bgl-recent-event-meta {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 7px;
-        color: #aaa;
-        font-size: 12px;
-    }
-
-    .bgl-recent-event-category {
-        padding: 2px 7px;
-        border: 1px solid #5a5a5a;
-        border-radius: 999px;
-        color: #ddd;
-        text-transform: capitalize;
-    }
-
-    .bgl-recent-event-text {
-        color: #eee;
-        line-height: 1.45;
-        overflow-wrap: anywhere;
-        white-space: pre-wrap;
-    }
-
-    .bgl-recent-events-empty {
-        padding: 24px;
-        border: 1px dashed #4a4a4a;
-        border-radius: 6px;
-        color: #aaa;
-        text-align: center;
-    }
-
     .bgl-create-npc-notice {
         margin-bottom: 16px;
         padding: 11px 13px;
@@ -2672,114 +2615,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             }
         }
 
-        let npcRecentEventsController = null;
-
-        function renderNpcRecentEvents(entries) {
-            const list = document.getElementById('npc-recent-events-list');
-            list.replaceChildren();
-
-            if (!entries || entries.length === 0) {
-                const empty = document.createElement('div');
-                empty.className = 'bgl-recent-events-empty';
-                empty.textContent = 'No recent Background Life events have been recorded for this NPC.';
-                list.appendChild(empty);
-                return;
-            }
-
-            entries.forEach(function (entry) {
-                const eventItem = document.createElement('article');
-                eventItem.className = 'bgl-recent-event';
-
-                const meta = document.createElement('div');
-                meta.className = 'bgl-recent-event-meta';
-
-                const time = document.createElement('span');
-                time.textContent = entry.tamrielic_time || 'Unknown time';
-                meta.appendChild(time);
-
-                const category = document.createElement('span');
-                category.className = 'bgl-recent-event-category';
-                category.textContent = entry.category || 'activity';
-                meta.appendChild(category);
-
-                const activity = document.createElement('div');
-                activity.className = 'bgl-recent-event-text';
-                activity.textContent = entry.activity || 'No details recorded';
-
-                eventItem.appendChild(meta);
-                eventItem.appendChild(activity);
-                list.appendChild(eventItem);
-            });
-        }
-
-        async function openNpcRecentEvents(npcName) {
-            const modal = document.getElementById('npc-recent-events');
-            const title = document.getElementById('npc-recent-events-title');
-            const status = document.getElementById('npc-recent-events-status');
-            const list = document.getElementById('npc-recent-events-list');
-            if (!modal || !title || !status || !list) {
-                return;
-            }
-
-            title.textContent = npcName + ' Recent Events';
-            status.textContent = 'Loading recent events...';
-            status.style.color = '';
-            list.replaceChildren();
-            openBglModal('npc-recent-events');
-
-            if (npcRecentEventsController) {
-                npcRecentEventsController.abort();
-            }
-            npcRecentEventsController = new AbortController();
-
-            const params = new URLSearchParams({
-                npc: npcName,
-                page: '1',
-                limit: '20'
-            });
-
-            try {
-                const response = await fetch(modal.dataset.apiUrl + '?' + params.toString(), {
-                    cache: 'no-store',
-                    credentials: 'same-origin',
-                    signal: npcRecentEventsController.signal
-                });
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status);
-                }
-
-                const payload = await response.json();
-                if (!payload.success) {
-                    throw new Error(payload.error || 'Unable to load recent events');
-                }
-
-                renderNpcRecentEvents(payload.entries);
-                const totalRecords = payload.pagination ? payload.pagination.total_records : payload.entries.length;
-                if (totalRecords > payload.entries.length) {
-                    status.textContent = 'Showing the latest ' + payload.entries.length + ' of ' + totalRecords + ' recorded events.';
-                } else {
-                    status.textContent = totalRecords === 1
-                        ? '1 recorded event'
-                        : totalRecords + ' recorded events, newest first';
-                }
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    return;
-                }
-                renderNpcRecentEvents([]);
-                status.textContent = 'Recent events could not be loaded.';
-                status.style.color = '#e88989';
-            }
-        }
-
-        function closeNpcRecentEvents() {
-            if (npcRecentEventsController) {
-                npcRecentEventsController.abort();
-                npcRecentEventsController = null;
-            }
-            closeBglModal('npc-recent-events');
-        }
-
         function openCreateNpcModal() {
             openBglModal('create-background-npc', 'npc_name');
         }
@@ -2807,31 +2642,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 openCreateRumorModal();
             }
 
-            document.querySelectorAll('.marker-item[data-npc-name]').forEach(function (card) {
-                card.addEventListener('click', function (event) {
-                    if (event.target.closest('button, a, input, label, [data-map-focus]')) {
-                        return;
-                    }
-                    openNpcRecentEvents(card.dataset.npcName);
-                });
-            });
-
-            document.querySelectorAll('[data-npc-events]').forEach(function (button) {
-                button.addEventListener('click', function (event) {
-                    event.stopPropagation();
-                    const card = button.closest('.marker-item[data-npc-name]');
-                    if (card) {
-                        openNpcRecentEvents(card.dataset.npcName);
-                    }
-                });
-                button.addEventListener('keydown', function (event) {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        button.click();
-                    }
-                });
-            });
-
             document.querySelectorAll('[data-map-focus]').forEach(function (control) {
                 control.addEventListener('keydown', function (event) {
                     if (event.key === 'Enter' || event.key === ' ') {
@@ -2846,7 +2656,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             if (event.key === 'Escape') {
                 closeCreateNpcModal();
                 closeCreateRumorModal();
-                closeNpcRecentEvents();
             }
         });
 
@@ -3064,7 +2873,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     ?>
 
-    <link rel="stylesheet" href="<?php echo htmlspecialchars($webRoot); ?>/ui/css/background_life_history.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($webRoot); ?>/ui/css/background_life_history.css?v=<?php echo (int) @filemtime(__DIR__ . '/css/background_life_history.css'); ?>">
     <section class="bgl-page-panel" id="bgl-tab-history" <?php echo $activeBglTab === 'history' ? '' : 'hidden'; ?>>
     <div
         class="info-panel bgl-history-panel"
@@ -3123,7 +2932,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         </div>
     </div>
     </section>
-    <script src="<?php echo htmlspecialchars($webRoot); ?>/ui/js/background_life_history.js"></script>
+    <script src="<?php echo htmlspecialchars($webRoot); ?>/ui/js/background_life_history.js?v=<?php echo (int) @filemtime(__DIR__ . '/js/background_life_history.js'); ?>"></script>
 
     <div
         class="bgl-modal"
