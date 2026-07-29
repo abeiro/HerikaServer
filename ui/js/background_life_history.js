@@ -1,6 +1,302 @@
 (function () {
     'use strict';
 
+    function initBackgroundLifeMap() {
+        const viewport = document.getElementById('bglMapViewport');
+        const canvas = document.getElementById('bglMapCanvas');
+        const image = document.getElementById('mapImage');
+        const zoomValue = document.getElementById('bglMapZoomValue');
+        const zoomInButton = document.querySelector('[data-map-zoom-in]');
+        const zoomOutButton = document.querySelector('[data-map-zoom-out]');
+        const resetButton = document.querySelector('[data-map-reset]');
+        if (!viewport || !canvas || !image || !zoomValue || !zoomInButton || !zoomOutButton || !resetButton) {
+            return;
+        }
+
+        const storageKey = 'bglMapCameraV1';
+        const provinceBounds = {
+            left: 0.025,
+            top: 0.14,
+            right: 0.98,
+            bottom: 0.89
+        };
+        const state = {
+            fitScale: 1,
+            zoom: 1,
+            scale: 1,
+            x: 0,
+            y: 0,
+            initialized: false,
+            dragging: false,
+            pointerId: null,
+            lastPointerX: 0,
+            lastPointerY: 0
+        };
+        let resizeTimer = null;
+
+        function clamp(value, minimum, maximum) {
+            return Math.min(maximum, Math.max(minimum, value));
+        }
+
+        function updateFitScale() {
+            const provinceWidth = canvas.offsetWidth * (provinceBounds.right - provinceBounds.left);
+            const provinceHeight = canvas.offsetHeight * (provinceBounds.bottom - provinceBounds.top);
+            if (!provinceWidth || !provinceHeight) {
+                return false;
+            }
+
+            state.fitScale = Math.min(
+                viewport.clientWidth / provinceWidth,
+                viewport.clientHeight / provinceHeight
+            ) * 0.96;
+            return Number.isFinite(state.fitScale) && state.fitScale > 0;
+        }
+
+        function clampPan() {
+            const scaledWidth = canvas.offsetWidth * state.scale;
+            const scaledHeight = canvas.offsetHeight * state.scale;
+
+            state.x = scaledWidth <= viewport.clientWidth
+                ? (viewport.clientWidth - scaledWidth) / 2
+                : clamp(state.x, viewport.clientWidth - scaledWidth, 0);
+            state.y = scaledHeight <= viewport.clientHeight
+                ? (viewport.clientHeight - scaledHeight) / 2
+                : clamp(state.y, viewport.clientHeight - scaledHeight, 0);
+        }
+
+        function renderCamera() {
+            clampPan();
+            canvas.style.transform = 'translate3d(' + state.x + 'px, ' + state.y + 'px, 0) scale(' + state.scale + ')';
+            zoomValue.textContent = Math.round(state.zoom * 100) + '%';
+        }
+
+        function currentCenter() {
+            return {
+                x: (viewport.clientWidth / 2 - state.x) / (canvas.offsetWidth * state.scale),
+                y: (viewport.clientHeight / 2 - state.y) / (canvas.offsetHeight * state.scale)
+            };
+        }
+
+        function saveCamera() {
+            if (!state.initialized) {
+                return;
+            }
+
+            const center = currentCenter();
+            localStorage.setItem(storageKey, JSON.stringify({
+                version: 1,
+                zoom: state.zoom,
+                centerX: center.x,
+                centerY: center.y
+            }));
+        }
+
+        function setCameraCenter(centerX, centerY) {
+            state.scale = state.fitScale * state.zoom;
+            state.x = viewport.clientWidth / 2 - centerX * canvas.offsetWidth * state.scale;
+            state.y = viewport.clientHeight / 2 - centerY * canvas.offsetHeight * state.scale;
+            renderCamera();
+        }
+
+        function fitProvince(savePreference) {
+            if (!updateFitScale()) {
+                return;
+            }
+
+            state.zoom = 1;
+            setCameraCenter(
+                (provinceBounds.left + provinceBounds.right) / 2,
+                (provinceBounds.top + provinceBounds.bottom) / 2
+            );
+            state.initialized = true;
+            if (savePreference) {
+                saveCamera();
+            }
+        }
+
+        function restoreCamera() {
+            if (!updateFitScale()) {
+                return false;
+            }
+
+            try {
+                const saved = JSON.parse(localStorage.getItem(storageKey));
+                if (
+                    saved
+                    && saved.version === 1
+                    && Number.isFinite(saved.zoom)
+                    && Number.isFinite(saved.centerX)
+                    && Number.isFinite(saved.centerY)
+                ) {
+                    state.zoom = clamp(saved.zoom, 0.72, 3);
+                    setCameraCenter(
+                        clamp(saved.centerX, 0, 1),
+                        clamp(saved.centerY, 0, 1)
+                    );
+                    state.initialized = true;
+                    return true;
+                }
+            } catch (error) {
+                localStorage.removeItem(storageKey);
+            }
+
+            return false;
+        }
+
+        function initializeCamera() {
+            if (!canvas.offsetWidth || !canvas.offsetHeight) {
+                return;
+            }
+
+            if (!restoreCamera()) {
+                fitProvince(false);
+            }
+        }
+
+        function zoomAt(factor, clientX, clientY) {
+            if (!state.initialized) {
+                initializeCamera();
+            }
+
+            const viewportRect = viewport.getBoundingClientRect();
+            const focalX = clientX === undefined ? viewport.clientWidth / 2 : clientX - viewportRect.left;
+            const focalY = clientY === undefined ? viewport.clientHeight / 2 : clientY - viewportRect.top;
+            const mapX = (focalX - state.x) / state.scale;
+            const mapY = (focalY - state.y) / state.scale;
+
+            state.zoom = clamp(state.zoom * factor, 0.72, 3);
+            state.scale = state.fitScale * state.zoom;
+            state.x = focalX - mapX * state.scale;
+            state.y = focalY - mapY * state.scale;
+            renderCamera();
+            saveCamera();
+        }
+
+        zoomInButton.addEventListener('click', function () {
+            zoomAt(1.25);
+        });
+        zoomOutButton.addEventListener('click', function () {
+            zoomAt(0.8);
+        });
+        resetButton.addEventListener('click', function () {
+            fitProvince(true);
+        });
+
+        viewport.addEventListener('wheel', function (event) {
+            event.preventDefault();
+            zoomAt(event.deltaY < 0 ? 1.12 : 1 / 1.12, event.clientX, event.clientY);
+        }, { passive: false });
+
+        viewport.addEventListener('pointerdown', function (event) {
+            if (
+                event.button !== 0
+                || event.target.closest('.marker, .location-marker, .map-navigation-controls')
+            ) {
+                return;
+            }
+
+            state.dragging = true;
+            state.pointerId = event.pointerId;
+            state.lastPointerX = event.clientX;
+            state.lastPointerY = event.clientY;
+            viewport.classList.add('is-dragging');
+            viewport.setPointerCapture(event.pointerId);
+        });
+
+        viewport.addEventListener('pointermove', function (event) {
+            if (!state.dragging || event.pointerId !== state.pointerId) {
+                return;
+            }
+
+            state.x += event.clientX - state.lastPointerX;
+            state.y += event.clientY - state.lastPointerY;
+            state.lastPointerX = event.clientX;
+            state.lastPointerY = event.clientY;
+            renderCamera();
+        });
+
+        function finishDragging(event) {
+            if (!state.dragging || event.pointerId !== state.pointerId) {
+                return;
+            }
+
+            state.dragging = false;
+            state.pointerId = null;
+            viewport.classList.remove('is-dragging');
+            if (viewport.hasPointerCapture(event.pointerId)) {
+                viewport.releasePointerCapture(event.pointerId);
+            }
+            saveCamera();
+        }
+
+        viewport.addEventListener('pointerup', finishDragging);
+        viewport.addEventListener('pointercancel', finishDragging);
+
+        viewport.addEventListener('keydown', function (event) {
+            if (event.target !== viewport) {
+                return;
+            }
+
+            const panStep = 50;
+            if (event.key === '+' || event.key === '=') {
+                event.preventDefault();
+                zoomAt(1.25);
+            } else if (event.key === '-') {
+                event.preventDefault();
+                zoomAt(0.8);
+            } else if (event.key === '0' || event.key === 'Home') {
+                event.preventDefault();
+                fitProvince(true);
+            } else if (event.key.startsWith('Arrow')) {
+                event.preventDefault();
+                state.x += event.key === 'ArrowLeft' ? panStep : event.key === 'ArrowRight' ? -panStep : 0;
+                state.y += event.key === 'ArrowUp' ? panStep : event.key === 'ArrowDown' ? -panStep : 0;
+                renderCamera();
+                saveCamera();
+            }
+        });
+
+        window.focusBglMapMarker = function (marker) {
+            const markerPosition = marker ? marker.closest('.marker') : null;
+            if (!markerPosition) {
+                return;
+            }
+            if (!state.initialized) {
+                initializeCamera();
+            }
+
+            state.zoom = Math.max(state.zoom, 1.45);
+            setCameraCenter(
+                markerPosition.offsetLeft / canvas.offsetWidth,
+                markerPosition.offsetTop / canvas.offsetHeight
+            );
+            saveCamera();
+            viewport.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        };
+
+        if (image.complete) {
+            requestAnimationFrame(initializeCamera);
+        } else {
+            image.addEventListener('load', initializeCamera, { once: true });
+        }
+
+        window.addEventListener('resize', function () {
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(function () {
+                if (!state.initialized) {
+                    initializeCamera();
+                    return;
+                }
+
+                const center = currentCenter();
+                updateFitScale();
+                setCameraCenter(center.x, center.y);
+            }, 120);
+        });
+    }
+
+    initBackgroundLifeMap();
+
     const panel = document.getElementById('bgl-history-panel');
     if (!panel) {
         return;

@@ -996,6 +996,26 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .map-section {
         flex: 0 0 75%;
+        min-width: 0;
+    }
+
+    .map-viewport {
+        position: relative;
+        width: 100%;
+        height: clamp(520px, 72vh, 820px);
+        overflow: hidden;
+        background: #111;
+        border: 3px solid rgb(242, 124, 17);
+        border-radius: 8px;
+        box-shadow: 0 0 20px rgba(242, 124, 17, 0.3);
+        box-sizing: border-box;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+    }
+
+    .map-viewport.is-dragging {
+        cursor: grabbing;
     }
 
     .sidebar-section {
@@ -1007,16 +1027,18 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .map-container {
         position: relative;
-        display: inline-block;
+        display: block;
         background: #1a1a1a;
         padding: 15px;
-        border: 3px solid rgb(242, 124, 17);
-        box-shadow: 0 0 20px rgba(242, 124, 17, 0.3);
-        margin: 0 auto;
+        border: 0;
+        box-shadow: none;
+        margin: 0;
         width: 100%;
         box-sizing: border-box;
-        border-radius: 8px;
+        border-radius: 0;
         overflow: visible;
+        transform-origin: 0 0;
+        will-change: transform;
     }
 
     .map-container img {
@@ -1025,6 +1047,58 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         height: auto;
         border: 1px solid #4a4a4a;
         border-radius: 4px;
+        pointer-events: none;
+        -webkit-user-drag: none;
+    }
+
+    .map-navigation-controls {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        z-index: 500;
+        display: grid;
+        width: 42px;
+        overflow: hidden;
+        border: 1px solid rgba(242, 124, 17, 0.7);
+        border-radius: 7px;
+        background: rgba(24, 24, 24, 0.94);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    }
+
+    .map-navigation-controls button,
+    .map-navigation-controls output {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        min-height: 38px;
+        box-sizing: border-box;
+        border: 0;
+        border-bottom: 1px solid #454545;
+        background: transparent;
+        color: #f2f2f2;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .map-navigation-controls button {
+        cursor: pointer;
+    }
+
+    .map-navigation-controls button:hover,
+    .map-navigation-controls button:focus-visible {
+        background: rgba(242, 124, 17, 0.22);
+        color: #ffd2a8;
+        outline: none;
+    }
+
+    .map-navigation-controls output {
+        min-height: 30px;
+        color: #bbb;
+        font-size: 10px;
+    }
+
+    .map-navigation-controls > :last-child {
+        border-bottom: 0;
     }
 
     .marker {
@@ -1719,41 +1793,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         margin-top: 10px;
     }
 
-    .map-width-controls {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        margin-bottom: 15px;
-        padding: 12px;
-        background: #2a2a2a;
-        border-radius: 8px;
-        border: 1px solid #4a4a4a;
-    }
-
-    .map-width-controls label {
-        color: rgb(242, 124, 17);
-        font-weight: bold;
-        font-size: 12px;
-        white-space: nowrap;
-    }
-
-    .map-width-slider {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .map-width-slider input[type="range"] {
-        flex: 1;
-        height: 6px;
-        border-radius: 3px;
-        background: #3a3a3a;
-        outline: none;
-        -webkit-appearance: none;
-        appearance: none;
-    }
-
     .bgl-settings-card {
         display: grid;
         gap: 10px;
@@ -1829,47 +1868,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-color: rgba(255, 80, 80, 0.45);
         background: rgba(255, 80, 80, 0.12);
         color: #ffb8b8;
-    }
-
-    .map-width-slider input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: rgb(242, 124, 17);
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(242, 124, 17, 0.5);
-        transition: all 0.2s ease;
-    }
-
-    .map-width-slider input[type="range"]::-webkit-slider-thumb:hover {
-        box-shadow: 0 0 8px rgba(242, 124, 17, 0.8);
-        transform: scale(1.2);
-    }
-
-    .map-width-slider input[type="range"]::-moz-range-thumb {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: rgb(242, 124, 17);
-        cursor: pointer;
-        border: none;
-        box-shadow: 0 2px 4px rgba(242, 124, 17, 0.5);
-        transition: all 0.2s ease;
-    }
-
-    .map-width-slider input[type="range"]::-moz-range-thumb:hover {
-        box-shadow: 0 0 8px rgba(242, 124, 17, 0.8);
-        transform: scale(1.2);
-    }
-
-    .map-width-value {
-        color: #ddd;
-        font-weight: bold;
-        font-size: 12px;
-        min-width: 35px;
-        text-align: right;
     }
 
     img.thumb {
@@ -2071,6 +2069,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         .npc-list-container {
             max-height: 400px;
         }
+
+        .map-viewport {
+            height: 62vh;
+            min-height: 420px;
+        }
     }
 
     @keyframes pulse {
@@ -2124,8 +2127,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     <div class="container">
         <div class="content-wrapper">
             <div class="map-section">
-               
-                <div class="map-container" >
+                <div
+                    class="map-viewport"
+                    id="bglMapViewport"
+                    tabindex="0"
+                    aria-label="Interactive Skyrim map. Drag to pan and use the mouse wheel or controls to zoom.">
+                <div class="map-container" id="bglMapCanvas">
                     <img src="<?php echo $mapImageUrl; ?>" alt="Skyrim Map" id="mapImage">
 
             <?php
@@ -2203,6 +2210,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 }
             ?>
                 </div>
+                <div class="map-navigation-controls" role="group" aria-label="Map controls">
+                    <button type="button" data-map-zoom-in aria-label="Zoom in" title="Zoom in">+</button>
+                    <output id="bglMapZoomValue" aria-live="polite">100%</output>
+                    <button type="button" data-map-zoom-out aria-label="Zoom out" title="Zoom out">&minus;</button>
+                    <button type="button" data-map-reset aria-label="Fit Skyrim in view" title="Fit Skyrim in view">&#8962;</button>
+                </div>
+                </div>
             </div>
 
             <div class="sidebar-section">
@@ -2248,13 +2262,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                         </div>
                     </div>
                     <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
-                </div>
-                <div class="map-width-controls">
-                    <label>Map Width:</label>
-                    <div class="map-width-slider">
-                        <input type="range" id="mapWidthSlider" min="30" max="100" value="100" onchange="updateMapWidthFromSlider()" oninput="updateMapWidthFromSlider()">
-                        <span class="map-width-value"><span id="widthValue">100</span>%</span>
-                    </div>
                 </div>
                 <form id="background-life-settings" class="bgl-settings-card" method="post">
                     <input type="hidden" name="action" value="save_bgl_settings">
@@ -2390,43 +2397,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             }
             window.location.href = url.toString();
         }
-
-        function updateMapWidthFromSlider() {
-            const slider = document.getElementById('mapWidthSlider');
-            const widthPercent = slider.value + '%';
-            const mapContainer = document.querySelector('.map-container');
-            mapContainer.style.width = widthPercent;
-            
-            // Update the displayed value
-            document.getElementById('widthValue').textContent = slider.value;
-            
-            // Save preference to localStorage
-            localStorage.setItem('mapViewWidth', widthPercent);
-        }
-
-        function setMapWidth(width) {
-            const mapContainer = document.querySelector('.map-container');
-            mapContainer.style.width = width;
-            
-            // Extract numeric value from width (e.g., "100%" -> 100)
-            const numericValue = parseInt(width);
-            const slider = document.getElementById('mapWidthSlider');
-            if (slider) {
-                slider.value = numericValue;
-                document.getElementById('widthValue').textContent = numericValue;
-            }
-            
-            // Save preference to localStorage
-            localStorage.setItem('mapViewWidth', width);
-        }
-
-        // Restore saved width preference on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedWidth = localStorage.getItem('mapViewWidth');
-            if (savedWidth) {
-                setMapWidth(savedWidth);
-            }
-        });
 
         function requestAction(npcName) {
             const formData = new FormData();
@@ -2686,6 +2656,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     var processingMessage;
         function pulseAnimation(id) {
             const el = document.getElementById(id);
+            if (!el) {
+                return;
+            }
+
+            if (typeof window.focusBglMapMarker === 'function') {
+                window.focusBglMapMarker(el);
+            }
 
             el.classList.add("pulsing");
 
