@@ -995,7 +995,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .map-section {
-        flex: 0 0 52%;
+        flex: 0 0 35%;
         min-width: 0;
     }
 
@@ -1026,7 +1026,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .npc-list-section {
-        flex: 0 0 calc(28% - 40px);
+        flex: 0 0 calc(45% - 40px);
         min-width: 0;
     }
 
@@ -1266,21 +1266,20 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .marker-list {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        align-items: start;
     }
 
     .marker-item {
         background-color: #1a1a1a;
-        padding: 15px;
+        padding: 10px;
         border-left: 4px solid;
         border-radius: 8px;
-        background-size: 100px;
-        background-repeat: no-repeat;
-        background-position: right 10px center;
         border: 1px solid #4a4a4a;
         width: 100%;
+        min-width: 0;
         box-sizing: border-box;
         position: relative;
         cursor: pointer;
@@ -1295,16 +1294,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .marker-item::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(to right, #1a1a1a 60%, transparent 100%);
-        border-radius: 8px;
-        pointer-events: none;
-        z-index: 1;
+        display: none;
     }
 
     .marker-item > * {
@@ -1314,32 +1304,47 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .marker-item-color {
         display: inline-block;
-        width: 20px;
-        height: 20px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
         vertical-align: middle;
-        margin-right: 10px;
-        border: 2px solid white;
+        margin-right: 0;
+        border: 1px solid white;
         box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        flex: 0 0 auto;
     }
 
     .marker-item h4 {
-        margin: 8px 0;
+        margin: 0 0 8px;
         color: rgb(242, 124, 17);
         font-family: 'MagicCards', serif;
-        display: inline-block;
-        vertical-align: text-top;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        font-size: 13px;
     }
 
     .marker-npc-events,
     .marker-map-focus {
-        display: inline;
+        display: block;
         padding: 0;
         border: 0;
         background: transparent;
         color: inherit;
         cursor: pointer;
         font: inherit;
+    }
+
+    .marker-npc-events {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .marker-map-focus {
+        margin-left: auto;
+        flex: 0 0 auto;
     }
 
     .marker-npc-events:hover,
@@ -1351,22 +1356,33 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         text-decoration: underline;
     }
 
-    .marker-item-coords {
-        font-size: 12px;
-        color: #bbb;
-        margin: 5px 0;
-    }
-
-    .marker-item-coords ul {
-        padding-left: 15px;
-    }
-
-    .marker-item-coords li {
-        margin: 3px 0;
-    }
-
     #mapImage {
         opacity: 1;
+    }
+
+    .marker-card-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+        gap: 4px;
+    }
+
+    .marker-card-actions .marker-action-btn,
+    .marker-card-actions .marker-action-btn-trans {
+        width: 100%;
+        min-width: 0;
+        padding: 6px 4px;
+        font-size: 10px;
+    }
+
+    .marker-card-toggles {
+        display: grid;
+        gap: 4px;
+        margin-top: 6px;
+    }
+
+    .marker-card-toggles .toggle-label-inline {
+        padding: 4px 6px;
+        font-size: 10px;
     }
 
     .marker-item a {
@@ -2317,33 +2333,19 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 class="marker-item"
                                 data-npc-name="<?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>"
                                 title="View recent events for <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>"
-                                style="border-left-color:<?php echo $marker['color']; ?>;background-image:url(<?php echo $marker['figure']; ?>);background-position-y: top;">
+                                style="border-left-color:<?php echo $marker['color']; ?>;">
                                 <h4>
                                     <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
                                     <!--<a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?> &nbsp; ↗️</a> -->
                                     <span class="marker-npc-events" data-npc-events role="button" tabindex="0"><?php echo $marker['name']; ?></span>
                                     <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="event.stopPropagation(); pulseAnimation('mkr_<?php echo $marker['id'] ?>')" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map">&nbsp;↗️</span>
                                 </h4>
-                                <div class="marker-item-coords">
-                                    <ul>
-                                    <li><strong>In-game:</strong> x=<?php echo $marker['ingame_x']; ?>, y=<?php echo $marker['ingame_y']; ?>, z=<?php echo $marker['ingame_z']; ?></li>
-                                    <li><strong>Map:</strong> (<?php echo $marker['x']; ?>,<?php echo $marker['y']; ?>)</li>
-                                    <li><strong>RefId:</strong> (<?php echo $marker['refid']; ?>)</li>
-                                    <li><strong>Last Position Timestamp:</strong> (<?php echo $marker['last_pos_ts']; ?>)</li>
-                                    <li><strong>Last Reported:</strong>
-                                        <span title="<?php echo htmlentities($marker['last_letter']); ?>">
-                                            (<?php echo $marker['last_report']; ?>)
-                                            <?php if (isset($marker['last_letter'])) echo "<span style='cursor:help'>📜</span>";?>
-                                    </span>
-                                    </li>
-                                    </ul>
-                                </div>
-                                <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
-                                    <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">🚶‍➡️Trigger Action</button>
-                                    <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">✉️ Request Letter</button>
+                                <div class="marker-card-actions">
+                                    <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">Action</button>
+                                    <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">Letter</button>
                                     <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" style="border: 2px solid #00ff00; background: #44ff44;">📍</button>
                                 </div>
-                                <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+                                <div class="marker-card-toggles">
                                     <label class="toggle-label-inline">
                                         <input type="checkbox" 
                                                class="toggle-checkbox" 
