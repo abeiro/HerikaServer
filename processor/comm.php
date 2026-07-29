@@ -1975,41 +1975,41 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $MUST_END=true;
     
     
-} elseif (strpos($gameRequest[0], "enable_bg")===0) {    // util_location_name 
-    
+} elseif (strpos($gameRequest[0], "enable_bg")===0 || strpos($gameRequest[0], "disable_bg")===0) {
     $npcMaster = new NpcMaster();
-    $splitNameBase=explode("/",$gameRequest[3]);
-    if ($splitNameBase[0] && $splitNameBase[1]) {
-        $currentNpcData = $npcMaster->getByName($splitNameBase[0]);
-        
-        if ($currentNpcData) {
-            // Get existing metadata
-            $extendedData = [];
-            if (!empty($currentNpcData['extended_data'])) {
-                $extendedData = json_decode($currentNpcData['extended_data'], true);
-                if (!is_array($extendedData)) {
-                    $extendedData = [];
-                }
-            }
-            $currentNpcData["refid"]=$splitNameBase[1];
-            // Update equipment section
-            $extendedData['background_life_enabled'] = true;
-            
-            $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extendedData);
-
-            // Metadata
-            $metadata=$npcMaster->getMetadata($currentNpcData);
-            $metadata["low_process_actors"]=[];
-            $currentNpcData=$npcMaster->setMetadata($currentNpcData,$metadata);
-
-            // Save back to database
-            $npcMaster->updateByArray($currentNpcData);
-            error_log("Updated background_life_enabled for {$currentNpcData["npc_name"]}");
-            Logger::info("Updated background_life_enabled for {$currentNpcData["npc_name"]}");
-        }
+    $splitNameBase = explode("/", (string)($gameRequest[3] ?? ''), 2);
+    $npcName = trim((string)($splitNameBase[0] ?? ''));
+    $refId = strtoupper(trim((string)($splitNameBase[1] ?? '')));
+    $currentNpcData = $refId !== '' ? $npcMaster->getByRefId($refId) : null;
+    if (!$currentNpcData && $npcName !== '') {
+        $currentNpcData = $npcMaster->getByName($npcName);
     }
 
-    $MUST_END=true;
+    if ($currentNpcData) {
+        $enabled = strpos($gameRequest[0], "enable_bg") === 0;
+        $extendedData = $npcMaster->getExtendedData($currentNpcData);
+        $extendedData['background_life_enabled'] = $enabled;
+        $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extendedData);
+        if ($refId !== '') {
+            $currentNpcData['refid'] = $refId;
+        }
+
+        if ($enabled) {
+            $metadata = $npcMaster->getMetadata($currentNpcData);
+            $metadata['low_process_actors'] = [];
+            $currentNpcData = $npcMaster->setMetadata($currentNpcData, $metadata);
+        }
+
+        $npcMaster->updateByArray($currentNpcData);
+        Logger::info(
+            "Background Life " . ($enabled ? "enabled" : "disabled") .
+            " for {$currentNpcData['npc_name']} ({$currentNpcData['refid']})"
+        );
+    } else {
+        Logger::warn("Background Life target not found: {$npcName}/{$refId}");
+    }
+
+    $MUST_END = true;
     
     
 } elseif (strpos($gameRequest[0], "updateprofile_narrator")===0) {

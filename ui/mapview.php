@@ -26,6 +26,8 @@ require_once $enginePath . 'lib/logger.php';
 require_once $enginePath . 'lib/utils_game_timestamp.php';
 require_once $enginePath . 'lib/rolemaster_helpers.php';
 require_once $enginePath . 'lib/scriptproxy_papyrus.php';
+require_once $enginePath . 'lib/background_life_requests.php';
+require_once $enginePath . 'lib/background_life_npc_creation.php';
 require_once $enginePath . 'lib/core/player.class.php';
 require_once $enginePath . 'lib/core/npc_master.class.php';
 require_once $enginePath . 'lib/core/api_badge.class.php';
@@ -71,22 +73,7 @@ $rumorFormData = [
     'content' => '',
     'length_days' => '7',
 ];
-$spawnNpcFormData = [
-    'name' => '',
-    'gender' => 'male',
-    'class' => 'farmer',
-    'race' => 'Nord',
-    'location' => '',
-    'appearance' => '',
-    'background' => '',
-    'speech_style' => '',
-    'disposition' => 'friendly',
-    'goal' => '',
-    'starting_point' => '',
-    'gold_qty' => '100',
-    'iron_ore_qty' => '10',
-    'gold_ore_qty' => '5',
-];
+$spawnNpcFormData = chimBglNpcCreationDefaults();
 $editingRumorId = 0;
 
 function getRumorPagePath() {
@@ -101,6 +88,8 @@ function redirectToRumorSection($status, $message, $anchor = 'create-rumor') {
     $path = getRumorPagePath();
 
     $query = http_build_query([
+        'tab' => 'backgroundlife',
+        'bgl_tab' => 'rumors',
         'rumor_status' => $status,
         'rumor_message' => $message,
     ]);
@@ -117,6 +106,8 @@ function redirectToRumorSection($status, $message, $anchor = 'create-rumor') {
 function redirectToBglSettings($status, $message) {
     $path = getRumorPagePath();
     $query = http_build_query([
+        'tab' => 'backgroundlife',
+        'bgl_tab' => 'background',
         'bgl_settings_status' => $status,
         'bgl_settings_message' => $message,
     ]);
@@ -128,6 +119,8 @@ function redirectToBglSettings($status, $message) {
 function redirectToSpawnNpcSection($status, $message, $anchor = 'create-background-npc') {
     $path = getRumorPagePath();
     $query = http_build_query([
+        'tab' => 'backgroundlife',
+        'bgl_tab' => 'background',
         'spawn_npc_status' => $status,
         'spawn_npc_message' => $message,
     ]);
@@ -234,255 +227,17 @@ function handleDeleteRumor() {
 }
 
 function handleCreateBackgroundNpc() {
-    global $enginePath;
-
-    $name = trim((string) ($_POST['npc_name'] ?? ''));
-    $gender = trim((string) ($_POST['npc_gender'] ?? ''));
-    $class = trim((string) ($_POST['npc_class'] ?? ''));
-    $race = trim((string) ($_POST['npc_race'] ?? ''));
-    $location = trim((string) ($_POST['npc_location'] ?? ''));
-    $appearance = trim((string) ($_POST['npc_appearance'] ?? ''));
-    $background = trim((string) ($_POST['npc_background'] ?? ''));
-    $speechStyle = trim((string) ($_POST['npc_speech_style'] ?? ''));
-    $disposition = trim((string) ($_POST['npc_disposition'] ?? ''));
-    $goal = trim((string) ($_POST['npc_goal'] ?? ''));
-    $startingPoint = trim((string) ($_POST['npc_starting_point'] ?? ''));
-
-    $goldQty = (int) ($_POST['npc_inventory_gold'] ?? 0);
-    $ironOreQty = (int) ($_POST['npc_inventory_iron_ore'] ?? 0);
-    $goldOreQty = (int) ($_POST['npc_inventory_gold_ore'] ?? 0);
-
-    $formData = [
-        'name' => $name,
-        'gender' => $gender,
-        'class' => $class,
-        'race' => $race,
-        'location' => $location,
-        'appearance' => $appearance,
-        'background' => $background,
-        'speech_style' => $speechStyle,
-        'disposition' => $disposition,
-        'goal' => $goal,
-        'starting_point' => $startingPoint,
-        'gold_qty' => (string) $goldQty,
-        'iron_ore_qty' => (string) $ironOreQty,
-        'gold_ore_qty' => (string) $goldOreQty,
-    ];
-
-    if ($name === '' || $gender === '' || $class === '' || $race === '' || $location === '' || $background === '' || $speechStyle === '' || $goal === '' ) {
+    $result = chimBglCreateNpc($_POST);
+    $formData = $result['form_data'] ?? chimBglNpcCreationFormData($_POST);
+    if (!($result['ok'] ?? false)) {
         return [[
             'type' => 'error',
-            'message' => 'Missing required fields for NPC creation.',
+            'message' => $result['message'] ?? 'Failed to create NPC.',
         ], $formData];
     }
 
-    $locationName = $GLOBALS['db']->fetchOne("select name from locations where formid='$location' limit 1")['name'] ?? '';
-    $npcProfile = [
-        'name' => $name,
-        'gender' => $gender,
-        'class' => $class,
-        'race' => $race,
-        'location' => $locationName,
-        'appearance' => $appearance,
-        'background' => $background,
-        'speechStyle' => $speechStyle,
-        'disposition' => $disposition,
-        'goal' => $goal,
-    ];
-
-    $inventoryItems = [];
-    if ($goldQty > 0) {
-        $inventoryItems[] = ['refid' => '0x0000000F', 'qty' => $goldQty];
-    }
-    if ($ironOreQty > 0) {
-        $inventoryItems[] = ['refid' => '0x00071cf3', 'qty' => $ironOreQty];
-    }
-    if ($goldOreQty > 0) {
-        $inventoryItems[] = ['refid' => '0x0005acde', 'qty' => $goldOreQty];
-    }
-
-    if (!$startingPoint) {
-        $startingPoint = resolveFormIdToDecimal($location);
-    }
-
-    spawnBackgroundLifeNpc($npcProfile, $startingPoint, $inventoryItems);
-
-    redirectToSpawnNpcSection('success', "NPC '$name' spawned successfully.");
+    redirectToSpawnNpcSection('success', $result['message'] ?? 'NPC created successfully.');
 }
-
-function resolveFormIdToDecimal($formId)
-{
-    if (is_int($formId)) {
-        return $formId;
-    }
-
-    $raw = trim((string) $formId);
-    if ($raw === '') {
-        return 0;
-    }
-
-    if (stripos($raw, '0x') === 0) {
-        return (int) hexdec(substr($raw, 2));
-    }
-
-    return (int) $raw;
-}
-
-function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
-{
-    if (!is_array($npc_profile) || empty($npc_profile['name'])) {
-        error_log('[ERROR] Invalid npc profile provided to spawnBackgroundLifeNpc');
-        return false;
-    }
-
-    $startingPointDec = resolveFormIdToDecimal($startingPoint);
-    if ($startingPointDec <= 0) {
-        error_log('[ERROR] Invalid starting point provided for ' . ($npc_profile['name'] ?? 'unknown npc'));
-        return false;
-    }
-
-    npcProfileBase(
-        $npc_profile['name'],
-        $npc_profile['class'],
-        $npc_profile['race'],
-        $npc_profile['gender'],
-        $npc_profile['location'],
-        '0',
-        $npc_profile['additional_data'] ?? []
-    );
-
-    $spawned = false;
-    $cnName = $GLOBALS['db']->escape($npc_profile['name']);
-    $last_gamets = null;
-    $last_ts = null;
-
-    while (!$spawned) {
-        sleep(1);
-        error_log('[DEBUG] Checking if ' . $npc_profile['name'] . ' spawned: ' . time() . PHP_EOL);
-        $res = $GLOBALS['db']->fetchOne("select count(*) as n, max(gamets) as gamets,max(ts) as ts from eventlog where type='status_msg' and data like '%spawned@$cnName@%'");
-        $spawned = $res['n'] > 0;
-        $last_gamets = $res['gamets'];
-        $last_ts = $res['ts'];
-    }
-
-    $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName($npc_profile['name']);
-    $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
-    $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
-    $npc['speechstyle'] = $npc_profile['speechStyle'];
-    $npc['goals'] = $npc_profile['goal'];
-    $npc['lock_profile'] = null;
-
-    $metadata = $npcMaster->getExtendedData($npc);
-    $metadata['gps_track'] = true;
-    $npc = $npcMaster->setMetadata($npc, $metadata);
-    $npcMaster->updateByArray($npc);
-
-    $refid = isset($npc['refid']) ? $npc['refid'] : null;
-    if (empty($refid)) {
-        error_log('[DEBUG] Waiting to refid to be populated for ' . $npc_profile['name'] . '...' . PHP_EOL);
-
-        $maxRetries = 30;
-        $retryCount = 0;
-        while (empty($refid) && $retryCount < $maxRetries) {
-            sleep(1);
-            $retryCount++;
-            $npcMaster = new NpcMaster();
-            $npc = $npcMaster->getByName($npc_profile['name']);
-            $refid = isset($npc['refid']) ? $npc['refid'] : null;
-            error_log('[DEBUG] Waiting to refid to be populated for ' . $npc_profile['name'] . "... $retryCount of $maxRetries" . PHP_EOL);
-        }
-
-        if (empty($refid)) {
-            error_log('[ERROR] Refid was not populated for ' . $npc_profile['name'] . " after {$maxRetries} retries. Exiting." . PHP_EOL);
-            return false;
-        }
-
-        $npcMaster = new NpcMaster();
-        $npc = $npcMaster->getByName($npc_profile['name']);
-    }
-
-    sleep(1);
-    $GLOBALS['db']->insert(
-        'responselog',
-        [
-            'localts' => time(),
-            'sent' => 0,
-            'actor' => 'rolemaster',
-            'text' => '',
-            'action' => "rolecommand|RenameNPC@0x$refid@$cnName",
-            'tag' => '',
-        ]
-    );
-
-    sleep(1);
-    $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName($npc_profile['name']);
-    $extended_data = $npcMaster->getExtendedData($npc);
-    $extended_data['background_life_commands'] = true;
-    $extended_data['background_life_enabled'] = true;
-    $extended_data['background_life_last_updated'] = $last_gamets;
-    $extended_data['background_life_player_unattached'] = true;
-    $extended_data['middle_term_enabled'] = 1;
-    
-
-    $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
-    $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
-    $npc['speechstyle'] = $npc_profile['speechStyle'];
-    $npc['goals'] = $npc_profile['goal'];
-    $npc['lock_profile'] = null;
-
-    $metadata = $npcMaster->getExtendedData($npc);
-    $metadata['gps_track'] = true;
-    $npc = $npcMaster->setMetadata($npc, $metadata);
-    $npc = $npcMaster->setExtendedData($npc, $extended_data);
-    $npcMaster->updateByArray($npc);
-
-    $skyrimCmd = new SkyrimCommandBuilder();
-    foreach ($inventoryItems as $itemEntry) {
-        if (!is_array($itemEntry)) {
-            continue;
-        }
-
-        $itemRefId = isset($itemEntry['refid']) ? (string) $itemEntry['refid'] : '';
-        $itemQty = isset($itemEntry['qty']) ? (int) $itemEntry['qty'] : 0;
-        if ($itemRefId === '' || $itemQty <= 0) {
-            continue;
-        }
-
-        $json = $skyrimCmd->ObjectReference->AddItem("0x{$npc['refid']}", $itemRefId, $itemQty, true);
-        $skyrimCmd->send(cmd: $json);
-    }
-
-    $GLOBALS['db']->insert(
-        'responselog',
-        [
-            'localts' => time(),
-            'sent' => 0,
-            'actor' => 'rolemaster',
-            'text' => '',
-            'action' => "rolecommand|BackgroundCmd@$refid@TravelTo/$startingPointDec",
-            'tag' => __FILE__ . ':' . __LINE__,
-        ]
-    );
-
-    $res = $GLOBALS['db']->fetchOne('select max(gamets) as gamets,max(ts) as ts from eventlog order by gamets desc,ts desc limit 1');
-    $last_gamets = $res['gamets'];
-    $last_ts = $res['ts'];
-
-    $GLOBALS['db']->insert('actions_issued', [
-        'action' => 'TravelTo',
-        'fullcall' => 'TravelTo',
-        'actorname' => $npc['npc_name'],
-        'ts' => $last_ts,
-        'gamets' => $last_gamets,
-        'localts' => time(),
-        'original' => 'backgroundaction',
-    ]);
-
-    return true;
-}
-
 
 if (isset($_GET['rumor_status']) && isset($_GET['rumor_message'])) {
     $rumorFlash = [
@@ -505,16 +260,7 @@ if (isset($_GET['spawn_npc_status']) && isset($_GET['spawn_npc_message'])) {
     ];
 }
 
-$npcLocationOptions = [];
-$npcLocationResult = pg_query($adminConn, 'SELECT formid,name,is_interior,region,hold FROM "public"."locations" ORDER BY name ASC');
-if ($npcLocationResult) {
-    while ($locationRow = pg_fetch_assoc($npcLocationResult)) {
-        $locationName = trim((string) ($locationRow['name'] ?? ''));
-        if ($locationName !== '') {
-            $npcLocationOptions[] = [$locationRow['formid'], $locationName, (bool) $locationRow['is_interior'], $locationRow['region'], $locationRow['hold']];
-        }
-    }
-}
+$npcCreationOptions = chimBglNpcCreationOptions();
 
 // Helper function to resolve NPC portrait path (same as npc_master.php)
 if (!function_exists('race_icon_web_path')) {
@@ -657,6 +403,21 @@ if (!function_exists('race_icon_web_path')) {
     } elseif (isset($rumorFormData['id'])) {
         $editingRumorId = (int) $rumorFormData['id'];
     }
+
+    $activeBglTab = strtolower(trim((string) ($_GET['bgl_tab'] ?? 'background')));
+    if (!in_array($activeBglTab, ['background', 'history', 'rumors'], true)) {
+        $activeBglTab = 'background';
+    }
+    if ($editingRumorId > 0 || !empty($rumorFlash['message'])) {
+        $activeBglTab = 'rumors';
+    } elseif (!empty($spawnNpcFlash['message']) || !empty($bglSettingsFlash['message'])) {
+        $activeBglTab = 'background';
+    }
+
+    $rumorsTabUrl = getRumorPagePath() . '?' . http_build_query(['tab' => 'backgroundlife', 'bgl_tab' => 'rumors']);
+    $backgroundPageTabUrl = $webRoot . '/ui/events-memories.php?' . http_build_query(['tab' => 'backgroundlife', 'bgl_tab' => 'background']);
+    $historyPageTabUrl = $webRoot . '/ui/events-memories.php?' . http_build_query(['tab' => 'backgroundlife', 'bgl_tab' => 'history']);
+    $rumorsPageTabUrl = $webRoot . '/ui/events-memories.php?' . http_build_query(['tab' => 'backgroundlife', 'bgl_tab' => 'rumors']);
 
     function handleRequestAction() {
         global $enginePath;
@@ -1622,31 +1383,231 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         display: none;
     }
 
-    .collapsible-panel .collapsible-body {
-        display: block;
+    .bgl-action-toolbar {
+        display: flex;
+        margin: 0 0 12px;
     }
 
-    .collapsible-panel.collapsed .collapsible-body {
-        display: none;
+    .bgl-page-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        max-width: 900px;
+        margin: 0 auto 20px;
+        padding: 8px;
+        background: #1d1d1d;
+        border: 1px solid #3d3d3d;
+        border-radius: 8px;
     }
 
-    .toggle-panel-btn {
-        width: 100%;
-        margin-top: 10px;
-        background: #3a3a3a;
-        color: #ddd;
-        border: none;
+    .bgl-page-tab {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
         padding: 8px 12px;
+        color: #ddd;
+        background: #2d2d2d;
+        border: 1px solid #474747;
         border-radius: 6px;
-        cursor: pointer;
-        font-weight: bold;
-        font-size: 12px;
-        transition: all 0.3s ease;
+        font-weight: 700;
+        text-align: center;
+        text-decoration: none;
+        box-sizing: border-box;
     }
 
-    .toggle-panel-btn:hover {
-        background: #4a4a4a;
+    .bgl-page-tab:hover {
+        color: #fff;
+        background: #363636;
+        border-color: #777;
+        text-decoration: none;
+    }
+
+    .bgl-page-tab.active {
+        color: #fff;
+        background: rgba(169, 81, 9, 0.28);
+        border-color: rgb(242, 124, 17);
+        box-shadow: inset 0 -2px 0 rgb(242, 124, 17);
+    }
+
+    .bgl-page-panel[hidden] {
+        display: none !important;
+    }
+
+    .bgl-action-button {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid rgb(242, 124, 17);
+        border-radius: 6px;
+        background: rgb(242, 124, 17);
+        color: #121212;
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+    .bgl-action-button:hover {
+        background: #ff9138;
+    }
+
+    .bgl-modal {
+        display: none;
+        position: fixed;
+        z-index: 10020;
+        inset: 0;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        background: rgba(0, 0, 0, 0.78);
+        box-sizing: border-box;
+    }
+
+    .bgl-modal.open {
+        display: flex;
+    }
+
+    .bgl-modal-dialog {
+        width: min(1050px, 100%);
+        max-height: calc(100vh - 36px);
+        overflow-y: auto;
+        padding: 20px;
+        border: 1px solid #555;
+        border-radius: 10px;
+        background: #262626;
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.65);
+        box-sizing: border-box;
+    }
+
+    .bgl-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #444;
+    }
+
+    .bgl-modal-header h3 {
+        margin: 0;
+    }
+
+    .bgl-modal-close {
+        width: 36px;
+        height: 36px;
+        border: 1px solid #555;
+        border-radius: 6px;
+        background: #333;
+        color: #fff;
+        cursor: pointer;
+        font-size: 22px;
+        line-height: 1;
+    }
+
+    .bgl-modal-close:hover {
+        border-color: rgb(242, 124, 17);
         color: rgb(242, 124, 17);
+    }
+
+    .bgl-create-npc-notice {
+        margin-bottom: 16px;
+        padding: 11px 13px;
+        border: 1px solid #9b6a24;
+        border-radius: 6px;
+        background: rgba(155, 106, 36, 0.2);
+        color: #f5d59d;
+        line-height: 1.45;
+    }
+
+    .bgl-create-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+    }
+
+    .bgl-create-field {
+        min-width: 0;
+    }
+
+    .bgl-create-field-wide {
+        grid-column: 1 / -1;
+    }
+
+    .bgl-create-field label {
+        display: block;
+        margin-bottom: 8px;
+        color: #f2c48f;
+        font-weight: 600;
+    }
+
+    .bgl-create-field input,
+    .bgl-create-field select,
+    .bgl-create-field textarea {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px 12px;
+        border: 1px solid #444;
+        border-radius: 8px;
+        background: #171717;
+        color: #f5f5f5;
+    }
+
+    .bgl-create-field textarea {
+        resize: vertical;
+    }
+
+    .bgl-create-advanced {
+        margin-top: 18px;
+        border: 1px solid #3b3b3b;
+        border-radius: 8px;
+        background: #1b1b1b;
+    }
+
+    .bgl-create-advanced summary {
+        padding: 12px 14px;
+        color: #f2c48f;
+        font-weight: 700;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .bgl-create-advanced[open] summary {
+        border-bottom: 1px solid #333;
+    }
+
+    .bgl-create-advanced .bgl-create-form-grid {
+        margin: 0;
+        padding: 14px;
+    }
+
+    body.bgl-modal-open {
+        overflow: hidden;
+    }
+
+    @media (max-width: 820px) {
+        .bgl-create-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .bgl-modal {
+            padding: 8px;
+        }
+
+        .bgl-modal-dialog {
+            max-height: calc(100vh - 16px);
+            padding: 14px;
+        }
+
+        .bgl-page-tabs {
+            gap: 5px;
+            padding: 5px;
+        }
+
+        .bgl-page-tab {
+            min-height: 38px;
+            padding: 7px 5px;
+            font-size: 12px;
+        }
     }
 
     .toggle-checkbox {
@@ -2086,6 +2047,31 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 </style>
 
 <main>
+    <nav class="bgl-page-tabs" aria-label="Background Life sections">
+        <a
+            class="bgl-page-tab <?php echo $activeBglTab === 'background' ? 'active' : ''; ?>"
+            href="<?php echo htmlspecialchars($backgroundPageTabUrl); ?>"
+            target="_parent"
+            <?php echo $activeBglTab === 'background' ? 'aria-current="page"' : ''; ?>>
+            🌍 Background Life
+        </a>
+        <a
+            class="bgl-page-tab <?php echo $activeBglTab === 'history' ? 'active' : ''; ?>"
+            href="<?php echo htmlspecialchars($historyPageTabUrl); ?>"
+            target="_parent"
+            <?php echo $activeBglTab === 'history' ? 'aria-current="page"' : ''; ?>>
+            📚 History
+        </a>
+        <a
+            class="bgl-page-tab <?php echo $activeBglTab === 'rumors' ? 'active' : ''; ?>"
+            href="<?php echo htmlspecialchars($rumorsPageTabUrl); ?>"
+            target="_parent"
+            <?php echo $activeBglTab === 'rumors' ? 'aria-current="page"' : ''; ?>>
+            📰 Rumors
+        </a>
+    </nav>
+
+    <section class="bgl-page-panel" id="bgl-tab-background" <?php echo $activeBglTab === 'background' ? '' : 'hidden'; ?>>
     <div class="container">
         <div class="content-wrapper">
             <div class="map-section">
@@ -2234,6 +2220,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     <div class="bgl-settings-help">Controls how many in-game hours pass before eligible Background Life NPCs automatically run their next update.</div>
                     <button type="submit" class="bgl-settings-save">Save</button>
                 </form>
+                <div class="bgl-action-toolbar">
+                    <button type="button" class="chim-btn-primary bgl-action-button" onclick="openCreateNpcModal()">Create NPC</button>
+                </div>
                 <div class="npc-list-header">
                         <h3>📍 NPC Markers</h3>
                         <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
@@ -2317,6 +2306,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     </div>
     <span class="open-new-window" onclick="openInNewWindow()" title="Open in new window">↗️</span>
     <span class="open-new-window-2" onclick="location.href='mapview.php'" title="Refresh">🔄</span>
+    </section>
     <script>
         // NPC Diary Data - embedded directly in page
         const npcDiaryData = <?php echo json_encode(array_combine(
@@ -2540,17 +2530,69 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             }
         }
 
-        function togglePanel(panelId, button) {
-            const panel = document.getElementById(panelId);
-            if (!panel) {
+        function openBglModal(modalId, focusId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) {
                 return;
             }
 
-            panel.classList.toggle('collapsed');
-            if (button) {
-                button.textContent = panel.classList.contains('collapsed') ? 'Show Form' : 'Hide Form';
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('bgl-modal-open');
+
+            const focusTarget = document.getElementById(focusId);
+            if (focusTarget) {
+                focusTarget.focus();
             }
         }
+
+        function closeBglModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) {
+                return;
+            }
+
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+            if (!document.querySelector('.bgl-modal.open')) {
+                document.body.classList.remove('bgl-modal-open');
+            }
+        }
+
+        function openCreateNpcModal() {
+            openBglModal('create-background-npc', 'npc_name');
+        }
+
+        function closeCreateNpcModal() {
+            closeBglModal('create-background-npc');
+        }
+
+        function openCreateRumorModal() {
+            openBglModal('create-rumor', 'rumor_hold');
+        }
+
+        function closeCreateRumorModal() {
+            closeBglModal('create-rumor');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const npcModal = document.getElementById('create-background-npc');
+            if (npcModal && npcModal.dataset.autoOpen === '1') {
+                openCreateNpcModal();
+            }
+
+            const rumorModal = document.getElementById('create-rumor');
+            if (rumorModal && rumorModal.dataset.autoOpen === '1') {
+                openCreateRumorModal();
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeCreateNpcModal();
+                closeCreateRumorModal();
+            }
+        });
 
         function showProcessing()
         {
@@ -2764,56 +2806,84 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         }
     }
 
-    // Query Background Life history entries
-    $bglHistoryQuery = "SELECT rowid,npc,gamets,convert_gamets2skyrim_date(gamets) as gamedate,to_timestamp(localts) as localdate,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 50";
-    $bglHistoryResult = pg_query($adminConn, $bglHistoryQuery);
-    $bglHistoryRows = [];
-    if ($bglHistoryResult) {
-        while ($row = pg_fetch_assoc($bglHistoryResult)) {
-            $bglHistoryRows[] = $row;
-        }
-    }
     ?>
-    
-     <!-- Background Life History -->
-    <div class="info-panel" style="margin-top: 30px;">
-        <h3>📚 Background Life History</h3>
-        <?php if (empty($bglHistoryRows)): ?>
-            <p style="color: #888; font-style: italic;">No history rows found</p>
-        <?php else: ?>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                    <thead>
-                        <tr style="background: #1a1a1a; border-bottom: 2px solid rgb(242, 124, 17);">
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">rowid</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">npc</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">gamets</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">gamedate</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">localdate</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">data</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($bglHistoryRows as $historyRow): ?>
-                            <tr style="border-bottom: 1px solid #333;">
-                                <td style="padding: 12px; color: #ddd; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['rowid'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #ddd; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['npc'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['gamets'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['gamedate'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['localdate'] ?? '')); ?></td>
-                                <td style="padding: 12px; color: #fff;"><?php echo nl2br(htmlspecialchars((string) ($historyRow['data'] ?? ''))); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
-    </div>
 
-    <div class="info-panel collapsible-panel <?php echo !empty($spawnNpcFlash['message']) ? '' : 'collapsed'; ?>" id="create-background-npc" style="margin-top: 30px;">
-        <h3>🧬 Create Background Life NPC</h3>
-        <button type="button" class="toggle-panel-btn" onclick="togglePanel('create-background-npc', this)"><?php echo !empty($spawnNpcFlash['message']) ? 'Hide Form' : 'Show Form'; ?></button>
-        <div class="collapsible-body">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($webRoot); ?>/ui/css/background_life_history.css">
+    <section class="bgl-page-panel" id="bgl-tab-history" <?php echo $activeBglTab === 'history' ? '' : 'hidden'; ?>>
+    <div
+        class="info-panel bgl-history-panel"
+        id="bgl-history-panel"
+        data-api-url="<?php echo htmlspecialchars($webRoot); ?>/ui/api/background_life_history.php">
+        <div class="bgl-history-header">
+            <div>
+                <h3>📚 Background Life History</h3>
+                <div class="bgl-history-subtitle">Recent NPC activity, decisions, travel, and routines.</div>
+            </div>
+            <div class="bgl-history-status" id="bgl-history-status" aria-live="polite"></div>
+        </div>
+
+        <div class="bgl-history-toolbar">
+            <select class="bgl-history-control" id="bgl-history-npc-filter" aria-label="Filter by NPC">
+                <option value="">All NPCs</option>
+            </select>
+            <input
+                class="bgl-history-control"
+                id="bgl-history-search"
+                type="search"
+                placeholder="Search Background Life activity"
+                aria-label="Search Background Life activity">
+            <select class="bgl-history-control" id="bgl-history-limit" aria-label="Activities per page">
+                <option value="20" selected>20 rows</option>
+                <option value="50">50 rows</option>
+                <option value="100">100 rows</option>
+            </select>
+            <div style="display: flex; gap: 8px;">
+                <button class="bgl-history-button" id="bgl-history-refresh" type="button">Refresh</button>
+                <button class="bgl-history-button" id="bgl-history-live" type="button">Auto Refresh</button>
+            </div>
+        </div>
+
+        <div class="bgl-history-table-wrap">
+            <table class="bgl-history-table">
+                <thead>
+                    <tr>
+                        <th>Tamrielic Time</th>
+                        <th>NPC</th>
+                        <th>Activity</th>
+                    </tr>
+                </thead>
+                <tbody id="bgl-history-body">
+                    <tr>
+                        <td class="bgl-history-empty" colspan="3">Loading Background Life history...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="bgl-history-pagination">
+            <button class="bgl-history-button" id="bgl-history-previous" type="button">Previous</button>
+            <span class="bgl-history-page-label" id="bgl-history-page-label">Page 1 of 1</span>
+            <button class="bgl-history-button" id="bgl-history-next" type="button">Next</button>
+        </div>
+    </div>
+    </section>
+    <script src="<?php echo htmlspecialchars($webRoot); ?>/ui/js/background_life_history.js"></script>
+
+    <div
+        class="bgl-modal"
+        id="create-background-npc"
+        data-auto-open="<?php echo !empty($spawnNpcFlash['message']) ? '1' : '0'; ?>"
+        aria-hidden="true"
+        onclick="if (event.target === this) closeCreateNpcModal()">
+        <div class="bgl-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="create-background-npc-title">
+        <div class="bgl-modal-header">
+            <h3 id="create-background-npc-title">🧬 Create Background Life NPC</h3>
+            <button type="button" class="bgl-modal-close" onclick="closeCreateNpcModal()" aria-label="Close Create NPC modal">&times;</button>
+        </div>
+        <div class="bgl-create-npc-notice">
+            <strong>Skyrim must be running and connected to CHIM.</strong>
+            Keep the game open while the NPC is created, renamed, moved to the selected location, and added to Background Life.
+        </div>
         <?php if (!empty($spawnNpcFlash['message'])): ?>
             <?php
                 $isSpawnSuccess = ($spawnNpcFlash['type'] ?? '') === 'success';
@@ -2828,102 +2898,114 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
         <form method="post" action="">
             <input type="hidden" name="action" value="create_background_npc">
-            <div style="display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 14px; margin-top: 16px;">
-                <div>
-                    <label for="npc_name" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Name</label>
-                    <input id="npc_name" name="npc_name" type="text" required value="<?php echo htmlspecialchars($spawnNpcFormData['name'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+            <div class="bgl-create-form-grid">
+                <div class="bgl-create-field">
+                    <label for="npc_name">Name</label>
+                    <input id="npc_name" name="npc_name" type="text" required value="<?php echo htmlspecialchars($spawnNpcFormData['name'] ?? ''); ?>">
                 </div>
-                <div>
-                    <label for="npc_gender" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Gender</label>
-                    <select id="npc_gender" name="npc_gender" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field">
+                    <label for="npc_gender">Gender</label>
+                    <select id="npc_gender" name="npc_gender" required>
                         <?php $npcGenderValue = (string) ($spawnNpcFormData['gender'] ?? 'male'); ?>
-                        <option value="male" <?php echo ($npcGenderValue === 'male') ? 'selected' : ''; ?>>male</option>
-                        <option value="female" <?php echo ($npcGenderValue === 'female') ? 'selected' : ''; ?>>female</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="npc_class" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Class</label>
-                    <select id="npc_class" name="npc_class" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                        <?php
-                            $npcClassValue = (string) ($spawnNpcFormData['class'] ?? 'farmer');
-                            $npcClassOptions = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'forsworn'];
-                            foreach ($npcClassOptions as $npcClassOption):
-                        ?>
-                            <option value="<?php echo htmlspecialchars($npcClassOption); ?>" <?php echo ($npcClassValue === $npcClassOption) ? 'selected' : ''; ?>><?php echo htmlspecialchars($npcClassOption); ?></option>
+                        <?php foreach ($npcCreationOptions['genders'] as $npcGenderOption): ?>
+                            <option value="<?php echo htmlspecialchars($npcGenderOption); ?>" <?php echo ($npcGenderValue === $npcGenderOption) ? 'selected' : ''; ?>><?php echo htmlspecialchars($npcGenderOption); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div>
-                    <label for="npc_race" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Race</label>
-                    <select id="npc_race" name="npc_race" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field">
+                    <label for="npc_race">Race</label>
+                    <select id="npc_race" name="npc_race" required>
                         <?php
                             $npcRaceValue = (string) ($spawnNpcFormData['race'] ?? 'Nord');
-                            $npcRaceOptions = ['Nord', 'Imperial', 'Argonian', 'RedGuard', 'Orc', 'Breton'];
-                            foreach ($npcRaceOptions as $npcRaceOption):
+                            foreach ($npcCreationOptions['races'] as $npcRaceOption):
                         ?>
                             <option value="<?php echo htmlspecialchars($npcRaceOption); ?>" <?php echo ($npcRaceValue === $npcRaceOption) ? 'selected' : ''; ?>><?php echo htmlspecialchars($npcRaceOption); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div>
-                    <label for="npc_location" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Location</label>
-                    <input id="npc_location" name="npc_location" type="text" list="npc-location-options" required value="<?php echo htmlspecialchars($spawnNpcFormData['location'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                    <datalist id="npc-location-options">
-                        <?php foreach ($npcLocationOptions as $npcLocationOption): ?>
-                            <option value="<?php echo htmlspecialchars($npcLocationOption[0]); ?>" label="<?php echo htmlspecialchars($npcLocationOption[1] . ' (' . ($npcLocationOption[2] ? 'Interior' : 'Exterior') . ' ' . $npcLocationOption[3] . ', ' . $npcLocationOption[4] . ')'); ?>"></option>
+                <div class="bgl-create-field">
+                    <label for="npc_class">Class</label>
+                    <select id="npc_class" name="npc_class" required>
+                        <?php
+                            $npcClassValue = (string) ($spawnNpcFormData['class'] ?? 'farmer');
+                            foreach ($npcCreationOptions['classes'] as $npcClassOption):
+                        ?>
+                            <option value="<?php echo htmlspecialchars($npcClassOption); ?>" <?php echo ($npcClassValue === $npcClassOption) ? 'selected' : ''; ?>><?php echo htmlspecialchars($npcClassOption); ?></option>
                         <?php endforeach; ?>
-                    </datalist>
+                    </select>
                 </div>
-                <div>
-                    <label for="npc_disposition" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Disposition</label>
-                    <input id="npc_disposition" name="npc_disposition" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['disposition'] ?? 'friendly'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field bgl-create-field-wide">
+                    <label for="npc_location">Location</label>
+                    <select id="npc_location" name="npc_location" required>
+                        <?php $npcLocationValue = (string) ($spawnNpcFormData['location'] ?? ''); ?>
+                        <option value="">Select discovered location</option>
+                        <?php foreach ($npcCreationOptions['locations'] as $npcLocationOption): ?>
+                            <option value="<?php echo htmlspecialchars($npcLocationOption['formid']); ?>" <?php echo ($npcLocationValue === (string) $npcLocationOption['formid']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($npcLocationOption['label']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
-                <div>
-                    <label for="npc_starting_point" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Starting Point (FormID) (will use location if empty)</label>
-                    <input id="npc_starting_point" name="npc_starting_point" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['starting_point'] ?? '0x0002b0dd'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field bgl-create-field-wide">
+                    <label for="npc_background">Background</label>
+                    <textarea id="npc_background" name="npc_background" rows="3" required><?php echo htmlspecialchars($spawnNpcFormData['background'] ?? ''); ?></textarea>
                 </div>
-                <div>
-                    <label for="npc_inventory_gold" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Gold Qty (0x0000000F)</label>
-                    <input id="npc_inventory_gold" name="npc_inventory_gold" type="number" min="0" step="1" value="<?php echo htmlspecialchars($spawnNpcFormData['gold_qty'] ?? '100'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field">
+                    <label for="npc_speech_style">Speech Style</label>
+                    <input id="npc_speech_style" name="npc_speech_style" type="text" required value="<?php echo htmlspecialchars($spawnNpcFormData['speech_style'] ?? ''); ?>">
                 </div>
-                <div>
-                    <label for="npc_inventory_iron_ore" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Iron Ore Qty (0x00071cf3)</label>
-                    <input id="npc_inventory_iron_ore" name="npc_inventory_iron_ore" type="number" min="0" step="1" value="<?php echo htmlspecialchars($spawnNpcFormData['iron_ore_qty'] ?? '10'); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div class="bgl-create-field bgl-create-field-wide">
+                    <label for="npc_goal">Goals</label>
+                    <textarea id="npc_goal" name="npc_goal" rows="3" required><?php echo htmlspecialchars($spawnNpcFormData['goal'] ?? ''); ?></textarea>
                 </div>
             </div>
 
-            <div style="margin-top: 16px;">
-                <label for="npc_appearance" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Appearance</label>
-                <input id="npc_appearance" name="npc_appearance" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['appearance'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-            </div>
-
-            <div style="margin-top: 16px;">
-                <label for="npc_speech_style" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Speech Style</label>
-                <input id="npc_speech_style" name="npc_speech_style" type="text" required value="<?php echo htmlspecialchars($spawnNpcFormData['speech_style'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-            </div>
-
-            <div style="margin-top: 16px;">
-                <label for="npc_background" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Background</label>
-                <textarea id="npc_background" name="npc_background" rows="3" required style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($spawnNpcFormData['background'] ?? ''); ?></textarea>
-            </div>
-
-            <div style="margin-top: 16px;">
-                <label for="npc_goal" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Goals</label>
-                <textarea id="npc_goal" name="npc_goal" rows="12" required style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($spawnNpcFormData['goal'] ?? ''); ?></textarea>
-            </div>
+            <details class="bgl-create-advanced">
+                <summary>Advanced Options</summary>
+                <div class="bgl-create-form-grid">
+                    <div class="bgl-create-field bgl-create-field-wide">
+                        <label for="npc_appearance">Appearance</label>
+                        <input id="npc_appearance" name="npc_appearance" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['appearance'] ?? ''); ?>">
+                    </div>
+                    <div class="bgl-create-field">
+                        <label for="npc_disposition">Disposition</label>
+                        <input id="npc_disposition" name="npc_disposition" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['disposition'] ?? 'friendly'); ?>">
+                    </div>
+                    <div class="bgl-create-field">
+                        <label for="npc_starting_point">Starting Point FormID</label>
+                        <input id="npc_starting_point" name="npc_starting_point" type="text" value="<?php echo htmlspecialchars($spawnNpcFormData['starting_point'] ?? ''); ?>" placeholder="Uses location when empty">
+                    </div>
+                    <div class="bgl-create-field">
+                        <label for="npc_inventory_gold">Gold</label>
+                        <input id="npc_inventory_gold" name="npc_inventory_gold" type="number" min="0" step="1" value="<?php echo htmlspecialchars($spawnNpcFormData['gold_qty'] ?? '100'); ?>">
+                    </div>
+                    <div class="bgl-create-field">
+                        <label for="npc_inventory_iron_ore">Iron Ore</label>
+                        <input id="npc_inventory_iron_ore" name="npc_inventory_iron_ore" type="number" min="0" step="1" value="<?php echo htmlspecialchars($spawnNpcFormData['iron_ore_qty'] ?? '10'); ?>">
+                    </div>
+                </div>
+            </details>
 
             <div style="margin-top: 18px; display: flex; justify-content: flex-end;">
                 <button type="submit" style="padding: 10px 18px; border-radius: 8px; border: 1px solid rgb(242, 124, 17); background: rgb(242, 124, 17); color: #121212; font-weight: 700; cursor: pointer;">
-                    Spawn Background NPC
+                    Create NPC
                 </button>
             </div>
         </form>
         </div>
     </div>
 
-    <div id="rumors-section" style="margin-top: 40px;">
+    <section
+        class="bgl-page-panel"
+        id="rumors-section"
+        <?php echo $activeBglTab === 'rumors' ? '' : 'hidden'; ?>>
         <div class="page-header" style="margin-bottom: 20px;">
             <h1>📰 Rumors</h1>
+        </div>
+        <div class="bgl-action-toolbar">
+            <button type="button" class="chim-btn-primary bgl-action-button" onclick="openCreateRumorModal()">
+                <?php echo ($editingRumorId > 0) ? 'Edit Rumor' : 'Create Rumor'; ?>
+            </button>
         </div>
         
         <?php if (!empty($rumorFlash['message'])): ?>
@@ -2971,7 +3053,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <td style="padding: 12px; color: #bbb; font-size: 12px; white-space: nowrap;"><?php echo htmlspecialchars($rumorDate); ?></td>
                                     <td style="padding: 12px; color: #888; font-size: 12px; white-space: nowrap;"><?php echo $hoursAgo; ?> hours ago</td>
                                     <td style="padding: 12px;">
-                                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '?edit_rumor_id=' . urlencode((string)($rumor['id'] ?? '')) . '#create-rumor'); ?>" style="color: rgb(242, 124, 17); font-weight: 600; text-decoration: none;">Edit</a>
+                                        <a href="<?php echo htmlspecialchars($rumorsTabUrl . '&edit_rumor_id=' . urlencode((string)($rumor['id'] ?? '')) . '#create-rumor'); ?>" style="color: rgb(242, 124, 17); font-weight: 600; text-decoration: none;">Edit</a>
                                         <form method="post" action="" style="display: inline; margin-left: 12px;" onsubmit="return confirm('Delete this rumor?');">
                                             <input type="hidden" name="action" value="delete_rumor">
                                             <input type="hidden" name="rumor_id" value="<?php echo (int) ($rumor['id'] ?? 0); ?>">
@@ -3019,7 +3101,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <td style="padding: 12px; color: #777; font-size: 12px; white-space: nowrap;"><?php echo htmlspecialchars($rumorDate); ?></td>
                                     <td style="padding: 12px; color: #666; font-size: 12px; white-space: nowrap;"><?php echo $hoursAgo; ?> hours ago</td>
                                     <td style="padding: 12px;">
-                                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '?edit_rumor_id=' . urlencode((string)($rumor['id'] ?? '')) . '#create-rumor'); ?>" style="color: #bbb; font-weight: 600; text-decoration: none;">Edit</a>
+                                        <a href="<?php echo htmlspecialchars($rumorsTabUrl . '&edit_rumor_id=' . urlencode((string)($rumor['id'] ?? '')) . '#create-rumor'); ?>" style="color: #bbb; font-weight: 600; text-decoration: none;">Edit</a>
                                         <form method="post" action="" style="display: inline; margin-left: 12px;" onsubmit="return confirm('Delete this rumor?');">
                                             <input type="hidden" name="action" value="delete_rumor">
                                             <input type="hidden" name="rumor_id" value="<?php echo (int) ($rumor['id'] ?? 0); ?>">
@@ -3036,16 +3118,23 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
        
 
-        <div class="info-panel collapsible-panel <?php echo ($editingRumorId > 0 || (($rumorFlash['type'] ?? '') === 'error')) ? '' : 'collapsed'; ?>" id="create-rumor" style="margin-top: 30px;">
-            <h3><?php echo ($editingRumorId > 0) ? 'Edit Rumor' : 'Create Rumor'; ?></h3>
-            <button type="button" class="toggle-panel-btn" onclick="togglePanel('create-rumor', this)"><?php echo ($editingRumorId > 0 || (($rumorFlash['type'] ?? '') === 'error')) ? 'Hide Form' : 'Show Form'; ?></button>
-            <div class="collapsible-body">
+        <div
+            class="bgl-modal"
+            id="create-rumor"
+            data-auto-open="<?php echo ($editingRumorId > 0 || (($rumorFlash['type'] ?? '') === 'error')) ? '1' : '0'; ?>"
+            aria-hidden="true"
+            onclick="if (event.target === this) closeCreateRumorModal()">
+            <div class="bgl-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="create-rumor-title">
+            <div class="bgl-modal-header">
+                <h3 id="create-rumor-title"><?php echo ($editingRumorId > 0) ? 'Edit Rumor' : 'Create Rumor'; ?></h3>
+                <button type="button" class="bgl-modal-close" onclick="closeCreateRumorModal()" aria-label="Close rumor modal">&times;</button>
+            </div>
             <form method="post" action="">
                 <input type="hidden" name="action" value="<?php echo ($editingRumorId > 0) ? 'update_rumor' : 'create_rumor'; ?>">
                 <?php if ($editingRumorId > 0): ?>
                     <input type="hidden" name="rumor_id" value="<?php echo (int) $editingRumorId; ?>">
                 <?php endif; ?>
-                <div style="display: grid; grid-template-columns: minmax(220px, 280px) minmax(200px, 1fr) minmax(160px, 180px); gap: 18px; margin-top: 16px;">
+                <div class="bgl-create-form-grid">
                     <div>
                         <label for="rumor_hold" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Hold</label>
                         <select id="rumor_hold" name="rumor_hold" required style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px;">
@@ -3092,7 +3181,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                 </div>
                 <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 12px;">
                     <?php if ($editingRumorId > 0): ?>
-                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '#create-rumor'); ?>" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #555; background: #242424; color: #f2f2f2; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
+                        <a href="<?php echo htmlspecialchars($rumorsTabUrl . '#rumors-section'); ?>" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #555; background: #242424; color: #f2f2f2; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
                             Cancel Edit
                         </a>
                     <?php endif; ?>
@@ -3103,7 +3192,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             </form>
             </div>
         </div>
-    </div>
+    </section>
 </main>
 
 <?php
