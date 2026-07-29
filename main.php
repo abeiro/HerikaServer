@@ -996,8 +996,18 @@ if (in_array($gameRequest[0],["bored"])) {
     if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"])) {
         Logger::info("[NARRATOR_BORED] Using narrator bored flow");
     } elseif ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
-        Logger::info("Redirecting bored event to rolemaster");
-        `php service/manager.php rolemaster instruction ""`;
+        $boredSeedActor = trim((string)($gameRequest[4] ?? $GLOBALS["HERIKA_NAME"] ?? ""));
+        Logger::info("Redirecting bored event to rolemaster with seed actor '{$boredSeedActor}'");
+        $phpCli = PHP_BINDIR . DIRECTORY_SEPARATOR . "php";
+        $managerPath = __DIR__ . DIRECTORY_SEPARATOR . "service" . DIRECTORY_SEPARATOR . "manager.php";
+        $command = escapeshellarg($phpCli)
+            . " " . escapeshellarg($managerPath)
+            . " rolemaster instruction " . escapeshellarg("")
+            . " bored " . escapeshellarg($boredSeedActor);
+        exec($command, $output, $returnCode);
+        if ($returnCode !== 0) {
+            Logger::warn("Failed to start bored rolemaster request (exit code {$returnCode})");
+        }
         terminate();
 
     }
@@ -1729,7 +1739,18 @@ if (($gameRequest[0] ?? "") === "rechat" && isset($GLOBALS["RECHAT_RESOLVED_TARG
 $authoritativePeople = $hasAuthoritativeRequestAudience ? $requestAudienceSnapshot : $resolvedRechatPeople;
 $directiveFallbackPeople = "";
 if ($authoritativePeople === "" && in_array($gameRequest[0] ?? "", $directiveDialogueEventTypes, true)) {
-    $directiveFallbackPeople = DataBeingsInCloseRange(true);
+    // Busy actors remain physically present even though Rolemaster must not
+    // select them as new speakers.
+    $directiveSpeakerName = trim((string)(
+        $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"]["npc_name"]
+        ?? $GLOBALS["HERIKA_NAME"]
+        ?? ""
+    ));
+    $directiveFallbackPeople = chimBuildDirectivePeoplePipe(
+        DataBeingsInCloseRange(true, true),
+        $directiveSpeakerName,
+        $gameRequest[3] ?? ""
+    );
 }
 
 if (isWhisperExecutionMode() && in_array($gameRequest[0] ?? "", $playerInputEventTypes, true)) {
@@ -2461,6 +2482,14 @@ $promptInjectionContext = [
 $characterBottomInjections = function_exists('chimRenderPromptInjections')
     ? chimRenderPromptInjections("character_bottom", $promptInjectionContext)
     : "";
+$latestDiaryContext = function_exists('chimBuildLatestDiaryContextBlock')
+    ? chimBuildLatestDiaryContextBlock(
+        strval($GLOBALS["HERIKA_NAME"] ?? ''),
+        is_array($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] ?? null)
+            ? $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]
+            : []
+    )
+    : "";
 $promptBottomInjections = function_exists('chimRenderPromptInjections')
     ? chimRenderPromptInjections("prompt_bottom", $promptInjectionContext)
     : "";
@@ -2480,7 +2509,7 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
 
 $systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
     "\n</roleplay_instructions>" . $worldPrompt .
-    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography . $characterBottomInjections .
+    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography . $latestDiaryContext . $characterBottomInjections .
     "\n</character>" . $knowledgeSection .
     "\n\n<general_instructions>\n" . $GLOBALS["COMMAND_PROMPT"] .
     "\n</general_instructions>" . $actionsList . $nearbySections . $promptBottomInjections . $paralinguisticTagsPrompt .
@@ -2489,7 +2518,7 @@ $systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
 $promptCompositionSections = [
     'roleplay_instructions' => $GLOBALS["PROMPT_HEAD"] ?? '',
     'world' => $worldPrompt ?? '',
-    'character' => ($GLOBALS["HERIKA_PERS"] ?? '') . ($dynamicBiography ?? '') . ($characterBottomInjections ?? ''),
+    'character' => ($GLOBALS["HERIKA_PERS"] ?? '') . ($dynamicBiography ?? '') . ($latestDiaryContext ?? '') . ($characterBottomInjections ?? ''),
     'knowledge' => $knowledgeSection ?? '',
     'general_instructions' => $GLOBALS["COMMAND_PROMPT"] ?? '',
     'actions' => $actionsList ?? '',

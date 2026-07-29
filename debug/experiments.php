@@ -581,4 +581,47 @@ When at a city, tavern or social scenario, and intent is work, she generates gol
 if ($argv[1] == '7') {
     echo getNameForItemReference("07000801") . PHP_EOL;
 }
+
+if ($argv[1] == '8') {
+    $npc_profile = [
+    'name' => 'Sees-the-Tide',
+    'gender' => 'male',
+    'class' => 'farmer',
+    'race' => 'argonian',
+    'location' => 'Windhelm',
+    'appearance' => 'a lean green-scaled Argonian wearing weathered fishing clothes, carrying nets that smell of river water and salt',
+    'background' => 'Born in Black Marsh, Sees-the-Tide travelled north searching for honest work after years of hardship. Like many Argonians, he eventually found employment on the Windhelm docks. Although he is not allowed to live within the city walls, he has built a modest life among the workers along the harbor. He knows the Sea of Ghosts, the White River and every fisherman in the port, believing that patience and hard work matter more than politics.',
+    'speechStyle' => 'Use a calm, measured, and pragmatic speaking style. Speak in fluent, natural English with clear, deliberate sentences, avoiding slang, exaggerated emotion, or unnecessary contractions. Favor concrete observations over opinions, and express feelings through restraint rather than intensity. Be courteous but reserved, respectful without excessive warmth, and let confidence come from quiet certainty instead of bravado. Prefer practical, descriptive language with occasional subtle metaphors drawn from nature, rivers, marshes, predators, prey, or the passage of seasons, but use them sparingly. Avoid broken grammar, Khajiit-like mannerisms (such as referring to oneself as "this one"), or excessive references to the Hist. The overall impression should be thoughtful, observant, patient, and quietly wise, with dialogue that feels grounded, concise, and purposeful.',
+    'disposition' => 'friendly',
+    'goal' => "[Life goals]
+Earn an honest living as one of Windhelm's most dependable fishermen while supporting the Argonian community on the docks.
+
+* Works at 'Windhelm Docks'
+* Inspect and repair fishing nets and equipment.
+* Spend most of the morning and afternoon fishing along the docks and nearby waters.
+* Sell freshly caught fish (River Betty, item refid:0x00106e1a, common price about 15 gold coins) to merchants, innkeepers and citizens.
+* Occasionally trade with sailors arriving from Dawnstar and Solitude.
+* Help other dock workers repair nets or unload fishing boats.
+* Eat and drink at least once every day.
+* Spend evenings around the docks or at Candlehearth Hall, listening to sailors and exchanging stories.
+* Sleeps at Candlehearth Hall.
+* Discusses weather conditions with sailors.
+* Talks about fish migrations and good fishing spots.
+* Shares rumors brought by incoming ships.
+* Watches for unusual creatures or strange objects in the water.
+* Greets other Argonians working on the docks.
+
+[Production]
+When at the docks, shoreline or fishing areas, and intent is work, he generates fish (River Betty, item refid:0x00106e1a)
+at a rate of 8 each hour.
+"
+];
+
+ $startingPoint = 0x27019D09;
+    $inventoryItems = [
+        ['refid' => '0x00106e1a', 'qty' => 10],
+    ];
+
+    spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems);
+}
 ?>

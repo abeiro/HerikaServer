@@ -1899,6 +1899,7 @@ function getLocationsNearNpcCoords($npcName) {
     $pointLiteral = '(' . $x . ',' . $y . ')';
     $pointEsc = $db->escape($pointLiteral);
 
+    // Abandoned Shack locations is bugged as is child of Batte-Born Farm.
     $closestLocations = $db->fetchAll(
         "SELECT
             name,
@@ -1911,6 +1912,7 @@ function getLocationsNearNpcCoords($npcName) {
             coords <-> '{$pointEsc}'::point AS distance
          FROM locations
          WHERE coords IS NOT NULL
+         and name<>'Abandoned Shack'
          ORDER BY distance ASC
          LIMIT 25"
     );

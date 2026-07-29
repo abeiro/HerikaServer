@@ -241,7 +241,17 @@ if ($lastIssuedAction["gamets"] && ($lastIssuedAction["action"] == "TravelTo" ||
     $npcIsTravellingStarted = 0;
 }
 
+// Guard: Check lasts LLM requests to avoid exceeding the maximum allowed LLM calls per hour for this NPC
+// Check if the last 5 calls were made within the last 2 minutes
 
+if (checkLastCallsFor($GLOBALS['HERIKA_NAME'])) {
+    error_log("[BGL RUN] $npcName — LLM call limit exceeded for this NPC, skipping.");
+    if (isset($extdata["background_life_last_llm_call_suspended"]) && $extdata["background_life_last_llm_call_suspended"] === true) {
+        error_log("[BGL RUN] $npcName — LLM calls are suspended for this NPC, skipping.");
+    }
+    markAsErrored($GLOBALS['HERIKA_NAME']);
+    return;
+}
 
 // ─── Guard: Require at Least One Prior Interaction ───────────────────────────
 
@@ -591,9 +601,10 @@ if (isset($metadata['low_process_actors'])) {
 
 
 if (isset($metadata['last_inventory_update_gamets'])) {
+    $nullArray=[];
     $bgEvents[] = [
         'gamets' => $metadata['last_inventory_update_gamets'],
-        'content' => implode("\n", chimFormatInventoryPromptLines($metadata['inventory'] ?? [])),
+        'content' => implode("\n", chimFormatInventoryPromptLines($metadata['inventory'] ?? [], null, $nullArray, false, true)),
         'type' => 'inventory_update',
     ];
 
@@ -852,7 +863,7 @@ Rules:
 - You may include multiple actions if needed.
 - reasoning must be short (one sentence)
 - Do not add any keys other than 'action' and 'reasoning'.
-- 1 gold coin (or septim) is represented as itemid 0000000F.
+- 1 gold coin (or septim) is represented as itemid 0000000F. 9 gold coins would be represented as 0000000F:9, 900 gold coins would be represented as 0000000F:900, and so on.
 "
         ]
     ];
@@ -861,7 +872,9 @@ Rules:
 
     $connectionHandler = $connector->getConnector($currentConnectorData);
     $preResponse = $connectionHandler->fast_request($preStep1Prompt, ['MAX_TOKENS' => 1024], 'backgroundlife');
-
+    
+    updateLastLLMCall($GLOBALS['HERIKA_NAME']);
+    
     $parsedResponse = __jpd_decode_lazy($preResponse);
 
     if (isset($parsedResponse[0]) && is_array($parsedResponse[0])) {
@@ -1176,6 +1189,7 @@ if (!$isSpeakAction) {
     if ($bypassInnerThoughts == false) {
         $connectionHandler = $connector->getConnector($currentConnectorData);
         $innerThoughtBuffer = $connectionHandler->fast_request($step1Prompt, ['MAX_TOKENS' => 2048], 'backgroundlife');
+        updateLastLLMCall($GLOBALS['HERIKA_NAME']);
         $recordDiaryEntry = true;
     } else {
         $innerThoughtBuffer = $innerThoughtBufferForced ?? "{$GLOBALS['HERIKA_NAME']}'s inner thought: I've reached destination, I must figure out my next action";
@@ -1407,6 +1421,7 @@ For example:
 $step2Prompt = [['role' => 'system', 'content' => $step2Content]];
 $connectionHandler = $connector->getConnector($currentConnectorData);
 $decisionBuffer = $connectionHandler->fast_request($step2Prompt, ['MAX_TOKENS' => 2048], 'backgroundlife');
+updateLastLLMCall($GLOBALS['HERIKA_NAME']);
 
 echo $decisionBuffer . PHP_EOL;
 

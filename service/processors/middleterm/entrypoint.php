@@ -279,12 +279,10 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
                 // Update timestamp to avoid repeated instructions.
                 // In BgL case, simple_lllm_request_with_context_life.php will update the timestamp after processing the instruction.
                 $npcManager = new NpcMaster();
-                $npcData = $npcManager->getByName($npc["npc_name"]);
-                $extended = json_decode($npcData["extended_data"], true);
+                
                 $extended["background_life_last_updated"] = $maxRow;
                 $extended["background_life_last_updated_presence_delta"] = 0;
-                $npcData = $npcManager->setExtendedData($npcData, $extended);
-                $npcManager->updateByArray($npcData);
+                $npcManager->updateExtendedKeysByName($npc["npc_name"], $extended);
                 
             } else {
                 $runner = $enginePath . 'debug/simple_llm_request_with_context_life_v2.php';

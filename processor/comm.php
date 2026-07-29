@@ -1883,7 +1883,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 }
             }
             
-            // Update equipment section
+            // Update last_coords_history
             if (isset($meta["last_coords"])) {
                 $meta["last_coords_history"][]=$meta['last_coords'];
                 // Keep only last 10 elements
@@ -1894,6 +1894,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             }
 
             $previousLastCoords = is_array($meta["last_coords"] ?? null) ? $meta["last_coords"] : [];
+
+           
             $meta['last_coords'] = [
                 $splitNameBase[1],
                 $splitNameBase[2] ?? '',
@@ -1902,6 +1904,35 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 "last_updated"=>$gameRequest[2],
                 "location_formid"=>$splitNameBase[5] ?hexdec($splitNameBase[5]):null,
             ];
+
+             // Patch to get location name from coords. Can help with "Fake" locations.
+            $pointLiteral = '(' . $splitNameBase[1] . ',' . $splitNameBase[2] . ')';
+            $pointEsc = $db->escape($pointLiteral);
+
+            // Abandoned Shack locations is bugged as is child of Batte-Born Farm.
+            $closestLocations = $db->fetchOne(
+                "SELECT
+                    name,
+                    formid,
+                    region,
+                    hold,
+                    coords,
+                    tags,
+                    is_interior,
+                    coords <-> '{$pointEsc}'::point AS distance
+                FROM locations
+                WHERE coords IS NOT NULL and is_interior=0
+                and name<>'Abandoned Shack'
+                ORDER BY distance ASC
+                LIMIT 1"
+            );
+            error_log("[UTIL_LOCATION_NPC] Closest location to {$pointLiteral} is: " . print_r($closestLocations, true));
+            if (isset($closestLocations['name'])) {
+                $meta['last_coords']['location_name'] = $closestLocations['name'];
+                $meta['last_coords'][3] = $closestLocations['name'];
+                $meta['last_coords']['location_formid'] = $closestLocations['formid'];
+                
+            } 
 
             if (isset($splitNameBase[5], $splitNameBase[6]) && $splitNameBase[5] !== '' && $splitNameBase[6] !== '') {
                 $meta['last_coords']["nearest_npc"] = [$splitNameBase[6] => $splitNameBase[5]];

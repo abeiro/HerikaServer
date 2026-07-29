@@ -106,6 +106,10 @@ try {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_connector.sql"));
         $db->execQuery("SET search_path TO public");
     }
+    if ($checkTableExists("core_tts_fallback") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_fallback.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
     if ($checkTableExists("core_llm_connector") == -1) {
         // ensure api_badge for FK first
         if ($checkTableExists("core_api_badge") == -1) {
@@ -3753,6 +3757,7 @@ try {
         ["name"=>"core_api_badge",   "file"=>__DIR__."/../lib/core/database_schema/core_api_badge.sql"],
         ["name"=>"core_llm_connector","file"=>__DIR__."/../lib/core/database_schema/core_llm_connector.sql"],
         ["name"=>"core_tts_connector","file"=>__DIR__."/../lib/core/database_schema/core_tts_connector.sql"],
+        ["name"=>"core_tts_fallback","file"=>__DIR__."/../lib/core/database_schema/core_tts_fallback.sql"],
         ["name"=>"core_stt_connector","file"=>__DIR__."/../lib/core/database_schema/core_stt_connector.sql"],
         ["name"=>"core_profiles",     "file"=>__DIR__."/../lib/core/database_schema/core_profiles.sql"],
         ["name"=>"core_npc_master",   "file"=>__DIR__."/../lib/core/database_schema/core_npc_master.sql"]
@@ -7531,6 +7536,34 @@ if ($checkVersion("prompts") < 20260719001) {
     Logger::info("Applied patch prompts 20260719001 - improved book reading prompt");
 }
 
+if ($checkVersion("prompts") < 20260727001) {
+    Logger::debug("Applying prompts 20260727001 - add bored event director rules");
+
+    require_once(__DIR__ . "/../lib/rolemaster_bored.php");
+    $boredEventRules = $db->escape(chimRolemasterDefaultBoredEventRules());
+    $description = $db->escape(
+        "Additional Rolemaster rules used only for autonomous bored events. "
+        . "Supports {SEED_ACTOR_RULE}, {SEED_ACTOR}, {NEARBY_ACTORS}, and {PLAYER_NAME} placeholders. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_rules', '{$boredEventRules}', '{$description}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260727001);
+        Logger::info("Applied patch prompts 20260727001 - added bored event director rules");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260727001");
+    }
+}
+
 if ($checkVersion("memory_summary") < 20260721001) {
     Logger::debug("Applying memory_summary 20260721001 - normalize diary memory owners");
 
@@ -7630,6 +7663,34 @@ if ($checkVersion("visual_context") < 20260718001) {
         Logger::info("Applied patch visual_context 20260718001");
     } else {
         Logger::error("Failed to apply patch visual_context 20260718001");
+    }
+}
+
+if ($checkVersion("core_tts_fallback") < 20260727001) {
+    Logger::debug("Applying core_tts_fallback 20260727001 - add global race and gender voice fallbacks");
+
+    $schemaPath = __DIR__ . "/../lib/core/database_schema/core_tts_fallback.sql";
+    if ($db->execQuery(file_get_contents($schemaPath)) !== false) {
+        $updateVersion("core_tts_fallback", 20260727001);
+        Logger::info("Applied patch core_tts_fallback 20260727001");
+    } else {
+        Logger::error("Failed to apply patch core_tts_fallback 20260727001");
+    }
+}
+
+if ($checkVersion("latest_diary_context") < 20260727001) {
+    Logger::debug("Applying latest_diary_context 20260727001 - index latest NPC diary lookups");
+
+    $migrationOk = $db->execQuery(
+        "CREATE INDEX IF NOT EXISTS idx_diarylog_people_gamets
+         ON public.diarylog (lower(trim(people)), gamets DESC, localts DESC, rowid DESC)"
+    ) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("latest_diary_context", 20260727001);
+        Logger::info("Applied patch latest_diary_context 20260727001");
+    } else {
+        Logger::error("Failed to apply patch latest_diary_context 20260727001");
     }
 }
 

@@ -12,6 +12,54 @@ require_once(__DIR__."/pipeline_status.php");
 require_once(__DIR__."/emote_moods.php");
 require_once(__DIR__."/core/event_type.php");
 
+function chimBuildLatestDiaryContextBlock(string $npcName, array $profileData): string
+{
+    $safeNpcName = trim($npcName);
+    if ($safeNpcName === '' || strcasecmp($safeNpcName, 'The Narrator') === 0) {
+        return '';
+    }
+
+    $metadata = json_decode(strval($profileData['metadata'] ?? '{}'), true);
+    if (!is_array($metadata)
+        || !filter_var($metadata['LATEST_DIARY_CONTEXT_ENABLED'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+        return '';
+    }
+
+    $db = $GLOBALS['db'] ?? null;
+    if (!is_object($db) || !method_exists($db, 'fetchOne') || !method_exists($db, 'escape')) {
+        return '';
+    }
+
+    try {
+        $escapedName = $db->escape($safeNpcName);
+        $entry = $db->fetchOne(
+            "SELECT topic, content
+             FROM diarylog
+             WHERE lower(trim(people)) = lower('{$escapedName}')
+             ORDER BY gamets DESC, localts DESC, rowid DESC
+             LIMIT 1"
+        );
+    } catch (Throwable $e) {
+        Logger::warn("[LATEST_DIARY_CONTEXT] Unable to load diary context for {$safeNpcName}: " . $e->getMessage());
+        return '';
+    }
+
+    $content = trim(strval($entry['content'] ?? ''));
+    if ($content === '') {
+        return '';
+    }
+
+    $topic = trim(strval($entry['topic'] ?? ''));
+    $diaryText = $topic !== '' ? "Date: {$topic}\n{$content}" : $content;
+    $escapedText = htmlspecialchars(
+        $diaryText,
+        ENT_QUOTES | ENT_XML1 | ENT_SUBSTITUTE,
+        'UTF-8'
+    );
+
+    return "\n<latest_diary_entry>\n{$escapedText}\n</latest_diary_entry>\n";
+}
+
 function callConfiguredTts($textString, $mood, $stringforhash)
 {
     $ttsFunction = strval($GLOBALS["TTSFUNCTION"] ?? '');
@@ -40,14 +88,45 @@ function callConfiguredTts($textString, $mood, $stringforhash)
     return $GLOBALS["TTS_IN_USE"]($textString, $mood, $stringforhash);
 }
 
+function getNpcTtsFallbackCandidates(): array
+{
+    $configured = $GLOBALS["TTS_NPC_FALLBACK_VOICES"] ?? [];
+    if (!is_array($configured)) {
+        $configured = [$configured];
+    }
+    if (empty($configured)) {
+        $configured = [$GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''];
+    }
+
+    $currentVoice = trim(strval(
+        $GLOBALS["PATCH_OVERRIDE_VOICE"]
+        ?? $GLOBALS["TTS_NPC_RESOLVED_VOICE"]
+        ?? ''
+    ));
+    $candidates = [];
+    foreach ($configured as $voice) {
+        $voice = trim(strval($voice));
+        if ($voice === '' || strcasecmp($voice, $currentVoice) === 0) {
+            continue;
+        }
+        $duplicate = array_filter(
+            $candidates,
+            fn($candidate) => strcasecmp($candidate, $voice) === 0
+        );
+        if (empty($duplicate)) {
+            $candidates[] = $voice;
+        }
+    }
+
+    return $candidates;
+}
+
 function canRetryNpcTtsWithFallback(): bool
 {
     $currentNpcData = $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] ?? null;
     $currentName = trim(strval($GLOBALS["HERIKA_NAME"] ?? ''));
-    $originalVoice = trim(strval($GLOBALS["TTS_NPC_ORIGINAL_VOICE"] ?? ''));
-    $fallbackVoice = trim(strval($GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''));
 
-    if (!is_array($currentNpcData) || $currentName === '' || $originalVoice === '' || $fallbackVoice === '') {
+    if (!is_array($currentNpcData) || $currentName === '') {
         return false;
     }
     if (strcasecmp($currentName, 'The Narrator') === 0) {
@@ -57,7 +136,7 @@ function canRetryNpcTtsWithFallback(): bool
         return false;
     }
 
-    return strcasecmp($originalVoice, $fallbackVoice) !== 0;
+    return !empty(getNpcTtsFallbackCandidates());
 }
 
 function callNpcTtsWithFallback($textString, $mood, $stringforhash)
@@ -71,20 +150,16 @@ function callNpcTtsWithFallback($textString, $mood, $stringforhash)
         return $ttsOutput;
     }
 
-    $fallbackVoice = trim(strval($GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''));
     $originalVoice = $GLOBALS["PATCH_OVERRIDE_VOICE"] ?? null;
-    if ($fallbackVoice === '') {
-        return $ttsOutput;
-    }
+    foreach (getNpcTtsFallbackCandidates() as $fallbackVoice) {
+        Logger::warn("[TTS FALLBACK] Retrying NPC TTS for {$GLOBALS["HERIKA_NAME"]} with fallback voice '{$fallbackVoice}' after synthesis failure.");
 
-    Logger::warn("[TTS FALLBACK] Retrying NPC TTS for {$GLOBALS["HERIKA_NAME"]} with fallback voice '{$fallbackVoice}' after initial synthesis failure.");
-
-    $GLOBALS["PATCH_OVERRIDE_VOICE"] = $fallbackVoice;
-    $retryOutput = callConfiguredTts($textString, $mood, $stringforhash);
-
-    if ($retryOutput) {
-        $GLOBALS["TTS_NPC_RESOLVED_VOICE"] = $fallbackVoice;
-        return $retryOutput;
+        $GLOBALS["PATCH_OVERRIDE_VOICE"] = $fallbackVoice;
+        $retryOutput = callConfiguredTts($textString, $mood, $stringforhash);
+        if ($retryOutput) {
+            $GLOBALS["TTS_NPC_RESOLVED_VOICE"] = $fallbackVoice;
+            return $retryOutput;
+        }
     }
 
     if ($originalVoice === null || trim(strval($originalVoice)) === '') {
@@ -1753,7 +1828,12 @@ function returnLines($lines,$writeOutput=true)
                 $addonlistener="";
             }
             $originalRequest[3]="{$outBuffer["actor"]}: $responseForContext $addonlistener";
-            logEvent($originalRequest);
+            $dialogueEventPeople = chimBuildDialogueEventPeoplePipe(
+                chimGetCurrentTurnPeopleSnapshot(),
+                $outBuffer["actor"] ?? "",
+                $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"] ?? ""
+            );
+            logEvent($originalRequest, $dialogueEventPeople);
             
             // Log chat here, because  function return comes back out of sync.
             $originalRequest[0]="chat";
@@ -1778,7 +1858,7 @@ function returnLines($lines,$writeOutput=true)
                 'utterance_id' => $GLOBALS["SCRIPTLINE_UTTERANCE_ID"] ?? chimGenerateUtteranceId(),
                 'delivery_state' => 'emitted'
             ];
-            logEvent($originalRequest);
+            logEvent($originalRequest, $dialogueEventPeople);
         }
         
     }
@@ -2818,6 +2898,49 @@ function chimMergePeoplePipeLists()
         }
     }
     return normalizePeoplePipeList($names);
+}
+
+function chimBuildDirectivePeoplePipe($nearbyPeople, $speakerName, $instructionText)
+{
+    $speakerPeople = normalizePeoplePipeList([(string)$speakerName]);
+    $listenerPeople = "";
+    $listenerName = "";
+
+    if (preg_match(
+        '/\bThe dialogue listener must be\s+([^\r\n.]+)\.(?:\s|$)/iu',
+        (string)$instructionText,
+        $matches
+    )) {
+        $listenerName = html_entity_decode(
+            trim((string)($matches[1] ?? "")),
+            ENT_QUOTES | ENT_HTML5,
+            "UTF-8"
+        );
+    } elseif (preg_match(
+        '/\(must use ACTION\s+(?:JustTalk|Talk)\s+([^)]+)\)/iu',
+        (string)$instructionText,
+        $matches
+    )) {
+        $listenerName = html_entity_decode(
+            trim((string)($matches[1] ?? "")),
+            ENT_QUOTES | ENT_HTML5,
+            "UTF-8"
+        );
+    }
+
+    if ($listenerName !== "" && strcasecmp($listenerName, "everyone") !== 0) {
+        $listenerPeople = normalizePeoplePipeList([$listenerName]);
+    }
+
+    return chimMergePeoplePipeLists($nearbyPeople, $speakerPeople, $listenerPeople);
+}
+
+function chimBuildDialogueEventPeoplePipe($turnPeople, $speakerName, $listenerName)
+{
+    return chimMergePeoplePipeLists(
+        $turnPeople,
+        normalizePeoplePipeList([(string)$speakerName, (string)$listenerName])
+    );
 }
 
 function chimSetCurrentTurnPresentActorsSnapshot($actors)

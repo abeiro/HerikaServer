@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 
@@ -2052,7 +2052,165 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     </script>
     <?php endif; ?>
 
-    <div class="form-grid">
+    <div class="npc-editor-tabs" role="tablist" aria-label="NPC editor categories" data-npc-editor-tabs data-storage-key="herika-npc-editor-tab">
+    <button type="button" class="npc-editor-tab is-active" role="tab" aria-selected="true" data-npc-editor-tab="general">🧭 General</button>
+    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="bios">📖 Roleplay</button>
+    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="relationships">🤝 Relationships</button>
+    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="info">🛠️ Info</button>
+</div>
+<style>
+.npc-editor-tabs {
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:8px;
+    margin-bottom:14px;
+    padding:8px;
+    border:1px solid #3a3a3a;
+    border-radius:10px;
+    background:rgba(30, 30, 30, 0.92);
+}
+.npc-editor-tab {
+    position:relative;
+    min-height:40px;
+    padding:8px 12px;
+    border:1px solid #444;
+    border-radius:7px;
+    background:#303030;
+    color:#ddd;
+    font-weight:700;
+    cursor:pointer;
+    transition:border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.npc-editor-tab:hover { border-color:rgba(242,124,17,0.55); background:#383838; }
+.npc-editor-tabs .npc-editor-tab.is-active {
+    border-color:rgb(242,124,17) !important;
+    color:#fff !important;
+    background:rgba(92,53,25,0.95) !important;
+    box-shadow:inset 0 0 0 1px rgba(242,124,17,0.28), 0 0 12px rgba(242,124,17,0.24) !important;
+    transform:translateY(-1px) !important;
+}
+.npc-editor-tab:focus-visible { outline:2px solid rgb(242,124,17); outline-offset:2px; }
+.npc-editor-panels { display:block; }
+.npc-editor-panel[hidden] { display:none !important; }
+.npc-editor-panel[data-npc-editor-panel="bios"] { grid-template-columns:minmax(0, 1fr); }
+@media (max-width:700px) { .npc-editor-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+</style>
+<script>
+(function(){
+    const fieldSections = {
+        general: new Set(['npc_name','profile_id','lock_profile','npc_favorite','gender','race','base','refid','oghma_knowledge_tags','worldknowledge_tags','world_knowledge_tags','voiceid','faction','dynamic_profile','middle_term_enabled','individual_memory_enabled','auto_diary_enabled','auto_diary_wait_enabled','salutation_after_a_while','prompt_head']),
+        bios: new Set(['core','npc_static_bio','appearance','personality','occupation','skills','speechstyle','goals']),
+        relationships: new Set(['relationships','relationships_jsonb','middle_term_latest']),
+        info: new Set(['emote_moods','metadata','extended_data'])
+    };
+
+    function initNpcEditorTabs(){
+        document.querySelectorAll('[data-npc-editor-tabs]').forEach(function(tablist, index){
+            if (tablist.dataset.initialized === '1') return;
+            const form = tablist.closest('form');
+            const grid = form ? form.querySelector('.form-grid') : null;
+            if (!form || !grid) return;
+            tablist.dataset.initialized = '1';
+
+            const panels = {};
+            ['general','bios','relationships','info'].forEach(function(section){
+                const panel = document.createElement('div');
+                panel.className = 'npc-editor-panel form-grid';
+                panel.dataset.npcEditorPanel = section;
+                panel.id = 'npc-editor-panel-' + section + '-' + index;
+                panel.setAttribute('role', 'tabpanel');
+                panels[section] = panel;
+                const button = tablist.querySelector('[data-npc-editor-tab="' + section + '"]');
+                if (button) button.setAttribute('aria-controls', panel.id);
+            });
+
+            function tokensFor(unit){
+                const nodes = [];
+                if (unit.matches('[id],[name]')) nodes.push(unit);
+                unit.querySelectorAll('[id],[name]').forEach(function(node){ nodes.push(node); });
+                const tokens = [];
+                nodes.forEach(function(node){
+                    if (node.id) tokens.push(node.id);
+                    if (node.getAttribute('name')) tokens.push(node.getAttribute('name'));
+                });
+                return tokens;
+            }
+
+            function sectionFor(unit){
+                if (unit.id === 'relationship-editor-section' || unit.querySelector('#relationship-editor-section')) return 'relationships';
+                const label = unit.querySelector('label:not([for])');
+                if (label && label.textContent.replace(/\s+/g, ' ').trim() === 'Relationships') return 'relationships';
+                const tokens = tokensFor(unit);
+                for (const section of ['relationships','general','bios','info']) {
+                    if (tokens.some(function(token){ return fieldSections[section].has(token); })) return section;
+                }
+                return 'info';
+            }
+
+            function isFieldUnit(unit){
+                if (!(unit instanceof Element)) return false;
+                if (unit.matches('.form-item,#relationship-editor-section,input,textarea,select,details')) return true;
+                return Boolean(unit.querySelector('input,textarea,select,details,#relationship-editor-section'));
+            }
+
+            function moveUnit(unit){
+                if (!isFieldUnit(unit)) return;
+                panels[sectionFor(unit)].appendChild(unit);
+            }
+
+            Array.from(grid.children).forEach(function(unit){
+                if (unit.classList.contains('dynamic-profile-section')) {
+                    Array.from(unit.children).forEach(moveUnit);
+                    unit.hidden = true;
+                    return;
+                }
+                moveUnit(unit);
+            });
+
+            grid.classList.remove('form-grid');
+            grid.classList.add('npc-editor-panels');
+            Object.values(panels).forEach(function(panel){ grid.appendChild(panel); });
+
+            const storageKey = tablist.dataset.storageKey || 'npc-editor-tab';
+            function activate(section){
+                if (!panels[section]) section = 'general';
+                tablist.querySelectorAll('[data-npc-editor-tab]').forEach(function(button){
+                    const active = button.dataset.npcEditorTab === section;
+                    button.classList.toggle('is-active', active);
+                    button.setAttribute('aria-selected', active ? 'true' : 'false');
+                    button.tabIndex = active ? 0 : -1;
+                });
+                Object.entries(panels).forEach(function(entry){ entry[1].hidden = entry[0] !== section; });
+                try { window.localStorage.setItem(storageKey, section); } catch (_e) {}
+            }
+
+            tablist.addEventListener('click', function(event){
+                const button = event.target.closest('[data-npc-editor-tab]');
+                if (button) activate(button.dataset.npcEditorTab);
+            });
+            tablist.addEventListener('keydown', function(event){
+                if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+                const buttons = Array.from(tablist.querySelectorAll('[data-npc-editor-tab]'));
+                let next = buttons.indexOf(document.activeElement);
+                if (event.key === 'Home') next = 0;
+                else if (event.key === 'End') next = buttons.length - 1;
+                else next = (next + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+                event.preventDefault();
+                buttons[next].focus();
+                activate(buttons[next].dataset.npcEditorTab);
+            });
+
+            let initial = 'general';
+            try { initial = window.localStorage.getItem(storageKey) || initial; } catch (_e) {}
+            activate(initial);
+        });
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initNpcEditorTabs);
+    window.setTimeout(initNpcEditorTabs, 0);
+})();
+</script>
+<div class="form-grid">
         <div class="form-item span-2">
             <label for="npc_name">NPC Name</label>
             <input type="text" id="npc_name" name="npc_name" placeholder="e.g. Aela the Huntress" value="<?= htmlspecialchars($editItem["npc_name"] ?? "") ?>">
@@ -2392,14 +2550,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <?php if (file_exists(__DIR__."/../../ext/relationship_system/relationship_editor.php")) {
             include(__DIR__."/../../ext/relationship_system/relationship_editor.php");
         } ?>
-
-        <div class="form-item">
-            <label for="relationships">Relationships (Deprecated)</label>
-            <textarea id="relationships" name="relationships" placeholder="Legacy relationship text."><?= htmlspecialchars($editItem["relationships"] ?? "") ?></textarea>
-            <small class="hint">This legacy text field is still editable, but it is no longer used in prompting. Prompt relationship context comes from Relationships above.</small>
-        </div>
-
-        <div class="form-item">
+<div class="form-item">
             <label for="occupation">Occupation</label>
             <textarea id="occupation" name="occupation" placeholder="Role, job, affiliations."><?= htmlspecialchars($editItem["occupation"] ?? "") ?></textarea>
             <small class="hint">Primary role or job. Include relevant guilds or factions.</small>

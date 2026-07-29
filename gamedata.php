@@ -415,6 +415,7 @@ function buildInventoryMetadataValue(array $items): array
                 'baseid' => $item['baseid'],
                 'count' => intval($item['count']),
                 'keywords' => isset($item['keywords']) ? sanitizeItemKeywordList($item['keywords']) : [],
+                'goldvalue' => isset($item['goldvalue']) ? intval($item['goldvalue']) : 0,
             ];
         }
     }
