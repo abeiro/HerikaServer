@@ -1398,6 +1398,121 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         color: rgb(242, 124, 17);
     }
 
+    .bgl-create-npc-toolbar {
+        display: flex;
+        margin: 0 0 12px;
+    }
+
+    .bgl-create-npc-button {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid rgb(242, 124, 17);
+        border-radius: 6px;
+        background: rgb(242, 124, 17);
+        color: #121212;
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+    .bgl-create-npc-button:hover {
+        background: #ff9138;
+    }
+
+    .bgl-create-npc-modal {
+        display: none;
+        position: fixed;
+        z-index: 10020;
+        inset: 0;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        background: rgba(0, 0, 0, 0.78);
+        box-sizing: border-box;
+    }
+
+    .bgl-create-npc-modal.open {
+        display: flex;
+    }
+
+    .bgl-create-npc-dialog {
+        width: min(1050px, 100%);
+        max-height: calc(100vh - 36px);
+        overflow-y: auto;
+        padding: 20px;
+        border: 1px solid #555;
+        border-radius: 10px;
+        background: #262626;
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.65);
+        box-sizing: border-box;
+    }
+
+    .bgl-create-npc-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #444;
+    }
+
+    .bgl-create-npc-header h3 {
+        margin: 0;
+    }
+
+    .bgl-create-npc-close {
+        width: 36px;
+        height: 36px;
+        border: 1px solid #555;
+        border-radius: 6px;
+        background: #333;
+        color: #fff;
+        cursor: pointer;
+        font-size: 22px;
+        line-height: 1;
+    }
+
+    .bgl-create-npc-close:hover {
+        border-color: rgb(242, 124, 17);
+        color: rgb(242, 124, 17);
+    }
+
+    .bgl-create-npc-notice {
+        margin-bottom: 16px;
+        padding: 11px 13px;
+        border: 1px solid #9b6a24;
+        border-radius: 6px;
+        background: rgba(155, 106, 36, 0.2);
+        color: #f5d59d;
+        line-height: 1.45;
+    }
+
+    .bgl-create-form-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(180px, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+    }
+
+    body.bgl-modal-open {
+        overflow: hidden;
+    }
+
+    @media (max-width: 820px) {
+        .bgl-create-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .bgl-create-npc-modal {
+            padding: 8px;
+        }
+
+        .bgl-create-npc-dialog {
+            max-height: calc(100vh - 16px);
+            padding: 14px;
+        }
+    }
+
     .toggle-checkbox {
         width: 36px;
         height: 18px;
@@ -1983,6 +2098,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     <div class="bgl-settings-help">Controls how many in-game hours pass before eligible Background Life NPCs automatically run their next update.</div>
                     <button type="submit" class="bgl-settings-save">Save</button>
                 </form>
+                <div class="bgl-create-npc-toolbar">
+                    <button type="button" class="bgl-create-npc-button" onclick="openCreateNpcModal()">Create NPC</button>
+                </div>
                 <div class="npc-list-header">
                         <h3>📍 NPC Markers</h3>
                         <div style="color: #bbb; font-size: 13px; padding-bottom: 10px; border-bottom: 1px solid #4a4a4a;">
@@ -2301,6 +2419,46 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             }
         }
 
+        function openCreateNpcModal() {
+            const modal = document.getElementById('create-background-npc');
+            if (!modal) {
+                return;
+            }
+
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('bgl-modal-open');
+
+            const nameInput = document.getElementById('npc_name');
+            if (nameInput) {
+                nameInput.focus();
+            }
+        }
+
+        function closeCreateNpcModal() {
+            const modal = document.getElementById('create-background-npc');
+            if (!modal) {
+                return;
+            }
+
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('bgl-modal-open');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const modal = document.getElementById('create-background-npc');
+            if (modal && modal.dataset.autoOpen === '1') {
+                openCreateNpcModal();
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeCreateNpcModal();
+            }
+        });
+
         function showProcessing()
         {
 
@@ -2574,10 +2732,21 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     </div>
     <script src="<?php echo htmlspecialchars($webRoot); ?>/ui/js/background_life_history.js"></script>
 
-    <div class="info-panel collapsible-panel <?php echo !empty($spawnNpcFlash['message']) ? '' : 'collapsed'; ?>" id="create-background-npc" style="margin-top: 30px;">
-        <h3>🧬 Create Background Life NPC</h3>
-        <button type="button" class="toggle-panel-btn" onclick="togglePanel('create-background-npc', this)"><?php echo !empty($spawnNpcFlash['message']) ? 'Hide Form' : 'Show Form'; ?></button>
-        <div class="collapsible-body">
+    <div
+        class="bgl-create-npc-modal"
+        id="create-background-npc"
+        data-auto-open="<?php echo !empty($spawnNpcFlash['message']) ? '1' : '0'; ?>"
+        aria-hidden="true"
+        onclick="if (event.target === this) closeCreateNpcModal()">
+        <div class="bgl-create-npc-dialog" role="dialog" aria-modal="true" aria-labelledby="create-background-npc-title">
+        <div class="bgl-create-npc-header">
+            <h3 id="create-background-npc-title">🧬 Create Background Life NPC</h3>
+            <button type="button" class="bgl-create-npc-close" onclick="closeCreateNpcModal()" aria-label="Close Create NPC modal">&times;</button>
+        </div>
+        <div class="bgl-create-npc-notice">
+            <strong>Skyrim must be running and connected to CHIM.</strong>
+            Keep the game open while the NPC is created, renamed, moved to the selected location, and added to Background Life.
+        </div>
         <?php if (!empty($spawnNpcFlash['message'])): ?>
             <?php
                 $isSpawnSuccess = ($spawnNpcFlash['type'] ?? '') === 'success';
@@ -2592,7 +2761,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
         <form method="post" action="">
             <input type="hidden" name="action" value="create_background_npc">
-            <div style="display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 14px; margin-top: 16px;">
+            <div class="bgl-create-form-grid">
                 <div>
                     <label for="npc_name" style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Name</label>
                     <input id="npc_name" name="npc_name" type="text" required value="<?php echo htmlspecialchars($spawnNpcFormData['name'] ?? ''); ?>" style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
@@ -2677,7 +2846,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
             <div style="margin-top: 18px; display: flex; justify-content: flex-end;">
                 <button type="submit" style="padding: 10px 18px; border-radius: 8px; border: 1px solid rgb(242, 124, 17); background: rgb(242, 124, 17); color: #121212; font-weight: 700; cursor: pointer;">
-                    Spawn Background NPC
+                    Create NPC
                 </button>
             </div>
         </form>
