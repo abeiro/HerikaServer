@@ -1314,15 +1314,33 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         flex: 0 0 auto;
     }
 
+    .marker-card-identity {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .marker-card-portrait {
+        width: 44px;
+        height: 44px;
+        border: 1px solid #555;
+        border-radius: 6px;
+        object-fit: cover;
+        background: #111;
+    }
+
     .marker-item h4 {
-        margin: 0 0 8px;
+        margin: 0;
         color: rgb(242, 124, 17);
         font-family: 'MagicCards', serif;
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 6px;
         min-width: 0;
         font-size: 13px;
+        line-height: 1.2;
     }
 
     .marker-npc-events,
@@ -1337,14 +1355,18 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .marker-npc-events {
+        flex: 1 1 auto;
         overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
     }
 
     .marker-map-focus {
         margin-left: auto;
         flex: 0 0 auto;
+        font-size: 16px;
+        line-height: 1;
     }
 
     .marker-npc-events:hover,
@@ -1376,13 +1398,21 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .marker-card-toggles {
         display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 4px;
         margin-top: 6px;
     }
 
     .marker-card-toggles .toggle-label-inline {
-        padding: 4px 6px;
-        font-size: 10px;
+        justify-content: center;
+        gap: 3px;
+        min-width: 0;
+        padding: 4px;
+        font-size: 14px;
+    }
+
+    .marker-card-toggles .toggle-text {
+        line-height: 1;
     }
 
     .marker-item a {
@@ -2334,44 +2364,49 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 data-npc-name="<?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>"
                                 title="View recent events for <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>"
                                 style="border-left-color:<?php echo $marker['color']; ?>;">
-                                <h4>
-                                    <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
-                                    <!--<a href="#mkr_<?php echo $marker['id'] ?>"><?php echo $marker['name']; ?> &nbsp; ↗️</a> -->
-                                    <span class="marker-npc-events" data-npc-events role="button" tabindex="0"><?php echo $marker['name']; ?></span>
-                                    <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="event.stopPropagation(); pulseAnimation('mkr_<?php echo $marker['id'] ?>')" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map">&nbsp;↗️</span>
-                                </h4>
+                                <div class="marker-card-identity">
+                                    <img class="marker-card-portrait" src="<?php echo htmlspecialchars($marker['figure'], ENT_QUOTES, 'UTF-8'); ?>" alt="" loading="lazy">
+                                    <h4>
+                                        <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
+                                        <span class="marker-npc-events" data-npc-events role="button" tabindex="0"><?php echo $marker['name']; ?></span>
+                                        <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="event.stopPropagation(); pulseAnimation('mkr_<?php echo $marker['id'] ?>')" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map" title="Show on map">🗺️</span>
+                                    </h4>
+                                </div>
                                 <div class="marker-card-actions">
                                     <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn">Action</button>
                                     <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" style="background: #4488ff;">Letter</button>
                                     <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" style="border: 2px solid #00ff00; background: #44ff44;">📍</button>
                                 </div>
                                 <div class="marker-card-toggles">
-                                    <label class="toggle-label-inline">
+                                    <label class="toggle-label-inline" title="Toggle automatic actions">
                                         <input type="checkbox" 
                                                class="toggle-checkbox" 
+                                               aria-label="Automatic actions"
                                                data-npc-id="<?php echo $marker['id']; ?>" 
                                                data-setting="bg_life_commands" 
                                                <?php echo $marker['bg_life_commands'] ? 'checked' : ''; ?>
                                                onchange="toggleBgLifeSetting(this)">
-                                        <span class="toggle-text">🎮 Actions</span>
+                                        <span class="toggle-text">🎮</span>
                                     </label>
-                                    <label class="toggle-label-inline">
+                                    <label class="toggle-label-inline" title="Toggle automatic letters">
                                         <input type="checkbox" 
                                                class="toggle-checkbox" 
+                                               aria-label="Automatic letters"
                                                data-npc-id="<?php echo $marker['id']; ?>" 
                                                data-setting="bg_life_letters" 
                                                <?php echo $marker['bg_life_letters'] ? 'checked' : ''; ?>
                                                onchange="toggleBgLifeSetting(this)">
-                                        <span class="toggle-text">✉️ Letters</span>
+                                        <span class="toggle-text">✉️</span>
                                     </label>
-                                    <label class="toggle-label-inline">
+                                    <label class="toggle-label-inline" title="Toggle hourly tracking">
                                         <input type="checkbox" 
                                                class="toggle-checkbox" 
+                                               aria-label="Hourly tracking"
                                                data-npc-id="<?php echo $marker['id']; ?>" 
                                                data-setting="gps_track" 
                                                <?php echo $marker['gps_track'] ? 'checked' : ''; ?>
                                                onchange="toggleBgLifeSetting(this)">
-                                        <span class="toggle-text">📍 Tracking</span>
+                                        <span class="toggle-text">📍</span>
                                     </label>
                                 </div>
                             </div>
