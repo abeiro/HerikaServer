@@ -1367,6 +1367,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         flex: 0 0 auto;
         font-size: 16px;
         line-height: 1;
+        transform-origin: center;
+        transition: color 0.15s ease, transform 0.15s ease;
     }
 
     .marker-npc-events:hover,
@@ -1381,6 +1383,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         color: #fff;
         outline: none;
         text-decoration: none;
+        transform: scale(1.1);
     }
 
     #mapImage {
