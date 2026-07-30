@@ -1434,13 +1434,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .marker-setting-button.is-enabled {
-        background: #287a3f;
-        border-color: #45a85f;
+        background: #287a3f !important;
+        border-color: #45a85f !important;
     }
 
     .marker-setting-button.is-disabled {
-        background: #8f3037;
-        border-color: #c6535c;
+        background: #8f3037 !important;
+        border-color: #c6535c !important;
     }
 
     .marker-setting-button:hover,
