@@ -1123,23 +1123,32 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         justify-content: center;
         z-index: 10;
         position: relative;
+        transform: scale(var(--bgl-marker-scale, 1));
+        transform-origin: center;
+        transition: transform 0.15s ease;
+    }
+
+    .marker:hover .marker-dot {
+        transform: scale(var(--bgl-marker-hover-scale, 1.1));
     }
 
     .history-marker {
         position: absolute;
-        transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%) scale(var(--bgl-marker-scale, 1));
+        transform-origin: center;
         border-radius: 50%;
         border: 1px solid rgba(255, 255, 255, 0.6);
         box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
         z-index: 5;
         opacity: 0.7;
-        transition: opacity 0.2s ease;
+        transition: opacity 0.2s ease, transform 0.15s ease;
     }
 
     .history-marker:hover {
         opacity: 1;
         box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
         z-index: 15;
+        transform: translate(-50%, -50%) scale(var(--bgl-marker-hover-scale, 1.1));
     }
 
     .history-marker-label {
@@ -1989,6 +1998,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         opacity: 0.8;
         transition: all 0.3s ease;
         border: none;
+        transform: scale(var(--bgl-marker-scale, 1));
+        transform-origin: center;
     }
 
     .location-marker-icon img {
@@ -2018,7 +2029,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .location-marker:hover .location-marker-icon {
         opacity: 1;
-        transform: scale(1.3);
+        transform: scale(var(--bgl-marker-hover-scale, 1.1));
     }
 
     .location-marker:hover .location-marker-icon img {
