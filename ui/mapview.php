@@ -1420,16 +1420,40 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         margin-top: 6px;
     }
 
-    .marker-card-toggles .toggle-label-inline {
-        justify-content: center;
-        gap: 3px;
+    .marker-setting-button {
         min-width: 0;
+        min-height: 30px;
         padding: 4px;
-        font-size: 14px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        color: #fff;
+        font-size: 15px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
     }
 
-    .marker-card-toggles .toggle-text {
-        line-height: 1;
+    .marker-setting-button.is-enabled {
+        background: #287a3f;
+        border-color: #45a85f;
+    }
+
+    .marker-setting-button.is-disabled {
+        background: #8f3037;
+        border-color: #c6535c;
+    }
+
+    .marker-setting-button:hover,
+    .marker-setting-button:focus-visible {
+        border-color: #fff;
+        outline: none;
+        transform: translateY(-1px);
+    }
+
+    .marker-setting-button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+        transform: none;
     }
 
     .marker-item a {
@@ -2397,36 +2421,36 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" style="border: 2px solid #00ff00; background: #44ff44;">📍</button>
                                 </div>
                                 <div class="marker-card-toggles">
-                                    <label class="toggle-label-inline" title="Toggle automatic actions">
-                                        <input type="checkbox" 
-                                               class="toggle-checkbox" 
-                                               aria-label="Automatic actions"
-                                               data-npc-id="<?php echo $marker['id']; ?>" 
-                                               data-setting="bg_life_commands" 
-                                               <?php echo $marker['bg_life_commands'] ? 'checked' : ''; ?>
-                                               onchange="toggleBgLifeSetting(this)">
-                                        <span class="toggle-text">🎮</span>
-                                    </label>
-                                    <label class="toggle-label-inline" title="Toggle automatic letters">
-                                        <input type="checkbox" 
-                                               class="toggle-checkbox" 
-                                               aria-label="Automatic letters"
-                                               data-npc-id="<?php echo $marker['id']; ?>" 
-                                               data-setting="bg_life_letters" 
-                                               <?php echo $marker['bg_life_letters'] ? 'checked' : ''; ?>
-                                               onchange="toggleBgLifeSetting(this)">
-                                        <span class="toggle-text">✉️</span>
-                                    </label>
-                                    <label class="toggle-label-inline" title="Toggle hourly tracking">
-                                        <input type="checkbox" 
-                                               class="toggle-checkbox" 
-                                               aria-label="Hourly tracking"
-                                               data-npc-id="<?php echo $marker['id']; ?>" 
-                                               data-setting="gps_track" 
-                                               <?php echo $marker['gps_track'] ? 'checked' : ''; ?>
-                                               onchange="toggleBgLifeSetting(this)">
-                                        <span class="toggle-text">📍</span>
-                                    </label>
+                                    <button type="button"
+                                            class="marker-setting-button <?php echo $marker['bg_life_commands'] ? 'is-enabled' : 'is-disabled'; ?>"
+                                            aria-label="Automatic actions: <?php echo $marker['bg_life_commands'] ? 'enabled' : 'disabled'; ?>"
+                                            aria-pressed="<?php echo $marker['bg_life_commands'] ? 'true' : 'false'; ?>"
+                                            title="Automatic actions: <?php echo $marker['bg_life_commands'] ? 'enabled' : 'disabled'; ?>"
+                                            data-label="Automatic actions"
+                                            data-enabled="<?php echo $marker['bg_life_commands'] ? '1' : '0'; ?>"
+                                            data-npc-id="<?php echo $marker['id']; ?>"
+                                            data-setting="bg_life_commands"
+                                            onclick="toggleBgLifeSetting(this)">🎮</button>
+                                    <button type="button"
+                                            class="marker-setting-button <?php echo $marker['bg_life_letters'] ? 'is-enabled' : 'is-disabled'; ?>"
+                                            aria-label="Automatic letters: <?php echo $marker['bg_life_letters'] ? 'enabled' : 'disabled'; ?>"
+                                            aria-pressed="<?php echo $marker['bg_life_letters'] ? 'true' : 'false'; ?>"
+                                            title="Automatic letters: <?php echo $marker['bg_life_letters'] ? 'enabled' : 'disabled'; ?>"
+                                            data-label="Automatic letters"
+                                            data-enabled="<?php echo $marker['bg_life_letters'] ? '1' : '0'; ?>"
+                                            data-npc-id="<?php echo $marker['id']; ?>"
+                                            data-setting="bg_life_letters"
+                                            onclick="toggleBgLifeSetting(this)">✉️</button>
+                                    <button type="button"
+                                            class="marker-setting-button <?php echo $marker['gps_track'] ? 'is-enabled' : 'is-disabled'; ?>"
+                                            aria-label="Hourly tracking: <?php echo $marker['gps_track'] ? 'enabled' : 'disabled'; ?>"
+                                            aria-pressed="<?php echo $marker['gps_track'] ? 'true' : 'false'; ?>"
+                                            title="Hourly tracking: <?php echo $marker['gps_track'] ? 'enabled' : 'disabled'; ?>"
+                                            data-label="Hourly tracking"
+                                            data-enabled="<?php echo $marker['gps_track'] ? '1' : '0'; ?>"
+                                            data-npc-id="<?php echo $marker['id']; ?>"
+                                            data-setting="gps_track"
+                                            onclick="toggleBgLifeSetting(this)">📍</button>
                                 </div>
                             </div>
                         <?php }?>
@@ -2576,10 +2600,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             });
         }
 
-        function toggleBgLifeSetting(checkbox) {
-            const npcId = checkbox.getAttribute('data-npc-id');
-            const setting = checkbox.getAttribute('data-setting');
-            const value = checkbox.checked;
+        function toggleBgLifeSetting(button) {
+            const npcId = button.getAttribute('data-npc-id');
+            const setting = button.getAttribute('data-setting');
+            const label = button.getAttribute('data-label');
+            const value = button.getAttribute('data-enabled') !== '1';
             
             const formData = new FormData();
             formData.append('action', 'toggle_bg_life_setting');
@@ -2594,21 +2619,27 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             .then(response => response.json())
             .then(data => {
                 if (data.ok) {
-                    // Show success message without alert
                     console.log(data.message);
-                    // Optional: show a brief toast notification
+                    button.setAttribute('data-enabled', value ? '1' : '0');
+                    button.setAttribute('aria-pressed', value ? 'true' : 'false');
+                    button.classList.toggle('is-enabled', value);
+                    button.classList.toggle('is-disabled', !value);
+                    const stateText = value ? 'enabled' : 'disabled';
+                    button.setAttribute('aria-label', label + ': ' + stateText);
+                    button.setAttribute('title', label + ': ' + stateText);
                 } else {
                     alert('Error: ' + (data.message || 'Unknown error'));
-                    // Revert checkbox on error
-                    checkbox.checked = !value;
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 alert('Request failed');
-                // Revert checkbox on error
-                checkbox.checked = !value;
+            })
+            .finally(() => {
+                button.disabled = false;
             });
+
+            button.disabled = true;
         }
 
         function toggleInstructions() {
