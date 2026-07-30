@@ -2919,7 +2919,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             <button type="button" class="bgl-modal-close" onclick="closeCreateNpcModal()" aria-label="Close Create NPC modal">&times;</button>
         </div>
         <div class="bgl-create-npc-notice">
-            <strong>Skyrim must be running and connected to CHIM.</strong>
+            <strong>Skyrim must be running, connected to CHIM, and unpaused.</strong>
             Keep the game open while the NPC is created, renamed, moved to the selected location, and added to Background Life.
         </div>
         <?php if (!empty($spawnNpcFlash['message'])): ?>
