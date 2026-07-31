@@ -995,6 +995,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .map-section {
+        order: 1;
         flex: 0 0 35%;
         min-width: 0;
     }
@@ -1019,6 +1020,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .sidebar-section {
+        order: 3;
         flex: 0 0 20%;
         display: flex;
         flex-direction: column;
@@ -1026,6 +1028,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .npc-list-section {
+        order: 2;
         flex: 0 0 calc(45% - 40px);
         min-width: 0;
     }
