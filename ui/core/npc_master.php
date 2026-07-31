@@ -1212,6 +1212,7 @@ $lockOnly = (isset($_GET['lock']) && $_GET['lock'] === '1');
 $salOnly = (isset($_GET['sal']) && $_GET['sal'] === '1');
 $blcOnly = (isset($_GET['blc']) && $_GET['blc'] === '1');
 $gpsOnly = (isset($_GET['gps']) && $_GET['gps'] === '1');
+$createdOnly = (isset($_GET['created']) && $_GET['created'] === '1');
 
 // Preload profiles for filter dropdown
 $profileRows = $GLOBALS["db"]->fetchAll("SELECT id, label, metadata FROM core_profiles ORDER BY label ASC");
@@ -1321,6 +1322,9 @@ if ($blcOnly) {
 if ($gpsOnly) {
     $where .= " and coalesce(metadata::text,'') ~ '\"gps_track\"\\s*:\\s*(true|1)'";
 }
+if ($createdOnly) {
+    $where .= " and coalesce(metadata::text,'') ~ '\"background_life_created\"\\s*:\\s*(true|1)'";
+}
 
 // Default: The Narrator first, then favorites, then alphabetical by name
 $order = "order by (case when npc_name = 'The Narrator' then 0 else 1 end), coalesce(npc_favorite,0) desc, coalesce(gamets_last_updated,0) desc, lower(npc_name) ".$alpha.", id asc";
@@ -1427,6 +1431,7 @@ if (!function_exists('renderNpcToolbar')) {
                   <label><input type="checkbox" id="npc_filter_sal<?= $suffix ?>" <?= $salOnly ? 'checked' : '' ?>> 👋 Auto Greeting</label>
                   <label><input type="checkbox" id="npc_filter_blc<?= $suffix ?>" <?= $blcOnly ? 'checked' : '' ?>> 🎮 BGL: Auto Actions</label>
                   <label><input type="checkbox" id="npc_filter_gps<?= $suffix ?>" <?= $gpsOnly ? 'checked' : '' ?>> 📍 BGL: GPS track</label>
+                  <label><input type="checkbox" id="npc_filter_created<?= $suffix ?>" <?= $createdOnly ? 'checked' : '' ?>> 🧬 Created NPCs</label>
                 </div>
               </div>
               <div class="npc-total-pill" title="Total NPC profiles">
@@ -5309,6 +5314,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const sal = (document.getElementById('npc_filter_sal_top')||document.getElementById('npc_filter_sal'));
       const blc = (document.getElementById('npc_filter_blc_top')||document.getElementById('npc_filter_blc'));
       const gps = (document.getElementById('npc_filter_gps_top')||document.getElementById('npc_filter_gps'));
+      const created = (document.getElementById('npc_filter_created_top')||document.getElementById('npc_filter_created'));
       params.set('fav', fav && fav.checked ? '1' : '');
       params.set('dyn', dyn && dyn.checked ? '1' : '');
       params.set('mtm', mtm && mtm.checked ? '1' : '');
@@ -5316,6 +5322,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       params.set('sal', sal && sal.checked ? '1' : '');
       params.set('blc', blc && blc.checked ? '1' : '');
       params.set('gps', gps && gps.checked ? '1' : '');
+      params.set('created', created && created.checked ? '1' : '');
     } catch(_e){}
     params.set('alpha', 'asc');
     if (page) params.set('page', String(page));
