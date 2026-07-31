@@ -2350,6 +2350,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             <div class="sidebar-section">
                 <div class="bgl-instructions-box collapsed">
                     <h3>📖 How Background Life Works</h3>
+                    <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
                     <div class="bgl-instructions-content">
                         <div class="instruction-section">
                             <strong>Getting Started:</strong>
@@ -2389,7 +2390,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <strong>💡 Note:</strong> Events are triggered automatically based on the configured trigger period (Global Settings, default: 24 in-game hours). The buttons are mainly for testing or forcing immediate updates.
                         </div>
                     </div>
-                    <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
                 </div>
                 <form id="background-life-settings" class="bgl-settings-card" method="post">
                     <input type="hidden" name="action" value="save_bgl_settings">
