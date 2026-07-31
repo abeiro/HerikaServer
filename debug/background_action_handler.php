@@ -17,8 +17,16 @@ function triggerNpcUpdate($npcName, $error_count = 0)
     $extended["background_life_last_updated"] = 0;
     $extended["background_life_last_updated_ec"] = $error_count;
     $extended["background_life_last_updated_presence_delta"] = 0;
+    $extended["background_life_last_run"] = $GLOBALS["LAST_GAMETS_BGL"] + 20; // Some actions can insert events using a future gamets up to 20
 
 
+    $npcManager->updateExtendedKeysByName($npcName, $extended);
+}
+
+function updateLastActionGameTs($npcName)
+{
+    $npcManager = new NpcMaster();
+    $extended["background_life_last_run"] = $GLOBALS["LAST_GAMETS_BGL"] + 20; // Some actions can insert events using a future gamets up to 20
     $npcManager->updateExtendedKeysByName($npcName, $extended);
 }
 
@@ -26,11 +34,11 @@ function triggerNpcUpdate($npcName, $error_count = 0)
 function updateLastLLMCall($npcName)
 {
     $npcManager = new NpcMaster();
-    $currentData=$npcManager->getByName($npcName);
+    $currentData = $npcManager->getByName($npcName);
     $extended = $npcManager->getExtendedData($currentData);
-    $extendedCopy["background_life_last_llm_call"]=$extended["background_life_last_llm_call"] ?? [];
+    $extendedCopy["background_life_last_llm_call"] = $extended["background_life_last_llm_call"] ?? [];
     $extendedCopy["background_life_last_llm_call"][] = time();
-    $extendedCopy["background_life_last_llm_call"]=array_slice($extendedCopy["background_life_last_llm_call"], -5); // keep only last 5 calls
+    $extendedCopy["background_life_last_llm_call"] = array_slice($extendedCopy["background_life_last_llm_call"], -5); // keep only last 5 calls
 
     $extended["background_life_last_llm_call"] = $extendedCopy["background_life_last_llm_call"];
 
@@ -40,24 +48,36 @@ function updateLastLLMCall($npcName)
 function markAsErrored($npcName)
 {
     $npcManager = new NpcMaster();
-    
+
     $extended["background_life_last_llm_call_suspended"] = true;
 
     $npcManager->updateExtendedKeysByName($npcName, $extended);
+}
+
+function gameIsPaused() {
+    // Check $GLOBALS["LAST_GAMETS_BGL"] against the last run on DB
+    $localLastGameTs = $GLOBALS["db"]->fetchAll('SELECT max(gamets) AS last_gamets FROM eventlog');
+    $lastGameTs = $localLastGameTs[0]['last_gamets'] ?? 0;
+    if (($GLOBALS["LAST_GAMETS_BGL"] + 20) > $lastGameTs) {
+        error_log("[BGL RUN] Game is paused. LAST_GAMETS_BGL: {$GLOBALS["LAST_GAMETS_BGL"]}, lastGameTs: $lastGameTs");
+        return true; // Game is paused
+    }
+    return false;
+
 }
 
 function checkLastCallsFor($npcName)
 {
     // Check if the last 6 calls were made within the last 2 minutes
     $npcManager = new NpcMaster();
-    $currentData=$npcManager->getByName($npcName);
+    $currentData = $npcManager->getByName($npcName);
     $extended = $npcManager->getExtendedData($currentData);
     $lastCalls = $extended["background_life_last_llm_call"] ?? [];
     if (isset($extended["background_life_last_llm_call_suspended"]) && $extended["background_life_last_llm_call_suspended"] === true) {
         return true; // Suspended, treat as exceeded
     }
     $now = time();
-    $recentCalls = array_filter($lastCalls, function($ts) use ($now) {
+    $recentCalls = array_filter($lastCalls, function ($ts) use ($now) {
         return ($now - $ts) <= 120; // last 2 minutes
     });
     return count($recentCalls) >= 6;
@@ -1030,6 +1050,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
     $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
         formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
 
+    $checkResponseLimitTs = time();
     if ($vendorFactionsNpcBelongs) {
         foreach ($vendorFactionsNpcBelongs as $vendorFaction) {
             $skyrimCmd = new SkyrimCommandBuilder();
@@ -1038,6 +1059,22 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
         }
         // Give the game a moment to process the vendor container request before proceeding with dialogue.
         sleep(1 * sizeof($vendorFactionsNpcBelongs));
+
+        // TO-DO change this to a more robust check to ensure the vendor container data has been received before proceeding.
+        // Add updated_gamests column to factions table, and check if updated_gamets > last_gamets before proceeding with dialogue.
+        $maxRetryCount = 5;
+        $retryCount = 0;
+        while ($retryCount < $maxRetryCount) {
+            $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
+            formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000' and localts>$checkResponseLimitTs");
+            if (sizeof($vendorFactionsNpcBelongs) == 0) {
+                error_log("[handleSpeakToAction] Vendor faction container data not received in time for $resolvedName. Proceeding without stock information.");
+                sleep(1);
+            }
+            if (!gameIsPaused()) 
+                $retryCount++;
+            sleep(1);
+        }
     }
 
     $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
