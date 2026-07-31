@@ -4375,6 +4375,7 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS coords POI
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS refs text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS cleared boolean");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS world text");
 $db->execQuery("
 CREATE OR REPLACE VIEW public.locations_v
 as
@@ -4389,6 +4390,7 @@ $db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS vendor_cont
 $db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS stock JSONB");
 $db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS gold numeric");
 $db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS player_rank numeric");
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS localts bigint");
 
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
