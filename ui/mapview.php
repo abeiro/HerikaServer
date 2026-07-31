@@ -2371,7 +2371,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <strong>Control Buttons:</strong>
                             <ul>
                                 <li><strong>Trigger Action:</strong> Forces the NPC to generate an action immediately (may move or stay based on AI decision).</li>
-                                <li><strong>Request Letter:</strong> Forces the NPC to send you a letter about their current activities. You will need to be in a town so the courier can deliver it.</li>
+                                <li><strong>Send Letter:</strong> Forces the NPC to send you a letter about their current activities. You will need to be in a town so the courier can deliver it.</li>
                                 <li><strong>Update All NPC Coords:</strong> Refreshes position tracking for all Background Life NPC.s</li>
                             </ul>
                         </div>
@@ -2436,8 +2436,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     </h4>
                                 </div>
                                 <div class="marker-card-actions">
-                                    <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Request a Background Life action from <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>">Action</button>
-                                    <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Request a letter from <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>" style="background: #4488ff;">Letter</button>
+                                    <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Trigger a Background Life action for <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>">Trigger Action</button>
+                                    <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Send a letter from <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>" style="background: #4488ff;">Send Letter</button>
                                     <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" style="border: 2px solid #00ff00; background: #44ff44;">📍</button>
                                 </div>
                                 <div class="marker-card-toggles">
