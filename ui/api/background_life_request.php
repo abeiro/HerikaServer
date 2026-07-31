@@ -38,14 +38,24 @@ $GLOBALS['db'] = new sql();
 $npcMaster = new NpcMaster();
 
 try {
+    $requestType = trim((string)($_POST['request_type'] ?? ''));
+    if (!in_array($requestType, ['action', 'letter', 'track', 'track_all'], true)) {
+        throw new InvalidArgumentException('Unsupported Background Life request type');
+    }
+
+    if ($requestType === 'track_all') {
+        $result = chimBglRunTrackingRequest(BASE_PATH);
+        if ((int)$result['exit_code'] !== 0) {
+            throw new RuntimeException($result['stderr'] !== '' ? $result['stderr'] : 'Coordinate request failed');
+        }
+        echo json_encode(['success' => true, 'message' => 'All NPC coordinate updates processed']);
+        exit;
+    }
+
     $refid = trim((string)($_POST['refid'] ?? ''));
     $npcName = trim((string)($_POST['npc_name'] ?? ''));
-    $requestType = trim((string)($_POST['request_type'] ?? ''));
     if ($refid === '' && $npcName === '') {
         throw new InvalidArgumentException('NPC RefID or name is required');
-    }
-    if (!in_array($requestType, ['action', 'letter'], true)) {
-        throw new InvalidArgumentException('Request type must be action or letter');
     }
 
     $npc = chimBglResolveNpc($npcMaster, $refid, $npcName);
@@ -60,7 +70,9 @@ try {
         throw new DomainException('Enable Background Life before requesting an action');
     }
 
-    $result = chimBglRunRequest(BASE_PATH, $npc, $requestType);
+    $result = $requestType === 'track'
+        ? chimBglRunTrackingRequest(BASE_PATH, (string)($npc['npc_name'] ?? $npcName))
+        : chimBglRunRequest(BASE_PATH, $npc, $requestType);
     if ((int)$result['exit_code'] !== 0) {
         throw new RuntimeException(
             $result['stderr'] !== ''
@@ -72,6 +84,7 @@ try {
     $messages = [
         'letter' => 'Letter request processed',
         'action' => 'Background action processed',
+        'track' => 'Coordinate update processed',
     ];
     echo json_encode([
         'success' => true,

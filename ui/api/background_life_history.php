@@ -8,6 +8,14 @@ define('LIB_PATH', BASE_PATH . DIRECTORY_SEPARATOR . 'lib');
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
 
 if (!file_exists(CONFIG_PATH . DIRECTORY_SEPARATOR . 'conf.php')) {
     http_response_code(500);
@@ -22,34 +30,9 @@ require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'profile_loader.php';
 require_once LIB_PATH . DIRECTORY_SEPARATOR . 'logger.php';
 require_once LIB_PATH . DIRECTORY_SEPARATOR . "{$GLOBALS['DBDRIVER']}.class.php";
 require_once LIB_PATH . DIRECTORY_SEPARATOR . 'utils_game_timestamp.php';
+require_once LIB_PATH . DIRECTORY_SEPARATOR . 'background_life_dashboard.php';
 
 $db = new sql();
-
-function chimBglHistoryCategory(string $activity): string
-{
-    $activity = strtolower($activity);
-
-    if (preg_match('/\b(travel|travelling|arriv)/', $activity)) {
-        return 'travel';
-    }
-    if (preg_match('/\b(work|job|craft|mine|harvest)/', $activity)) {
-        return 'work';
-    }
-    if (preg_match('/\b(sleep|rest|wait)/', $activity)) {
-        return 'rest';
-    }
-    if (preg_match('/\b(speak|talk|conversation|visit)/', $activity)) {
-        return 'social';
-    }
-    if (preg_match('/\b(move|search|find|follow)/', $activity)) {
-        return 'movement';
-    }
-    if (preg_match('/\b(buy|sell|trade|gold|inventory)/', $activity)) {
-        return 'trade';
-    }
-
-    return 'activity';
-}
 
 function chimBglHistoryTamrielicDate(int $gamets): string
 {
@@ -93,8 +76,9 @@ try {
     }
     $whereSql = implode(' AND ', $where);
 
+    $categorySelect = chimBglHistoryCategorySelect($db);
     $rows = $db->fetchAll(
-        "SELECT rowid, npc, gamets, ts, localts, data,category
+        "SELECT rowid, npc, gamets, ts, localts, data{$categorySelect}
          FROM bgl_history
          WHERE {$whereSql}
          ORDER BY gamets DESC, ts DESC, rowid DESC
@@ -126,7 +110,7 @@ try {
             'rowid' => (int)($row['rowid'] ?? 0),
             'npc' => trim((string)($row['npc'] ?? 'Unknown NPC')),
             'activity' => $activity,
-            'category' => $row['category'] ?? chimBglHistoryCategory($activity),
+            'category' => trim((string)($row['category'] ?? '')) ?: chimBglHistoryCategory($activity),
             'tamrielic_time' => chimBglHistoryTamrielicDate($gamets),
             'server_time' => chimBglHistoryUtcDate($localts),
             'gamets' => $gamets,
