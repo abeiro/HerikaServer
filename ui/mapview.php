@@ -2037,9 +2037,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .location-marker-caption {
         position: absolute;
-        top: 30px;
+        top: calc(30px * var(--bgl-marker-scale, 1));
         left: 50%;
-        transform: translateX(-50%);
+        transform: translateX(-50%) scale(var(--bgl-marker-scale, 1));
+        transform-origin: top center;
         color: #ece7dc;
         font-size: 10px;
         font-weight: 600;
@@ -2069,10 +2070,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-radius: 6px;
         white-space: nowrap;
         font-size: 14px;
-        top: 15px;
+        top: calc(15px * var(--bgl-marker-scale, 1));
         left: 50%;
-        transform: translateX(-50%);
-        margin-top: 5px;
+        transform: translateX(-50%) scale(var(--bgl-marker-scale, 1));
+        transform-origin: top center;
+        margin-top: calc(5px * var(--bgl-marker-scale, 1));
         border: none;
         display: none;
         z-index: 30;
