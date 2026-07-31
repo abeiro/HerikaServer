@@ -1442,6 +1442,36 @@ if (!function_exists('renderNpcToolbar')) {
 
 if (isset($_GET["edit"])) {
     $editItem = $npc->getById($_GET["edit"]);
+
+    if (!$editItem && isset($_GET['partial']) && $_GET['partial'] === '1') {
+        try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+        http_response_code(404);
+        header('Content-Type: text/html; charset=utf-8');
+        ?>
+        <!doctype html>
+        <html lang="en">
+        <head>
+            <meta charset="utf-8">
+            <title>NPC profile unavailable</title>
+            <style>
+                html, body { margin:0; min-height:100%; background:#222; color:#e9efff; font-family:Arial, sans-serif; }
+                main { min-height:65vh; display:flex; align-items:center; justify-content:center; padding:24px; text-align:center; }
+                h2 { margin:0 0 8px; color:#f27c11; }
+                p { margin:0; color:#cfd9ea; line-height:1.45; }
+            </style>
+        </head>
+        <body>
+            <main data-npc-load-error="1">
+                <div>
+                    <h2>NPC profile no longer exists</h2>
+                    <p>The NPC list changed after this page loaded. Refresh the list and try again.</p>
+                </div>
+            </main>
+        </body>
+        </html>
+        <?php
+        exit;
+    }
 }
 
 // Partial list renderer for AJAX refresh of grid and pagination
@@ -1866,6 +1896,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .modal-inline-actions .btn-toggle:hover{color: rgb(242, 124, 17); text-decoration:none;}
 .modal-inline-actions .btn-toggle.active{color:#ffd700; font-weight:700;}
 </style>
+<div data-npc-profile-loaded="1" data-npc-id="<?= htmlspecialchars((string)($editItem['id'] ?? '')) ?>" hidden></div>
 <form method="post" onsubmit='return false' style='display:block'>
 <?php } else { ?>
 <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
@@ -2201,7 +2232,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             });
 
             let initial = 'general';
-            try { initial = window.localStorage.getItem(storageKey) || initial; } catch (_e) {}
+            const resetForModal = <?= isset($_GET['partial']) && $_GET['partial'] === '1' ? 'true' : 'false' ?>;
+            if (!resetForModal) {
+                try { initial = window.localStorage.getItem(storageKey) || initial; } catch (_e) {}
+            }
             activate(initial);
         });
     }
@@ -3246,6 +3280,23 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     max-height:calc(85vh - 100px); 
     background: rgba(34, 34, 34, 0.95); 
 }
+.npc-modal-frame-wrap { position:relative; min-height:260px; }
+.npc-modal-load-status {
+    position:absolute;
+    inset:0;
+    z-index:3;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:#222;
+    color:#e9efff;
+    text-align:center;
+}
+.npc-modal-load-status.is-visible { display:flex; }
+.npc-modal-load-status strong { display:block; margin-bottom:8px; color:rgb(242,124,17); font-size:18px; }
+.npc-modal-load-status p { margin:0; color:#cfd9ea; line-height:1.45; }
+.npc-modal-load-status button { margin-top:14px; }
 .modal-close { 
     background:#3a3a3a; 
     color:#fff; 
@@ -3885,7 +3936,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <button type="button" class="pf-tab active" data-pane="pane_manual">✍️ Manual</button>
         <button type="button" class="pf-tab" data-pane="pane_bio">📚 NPC Biographies</button>
       </div>
-      <div id="pane_manual" class="pf-pane active" style="padding:0;">
+      <div id="pane_manual" class="pf-pane active npc-modal-frame-wrap" style="padding:0;">
+        <div id="npc_modal_load_status" class="npc-modal-load-status" role="status" aria-live="polite">
+          <div>
+            <strong id="npc_modal_load_title">Loading profile...</strong>
+            <p id="npc_modal_load_message">Retrieving the latest NPC data.</p>
+            <button id="npc_modal_retry" type="button" class="btn-cancel" style="display:none;">Retry</button>
+          </div>
+        </div>
         <iframe id="npc_modal_iframe" src="about:blank" style="width:100%; height:70vh; border:0; background:transparent;"></iframe>
       </div>
       <div id="pane_bio" class="pf-pane" style="display:none; padding:10px;">
@@ -4053,8 +4111,39 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   const PROFILE_OPTIONS = <?= json_encode($profileOptions ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
   const modal = document.getElementById('npc_modal');
   const iframe = document.getElementById('npc_modal_iframe');
+  const loadStatus = document.getElementById('npc_modal_load_status');
+  const loadTitle = document.getElementById('npc_modal_load_title');
+  const loadMessage = document.getElementById('npc_modal_load_message');
+  const retryBtn = document.getElementById('npc_modal_retry');
+  let modalUrl = '';
+  let expectedNpcId = '';
+  let modalRequestId = 0;
+
+  function setModalLoadState(state, message){
+    const ready = state === 'ready';
+    if (iframe) iframe.style.visibility = ready ? 'visible' : 'hidden';
+    if (loadStatus) loadStatus.classList.toggle('is-visible', !ready);
+    if (loadTitle) loadTitle.textContent = state === 'error' ? 'Unable to load NPC profile' : 'Loading profile...';
+    if (loadMessage) loadMessage.textContent = message || (state === 'error' ? 'Refresh the NPC list and try again.' : 'Retrieving the latest NPC data.');
+    if (retryBtn) retryBtn.style.display = state === 'error' ? '' : 'none';
+    document.querySelectorAll('#npc_modal .modal-actions button').forEach(function(button){
+      if (button.id !== 'npc_modal_close') button.disabled = !ready;
+    });
+  }
+
+  function loadModalUrl(){
+    if (!modalUrl) return;
+    const requestId = ++modalRequestId;
+    setModalLoadState('loading');
+    const separator = modalUrl.includes('?') ? '&' : '?';
+    iframe.src = modalUrl + separator + '_modal_request=' + encodeURIComponent(String(requestId));
+  }
+
   function openModal(url){
-    iframe.src = url;
+    modalUrl = url;
+    const match = url.match(/[?&]edit=([^&]+)/);
+    expectedNpcId = match ? String(decodeURIComponent(match[1])) : '';
+    loadModalUrl();
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     try {
@@ -4085,7 +4174,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 
      
   }
-  function closeModal(){ modal.style.display = 'none'; document.body.style.overflow = 'auto'; try { iframe.src='about:blank'; } catch(_){} }
+  function closeModal(){
+    modalRequestId++;
+    modalUrl = '';
+    expectedNpcId = '';
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+    setModalLoadState('ready');
+    try { iframe.src='about:blank'; } catch(_){}
+  }
+  if (retryBtn) retryBtn.addEventListener('click', loadModalUrl);
   const headerSave = document.getElementById('npc_modal_save_header');
   if (headerSave){
     window.NPC_UPDATE_SAVE_STATE = function(){
@@ -4102,12 +4200,24 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     try {
       iframe.addEventListener('load', function(){
         try {
+          if (!modalUrl || iframe.src === 'about:blank') return;
           const doc = iframe && iframe.contentDocument;
           const nameEl = doc ? doc.getElementById('npc_name') : null;
+          const loadedMarker = doc ? doc.querySelector('[data-npc-profile-loaded="1"]') : null;
+          const loadError = doc ? doc.querySelector('[data-npc-load-error="1"]') : null;
+          const loadedNpcId = loadedMarker ? String(loadedMarker.getAttribute('data-npc-id') || '') : '';
+          if (loadError || !nameEl || (expectedNpcId && loadedNpcId !== expectedNpcId)) {
+            setModalLoadState('error', loadError ? 'This NPC profile no longer exists. Refresh the NPC list and try again.' : 'The server returned incomplete or stale NPC data.');
+            return;
+          }
           if (nameEl){
             ['input','change','keyup'].forEach(evt=> nameEl.addEventListener(evt, window.NPC_UPDATE_SAVE_STATE));
           }
-        } catch(_e){}
+          setModalLoadState('ready');
+        } catch(_e){
+          setModalLoadState('error', 'The NPC profile response could not be read.');
+          return;
+        }
         window.NPC_UPDATE_SAVE_STATE();
       });
     } catch(_e){}
@@ -5125,6 +5235,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     bindBulkSwitch(document.getElementById('npc_bulk_switch_profile_btn'));
   })();
   let listAbort = null;
+  let listRequestId = 0;
   function bindNpcLetterButtons(root){
     const scope = root || document;
     scope.querySelectorAll('.npc-letter-btn[data-letter]').forEach(btn=>{
@@ -5210,13 +5321,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     if (page) params.set('page', String(page));
     params.set('list','1');
     if (listAbort) { try { listAbort.abort(); } catch(_){} }
+    const requestId = ++listRequestId;
     listAbort = new AbortController();
-    const res = await fetch('npc_master.php?'+params.toString(), { signal: listAbort.signal });
-    const html = await res.text();
-    const temp = document.createElement('div'); temp.innerHTML = html;
-    const newPag = temp.querySelector('.pagination');
-    const newGrid = temp.querySelector('.npc-grid');
-    if (newPag && newGrid){
+    try {
+      const res = await fetch('npc_master.php?'+params.toString(), { signal: listAbort.signal });
+      if (!res.ok) throw new Error('HTTP ' + String(res.status));
+      const html = await res.text();
+      if (requestId !== listRequestId) return;
+      const temp = document.createElement('div'); temp.innerHTML = html;
+      const newPag = temp.querySelector('.pagination');
+      const newGrid = temp.querySelector('.npc-grid');
+      if (!newPag || !newGrid) throw new Error('Incomplete NPC list response');
       const oldPag = document.querySelector('.pagination');
       const oldGrid = document.querySelector('.npc-grid');
       if (oldPag && oldPag.parentElement) oldPag.parentElement.replaceChild(newPag, oldPag);
@@ -5292,6 +5407,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const newProfileSel = document.getElementById('npc_profile_filter');
       if (newProfileSel){ newProfileSel.addEventListener('change', function(){ refreshList(1); }); }
       bindAutoLockProfile(document.getElementById('npc_auto_lock_profile'));
+    } catch(error) {
+      if (error && error.name === 'AbortError') return;
+      console.error('NPC profile list refresh failed:', error);
+      try {
+        const toast = document.getElementById('toast');
+        if (toast) {
+          toast.querySelector('.message').textContent = 'Unable to refresh NPC profiles. The current list was kept.';
+          toast.classList.add('show');
+          setTimeout(()=>toast.classList.remove('show'), 3000);
+        }
+      } catch(_e){}
     }
   }
   // Simple debounce for input
