@@ -1403,6 +1403,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         opacity: 1;
     }
 
+    .marker-card-row-label {
+        margin: 6px 0 3px;
+        color: #9a9aa2;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
     .marker-card-actions {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
@@ -2435,11 +2444,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                         <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="window.open('https://gamemap.uesp.net/sr/?world=skyrim&layer=day&x=<?php echo $marker['ingame_x'] ?>&y=<?php echo $marker['ingame_y'] ?>&zoom=8', '_blank'); event.stopPropagation();" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map" title="UESP Map">🗺️</span>
                                     </h4>
                                 </div>
+                                <div class="marker-card-row-label">Actions</div>
                                 <div class="marker-card-actions">
                                     <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Trigger a Background Life action for <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>">Trigger Action</button>
                                     <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Send a letter from <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>" style="background: #4488ff;">Send Letter</button>
                                     <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" style="border: 2px solid #00ff00; background: #44ff44;">📍</button>
                                 </div>
+                                <div class="marker-card-row-label">Rules</div>
                                 <div class="marker-card-toggles">
                                     <button type="button"
                                             class="marker-setting-button <?php echo $marker['bg_life_commands'] ? 'is-enabled' : 'is-disabled'; ?>"
