@@ -201,3 +201,43 @@ function chimBglRunRequest(string $enginePath, array $npc, string $requestType):
         'stderr' => $exitCode === 0 ? '' : $output,
     ];
 }
+
+// Run the coordinate trackers used by the Background Life map controls.
+function chimBglRunTrackingRequest(string $enginePath, string $npcName = ''): array
+{
+    $scriptPath = rtrim($enginePath, '/\\') . DIRECTORY_SEPARATOR . 'debug' . DIRECTORY_SEPARATOR . 'simple_llm_request_with_context_life_command.php';
+    if (!is_file($scriptPath)) {
+        throw new RuntimeException('Background Life coordinate processor is unavailable');
+    }
+
+    $arguments = trim($npcName) === '' ? ['The Narrator', 'TrackAll'] : [trim($npcName), 'Track'];
+    $command = array_merge([PHP_BINARY, $scriptPath], $arguments);
+    $pipes = [];
+    $process = proc_open(
+        $command,
+        [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['redirect', 1],
+        ],
+        $pipes,
+        rtrim($enginePath, '/\\'),
+        null,
+        ['bypass_shell' => true]
+    );
+    if (!is_resource($process)) {
+        throw new RuntimeException('Could not start Background Life coordinate processor');
+    }
+
+    fclose($pipes[0]);
+    $stdout = stream_get_contents($pipes[1]) ?: '';
+    fclose($pipes[1]);
+    $exitCode = proc_close($process);
+    $output = trim($stdout);
+
+    return [
+        'exit_code' => $exitCode,
+        'stdout' => $exitCode === 0 ? $output : '',
+        'stderr' => $exitCode === 0 ? '' : $output,
+    ];
+}
