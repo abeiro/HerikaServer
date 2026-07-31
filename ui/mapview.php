@@ -1422,11 +1422,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     .marker-setting-button {
+        position: relative;
         min-width: 0;
         min-height: 30px;
         padding: 4px;
-        border: 1px solid transparent;
+        border: 1px solid #4d4d4d;
         border-radius: 6px;
+        background: #333;
         color: #fff;
         font-size: 15px;
         line-height: 1;
@@ -1434,19 +1436,30 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
     }
 
-    .marker-setting-button.is-enabled {
-        background: #287a3f !important;
-        border-color: #45a85f !important;
+    .marker-setting-button.is-enabled,
+    .marker-setting-button.is-disabled {
+        background: #333 !important;
+        border-color: #4d4d4d !important;
     }
 
-    .marker-setting-button.is-disabled {
-        background: #8f3037 !important;
-        border-color: #c6535c !important;
+    .marker-setting-button::after {
+        content: "";
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #a95059;
+    }
+
+    .marker-setting-button.is-enabled::after {
+        background: #4f9b68;
     }
 
     .marker-setting-button:hover,
     .marker-setting-button:focus-visible {
-        border-color: #fff;
+        border-color: rgb(242, 124, 17) !important;
         outline: none;
         transform: translateY(-1px);
     }
