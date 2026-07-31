@@ -1455,30 +1455,6 @@ CREATE TABLE public.oghma (
 ALTER TABLE public.oghma OWNER TO dwemer;
 
 --
--- Name: oghma_context_rule; Type: TABLE; Schema: public; Owner: dwemer
---
-
-CREATE TABLE public.oghma_context_rule (
-    id bigserial NOT NULL,
-    label text NOT NULL,
-    enabled boolean DEFAULT true NOT NULL,
-    priority integer DEFAULT 100 NOT NULL,
-    selector_type text DEFAULT 'topic'::text NOT NULL,
-    selector_value text NOT NULL,
-    conditions jsonb DEFAULT '{}'::jsonb NOT NULL,
-    max_articles smallint DEFAULT 1 NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT oghma_context_rule_pkey PRIMARY KEY (id),
-    CONSTRAINT oghma_context_rule_selector_type_check CHECK ((selector_type = ANY (ARRAY['topic'::text, 'tag'::text, 'category'::text]))),
-    CONSTRAINT oghma_context_rule_max_articles_check CHECK (((max_articles >= 1) AND (max_articles <= 5)))
-);
-
-ALTER TABLE public.oghma_context_rule OWNER TO dwemer;
-
-CREATE INDEX idx_oghma_context_rule_active ON public.oghma_context_rule USING btree (enabled, priority, id);
-
---
 -- Name: oghma_dynamic; Type: TABLE; Schema: public; Owner: dwemer
 --
 
@@ -1892,7 +1868,6 @@ INSERT INTO public.database_versioning VALUES ('actions_issued', 20250525001);
 INSERT INTO public.database_versioning VALUES ('moods_issued', 20250526001);
 INSERT INTO public.database_versioning VALUES ('dynamic_bio', 20250710001);
 INSERT INTO public.database_versioning VALUES ('oghma', 20250903001);
-INSERT INTO public.database_versioning VALUES ('oghma_context_rule', 20260724001);
 INSERT INTO public.database_versioning VALUES ('locations', 20250526001);
 INSERT INTO public.database_versioning VALUES ('rolemaster', 20250528001);
 INSERT INTO public.database_versioning VALUES ('db_maintenance', 20250528002);
