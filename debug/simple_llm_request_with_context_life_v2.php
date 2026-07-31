@@ -205,12 +205,15 @@ if ($backgroundLifeErrorCount > 2) {
     return;
 }
 
+
+
 // ─── Game Timestamps ──────────────────────────────────────────────────────────
 
 $lastGameTsRow = $db->fetchAll('SELECT max(gamets) AS last_gamets FROM eventlog');
 $lastTsRow = $db->fetchAll("SELECT max(ts) AS ts FROM eventlog WHERE gamets='{$lastGameTsRow[0]['last_gamets']}'");
 
 $last_gamets = (int) $lastGameTsRow[0]['last_gamets'] + 1;
+$GLOBALS["LAST_GAMETS_BGL"] = $last_gamets;
 $last_ts = $lastTsRow[0]['ts'];
 $momentum = time();
 
@@ -218,6 +221,14 @@ $gameRequest = ['inputtext', '0', $last_gamets, $npcName];
 $npcNameEsc = $db->escape($npcName);
 
 // Last action issued by the NPC (if any) in the last 24 in-game hours
+
+// Guard: Avoid running if game is paused.
+if (isset($extdata["background_life_last_run"]) && $extdata["background_life_last_run"] >= $GLOBALS["LAST_GAMETS_BGL"]) {
+    error_log("[BGL RUN] $npcName — background_life_last_run equals LAST_GAMETS_BGL, game is paused?.");
+    return;
+} else {
+    error_log("[BGL RUN] $npcName — background_life_last_run: {$extdata["background_life_last_run"]}, LAST_GAMETS_BGL: {$GLOBALS["LAST_GAMETS_BGL"]}");
+}
 
 $lastIssuedAction = $db->fetchOne(
     "SELECT gamets, action FROM actions_issued
@@ -1531,6 +1542,7 @@ if (!empty($parsed['action'])) {
             triggerNpcUpdate($GLOBALS['HERIKA_NAME'], ($extdata['background_life_last_updated_ec'] ?? 0) + 1);
             break;
     }
+    updateLastActionGameTs($GLOBALS['HERIKA_NAME']);
 }
 
 // ─── Dispatch: Letter / Notification (disabled) ─────────────────────────────
