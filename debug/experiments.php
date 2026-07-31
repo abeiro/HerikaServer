@@ -539,7 +539,7 @@ if ($argv[1] == '6') {
         'gender' => 'female',
         'class' => 'merchant',
         'race' => 'imperial',
-        'location' => 'Dragonsreach',
+        'location' => 'Whiterun',
         'appearance' => 'an elegant imperial journalist',
         'background' => 'Born in Cyrodiil to a family of historians, Cassia Valerius became fascinated by the stories of ordinary people living through extraordinary events. She travelled to Skyrim after the Civil War began, determined to document the truth beyond the official speeches of jarls and generals. She believes every citizen, from a miner to a noble, has a story worth recording.',
         'speechStyle' => 'professional, inquisitive and diplomatic. She asks precise questions, listens carefully, and often references history, politics and local rumors. She is polite but persistent when seeking the truth.',
@@ -570,7 +570,7 @@ When at a city, tavern or social scenario, and intent is work, she generates gol
 ",
     ];
 
-    $startingPoint = 0x0001f890;
+    $startingPoint = 0x2701EE0A;
     $inventoryItems = [
         ['refid' => '0x0000000F', 'qty' => 100],
     ];
