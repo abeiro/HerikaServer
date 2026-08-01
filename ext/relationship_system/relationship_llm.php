@@ -668,7 +668,9 @@ PROMPT;
                     'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
                 ]);
             });
-            if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcId); }
+            if ($result !== false && function_exists('chimRelationshipTimelineStamp')) {
+                chimRelationshipTimelineStamp($npcId);
+            }
 
             $this->releaseNpcLock($npcId);
             return $result;
@@ -836,13 +838,15 @@ PROMPT;
                 $extended['relationships'] = $myRels;
                 $extended['relationships_inferred'] = date('Y-m-d H:i:s');
 
-                chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcId, $extended) {
+                $result = chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcId, $extended) {
                     return $npcMaster->updateByArray([
                         'id' => $npcId,
                         'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
                     ]);
                 });
-                if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcId); }
+                if ($result !== false && function_exists('chimRelationshipTimelineStamp')) {
+                    chimRelationshipTimelineStamp($npcId);
+                }
 
                 $this->releaseNpcLock($npcId);
                 Logger::info("[REL-LLM] Inferred " . count($inferred) . " relationships for " . $npc['npc_name']);
@@ -1671,7 +1675,9 @@ PROMPT;
                         'extended_data' => $jsonData
                     ]);
                 });
-                if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcId); }
+                if ($result !== false && function_exists('chimRelationshipTimelineStamp')) {
+                    chimRelationshipTimelineStamp($npcId);
+                }
 
                 $this->releaseNpcLock($npcId);
                 Logger::debug("[REL-LLM] Database update for NPC {$npcId}: " . ($result === false ? "FAILED" : "OK") . " - relationships: " . json_encode($existingRels));
