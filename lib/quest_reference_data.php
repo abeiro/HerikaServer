@@ -269,6 +269,7 @@ if (!function_exists('quest_reference_normalize_formid')) {
             && (
                 ($runtimeValue >= 0x00025844 && $runtimeValue <= 0x0002584D)
                 || ($runtimeValue >= 0x00025DAF && $runtimeValue <= 0x00025DED)
+                || ($runtimeValue >= 0x00045CE7 && $runtimeValue <= 0x00045CEE)
             )
         ) {
             return 'AIAgent.esp';
@@ -408,6 +409,27 @@ if (!function_exists('quest_reference_normalize_formid')) {
         }
 
         return null;
+    }
+}
+
+if (!function_exists('quest_reference_formid_for_papyrus')) {
+    function quest_reference_formid_for_papyrus($value): int
+    {
+        $formId = quest_reference_normalize_formid($value);
+        if ($formId === null) {
+            return 0;
+        }
+
+        $unsigned = $formId & 0xFFFFFFFF;
+        return $unsigned > 0x7FFFFFFF ? $unsigned - 0x100000000 : $unsigned;
+    }
+}
+
+if (!function_exists('quest_reference_formid_for_full_plugin_file')) {
+    function quest_reference_formid_for_full_plugin_file($value): int
+    {
+        $formId = quest_reference_normalize_formid($value);
+        return $formId === null ? 0 : $formId & 0x00FFFFFF;
     }
 }
 

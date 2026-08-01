@@ -415,6 +415,7 @@ function buildInventoryMetadataValue(array $items): array
                 'baseid' => $item['baseid'],
                 'count' => intval($item['count']),
                 'keywords' => isset($item['keywords']) ? sanitizeItemKeywordList($item['keywords']) : [],
+                'goldvalue' => isset($item['goldvalue']) ? intval($item['goldvalue']) : 0,
             ];
         }
     }
@@ -909,7 +910,7 @@ function handleMarketStockUpdate(array $data): void
     $stockJson = $db->escape(json_encode($stock));
 
     $sql = "UPDATE public.factions
-               SET stock = '{$stockJson}'::jsonb,gold=$gold,player_rank=$rank
+               SET stock = '{$stockJson}'::jsonb,gold=$gold,player_rank=$rank,gamets=".time()."
              WHERE formid = '{$factionFormId}'";
 
     $result = $db->execQuery($sql);

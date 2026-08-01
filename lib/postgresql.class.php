@@ -486,8 +486,9 @@ class sql
         }
         if (!$result) {
             Logger::error("SQL: updateRow failed {$query} " .$this->GetLastError() . $this->extract_caller() );
+            return false;
         }
-        return $result !== false;
+        return true;
     }
 
     public function upsertRow($table, $data, $where) {

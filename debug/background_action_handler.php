@@ -17,9 +17,70 @@ function triggerNpcUpdate($npcName, $error_count = 0)
     $extended["background_life_last_updated"] = 0;
     $extended["background_life_last_updated_ec"] = $error_count;
     $extended["background_life_last_updated_presence_delta"] = 0;
+    $extended["background_life_last_run"] = $GLOBALS["LAST_GAMETS_BGL"] + 20; // Some actions can insert events using a future gamets up to 20
 
 
     $npcManager->updateExtendedKeysByName($npcName, $extended);
+}
+
+function updateLastActionGameTs($npcName)
+{
+    $npcManager = new NpcMaster();
+    $extended["background_life_last_run"] = $GLOBALS["LAST_GAMETS_BGL"] + 20; // Some actions can insert events using a future gamets up to 20
+    $npcManager->updateExtendedKeysByName($npcName, $extended);
+}
+
+
+function updateLastLLMCall($npcName)
+{
+    $npcManager = new NpcMaster();
+    $currentData = $npcManager->getByName($npcName);
+    $extended = $npcManager->getExtendedData($currentData);
+    $extendedCopy["background_life_last_llm_call"] = $extended["background_life_last_llm_call"] ?? [];
+    $extendedCopy["background_life_last_llm_call"][] = time();
+    $extendedCopy["background_life_last_llm_call"] = array_slice($extendedCopy["background_life_last_llm_call"], -5); // keep only last 5 calls
+
+    $extended["background_life_last_llm_call"] = $extendedCopy["background_life_last_llm_call"];
+
+    $npcManager->updateExtendedKeysByName($npcName, $extended);
+}
+
+function markAsErrored($npcName)
+{
+    $npcManager = new NpcMaster();
+
+    $extended["background_life_last_llm_call_suspended"] = true;
+
+    $npcManager->updateExtendedKeysByName($npcName, $extended);
+}
+
+function gameIsPaused() {
+    // Check $GLOBALS["LAST_GAMETS_BGL"] against the last run on DB
+    $localLastGameTs = $GLOBALS["db"]->fetchAll('SELECT max(gamets) AS last_gamets FROM eventlog');
+    $lastGameTs = $localLastGameTs[0]['last_gamets'] ?? 0;
+    if (($GLOBALS["LAST_GAMETS_BGL"] + 20) > $lastGameTs) {
+        error_log("[BGL RUN] Game is paused. LAST_GAMETS_BGL: {$GLOBALS["LAST_GAMETS_BGL"]}, lastGameTs: $lastGameTs");
+        return true; // Game is paused
+    }
+    return false;
+
+}
+
+function checkLastCallsFor($npcName)
+{
+    // Check if the last 6 calls were made within the last 2 minutes
+    $npcManager = new NpcMaster();
+    $currentData = $npcManager->getByName($npcName);
+    $extended = $npcManager->getExtendedData($currentData);
+    $lastCalls = $extended["background_life_last_llm_call"] ?? [];
+    if (isset($extended["background_life_last_llm_call_suspended"]) && $extended["background_life_last_llm_call_suspended"] === true) {
+        return true; // Suspended, treat as exceeded
+    }
+    $now = time();
+    $recentCalls = array_filter($lastCalls, function ($ts) use ($now) {
+        return ($now - $ts) <= 120; // last 2 minutes
+    });
+    return count($recentCalls) >= 6;
 }
 
 /**
@@ -212,6 +273,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'gamets' => $last_gamets,
             'localts' => time(),
             'data' => ($location == $resolvedLocation) ? "$npcName starts travelling to $location. Reason: {$GLOBALS["LAST_REASON"]}" : "$npcName starts travelling to $location (resolved as $resolvedLocation). Reason: {$GLOBALS["LAST_REASON"]}",
+            'category' => 'travel',
         ]
     );
 
@@ -279,6 +341,7 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
             'data' => "$npcName stays at current location ($requestedLocation, resolved as $resolvedLocation)$intentText. Reason: {$GLOBALS["LAST_REASON"]}",
+            'category' => $intent,
         ]
     );
 
@@ -391,6 +454,7 @@ function handleSendLetter($letterContent, $currentNpcData, $npcName, $last_ts, $
     ];
 
     $dialogueBuffer = $connectionHandler->fast_request($dialoguePrompt, ['MAX_TOKENS' => 512], 'backgroundlife');
+    updateLastLLMCall($GLOBALS['HERIKA_NAME']);
     // This is going to create a picture with the letter.
     if ($dialogueBuffer === null || trim($dialogueBuffer) === '') {
         error_log("[handleSendLetter] Failed to generate letter content for NPC: $npcName");
@@ -449,6 +513,7 @@ function handleSendLetter($letterContent, $currentNpcData, $npcName, $last_ts, $
             'gamets' => $last_gamets + 1,
             'localts' => time(),
             'data' => "{$GLOBALS["HERIKA_NAME"]} sends a letter to {$GLOBALS["PLAYER_NAME"]}",
+            'category' => 'letter',
         ]
     );
 
@@ -532,7 +597,8 @@ function handleReturnHome($location, $currentNpcData, $npcName, $last_ts, $last_
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName returns back to {$GLOBALS['PLAYER_NAME']}. Reason: {$GLOBALS['LAST_REASON']}"
+            'data' => "$npcName returns back to {$GLOBALS['PLAYER_NAME']}. Reason: {$GLOBALS['LAST_REASON']}",
+            'category' => 'return_home',
         ]
     );
 
@@ -682,7 +748,8 @@ function handleMoveToAction($targetNpcName, $currentNpcData, $npcName, $last_ts,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName moves towards $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
+            'data' => "$npcName moves towards $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}",
+            'category' => 'move',
         ]
     );
 
@@ -788,7 +855,8 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName looks for $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
+            'data' => "$npcName looks for $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}",
+            'category' => 'find',
         ]
     );
 
@@ -868,7 +936,8 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                 'ts' => $last_ts,
                 'gamets' => $last_gamets,
                 'localts' => time(),
-                'data' => "$npcName moves toward $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
+                'data' => "$npcName moves toward $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'move',
             ]
         );
 
@@ -981,6 +1050,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
     $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
         formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
 
+    $checkResponseLimitTs = time();
     if ($vendorFactionsNpcBelongs) {
         foreach ($vendorFactionsNpcBelongs as $vendorFaction) {
             $skyrimCmd = new SkyrimCommandBuilder();
@@ -989,6 +1059,22 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
         }
         // Give the game a moment to process the vendor container request before proceeding with dialogue.
         sleep(1 * sizeof($vendorFactionsNpcBelongs));
+
+        // TO-DO change this to a more robust check to ensure the vendor container data has been received before proceeding.
+        // Add updated_gamests column to factions table, and check if updated_gamets > last_gamets before proceeding with dialogue.
+        $maxRetryCount = 5;
+        $retryCount = 0;
+        while ($retryCount < $maxRetryCount) {
+            $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
+            formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000' and localts>$checkResponseLimitTs");
+            if (sizeof($vendorFactionsNpcBelongs) == 0) {
+                error_log("[handleSpeakToAction] Vendor faction container data not received in time for $resolvedName. Proceeding without stock information.");
+                sleep(1);
+            }
+            if (!gameIsPaused()) 
+                $retryCount++;
+            sleep(1);
+        }
     }
 
     $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
@@ -1090,6 +1176,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
         ];
 
         $dialogueBuffer = $connectionHandler->fast_request($dialoguePrompt, ['MAX_TOKENS' => 512], 'backgroundlife');
+        updateLastLLMCall($GLOBALS["HERIKA_NAME"]);
 
         if (!empty($dialogueBuffer)) {
             error_log("[handleSpeakToAction] Generated dialogue between $npcName and $resolvedName.");
@@ -1116,7 +1203,8 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                 'ts' => $last_ts,
                 'gamets' => $last_gamets + 20,
                 'localts' => time(),
-                'data' => "$npcName has a conversation with $resolvedName\nDialogue: $dialogueBuffer\nReason: {$GLOBALS["LAST_REASON"]}"
+                'data' => "$npcName has a conversation with $resolvedName\nDialogue: $dialogueBuffer\nReason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'dialogue',
             ]
         );
     }
@@ -1212,7 +1300,8 @@ function handleGiveGoldToAction($actionArgument, $currentNpcData, $npcName, $las
                 'ts' => $last_ts,
                 'gamets' => $last_gamets,
                 'localts' => time(),
-                'data' => "$npcName gives $gold gold to $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}"
+                'data' => "$npcName gives $gold gold to $resolvedName. Reason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'give',
             ]
         );
 
@@ -1375,7 +1464,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
             'ts' => $last_ts,
             'gamets' => $last_gamets + 10,
             'type' => 'innerchat',
-            'data' => "The Narrator: $npcName " . ($tradeType === 'BuyItem' ? 'buys items from' : ($tradeType === 'SellItem' ? 'sells items to' : 'gives items to')) . " $resolvedName $itemNameResolved. Inventories updated!",
+            'data' => "The Narrator: $npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:" . ($tradeType === 'GiveItemTo' ? 0 : $gold) . "), item description:$itemNameResolved\nReason: \"{$GLOBALS["LAST_REASON"]}\"",
             'sess' => $momentum,
             'localts' => time(),
             'people' => "|$npcName|$resolvedName|",
@@ -1400,7 +1489,8 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
                 'ts' => $last_ts,
                 'gamets' => $last_gamets,
                 'localts' => time(),
-                'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:" . ($tradeType === 'GiveItemTo' ? 0 : $gold) . "), item description:$itemNameResolved\nReason: {$GLOBALS["LAST_REASON"]}"
+                'data' => "$npcName is trading with $resolvedName (tradeType:$tradeType, item:$itemId, count:$count, gold:" . ($tradeType === 'GiveItemTo' ? 0 : $gold) . "), item description:$itemNameResolved\nReason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'trade',
             ]
         );
 

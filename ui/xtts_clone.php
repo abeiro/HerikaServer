@@ -14,6 +14,7 @@ require_once($enginePath . "conf" . DIRECTORY_SEPARATOR . "conf_loader.php");
 @include_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "online_translation.php");
 @include_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_fallback.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_studio_provider_detection.php");
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
@@ -1438,7 +1439,7 @@ error_reporting(E_ALL);
 
 // Tab state from URL parameter
 $activeTab = $_GET['tab'] ?? 'xtts';
-$validTabs = ['xtts', 'chatterbox', 'pockettts', 'omnivoice', 'cartesia', 'inworld'];
+$validTabs = ['xtts', 'chatterbox', 'pockettts', 'omnivoice', 'cartesia', 'inworld', 'fallbacks'];
 if (!in_array($activeTab, $validTabs, true)) {
     $activeTab = 'xtts';
 }
@@ -2013,9 +2014,21 @@ $message = '';
 $speakersMessage = '';
 $cartesiaMessage = '';
 $inworldMessage = '';
+$ttsFallbackManager = new TTSFallback();
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (($_POST['action'] ?? '') === 'save_tts_fallbacks') {
+        $submittedFallbacks = $_POST['fallbacks'] ?? [];
+        if (!is_array($submittedFallbacks)) {
+            $message .= "<p style='color:#f44336;'><strong>Invalid fallback voice settings.</strong></p>";
+        } elseif ($ttsFallbackManager->saveMatrix($submittedFallbacks)) {
+            $message .= "<p style='color:#4caf50;'><strong>Fallback voices saved.</strong></p>";
+        } else {
+            $message .= "<p style='color:#f44336;'><strong>Fallback voices could not be saved. Apply database updates and try again.</strong></p>";
+        }
+    }
+
     // Cartesia sync handler (all missing)
     if (isset($_POST['action']) && $_POST['action'] === 'sync_cartesia') {
         $cartesiaStatus = getCartesiaConfigurationStatus();
@@ -2727,6 +2740,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$ttsFallbackDefinitions = $ttsFallbackManager->getDefinitions();
+$ttsFallbackMatrix = $ttsFallbackManager->getMatrix();
+$ttsFallbackVoiceIds = $ttsFallbackManager->getSuggestedVoiceIds();
 
 // Add the JavaScript functions
 ?>
@@ -3530,6 +3546,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     /* Tab Navigation */
     .tab-nav {
         display: flex;
+        flex-wrap: wrap;
         gap: 10px;
         margin-bottom: 30px;
         border-bottom: 2px solid rgba(242, 124, 17, 0.2);
@@ -3619,6 +3636,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     .tab-content.active {
         display: block;
+    }
+
+    .fallback-voice-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 12px;
+        margin: 18px 0;
+    }
+
+    .fallback-race-card {
+        background: #242424;
+        border: 1px solid #414141;
+        border-radius: 7px;
+        padding: 14px;
+    }
+
+    .fallback-race-card h2 {
+        color: #f2f2f2;
+        font-size: 16px;
+        margin: 0 0 4px;
+    }
+
+    .fallback-race-key {
+        color: #8b98a8;
+        font-size: 11px;
+        margin-bottom: 12px;
+    }
+
+    .fallback-gender-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .fallback-gender-grid label {
+        color: #cfd8e3;
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+    }
+
+    .fallback-gender-grid input {
+        background: #191919;
+        border: 1px solid #4a4a4a;
+        border-radius: 5px;
+        box-sizing: border-box;
+        color: #f8f9fa;
+        padding: 9px 10px;
+        width: 100%;
+    }
+
+    .fallback-gender-grid input:focus {
+        border-color: rgb(242, 124, 17);
+        outline: none;
+    }
+
+    @media (max-width: 560px) {
+        .fallback-voice-grid,
+        .fallback-gender-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     .voice-status-grid {
@@ -3760,7 +3840,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="page-header">
         <h1>Voice Management
         </h1>
-        <p class="page-subtitle">Manage voice samples across multiple TTS providers: XTTS, Chatterbox, PocketTTS, OmniVoice, Cartesia, and Inworld</p>
+        <p class="page-subtitle">Manage voice samples and global NPC fallback voices across all TTS providers.</p>
         <p class="page-note"><strong>Note:</strong> XTTS, Chatterbox, and PocketTTS share a simple voice sample flow. OmniVoice imports voices into the selected language library.</p>
     </div>
 
@@ -3784,6 +3864,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button class="tab-btn <?php echo $activeTab === 'inworld' ? 'active' : ''; ?>"
                 title="<?php echo htmlspecialchars($ttsStudioProviderStatuses['inworld']['title']); ?>"
                 onclick="switchTab('inworld')"><span class="tab-label">Inworld</span><span class="tab-status <?php echo htmlspecialchars($ttsStudioProviderStatuses['inworld']['class']); ?>"><?php echo htmlspecialchars($ttsStudioProviderStatuses['inworld']['label']); ?></span></button>
+        <button class="tab-btn <?php echo $activeTab === 'fallbacks' ? 'active' : ''; ?>"
+                title="Global race and gender voice fallbacks used by every TTS connector"
+                onclick="switchTab('fallbacks')"><span class="tab-label">Fallback Voices</span><span class="tab-status configured">Global</span></button>
     </div>
 
     <?php if (!empty($message)): ?>
@@ -3815,6 +3898,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p style='color:rgb(247, 231, 16);'><strong>Successfully generated voice '<?php echo htmlspecialchars($_GET['synced']); ?>' for Inworld.</strong></p>
         </div>
     <?php endif; ?>
+
+    <!-- Fallback Voices Tab Content -->
+    <div class="tab-content <?php echo $activeTab === 'fallbacks' ? 'active' : ''; ?>">
+        <div class="content-section full-width-section">
+            <h1>Fallback Voices</h1>
+            <p>Choose the voice used when an NPC has no explicit voice assigned. These settings apply to every TTS connector.</p>
+            <p style="color:#aeb8c4;"><strong>Resolution order:</strong> explicit NPC voice, matching race and gender voice, then the connector's male or female fallback. Leave a field blank to skip the race fallback for that combination.</p>
+
+            <form action="<?php echo $webRoot; ?>/ui/xtts_clone.php?tab=fallbacks" method="post">
+                <input type="hidden" name="action" value="save_tts_fallbacks">
+                <div class="fallback-voice-grid">
+                    <?php foreach ($ttsFallbackDefinitions as $race => $definition): ?>
+                        <section class="fallback-race-card">
+                            <h2><?php echo htmlspecialchars($definition['label'] ?? $race); ?></h2>
+                            <div class="fallback-race-key"><?php echo htmlspecialchars($race); ?></div>
+                            <div class="fallback-gender-grid">
+                                <?php foreach (['male' => 'Male', 'female' => 'Female'] as $gender => $genderLabel): ?>
+                                    <div>
+                                        <label for="fallback-<?php echo htmlspecialchars($race . '-' . $gender); ?>"><?php echo $genderLabel; ?></label>
+                                        <input
+                                            id="fallback-<?php echo htmlspecialchars($race . '-' . $gender); ?>"
+                                            name="fallbacks[<?php echo htmlspecialchars($race); ?>][<?php echo htmlspecialchars($gender); ?>]"
+                                            value="<?php echo htmlspecialchars($ttsFallbackMatrix[$race][$gender] ?? ''); ?>"
+                                            list="tts-fallback-voiceids"
+                                            autocomplete="off"
+                                            spellcheck="false">
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+                    <?php endforeach; ?>
+                </div>
+
+                <datalist id="tts-fallback-voiceids">
+                    <?php foreach ($ttsFallbackVoiceIds as $voiceId): ?>
+                        <option value="<?php echo htmlspecialchars($voiceId); ?>"></option>
+                    <?php endforeach; ?>
+                </datalist>
+
+                <div class="button-group">
+                    <button type="submit" class="action-button upload-csv">Save Fallback Voices</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- XTTS Tab Content -->
     <div class="tab-content <?php echo $activeTab === 'xtts' ? 'active' : ''; ?>" data-tab-type="xtts">

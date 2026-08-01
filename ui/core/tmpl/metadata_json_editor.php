@@ -28,7 +28,7 @@ $localSchemaOverrides = [
     ],
     'DIARY_PROMPT' => [
         'type' => 'longstring',
-        'description' => 'Default profile only! Instructions for generating diary entries. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the DIARY connector you are using.',
+        'description' => 'Instructions for generating diary entries for this profile. You can adjust max tokens by changing MAX_TOKENS_MEMORY for the DIARY connector you are using.',
     ],
     'LANG_LLM_XTTS' => [
         'type' => 'boolean',
@@ -245,6 +245,9 @@ function renderMetaSettingRow(string $key, array $schemaEntry, $value): string {
         $html .= '</label>';
     } else {
         $html .= renderMetaInput($key, $schemaEntry, $value, true);
+        if ($key === 'DIARY_PROMPT') {
+            $html .= '<button type="button" id="btn_sync_diary_prompt" class="btn-primary" style="margin-top:8px;">Apply to all profiles</button>';
+        }
     }
     $html .= '</div>';
     $html .= '</div>';

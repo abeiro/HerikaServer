@@ -205,12 +205,15 @@ if ($backgroundLifeErrorCount > 2) {
     return;
 }
 
+
+
 // ─── Game Timestamps ──────────────────────────────────────────────────────────
 
 $lastGameTsRow = $db->fetchAll('SELECT max(gamets) AS last_gamets FROM eventlog');
 $lastTsRow = $db->fetchAll("SELECT max(ts) AS ts FROM eventlog WHERE gamets='{$lastGameTsRow[0]['last_gamets']}'");
 
 $last_gamets = (int) $lastGameTsRow[0]['last_gamets'] + 1;
+$GLOBALS["LAST_GAMETS_BGL"] = $last_gamets;
 $last_ts = $lastTsRow[0]['ts'];
 $momentum = time();
 
@@ -218,6 +221,14 @@ $gameRequest = ['inputtext', '0', $last_gamets, $npcName];
 $npcNameEsc = $db->escape($npcName);
 
 // Last action issued by the NPC (if any) in the last 24 in-game hours
+
+// Guard: Avoid running if game is paused.
+if (isset($extdata["background_life_last_run"]) && $extdata["background_life_last_run"] >= $GLOBALS["LAST_GAMETS_BGL"]) {
+    error_log("[BGL RUN] $npcName — background_life_last_run equals LAST_GAMETS_BGL, game is paused?.");
+    return;
+} else {
+    error_log("[BGL RUN] $npcName — background_life_last_run: {$extdata["background_life_last_run"]}, LAST_GAMETS_BGL: {$GLOBALS["LAST_GAMETS_BGL"]}");
+}
 
 $lastIssuedAction = $db->fetchOne(
     "SELECT gamets, action FROM actions_issued
@@ -233,7 +244,17 @@ if ($lastIssuedAction["gamets"] && ($lastIssuedAction["action"] == "TravelTo" ||
     $npcIsTravellingStarted = 0;
 }
 
+// Guard: Check lasts LLM requests to avoid exceeding the maximum allowed LLM calls per hour for this NPC
+// Check if the last 5 calls were made within the last 2 minutes
 
+if (checkLastCallsFor($GLOBALS['HERIKA_NAME'])) {
+    error_log("[BGL RUN] $npcName — LLM call limit exceeded for this NPC, skipping.");
+    if (isset($extdata["background_life_last_llm_call_suspended"]) && $extdata["background_life_last_llm_call_suspended"] === true) {
+        error_log("[BGL RUN] $npcName — LLM calls are suspended for this NPC, skipping.");
+    }
+    markAsErrored($GLOBALS['HERIKA_NAME']);
+    return;
+}
 
 // ─── Guard: Require at Least One Prior Interaction ───────────────────────────
 
@@ -583,9 +604,10 @@ if (isset($metadata['low_process_actors'])) {
 
 
 if (isset($metadata['last_inventory_update_gamets'])) {
+    $nullArray=[];
     $bgEvents[] = [
         'gamets' => $metadata['last_inventory_update_gamets'],
-        'content' => implode("\n", chimFormatInventoryPromptLines($metadata['inventory'] ?? [])),
+        'content' => implode("\n", chimFormatInventoryPromptLines($metadata['inventory'] ?? [], null, $nullArray, false, true)),
         'type' => 'inventory_update',
     ];
 
@@ -845,7 +867,9 @@ Rules:
 
     $connectionHandler = $connector->getConnector($currentConnectorData);
     $preResponse = $connectionHandler->fast_request($preStep1Prompt, ['MAX_TOKENS' => 1024], 'backgroundlife');
-
+    
+    updateLastLLMCall($GLOBALS['HERIKA_NAME']);
+    
     $parsedResponse = __jpd_decode_lazy($preResponse);
 
     if (isset($parsedResponse[0]) && is_array($parsedResponse[0])) {
@@ -933,6 +957,7 @@ Rules:
                 'gamets' => $last_gamets - 10,
                 'localts' => time(),
                 'data' => "$npcName produced/consumed items while idle: $actionTextFinal $actionTextDescriptionFinal. Reasoning: $reasoning",
+                'category' => 'produce_consume'
             ]
         );
 
@@ -1160,6 +1185,7 @@ if (!$isSpeakAction) {
     if ($bypassInnerThoughts == false) {
         $connectionHandler = $connector->getConnector($currentConnectorData);
         $innerThoughtBuffer = $connectionHandler->fast_request($step1Prompt, ['MAX_TOKENS' => 2048], 'backgroundlife');
+        updateLastLLMCall($GLOBALS['HERIKA_NAME']);
         $recordDiaryEntry = true;
     } else {
         $innerThoughtBuffer = $innerThoughtBufferForced ?? "{$GLOBALS['HERIKA_NAME']}'s inner thought: I've reached destination, I must figure out my next action";
@@ -1262,10 +1288,10 @@ BuyItem:<NPC name>:<itemid>:<count>:<total_gold_spent>,<NPC name>:<itemid>:<coun
 - Required after a previously agreed trade so inventories can be updated.
 - total_gold_spent is <item price>*<count>, the total amount of gold spent for that item, including any haggling or discounts.
 
-SellItem:<NPC name>:<itemid>:<count>:<total_gold_received>,<NPC name>:<itemid>:<count>:<total_gold_received>,...
+SellItem:<NPC name>:<itemid>:<count>:<total_gold_amount>,<NPC name>:<itemid>:<count>:<total_gold_amount>,...
 - Sell items to another NPC.
 - Required after a previously agreed trade so inventories can be updated.
-- total_gold_received is <item price>*<count>, the total amount of gold received for that item, including any haggling or discounts (price*count).
+- total_gold_amount is <item price>*<count>, the total amount of gold received for that item, including any haggling or discounts (price*count).
 
 GiveItemTo:<NPC name>:<itemid>:<count>,<NPC name>:<itemid>:<count>
 - Give items directly to one or more NPCs with no gold exchange.
@@ -1388,6 +1414,7 @@ For example:
 $step2Prompt = [['role' => 'system', 'content' => $step2Content]];
 $connectionHandler = $connector->getConnector($currentConnectorData);
 $decisionBuffer = $connectionHandler->fast_request($step2Prompt, ['MAX_TOKENS' => 2048], 'backgroundlife');
+updateLastLLMCall($GLOBALS['HERIKA_NAME']);
 
 echo $decisionBuffer . PHP_EOL;
 
@@ -1515,6 +1542,7 @@ if (!empty($parsed['action'])) {
             triggerNpcUpdate($GLOBALS['HERIKA_NAME'], ($extdata['background_life_last_updated_ec'] ?? 0) + 1);
             break;
     }
+    updateLastActionGameTs($GLOBALS['HERIKA_NAME']);
 }
 
 // ─── Dispatch: Letter / Notification (disabled) ─────────────────────────────

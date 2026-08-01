@@ -36,6 +36,7 @@ class CoreProfile
                 ],
                 'RPG_COMMENTS_CHANCE'    => 50,
                 'COMBAT_BARK_COOLDOWN'   => 30,
+                'LATEST_DIARY_CONTEXT_ENABLED' => false,
             ];
             $data['metadata'] = json_encode($defaultMeta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         }
