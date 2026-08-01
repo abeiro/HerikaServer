@@ -461,7 +461,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 ?>
 <!-- Ensure main.css is loaded after any reboot.css -->
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/diary_adventure.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/diary_adventure.css?v=<?php echo (int) @filemtime(__DIR__ . '/css/diary_adventure.css'); ?>">
 <style>
     @font-face {
         font-family: 'MagicCards';
@@ -924,7 +924,7 @@ if ($shouldFetchEvents) {
             foreach ($currentCsvParams as $key => $value) {
                 echo "<input type='hidden' name='" . htmlspecialchars($key) . "' value='" . htmlspecialchars($value) . "'>";
             }
-            echo "<button type='submit' class='btn-save'>Download Current Diaries</button>";
+        echo "<button type='submit' class='btn-save log-action-button'>Download Current Diaries</button>";
             echo "</form>";
 
             // For all entries, only preserve month and year if they exist
@@ -941,7 +941,7 @@ if ($shouldFetchEvents) {
             foreach ($allCsvParams as $key => $value) {
                 echo "<input type='hidden' name='" . htmlspecialchars($key) . "' value='" . htmlspecialchars($value) . "'>";
             }
-            echo "<button type='submit' class='btn-save'>Download All Diary Entries</button>";
+    echo "<button type='submit' class='btn-save log-action-button'>Download All Diary Entries</button>";
             echo "</form>";
 
             // Delete all button

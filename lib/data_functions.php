@@ -497,7 +497,8 @@ function chimFormatInventoryPromptLines(
     array $inventory,
     ?callable $getItemDescription = null,
     array &$describedBaseids = [],
-    bool $descriptionsOnly = false
+    bool $descriptionsOnly = false,
+    bool $showGoldValue = false
 ): array {
     $lines = [];
 
@@ -508,6 +509,7 @@ function chimFormatInventoryPromptLines(
         }
 
         $count = max(0, intval($item['count'] ?? 0));
+        $goldValue = max(0, intval($item['goldvalue'] ?? 0));
         $rawBaseId = trim((string) ($item['baseid'] ?? ''));
         $baseId = chimNormalizePromptFormId($rawBaseId);
         $baseIdKey = $baseId ?? '';
@@ -527,6 +529,9 @@ function chimFormatInventoryPromptLines(
         $safeName = chimEscapePromptItemText($itemName);
         $identifier = $baseId !== null ? "`{$baseId}:{$safeName}`" : $safeName;
         $line = "- {$identifier} ({$count})";
+        if ($showGoldValue) {
+            $line .= " - Gold Value: {$goldValue}";
+        }
         if ($description) {
             $line .= ' - ' . chimEscapePromptItemText($description);
         }
@@ -962,12 +967,12 @@ function DataLastDataFor($actor, $lastNelements = -10)
 /**
  * Get context for actor to send to llm
  */
-function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
+function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false,$excludeFarAway=false)
 {
     
     $lastDialog = array(); // Initialize the return array
     $followers=[];
-    $actorsInRangeList=DataBeingsInCloseRange();
+    $actorsInRangeList=DataBeingsInCloseRange($excludeFarAway);
     $actorsInRange=strtr($actorsInRangeList,["|"=>"\n* "]);
     $actorDetailedList=explode("|",$actorsInRangeList);
     // Not always the same order
@@ -1549,7 +1554,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         
     // This is intended to give info about nearby actors, ALL actors (dead ones included).
 
-    $nearbyActors=DataBeingsOrDeathsInRangeExcluding("",true);
+    $nearbyActors=$excludeFarAway ? trim($actorsInRangeList, "|") : DataBeingsOrDeathsInRangeExcluding("",true);
     $nearbyActorsList=[];
     if ($nearbyActors) {
         foreach (explode("|",$nearbyActors) as $k=>$v) {
@@ -4530,7 +4535,7 @@ function chimDataStripActorStateSuffix($name)
     return trim((string)$name);
 }
 
-function chimDataActorStatusBlocksCloseRange($token)
+function chimDataActorStatusBlocksCloseRange($token, $includeBusy = false)
 {
     if (!preg_match('/\s*\(([^()]*)\)\s*$/u', (string)$token, $matches)) {
         return false;
@@ -4545,10 +4550,14 @@ function chimDataActorStatusBlocksCloseRange($token)
         return false;
     }
 
+    if ($includeBusy && $status === "busy") {
+        return false;
+    }
+
     return preg_match('/^(?:busy|hostile|in combat|far away|too far away|restrained|dead|disabled|unavailable|checking|can[\'"]?t hear you|no target|no crosshair target)/i', $status) === 1;
 }
 
-function DataBeingsInCloseRange($excludeFarAway=false)
+function DataBeingsInCloseRange($excludeFarAway=false, $includeBusy=false)
 {
 
     global $db;
@@ -4572,7 +4581,7 @@ function DataBeingsInCloseRange($excludeFarAway=false)
         $beingsArrayNew=[];
         foreach ($beingsArray as $k=>$v) {
             $v = trim((string)$v);
-            if ($excludeFarAway && chimDataActorStatusBlocksCloseRange($v))
+            if ($excludeFarAway && chimDataActorStatusBlocksCloseRange($v, $includeBusy))
                 continue;
             if (preg_match('/\((?:dead|disabled)\)\s*$/i', $v)) //??
                 continue;

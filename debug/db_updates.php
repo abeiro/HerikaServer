@@ -106,6 +106,10 @@ try {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_connector.sql"));
         $db->execQuery("SET search_path TO public");
     }
+    if ($checkTableExists("core_tts_fallback") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_fallback.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
     if ($checkTableExists("core_llm_connector") == -1) {
         // ensure api_badge for FK first
         if ($checkTableExists("core_api_badge") == -1) {
@@ -135,19 +139,8 @@ try {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_narrator.sql"));
         $db->execQuery("SET search_path TO public");
     }
-    if ($checkTableExists("oghma_context_rule") == -1) {
-        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/oghma_context_rule.sql"));
-        $db->execQuery("SET search_path TO public");
-    }
 } catch (Exception $e) {
     Logger::warn("Bootstrap core tables: " . $e->getMessage());
-}
-
-if ($checkVersion("oghma_context_rule") < 20260724001) {
-    Logger::debug("Applying oghma_context_rule 20260724001 - add deterministic Oghma context rules");
-    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/oghma_context_rule.sql"));
-    $updateVersion("oghma_context_rule", 20260724001);
-    Logger::info("Applied patch oghma_context_rule 20260724001");
 }
 
 if ($checkVersion("core_action") < 20260426001) {
@@ -3753,6 +3746,7 @@ try {
         ["name"=>"core_api_badge",   "file"=>__DIR__."/../lib/core/database_schema/core_api_badge.sql"],
         ["name"=>"core_llm_connector","file"=>__DIR__."/../lib/core/database_schema/core_llm_connector.sql"],
         ["name"=>"core_tts_connector","file"=>__DIR__."/../lib/core/database_schema/core_tts_connector.sql"],
+        ["name"=>"core_tts_fallback","file"=>__DIR__."/../lib/core/database_schema/core_tts_fallback.sql"],
         ["name"=>"core_stt_connector","file"=>__DIR__."/../lib/core/database_schema/core_stt_connector.sql"],
         ["name"=>"core_profiles",     "file"=>__DIR__."/../lib/core/database_schema/core_profiles.sql"],
         ["name"=>"core_npc_master",   "file"=>__DIR__."/../lib/core/database_schema/core_npc_master.sql"]
@@ -4370,6 +4364,7 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS coords POI
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS refs text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS cleared boolean");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS world text");
 $db->execQuery("
 CREATE OR REPLACE VIEW public.locations_v
 as
@@ -4384,6 +4379,7 @@ $db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS vendor_cont
 $db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS stock JSONB");
 $db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS gold numeric");
 $db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS player_rank numeric");
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS localts bigint");
 
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
@@ -7050,6 +7046,18 @@ if ($checkVersion("bgl_history") < 20260623001) {
 
 }
 
+if ($checkVersion("bgl_history") < 20260729001) {
+    Logger::debug("Applying bgl_history 20260729001 - create BgL history table");
+
+    $db->execQuery("
+        ALTER TABLE public.bgl_history ADD COLUMN category TEXT DEFAULT NULL
+    ");
+
+    $updateVersion("bgl_history", 20260729001);
+    Logger::info("Applied patch bgl_history 20260729001");
+
+}
+
 if ($checkVersion("oghma") < 20260625001) {
     Logger::debug("Applying oghma 20260625001 - ensure topic has a unique constraint for upserts");
 
@@ -7508,6 +7516,58 @@ if ($checkVersion("quest_asset_library") < 20260719001) {
     }
 }
 
+if ($checkVersion("quest_asset_library") < 20260729001) {
+    Logger::debug("Applying quest_asset_library 20260729001 - restore shipped playable race NPC templates");
+
+    require_once __DIR__ . "/../lib/quest_asset_library.php";
+    require_once __DIR__ . "/../lib/quest_reference_data.php";
+
+    $migrationOk = true;
+    $manifestPath = __DIR__ . "/../data/quest_assets/chim_spawn_templates.json";
+    $result = quest_asset_import_manifest_file($manifestPath);
+    if (empty($result["success"])) {
+        $migrationOk = false;
+        Logger::error(
+            "Failed importing playable race NPC templates: "
+            . implode("; ", $result["errors"] ?? ["unknown error"])
+        );
+    }
+
+    if ($migrationOk) {
+        $manifest = json_decode((string) file_get_contents($manifestPath), true);
+        $spawnTemplates = [];
+        foreach (($manifest["groups"] ?? []) as $group) {
+            if (strtolower(trim((string) ($group["dataset"] ?? ""))) !== "npc_own_templates") {
+                continue;
+            }
+
+            $groupKey = strtolower(trim((string) ($group["key"] ?? "")));
+            if ($groupKey === "") {
+                continue;
+            }
+
+            foreach (($group["members"] ?? []) as $member) {
+                $stableRef = trim((string) ($member["stable_ref"] ?? ""));
+                if ($stableRef !== "") {
+                    $spawnTemplates[$groupKey][] = $stableRef;
+                }
+            }
+        }
+
+        $migrationOk = quest_reference_add_missing_dataset_entries(
+            "npc_own_templates",
+            $spawnTemplates
+        ) !== false;
+    }
+
+    if ($migrationOk) {
+        $updateVersion("quest_asset_library", 20260729001);
+        Logger::info("Applied patch quest_asset_library 20260729001");
+    } else {
+        Logger::error("Failed to apply quest_asset_library 20260729001");
+    }
+}
+
 if ($checkVersion("prompts") < 20260719001) {
     Logger::debug("Applying prompts 20260719001 - improve book reading prompt");
 
@@ -7529,6 +7589,34 @@ if ($checkVersion("prompts") < 20260719001) {
 
     $updateVersion("prompts", 20260719001);
     Logger::info("Applied patch prompts 20260719001 - improved book reading prompt");
+}
+
+if ($checkVersion("prompts") < 20260727001) {
+    Logger::debug("Applying prompts 20260727001 - add bored event director rules");
+
+    require_once(__DIR__ . "/../lib/rolemaster_bored.php");
+    $boredEventRules = $db->escape(chimRolemasterDefaultBoredEventRules());
+    $description = $db->escape(
+        "Additional Rolemaster rules used only for autonomous bored events. "
+        . "Supports {SEED_ACTOR_RULE}, {SEED_ACTOR}, {NEARBY_ACTORS}, and {PLAYER_NAME} placeholders. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_rules', '{$boredEventRules}', '{$description}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260727001);
+        Logger::info("Applied patch prompts 20260727001 - added bored event director rules");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260727001");
+    }
 }
 
 if ($checkVersion("memory_summary") < 20260721001) {
@@ -7630,6 +7718,34 @@ if ($checkVersion("visual_context") < 20260718001) {
         Logger::info("Applied patch visual_context 20260718001");
     } else {
         Logger::error("Failed to apply patch visual_context 20260718001");
+    }
+}
+
+if ($checkVersion("core_tts_fallback") < 20260727001) {
+    Logger::debug("Applying core_tts_fallback 20260727001 - add global race and gender voice fallbacks");
+
+    $schemaPath = __DIR__ . "/../lib/core/database_schema/core_tts_fallback.sql";
+    if ($db->execQuery(file_get_contents($schemaPath)) !== false) {
+        $updateVersion("core_tts_fallback", 20260727001);
+        Logger::info("Applied patch core_tts_fallback 20260727001");
+    } else {
+        Logger::error("Failed to apply patch core_tts_fallback 20260727001");
+    }
+}
+
+if ($checkVersion("latest_diary_context") < 20260727001) {
+    Logger::debug("Applying latest_diary_context 20260727001 - index latest NPC diary lookups");
+
+    $migrationOk = $db->execQuery(
+        "CREATE INDEX IF NOT EXISTS idx_diarylog_people_gamets
+         ON public.diarylog (lower(trim(people)), gamets DESC, localts DESC, rowid DESC)"
+    ) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("latest_diary_context", 20260727001);
+        Logger::info("Applied patch latest_diary_context 20260727001");
+    } else {
+        Logger::error("Failed to apply patch latest_diary_context 20260727001");
     }
 }
 

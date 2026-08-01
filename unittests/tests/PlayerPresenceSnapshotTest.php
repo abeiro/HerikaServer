@@ -87,4 +87,68 @@ final class PlayerPresenceSnapshotTest extends TestCase
         $this->assertSame('|Lydia|RANGROO|', $snapshot['audience']);
         $this->assertSame([], $snapshot['present_actors']);
     }
+
+    public function testDirectivePeopleIncludeSelectedSpeakerAndExplicitListener(): void
+    {
+        $people = chimBuildDirectivePeoplePipe(
+            '|Lisette|Vivienne Onis|RANGROO|',
+            'Dorian',
+            'Dorian should ask about a remedy. The dialogue listener must be Vivienne Onis. (must use ACTION JustTalk Vivienne Onis)'
+        );
+
+        $this->assertSame(
+            '|Lisette|Vivienne Onis|RANGROO|Dorian|',
+            $people
+        );
+    }
+
+    public function testDirectivePeopleStillIncludeSpeakerWithoutExplicitListener(): void
+    {
+        $people = chimBuildDirectivePeoplePipe(
+            '|Lisette|RANGROO|',
+            'Jorn',
+            'Jorn should inspect the room. (must use ACTION Inspect_Surroundings)'
+        );
+
+        $this->assertSame('|Lisette|RANGROO|Jorn|', $people);
+    }
+
+    public function testDirectivePeopleUseTalkActionTargetWhenListenerRequirementIsAbsent(): void
+    {
+        $people = chimBuildDirectivePeoplePipe(
+            '|Lisette|RANGROO|',
+            'Belrand',
+            'Belrand should ask about work. (must use ACTION JustTalk Vivienne Onis)'
+        );
+
+        $this->assertSame(
+            '|Lisette|RANGROO|Belrand|Vivienne Onis|',
+            $people
+        );
+    }
+
+    public function testDirectivePeopleDoNotAddEveryoneAsAnActor(): void
+    {
+        $people = chimBuildDirectivePeoplePipe(
+            '|Lisette|RANGROO|',
+            'Eris',
+            'Eris should address the room. (must use ACTION JustTalk everyone)'
+        );
+
+        $this->assertSame('|Lisette|RANGROO|Eris|', $people);
+    }
+
+    public function testDialogueEventPeopleAlwaysIncludeActualSpeakerAndListener(): void
+    {
+        $people = chimBuildDialogueEventPeoplePipe(
+            '|Octieve San|Lisette|RANGROO|',
+            'Octieve San',
+            'Minette Vinius'
+        );
+
+        $this->assertSame(
+            '|Octieve San|Lisette|RANGROO|Minette Vinius|',
+            $people
+        );
+    }
 }

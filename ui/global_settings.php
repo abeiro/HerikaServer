@@ -43,10 +43,11 @@ $promptContextOptionFields = [
 ];
 
 $gsSections = [
-    'Prompt' => [
+    'Prompt & Rechat' => [
         [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
         [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
-        [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
+        [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
+        [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
     ],
     'Oghma' => [
         [ 'name' => 'OGHMA_INFINIUM', 'type' => 'boolean' ],
@@ -55,9 +56,12 @@ $gsSections = [
         [ 'name' => 'LOCATION_OGHMA', 'type' => 'boolean' ],
         [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
     ],
-    'Rechat' => [
-        [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
-        [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
+    'Memory' => [
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@TXTAI_URL', 'type' => 'url' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
+        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
+        [ 'name' => 'PLAYER_WORST_MEMORY_GAME_DAYS', 'type' => 'integer', 'min' => 0, 'max' => 365, 'default' => 7, 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.' ],
     ],
     'Misc' => [
         [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
@@ -70,12 +74,6 @@ $gsSections = [
         [ 'name' => 'CHIM_AI_QUEST_PROGRESSION', 'type' => 'boolean' ],
         [ 'name' => 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT', 'type' => 'boolean' ],
     ],
-    'Memory' => [
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@TXTAI_URL', 'type' => 'url' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
-    ],
     'Global Connectors' => [
         [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
@@ -85,9 +83,9 @@ $gsSections = [
         [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'CORE_CONNECTOR_BGL', 'type' => 'foreign:core_llm_connector:id:label' ],
         [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'PLAYER_WORST_MEMORY_GAME_DAYS', 'type' => 'integer', 'min' => 0, 'max' => 365, 'default' => 7, 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.' ],
     ],
     'Context' => [
+        [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
         [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
         [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
@@ -111,6 +109,32 @@ $gsSections = [
         [ 'name' => 'TRANSLATION@DeepL@player_source_language', 'type' => 'string' ],
         [ 'name' => 'TRANSLATION@DeepL@player_target_language', 'type' => 'string' ],
     ],
+];
+
+$settingsTabs = [
+    'prompt-rechat' => '💬 Prompt & Rechat',
+    'ai-memory' => '🧠 Memory & Others',
+    'context-knowledge' => '📚 Context & Knowledge',
+    'global-connectors' => '🔌 Global Connectors',
+];
+
+$sectionTabs = [
+    'Prompt & Rechat' => 'prompt-rechat',
+    'Memory' => 'ai-memory',
+    'Misc' => 'ai-memory',
+    'Quests' => 'ai-memory',
+    'Translation' => 'ai-memory',
+    'Oghma' => 'context-knowledge',
+    'Context' => 'context-knowledge',
+    $promptContextSectionTitle => 'context-knowledge',
+    'Global Connectors' => 'global-connectors',
+];
+
+$tabControlPanels = [
+    'prompt-rechat' => 'settings-panel-prompt-rechat-prompt-rechat',
+    'ai-memory' => 'settings-panel-ai-memory-memory',
+    'context-knowledge' => 'settings-panel-context-knowledge-oghma',
+    'global-connectors' => 'settings-panel-global-connectors-global-connectors',
 ];
 
 function pretty_label(string $flatName): string
@@ -182,12 +206,57 @@ function pretty_label(string $flatName): string
 function icon_for_field(string $flatName): string
 {
     $u = strtoupper($flatName);
-    if ($u === 'PLAYER_WORST_MEMORY_GAME_DAYS') return '💔';
-    if (strpos($u, 'FEATURES@MEMORY_EMBEDDING@') === 0 || strpos($u, 'MEMORY_') !== false) return '💭';
-    if ($u === 'PLAYER_NAME') return '🏷️';
-    if ($u === 'PROMPT_HEAD') return '🔝';
-    if ($u === 'EMOTEMOODS') return '🎭';
-    if ($u === 'PROMPT_TIMESTAMP') return '🕐';
+    $icons = [
+        'PLAYER_NAME' => '🏷️',
+        'PROMPT_HEAD' => '🔝',
+        'EMOTEMOODS' => '🎭',
+        'RECHAT_MODE' => '🔁',
+        'ENFORCE_STRICT_RECHAT_RESPONSE' => '🎯',
+        'OGHMA_INFINIUM' => '📚',
+        'OGHMA_AMOUNT' => '🔢',
+        'RACIAL_OGHMA' => '🧬',
+        'LOCATION_OGHMA' => '📍',
+        'FEATURES@MEMORY_EMBEDDING@ENABLED' => '🧠',
+        'FEATURES@MEMORY_EMBEDDING@TXTAI_URL' => '🔗',
+        'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC' => '🔤',
+        'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL' => '⏱️',
+        'PLAYER_WORST_MEMORY_GAME_DAYS' => '💔',
+        'AUTO_LOCK_PROFILE' => '🔒',
+        'AUTOFILL_CUSTOM_PROFILES' => '✨',
+        'AUTOFILL_CUSTOM_PROFILES_TRIGGER' => '🎯',
+        'BGL_TRIGGER_HOURS' => '🌍',
+        'END_CONVERSATION_COOLDOWN' => '⏳',
+        'CHIM_AI_QUEST_PROGRESSION' => '🗺️',
+        'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => '🧍',
+        'SCENE_CLASSIFIER_ENABLED' => '🎭',
+        'RELATIONSHIP_SYSTEM_ENABLED' => '💞',
+        'RELLLM_CONNECTOR' => '🔗',
+        'DETECT_MAGIC_EVENT' => '✨',
+        'GROUND_ITEMS_DESCRIPTIONS_ONLY' => '🪨',
+        'INVENTORY_ITEMS_DESCRIPTIONS_ONLY' => '🎒',
+        'HIDE_AMBIENT_COMBAT' => '🕊️',
+        'DISABLE_REANIMATION_TRACKING' => '🧟',
+        'TRANSFORMATION_DETECTION' => '🐺',
+        'POWER_AWARENESS_ENABLED' => '⚔️',
+        'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => '💰',
+        'PROMPT_TIMESTAMP' => '🕐',
+        'MAGIC_EVENT_BLACKLIST' => '🪄',
+        'LOCATION_BLACKLIST' => '📍',
+        'ITEM_BLACKLIST' => '📦',
+        'EVENT_TYPE_FILTER' => '🔍',
+        'TRANSLATION_FUNCTION' => '🌐',
+        'TRANSLATION@SETTINGS@TRANSLATE_AUDIO' => '🎧',
+        'TRANSLATION@SETTINGS@TRANSLATE_TEXT' => '📝',
+        'TRANSLATION@SETTINGS@SAVE_TRANSLATED_TEXT' => '💾',
+        'TRANSLATION@SETTINGS@TRANSLATE_PLAYER_AUDIO' => '🎙️',
+        'TRANSLATION@SETTINGS@SAVE_TRANSLATED_PLAYER_TEXT' => '💾',
+        'TRANSLATION@DEEPL@SOURCE_LANGUAGE' => '🗣️',
+        'TRANSLATION@DEEPL@TARGET_LANGUAGE' => '🌍',
+        'TRANSLATION@DEEPL@URL' => '🔗',
+        'TRANSLATION@DEEPL@PLAYER_SOURCE_LANGUAGE' => '🎤',
+        'TRANSLATION@DEEPL@PLAYER_TARGET_LANGUAGE' => '🌎',
+    ];
+    if (isset($icons[$u])) return $icons[$u];
     if (strpos($u, 'CORE_CONNECTOR_') === 0) {
         if ($u === 'CORE_CONNECTOR_PLAYER') return '🎮';
         if ($u === 'CORE_CONNECTOR_SUMMARY') return '📝';
@@ -196,20 +265,18 @@ function icon_for_field(string $flatName): string
         if ($u === 'CORE_CONNECTOR_PROFILES') return '👥';
         if ($u === 'CORE_CONNECTOR_DIRECTOR') return '🎬';
         if ($u === 'CORE_CONNECTOR_BGL') return '⏱️';
-        if ($u === 'CORE_CONNECTOR_OGHMA_CUSTOM') return '🐙';
+        if ($u === 'CORE_CONNECTOR_OGHMA_CUSTOM') return '📖';
         return '🔌';
     }
-    if ($u === 'SCENE_CLASSIFIER_ENABLED') return '🎭';
-    if ($u === 'RELATIONSHIP_SYSTEM_ENABLED') return '💞';
-    if ($u === 'RELLLM_CONNECTOR') return '🔗';
-    if ($u === 'POWER_AWARENESS_ENABLED') return '⚔️';
     if (strpos($u, 'RESPEECH') !== false) return '🦜';
     if (strpos($u, 'SPEECH_STYLE') !== false) return '🦜';
-    if (strpos($u, 'SUMMARY_PROMPT') === 0) return '🎭';
-    if (strpos($u, 'DYNAMIC_PROMPT_') === 0) return '🎭';
+    if (strpos($u, 'SUMMARY_PROMPT') === 0) return '📝';
+    if (strpos($u, 'DYNAMIC_PROMPT_') === 0) return '👥';
     if (strpos($u, 'DIARY') !== false) return '📙';
     if (strpos($u, 'NARRATOR') !== false) return '🗣️';
-    return '⚙️';
+    if (strpos($u, 'MEMORY') !== false) return '🧠';
+    if (strpos($u, 'COOLDOWN') !== false || strpos($u, 'INTERVAL') !== false) return '⏱️';
+    return '🧩';
 }
 
 function select_option_label(string $fieldName, string $optionValue): string
@@ -487,6 +554,48 @@ h1.gs-title {
     font-size: 13px;
 }
 
+.settings-tabs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 8px;
+    border: 1px solid #3a3a3a;
+    border-radius: 10px;
+    background: rgba(30, 30, 30, 0.92);
+}
+
+.settings-tab {
+    position: relative;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #444;
+    border-radius: 7px;
+    background: #303030;
+    color: #ddd;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.settings-tab:hover {
+    border-color: rgba(242, 124, 17, 0.55);
+    background: #383838;
+}
+
+body .settings-tabs .settings-tab.is-active {
+    border-color: rgb(242,124,17) !important;
+    color: #fff !important;
+    background: rgba(92, 53, 25, 0.95) !important;
+    box-shadow: inset 0 0 0 1px rgba(242, 124, 17, 0.28), 0 0 12px rgba(242, 124, 17, 0.24) !important;
+    transform: translateY(-1px) !important;
+}
+
+.settings-tab:focus-visible {
+    outline: 2px solid rgb(242,124,17);
+    outline-offset: 2px;
+}
+
 .content-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -542,6 +651,24 @@ h1.gs-title {
     align-items: center;
 }
 
+.connector-section .provider-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.connector-section .provider-card {
+    grid-template-columns: 1fr;
+    align-content: start;
+    align-items: start;
+}
+
+.connector-section .provider-body {
+    width: 100%;
+}
+
+.connector-section .provider-help {
+    margin-top: 0;
+}
+
 .provider-head {
     display: flex;
     align-items: center;
@@ -556,7 +683,8 @@ h1.gs-title {
     gap: 10px;
     color: #e0e0e0;
     min-width: 0;
-    flex-wrap: wrap;
+    width: 100%;
+    flex-wrap: nowrap;
 }
 
 .provider-icon {
@@ -583,6 +711,14 @@ h1.gs-title {
     gap: 10px;
     width: 100%;
     min-width: 0;
+}
+
+.filter-setting-card {
+    grid-template-columns: minmax(180px, 0.65fr) minmax(420px, 1.7fr) minmax(180px, 0.65fr);
+}
+
+.filter-setting-card .provider-body {
+    width: 100%;
 }
 
 .btn-filter-browse {
@@ -640,9 +776,10 @@ h1.gs-title {
 }
 
 .provider-toggle {
-    margin-left: 10px;
+    margin-left: auto;
     display: flex;
     align-items: center;
+    flex: 0 0 auto;
 }
 
 .provider-toggle input[type="checkbox"] {
@@ -1159,6 +1296,11 @@ h1.gs-title {
 }
 
 @media (max-width: 900px) {
+    .settings-tabs,
+    .connector-section .provider-grid {
+        grid-template-columns: 1fr;
+    }
+
     main {
         padding-left: 5%;
         padding-right: 5%;
@@ -1225,10 +1367,36 @@ h1.gs-title {
         <div class="result-ok" style="margin-bottom: 16px;">Global settings saved to the database.</div>
     <?php endif; ?>
 
+    <div class="settings-tabs" role="tablist" aria-label="Global settings categories">
+        <?php foreach ($settingsTabs as $tabId => $tabLabel): ?>
+            <button
+                type="button"
+                class="settings-tab<?php echo $tabId === 'prompt-rechat' ? ' is-active' : ''; ?>"
+                id="settings-tab-<?php echo htmlspecialchars($tabId); ?>"
+                role="tab"
+                aria-selected="<?php echo $tabId === 'prompt-rechat' ? 'true' : 'false'; ?>"
+                aria-controls="<?php echo htmlspecialchars($tabControlPanels[$tabId]); ?>"
+                data-settings-tab="<?php echo htmlspecialchars($tabId); ?>"
+            ><?php echo htmlspecialchars($tabLabel); ?></button>
+        <?php endforeach; ?>
+    </div>
+
     <form method="post" action="" id="gs_form">
         <div class="content-grid">
             <?php foreach ($gsSections as $sectionTitle => $fields): ?>
-                <div class="content-section">
+                <?php
+                $sectionTab = $sectionTabs[$sectionTitle] ?? 'general';
+                $isInitialTab = $sectionTab === 'prompt-rechat';
+                $sectionClasses = 'content-section' . ($sectionTitle === 'Global Connectors' ? ' connector-section' : '');
+                ?>
+                <div
+                    class="<?php echo htmlspecialchars($sectionClasses); ?>"
+                    id="settings-panel-<?php echo htmlspecialchars($sectionTab); ?>-<?php echo htmlspecialchars(preg_replace('/[^a-z0-9]+/i', '-', strtolower($sectionTitle))); ?>"
+                    role="tabpanel"
+                    aria-labelledby="settings-tab-<?php echo htmlspecialchars($sectionTab); ?>"
+                    data-settings-panel="<?php echo htmlspecialchars($sectionTab); ?>"
+                    <?php echo $isInitialTab ? '' : 'hidden'; ?>
+                >
                     <h2><?php echo htmlspecialchars($sectionTitle); ?></h2>
                     <div class="provider-grid">
                         <?php if ($sectionTitle === $promptContextSectionTitle): ?>
@@ -1267,7 +1435,7 @@ h1.gs-title {
                                             $isReadonly = isset($schemaDefinition['readonly']) && $schemaDefinition['readonly'] === true;
                                             $readonlyAttr = $isReadonly ? 'readonly' : '';
                                             ?>
-                                            <div class="provider-card">
+                                            <div class="provider-card<?php echo isset($filterBrowseFieldConfigs[$fieldName]) ? ' filter-setting-card' : ''; ?>">
                                                 <div class="provider-head">
                                                     <div class="provider-title">
                                                         <div class="provider-icon"><?php echo icon_for_field($fieldName); ?></div>
@@ -1300,14 +1468,16 @@ h1.gs-title {
                                                             <textarea name="<?php echo htmlspecialchars($fieldName); ?>" rows="4" <?php echo $readonlyAttr; ?>><?php echo htmlspecialchars(strval($current)); ?></textarea>
                                                         <?php endif; ?>
                                                     <?php endif; ?>
-                                                    <?php if (!empty($help)): ?>
-                                                        <p class="provider-help"><?php echo render_provider_help($fieldName, $help, $webRoot); ?></p>
-                                                    <?php endif; ?>
                                                 </div>
+                                                <?php if (!empty($help)): ?>
+                                                    <p class="provider-help"><?php echo render_provider_help($fieldName, $help, $webRoot); ?></p>
+                                                <?php endif; ?>
                                             </div>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
+                            </div>
+                            </div>
                             </div>
                             <?php continue; ?>
                         <?php endif; ?>
@@ -1341,7 +1511,7 @@ h1.gs-title {
                             $isReadonly = isset($schemaDefinition['readonly']) && $schemaDefinition['readonly'] === true;
                             $readonlyAttr = $isReadonly ? 'readonly' : '';
                             ?>
-                            <div class="provider-card">
+                            <div class="provider-card<?php echo isset($filterBrowseFieldConfigs[$fieldName]) ? ' filter-setting-card' : ''; ?>">
                                 <div class="provider-head">
                                     <div class="provider-title">
                                         <div class="provider-icon"><?php echo icon_for_field($fieldName); ?></div>
@@ -1447,6 +1617,78 @@ h1.gs-title {
             <?php endforeach; ?>
         </div>
     </form>
+
+    <script>
+    (() => {
+        const storageKey = 'herika-global-settings-tab';
+        const tabs = Array.from(document.querySelectorAll('[data-settings-tab]'));
+        const panels = Array.from(document.querySelectorAll('[data-settings-panel]'));
+        const form = document.getElementById('gs_form');
+        const validTabs = new Set(tabs.map((tab) => tab.dataset.settingsTab));
+
+        function activateTab(tabId, focusTab = false) {
+            if (!validTabs.has(tabId)) {
+                tabId = 'prompt-rechat';
+            }
+
+            tabs.forEach((tab) => {
+                const active = tab.dataset.settingsTab === tabId;
+                tab.classList.toggle('is-active', active);
+                tab.setAttribute('aria-selected', active ? 'true' : 'false');
+                tab.tabIndex = active ? 0 : -1;
+                if (active && focusTab) {
+                    tab.focus();
+                }
+            });
+
+            panels.forEach((panel) => {
+                panel.hidden = panel.dataset.settingsPanel !== tabId;
+            });
+
+            try {
+                sessionStorage.setItem(storageKey, tabId);
+            } catch (error) {
+                // Storage can be unavailable in privacy-restricted browsers.
+            }
+        }
+
+        tabs.forEach((tab, index) => {
+            tab.addEventListener('click', () => activateTab(tab.dataset.settingsTab));
+            tab.addEventListener('keydown', (event) => {
+                let nextIndex = null;
+                if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                    nextIndex = (index + 1) % tabs.length;
+                } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                    nextIndex = (index - 1 + tabs.length) % tabs.length;
+                } else if (event.key === 'Home') {
+                    nextIndex = 0;
+                } else if (event.key === 'End') {
+                    nextIndex = tabs.length - 1;
+                }
+
+                if (nextIndex !== null) {
+                    event.preventDefault();
+                    activateTab(tabs[nextIndex].dataset.settingsTab, true);
+                }
+            });
+        });
+
+        form?.addEventListener('invalid', (event) => {
+            const panel = event.target.closest('[data-settings-panel]');
+            if (panel) {
+                activateTab(panel.dataset.settingsPanel);
+            }
+        }, true);
+
+        let initialTab = 'prompt-rechat';
+        try {
+            initialTab = sessionStorage.getItem(storageKey) || initialTab;
+        } catch (error) {
+            // Keep the default tab when storage is unavailable.
+        }
+        activateTab(initialTab);
+    })();
+    </script>
 
     <div id="global-connector-test-modal" class="global-test-modal" aria-hidden="true">
         <div class="global-test-shell" role="dialog" aria-modal="true" aria-labelledby="global-connector-test-title">

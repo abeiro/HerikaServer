@@ -203,6 +203,29 @@ $GLOBALS["npc_own_templates"] = [
 
 ];
 
+$questRaceSpawnBases = [
+    "male_altmer" => "AIAgent.esp|00045CE7",
+    "female_altmer" => "AIAgent.esp|00045CE8",
+    "male_bosmer" => "AIAgent.esp|00045CE9",
+    "female_bosmer" => "AIAgent.esp|00045CEA",
+    "male_dunmer" => "AIAgent.esp|00045CEB",
+    "female_dunmer" => "AIAgent.esp|00045CEC",
+    "male_khajiit" => "AIAgent.esp|00045CED",
+    "female_khajiit" => "AIAgent.esp|00045CEE",
+];
+$questSpawnAliases = [];
+foreach (array_keys($GLOBALS["npc_own_templates"]) as $templateKey) {
+    if (preg_match('/^male_argonian_(.+)$/', $templateKey, $matches)) {
+        $questSpawnAliases[] = $matches[1];
+    }
+}
+foreach ($questRaceSpawnBases as $templatePrefix => $formId) {
+    foreach ($questSpawnAliases as $classAlias) {
+        $GLOBALS["npc_own_templates"]["{$templatePrefix}_{$classAlias}"] = [$formId];
+    }
+}
+unset($questRaceSpawnBases, $questSpawnAliases, $templateKey, $templatePrefix, $classAlias, $formId, $matches);
+
 $GLOBALS["outfit"] = [
     "beggar" => [0x000a1983],
     "mage" => [0x0006e26f, 0x001034ef, 0x000a199c, 0x000d504c, 0x0007eab5, 0x0001703a, 0x000f3e7d, 0x00106114, 0x000fba59, 0x000e9ac4, 0x000b7a3e, 0x000b7a3f],
@@ -670,6 +693,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
 
     $humanoidRaces = quest_reference_playable_races();
     $parm1 = quest_reference_pick_safe_spawn_base($masterData, $gender, $race, $dclass);
+    $usesChimOwnedSpawnBase = $parm1 !== 0;
     if ($parm1 === 0) {
         if (in_array($race, $humanoidRaces, true)) {
             Logger::warn("[npcProfileBase] Aborting humanoid spawn: no CHIM-owned base for {$classTemplateKey}");
@@ -766,6 +790,16 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
 
     }
 
+    // SpawnAgent resolves CHIM-owned humanoid bases with GetFormFromFile,
+    // which requires AIAgent.esp's local FormID rather than its runtime prefix.
+    $wireParm1 = $usesChimOwnedSpawnBase
+        ? quest_reference_formid_for_full_plugin_file($parm1)
+        : quest_reference_formid_for_papyrus($parm1);
+    $wireParm2 = quest_reference_formid_for_papyrus($parm2);
+    $wireParm3 = quest_reference_formid_for_papyrus($parm3);
+    $wireParm4 = quest_reference_formid_for_papyrus($parm4);
+    $wireParm5 = quest_reference_formid_for_papyrus($parm5);
+
     $GLOBALS["db"]->insert(
         'responselog',
         [
@@ -773,7 +807,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|spawnCharacter@{$name}@$parm1@$parm2@$parm3@$parm4@$patchedTaskid@$parm5",
+            'action' => "rolecommand|spawnCharacter@{$name}@$wireParm1@$wireParm2@$wireParm3@$wireParm4@$patchedTaskid@$wireParm5",
             'tag' => "",
         ]
     );

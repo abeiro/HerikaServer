@@ -112,6 +112,8 @@ try {
     // Load required classes
     require_once $enginePath . 'lib/core/api_badge.class.php';
     require_once $enginePath . 'lib/logger.php';
+    require_once $enginePath . 'lib/settings.php';
+    chimLoadGeneralSettingsIntoGlobals();
 
     // Set up minimal globals that LLM connector needs
     $GLOBALS['HERIKA_NAME'] = 'Worker';
