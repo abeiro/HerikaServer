@@ -58,7 +58,7 @@ final class QuestAssetLibraryTest extends TestCase
     {
         $expected = [
             'skyrim_official.json' => [178, 93],
-            'chim_spawn_templates.json' => [71, 266],
+            'chim_spawn_templates.json' => [79, 442],
         ];
 
         foreach ($expected as $filename => [$assetCount, $groupCount]) {
@@ -84,7 +84,8 @@ final class QuestAssetLibraryTest extends TestCase
             $localFormId = hexdec(substr($asset['stable_ref'], strrpos($asset['stable_ref'], '|') + 1));
             $this->assertTrue(
                 ($localFormId >= 0x00025844 && $localFormId <= 0x0002584D)
-                    || ($localFormId >= 0x00025DAF && $localFormId <= 0x00025DED),
+                    || ($localFormId >= 0x00025DAF && $localFormId <= 0x00025DED)
+                    || ($localFormId >= 0x00045CE7 && $localFormId <= 0x00045CEE),
                 $asset['stable_ref'] . ' is not a shipped AIAgent.esp NPC template.'
             );
         }
@@ -108,18 +109,12 @@ final class QuestAssetLibraryTest extends TestCase
             $ownGroups[$group['key']] = true;
         }
 
-        $shippedSpawnRaces = ['nord', 'imperial', 'redguard', 'breton', 'orc', 'argonian'];
         foreach (['male', 'female'] as $gender) {
-            foreach ($shippedSpawnRaces as $race) {
+            foreach (quest_reference_playable_races() as $race) {
                 foreach ($classes as $class) {
                     $this->assertArrayHasKey("{$gender}_{$race}_{$class}", $ownGroups);
                 }
             }
-        }
-
-        foreach (['altmer', 'bosmer', 'dunmer', 'khajiit'] as $unsupportedRace) {
-            $this->assertArrayNotHasKey("male_{$unsupportedRace}_warrior", $ownGroups);
-            $this->assertArrayNotHasKey("female_{$unsupportedRace}_warrior", $ownGroups);
         }
     }
 
@@ -318,7 +313,7 @@ final class QuestAssetLibraryTest extends TestCase
         }
 
         $this->assertSame(
-            ['nord', 'imperial', 'redguard', 'breton', 'orc', 'argonian'],
+            quest_reference_playable_races(),
             quest_reference_spawnable_playable_races($donorKeys, $spawnKeys, $classes)
         );
     }

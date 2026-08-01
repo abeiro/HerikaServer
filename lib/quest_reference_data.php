@@ -269,6 +269,7 @@ if (!function_exists('quest_reference_normalize_formid')) {
             && (
                 ($runtimeValue >= 0x00025844 && $runtimeValue <= 0x0002584D)
                 || ($runtimeValue >= 0x00025DAF && $runtimeValue <= 0x00025DED)
+                || ($runtimeValue >= 0x00045CE7 && $runtimeValue <= 0x00045CEE)
             )
         ) {
             return 'AIAgent.esp';
