@@ -1403,6 +1403,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         opacity: 1;
     }
 
+    .marker-card-row-label {
+        margin: 6px 0 3px;
+        color: #9a9aa2;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
     .marker-card-actions {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
@@ -2341,6 +2350,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             <div class="sidebar-section">
                 <div class="bgl-instructions-box collapsed">
                     <h3>📖 How Background Life Works</h3>
+                    <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
                     <div class="bgl-instructions-content">
                         <div class="instruction-section">
                             <strong>Getting Started:</strong>
@@ -2371,7 +2381,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <strong>Control Buttons:</strong>
                             <ul>
                                 <li><strong>Trigger Action:</strong> Forces the NPC to generate an action immediately (may move or stay based on AI decision).</li>
-                                <li><strong>Request Letter:</strong> Forces the NPC to send you a letter about their current activities. You will need to be in a town so the courier can deliver it.</li>
+                                <li><strong>Send Letter:</strong> Forces the NPC to send you a letter about their current activities. You will need to be in a town so the courier can deliver it.</li>
                                 <li><strong>Update All NPC Coords:</strong> Refreshes position tracking for all Background Life NPC.s</li>
                             </ul>
                         </div>
@@ -2380,7 +2390,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <strong>💡 Note:</strong> Events are triggered automatically based on the configured trigger period (Global Settings, default: 24 in-game hours). The buttons are mainly for testing or forcing immediate updates.
                         </div>
                     </div>
-                    <button class="toggle-instructions-btn" onclick="toggleInstructions()">Show Instructions</button>
                 </div>
                 <form id="background-life-settings" class="bgl-settings-card" method="post">
                     <input type="hidden" name="action" value="save_bgl_settings">
@@ -2431,15 +2440,17 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                     <h4>
                                         <span class="marker-item-color" style="background-color:                                                                                                                                                                         <?php echo $marker['color']; ?>;"></span>
                                         <span class="marker-npc-events" data-npc-events role="button" tabindex="0"><?php echo $marker['name']; ?></span>
-                                        <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="event.stopPropagation(); pulseAnimation('mkr_<?php echo $marker['id'] ?>')" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map" title="Show on map">🗺️</span>
+                                        <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="event.stopPropagation(); pulseAnimation('mkr_<?php echo $marker['id'] ?>')" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map" title="Show on map">👀</span>
                                         <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="window.open('https://gamemap.uesp.net/sr/?world=skyrim&layer=day&x=<?php echo $marker['ingame_x'] ?>&y=<?php echo $marker['ingame_y'] ?>&zoom=8', '_blank'); event.stopPropagation();" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map" title="UESP Map">🗺️</span>
                                     </h4>
                                 </div>
+                                <div class="marker-card-row-label">Actions</div>
                                 <div class="marker-card-actions">
-                                    <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Request a Background Life action from <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>">Action</button>
-                                    <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Request a letter from <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>" style="background: #4488ff;">Letter</button>
+                                    <button onclick="requestAction('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Trigger a Background Life action for <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>">Trigger Action</button>
+                                    <button onclick="requestReporting('<?php echo addslashes($marker['name']); ?>')" class="marker-action-btn" title="Send a letter from <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>" style="background: #4488ff;">Send Letter</button>
                                     <button onclick="updateCoords('<?php echo addslashes($marker['name']); ?>')" title="Request coords update now" class="marker-action-btn-trans" style="border: 2px solid #00ff00; background: #44ff44;">📍</button>
                                 </div>
+                                <div class="marker-card-row-label">Rules</div>
                                 <div class="marker-card-toggles">
                                     <button type="button"
                                             class="marker-setting-button <?php echo $marker['bg_life_commands'] ? 'is-enabled' : 'is-disabled'; ?>"

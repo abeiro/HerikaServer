@@ -228,6 +228,15 @@ function chimBglSpawnNpc(array $npcProfile, int $startingPoint, array $inventory
     $startRow = $GLOBALS['db']->fetchOne('SELECT COALESCE(MAX(rowid), 0) AS rowid FROM eventlog');
     $startRowId = (int)($startRow['rowid'] ?? 0);
 
+    $GLOBALS['db']->insert('responselog', [
+        'localts' => time(),
+        'sent' => 0,
+        'actor' => 'rolemaster',
+        'text' => '',
+        'action' => "rolecommand|DebugNotification@Creating {$npcProfile['name']}. Please keep the game running.",
+        'tag' => __FILE__ . ':' . __LINE__,
+    ]);
+
     npcProfileBase(
         $npcProfile['name'],
         $npcProfile['class'],
@@ -301,6 +310,7 @@ function chimBglSpawnNpc(array $npcProfile, int $startingPoint, array $inventory
 
     $metadata = $npcMaster->getMetadata($npc);
     $metadata['gps_track'] = true;
+    $metadata['background_life_created'] = true;
 
     $npc['core'] = "{$npcProfile['name']}. {$npcProfile['gender']} {$npcProfile['class']} {$npcProfile['race']}";
     $npc['npc_static_bio'] = "{$npcProfile['name']}. {$npcProfile['background']}";
