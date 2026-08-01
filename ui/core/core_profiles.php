@@ -323,20 +323,22 @@ h1.api-title {
 .setting-control select,
 .setting-control textarea { width:100%; }
 .setting-control textarea { min-height: 88px; }
-.profile-setting-sync-btn {
-    display:block;
-    width:max-content;
-    margin:5px 0 0 auto;
-    padding:4px 8px;
-    border:1px solid #4b4b4b;
-    border-radius:5px;
-    background:#303030;
-    color:#f3f3f3;
-    font-size:11px;
-    line-height:1.2;
+body .setting-key .profile-setting-sync-btn {
+    display:inline-flex;
+    flex:0 0 auto;
+    min-height:18px !important;
+    margin:0 !important;
+    padding:2px 5px !important;
+    border:1px solid #4b4b4b !important;
+    border-radius:4px !important;
+    background:#303030 !important;
+    color:#f3f3f3 !important;
+    font-size:9px !important;
+    font-weight:600;
+    line-height:1.1;
     cursor:pointer;
 }
-.profile-setting-sync-btn:hover { border-color:#f27c11; background:#383838; }
+body .setting-key .profile-setting-sync-btn:hover { border-color:#f27c11 !important; background:#383838 !important; }
 .range-pair { display:flex; align-items:center; gap:8px; }
 .range-pair input[type="range"] { flex:1; accent-color: rgb(242,124,17); }
 .range-pair input[type="number"] { width:86px; min-width:86px; text-align:right; }

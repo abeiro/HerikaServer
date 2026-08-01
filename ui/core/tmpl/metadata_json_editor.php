@@ -232,7 +232,8 @@ function renderMetaSettingRow(string $key, array $schemaEntry, $value): string {
     $safeKey = htmlspecialchars($key);
     $html = '<div class="setting-row">';
     $html .= '<div>';
-    $html .= '<div class="setting-key"><span class="setting-icon">'.$icon.'</span><span>'.$label.'</span></div>';
+    $html .= '<div class="setting-key"><span class="setting-icon">'.$icon.'</span><span>'.$label.'</span>';
+    $html .= '<button type="button" class="profile-setting-sync-btn" data-setting-key="'.$safeKey.'" data-setting-label="'.$label.'" title="Copy this setting to every profile">Copy to all</button></div>';
     if (!empty($desc)) {
         $html .= '<div class="setting-desc">'.$desc.'</div>';
     }
@@ -248,7 +249,6 @@ function renderMetaSettingRow(string $key, array $schemaEntry, $value): string {
     } else {
         $html .= renderMetaInput($key, $schemaEntry, $value, true);
     }
-    $html .= '<button type="button" class="profile-setting-sync-btn" data-setting-key="'.$safeKey.'" data-setting-label="'.$label.'" title="Copy this setting to every profile">Copy to all</button>';
     $html .= '</div>';
     $html .= '</div>';
     return $html;
