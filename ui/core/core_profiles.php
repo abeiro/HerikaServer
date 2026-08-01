@@ -566,9 +566,40 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         }
         $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
     }
-    $profiles->update($_POST["id"], $_POST);
+    $updated = $profiles->update($_POST["id"], $_POST);
+    $syncedProfiles = null;
+
+    if ($updated !== false && isset($_POST['sync_diary_prompt'])) {
+        $metadata = json_decode($_POST['metadata'] ?? '{}', true);
+        $diaryPrompt = is_array($metadata) ? trim((string)($metadata['DIARY_PROMPT'] ?? '')) : '';
+
+        if ($diaryPrompt === '') {
+            $updated = false;
+            $syncError = 'Enter a diary prompt before applying it to all profiles.';
+        } else {
+            $encodedPrompt = json_encode($diaryPrompt, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $escapedPrompt = $GLOBALS['db']->escape($encodedPrompt);
+            $syncResult = $GLOBALS['db']->execQuery(
+                "UPDATE core_profiles
+                 SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{DIARY_PROMPT}', '{$escapedPrompt}'::jsonb, true)"
+            );
+
+            if ($syncResult === false) {
+                $updated = false;
+                $syncError = 'The profile was saved, but the diary prompt could not be applied to all profiles.';
+            } else {
+                $syncedProfiles = $profiles->getProfileCount();
+            }
+        }
+    }
+
     if ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
-        echo json_encode(['ok'=>true,'id'=>$_POST['id'] ?? null]);
+        echo json_encode([
+            'ok' => $updated !== false,
+            'id' => $_POST['id'] ?? null,
+            'synced_profiles' => $syncedProfiles,
+            'error' => $updated === false ? ($syncError ?? $profiles->getLastError()) : null,
+        ]);
         exit;
     } else {
         header("Location: core_profiles.php");
@@ -1964,6 +1995,14 @@ $ittById = $byId($ittRows);
         if (basicBtn){ basicBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
 const saveAllBtn = document.getElementById('btn_save_all');
         if (saveAllBtn){ saveAllBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving all settings...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
+        const syncDiaryPromptBtn = document.getElementById('btn_sync_diary_prompt');
+        if (syncDiaryPromptBtn){ syncDiaryPromptBtn.addEventListener('click', function(ev){
+            if (!window.confirm('Apply this diary prompt to every profile? Other profile settings will not change.')) return;
+            try {
+                if (typeof showToast === 'function') showToast('Applying diary prompt...');
+                saveProfileAjax(ev, 'core_profile_form', true);
+            } catch(_e){}
+        }); }
         const backTopBtn = document.getElementById('btn_back_to_top');
         if (backTopBtn){ backTopBtn.addEventListener('click', function(){
             try { window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -2231,7 +2270,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
     })();
 
     // Save handler that keeps the user on the same profile and shows a toast
-    async function saveProfileAjax(ev, formId){
+    async function saveProfileAjax(ev, formId, syncDiaryPrompt){
         try {
             if (typeof consolidation === 'function') {
                 const ok = consolidation(ev, formId);
@@ -2264,6 +2303,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
         } else {
             if (!fd.has('create')) fd.append('create','1');
         }
+        if (syncDiaryPrompt === true) fd.append('sync_diary_prompt', '1');
         try {
             const res = await fetch('core_profiles.php', { method:'POST', headers:{ 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
             let json = {};
@@ -2276,7 +2316,10 @@ const saveAllBtn = document.getElementById('btn_save_all');
                     idEl.value = String(json.id);
                     try { history.replaceState({}, '', 'core_profiles.php?edit='+encodeURIComponent(String(json.id))); } catch(_){ }
                 }
-                if (typeof showToast === 'function') showToast('Profile saved');
+                if (typeof showToast === 'function') {
+                    const synced = Number(json.synced_profiles || 0);
+                    showToast(synced > 0 ? ('Diary prompt applied to ' + synced + ' profiles') : 'Profile saved');
+                }
             } else {
                 if (typeof showToast === 'function') showToast('Save failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
             }

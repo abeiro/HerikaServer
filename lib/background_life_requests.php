@@ -138,6 +138,39 @@ function chimBglSetEnabled(NpcMaster $npcMaster, array $npc, bool $enabled): arr
     return $status;
 }
 
+// Resolve the CLI interpreter when PHP is running under Apache rather than CLI.
+function chimBglPhpCliBinary(): string
+{
+    $binaryName = DIRECTORY_SEPARATOR === '\\' ? 'php.exe' : 'php';
+    $candidates = [];
+
+    $phpBindir = rtrim((string)(PHP_BINDIR ?? ''), '/\\');
+    if ($phpBindir !== '') {
+        $candidates[] = $phpBindir . DIRECTORY_SEPARATOR . $binaryName;
+    }
+
+    $phpBinary = trim((string)(PHP_BINARY ?? ''));
+    if ($phpBinary !== '') {
+        $phpBinaryName = basename(str_replace('\\', '/', $phpBinary));
+        if (preg_match('/^php(?:[0-9.]+)?(?:\.exe)?$/i', $phpBinaryName) === 1) {
+            $candidates[] = $phpBinary;
+        }
+    }
+
+    if (DIRECTORY_SEPARATOR !== '\\') {
+        $candidates[] = '/usr/bin/php';
+        $candidates[] = '/usr/local/bin/php';
+    }
+
+    foreach (array_unique($candidates) as $candidate) {
+        if (is_file($candidate) && is_executable($candidate)) {
+            return $candidate;
+        }
+    }
+
+    return $binaryName;
+}
+
 // Invoke the same one-shot action and letter runners used by the existing map UI.
 function chimBglRunRequest(string $enginePath, array $npc, string $requestType): array
 {
@@ -171,7 +204,7 @@ function chimBglRunRequest(string $enginePath, array $npc, string $requestType):
         throw new RuntimeException('Background Life request processor is unavailable');
     }
 
-    $command = array_merge([PHP_BINARY, $scriptPath], $arguments);
+    $command = array_merge([chimBglPhpCliBinary(), $scriptPath], $arguments);
     $pipes = [];
     $process = proc_open(
         $command,
@@ -211,7 +244,7 @@ function chimBglRunTrackingRequest(string $enginePath, string $npcName = ''): ar
     }
 
     $arguments = trim($npcName) === '' ? ['The Narrator', 'TrackAll'] : [trim($npcName), 'Track'];
-    $command = array_merge([PHP_BINARY, $scriptPath], $arguments);
+    $command = array_merge([chimBglPhpCliBinary(), $scriptPath], $arguments);
     $pipes = [];
     $process = proc_open(
         $command,

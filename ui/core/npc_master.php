@@ -287,9 +287,6 @@ h1.api-title {
     padding: 12px;
 }
 
-#npc_modal_dev_toggle {
-    zoom:0.75;
-}
 </style>
 
 <main>
@@ -2093,11 +2090,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="bios">📖 Roleplay</button>
     <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="relationships">🤝 Relationships</button>
     <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="info">🛠️ Info</button>
+    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="actions">⚡ Actions</button>
 </div>
 <style>
 .npc-editor-tabs {
     display:grid;
-    grid-template-columns:repeat(4, minmax(0, 1fr));
+    grid-template-columns:repeat(5, minmax(0, 1fr));
     gap:8px;
     margin-bottom:14px;
     padding:8px;
@@ -2129,7 +2127,30 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-editor-panels { display:block; }
 .npc-editor-panel[hidden] { display:none !important; }
 .npc-editor-panel[data-npc-editor-panel="bios"] { grid-template-columns:minmax(0, 1fr); }
+.npc-editor-panel[data-npc-editor-panel="actions"] { grid-template-columns:minmax(0, 1fr); }
+.npc-editor-action-note { margin:0; color:#aaa; font-size:0.86rem; }
+.npc-editor-action-list { display:grid; gap:10px; }
+.npc-editor-action-card {
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    align-items:center;
+    gap:14px;
+    padding:12px;
+    border:1px solid #444;
+    border-radius:7px;
+    background:#282828;
+}
+.npc-editor-action-card h3 { margin:0 0 4px; color:#f2bd7f; font-size:1rem; }
+.npc-editor-action-card p { margin:0; color:#aaa; font-size:0.82rem; }
+.npc-editor-action-card textarea { min-height:84px; resize:vertical; }
+.npc-editor-action-card.is-inception { grid-template-columns:minmax(220px, 0.8fr) minmax(280px, 1.2fr) auto; }
+.npc-editor-action-status { min-height:1.2rem; margin:0; color:#aaa; font-size:0.82rem; }
+.npc-editor-action-status.is-error { color:#ef8f96; }
 @media (max-width:700px) { .npc-editor-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@media (max-width:850px) {
+    .npc-editor-action-card,
+    .npc-editor-action-card.is-inception { grid-template-columns:minmax(0, 1fr); }
+}
 </style>
 <script>
 (function(){
@@ -2137,7 +2158,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         general: new Set(['npc_name','profile_id','lock_profile','npc_favorite','gender','race','base','refid','oghma_knowledge_tags','worldknowledge_tags','world_knowledge_tags','voiceid','faction','dynamic_profile','middle_term_enabled','individual_memory_enabled','auto_diary_enabled','auto_diary_wait_enabled','salutation_after_a_while','prompt_head']),
         bios: new Set(['core','npc_static_bio','appearance','personality','occupation','skills','speechstyle','goals']),
         relationships: new Set(['relationships','relationships_jsonb','middle_term_latest']),
-        info: new Set(['emote_moods','metadata','extended_data'])
+        info: new Set(['emote_moods','metadata','extended_data']),
+        actions: new Set()
     };
 
     function initNpcEditorTabs(){
@@ -2149,7 +2171,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             tablist.dataset.initialized = '1';
 
             const panels = {};
-            ['general','bios','relationships','info'].forEach(function(section){
+            ['general','bios','relationships','info','actions'].forEach(function(section){
                 const panel = document.createElement('div');
                 panel.className = 'npc-editor-panel form-grid';
                 panel.dataset.npcEditorPanel = section;
@@ -2206,6 +2228,64 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             grid.classList.remove('form-grid');
             grid.classList.add('npc-editor-panels');
             Object.values(panels).forEach(function(panel){ grid.appendChild(panel); });
+
+            const targetId = <?= (int)($editItem['id'] ?? 0) ?>;
+            panels.actions.innerHTML = `
+                <p class="npc-editor-action-note">The game must be running and unpaused for Visit and Teleport.</p>
+                <div class="npc-editor-action-list">
+                    <article class="npc-editor-action-card">
+                        <div><h3>Visit</h3><p>Move the player to this NPC's current position.</p></div>
+                        <button type="button" class="btn-cancel" data-npc-action="visit">Visit</button>
+                    </article>
+                    <article class="npc-editor-action-card">
+                        <div><h3>Teleport</h3><p>Move this NPC to the player's current position.</p></div>
+                        <button type="button" class="btn-cancel" data-npc-action="teleport">Teleport</button>
+                    </article>
+                    <article class="npc-editor-action-card is-inception">
+                        <div><h3>Background Life Inception</h3><p>Give this NPC a one-time thought for their next Background Life decision.</p></div>
+                        <textarea data-npc-inception-idea placeholder="Enter the thought to influence their next decision"></textarea>
+                        <button type="button" class="btn-cancel" data-npc-action="bgl_inception">Set Thought</button>
+                    </article>
+                </div>
+                <p class="npc-editor-action-status" data-npc-action-status role="status" aria-live="polite"></p>`;
+
+            const actionStatus = panels.actions.querySelector('[data-npc-action-status]');
+            panels.actions.querySelectorAll('[data-npc-action]').forEach(function(button){
+                button.disabled = targetId <= 0;
+                button.addEventListener('click', async function(){
+                    const action = button.dataset.npcAction;
+                    const ideaField = panels.actions.querySelector('[data-npc-inception-idea]');
+                    const idea = action === 'bgl_inception' ? ideaField.value.trim() : '';
+                    if (action === 'bgl_inception' && !idea) {
+                        actionStatus.textContent = 'Enter a thought before setting Background Life inception.';
+                        actionStatus.classList.add('is-error');
+                        return;
+                    }
+
+                    button.disabled = true;
+                    actionStatus.textContent = 'Sending action...';
+                    actionStatus.classList.remove('is-error');
+                    try {
+                        const response = await fetch('../api/chim_npc_manager.php', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({operation:'action', action:action, id:targetId, idea:idea})
+                        });
+                        const payload = await response.json();
+                        if (!response.ok || !payload || !payload.success) {
+                            throw new Error((payload && payload.error) || ('HTTP ' + response.status));
+                        }
+                        actionStatus.textContent = (payload.data && payload.data.message) || 'Action sent.';
+                        if (action === 'bgl_inception') ideaField.value = '';
+                    } catch (error) {
+                        actionStatus.textContent = 'Action failed: ' + (error.message || error);
+                        actionStatus.classList.add('is-error');
+                    } finally {
+                        button.disabled = targetId <= 0;
+                    }
+                });
+            });
+            if (targetId <= 0) actionStatus.textContent = 'Save this NPC before using actions.';
 
             const storageKey = tablist.dataset.storageKey || 'npc-editor-tab';
             function activate(section){
@@ -3553,18 +3633,24 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     gap:8px;
     flex-wrap:wrap;
 }
-.pagination.npc-toolbar .npc-toolbar-actions {
-    flex:1 1 1192px;
-    min-width:1192px;
+.pagination.npc-toolbar .npc-toolbar-main {
+    align-items:flex-start;
     flex-wrap:nowrap;
 }
+.pagination.npc-toolbar .npc-toolbar-actions {
+    flex:1 1 0;
+    min-width:0;
+    flex-wrap:wrap;
+}
 .pagination.npc-toolbar .npc-toolbar-tools {
-    flex:0 0 320px;
-    width:320px;
-    min-width:320px;
-    flex-direction:column;
-    align-items:stretch;
-    justify-content:flex-start;
+    flex:0 0 auto;
+    width:auto;
+    min-width:0;
+    margin-left:auto;
+    flex-direction:row;
+    align-items:center;
+    justify-content:flex-end;
+    flex-wrap:nowrap;
 }
 .pagination.npc-toolbar .npc-auto-lock-profile {
     display:flex;
@@ -3676,16 +3762,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     font-size:13px;
 }
 .pagination.npc-toolbar .npc-toolbar-tools input[type="text"] {
-    flex:0 0 auto;
-    width:100%;
+    flex:0 0 220px;
+    width:220px;
     min-width:0;
-    max-width:none;
+    max-width:220px;
 }
 .pagination.npc-toolbar .npc-toolbar-tools select {
-    flex:0 0 auto;
-    width:100%;
+    flex:0 0 180px;
+    width:180px;
     min-width:0;
-    max-width:none;
+    max-width:180px;
 }
 .pagination.npc-toolbar .npc-page-link {
     display:inline-flex;
@@ -3746,6 +3832,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     }
 }
 @media (max-width: 780px) {
+    .pagination.npc-toolbar .npc-toolbar-main {
+        flex-wrap:wrap;
+    }
     .pagination.npc-toolbar .npc-toolbar-tools,
     .pagination.npc-toolbar .npc-toolbar-actions,
     .pagination.npc-toolbar .npc-toolbar-pager,
@@ -3765,6 +3854,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         flex:1 1 100%;
         width:100%;
         min-width:0;
+        margin-left:0;
+        flex-wrap:wrap;
+        justify-content:flex-start;
     }
     .pagination.npc-toolbar .npc-toolbar-letter-row {
         align-items:flex-start;
@@ -3927,14 +4019,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <button id="npc_modal_regen" class="btn-cancel" title="Will use AI to regenerate this profile. Intended for custom NPCs without biography descriptions.">AI Generate Profile</button>
         <button id="npc_modal_close" class="btn-cancel">Close</button>
       </div>
-    </div>
-    <div class="modal-header-dev">
-        <span style="cursor:pointer" id="" onclick="document.getElementById('npc_modal_dev_toggle').style.display = (document.getElementById('npc_modal_dev_toggle').style.display === 'none' ? 'block' : 'none')">🐞</span>
-        <div id="npc_modal_dev_toggle" class="modal-dev-actions" style="font-size:8px;zoom:0.75px;display:none">
-            <button id="npc_modal_dev_visit" title="Teleport player to NPC">Visit</button>
-            <button id="npc_modal_dev_teleport" title="Teleport NPC to player">Teleport</button>
-            <button id="npc_modal_dev_bgl_inception" title="BgL Inception. Puts an ephemeral thought on BgL NPC">BgL Inception</button>
-        </div>
     </div>
     <div class="modal-body">
       <div id="npc_modal_tabs" style="display:flex; gap:8px; padding:8px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2;">
@@ -5817,81 +5901,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     });
   }
   
-  const visitBtn = document.getElementById('npc_modal_dev_visit');
-  if (visitBtn) {
-    visitBtn.addEventListener('click', async function(){
-      
-        const formData = new FormData();
-        const id = window.CURRENT_NPC_ID;
-        if (!id) { alert('No NPC selected. Save the NPC first before importing.'); return; }
-
-        formData.append('dev_visit', '1');
-        formData.append('target_id', id);
-        
-        const res = await fetch('npc_master.php', { method: 'POST', body: formData });
-        const result = await res.json();
-        
-        if (result.ok) {
-            alert(result.message || 'Dev visit triggered successfully');
-        
-        } else {
-            alert('Error: ' + (result.error || 'Dev visit failed'));
-        }
-            
-    });
-  }
-
-  const bglInceptionBtn = document.getElementById('npc_modal_dev_bgl_inception');
-  if (bglInceptionBtn) {
-    bglInceptionBtn.addEventListener('click', async function(){
-      
-        const formData = new FormData();
-        const id = window.CURRENT_NPC_ID;
-        const idea=prompt('Enter the idea for BgL Inception:');
-
-        formData.append('bgl_inception', '1');
-        formData.append('idea', idea);
-        formData.append('target_id', id);
-        
-        const res = await fetch('npc_master.php', { method: 'POST', body: formData });
-        const result = await res.json();
-        
-        if (result.ok) {
-            alert(result.message || 'BgL Inception triggered successfully');
-            document.location.reload();
-        } else {
-            alert('Error: ' + (result.error || 'BgL Inception failed'));
-        }
-            
-    });
-  }
-
-  
-  const teleportBtn = document.getElementById('npc_modal_dev_teleport');
-  if (teleportBtn) {
-    teleportBtn.addEventListener('click', async function(){
-      
-        const formData = new FormData();
-        const id = window.CURRENT_NPC_ID;
-        if (!id) { alert('No NPC selected. Save the NPC first before importing.'); return; }
-
-        formData.append('dev_teleport', '1');
-        formData.append('target_id', id);
-        
-        const res = await fetch('npc_master.php', { method: 'POST', body: formData });
-        const result = await res.json();
-        
-        if (result.ok) {
-            alert(result.message || 'Dev teleport triggered successfully');
-        
-        } else {
-            alert('Error: ' + (result.error || 'Dev teleport failed'));
-        }
-            
-    });
-  }
-  
-
   // Import Bio to current NPC button in modal header (only for existing NPCs)
   const importToBtn = document.getElementById('npc_modal_import_to');
   if (importToBtn) {

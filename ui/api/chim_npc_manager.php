@@ -274,6 +274,47 @@ function chimNpcManagerFindNpc(array $input): array
     throw new InvalidArgumentException('NPC not found');
 }
 
+function chimNpcManagerAction(array $input): array
+{
+    $row = chimNpcManagerFindNpc($input);
+    $action = strtolower(trim((string)($input['action'] ?? '')));
+    $npcName = trim((string)($row['npc_name'] ?? 'NPC'));
+
+    if ($action === 'bgl_inception') {
+        $idea = trim((string)($input['idea'] ?? ''));
+        if ($idea === '') {
+            throw new InvalidArgumentException('Background Life inception requires a thought');
+        }
+        if (!(new NpcMaster())->updateExtendedKeysByName($npcName, ['bgl_inception' => $idea])) {
+            throw new RuntimeException('Background Life inception could not be saved');
+        }
+        return ['message' => "Background Life thought set for {$npcName}."];
+    }
+
+    if (!in_array($action, ['visit', 'teleport'], true)) {
+        throw new InvalidArgumentException('Unsupported NPC action');
+    }
+
+    $refid = strtoupper(preg_replace('/^0X/i', '', trim((string)($row['refid'] ?? ''))));
+    if (!preg_match('/^[0-9A-F]{1,8}$/', $refid)) {
+        throw new InvalidArgumentException("{$npcName} does not have a valid RefID");
+    }
+    $npcRefid = '0x' . str_pad($refid, 8, '0', STR_PAD_LEFT);
+
+    require_once LIB_PATH . DIRECTORY_SEPARATOR . 'scriptproxy_papyrus.php';
+    $commandBuilder = new SkyrimCommandBuilder();
+    $command = $action === 'visit'
+        ? $commandBuilder->ObjectReference->MoveTo(PLAYER_REFID, $npcRefid)
+        : $commandBuilder->ObjectReference->MoveTo($npcRefid, PLAYER_REFID);
+    $commandBuilder->send($command);
+
+    return [
+        'message' => $action === 'visit'
+            ? "Visit command sent for {$npcName}."
+            : "Teleport command sent for {$npcName}.",
+    ];
+}
+
 function chimNpcManagerList(array $profiles): array
 {
     $page = max(1, (int)($_GET['page'] ?? 1));
@@ -490,6 +531,13 @@ try {
         $input = json_decode((string)file_get_contents('php://input'), true);
         if (!is_array($input)) {
             throw new InvalidArgumentException('Invalid JSON request');
+        }
+        $operation = strtolower(trim((string)($input['operation'] ?? 'save')));
+        if ($operation === 'action') {
+            chimNpcManagerRespond(['success' => true, 'data' => chimNpcManagerAction($input)]);
+        }
+        if ($operation !== 'save') {
+            throw new InvalidArgumentException('Unsupported NPC manager operation');
         }
         chimNpcManagerRespond(['success' => true, 'data' => chimNpcManagerSave($input, $profiles)]);
     }
