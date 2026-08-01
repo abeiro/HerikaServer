@@ -222,6 +222,26 @@ tr.featured-plugin-row td {
     color: #FDF5D0;
     animation: sharmatNeonPulse 3s ease-in-out infinite alternate;
 }
+.package-sync-card {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto;
+    gap: 14px;
+    align-items: end;
+    margin-bottom: 20px;
+    padding: 16px;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    background: #242424;
+}
+.package-sync-card h2 { margin: 0 0 5px; color: #f27c11; }
+.package-sync-card p { margin: 0; color: #bbb; }
+.package-sync-status { grid-column: 1 / -1; padding: 10px 12px; border-radius: 5px; background: #181818; color: #ddd; }
+.package-sync-list { display: grid; gap: 6px; margin-top: 8px; }
+.package-sync-row { display: flex; justify-content: space-between; gap: 16px; padding: 7px 9px; background: #202020; border: 1px solid #363636; border-radius: 4px; }
+.package-sync-version { color: #a9e7b7; white-space: nowrap; }
+@media (max-width: 900px) {
+    .package-sync-card { grid-template-columns: 1fr; }
+}
 </style>
 
 <main>
@@ -229,6 +249,15 @@ tr.featured-plugin-row td {
         <h1 id="page-title"><span id="title-text">Server Plugins</span></h1>
         <p class="page-subtitle">Manage and install plugins to extend CHIM functionality</p>
     </div>
+
+    <section class="package-sync-card">
+        <div>
+            <h2>Automatic Game Plugin Sync</h2>
+            <p>CHIM transfers bundled server plugins automatically when a save is loaded. No manual upload is required.</p>
+        </div>
+        <button id="package-sync-refresh" type="button" class="btn-base btn-primary">Refresh Status</button>
+        <div id="package-sync-status" class="package-sync-status" role="status" aria-live="polite">Loading installed packages...</div>
+    </section>
 
     <div class="table-container">
         <?php
@@ -417,34 +446,6 @@ tr.featured-plugin-row td {
             exit;
         }
 
-        if (isset($_POST['download_minai'])) {
-            $zipUrl = 'https://github.com/MinLL/MinAI/archive/refs/heads/stable.zip';
-            $zipFile = tempnam(sys_get_temp_dir(), 'minai_') . '.zip';
-            $zipContent = @file_get_contents($zipUrl);
-            if ($zipContent !== false) {
-                file_put_contents($zipFile, $zipContent);
-                $zip = new ZipArchive;
-                if ($zip->open($zipFile) === TRUE) {
-                    $destination = __DIR__ . '/../ext/';
-                    $zip->extractTo($destination);
-                    $zip->close();
-                    @unlink($zipFile);
-                    // Move extracted folder
-                    $sourcePath = $destination . 'MinAI-stable/minai_plugin';
-                    $targetPath = $destination . 'minai_plugin';
-                    if (is_dir($sourcePath)) {
-                        if (is_dir($targetPath)) rrmdir($targetPath);
-                        @rename($sourcePath, $targetPath);
-                        rrmdir($destination . 'MinAI-stable');
-                    }
-                } else {
-                    @unlink($zipFile);
-                }
-            }
-            header('Location: ' . $_SERVER['REQUEST_URI']);
-            exit;
-        }
-
         // Gather installed plugins
         $pluginFoldersRoot = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "ext" . DIRECTORY_SEPARATOR;
         $pluginFolders = scandir($pluginFoldersRoot);
@@ -626,27 +627,51 @@ tr.featured-plugin-row td {
         }
         echo '</table>';
 
-        // MinAI plugin quick-download
-        $pluginFoldersRoot = __DIR__ . '/../ext/';
-        $minaiInstalled = is_dir($pluginFoldersRoot . 'minai_plugin');
-        echo '<table border="1">';
-        echo '<tr><th>Plugin</th><th>Description</th><th>Mod Page</th><th>Skyrim Mod Download</th></tr>';
-        echo '<tr>';
-        echo '<td style="text-align:center;">';
-        if ($minaiInstalled) {
-            echo '<button class="btn-base btn-primary" disabled>MinAI Installed</button>';
-        } else {
-            echo '<form method="post" style="margin:0;"><input type="hidden" name="download_minai" value="1"><button type="submit" class="btn-base btn-primary">Download MinAI</button></form>';
-        }
-        echo '</td>';
-        echo '<td>Extension for CHIM that expands its capabilities and optionally adds NSFW integrations.<br><span style="color: #ff6b6b; font-size: 0.9em;"><strong>Note:</strong> No longer supported by the original author. May have compatibility issues. Use at your own risk.</span></td>';
-        echo '<td><button onclick="window.open(\'https://github.com/MinLL/MinAI\', \'_blank\')" class="btn-base btn-primary">More Info</button></td>';
-        echo '<td><button onclick="window.open(\'https://github.com/MinLL/MinAI/releases\', \'_blank\')" class="btn-base btn-primary">Mod Download</button></td>';
-        echo '</tr></table>';
         echo '</div>'; // Close the second table-container
         ?>
     </div>
 </main>
+
+<script>
+(() => {
+    const refresh = document.getElementById('package-sync-refresh');
+    const status = document.getElementById('package-sync-status');
+    const endpoint = <?php echo json_encode($webRoot . '/ui/api/plugin_packages.php'); ?>;
+
+    const loadPackages = async () => {
+        refresh.disabled = true;
+        status.textContent = 'Loading installed packages...';
+        try {
+            const response = await fetch(`${endpoint}?action=packages`, { cache: 'no-store' });
+            const payload = await response.json();
+            if (!response.ok || !payload.ok) throw new Error(payload.error || 'Could not read automatic package status.');
+            if (!payload.packages.length) {
+                status.textContent = 'No game-bundled server plugins have synchronized yet.';
+            } else {
+                status.innerHTML = '<strong>Installed from game:</strong><div class="package-sync-list"></div>';
+                const list = status.querySelector('.package-sync-list');
+                for (const plugin of payload.packages) {
+                    const row = document.createElement('div');
+                    row.className = 'package-sync-row';
+                    const name = document.createElement('span');
+                    name.textContent = plugin.name;
+                    const version = document.createElement('span');
+                    version.className = 'package-sync-version';
+                    version.textContent = plugin.version;
+                    row.append(name, version);
+                    list.append(row);
+                }
+            }
+        } catch (error) {
+            status.textContent = error.message;
+        } finally {
+            refresh.disabled = false;
+        }
+    };
+    refresh.addEventListener('click', loadPackages);
+    loadPackages();
+})();
+</script>
 
 <?php
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."footer.html");

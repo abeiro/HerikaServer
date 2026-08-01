@@ -788,17 +788,14 @@ foreach ($rows as $row) {
 $promptModalContentById = [];
 
 $TITLE = "AI Responses";
+$BODY_CLASS = 'hub-page';
 ob_start();
 include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.html");
 ?>
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-    body {
-        padding-top: 80px;
-    }
-
     main.ai-response-page {
-        padding: 20px 12px 40px;
+        padding: 0 12px 40px;
     }
 
     @font-face {
@@ -811,56 +808,6 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.htm
     h1, h3 {
         font-family: "MagicCards", sans-serif;
         letter-spacing: 1.5px;
-    }
-
-    .tab-container {
-        margin: 20px 0;
-    }
-
-    .tab-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        margin-bottom: 20px;
-        border-bottom: 2px solid rgba(242, 124, 17, 0.2);
-        gap: 5px;
-        word-spacing: 5px;
-    }
-
-    .tab-button {
-        background: linear-gradient(180deg, rgba(42, 42, 42, 0.8), rgba(34, 34, 34, 0.9));
-        border: 2px solid #3a3a3a;
-        border-bottom: none;
-        padding: 12px 18px;
-        color: #f8f9fa;
-        cursor: pointer;
-        border-top-left-radius: 8px;
-        border-top-right-radius: 8px;
-        transition: all 0.3s ease;
-        font-size: 1em;
-        white-space: nowrap;
-        font-family: "MagicCards", sans-serif;
-        word-spacing: 5px;
-        letter-spacing: 1.5px;
-        margin-bottom: -2px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        text-decoration: none;
-        display: inline-block;
-    }
-
-    .tab-button:hover {
-        background: linear-gradient(180deg, rgba(58, 58, 58, 0.9), rgba(48, 48, 48, 1));
-        color: rgb(242, 124, 17);
-        border-color: rgba(242, 124, 17, 0.3);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        text-decoration: none;
-    }
-
-    .tab-button.active {
-        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
-        border-color: rgba(242, 124, 17, 0.5);
-        border-bottom: 2px solid rgba(42, 42, 42, 0.95);
-        color: rgb(242, 124, 17);
-        box-shadow: 0 4px 8px rgba(242, 124, 17, 0.2);
     }
 
     .tab-content {
@@ -1152,12 +1099,9 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.htm
         .ai-response-table td {
             padding: 8px;
         }
-        .tab-button {
-            padding: 10px 14px;
-            font-size: 0.9em;
-        }
     }
 </style>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/hub-navigation.css?v=<?php echo filemtime(__DIR__ . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'hub-navigation.css'); ?>">
 <?php include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "navbar.php"); ?>
 
 <div id="contentModal" class="modal">
@@ -1175,13 +1119,10 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.htm
 
 <main class="container-fluid ai-response-page">
     <div class="tab-container">
-        <div class="tab-buttons">
-            <a class="tab-button" href="events-memories.php?tab=eventlog">&#x1F4DD; Events</a>
-            <a class="tab-button active" href="ai-response.php">&#x1F916; AI Responses</a>
-            <a class="tab-button" href="events-memories.php?tab=memory">&#x1F9E0; Memories</a>
-            <a class="tab-button" href="events-memories.php?tab=quests">&#x1F3AF; Active Quests</a>
-            <a class="tab-button" href="events-memories.php?tab=books">&#x1F4DA; Books</a>
-        </div>
+        <?php
+        $eventsMemoriesActiveTab = 'responselog';
+        include(__DIR__ . DIRECTORY_SEPARATOR . 'tmpl' . DIRECTORY_SEPARATOR . 'events_memories_navigation.php');
+        ?>
 
         <div id="responselog-tab" class="tab-content">
             <div style="background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px 15px; border-radius: 5px; margin: 15px 0; font-size: 0.9em;">

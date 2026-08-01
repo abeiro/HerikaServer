@@ -62,6 +62,59 @@ if (!function_exists('chimNormalizeFormIdPrefix')) {
     }
 }
 
+if (!function_exists('chimNormalizeLoadedGamePluginManifest')) {
+    function chimNormalizeLoadedGamePluginManifest(array $plugins): array
+    {
+        $normalizedPlugins = [];
+        foreach ($plugins as $pluginRow) {
+            if (!is_array($pluginRow)) {
+                continue;
+            }
+
+            $pluginName = chimNormalizePluginName($pluginRow['plugin_name'] ?? '');
+            $formIdPrefix = chimNormalizeFormIdPrefix($pluginRow['formid_prefix'] ?? '');
+            if ($pluginName === '' || $formIdPrefix === '') {
+                continue;
+            }
+
+            $normalizedPlugins[strtolower($pluginName)] = [
+                'plugin_name' => $pluginName,
+                'is_light' => !empty($pluginRow['is_light']),
+                'compile_index' => isset($pluginRow['compile_index']) ? intval($pluginRow['compile_index']) : 0,
+                'small_file_compile_index' => isset($pluginRow['small_file_compile_index']) ? intval($pluginRow['small_file_compile_index']) : 0,
+                'partial_index' => isset($pluginRow['partial_index']) ? intval($pluginRow['partial_index']) : 0,
+                'formid_prefix' => $formIdPrefix,
+            ];
+        }
+
+        return array_values($normalizedPlugins);
+    }
+}
+
+if (!function_exists('chimIndexLoadedGamePluginsByPrefix')) {
+    function chimIndexLoadedGamePluginsByPrefix(array $plugins): array
+    {
+        $pluginsByPrefix = [];
+        foreach (chimNormalizeLoadedGamePluginManifest($plugins) as $pluginRow) {
+            $pluginsByPrefix[strtoupper($pluginRow['formid_prefix'])] = $pluginRow;
+        }
+
+        return $pluginsByPrefix;
+    }
+}
+
+if (!function_exists('chimIndexLoadedGamePluginsByName')) {
+    function chimIndexLoadedGamePluginsByName(array $plugins): array
+    {
+        $pluginsByName = [];
+        foreach (chimNormalizeLoadedGamePluginManifest($plugins) as $pluginRow) {
+            $pluginsByName[strtolower($pluginRow['plugin_name'])] = $pluginRow;
+        }
+
+        return $pluginsByName;
+    }
+}
+
 if (!function_exists('chimBuildStableFormReference')) {
     function chimBuildStableFormReference($pluginName, $localFormId): string
     {
@@ -260,6 +313,34 @@ if (!function_exists('chimExtractLocalFormIdFromRuntimeFormId')) {
     }
 }
 
+if (!function_exists('chimConvertRuntimeFormIdToStableReference')) {
+    function chimConvertRuntimeFormIdToStableReference($runtimeFormId, ?array $pluginsByPrefix = null): ?string
+    {
+        $runtimeFormId = chimNormalizeRuntimeFormId($runtimeFormId);
+        if (strlen($runtimeFormId) !== 8 || strpos($runtimeFormId, 'FF') === 0) {
+            return null;
+        }
+
+        $formIdPrefix = (strpos($runtimeFormId, 'FE') === 0)
+            ? substr($runtimeFormId, 0, 5)
+            : substr($runtimeFormId, 0, 2);
+
+        if ($pluginsByPrefix === null) {
+            $pluginRow = chimGetLoadedGamePluginByFormIdPrefix($formIdPrefix);
+        } else {
+            $pluginRow = $pluginsByPrefix[strtoupper($formIdPrefix)] ?? null;
+        }
+
+        $localFormId = chimExtractLocalFormIdFromRuntimeFormId($runtimeFormId);
+        if (!is_array($pluginRow) || empty($pluginRow['plugin_name']) || $localFormId === '') {
+            return null;
+        }
+
+        $stableReference = chimBuildStableFormReference($pluginRow['plugin_name'], $localFormId);
+        return $stableReference !== '' ? $stableReference : null;
+    }
+}
+
 if (!function_exists('chimBuildLegacyDescriptionBaseId')) {
     function chimBuildLegacyDescriptionBaseId($runtimeFormId, ?array $pluginRow = null): string
     {
@@ -388,27 +469,7 @@ if (!function_exists('chimReplaceLoadedGamePlugins')) {
             return 0;
         }
 
-        $normalizedPlugins = [];
-        foreach ($plugins as $pluginRow) {
-            if (!is_array($pluginRow)) {
-                continue;
-            }
-
-            $pluginName = chimNormalizePluginName($pluginRow['plugin_name'] ?? '');
-            $formIdPrefix = chimNormalizeFormIdPrefix($pluginRow['formid_prefix'] ?? '');
-            if ($pluginName === '' || $formIdPrefix === '') {
-                continue;
-            }
-
-            $normalizedPlugins[strtolower($pluginName)] = [
-                'plugin_name' => $pluginName,
-                'is_light' => !empty($pluginRow['is_light']),
-                'compile_index' => isset($pluginRow['compile_index']) ? intval($pluginRow['compile_index']) : 0,
-                'small_file_compile_index' => isset($pluginRow['small_file_compile_index']) ? intval($pluginRow['small_file_compile_index']) : 0,
-                'partial_index' => isset($pluginRow['partial_index']) ? intval($pluginRow['partial_index']) : 0,
-                'formid_prefix' => $formIdPrefix,
-            ];
-        }
+        $normalizedPlugins = chimNormalizeLoadedGamePluginManifest($plugins);
 
         if (count($normalizedPlugins) === 0) {
             return 0;

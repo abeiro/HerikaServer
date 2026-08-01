@@ -17,6 +17,7 @@ require_once $path . "lib/utils.php";
 require_once $path . "lib/fuz_convert.php"; // API KEY must be there
 require_once $path . "lib/auditing.php";
 require_once $path . "lib/logger.php";
+require_once $path . "lib/voice_sample_metadata.php";
 
 $db = $GLOBALS["db"] ?? new sql();
 $GLOBALS["db"] = $db;
@@ -28,6 +29,26 @@ require_once $path . "lib/core/llm_connector.class.php";
 require_once $path . "lib/core/tts_connector.class.php";
 require_once $path . "lib/semaphore_manager.class.php";
 
+function chimVsxRespond(int $statusCode, bool $ok, string $message = '', array $extra = []): void
+{
+    if (!headers_sent()) {
+        http_response_code($statusCode);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+
+    $payload = array_merge([
+        'schema' => 'chim.voice_sample.response.v1',
+        'request_id' => strval($GLOBALS['AUDIT_RUNID'] ?? ''),
+        'ok' => $ok,
+    ], $extra);
+    if ($message !== '') {
+        $payload[$ok ? 'message' : 'error'] = $message;
+    }
+
+    echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . PHP_EOL;
+    exit;
+}
+
 function normalize_endpoint_url($url)
 {
     // Remove trailing slashes
@@ -38,7 +59,7 @@ function normalize_endpoint_url($url)
 function chimVsxResolveCloneTtsRuntime(string $actorName): array
 {
     $ttsConnector = new TTSConnector();
-    $supportedCloneDrivers = ['xtts-fastapi', 'chatterbox', 'pockettts'];
+    $supportedCloneDrivers = ['xtts-fastapi', 'chatterbox', 'pockettts', 'inworld'];
 
     $fallbackDriver = $ttsConnector->normalizeDriverValue($GLOBALS["TTSFUNCTION"] ?? 'pockettts');
     if ($fallbackDriver === '') {
@@ -90,7 +111,7 @@ function chimVsxResolveCloneTtsRuntime(string $actorName): array
         : [];
 
     $endpoint = trim(strval($providerConfig['endpoint'] ?? $providerConfig['url'] ?? $providerConfig['URL'] ?? ''));
-    if ($endpoint === '' && $selectedDriver !== $fallbackDriver) {
+    if ($endpoint === '' && $selectedDriver !== $fallbackDriver && $selectedDriver !== 'inworld') {
         $fallbackProviderKey = $ttsConnector->getProviderKeyFromDriver($fallbackDriver);
         $fallbackConfig = ($fallbackProviderKey !== '' && isset($GLOBALS["TTS"][$fallbackProviderKey]) && is_array($GLOBALS["TTS"][$fallbackProviderKey]))
             ? $GLOBALS["TTS"][$fallbackProviderKey]
@@ -116,49 +137,61 @@ function chimVsxResolveCloneTtsRuntime(string $actorName): array
 
 $GLOBALS["AUDIT_RUNID_REQUEST"] = "vsx";
 
-// Put info into DB asap
-$vsxTtsRuntime = chimVsxResolveCloneTtsRuntime(trim(strval($_GET["codename"] ?? '')));
+try {
+    $voiceSampleMetadata = chim_voice_sample_decode_metadata($_POST, $_GET);
+} catch (InvalidArgumentException $e) {
+    chimVsxRespond(400, false, $e->getMessage());
+}
+
+$actorName = $voiceSampleMetadata['actor_name'];
+$sourcePath = $voiceSampleMetadata['original_name'];
+$vsxTtsRuntime = chimVsxResolveCloneTtsRuntime($actorName);
 $voicelogic = $vsxTtsRuntime['voicelogic'];
 $ttsEndpoint = $vsxTtsRuntime['endpoint'];
-Logger::info("[vsx] Using clone driver '{$vsxTtsRuntime['driver']}' for actor '{$_GET["codename"]}' with endpoint '{$ttsEndpoint}'");
+Logger::info("[vsx] Using clone driver '{$vsxTtsRuntime['driver']}' for actor '{$actorName}' with endpoint '{$ttsEndpoint}' protocol='{$voiceSampleMetadata['protocol']}'");
 
 // Lock
 $semaphore_timeout = $GLOBALS["SEMAPHORES_TIMEOUT"] ?? 300;
 if (!SemaphoreWait("VSX", $semaphore_timeout, 47, null)) {
     Logger::warn("[vsx] semaphore wait failed in " . __FILE__ . " " . __LINE__);
-    terminate();
+    chimVsxRespond(503, false, 'Voice sample service is busy');
 }
 
-if ($voicelogic === 'voicetype' || true) { // force 
-
-    //db insert for name entry for data_functions.
-    $codename = npcNameToCodename($_GET["codename"]);
-
+$databaseError = null;
+try {
+    $actorCodename = npcNameToCodename($actorName);
     $db->upsertRowTrx(
         'conf_opts',
         [
-            'value' => $_GET["oname"],
-            "id"    => "Nametype/$codename",
+            'value' => $sourcePath,
+            'id' => "Nametype/$actorCodename",
         ],
-        ["id" => "Nametype/$codename"]
+        ['id' => "Nametype/$actorCodename"]
     );
 
-                                                // new logic so codename is set to voicetype so it generates voicetype sample
-    $voicetype = explode("\\", $_GET["oname"]); // Split the path
-    $codename  = strtolower($voicetype[3]);     // Use the 4th part of the path
-                                                // Delete and insert the database entry
+    $sourceParts = preg_split('/[\\\\\/]+/', $sourcePath);
+    $sourceVoiceId = (is_array($sourceParts) && count($sourceParts) >= 4)
+        ? strtolower(trim(strval($sourceParts[3])))
+        : '';
+    $codename = preg_replace('/[^a-z0-9_-]/i', '', $sourceVoiceId) ?: '';
+    if ($codename === '') {
+        $codename = preg_replace('/[^a-z0-9_-]/i', '', strtolower($actorCodename)) ?: '';
+    }
+    if ($codename === '') {
+        throw new RuntimeException('Unable to determine voice sample identifier');
+    }
 
     $db->upsertRowTrx(
         'conf_opts',
         [
-            'value' => $_GET["oname"],
-            "id"    => "Voicetype/$codename",
+            'value' => $sourcePath,
+            'id' => "Voicetype/$codename",
         ],
-        ["id" => "Voicetype/$codename"]
+        ['id' => "Voicetype/$codename"]
     );
 
     $npcMaster      = new NpcMaster();
-    $currentNpcData = $npcMaster->getByName($_GET["codename"]);
+    $currentNpcData = $npcMaster->getByName($actorName);
     if ($currentNpcData) {
         if (empty($currentNpcData["voiceid"])) {
             $currentNpcData["voiceid"] = $codename;
@@ -168,110 +201,98 @@ if ($voicelogic === 'voicetype' || true) { // force
         unset($extended["voice_refresh_requested_at"]);
         $extended["voice_refresh_last_result"] = "sample_uploaded";
         $extended["voice_refresh_last_resolved_at"] = time();
+        $extended["voice_sample_source"] = $sourcePath;
+        $extended["voice_sample_reference_text"] = $voiceSampleMetadata['reference_text'];
         $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
         $currentNpcData = $npcMaster->updateByArray($currentNpcData);
     }
-
+} catch (Throwable $e) {
+    $databaseError = $e;
+} finally {
     $db->close();
-
-} else {
-    $codename = npcNameToCodename($_GET["codename"]);
-    // Old name logic
-
-    $db->upsertRowTrx(
-        'conf_opts',
-        [
-            'value' => $_GET["oname"],
-            "id"    => "Voicetype/$codename",
-        ],
-        ["id" => "Voicetype/$codename"]
-
-    );
-    $db->close();
+    SemaphoreManager::release("VSX");
 }
 
-// Release lock, this is the time consuming part, we have the needed data into the database
-
+if ($databaseError !== null) {
+    Logger::error('[vsx] Failed to store voice metadata: ' . $databaseError->getMessage());
+    chimVsxRespond(500, false, 'Failed to store voice sample metadata');
+}
 audit_log("vsx.php data available for $codename");
 
-SemaphoreManager::release("VSX");
-
-if (strpos($_GET["oname"], ".fuz")) {
-    $ext = "fuz";
-} else if (strpos($_GET["oname"], ".xwm")) {
-    $ext = "xwm";
-} else if (strpos($_GET["oname"], ".wav")) {
-    $ext = "wav";
+$ext = strtolower(pathinfo(str_replace('\\', '/', $sourcePath), PATHINFO_EXTENSION));
+if (!in_array($ext, ['fuz', 'xwm', 'wav'], true)) {
+    chimVsxRespond(400, false, 'Unsupported voice sample extension', ['extension' => $ext]);
 }
 
-$already   = ($ttsEndpoint !== '') ? file_exists($ttsEndpoint . "/sample/$codename.wav") : false;
+if (empty($_FILES['file']['tmp_name']) || !is_file($_FILES['file']['tmp_name'])) {
+    chimVsxRespond(400, false, 'No voice sample uploaded');
+}
+if (filesize($_FILES['file']['tmp_name']) <= 0) {
+    Logger::error("Empty file {$_FILES['file']['tmp_name']}");
+    chimVsxRespond(400, false, 'Uploaded voice sample was empty');
+}
+
 $finalName = __DIR__ . DIRECTORY_SEPARATOR . "soundcache/_vsx_" . md5($_FILES["file"]["tmp_name"]) . ".$ext";
-@copy($_FILES["file"]["tmp_name"], $finalName);
+if (!@copy($_FILES['file']['tmp_name'], $finalName)) {
+    chimVsxRespond(500, false, 'Failed to stage uploaded voice sample');
+}
+Logger::info("Received sample: {$sourcePath}");
 
-if (! $already) {
+$finalFile = match ($ext) {
+    'fuz' => fuzToWav($finalName),
+    'xwm' => xwmToWav($finalName),
+    'wav' => wavToWav($finalName),
+};
+if (empty($finalFile) || !is_file($finalFile) || filesize($finalFile) <= 44) {
+    Logger::error("[vsx] Failed to create converted voice sample for {$codename} from {$sourcePath}");
+    chimVsxRespond(500, false, 'Voice sample conversion failed', ['codename' => $codename]);
+}
 
-    if (file_exists($path . "data/voices/$codename.wav")) {
-        // File exists in HS data/voices. Dont't convert again
-        $finalFile = $path . "data/voices/$codename.wav";
+$voiceCacheFile = $path . "data/voices/$codename.wav";
+$cacheAlreadyAvailable = is_file($voiceCacheFile) && filesize($voiceCacheFile) > 44;
+if (!chim_voice_sample_replace_file($finalFile, $voiceCacheFile)) {
+    Logger::error("[vsx] Failed to cache converted voice sample at {$voiceCacheFile}");
+    chimVsxRespond(500, false, 'Voice sample cache copy failed', ['codename' => $codename]);
+}
+if (!chim_voice_sample_write_metadata($voiceCacheFile, $codename, $voiceSampleMetadata)) {
+    Logger::error("[vsx] Failed to write voice sample metadata for {$codename}");
+    chimVsxRespond(500, false, 'Voice sample metadata write failed', ['codename' => $codename]);
+}
+Logger::info("[vsx] Cached normalized voice sample {$codename}.wav sha256=" . hash_file('sha256', $voiceCacheFile));
 
-    } else {
+$syncAttempted = false;
+$syncSucceeded = null;
+if ($ttsEndpoint !== '') {
+    $syncAttempted = true;
+    $url  = rtrim($ttsEndpoint, '/') . '/upload_sample';
+    $curl = curl_init();
 
-        if (! $_FILES["file"]["tmp_name"]) {
-            die("VSX error, no data given");
-        }
+    curl_setopt_array($curl, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => [
+            'wavFile' => new CURLFile($voiceCacheFile, 'audio/wav', "$codename.wav"),
+        ],
+    ]);
 
-        if (filesize($_FILES["file"]["tmp_name"]) == 0) {
-            Logger::error("Empty file {$_FILES["file"]["tmp_name"]}");
-            die();
-        }
-
-        Logger::info("Received sample: {$_GET["oname"]}");
-
-        if (strpos($_GET["oname"], ".fuz")) {
-            $finalFile = fuzToWav($finalName);
-
-        } else if (strpos($_GET["oname"], ".xwm")) {
-
-            $finalFile = xwmToWav($finalName);
-
-        } else if (strpos($_GET["oname"], ".wav")) {
-
-            $finalFile = wavToWav($finalName);
-        }
+    $response = curl_exec($curl);
+    $syncSucceeded = $response !== false;
+    if (!$syncSucceeded) {
+        Logger::warn("[vsx] Voice provider sync failed for {$codename}: " . curl_error($curl));
     }
-    if ($ttsEndpoint === '') {
-        die("Error");
-    }
-
+    curl_close($curl);
 } else {
-    Logger::info("Empty file {$_FILES["file"]["tmp_name"]} already exists at {$ttsEndpoint}/sample/$codename.wav");
-
+    Logger::info("[vsx] Cached {$codename}.wav locally for '{$vsxTtsRuntime['driver']}'; no immediate clone endpoint required");
 }
 
-if ($already) {
-    die();
-}
-
-// Lets store voice files
-@copy($finalFile, $path . "data/voices/$codename.wav");
-
-$url  = $ttsEndpoint . '/upload_sample';
-$curl = curl_init();
-
-// Set cURL options
-curl_setopt_array($curl, [
-    CURLOPT_URL            => $url,
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST           => true,
-    CURLOPT_POSTFIELDS     => [
-        'wavFile' => new CURLFile($finalFile, 'audio/wav', "$codename.wav"),
-    ],
-    CURLOPT_HTTPHEADER     => [
-        'Content-Type: multipart/form-data',
-    ],
+audit_log("vsx.php voice available for {$actorName}");
+chimVsxRespond(200, true, 'Voice sample uploaded', [
+    'codename' => $codename,
+    'driver' => $vsxTtsRuntime['driver'] ?? '',
+    'already_available' => $cacheAlreadyAvailable,
+    'cached_path' => "data/voices/$codename.wav",
+    'metadata_path' => "data/voices/$codename.json",
+    'provider_sync_attempted' => $syncAttempted,
+    'provider_sync_succeeded' => $syncSucceeded,
 ]);
-
-// Execute cURL request and get response
-$response = curl_exec($curl);
-
-audit_log("vsx.php voice available for {$_GET["codename"]}");

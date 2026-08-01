@@ -13,10 +13,12 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."model_dynmodel.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."data_functions.php");
 require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."logger.php");
+require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."profile_llm_mode.php");
 
 require_once "{$enginePath}/lib/core/core_profiles.class.php";
 require_once "{$enginePath}/lib/core/llm_connector.class.php";
 require_once "{$enginePath}/lib/core/tts_connector.class.php";
+require_once "{$enginePath}/lib/core/itt_connector.class.php";
 require_once "{$enginePath}/lib/core/api_badge.class.php";
 require_once "{$enginePath}/lib/core/import_rules.class.php";
 
@@ -42,7 +44,7 @@ ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 ?>
 
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css?v=<?php echo (int) @filemtime(dirname(__DIR__) . '/css/main.css'); ?>">
 <style>
 /* Match Oghma/Connectors spacing and title styling */
 @font-face {
@@ -123,7 +125,7 @@ h1.api-title {
     background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
 }
-.llm-right { min-width: 0; }
+.llm-right { min-width: 0; container-type:inline-size; }
 .list-filters { display:flex; gap:8px; align-items:center; margin:6px 0 10px; flex-wrap:wrap; }
 .list-filters input[type="text"]{ 
     width: 100%; 
@@ -362,6 +364,115 @@ h1.api-title {
 .profile-core-compact-field > label { margin-bottom: 3px; line-height: 1.25; }
 .profile-core-compact-field > .hint,
 .profile-core-compact-field > small.hint { margin-top: 3px; line-height: 1.3; }
+
+/* Compact profile editor */
+.profile-editor-toolbar {
+    position:sticky;
+    top:0;
+    z-index:50;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:10px;
+    padding:10px 12px;
+    background:rgba(31,31,31,0.97);
+    border:1px solid #444;
+    border-radius:8px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.28);
+    backdrop-filter:blur(4px);
+}
+.profile-editor-toolbar-label { color:#9fb1c9; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; }
+.profile-editor-toolbar-name { color:#f3f5fa; font-size:16px; font-weight:700; margin-top:2px; }
+.profile-core-grid { display:grid; grid-template-columns:minmax(0, 2fr) 120px 190px; gap:10px; align-items:start; }
+.profile-core-grid .profile-core-compact-field { margin:0; }
+.profile-default-card {
+    min-height:68px;
+    display:flex !important;
+    flex-direction:column;
+    justify-content:center;
+    padding:9px 10px;
+    border:1px solid #414141;
+    border-radius:7px;
+    background:#242424;
+    cursor:pointer;
+}
+.profile-prompt-field { margin-top:10px; }
+.profile-prompt-field textarea { min-height:82px; }
+.profile-toggle-groups { display:grid; gap:9px; margin-top:10px; }
+.profile-toggle-group { padding:9px; border:1px solid #3f3f3f; border-radius:7px; background:#202020; }
+.profile-toggle-group-title { margin:0 0 7px; color:#f27c11; font-family:'MagicCards', serif; font-size:1em; letter-spacing:0.4px; word-spacing:4px; }
+.profile-toggle-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; }
+.profile-toggle-card {
+    display:block !important;
+    min-height:78px;
+    margin:0 !important;
+    padding:9px 10px;
+    border:1px solid #414141;
+    border-radius:7px;
+    background:#242424;
+    cursor:pointer;
+}
+.profile-toggle-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; color:#f0f5ff; font-size:12px; font-weight:700; }
+.profile-toggle-control { display:inline-flex; align-items:center; gap:7px; white-space:nowrap; }
+.profile-toggle-card input[type="checkbox"],
+.profile-default-card input[type="checkbox"] { accent-color:#176529; transform:scale(1.25); cursor:pointer; }
+.profile-toggle-card .toggle-text,
+.profile-default-card .toggle-text { min-width:20px; color:#dce5f4; font-size:11px; text-align:right; }
+.profile-toggle-description { display:block; margin-top:6px; color:#9fb1c9; font-size:11px; font-weight:400; line-height:1.3; }
+.connector-selection-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; align-items:stretch; }
+.connector-group-card { min-width:0; height:100%; padding:11px; border:1px solid #414141; border-radius:7px; background:#202020; box-sizing:border-box; }
+.connector-group-title { margin:0; color:#f27c11; font-family:'MagicCards', serif; font-size:1.05em; line-height:1.25; letter-spacing:0.4px; word-spacing:5px; }
+.connector-group-subtitle { min-height:30px; margin:4px 0 8px; color:#9fb1c9; font-size:11px; line-height:1.3; }
+.connector-group-fields { display:grid; grid-template-columns:1fr; gap:8px; }
+.connector-option-card { min-width:0; padding:10px; border:1px solid #414141; border-radius:7px; background:#242424; }
+.connector-option-card .setting-key { margin-bottom:2px; }
+.connector-option-card .setting-desc { min-height:32px; }
+.connector-option-card .setting-control { max-width:none; margin-top:7px; }
+.profile-feature-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:9px; align-items:stretch; margin-bottom:9px; }
+.profile-feature-grid .provider-card { height:100%; margin:0 !important; box-sizing:border-box; }
+.profile-feature-grid .setting-row,
+.profile-settings-columns .setting-row { grid-template-columns:1fr; gap:7px; }
+.profile-feature-grid .setting-control,
+.profile-feature-grid .setting-control-wide,
+.profile-settings-columns .setting-control,
+.profile-settings-columns .setting-control-wide { max-width:none; justify-self:stretch; }
+.profile-feature-grid .profile-setting-chips,
+.profile-settings-columns .profile-setting-chips { justify-content:flex-start; }
+.profile-settings-columns { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; align-items:stretch; }
+.profile-settings-group { display:flex; min-width:0; flex-direction:column; }
+.profile-settings-group > .provider-card { flex:1 1 auto; box-sizing:border-box; }
+.profile-settings-heading {
+    margin:0 0 6px;
+    padding:0;
+    color:#f27c11;
+    font-family:'MagicCards', serif;
+    font-size:1.05em;
+    line-height:1.25;
+    letter-spacing:0.4px;
+    word-spacing:5px;
+    text-shadow:1px 1px 2px rgba(0,0,0,0.5);
+}
+.rechat-calculator { margin-bottom:7px; padding:8px 10px; border:1px solid #3c3c3c; border-radius:7px; background:#1d1d1d; }
+.rechat-calculator-title { display:flex; align-items:center; gap:7px; margin-bottom:5px; color:#f27c11; font-size:12px; font-weight:700; }
+.profile-settings-other { margin-top:10px; }
+
+@container (max-width: 760px) {
+    .profile-core-grid { grid-template-columns:minmax(0, 1fr) 110px; }
+    .profile-default-card { grid-column:1 / -1; min-height:auto; }
+    .profile-toggle-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .connector-selection-grid { grid-template-columns:1fr; }
+    .connector-group-fields { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .profile-settings-columns,
+    .profile-feature-grid { grid-template-columns:1fr; }
+}
+@container (max-width: 540px) {
+    .profile-editor-toolbar { position:static; }
+    .profile-core-grid,
+    .profile-toggle-grid { grid-template-columns:1fr; }
+    .connector-group-fields { grid-template-columns:1fr; }
+    .profile-default-card { grid-column:auto; }
+}
 </style>
 
 <main>
@@ -455,9 +566,40 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         }
         $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
     }
-    $profiles->update($_POST["id"], $_POST);
+    $updated = $profiles->update($_POST["id"], $_POST);
+    $syncedProfiles = null;
+
+    if ($updated !== false && isset($_POST['sync_diary_prompt'])) {
+        $metadata = json_decode($_POST['metadata'] ?? '{}', true);
+        $diaryPrompt = is_array($metadata) ? trim((string)($metadata['DIARY_PROMPT'] ?? '')) : '';
+
+        if ($diaryPrompt === '') {
+            $updated = false;
+            $syncError = 'Enter a diary prompt before applying it to all profiles.';
+        } else {
+            $encodedPrompt = json_encode($diaryPrompt, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $escapedPrompt = $GLOBALS['db']->escape($encodedPrompt);
+            $syncResult = $GLOBALS['db']->execQuery(
+                "UPDATE core_profiles
+                 SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{DIARY_PROMPT}', '{$escapedPrompt}'::jsonb, true)"
+            );
+
+            if ($syncResult === false) {
+                $updated = false;
+                $syncError = 'The profile was saved, but the diary prompt could not be applied to all profiles.';
+            } else {
+                $syncedProfiles = $profiles->getProfileCount();
+            }
+        }
+    }
+
     if ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
-        echo json_encode(['ok'=>true,'id'=>$_POST['id'] ?? null]);
+        echo json_encode([
+            'ok' => $updated !== false,
+            'id' => $_POST['id'] ?? null,
+            'synced_profiles' => $syncedProfiles,
+            'error' => $updated === false ? ($syncError ?? $profiles->getLastError()) : null,
+        ]);
         exit;
     } else {
         header("Location: core_profiles.php");
@@ -805,7 +947,8 @@ if (!function_exists('chimNullIfBlank')) {
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
     header('Content-Type: application/json');
-    
+
+    $importTransactionStarted = false;
     try {
         $importJson = $_POST['import_data'] ?? '';
         
@@ -835,6 +978,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
             echo json_encode(['ok' => false, 'error' => 'Profile slot must be 1-4 or empty']);
             exit;
         }
+
+        if ($GLOBALS["db"]->query("BEGIN") === false) {
+            throw new Exception('Could not start profile import transaction');
+        }
+        $importTransactionStarted = true;
+
         $previousDefaultNpc = $profiles->getDefaultNpc();
         $previousDefaultNpcId = is_array($previousDefaultNpc) && !empty($previousDefaultNpc['id'])
             ? (int)$previousDefaultNpc['id']
@@ -850,6 +999,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         
         $llmConn = new LLMConnector();
         $ttsConn = new TTSConnector();
+        $ittConn = new ITTConnector();
         $apiBadgeObj = new ApiBadge();
         
         // Step 1: Create or match API badges
@@ -867,6 +1017,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
                     'label' => $label,
                     'api_key' => '' // Empty, user must fill in
                 ]);
+                if (!$newBadgeId) {
+                    throw new Exception($apiBadgeObj->getLastError() ?: "Could not import API key entry '{$label}'");
+                }
                 $apiBadgeIdMap[$oldId] = $newBadgeId;
             }
         }
@@ -900,6 +1053,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
                 
                 // Create new connector
                 $newConnId = $llmConn->create($connData);
+                if (!$newConnId) {
+                    throw new Exception($llmConn->getLastError() ?: "Could not import LLM connector '{$label}'");
+                }
                 $llmConnectorIdMap[$oldId] = $newConnId;
             }
         }
@@ -927,6 +1083,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
                 }
                 
                 $ttsConnectorId = $ttsConn->create($ttsData);
+                if (!$ttsConnectorId) {
+                    throw new Exception($ttsConn->getLastError() ?: "Could not import TTS connector '{$label}'");
+                }
             }
         }
         
@@ -946,7 +1105,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
             } else {
                 $ittData = $ittConnector;
                 unset($ittData['id']);
-                $ittConnectorId = $GLOBALS["db"]->insert('core_itt_connector', $ittData);
+                if (!empty($ittData['api_badge_id']) && isset($apiBadgeIdMap[$ittData['api_badge_id']])) {
+                    $ittData['api_badge_id'] = $apiBadgeIdMap[$ittData['api_badge_id']];
+                } else {
+                    $ittData['api_badge_id'] = null;
+                }
+                $ittConnectorId = $ittConn->create($ittData);
+                if (!$ittConnectorId) {
+                    throw new Exception($ittConn->getLastError() ?: "Could not import ITT connector '{$label}'");
+                }
             }
         }
         
@@ -982,7 +1149,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         }
 
         if ($assignSlot !== null) {
-            $GLOBALS["db"]->query("UPDATE core_profiles SET slot = NULL WHERE slot = {$assignSlot}");
+            if ($GLOBALS["db"]->query("UPDATE core_profiles SET slot = NULL WHERE slot = {$assignSlot}") === false) {
+                throw new Exception('Could not clear the selected profile slot');
+            }
             $slotOk = $profiles->update($newProfileId, ['slot' => $assignSlot]);
             if ($slotOk === false) {
                 throw new Exception($profiles->getLastError() ?: 'Could not assign imported profile slot');
@@ -990,7 +1159,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         }
 
         if ($makeDefaultNpc) {
-            $profiles->promoteToDefaultNpc($newProfileId);
+            if ($profiles->promoteToDefaultNpc($newProfileId) === false) {
+                throw new Exception($profiles->getLastError() ?: 'Could not set imported profile as the default');
+            }
         }
 
         $migratedNpcCount = 0;
@@ -1002,7 +1173,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
             $where = implode(' OR ', $whereParts);
             $countRow = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master WHERE {$where}");
             $migratedNpcCount = (int)($countRow['c'] ?? 0);
-            $GLOBALS["db"]->query("UPDATE core_npc_master SET profile_id = {$newProfileId} WHERE {$where}");
+            if ($GLOBALS["db"]->query("UPDATE core_npc_master SET profile_id = {$newProfileId} WHERE {$where}") === false) {
+                throw new Exception('Could not move current default NPCs to the imported profile');
+            }
         }
 
         $messageParts = ['Profile imported successfully'];
@@ -1015,7 +1188,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         if ($migrateOldDefaultNpcs) {
             $messageParts[] = "migrated {$migratedNpcCount} NPCs from old default/empty profile";
         }
-        
+
+        if ($GLOBALS["db"]->query("COMMIT") === false) {
+            throw new Exception('Could not commit imported profile');
+        }
+        $importTransactionStarted = false;
+
         echo json_encode([
             'ok' => true, 
             'id' => $newProfileId,
@@ -1023,6 +1201,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
         ]);
         
     } catch (Throwable $e) {
+        if ($importTransactionStarted) {
+            $GLOBALS["db"]->query("ROLLBACK");
+        }
         echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
     }
     exit;
@@ -1031,12 +1212,104 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
 // ============= Profile Rules AJAX Handlers =============
 $importRules = new ImportRules();
 
+function chimDecodeRuleSelection($raw)
+{
+    if (is_array($raw)) {
+        $values = $raw;
+    } else {
+        $decoded = json_decode((string)$raw, true);
+        if (!is_array($decoded)) {
+            throw new InvalidArgumentException('Invalid simple rule selection');
+        }
+        $values = $decoded;
+    }
+
+    return array_values(array_unique(array_filter(array_map(static function ($value) {
+        return trim((string)$value);
+    }, $values), static function ($value) {
+        return $value !== '';
+    })));
+}
+
+function chimImportRuleDataFromPost(array $post)
+{
+    $rawAction = isset($post['action']) ? trim((string)$post['action']) : '';
+    $decodedAction = null;
+    if ($rawAction !== '') {
+        $decodedAction = json_decode($rawAction, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new InvalidArgumentException('Action must be valid JSON');
+        }
+    }
+
+    if (($post['editor_mode'] ?? 'advanced') === 'simple') {
+        $matchName = ImportRules::buildExactRegex(chimDecodeRuleSelection($post['simple_match_name'] ?? '[]'));
+        $matchRace = ImportRules::buildExactRegex(chimDecodeRuleSelection($post['simple_match_race'] ?? '[]'));
+        $matchGender = ImportRules::buildExactRegex(chimDecodeRuleSelection($post['simple_match_gender'] ?? '[]'));
+        $matchFaction = ImportRules::buildExactRegex(chimDecodeRuleSelection($post['simple_match_faction'] ?? '[]'));
+        $modsArr = chimDecodeRuleSelection($post['simple_match_mods'] ?? '[]');
+        $matchBase = null;
+    } else {
+        $matchName = chimNullIfBlank($post['match_name'] ?? '');
+        $matchRace = chimNullIfBlank($post['match_race'] ?? '');
+        $matchGender = chimNullIfBlank($post['match_gender'] ?? '');
+        $matchBase = chimNullIfBlank($post['match_base'] ?? '');
+        $matchFaction = chimNullIfBlank($post['match_faction'] ?? '');
+        $modsStr = isset($post['match_mods']) ? (string)$post['match_mods'] : '';
+        $modsArr = $modsStr !== ''
+            ? array_values(array_filter(array_map('trim', explode(',', $modsStr)), static function ($value) {
+                return $value !== '';
+            }))
+            : null;
+    }
+
+    return [
+        'description' => trim($post['description'] ?? ''),
+        'match_name' => $matchName,
+        'match_race' => $matchRace,
+        'match_gender' => $matchGender,
+        'match_base' => $matchBase,
+        'match_faction' => $matchFaction,
+        'match_mods' => empty($modsArr) ? null : $modsArr,
+        'action' => $decodedAction,
+        'profile' => !empty($post['profile']) ? (int)$post['profile'] : null,
+        'priority' => isset($post['priority']) ? (int)$post['priority'] : 0,
+        'enabled' => isset($post['enabled']) && $post['enabled'] === '1',
+    ];
+}
+
 // Fetch all import rules (AJAX)
 if ($_SERVER["REQUEST_METHOD"] === "GET" && isset($_GET["get_import_rules"])) {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
     header('Content-Type: application/json');
     $rules = $importRules->getAll();
-    echo json_encode(['ok' => true, 'data' => $rules]);
+    foreach ($rules as &$rule) {
+        $rule['_simple'] = [];
+        $rule['_has_custom_regex'] = false;
+        foreach ([
+            'match_name' => 'name',
+            'match_race' => 'race',
+            'match_gender' => 'gender',
+            'match_faction' => 'faction',
+        ] as $column => $simpleKey) {
+            $parsed = ImportRules::parseExactRegex($rule[$column] ?? null);
+            if ($parsed === null) {
+                $rule['_has_custom_regex'] = true;
+                $parsed = [];
+            }
+            $rule['_simple'][$simpleKey] = $parsed;
+        }
+        if (!empty($rule['match_base'])) {
+            $rule['_has_custom_regex'] = true;
+        }
+    }
+    unset($rule);
+
+    echo json_encode([
+        'ok' => true,
+        'data' => $rules,
+        'options' => $importRules->getEditorOptions(),
+    ]);
     exit;
 }
 
@@ -1044,38 +1317,13 @@ if ($_SERVER["REQUEST_METHOD"] === "GET" && isset($_GET["get_import_rules"])) {
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create_import_rule"])) {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
     header('Content-Type: application/json');
-    
-    // Normalize inputs
-    $rawAction = isset($_POST['action']) ? (string)$_POST['action'] : '';
-    $decodedAction = null;
-    if ($rawAction !== '') {
-        $tmp = json_decode($rawAction, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            echo json_encode(['ok'=>false,'error'=>'Invalid JSON in action']);
-            exit;
-        }
-        $decodedAction = $tmp;
+    try {
+        $importRules->create(chimImportRuleDataFromPost($_POST));
+        $last = $GLOBALS['db']->fetchOne("SELECT id FROM import_rules ORDER BY id DESC LIMIT 1");
+        echo json_encode(['ok' => true, 'id' => $last['id'] ?? '']);
+    } catch (Throwable $e) {
+        echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
     }
-    $modsStr = isset($_POST['match_mods']) ? (string)$_POST['match_mods'] : '';
-    $modsArr = $modsStr !== '' ? array_values(array_filter(array_map('trim', explode(',', $modsStr)), function($v){ return $v!==''; })) : null;
-
-    $data = [
-        'description' => trim($_POST['description'] ?? ''),
-        'match_name' => chimNullIfBlank($_POST['match_name'] ?? ''),
-        'match_race' => chimNullIfBlank($_POST['match_race'] ?? ''),
-        'match_gender' => chimNullIfBlank($_POST['match_gender'] ?? ''),
-        'match_base' => chimNullIfBlank($_POST['match_base'] ?? ''),
-        'match_mods' => $modsArr,
-        'action' => $decodedAction,
-        'profile' => !empty($_POST['profile']) ? (int)$_POST['profile'] : null,
-        'priority' => isset($_POST['priority']) ? (int)$_POST['priority'] : 0,
-        'enabled' => isset($_POST['enabled']) && $_POST['enabled'] === '1'
-    ];
-    
-    $importRules->create($data);
-    $last = $GLOBALS['db']->fetchOne("SELECT id FROM import_rules ORDER BY id DESC LIMIT 1");
-    $newId = $last['id'] ?? '';
-    echo json_encode(['ok' => true, 'id' => $newId]);
     exit;
 }
 
@@ -1083,37 +1331,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create_import_rule"])
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update_import_rule"])) {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
     header('Content-Type: application/json');
-    
-    $id = (int)$_POST['id'];
-    // Normalize inputs
-    $rawAction = isset($_POST['action']) ? (string)$_POST['action'] : '';
-    $decodedAction = null;
-    if ($rawAction !== '') {
-        $tmp = json_decode($rawAction, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            echo json_encode(['ok'=>false,'error'=>'Invalid JSON in action']);
-            exit;
-        }
-        $decodedAction = $tmp;
+    try {
+        $importRules->update((int)$_POST['id'], chimImportRuleDataFromPost($_POST));
+        echo json_encode(['ok' => true]);
+    } catch (Throwable $e) {
+        echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
     }
-    $modsStr = isset($_POST['match_mods']) ? (string)$_POST['match_mods'] : '';
-    $modsArr = $modsStr !== '' ? array_values(array_filter(array_map('trim', explode(',', $modsStr)), function($v){ return $v!==''; })) : null;
-
-    $data = [
-        'description' => trim($_POST['description'] ?? ''),
-        'match_name' => chimNullIfBlank($_POST['match_name'] ?? ''),
-        'match_race' => chimNullIfBlank($_POST['match_race'] ?? ''),
-        'match_gender' => chimNullIfBlank($_POST['match_gender'] ?? ''),
-        'match_base' => chimNullIfBlank($_POST['match_base'] ?? ''),
-        'match_mods' => $modsArr,
-        'action' => $decodedAction,
-        'profile' => !empty($_POST['profile']) ? (int)$_POST['profile'] : null,
-        'priority' => isset($_POST['priority']) ? (int)$_POST['priority'] : 0,
-        'enabled' => isset($_POST['enabled']) && $_POST['enabled'] === '1'
-    ];
-    
-    $importRules->update($id, $data);
-    echo json_encode(['ok' => true]);
     exit;
 }
 
@@ -1185,14 +1408,14 @@ $ittById = $byId($ittRows);
 
 <div class="llm-layout">
     <div class="llm-left">
-        <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
-            <form method="get" action="core_profiles.php" style="display:inline">
+        <div class="sidebar-action-grid">
+            <form method="get" action="core_profiles.php">
                 <input type="hidden" name="create_blank" value="1">
-                <button type="submit" class="btn-save">New Profile</button>
+                <button type="submit" class="btn-save">New</button>
             </form>
-            <button type="button" id="import_profile_btn" class="btn-primary">Import Profile</button>
-            <button type="button" id="open_import_rules_btn" class="btn-primary">Profile Rules</button>
-            <button type="button" id="profile_test_all_btn" class="btn-primary">Test All Profiles</button>
+            <button type="button" id="import_profile_btn" class="btn-primary">Import</button>
+            <button type="button" id="open_import_rules_btn" class="btn-primary">Rules</button>
+            <button type="button" id="profile_test_all_btn" class="btn-primary">Test</button>
         </div>
         <div id="profiles_list" class="conn-list"></div>
         <script>
@@ -1628,172 +1851,137 @@ $ittById = $byId($ittRows);
 
     
 
+    <?php
+        $profileMetadata = [];
+        try {
+            if (!empty($editItem["metadata"])) {
+                $decodedProfileMetadata = json_decode($editItem["metadata"], true);
+                if (is_array($decodedProfileMetadata)) $profileMetadata = $decodedProfileMetadata;
+            }
+        } catch (Throwable $e) {}
+
+        $dynamicProfileEnabled = !empty($profileMetadata['DYNAMIC_PROFILE_ENABLED']);
+        $mtmEnabled = !empty($profileMetadata['MIDDLE_TERM_MEMORY_ENABLED']);
+        $autoDiaryEnabled = !empty($profileMetadata['AUTO_DIARY_ENABLED']);
+        $autoDiaryWaitEnabled = !empty($profileMetadata['AUTO_DIARY_WAIT_ENABLED']);
+        $physicalDiaryEnabled = !empty($profileMetadata['MATERIALIZE_DIARY_ENABLED']);
+        $latestDiaryContextEnabled = !empty($profileMetadata['LATEST_DIARY_CONTEXT_ENABLED']);
+        $randomizerEnabled = !empty($profileMetadata['LLM_RANDOMIZER_ENABLED']);
+        $fallbackEnabled = !empty($profileMetadata['LLM_FALLBACK_ENABLED']);
+
+        $usedSlotsRows = $GLOBALS["db"]->fetchAll("SELECT id, slot FROM core_profiles WHERE slot IS NOT NULL ORDER BY slot ASC");
+        $usedSlots = [];
+        foreach ($usedSlotsRows as $r){ $s=intval($r['slot']??0); if ($s>=1 && $s<=4) $usedSlots[$s]=(int)$r['id']; }
+        $currentId = (int)($editItem['id'] ?? 0);
+        $currentSlot = isset($editItem['slot']) ? (int)$editItem['slot'] : 0;
+
+        $profileToggleGroups = [
+            [
+                'title' => 'Profiles & Memories',
+                'cards' => [
+                    ['key' => 'DYNAMIC_PROFILE_ENABLED', 'icon' => '&#x267B;&#xFE0F;', 'title' => 'Dynamic Profile', 'enabled' => $dynamicProfileEnabled, 'short' => 'Allow gameplay events to evolve NPC profiles.', 'help' => 'Allow systems to evolve NPC profiles based on gameplay events. NPCs using this profile will have dynamic profile enabled by default.'],
+                    ['key' => 'MIDDLE_TERM_MEMORY_ENABLED', 'icon' => '&#x1F4C3;', 'title' => 'Middle Term Memory', 'enabled' => $mtmEnabled, 'short' => 'Include periodic middle-term memory summaries.', 'help' => 'Saves a list of recent events after every 10 memory summaries. NPCs using this profile will have MTM enabled by default.'],
+                ],
+            ],
+            [
+                'title' => 'Diary',
+                'cards' => [
+                    ['key' => 'AUTO_DIARY_ENABLED', 'icon' => '&#x1F4D9;', 'title' => 'Auto Diary', 'enabled' => $autoDiaryEnabled, 'short' => 'Generate nearby NPC diaries during sleep or wait.', 'help' => 'Automatically generate diary entries when NPCs are nearby during sleep/wait events. NPCs using this profile will have auto diary enabled by default.'],
+                    ['key' => 'AUTO_DIARY_WAIT_ENABLED', 'icon' => '&#x23F3;', 'title' => 'Auto Diary Wait', 'enabled' => $autoDiaryWaitEnabled, 'short' => 'Include wait events when Auto Diary is enabled.', 'help' => 'When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.'],
+                    ['key' => 'MATERIALIZE_DIARY_ENABLED', 'icon' => '&#x1F4D5;', 'title' => 'Physical Diary', 'enabled' => $physicalDiaryEnabled, 'short' => 'Create a physical ingame diary that can be read.', 'help' => 'Automatically creates one physical diary in each NPC\'s inventory when they write a diary entry, then refreshes that same book after future entries.'],
+                    ['key' => 'LATEST_DIARY_CONTEXT_ENABLED', 'icon' => '&#x1F4D6;', 'title' => 'Include Latest Diary Entry', 'enabled' => $latestDiaryContextEnabled, 'short' => 'Include the NPC\'s latest diary entry in response context.', 'help' => 'Adds the latest diary entry written by an NPC to the character section of every response prompt.'],
+                ],
+            ],
+            [
+                'title' => 'LLM',
+                'cards' => [
+                    ['key' => 'LLM_RANDOMIZER_ENABLED', 'icon' => '&#x1F3B2;', 'title' => 'LLM Randomizer', 'enabled' => $randomizerEnabled, 'short' => 'Rotate among the four profile LLM connectors.', 'help' => 'Randomly switches between the 4 LLM connectors for NPCs using this profile. Will roughly switch every 2-3 responses per NPC.'],
+                    ['key' => 'LLM_FALLBACK_ENABLED', 'icon' => '&#x1F504;', 'title' => 'LLM Fallback', 'enabled' => $fallbackEnabled, 'short' => 'Retry failed requests with the fallback connector.', 'help' => 'Automatically retry with the fallback connector when the primary connector fails. Response time will be longer when fallback is used.'],
+                ],
+            ],
+        ];
+    ?>
+
+    <div class="profile-editor-toolbar">
+        <div>
+            <div class="profile-editor-toolbar-label">Editing Profile</div>
+            <div class="profile-editor-toolbar-name"><?= htmlspecialchars($editItem["label"] ?? "Profile") ?></div>
+        </div>
+        <button type="button" id="btn_save_all" class="btn-save">Save All</button>
+    </div>
+
     <div class="connector-card" style="margin-bottom:12px;">
         <div class="connector-title">Profile Core</div>
-        <div class="connector-subtitle">&#x24D8; Core identity and runtime toggles for this profile.</div>
-        <div class="profile-core-compact-field">
-            <label for='label'>Name</label>
-            <input type="text" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
-            <small class="hint">Name for the profile.</small>
+        <div class="connector-subtitle">&#x24D8; Core identity and runtime options for this profile.</div>
+
+        <div class="profile-core-grid">
+            <div class="profile-core-compact-field">
+                <label for="label">Name</label>
+                <input type="text" id="label" name="label" placeholder="Name" value="<?= htmlspecialchars($editItem["label"] ?? "") ?>">
+                <small class="hint">Name shown when assigning this profile.</small>
+            </div>
+
+            <div class="profile-core-compact-field">
+                <label for="slot" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">Slot <span style="margin-left:4px; color:#9fb1c9; cursor:help;" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">&#x24D8;</span></label>
+                <select name="slot" id="slot" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">
+                    <option value="">&mdash;</option>
+                    <?php for($s=1;$s<=4;$s++):
+                        $takenBy = $usedSlots[$s] ?? null;
+                        $disabled = ($takenBy !== null && $takenBy !== $currentId) ? ' disabled' : '';
+                        $sel = ($currentSlot === $s) ? ' selected' : '';
+                    ?>
+                    <option value="<?= $s ?>"<?= $sel.$disabled ?>><?= $s ?></option>
+                    <?php endfor; ?>
+                </select>
+                <small class="hint">Settings Wheel shortcut.</small>
+            </div>
+
+            <label class="profile-default-card" title="When enabled, new NPCs will default to using this profile. Only one profile can be default.">
+                <span class="profile-toggle-heading">
+                    <span>&#x1F464; Default NPC</span>
+                    <span class="profile-toggle-control">
+                        <input type="hidden" name="default_npc" value="0">
+                        <input type="checkbox" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
+                        <span class="toggle-text">Off</span>
+                    </span>
+                </span>
+                <span class="profile-toggle-description">Use for newly discovered NPCs.</span>
+            </label>
         </div>
 
-        <div class="profile-core-compact-field">
-        <label for='slot' title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">Slot <span style="margin-left:6px; color:#9fb1c9; cursor:help;" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">&#x24D8;</span></label>
-        <?php
-            $usedSlotsRows = $GLOBALS["db"]->fetchAll("SELECT id, slot FROM core_profiles WHERE slot IS NOT NULL ORDER BY slot ASC");
-            $usedSlots = [];
-            foreach ($usedSlotsRows as $r){ $s=intval($r['slot']??0); if ($s>=1 && $s<=4) $usedSlots[$s]=(int)$r['id']; }
-            $currentId = (int)($editItem['id'] ?? 0);
-            $currentSlot = isset($editItem['slot']) ? (int)$editItem['slot'] : 0;
-        ?>
-        <select name="slot" id="slot" title="Can be assigned to NPCs ingame with the Settings Wheel hotkey">
-            <option value="">&mdash;</option>
-            <?php for($s=1;$s<=4;$s++):
-                $takenBy = $usedSlots[$s] ?? null;
-                $disabled = ($takenBy !== null && $takenBy !== $currentId) ? ' disabled' : '';
-                $sel = ($currentSlot === $s) ? ' selected' : '';
-            ?>
-            <option value="<?= $s ?>"<?= $sel.$disabled ?>><?= $s ?></option>
-            <?php endfor; ?>
-        </select>
-        <small class="hint">Optional quick-access slot (1-4). Can be quickchanged ingame.</small>
+        <div class="profile-prompt-field">
+            <label for="prompt">Profile Prompt</label>
+            <textarea id="prompt" name="prompt"><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
+            <small class="hint">Optional profile-specific system instructions appended to requests.</small>
         </div>
 
-        <div style="height:8px;"></div>
-        <label class="label-with-toggle">&#x1F464; Default NPC
-            <input type="hidden" name="default_npc" value="0">
-            <input type="checkbox" name="default_npc" value="1" <?= isset($editItem["default_npc"]) && $editItem["default_npc"] == 1 ? "checked" : "" ?>>
-            <span class="toggle-text">On</span>
-        </label>
-        <small class="hint">When enabled, new NPCs will default to using this profile. Only 1 profile can be default.</small>
-
-        <div style="height:8px;"></div>
-        <?php
-            $dynamicProfileEnabled = false;
-            try {
-                if (!empty($editItem["metadata"])) {
-                    $metaData = json_decode($editItem["metadata"], true);
-                    if (is_array($metaData)) {
-                        $dynamicProfileEnabled = !empty($metaData['DYNAMIC_PROFILE_ENABLED']);
-                    }
-                }
-            } catch (Throwable $e) {}
-        ?>
-        <label class="label-with-toggle">&#x267B;&#xFE0F; Dynamic Profile
-            <input type="hidden" name="meta_vis[DYNAMIC_PROFILE_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[DYNAMIC_PROFILE_ENABLED]" value="1" <?= $dynamicProfileEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">Allow systems to evolve NPC profiles based on gameplay events. NPCs using this profile will have dynamic profile enabled by default.</small>
-
-        <div style="height:6px;"></div>
-        <?php
-            $mtmEnabled = false;
-            try {
-                if (!empty($editItem["metadata"])) {
-                    $metaData = json_decode($editItem["metadata"], true);
-                    if (is_array($metaData)) {
-                        $mtmEnabled = !empty($metaData['MIDDLE_TERM_MEMORY_ENABLED']);
-                    }
-                }
-            } catch (Throwable $e) {}
-        ?>
-        <label class="label-with-toggle">&#x1F4C3; Middle Term Memory
-            <input type="hidden" name="meta_vis[MIDDLE_TERM_MEMORY_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[MIDDLE_TERM_MEMORY_ENABLED]" value="1" <?= $mtmEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">Saves a list of recent events after every 10 memory summaries. NPCs using this profile will have MTM enabled by default.</small>
-
-        <div style="height:6px;"></div>
-        <?php
-            $autoDiaryEnabled = false;
-            try {
-                if (!empty($editItem["metadata"])) {
-                    $metaData = json_decode($editItem["metadata"], true);
-                    if (is_array($metaData)) {
-                        $autoDiaryEnabled = !empty($metaData['AUTO_DIARY_ENABLED']);
-                    }
-                }
-            } catch (Throwable $e) {}
-        ?>
-        <label class="label-with-toggle">&#x1F4D9; Auto Diary
-            <input type="hidden" name="meta_vis[AUTO_DIARY_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[AUTO_DIARY_ENABLED]" value="1" <?= $autoDiaryEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">Automatically generate diary entries when NPCs are nearby during sleep/wait events. NPCs using this profile will have auto diary enabled by default.</small>
-
-        <div style="height:8px;"></div>
-        <?php
-            $autoDiaryWaitEnabled = false;
-            try {
-                if (!empty($editItem["metadata"])) {
-                    $metaData = json_decode($editItem["metadata"], true);
-                    if (is_array($metaData)) {
-                        $autoDiaryWaitEnabled = !empty($metaData['AUTO_DIARY_WAIT_ENABLED']);
-                    }
-                }
-            } catch (Throwable $e) {}
-        ?>
-        <label class="label-with-toggle">&#x23F3; Auto Diary Wait
-            <input type="hidden" name="meta_vis[AUTO_DIARY_WAIT_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[AUTO_DIARY_WAIT_ENABLED]" value="1" <?= $autoDiaryWaitEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">When Auto Diary is enabled, this controls whether diary entries are created during wait events. If disabled, auto diary will only trigger on sleep events.</small>
-
-        <div style="height:8px;"></div>
-        <label for="prompt">Profile Prompt</label>
-        <textarea name="prompt" placeholder="<?= htmlspecialchars('') ?>"><?= htmlspecialchars($editItem["prompt"] ?? "") ?></textarea>
-        <small class="hint">Optional: profile-specific system instructions appended to requests. Example is using this to hold specific instructions for followers and assigning the profile only to followers.</small>
-
-        <div style="height:8px;"></div>
-        <?php
-            $randomizerEnabled = false;
-            try {
-                if (!empty($editItem["metadata"])) {
-                    $metaData = json_decode($editItem["metadata"], true);
-                    if (is_array($metaData)) {
-                        $randomizerEnabled = !empty($metaData['LLM_RANDOMIZER_ENABLED']);
-                    }
-                }
-            } catch (Throwable $e) {}
-        ?>
-        <label class="label-with-toggle">LLM Randomizer
-            <input type="hidden" name="meta_vis[LLM_RANDOMIZER_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[LLM_RANDOMIZER_ENABLED]" value="1" <?= $randomizerEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">Randomly switches between the 4 LLM connectors for NPCs using this profile. Will roughly switch ever 2-3 responses per NPC. Is useful to add more variety to NPC responses and make them more dynamic.</small>
-
-        <div style="height:6px;"></div>
-        <?php
-            $fallbackEnabled = false;
-            try {
-                if (!empty($editItem["metadata"])) {
-                    $metaData = json_decode($editItem["metadata"], true);
-                    if (is_array($metaData)) {
-                        $fallbackEnabled = !empty($metaData['LLM_FALLBACK_ENABLED']);
-                    }
-                }
-            } catch (Throwable $e) {}
-        ?>
-        <label class="label-with-toggle">&#x1F504; LLM Fallback
-            <input type="hidden" name="meta_vis[LLM_FALLBACK_ENABLED]" value="">
-            <input type="checkbox" name="meta_vis[LLM_FALLBACK_ENABLED]" value="1" <?= $fallbackEnabled ? "checked" : "" ?>>
-            <span class="toggle-text">Off</span>
-        </label>
-        <small class="hint">Automatically retry with fallback connector when primary connector fails. Please use a reliable, ideally cheaper connector. Response time will be longer when fallback is used.</small>
-
-        <div style="margin-top:8px; display:flex; gap:8px;">
-            <button type="button" id="btn_save_profile_settings" class="btn-save">Save All</button>
+        <div class="profile-toggle-groups">
+            <?php foreach ($profileToggleGroups as $toggleGroup): ?>
+                <section class="profile-toggle-group">
+                    <h3 class="profile-toggle-group-title"><?= htmlspecialchars($toggleGroup['title']) ?></h3>
+                    <div class="profile-toggle-grid">
+                        <?php foreach ($toggleGroup['cards'] as $toggleCard): ?>
+                            <label class="profile-toggle-card" title="<?= htmlspecialchars($toggleCard['help']) ?>">
+                                <span class="profile-toggle-heading">
+                                    <span><?= $toggleCard['icon'] ?> <?= htmlspecialchars($toggleCard['title']) ?></span>
+                                    <span class="profile-toggle-control">
+                                        <input type="hidden" name="meta_vis[<?= htmlspecialchars($toggleCard['key']) ?>]" value="">
+                                        <input type="checkbox" name="meta_vis[<?= htmlspecialchars($toggleCard['key']) ?>]" value="1" <?= $toggleCard['enabled'] ? "checked" : "" ?>>
+                                        <span class="toggle-text"><?= $toggleCard['enabled'] ? 'On' : 'Off' ?></span>
+                                    </span>
+                                </span>
+                                <span class="profile-toggle-description"><?= htmlspecialchars($toggleCard['short']) ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+            <?php endforeach; ?>
         </div>
     </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', function(){
-        const names = ['default_npc','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]'];
+        const names = ['default_npc','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]','meta_vis[MATERIALIZE_DIARY_ENABLED]','meta_vis[LATEST_DIARY_CONTEXT_ENABLED]'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -1807,6 +1995,14 @@ $ittById = $byId($ittRows);
         if (basicBtn){ basicBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
 const saveAllBtn = document.getElementById('btn_save_all');
         if (saveAllBtn){ saveAllBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving all settings...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
+        const syncDiaryPromptBtn = document.getElementById('btn_sync_diary_prompt');
+        if (syncDiaryPromptBtn){ syncDiaryPromptBtn.addEventListener('click', function(ev){
+            if (!window.confirm('Apply this diary prompt to every profile? Other profile settings will not change.')) return;
+            try {
+                if (typeof showToast === 'function') showToast('Applying diary prompt...');
+                saveProfileAjax(ev, 'core_profile_form', true);
+            } catch(_e){}
+        }); }
         const backTopBtn = document.getElementById('btn_back_to_top');
         if (backTopBtn){ backTopBtn.addEventListener('click', function(){
             try { window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -1822,15 +2018,10 @@ const saveAllBtn = document.getElementById('btn_save_all');
         <div class="connector-subtitle">&#x24D8; Choose connector assignments for each role. Saved with Save All.</div>
 
         <?php
-            $connectorRoleSections = [
+            $connectorGroups = [
                 [
-                    'title' => 'Audio',
-                    'rows' => [
-                        ['field' => 'tts_connector_id',  'icon' => '&#x1F50A;',         'title' => 'TTS Connector',   'desc' => 'Voice synthesis connector used for spoken output.', 'options' => 'tts'],
-                    ],
-                ],
-                [
-                    'title' => 'Response',
+                    'title' => 'Response Connectors',
+                    'description' => 'Connectors used for live NPC dialogue and response modes.',
                     'rows' => [
                         ['field' => 'llm_primary_id',    'icon' => '&#x1F579;&#xFE0F;', 'title' => 'Standard LLM',     'desc' => 'General purpose connector for normal roleplay responses.', 'options' => 'llm'],
                         ['field' => 'llm_secondary_id',  'icon' => '&#x1F3C3;&#x200D;&#x2642;&#xFE0F;&#x200D;&#x27A1;&#xFE0F;', 'title' => 'Fast LLM',         'desc' => 'Lower-latency connector for quick reactions and lightweight dialogue.', 'options' => 'llm'],
@@ -1839,8 +2030,10 @@ const saveAllBtn = document.getElementById('btn_save_all');
                     ],
                 ],
                 [
-                    'title' => 'Background',
+                    'title' => 'Other Connectors',
+                    'description' => 'Voice, diary, formatting, and fallback services used by this profile.',
                     'rows' => [
+                        ['field' => 'tts_connector_id',  'icon' => '&#x1F50A;',         'title' => 'TTS Connector',   'desc' => 'Voice synthesis connector used for spoken output.', 'options' => 'tts'],
                         ['field' => 'diary_connector_id','icon' => '&#x1F4D3;',         'title' => 'Diary LLM',        'desc' => 'Connector used for diary generation.', 'options' => 'llm'],
                         ['field' => 'llm_formatter_id',  'icon' => '&#x1F9FE;',         'title' => 'Formatter LLM',    'desc' => 'Connector used for JSON formatting and structured background tasks.', 'options' => 'llm'],
                         ['field' => 'llm_fallback_id',   'icon' => '&#x1F504;',         'title' => 'Fallback LLM',     'desc' => 'Backup connector used when primary requests fail.', 'options' => 'llm'],
@@ -1848,33 +2041,38 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 ],
             ];
         ?>
-        <?php foreach ($connectorRoleSections as $sectionCfg): ?>
-            <div class="connector-subtitle" style="margin-top:10px; margin-bottom:4px; color:#ffffff; font-weight:700;"><?= htmlspecialchars($sectionCfg['title']) ?></div>
-            <?php foreach (($sectionCfg['rows'] ?? []) as $rowCfg): ?>
-                <?php $selectedId = (string)($editItem[$rowCfg['field']] ?? ''); ?>
-                <div class="setting-row">
-                    <div>
-                        <div class="setting-key"><span class="setting-icon"><?= $rowCfg['icon'] ?></span><span><?= htmlspecialchars($rowCfg['title']) ?></span></div>
-                        <div class="setting-desc"><?= htmlspecialchars($rowCfg['desc']) ?></div>
+        <div class="connector-selection-grid">
+            <?php foreach ($connectorGroups as $groupCfg): ?>
+                <section class="connector-group-card">
+                    <h3 class="connector-group-title"><?= htmlspecialchars($groupCfg['title']) ?></h3>
+                    <div class="connector-group-subtitle"><?= htmlspecialchars($groupCfg['description']) ?></div>
+                    <div class="connector-group-fields">
+                        <?php foreach (($groupCfg['rows'] ?? []) as $rowCfg): ?>
+                            <?php $selectedId = (string)($editItem[$rowCfg['field']] ?? ''); ?>
+                            <div class="connector-option-card">
+                                <div class="setting-key"><span class="setting-icon"><?= $rowCfg['icon'] ?></span><span><?= htmlspecialchars($rowCfg['title']) ?></span></div>
+                                <div class="setting-desc"><?= htmlspecialchars($rowCfg['desc']) ?></div>
+                                <div class="setting-control">
+                                    <select name="<?= htmlspecialchars($rowCfg['field']) ?>" id="<?= htmlspecialchars($rowCfg['field']) ?>">
+                                        <option value="">-- None --</option>
+                                        <?php $optionType = $rowCfg['options'] ?? 'llm'; ?>
+                                        <?php $optionRows = ($optionType === 'tts') ? ($ttsRows ?? []) : ($llmRows ?? []); ?>
+                                        <?php foreach ($optionRows as $opt): ?>
+                                            <?php
+                                                $optLabel = trim((string)($opt['label'] ?? '')) !== ''
+                                                    ? (string)$opt['label']
+                                                    : (string)($opt['model'] ?? ($optionType === 'tts' ? ('TTS #' . ($opt['id'] ?? '')) : ('LLM #' . ($opt['id'] ?? ''))));
+                                            ?>
+                                            <option value="<?= htmlspecialchars((string)$opt['id']) ?>" <?= ((string)$opt['id'] === $selectedId ? 'selected' : '') ?>><?= htmlspecialchars($optLabel) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-                    <div class="setting-control">
-                        <select name="<?= htmlspecialchars($rowCfg['field']) ?>" id="<?= htmlspecialchars($rowCfg['field']) ?>">
-                            <option value="">-- None --</option>
-                            <?php $optionType = $rowCfg['options'] ?? 'llm'; ?>
-                            <?php $optionRows = ($optionType === 'tts') ? ($ttsRows ?? []) : ($llmRows ?? []); ?>
-                            <?php foreach ($optionRows as $opt): ?>
-                                <?php
-                                    $optLabel = trim((string)($opt['label'] ?? '')) !== ''
-                                        ? (string)$opt['label']
-                                        : (string)($opt['model'] ?? ($optionType === 'tts' ? ('TTS #' . ($opt['id'] ?? '')) : ('LLM #' . ($opt['id'] ?? ''))));
-                                ?>
-                                <option value="<?= htmlspecialchars((string)$opt['id']) ?>" <?= ((string)$opt['id'] === $selectedId ? 'selected' : '') ?>><?= htmlspecialchars($optLabel) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
+                </section>
             <?php endforeach; ?>
-        <?php endforeach; ?>
+        </div>
     </div>
 
     <!-- Visual Profile Settings (first chunk) -->
@@ -1904,8 +2102,9 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 if (is_array($arr2)) { $dynSelected = array_values(array_map('strval', $arr2)); }
             } catch (Throwable $_e) { $dynSelected = []; }
         ?>
+        <div class="profile-feature-grid">
         <?php if (!empty($__dynOptions)): ?>
-        <div class="provider-card" style="margin-bottom:8px;">
+        <div class="provider-card">
             <div class="provider-head">
                 <div class="provider-title">
                     <div class="provider-icon">&#x1F6E0;&#xFE0F;</div>
@@ -1938,7 +2137,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
         </div>
         <?php endif; ?>
         <?php if (!empty($__rpgOptions)): ?>
-        <div class="provider-card" style="margin-bottom:8px;">
+        <div class="provider-card">
             <div class="provider-head">
                 <div class="provider-title">
                     <div class="provider-icon">&#x1F3B2;</div>
@@ -1994,10 +2193,10 @@ const saveAllBtn = document.getElementById('btn_save_all');
             </div>
         </div>
         <?php endif; ?>
+        </div>
         
         <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
-        <div style="margin-top:8px; display:flex; gap:8px;">
-<button type="button" id="btn_save_all" class="btn-save">Save All</button>
+        <div style="margin-top:8px; display:flex; justify-content:flex-end; gap:8px;">
             <button type="button" id="btn_back_to_top" class="btn-primary" title="Scroll to top">Back to top</button>
         </div>
     </div>
@@ -2039,7 +2238,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 'mode' => 'profile',
                 'fieldName' => 'metadata',
                 'settingsCatalog' => $profileOverrideCatalog,
-                'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'AUTO_DIARY_ENABLED', 'AUTO_DIARY_WAIT_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
+                'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'AUTO_DIARY_ENABLED', 'AUTO_DIARY_WAIT_ENABLED', 'MATERIALIZE_DIARY_ENABLED', 'LATEST_DIARY_CONTEXT_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
                 'currentData' => $currentProfileOverrides,
                 'systemFields' => [],
             ];
@@ -2071,7 +2270,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
     })();
 
     // Save handler that keeps the user on the same profile and shows a toast
-    async function saveProfileAjax(ev, formId){
+    async function saveProfileAjax(ev, formId, syncDiaryPrompt){
         try {
             if (typeof consolidation === 'function') {
                 const ok = consolidation(ev, formId);
@@ -2104,6 +2303,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
         } else {
             if (!fd.has('create')) fd.append('create','1');
         }
+        if (syncDiaryPrompt === true) fd.append('sync_diary_prompt', '1');
         try {
             const res = await fetch('core_profiles.php', { method:'POST', headers:{ 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
             let json = {};
@@ -2116,7 +2316,10 @@ const saveAllBtn = document.getElementById('btn_save_all');
                     idEl.value = String(json.id);
                     try { history.replaceState({}, '', 'core_profiles.php?edit='+encodeURIComponent(String(json.id))); } catch(_){ }
                 }
-                if (typeof showToast === 'function') showToast('Profile saved');
+                if (typeof showToast === 'function') {
+                    const synced = Number(json.synced_profiles || 0);
+                    showToast(synced > 0 ? ('Diary prompt applied to ' + synced + ' profiles') : 'Profile saved');
+                }
             } else {
                 if (typeof showToast === 'function') showToast('Save failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
             }
@@ -2587,39 +2790,9 @@ const saveAllBtn = document.getElementById('btn_save_all');
             </div>
         </div>
         <div class="modal-body" style="padding: 16px; max-height: calc(85vh - 100px); overflow-y: auto;">
-            <div class="connector-help" style="margin-bottom: 16px; padding: 12px; background: #1a1a1a; border: 1px solid #4a4a4a; border-radius: 8px;">
-                <strong>About Profile Rules:</strong>
-                    <p style="margin: 6px 0;">Profile Rules automatically apply when an NPC is Activated ingame. If an NPC that is activated matches the following ruleset, they will be assigned a custom profile of your choosing.</p>
-                    <ul style="margin: 6px 0 0 16px; padding: 0;">
-                    <li><strong>Match Fields:</strong> Use regex for name/race/base. Leave blank to match all. Gender is exact match.</li>
-                    <li><strong>Regex examples:</strong>
-                        <ul style="margin: 4px 0 0 16px; padding: 0;">
-                            <li>
-                                <strong>Name exact</strong>: <code>^lydia$</code>
-                                <div style="color:#9fb1c9; font-size:12px; margin-top:2px;">matches: lydia &nbsp;|&nbsp; does not match: cicero</div>
-                            </li>
-                            <li>
-                                <strong>Name starts with</strong>: <code>^mjoll</code>
-                                <div style="color:#9fb1c9; font-size:12px; margin-top:2px;">matches: mjoll_the_lioness &nbsp;|&nbsp; does not match: lydia</div>
-                            </li>
-                            <li>
-                                <strong>Name contains</strong>: <code>cicero</code>
-                                <div style="color:#9fb1c9; font-size:12px; margin-top:2px;">matches: cicero &nbsp;|&nbsp; does not match: herika</div>
-                            </li>
-                            <li>
-                                <strong>Names one of</strong>: <code>^(lydia|herika)$</code>
-                                <div style="color:#9fb1c9; font-size:12px; margin-top:2px;">matches: lydia, herika &nbsp;|&nbsp; does not match: cicero</div>
-                            </li>
-                            <li>
-                                <strong>Race one of</strong>: <code>^(argonian|imperial|nord|redguard|darkelf)$</code>
-                                <div style="color:#9fb1c9; font-size:12px; margin-top:2px;">matches: argonian, nord &nbsp;|&nbsp; does not match: (any race not in the list)</div>
-                            </li>
-                        </ul>
-                    </li>
-                    <li><strong>Mods:</strong> Comma-separated list (e.g., "MyAwesomeFollower.esp,AiAgent.esp")</li>
-                    <li><strong>Action:</strong> JSON object with NPC fields to set (e.g., <code>{"voiceid": "malenord", "refid": "A3000D67"}</code>)</li>
-                    <li><strong>Priority:</strong> Higher numbers apply first. Use to override other rules.</li>
-                </ul>
+            <div class="connector-help rule-help">
+                <strong>Profile Rules automatically assign profiles when NPCs are first activated.</strong>
+                <span>Choose one or more values inside a field to match any of them. Different fields must all match. Use Advanced Rules only for custom regex, base IDs, priority, or metadata actions.</span>
             </div>
             <div id="rules_list" style="display: flex; flex-direction: column; gap: 12px;">
                 <!-- Rules will be loaded here -->
@@ -2732,36 +2905,78 @@ const saveAllBtn = document.getElementById('btn_save_all');
     overflow: hidden;
     z-index: 10001;
 }
-#import_rules_modal .modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2; }
-#import_rules_modal .modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 6px; font-size: 1.6em; }
-#import_rules_modal .modal-body { background:#2a2a2a; overflow:auto; max-height: calc(90vh - 60px); }
-#import_rules_modal .modal-close { background:#3a3a3a; color:#fff; border:1px solid rgba(138,155,182,.35); border-radius:8px; padding:8px 14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700; }
+#import_rules_modal .modal-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #4a4a4a; background:#2a2a2a; position:sticky; top:0; z-index:2; }
+#import_rules_modal .modal-title { margin:0; font-weight:700; color: rgb(242, 124, 17); font-family: 'MagicCards', serif; word-spacing: 8px; font-size: 2em; }
+#import_rules_modal .modal-body { background:#2a2a2a; overflow:auto; max-height: calc(90vh - 68px); font-family:'Futura CondensedLight', Arial, sans-serif; font-size:16px; }
+#import_rules_modal .modal-close { background:#3a3a3a; color:#fff; border:1px solid rgba(138,155,182,.35); border-radius:8px; padding:10px 16px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:7px; font-size:15px; font-weight:700; }
 #import_rules_modal .modal-close:hover { background:#4a4a4a; }
 #import_rules_modal .modal-actions { display:flex; gap:8px; align-items:center; }
 
 /* Rule card styling */
-.rule-card { background: #2a2a2a; border: 1px solid #4a4a4a; border-radius: 10px; padding: 14px; }
+.rule-help { display:flex; gap:10px; align-items:baseline; margin-bottom:18px; padding:14px 16px; background:#202020; border:1px solid #424242; border-radius:8px; color:#cfd5df; font-size:15px; line-height:1.45; }
+.rule-help strong { color:#fff; white-space:nowrap; }
+.rule-card { background: #242424; border: 1px solid #454545; border-radius: 8px; padding: 16px; }
 .rule-card.editing { border-color: rgb(242, 124, 17); }
-.rule-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.rule-title { font-weight: 700; color: rgb(242, 124, 17); font-size: 1.1em; }
+.rule-header { display: flex; justify-content: space-between; align-items: center; gap:12px; }
+.rule-title-row { display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; }
+.rule-title { font-family:'Futura CondensedLight', Arial, sans-serif; font-weight:700; color:#fff; font-size:20px; letter-spacing:.2px; }
 .rule-actions { display: flex; gap: 6px; }
+.rule-status, .rule-advanced-badge { border:1px solid #505050; border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.rule-status.enabled { color:#8ee2aa; border-color:#2f7749; background:#193323; }
+.rule-status.disabled { color:#aaa; }
+.rule-advanced-badge { color:#ffbf76; border-color:#795122; background:#382613; }
+.rule-summary { display:flex; align-items:center; flex-wrap:wrap; gap:7px; margin-top:11px; color:#cfd5df; font-size:14px; }
+.rule-summary-target { color:#fff; font-weight:700; margin-right:4px; }
+.rule-chip { display:inline-flex; align-items:center; gap:4px; border:1px solid #4b4b4b; background:#1c1c1c; border-radius:999px; padding:4px 9px; font-size:13px; }
+.rule-edit-core { display:grid; grid-template-columns:minmax(240px, 1.4fr) minmax(240px, 1fr) auto; gap:14px; align-items:end; margin-top:14px; }
+.rule-field label, .rule-picker-label { display:block; color:#d5dbe4; font-size:14px; font-weight:700; margin-bottom:7px; text-transform:uppercase; letter-spacing:.04em; }
+.rule-picker-label { display:flex; align-items:center; gap:7px; }
+.rule-picker-icon { font-size:17px; line-height:1; text-transform:none; }
+.rule-enabled-field { min-width:92px; padding-bottom:7px; }
+.rule-enabled-field label { display:flex; align-items:center; gap:9px; margin:0; color:#fff; text-transform:none; font-size:15px; }
+.rule-simple-heading { margin:18px 0 10px; color:#fff; font-family:'MagicCards', serif; font-size:20px; word-spacing:5px; }
+.rule-simple-note { color:#aab3c0; font-family:'Futura CondensedLight', Arial, sans-serif; font-size:13px; font-weight:400; margin-left:7px; word-spacing:normal; }
+.rule-simple-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+.rule-picker { background:#1d1d1d; border:1px solid #404040; border-radius:8px; padding:12px; min-width:0; }
+.rule-picker-controls { display:flex; gap:6px; }
+.rule-picker-select, .rule-picker-custom { min-width:0; width:100%; background:#343434; border:1px solid #555; border-radius:6px; color:#f8f9fa; padding:9px 10px; font-family:'Futura CondensedLight', Arial, sans-serif; font-size:15px; }
+.rule-picker-select { cursor:pointer; }
+.rule-picker-custom:focus, .rule-picker-select:focus { border-color:rgb(242, 124, 17); outline:none; }
+.rule-picker-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; min-height:24px; }
+.rule-picker-empty { color:#818b99; font-size:13px; padding:3px 0; }
+.rule-picker-tag { display:inline-flex; align-items:center; gap:6px; border:1px solid #5a4a35; background:#30271d; color:#f2d1aa; border-radius:999px; padding:4px 9px; font-size:13px; }
+.rule-picker-remove { border:0; background:transparent; color:#f2d1aa; cursor:pointer; padding:0; line-height:1; }
+.rule-custom-row { display:flex; gap:7px; margin-top:7px; }
+.rule-small-btn, .rule-advanced-toggle { background:#333; color:#fff; border:1px solid #505050; border-radius:7px; padding:8px 12px; cursor:pointer; font-size:14px; font-weight:700; white-space:nowrap; }
+.rule-small-btn:hover, .rule-advanced-toggle:hover { background:#414141; }
+.rule-advanced-toggle { margin-top:14px; }
+.rule-advanced-panel { display:none; margin-top:12px; padding:14px; border:1px solid #51422e; border-radius:8px; background:#201d19; }
+.rule-advanced-panel.open { display:block; }
+.rule-advanced-note { color:#d3b995; font-size:14px; line-height:1.4; margin-bottom:12px; }
 .rule-grid { display: grid; grid-template-columns: 180px 1fr; gap: 8px 12px; align-items: start; }
-.rule-label { color: #9fb1c9; font-weight: 600; padding-top: 6px; }
+.rule-label { color:#c9d0da; font-size:14px; font-weight:700; padding-top:9px; }
 .rule-value { color: #e9efff; }
 .rule-value.empty { color: #666; font-style: italic; }
-.rule-input { width: 100%; background: #1a1a1a; border: 1px solid #4a4a4a; border-radius: 6px; padding: 6px 8px; color: #e9efff; }
+.rule-input { width:100%; background:#343434; border:1px solid #555; border-radius:6px; padding:9px 10px; color:#f8f9fa; font-family:'Futura CondensedLight', Arial, sans-serif; font-size:15px; }
 .rule-input:focus { border-color: rgb(242, 124, 17); outline: none; }
 .rule-input.json { font-family: monospace; min-height: 60px; }
-.rule-checkbox { accent-color: rgb(242, 124, 17); transform: scale(1.4); cursor: pointer; }
-.btn-rule-edit, .btn-rule-save, .btn-rule-cancel, .btn-rule-delete { color:#fff; border:1px solid rgba(138,155,182,.35); border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:700; font-size:12px; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+.rule-checkbox { accent-color: #2f9e58; transform: scale(1.2); cursor: pointer; }
+.btn-rule-edit, .btn-rule-save, .btn-rule-cancel, .btn-rule-delete { color:#fff; border:1px solid rgba(138,155,182,.35); border-radius:8px; padding:9px 14px; cursor:pointer; font-weight:700; font-size:14px; display:inline-flex; align-items:center; justify-content:center; gap:7px; }
 .btn-rule-edit { background:#204e7a; }
 .btn-rule-edit:hover { background:#285c8f; }
-.btn-rule-save { background:linear-gradient(135deg, rgba(32,122,74,.9), rgba(23,101,57,.9)); }
-.btn-rule-save:hover { background:linear-gradient(135deg, rgba(42,142,94,.95), rgba(32,122,74,.95)); }
+.btn-rule-save { background:#247a49; }
+.btn-rule-save:hover { background:#2c9258; }
 .btn-rule-cancel { background:#3a3a3a; }
 .btn-rule-cancel:hover { background:#4a4a4a; }
 .btn-rule-delete { background: #8b0000; border-color: #660000; }
 .btn-rule-delete:hover { background: #a00000; }
+@media (max-width: 850px) {
+    .rule-help { display:block; }
+    .rule-help strong { display:block; margin-bottom:4px; white-space:normal; }
+    .rule-edit-core, .rule-simple-grid { grid-template-columns:1fr; }
+    .rule-grid { grid-template-columns:1fr; }
+    .rule-label { padding-top:2px; }
+}
 </style>
 
 <script>
@@ -2776,6 +2991,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
     
     let rulesData = [];
     let editingId = null;
+    let editorOptions = { names: [], races: [], genders: [], factions: [], mods: [] };
     
     function escapeHtml(str) {
         if (str === null || str === undefined) return '';
@@ -2791,212 +3007,383 @@ const saveAllBtn = document.getElementById('btn_save_all');
         modal.classList.remove('show');
         editingId = null;
     }
-    
+
+    function parsePgTextArray(value) {
+        if (Array.isArray(value)) return value;
+        if (typeof value !== 'string') return [];
+        const source = value.trim();
+        if (!(source.startsWith('{') && source.endsWith('}'))) return [];
+        const body = source.slice(1, -1);
+        if (!body) return [];
+
+        try {
+            const parsed = JSON.parse('[' + body + ']');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (_error) {
+            const values = [];
+            let current = '';
+            let quoted = false;
+            let escaped = false;
+            for (const character of body) {
+                if (escaped) {
+                    current += character;
+                    escaped = false;
+                } else if (character === '\\') {
+                    escaped = true;
+                } else if (character === '"') {
+                    quoted = !quoted;
+                } else if (character === ',' && !quoted) {
+                    values.push(current.trim());
+                    current = '';
+                } else {
+                    current += character;
+                }
+            }
+            if (current !== '') values.push(current.trim());
+            return values.filter(Boolean);
+        }
+    }
+
+    function ruleMods(rule) {
+        return parsePgTextArray(rule.match_mods);
+    }
+
+    function simpleValues(rule, key) {
+        return Array.isArray(rule?._simple?.[key]) ? rule._simple[key] : [];
+    }
+
+    function buildExactRegex(values) {
+        const unique = Array.from(new Set((values || []).map(value => String(value).trim()).filter(Boolean)));
+        if (!unique.length) return '';
+        const escaped = unique.map(value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        return `^(?:${escaped.join('|')})$`;
+    }
+
+    function renderProfileOptions(selectedValue) {
+        let options = '<option value="">-- Select Profile --</option>';
+        PROFILES.forEach(profile => {
+            const selected = String(profile.id) === String(selectedValue) ? ' selected' : '';
+            options += `<option value="${escapeHtml(profile.id)}"${selected}>${escapeHtml(profile.label || 'Profile #' + profile.id)}</option>`;
+        });
+        return options;
+    }
+
+    function renderPicker(pickerId, name, label, selectedValues, availableValues, customHint, note = '', icon = '', explicitDropdown = false) {
+        const selected = Array.from(new Set((selectedValues || []).map(String).filter(Boolean)));
+        const available = Array.from(new Set([...(availableValues || []), ...selected]))
+            .filter(Boolean)
+            .sort((left, right) => left.localeCompare(right, undefined, { sensitivity: 'base' }));
+        const remaining = available
+            .filter(value => !selected.includes(value))
+        const choices = remaining.map(value => `<option value="${escapeHtml(value)}"></option>`).join('');
+        const selectOptions = remaining.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+        const tags = selected.length
+            ? selected.map(value => renderPickerTag(value)).join('')
+            : '<span class="rule-picker-empty">Any</span>';
+        const listId = `rule-options-${String(pickerId).replace(/[^a-zA-Z0-9_-]/g, '-')}-${name}`;
+        const inputControls = explicitDropdown
+            ? `<div class="rule-picker-controls">
+                    <select class="rule-picker-select" aria-label="Select detected ${escapeHtml(label)}">
+                        <option value="">Select a detected ${escapeHtml(label.toLowerCase())}</option>
+                        ${selectOptions}
+                    </select>
+                    <button type="button" class="rule-small-btn" data-action="add-selected">＋ Add</button>
+               </div>
+               <div class="rule-custom-row">
+                    <input type="text" class="rule-picker-custom" aria-label="Type custom ${escapeHtml(label)}" placeholder="${escapeHtml(customHint)}">
+                    <button type="button" class="rule-small-btn" data-action="add-custom">＋ Add Typed</button>
+               </div>`
+            : `<div class="rule-custom-row">
+                    <input type="text" class="rule-picker-custom" list="${listId}" aria-label="${escapeHtml(customHint)}" placeholder="${escapeHtml(customHint)}">
+                    <button type="button" class="rule-small-btn" data-action="add-custom">＋ Add</button>
+               </div>
+               <datalist id="${listId}">${choices}</datalist>`;
+
+        return `<div class="rule-picker" data-picker-name="${name}">
+            <span class="rule-picker-label">${icon ? `<span class="rule-picker-icon" aria-hidden="true">${icon}</span>` : ''}${escapeHtml(label)}${note ? `<span class="rule-simple-note">(${escapeHtml(note)})</span>` : ''}</span>
+            ${inputControls}
+            <div class="rule-picker-tags">${tags}</div>
+        </div>`;
+    }
+
+    function renderPickerTag(value) {
+        return `<span class="rule-picker-tag" data-value="${escapeHtml(value)}">
+            <span>${escapeHtml(value)}</span>
+            <button type="button" class="rule-picker-remove" data-action="remove-tag" title="Remove">&times;</button>
+        </span>`;
+    }
+
+    function renderAdvancedField(label, name, value, type = 'text') {
+        const normalized = value && typeof value === 'object'
+            ? JSON.stringify(value, null, 2)
+            : (value || '');
+        const control = type === 'json'
+            ? `<textarea class="rule-input rule-input-${name} json">${escapeHtml(normalized)}</textarea>`
+            : `<input type="${type}" class="rule-input rule-input-${name}" value="${escapeHtml(normalized)}">`;
+        return `<div class="rule-label">${escapeHtml(label)}</div><div>${control}</div>`;
+    }
+
+    function renderSummary(rule, profileLabel) {
+        const chips = [];
+        if (rule._has_custom_regex) {
+            chips.push('<span class="rule-chip">Custom advanced matching</span>');
+        } else {
+            [
+                ['Name', simpleValues(rule, 'name')],
+                ['Race', simpleValues(rule, 'race')],
+                ['Gender', simpleValues(rule, 'gender')],
+                ['Faction', simpleValues(rule, 'faction')],
+                ['Requires mods', ruleMods(rule)],
+            ].forEach(([label, values]) => {
+                if (values.length) {
+                    chips.push(`<span class="rule-chip"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(values.join(' or '))}</span>`);
+                }
+            });
+        }
+        if (!chips.length) chips.push('<span class="rule-chip">All NPCs</span>');
+
+        return `<div class="rule-summary">
+            <span class="rule-summary-target">${escapeHtml(profileLabel || 'No profile assigned')}</span>
+            ${chips.join('')}
+        </div>`;
+    }
+
     async function loadRules() {
         try {
             const res = await fetch('core_profiles.php?get_import_rules=1');
             const json = await res.json();
             if (json.ok && json.data) {
                 rulesData = json.data;
+                editorOptions = Object.assign(editorOptions, json.options || {});
                 renderRules();
+            } else {
+                showToast(json.error || 'Failed to load profile rules', true);
             }
         } catch (e) {
             console.error('Failed to load rules:', e);
+            showToast('Failed to load profile rules', true);
         }
     }
-    
+
     function renderRules() {
         if (rulesData.length === 0) {
-            rulesList.innerHTML = '<div style="text-align:center; padding:40px; color:#888;">No import rules yet. Click "New Rule" to create one.</div>';
+            rulesList.innerHTML = '<div style="text-align:center; padding:40px; color:#888;">No profile rules yet. Click "New Rule" to create one.</div>';
             return;
-        }
-        
-        function parsePgTextArray(val){
-            if (Array.isArray(val)) return val;
-            if (typeof val !== 'string') return [];
-            const s = val.trim();
-            if (!(s.startsWith('{') && s.endsWith('}'))) return [];
-            const inner = s.slice(1, -1);
-            // Try JSON parse path first
-            try {
-                const json = '[' + inner + ']';
-                const arr = JSON.parse(json);
-                return Array.isArray(arr) ? arr : [];
-            } catch(_e) {
-                // Fallback: simple split handling quoted elements
-                const items = [];
-                let cur = '';
-                let inQ = false;
-                for (let i=0;i<inner.length;i++){
-                    const ch = inner[i];
-                    if (ch === '"') { inQ = !inQ; continue; }
-                    if (ch === ',' && !inQ) { items.push(cur.trim()); cur=''; continue; }
-                    cur += ch;
-                }
-                if (cur !== '') items.push(cur.trim());
-                return items.map(x=>x.replace(/^\"|\"$/g,'').replace(/\\\"/g,'"').replace(/\\\\/g,'\\'));
-            }
         }
 
         let html = '';
         rulesData.forEach(rule => {
-            const isEditing = editingId === rule.id;
+            const isEditing = String(editingId) === String(rule.id);
             const profileLabel = PROFILES.find(p => String(p.id) === String(rule.profile))?.label || '';
-            
-            // Parse match_mods array
-            let modsStr = '';
-            if (rule.match_mods) {
-                if (Array.isArray(rule.match_mods)) {
-                    modsStr = rule.match_mods.join(', ');
-                } else if (typeof rule.match_mods === 'string') {
-                    const arr = parsePgTextArray(rule.match_mods);
-                    modsStr = arr.join(', ');
-                }
-            }
-            
-            html += `<div class="rule-card${isEditing ? ' editing' : ''}" data-id="${rule.id}">
+            const enabled = rule.enabled === true || rule.enabled === 't' || rule.enabled === '1' || rule.enabled === 1;
+            const editorMode = rule._editor_mode || (rule._has_custom_regex ? 'advanced' : 'simple');
+            const isAdvanced = editorMode === 'advanced';
+
+            html += `<div class="rule-card${isEditing ? ' editing' : ''}" data-id="${rule.id}" data-editor-mode="${editorMode}">
                 <div class="rule-header">
-                    <div class="rule-title">${escapeHtml(rule.description || 'Untitled Rule')}</div>
+                    <div class="rule-title-row">
+                        <div class="rule-title">${escapeHtml(rule.description || 'Untitled Rule')}</div>
+                        <span class="rule-status ${enabled ? 'enabled' : 'disabled'}">${enabled ? 'Enabled' : 'Disabled'}</span>
+                        ${rule._has_custom_regex ? '<span class="rule-advanced-badge">Advanced</span>' : ''}
+                    </div>
                     <div class="rule-actions">
                         ${!isEditing ? `
-                            <button type="button" class="btn-rule-edit" data-action="edit">Edit</button>
-                            <button type="button" class="btn-rule-delete" data-action="delete">Delete</button>
+                            <button type="button" class="btn-rule-edit" data-action="edit">✎ Edit</button>
+                            <button type="button" class="btn-rule-delete" data-action="delete">× Delete</button>
                         ` : `
-                            <button type="button" class="btn-rule-save" data-action="save">Save</button>
-                            <button type="button" class="btn-rule-cancel" data-action="cancel">Cancel</button>
+                            <button type="button" class="btn-rule-save" data-action="save">✓ Save</button>
+                            <button type="button" class="btn-rule-cancel" data-action="cancel">× Cancel</button>
                         `}
                     </div>
                 </div>
-                <div class="rule-grid">
-                    ${renderField('Description', 'description', rule.description || '', isEditing, 'text', true)}
-                    ${renderField('Assign Profile', 'profile', rule.profile || '', isEditing, 'select', false, profileLabel)}
-                    ${renderField('Priority', 'priority', rule.priority || 0, isEditing, 'number')}
-                    ${renderField('Enabled', 'enabled', rule.enabled, isEditing, 'checkbox')}
-                    ${renderField('Match Name (regex)', 'match_name', rule.match_name || '', isEditing, 'text')}
-                    ${renderField('Match Race (regex)', 'match_race', rule.match_race || '', isEditing, 'text')}
-                    ${renderField('Match Gender (regex)', 'match_gender', rule.match_gender || '', isEditing, 'text')}
-                    ${renderField('Match Base (regex)', 'match_base', rule.match_base || '', isEditing, 'text')}
-                    ${renderField('Match Mods (comma-separated)', 'match_mods', modsStr, isEditing, 'text')}
-                    ${renderField('Action (JSON)', 'action', rule.action || '', isEditing, 'json')}
-                </div>
+                ${!isEditing ? renderSummary(rule, profileLabel) : `
+                    <div class="rule-edit-core">
+                        <div class="rule-field">
+                            <label>Rule Name</label>
+                            <input type="text" class="rule-input rule-input-description" value="${escapeHtml(rule.description || '')}" required>
+                        </div>
+                        <div class="rule-field">
+                            <label>Assign Profile</label>
+                            <select class="rule-input rule-input-profile">${renderProfileOptions(rule.profile || '')}</select>
+                        </div>
+                        <div class="rule-field rule-enabled-field">
+                            <label><input type="checkbox" class="rule-checkbox rule-input-enabled"${enabled ? ' checked' : ''}> Enabled</label>
+                        </div>
+                    </div>
+                    <div class="rule-simple-section"${isAdvanced ? ' style="display:none;"' : ''}>
+                        <div class="rule-simple-heading">Match NPCs When <span class="rule-simple-note">Any value inside a field; all populated fields must match.</span></div>
+                        <div class="rule-simple-grid">
+                            ${renderPicker(rule.id, 'name', 'NPC Name', simpleValues(rule, 'name'), editorOptions.names, 'Search or enter an NPC name', '', '👤')}
+                            ${renderPicker(rule.id, 'race', 'Race', simpleValues(rule, 'race'), editorOptions.races, 'Search or enter a race', '', '🧬')}
+                            ${renderPicker(rule.id, 'gender', 'Gender', simpleValues(rule, 'gender'), editorOptions.genders, 'Search or enter a gender', '', '⚧')}
+                            ${renderPicker(rule.id, 'faction', 'Faction', simpleValues(rule, 'faction'), editorOptions.factions, 'Type a custom faction name', '', '⚔', true)}
+                            ${renderPicker(rule.id, 'mods', 'Source Mods', ruleMods(rule), editorOptions.mods, 'Type PluginName.esp', 'all selected are required', '🧩', true)}
+                        </div>
+                        <button type="button" class="rule-advanced-toggle" data-action="open-advanced">⚙ Advanced Rules</button>
+                    </div>
+                    <div class="rule-advanced-panel${isAdvanced ? ' open' : ''}">
+                        <div class="rule-advanced-note">Raw regex and action fields are for advanced users. Blank match fields match every NPC. Higher priority rules override lower priority rules.</div>
+                        <div class="rule-grid">
+                            ${renderAdvancedField('Name Regex', 'match_name', rule.match_name)}
+                            ${renderAdvancedField('Race Regex', 'match_race', rule.match_race)}
+                            ${renderAdvancedField('Gender Regex', 'match_gender', rule.match_gender)}
+                            ${renderAdvancedField('Base / RefID Regex', 'match_base', rule.match_base)}
+                            ${renderAdvancedField('Faction Regex', 'match_faction', rule.match_faction)}
+                            ${renderAdvancedField('Required Mods', 'match_mods', ruleMods(rule).join(', '))}
+                            ${renderAdvancedField('Priority', 'priority', rule.priority || 0, 'number')}
+                            ${renderAdvancedField('Action JSON', 'action', rule.action, 'json')}
+                        </div>
+                    </div>
+                `}
             </div>`;
         });
-        
+
         rulesList.innerHTML = html;
     }
-    
-    function renderField(label, name, value, isEditing, type = 'text', required = false, displayValue = null) {
-        const displayVal = displayValue !== null ? displayValue : value;
-        const isEmpty = !value && value !== 0 && value !== false;
-        
-        let fieldHtml = '';
-        
-        if (type === 'checkbox') {
-            const checked = value === true || value === 't' || value === '1' || value === 1;
-            if (isEditing) {
-                fieldHtml = `<input type="checkbox" class="rule-checkbox rule-input-${name}" ${checked ? 'checked' : ''}>`;
-            } else {
-                fieldHtml = `<span class="rule-value">${checked ? 'Yes' : 'No'}</span>`;
-            }
-        } else if (type === 'select') {
-            if (isEditing) {
-                let options = '<option value="">-- None --</option>';
-                PROFILES.forEach(p => {
-                    const selected = String(p.id) === String(value) ? 'selected' : '';
-                    options += `<option value="${p.id}" ${selected}>${escapeHtml(p.label || 'Profile #' + p.id)}</option>`;
-                });
-                fieldHtml = `<select class="rule-input rule-input-${name}">${options}</select>`;
-            } else {
-                fieldHtml = `<span class="rule-value${isEmpty ? ' empty' : ''}">${isEmpty ? '(none)' : escapeHtml(displayVal)}</span>`;
-            }
-        } else if (type === 'json') {
-            if (isEditing) {
-                fieldHtml = `<textarea class="rule-input rule-input-${name} json" ${required ? 'required' : ''}>${escapeHtml(value)}</textarea>`;
-            } else {
-                fieldHtml = `<span class="rule-value${isEmpty ? ' empty' : ''}">${isEmpty ? '(none)' : escapeHtml(value)}</span>`;
+
+    function getInputValue(card, name) {
+        const element = card.querySelector(`.rule-input-${name}`);
+        if (!element) return '';
+        if (element.type === 'checkbox') return element.checked ? '1' : '0';
+        return element.value.trim();
+    }
+
+    function getPickerValues(card, name) {
+        const picker = card.querySelector(`.rule-picker[data-picker-name="${name}"]`);
+        if (!picker) return [];
+        return Array.from(picker.querySelectorAll('.rule-picker-tag'))
+            .map(tag => tag.dataset.value || '')
+            .filter(Boolean);
+    }
+
+    function addPickerValue(picker, value) {
+        value = String(value || '').trim();
+        if (!value) return;
+        const existing = Array.from(picker.querySelectorAll('.rule-picker-tag'))
+            .some(tag => tag.dataset.value.toLocaleLowerCase() === value.toLocaleLowerCase());
+        if (existing) return;
+
+        const empty = picker.querySelector('.rule-picker-empty');
+        if (empty) empty.remove();
+
+        const tag = document.createElement('span');
+        tag.className = 'rule-picker-tag';
+        tag.dataset.value = value;
+        const text = document.createElement('span');
+        text.textContent = value;
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'rule-picker-remove';
+        remove.dataset.action = 'remove-tag';
+        remove.title = 'Remove';
+        remove.innerHTML = '&times;';
+        tag.append(text, remove);
+        picker.querySelector('.rule-picker-tags').appendChild(tag);
+    }
+
+    function appendRuleData(formData, card) {
+        const editorMode = card.dataset.editorMode || 'simple';
+        const action = getInputValue(card, 'action');
+        if (action) {
+            try {
+                const parsed = JSON.parse(action);
+                formData.append('action', JSON.stringify(parsed));
+            } catch (_error) {
+                throw new Error('Action must be valid JSON');
             }
         } else {
-            if (isEditing) {
-                const inputType = type === 'number' ? 'number' : 'text';
-                fieldHtml = `<input type="${inputType}" class="rule-input rule-input-${name}" value="${escapeHtml(value)}" ${required ? 'required' : ''}>`;
-            } else {
-                fieldHtml = `<span class="rule-value${isEmpty ? ' empty' : ''}">${isEmpty ? '(none)' : escapeHtml(value)}</span>`;
-            }
+            formData.append('action', '');
         }
-        
-        return `<div class="rule-label">${label}${required ? ' *' : ''}</div><div>${fieldHtml}</div>`;
+
+        formData.append('description', getInputValue(card, 'description'));
+        formData.append('profile', getInputValue(card, 'profile'));
+        formData.append('enabled', getInputValue(card, 'enabled'));
+        formData.append('priority', getInputValue(card, 'priority') || '0');
+        formData.append('editor_mode', editorMode);
+
+        if (editorMode === 'simple') {
+            formData.append('simple_match_name', JSON.stringify(getPickerValues(card, 'name')));
+            formData.append('simple_match_race', JSON.stringify(getPickerValues(card, 'race')));
+            formData.append('simple_match_gender', JSON.stringify(getPickerValues(card, 'gender')));
+            formData.append('simple_match_faction', JSON.stringify(getPickerValues(card, 'faction')));
+            formData.append('simple_match_mods', JSON.stringify(getPickerValues(card, 'mods')));
+        } else {
+            formData.append('match_name', getInputValue(card, 'match_name'));
+            formData.append('match_race', getInputValue(card, 'match_race'));
+            formData.append('match_gender', getInputValue(card, 'match_gender'));
+            formData.append('match_base', getInputValue(card, 'match_base'));
+            formData.append('match_faction', getInputValue(card, 'match_faction'));
+            formData.append('match_mods', getInputValue(card, 'match_mods'));
+        }
     }
-    
+
     window.IMPORT_RULES = {
         editRule: function(id) {
+            const rule = rulesData.find(item => String(item.id) === String(id));
+            if (rule) rule._editor_mode = rule._has_custom_regex ? 'advanced' : 'simple';
             editingId = id;
             renderRules();
         },
-        
+
         cancelEdit: function() {
+            if (String(editingId) === '__new__') {
+                rulesData = rulesData.filter(rule => String(rule.id) !== '__new__');
+            }
             editingId = null;
             renderRules();
         },
-        
+
         saveRule: async function(id) {
             const card = document.querySelector(`.rule-card[data-id="${id}"]`);
             if (!card) return;
-            
-            const getData = (name) => {
-                const el = card.querySelector(`.rule-input-${name}`);
-                if (!el) return null;
-                if (el.type === 'checkbox') return el.checked ? '1' : '0';
-                return el.value.trim();
-            };
-            
-            const formData = new FormData();
-            formData.append('update_import_rule', '1');
-            formData.append('id', id);
-            formData.append('description', getData('description') || '');
-            formData.append('match_name', getData('match_name') || '');
-            formData.append('match_race', getData('match_race') || '');
-            formData.append('match_gender', getData('match_gender') || '');
-            formData.append('match_base', getData('match_base') || '');
-            formData.append('match_mods', getData('match_mods') || '');
-            // Validate JSON before sending; if invalid, show error and abort
-            (function(){
-                const raw = getData('action') || '';
-                if (!raw) { formData.append('action', ''); return; }
-                try {
-                    const parsed = JSON.parse(raw);
-                    formData.append('action', JSON.stringify(parsed));
-                } catch (e) {
-                    alert('Action must be valid JSON. Example: {"voiceid":"FemaleNord"}');
-                    throw e;
+            if (!getInputValue(card, 'description')) {
+                showToast('Rule name is required', true);
+                return;
+            }
+            if ((card.dataset.editorMode || 'simple') === 'simple' && !getInputValue(card, 'profile')) {
+                showToast('Select a profile for this rule', true);
+                return;
+            }
+            if ((card.dataset.editorMode || 'simple') === 'simple') {
+                const hasCondition = ['name', 'race', 'gender', 'faction', 'mods']
+                    .some(name => getPickerValues(card, name).length > 0);
+                if (!hasCondition && !confirm('This rule will match every newly activated NPC. Continue?')) {
+                    return;
                 }
-            })();
-            formData.append('profile', getData('profile') || '');
-            formData.append('priority', getData('priority') || '0');
-            formData.append('enabled', getData('enabled') || '0');
-            
+            }
+
+            const formData = new FormData();
+            if (String(id) === '__new__') {
+                formData.append('create_import_rule', '1');
+            } else {
+                formData.append('update_import_rule', '1');
+                formData.append('id', id);
+            }
+
             try {
+                appendRuleData(formData, card);
                 const res = await fetch('core_profiles.php', { method: 'POST', body: formData });
                 const json = await res.json();
                 if (json.ok) {
-                    showToast('Rule updated successfully');
+                    showToast(String(id) === '__new__' ? 'Rule created' : 'Rule updated');
                     editingId = null;
                     loadRules();
                 } else {
-                    showToast('Failed to update rule', true);
+                    showToast(json.error || 'Failed to save rule', true);
                 }
             } catch (e) {
                 console.error('Save failed:', e);
-                showToast('Error updating rule', true);
+                showToast(e.message || 'Error saving rule', true);
             }
         },
-        
+
         deleteRule: async function(id) {
-            if (!confirm('Delete this import rule?')) return;
-            
+            if (!confirm('Delete this profile rule?')) return;
+
             const formData = new FormData();
             formData.append('delete_import_rule', '1');
             formData.append('id', id);
-            
+
             try {
                 const res = await fetch('core_profiles.php', { method: 'POST', body: formData });
                 const json = await res.json();
@@ -3011,33 +3398,34 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 showToast('Error deleting rule', true);
             }
         },
-        
-        createRule: async function() {
-            const formData = new FormData();
-            formData.append('create_import_rule', '1');
-            formData.append('description', 'New Import Rule');
-            formData.append('priority', '0');
-            formData.append('enabled', '1');
-            
-            try {
-                const res = await fetch('core_profiles.php', { method: 'POST', body: formData });
-                const json = await res.json();
-                if (json.ok) {
-                    showToast('Rule created');
-                    loadRules();
-                    setTimeout(() => {
-                        window.IMPORT_RULES.editRule(json.id);
-                    }, 100);
-                } else {
-                    showToast('Failed to create rule', true);
-                }
-            } catch (e) {
-                console.error('Create failed:', e);
-                showToast('Error creating rule', true);
+
+        createRule: function() {
+            if (editingId !== null) {
+                showToast('Save or cancel the current rule first', true);
+                return;
             }
+            rulesData.unshift({
+                id: '__new__',
+                description: 'New Profile Rule',
+                profile: '',
+                priority: 0,
+                enabled: true,
+                match_name: null,
+                match_race: null,
+                match_gender: null,
+                match_base: null,
+                match_faction: null,
+                match_mods: null,
+                action: null,
+                _simple: { name: [], race: [], gender: [], faction: [] },
+                _has_custom_regex: false,
+                _editor_mode: 'simple',
+            });
+            editingId = '__new__';
+            renderRules();
         }
     };
-    
+
     function showToast(message, isError = false) {
         if (typeof window.showToast === 'function') {
             window.showToast(message, isError);
@@ -3050,7 +3438,6 @@ const saveAllBtn = document.getElementById('btn_save_all');
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
     if (addBtn) addBtn.addEventListener('click', () => window.IMPORT_RULES.createRule());
 
-    // Delegate clicks for rule action buttons to ensure handlers exist after re-render
     rulesList.addEventListener('click', (ev) => {
         const btn = ev.target.closest('button[data-action]');
         if (!btn) return;
@@ -3062,9 +3449,48 @@ const saveAllBtn = document.getElementById('btn_save_all');
         if (action === 'delete') return window.IMPORT_RULES.deleteRule(id);
         if (action === 'save') return window.IMPORT_RULES.saveRule(id);
         if (action === 'cancel') return window.IMPORT_RULES.cancelEdit();
+        if (action === 'open-advanced') {
+            card.querySelector('.rule-input-match_name').value = buildExactRegex(getPickerValues(card, 'name'));
+            card.querySelector('.rule-input-match_race').value = buildExactRegex(getPickerValues(card, 'race'));
+            card.querySelector('.rule-input-match_gender').value = buildExactRegex(getPickerValues(card, 'gender'));
+            card.querySelector('.rule-input-match_faction').value = buildExactRegex(getPickerValues(card, 'faction'));
+            card.querySelector('.rule-input-match_mods').value = getPickerValues(card, 'mods').join(', ');
+            card.dataset.editorMode = 'advanced';
+            card.querySelector('.rule-simple-section').style.display = 'none';
+            card.querySelector('.rule-advanced-panel').classList.add('open');
+            return;
+        }
+        if (action === 'add-selected') {
+            const picker = btn.closest('.rule-picker');
+            const select = picker.querySelector('.rule-picker-select');
+            addPickerValue(picker, select.value);
+            select.value = '';
+            return;
+        }
+        if (action === 'add-custom') {
+            const picker = btn.closest('.rule-picker');
+            const input = picker.querySelector('.rule-picker-custom');
+            addPickerValue(picker, input.value);
+            input.value = '';
+            return;
+        }
+        if (action === 'remove-tag') {
+            const tags = btn.closest('.rule-picker-tags');
+            btn.closest('.rule-picker-tag').remove();
+            if (!tags.querySelector('.rule-picker-tag')) {
+                tags.innerHTML = '<span class="rule-picker-empty">Any</span>';
+            }
+        }
     });
-    
-    // Close modal when clicking outside
+
+    rulesList.addEventListener('keydown', event => {
+        const input = event.target.closest('.rule-picker-custom');
+        if (!input || event.key !== 'Enter') return;
+        event.preventDefault();
+        addPickerValue(input.closest('.rule-picker'), input.value);
+        input.value = '';
+    });
+
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModal();
     });

@@ -1,5 +1,7 @@
 <?php
 
+require_once(__DIR__ . DIRECTORY_SEPARATOR . 'tts_fallback.class.php');
+
 class TTSConnector
 {
     private $table = "core_tts_connector";
@@ -77,7 +79,7 @@ class TTSConnector
 
     private static $localUrlDefaultMap = [
         'pockettts' => 'http://127.0.0.1:8086',
-        'chatterbox' => 'http://127.0.0.1:8020',
+        'chatterbox' => 'http://127.0.0.1:8023',
         'xtts-fastapi' => 'http://127.0.0.1:8020',
         'omnivoice' => 'http://127.0.0.1:8021',
         'piper-tts' => 'http://127.0.0.1:5000',
@@ -407,21 +409,64 @@ class TTSConnector
         );
 
         if ($this->isFemaleGender($gender)) {
-            return trim(strval($metadata['fallback_female'] ?? self::$sharedMetadataDefaultMap['fallback_female']));
+            return $this->resolveFallbackVoiceMetadata(
+                $metadata['fallback_female'] ?? null,
+                self::$sharedMetadataDefaultMap['fallback_female']
+            );
         }
 
-        return trim(strval($metadata['fallback_male'] ?? self::$sharedMetadataDefaultMap['fallback_male']));
+        return $this->resolveFallbackVoiceMetadata(
+            $metadata['fallback_male'] ?? null,
+            self::$sharedMetadataDefaultMap['fallback_male']
+        );
+    }
+
+    private function resolveFallbackVoiceMetadata($value, string $default): string
+    {
+        // Legacy seed rows stored field schemas instead of resolved values.
+        if (is_array($value)) {
+            $value = $value['default'] ?? $default;
+        }
+
+        return is_scalar($value) ? trim(strval($value)) : $default;
     }
 
     public function resolveNpcVoiceForConnector(array $currentNpcData, $connectorData = null): array
     {
         $originalVoice = trim(strval($currentNpcData['voiceid'] ?? ''));
-        $fallbackVoice = $this->getFallbackVoiceForGender($connectorData, $currentNpcData['gender'] ?? '');
+        $raceFallbackVoice = (new TTSFallback())->getVoice(
+            $currentNpcData['race'] ?? '',
+            $currentNpcData['gender'] ?? ''
+        );
+        $connectorFallbackVoice = $this->getFallbackVoiceForGender(
+            $connectorData,
+            $currentNpcData['gender'] ?? ''
+        );
+
+        $fallbackVoices = [];
+        foreach ([$raceFallbackVoice, $connectorFallbackVoice] as $candidate) {
+            $candidate = trim(strval($candidate));
+            if ($candidate === '' || strcasecmp($candidate, $originalVoice) === 0) {
+                continue;
+            }
+            $alreadyAdded = array_filter(
+                $fallbackVoices,
+                fn($voice) => strcasecmp($voice, $candidate) === 0
+            );
+            if (empty($alreadyAdded)) {
+                $fallbackVoices[] = $candidate;
+            }
+        }
+
+        $fallbackVoice = $fallbackVoices[0] ?? '';
         $resolvedVoice = $originalVoice !== '' ? $originalVoice : $fallbackVoice;
 
         return [
             'original_voice' => $originalVoice,
             'fallback_voice' => $fallbackVoice,
+            'fallback_voices' => $fallbackVoices,
+            'race_fallback_voice' => $raceFallbackVoice,
+            'connector_fallback_voice' => $connectorFallbackVoice,
             'resolved_voice' => $resolvedVoice,
             'used_fallback' => ($originalVoice === '' && $fallbackVoice !== ''),
         ];

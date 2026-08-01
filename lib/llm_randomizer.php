@@ -1,6 +1,7 @@
 <?php
 
 // Loaded - will use Logger class for runtime logging
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'profile_llm_mode.php';
 
 /**
  * LLM Randomizer - Exponential probability-based connector rotation
@@ -18,6 +19,7 @@ class LLMRandomizer {
     private const PLAYER2_FORCE_CONNECTOR_KEY = 'PLAYER2_FORCE_CONNECTOR_ID';
     private const PLAYER2_DEFAULT_LABEL = 'Player2 Local';
     private const PLAYER2_DEFAULT_URL = 'http://127.0.0.1:4315/v1/chat/completions';
+    private const NARRATOR_STATE_KEY = 'LLM_RANDOMIZER_NARRATOR_STATE';
 
     private static $player2ForceEnabled = null;
     private static $player2ForceConnectorId = null;
@@ -44,19 +46,16 @@ class LLMRandomizer {
      * @return int Connector slot to use (1-4)
      */
     public static function getConnectorSlot($profileData, &$npcData, $npcMaster) {
-        // Check if randomizer is enabled in profile
-        $profileMeta = [];
-        if (!empty($profileData['metadata'])) {
-            $tmp = json_decode($profileData['metadata'], true);
-            if (is_array($tmp)) {
-                $profileMeta = $tmp;
-            }
-        }
-        
-        $randomizerEnabled = self::isTruthy($profileMeta['LLM_RANDOMIZER_ENABLED'] ?? false);
+        $randomizerEnabled = ProfileLLMMode::isRandomEnabled(is_array($profileData) ? $profileData : []);
         
         if (!$randomizerEnabled) {
             // Randomizer disabled, use global setting (no logging)
+            return self::getGlobalConnectorSlot();
+        }
+
+        $configuredSlots = ProfileLLMMode::getConfiguredSlots(is_array($profileData) ? $profileData : []);
+        if (empty($configuredSlots)) {
+            Logger::warn("[LLM_RANDOMIZER] Profile has no configured LLM connector slots; using global slot");
             return self::getGlobalConnectorSlot();
         }
         
@@ -65,21 +64,27 @@ class LLMRandomizer {
         
         // Randomizer enabled - apply exponential probability logic
         
-        // Get NPC's randomizer state from metadata
-        $npcMeta = [];
-        if (!empty($npcData['metadata'])) {
-            $tmp = json_decode($npcData['metadata'], true);
-            if (is_array($tmp)) {
-                $npcMeta = $tmp;
-            }
-        }
+        $isNarrator = strcasecmp((string)($npcData['npc_name'] ?? ''), 'The Narrator') === 0;
+        $npcMeta = $isNarrator
+            ? self::getNarratorRandomizerState()
+            : ProfileLLMMode::decodeMetadata($npcData['metadata'] ?? null);
         
-        $currentSlot = isset($npcMeta['randomizer_current_slot']) ? (int)$npcMeta['randomizer_current_slot'] : 1;
+        $globalSlot = self::getGlobalConnectorSlot();
+        $defaultSlot = in_array($globalSlot, $configuredSlots, true) ? $globalSlot : $configuredSlots[0];
+        $currentSlot = isset($npcMeta['randomizer_current_slot']) ? (int)$npcMeta['randomizer_current_slot'] : $defaultSlot;
         $consecutiveUses = isset($npcMeta['randomizer_consecutive_uses']) ? (int)$npcMeta['randomizer_consecutive_uses'] : 0;
         
-        // Ensure valid slot
-        if ($currentSlot < 1 || $currentSlot > 4) {
-            $currentSlot = 1;
+        if (!in_array($currentSlot, $configuredSlots, true)) {
+            $currentSlot = $defaultSlot;
+            $consecutiveUses = 0;
+        }
+
+        if (count($configuredSlots) === 1) {
+            $npcMeta['randomizer_current_slot'] = $currentSlot;
+            $npcMeta['randomizer_consecutive_uses'] = min($consecutiveUses + 1, self::MAX_USES);
+            self::saveRandomizerState($npcData, $npcMeta, $npcMaster, $isNarrator);
+            Logger::info("[LLM_RANDOMIZER] Only slot {$currentSlot} is configured; using it without rotation");
+            return $currentSlot;
         }
         
         // Check if we need to switch
@@ -103,8 +108,7 @@ class LLMRandomizer {
         
         if ($shouldSwitch) {
             // Pick a different random slot
-            $availableSlots = [1, 2, 3, 4];
-            $otherSlots = array_diff($availableSlots, [$currentSlot]);
+            $otherSlots = array_values(array_diff($configuredSlots, [$currentSlot]));
             $newSlot = $otherSlots[array_rand($otherSlots)];
             
             // Update state
@@ -120,9 +124,7 @@ class LLMRandomizer {
             $npcMeta['randomizer_consecutive_uses'] = $consecutiveUses;
         }
         
-        // Save updated metadata back to NPC
-        $npcData['metadata'] = json_encode($npcMeta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        $npcMaster->updateByArray(['id' => $npcData['id'], 'metadata' => $npcData['metadata']]);
+        self::saveRandomizerState($npcData, $npcMeta, $npcMaster, $isNarrator);
         
         return $currentSlot;
     }
@@ -141,6 +143,29 @@ class LLMRandomizer {
         }
         
         return 1; // Default to primary
+    }
+
+    private static function getNarratorRandomizerState() {
+        $db = $GLOBALS['db'] ?? null;
+        if (!$db) {
+            return [];
+        }
+
+        $row = $db->fetchOne("SELECT value FROM conf_opts WHERE id='" . self::NARRATOR_STATE_KEY . "' LIMIT 1");
+        return ProfileLLMMode::decodeMetadata($row['value'] ?? null);
+    }
+
+    private static function saveRandomizerState(&$npcData, array $state, $npcMaster, bool $isNarrator) {
+        $encoded = json_encode($state, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($isNarrator) {
+            self::upsertConfOpt(self::NARRATOR_STATE_KEY, $encoded);
+            return;
+        }
+
+        $npcData['metadata'] = $encoded;
+        if (!empty($npcData['id']) && $npcMaster) {
+            $npcMaster->updateByArray(['id' => $npcData['id'], 'metadata' => $encoded]);
+        }
     }
     
     /**

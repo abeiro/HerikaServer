@@ -10,10 +10,13 @@ require_once(__DIR__."/emote_moods.php");
 require_once(__DIR__."/core/activity_status.php");
 require_once(__DIR__."/core/transformation_state.php");
 require_once(__DIR__."/core/game_plugins.php");
+require_once(__DIR__."/core/event_type.php");
 require_once(__DIR__."/core/npc_master.class.php");
 require_once(__DIR__."/core/core_profiles.class.php");
 require_once(__DIR__."/prompt_injections.php");
 require_once(__DIR__."/vr_items.php");
+require_once(__DIR__."/visual_context.php");
+require_once(__DIR__."/memory_ranking.php");
 
 
 function ChangeHerikaName($new_name="") {
@@ -373,6 +376,31 @@ function chimLookupItemDescriptionForContext(string $itemName, ?string $baseid =
     return null;
 }
 
+function getNameForItemReference($refid) {
+    global $db;
+    if (strpos($refid, '0x') === 0) {
+        $refid = substr($refid, 2);
+    }
+    $baseid = "00" . substr($refid, 2);
+    $modIndex = substr($refid, 0, 4);
+    $candidateMod = $db->fetchOne("select * from game_plugins where formid_prefix='{$modIndex}'");
+    // error_log("[DEBUG] getNameForItemReference: refid={$refid}, baseid={$baseid}, modIndex={$modIndex}, candidateMod=" . var_export($candidateMod, true));
+    if (!$candidateMod) {
+        $modIndex = substr($refid, 0, 2);
+        $candidateMod = $db->fetchOne("select * from game_plugins where formid_prefix='{$modIndex}'");
+    }
+
+    // error_log("[DEBUG] getNameForItemReference: refid={$refid}, baseid={$baseid}, modIndex={$modIndex}, candidateMod=" . var_export($candidateMod, true));
+    if ($candidateMod) {
+        $pluginName = $candidateMod['plugin_name'];
+        $existing = $db->fetchOne("select * from combined_descriptions where baseid='{$baseid}' and plugin='{$pluginName}'");
+        // error_log("[DEBUG] getNameForItemReference: refid={$refid}, baseid={$baseid}, pluginName={$pluginName}, existing=" . var_export($existing, true));
+        return $existing['name'] ?? null;
+    }
+
+    return null;
+}
+
 function chimEquipmentVanillaSlotLabels(): array
 {
     return [
@@ -469,7 +497,8 @@ function chimFormatInventoryPromptLines(
     array $inventory,
     ?callable $getItemDescription = null,
     array &$describedBaseids = [],
-    bool $descriptionsOnly = false
+    bool $descriptionsOnly = false,
+    bool $showGoldValue = false
 ): array {
     $lines = [];
 
@@ -480,6 +509,7 @@ function chimFormatInventoryPromptLines(
         }
 
         $count = max(0, intval($item['count'] ?? 0));
+        $goldValue = max(0, intval($item['goldvalue'] ?? 0));
         $rawBaseId = trim((string) ($item['baseid'] ?? ''));
         $baseId = chimNormalizePromptFormId($rawBaseId);
         $baseIdKey = $baseId ?? '';
@@ -499,6 +529,9 @@ function chimFormatInventoryPromptLines(
         $safeName = chimEscapePromptItemText($itemName);
         $identifier = $baseId !== null ? "`{$baseId}:{$safeName}`" : $safeName;
         $line = "- {$identifier} ({$count})";
+        if ($showGoldValue) {
+            $line .= " - Gold Value: {$goldValue}";
+        }
         if ($description) {
             $line .= ' - ' . chimEscapePromptItemText($description);
         }
@@ -573,12 +606,16 @@ function chimFormatProfileEquipmentParts(array $equipmentData, array $slots, boo
             continue;
         }
 
+        if (!is_scalar($equipmentData[$slot])) {
+            continue;
+        }
+
         $itemName = trim((string) $equipmentData[$slot]);
         if ($itemName === '' || isItemBlacklisted($itemName) || stripos($itemName, 'Missing Name') !== false) {
             continue;
         }
 
-        $baseid = isset($equipmentData[$slot . '_baseid'])
+        $baseid = isset($equipmentData[$slot . '_baseid']) && is_scalar($equipmentData[$slot . '_baseid'])
             ? trim((string) $equipmentData[$slot . '_baseid'])
             : '';
         $description = null;
@@ -603,7 +640,7 @@ function chimProfileEquipmentSlotsFromData(array $equipmentData, array $preferre
     $slots = $preferredSlots;
     foreach ($equipmentData as $key => $value) {
         $slot = trim((string) $key);
-        if ($slot === '' || substr($slot, -7) === '_baseid') {
+        if ($slot === '' || substr($slot, -7) === '_baseid' || substr($slot, -9) === '_keywords' || !is_scalar($value)) {
             continue;
         }
         if (!in_array($slot, $slots, true)) {
@@ -868,7 +905,7 @@ function DataLastDataFor($actor, $lastNelements = -10)
     $lastDialogFull = array();
     $results = $db->fetchAll("select  
     case 
-      when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%' or data like '%background chat%' then 'The Narrator:'
+      when type like 'info%' or type like 'death%' or type like 'funcret%' or type like 'location%' or type='chat_background' or data like '%background chat%' then 'The Narrator:'
       when type='book' then 'The Narrator: ({$GLOBALS["PLAYER_NAME"]} took the book ' 
       else '' 
     end||a.data  as data 
@@ -930,12 +967,12 @@ function DataLastDataFor($actor, $lastNelements = -10)
 /**
  * Get context for actor to send to llm
  */
-function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false)
+function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescriptions=false,$excludeBusy=false,$excludeFarAway=false)
 {
     
     $lastDialog = array(); // Initialize the return array
     $followers=[];
-    $actorsInRangeList=DataBeingsInCloseRange();
+    $actorsInRangeList=DataBeingsInCloseRange($excludeFarAway);
     $actorsInRange=strtr($actorsInRangeList,["|"=>"\n* "]);
     $actorDetailedList=explode("|",$actorsInRangeList);
     // Not always the same order
@@ -1268,6 +1305,12 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
     if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
         $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
     }
+    if (function_exists("chimBuildCurrentTurnPresentPeoplePrompt")) {
+        $peoplePresentPrompt = chimBuildCurrentTurnPresentPeoplePrompt();
+        if ($peoplePresentPrompt !== "") {
+            $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $peoplePresentPrompt;
+        }
+    }
     $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<nearby_actors>\n# NEARBY ACTORS/NPC IN THE SCENE \n## $actorsInRange\n</nearby_actors>";
     
     // Add faction descriptions section if any factions were found
@@ -1511,7 +1554,7 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
         
     // This is intended to give info about nearby actors, ALL actors (dead ones included).
 
-    $nearbyActors=DataBeingsOrDeathsInRangeExcluding("",true);
+    $nearbyActors=$excludeFarAway ? trim($actorsInRangeList, "|") : DataBeingsOrDeathsInRangeExcluding("",true);
     $nearbyActorsList=[];
     if ($nearbyActors) {
         foreach (explode("|",$nearbyActors) as $k=>$v) {
@@ -1520,6 +1563,14 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
                 $nearbyActorsList[]=$nearbyActor;
         }
         $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n<actors_nearby>\n" . implode(", ", $nearbyActorsList) . "\n</actors_nearby>";
+    }
+
+    $visualContext = chimBuildVisualContextPrompt(DataLastKnownLocation());
+    if ($visualContext !== '') {
+        if (!isset($GLOBALS["PROMPT_NEARBY_SECTIONS"])) {
+            $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
+        }
+        $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $visualContext;
     }
     
 
@@ -1965,7 +2016,7 @@ function DataQuestJournal($quest)
 }
 
 function removeTalkingToOccurrences($input) {
-    $pattern = '/\((?:talking|whispering|shouting)\s+to\s+[^()]+\)/i';
+    $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
     preg_match_all($pattern, $input, $matches, PREG_OFFSET_CAPTURE);
 
     // Get all positions of the matches
@@ -1996,7 +2047,7 @@ function moveDialogueTargetSuffixToEnd($input) {
         return "";
     }
 
-    $pattern = '/\s*(\((?:talking|whispering|shouting)\s+to [^()]+?\)|\(speaking loudly to [^()]+?\))\s*/i';
+    $pattern = '/\s*(\((?:(?:talking|whispering|shouting)|speaking privately)\s+to [^()]+?\)|\(speaking loudly to [^()]+?\))\s*/i';
     if (preg_match_all($pattern, $input, $matches) !== 1 || empty($matches[1])) {
         return trim(preg_replace('/\s+/', ' ', $input));
     }
@@ -2488,7 +2539,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     case 
       when type='infoaction' and a.data like '#%MEMORY%' then 'MEMORY'
       when type like 'info%' or type like 'funcret%' or type like 'location%' then 'CONTEXTI'
-      when a.data like '%background chat%' then 'BACKDIAG'
+      when a.type='chat_background' or a.data like '%background chat%' then 'BACKDIAG'
       when type='book' then 'BOOKEVT' 
       when type='contentbook' then 'BOOKEVT'
       when type='quest' then 'QUEST' 
@@ -2536,21 +2587,13 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     " {$ext_sqlfilter2} 
     ORDER BY gamets desc, ts desc, rowid desc LIMIT {$nRecordsLimit} OFFSET 0 ";
     
+    // error_log("[BGL] $query");   
     // Keep generic far-away actors out of historic context. Shared narrator rows are flattened on write.
     $results = $db->fetchAll($query);
 
-    // Filter blacklisted event types
+    // Filter stored event types, treating legacy background chat rows as chat_background.
     if (isset($GLOBALS["EVENT_TYPE_FILTER"]) && !empty($GLOBALS["EVENT_TYPE_FILTER"])) {
-        $blacklistedEventTypes = array_map('trim', explode(',', strtolower($GLOBALS["EVENT_TYPE_FILTER"])));
-        $results = array_filter($results, function($row) use ($blacklistedEventTypes) {
-            $eventType = strtolower($row["type"] ?? '');
-            foreach ($blacklistedEventTypes as $blacklistedType) {
-                if (!empty($blacklistedType) && $eventType === $blacklistedType) {
-                    return false;
-                }
-            }
-            return true;
-        });
+        $results = chimFilterRowsByEventType($results, $GLOBALS["EVENT_TYPE_FILTER"]);
     }
 
     $results = array_filter($results, function ($row) {
@@ -2582,9 +2625,6 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     $memoryLogToRemove=[];
     
     $lastTimeCategory = null; // Track last timestamp category for PROMPT_TIMESTAMP feature
-
-    $focusOnChat=($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"] ?? false);
-
 
     foreach ($orderedData as $n=>$row) {
         $rowData = $row["data"];
@@ -2658,78 +2698,44 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
             $speaker = "narratorchat";
             
         } else if ($row["subtype"]=="BACKDIAG") {
-            if ($focusOnChat)
-                continue;
             $speaker = "backgroundchat";
             
         } else if ($row["subtype"]=="BGLCHAT") {
             $speaker = "backgroundchat";
             
         } else if ($row["subtype"]=="BOOKEVT") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="CONTEXTI") {
             if (strpos($rowData,"should not be visible")!==false)
                 continue;
-            if ($focusOnChat) {
-                if (strpos($rowData," uses ")!==false) 
-                    continue;
-                if (strpos($rowData," casts ")!==false) 
-                    continue;
-                if (strpos($rowData," engages combat ")!==false) 
-                    continue;
-                if (strpos($rowData," has defeated ")!==false) 
-                    continue;
-                if (strpos($rowData," activates ")!==false) 
-                    continue;
-            }
             
          
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="QUEST") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="ITEM") {
-            if ($focusOnChat) {
-                if (strpos($rowData,"{$GLOBALS["HERIKA_NAME"]}")===false) // This NPC's item transactions conserved
-                    continue;
-            }
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_WORD") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_LVL") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_SPAWN") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_SHOUT") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             
         } else if ($row["subtype"]=="RPG_DEATH") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             $rowData = strtoupper($rowData);
             
         } else if ($row["subtype"]=="RPG_DEFEAT") {
-            if ($focusOnChat)
-                continue;
             $speaker = "narratorci";
             $rowData = strtoupper($rowData);
             
@@ -3231,7 +3237,7 @@ function DataLastDataExpandedForBak($actor, $lastNelements = -10,$sqlfilter="")
     $results = $db->fetchAll("select  
     case 
     when type like 'info%' or type like 'death%' or  type like 'funcret%' or type like 'location%'  then 'The Narrator:'
-    when a.data like '%background chat%' then 'The Narrator: background dialogue: '
+    when a.type='chat_background' or a.data like '%background chat%' then 'The Narrator: background dialogue: '
     when type='book' then 'The Narrator: ({$GLOBALS["PLAYER_NAME"]} took the book ' 
     else '' 
     end||a.data  as data , gamets,localts,type
@@ -4071,7 +4077,12 @@ function PackIntoSummary($onlyMissingDiary=false)
     
     if ($onlyMissingDiary) {
         $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions,scope)
-        select gamets,1,message,message,'diary',uid,speaker,'global'
+        select gamets,1,message,message,'diary',uid,
+            case
+                when nullif(trim(speaker), '') is null then ''
+                else '|' || trim(both '|' from trim(speaker)) || '|'
+            end,
+            'global'
         from memory
         where event in ('diary','auto_diary','backgroundlife_diary')
         and uid not in (select uid from memory_summary where classifier in  ('diary','auto_diary','backgroundlife_diary'))");
@@ -4183,7 +4194,12 @@ function PackIntoSummary($onlyMissingDiary=false)
         $results = $db->query($query);
         
         $results = $db->query("insert into memory_summary (gamets_truncated,n,packed_message,summary,classifier,uid,companions,scope)
-                                    select gamets,1,message,message,'diary',uid,speaker,'global'
+                                    select gamets,1,message,message,'diary',uid,
+                                        case
+                                            when nullif(trim(speaker), '') is null then ''
+                                            else '|' || trim(both '|' from trim(speaker)) || '|'
+                                        end,
+                                        'global'
                                     from memory
                                     where event='diary'
                                     and gamets>$maxRow
@@ -4239,16 +4255,16 @@ function DataRechatHistory()
 
 function extractDialogueTarget($string) {
     // Check if the string contains a directed-dialogue tag.
-    if ($string && preg_match('/\((?:talking|whispering|shouting)\s+to\s+/i', $string)) {
+    if ($string && preg_match('/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+/i', $string)) {
         // Extract the target's name using regular expression
-        preg_match('/\((?:talking|whispering|shouting)\s+to\s+([^\)]+)\)/i', $string, $matches);
+        preg_match('/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+([^\)]+)\)/i', $string, $matches);
         
         // Check if a match is found and extract the target's name
         if (isset($matches[1])) {
             $target = $matches[1];
 
             // Remove the directed-dialogue tag from the original string
-            $cleanedString = preg_replace('/\((?:talking|whispering|shouting)\s+to\s+[^\)]+\)/i', '', $string);
+            $cleanedString = preg_replace('/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^\)]+\)/i', '', $string);
             if (strpos($cleanedString,"{$GLOBALS["HERIKA_NAME"]}:")===0) {
                 $cleanedString=str_replace("{$GLOBALS["HERIKA_NAME"]}:","",$cleanedString);
             }
@@ -4519,7 +4535,7 @@ function chimDataStripActorStateSuffix($name)
     return trim((string)$name);
 }
 
-function chimDataActorStatusBlocksCloseRange($token)
+function chimDataActorStatusBlocksCloseRange($token, $includeBusy = false)
 {
     if (!preg_match('/\s*\(([^()]*)\)\s*$/u', (string)$token, $matches)) {
         return false;
@@ -4534,10 +4550,14 @@ function chimDataActorStatusBlocksCloseRange($token)
         return false;
     }
 
+    if ($includeBusy && $status === "busy") {
+        return false;
+    }
+
     return preg_match('/^(?:busy|hostile|in combat|far away|too far away|restrained|dead|disabled|unavailable|checking|can[\'"]?t hear you|no target|no crosshair target)/i', $status) === 1;
 }
 
-function DataBeingsInCloseRange($excludeFarAway=false)
+function DataBeingsInCloseRange($excludeFarAway=false, $includeBusy=false)
 {
 
     global $db;
@@ -4561,7 +4581,7 @@ function DataBeingsInCloseRange($excludeFarAway=false)
         $beingsArrayNew=[];
         foreach ($beingsArray as $k=>$v) {
             $v = trim((string)$v);
-            if ($excludeFarAway && chimDataActorStatusBlocksCloseRange($v))
+            if ($excludeFarAway && chimDataActorStatusBlocksCloseRange($v, $includeBusy))
                 continue;
             if (preg_match('/\((?:dead|disabled)\)\s*$/i', $v)) //??
                 continue;
@@ -4629,6 +4649,25 @@ function DataItemsInCloseRange()
     }
     
     return "";
+}
+
+function chimNormalizeExplicitActorRefTarget($target)
+{
+    $target = trim((string)$target);
+    if ($target === "") {
+        return "";
+    }
+
+    $pattern = '/\s*\[\s*RefID\s*:\s*(?:0x)?([0-9A-Fa-f]{1,8})\s*\]\s*/i';
+    if (!preg_match($pattern, $target, $matches)) {
+        return "";
+    }
+
+    $refId = strtoupper(str_pad($matches[1], 8, "0", STR_PAD_LEFT));
+    $fallbackName = trim((string)preg_replace($pattern, " ", $target));
+    $fallbackName = trim($fallbackName, " \t\n\r\0\x0B,;");
+
+    return ($fallbackName !== "" ? $fallbackName . " " : "") . "[RefID: " . $refId . "]";
 }
 
 // Find actor name with closest name, useful to sanitize actions parameters
@@ -4784,6 +4823,32 @@ function dataGetMemoryScopeConditionSql($npcName)
     return "(scope IS NULL OR scope='global')";
 }
 
+function dataGetMemoryCompanionConditionSql(
+    $npcName,
+    string $column = 'companions',
+    string $classifierColumn = 'classifier'
+): string
+{
+    $npcName = trim((string)$npcName);
+    if ($npcName === '') {
+        $narratorOnlyDiaryAccess = filter_var(
+            $GLOBALS['NARRATOR_ONLY_DIARY_ACCESS'] ?? false,
+            FILTER_VALIDATE_BOOLEAN
+        );
+        if (!$narratorOnlyDiaryAccess) {
+            // By default, the narrator searches every NPC diary in the global memory bank.
+            return 'TRUE';
+        }
+
+        $narratorName = $GLOBALS['db']->escape('The Narrator');
+        return "(COALESCE($classifierColumn, '') NOT IN ('diary','auto_diary','backgroundlife_diary')"
+            . " OR $column LIKE '%|$narratorName|%' OR $column='$narratorName')";
+    }
+
+    $npcEsc = $GLOBALS['db']->escape($npcName);
+    return "($column LIKE '%|$npcEsc|%' OR $column='$npcEsc')";
+}
+
 function DataSearchMemory($rawstring,$npcfilter) {
     
     //$kw=explode(" ",($rawstring));
@@ -4795,13 +4860,17 @@ function DataSearchMemory($rawstring,$npcfilter) {
         // MiniMe keyword extraction
         Logger::info("Using minime-t5 context");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+        $rawstring=strtr($rawstring,[
+            "Talking to The Narrator"=>"",
+            "Whispering to The Narrator"=>"",
+            "Speaking privately to The Narrator"=>""
+        ]);
 
         $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
                     
-        $pattern = '/\(talking to [^()]+\)/i';
+        $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
         $keywords=minimeExtract($TEST_TEXT);
@@ -4868,13 +4937,17 @@ function DataSearchMemory($rawstring,$npcfilter) {
     if (empty($kwStringAll)) {
         Logger::info("Using dumb context");
         $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-        $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+        $rawstring=strtr($rawstring,[
+            "Talking to The Narrator"=>"",
+            "Whispering to The Narrator"=>"",
+            "Speaking privately to The Narrator"=>""
+        ]);
 
         $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
                     
-        $pattern = '/\(talking to [^()]+\)/i';
+        $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
         $keywords=hashtagifySentences($TEST_TEXT);
@@ -4901,6 +4974,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
     
     
     $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
+    $companionConditionSql = dataGetMemoryCompanionConditionSql($npcfilter, 'A.companions', 'A.classifier');
 
     $memory=$GLOBALS["db"]->fetchAll("
         SELECT summary,gamets_truncated,
@@ -4910,7 +4984,7 @@ function DataSearchMemory($rawstring,$npcfilter) {
         where native_vec @@to_tsquery('$kwStringAny')
         and not (native_vec @@to_tsquery('#Reminiscence'))
         and $scopeConditionSql
-        and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
+        and $companionConditionSql
 
         ORDER BY rank_all DESC, rank_any DESC;
         ",true);
@@ -4936,6 +5010,22 @@ function DataSearchMemory($rawstring,$npcfilter) {
 }
 
 
+function chimNormalizeTsQueryTerms(string $text): array {
+    if (!preg_match_all('/[\p{L}\p{N}_]+/u', $text, $matches)) {
+        return [];
+    }
+
+    $terms = [];
+    foreach ($matches[0] as $term) {
+        if (mb_strlen($term, 'UTF-8') < 3) {
+            continue;
+        }
+        $terms[] = $term;
+    }
+
+    return array_values(array_unique($terms));
+}
+
 function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$timeThreshold=0) {
     
         $localStartTime=microtime(true);
@@ -4954,13 +5044,17 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
             Logger::info("Using minime-t5 context");
             error_log("[DataSearchMemoryByVector] Using minime-t5 context");
             $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-            $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+            $rawstring=strtr($rawstring,[
+                "Talking to The Narrator"=>"",
+                "Whispering to The Narrator"=>"",
+                "Speaking privately to The Narrator"=>""
+            ]);
 
             $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
             $replacement = "";
             $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
                         
-            $pattern = '/\(talking to [^()]+\)/i';
+            $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
             $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
             error_log("[DataSearchMemoryByVector start] minimeExtract : " . (microtime(true) - $localStartTime) . " seconds");
@@ -5042,13 +5136,17 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
         if (sizeof($result)<1) {
             Logger::info("Using dumb context");
             $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-            $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+            $rawstring=strtr($rawstring,[
+                "Talking to The Narrator"=>"",
+                "Whispering to The Narrator"=>"",
+                "Speaking privately to The Narrator"=>""
+            ]);
 
             $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
             $replacement = "";
             $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); // // assistant vs user war
                         
-            $pattern = '/\(talking to [^()]+\)/i';
+            $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
             $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
             $keywords=strtr($TEST_TEXT,["."=>" ",","=>" ","'"=>" "]);
@@ -5083,14 +5181,12 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
         }
 
        
-        if (empty($npcfilter)) {
-            $npcfilter=$GLOBALS["HERIKA_NAME"];
-        } else {
-            if ($useContextKw)
-                $result=array_merge($result,lastKeyWordsContext(5,$npcfilter));
+        if (!empty($npcfilter) && $useContextKw) {
+            $result=array_merge($result,lastKeyWordsContext(5,$npcfilter));
         }
 
         $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
+        $companionConditionSql = dataGetMemoryCompanionConditionSql($npcfilter);
 
         $contextKeywords  = implode(" ", $result);
         $contextKeywords=strtr(internalDumbTranslator($contextKeywords),["remember"=>"","Remember"=>"","do you remember"=>""]);
@@ -5129,17 +5225,7 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
 
         }
 
-        $result = explode(" ",$contextKeywords);
-
-        $resultNormalized=[];
-        foreach ($result as $word) {
-            if (strlen($word)<3)
-                continue;
-            if (!empty($word))
-                $resultNormalized[]=$word;
-        }
-
-        
+        $resultNormalized = chimNormalizeTsQueryTerms($contextKeywords);
         $kwStringAny=implode(" | ",$resultNormalized);
         $kwStringAll=implode(" & ",$resultNormalized);
         error_log("[DataSearchMemoryByVector] Generated Tags: $kwStringAny" );
@@ -5147,61 +5233,46 @@ function DataSearchMemoryByVector($rawstring,$npcfilter,$useContextKw=false,$tim
 
         if (is_array($vector) && isset($vector["embedding"])) {
             $vectorString="'[".implode(",",$vector["embedding"])."]'";
-   
-            $finalQuery="
-                SELECT summary, gamets_truncated,
-                        embedding <-> $vectorString as distance,
-                         ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_any_fts,
-                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts,
-                         (embedding <-> $vectorString) - ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll'))
-                          AS mixed_distance
-                    FROM public.memory_summary 
-                    WHERE embedding IS NOT NULL
-                    and $scopeConditionSql
-                    and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
-                    ORDER BY (embedding <-> $vectorString)
-                    LIMIT 5 OFFSET 0
-                ";
+            $rankAnySql = $kwStringAny !== ''
+                ? "ts_rank(native_vec, to_tsquery('" . $GLOBALS["db"]->escape($kwStringAny) . "'))"
+                : "0::real";
+            $rankAllSql = $kwStringAll !== ''
+                ? "ts_rank(native_vec, to_tsquery('" . $GLOBALS["db"]->escape($kwStringAll) . "'))"
+                : "0::real";
+            $rankCombinedSql = "($rankAnySql + $rankAllSql)";
 
-             $finalQuery="
+            $finalQuery="
                 SELECT rowid,gamets_truncated,
                         embedding <-> $vectorString as distance,
-                         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts_raw,
-                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts_raw,
-                         ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_any_fts,
-                         ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts,
-                         (embedding <-> $vectorString) - (ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll')) ) AS mixed_distance,
+                         $rankAnySql AS rank_any_fts_raw,
+                         $rankAllSql AS rank_all_fts_raw,
+                         $rankCombinedSql AS rank_fts,
+                         (embedding <-> $vectorString) - $rankCombinedSql AS mixed_distance,
                          summary
                     FROM public.memory_summary 
                     WHERE embedding IS NOT NULL
                     and $scopeConditionSql
-                    and companions like '|%{$GLOBALS["db"]->escape($npcfilter)}|%'
+                    and $companionConditionSql
                     and (gamets_truncated<$timeThreshold or $timeThreshold=0)
                     
-                    ORDER BY 
-                        round((embedding <-> $vectorString)::numeric, 2) ASC,
-                        (ts_rank(native_vec, to_tsquery('$kwStringAny'))+ts_rank(native_vec, to_tsquery('$kwStringAll'))) DESC
+                    ORDER BY
+                        mixed_distance ASC,
+                        distance ASC,
+                        gamets_truncated DESC,
+                        rowid DESC
                     LIMIT 50 OFFSET 0
                 ";    
             $memory=$GLOBALS["db"]->fetchAll($finalQuery);
-            //error_log($finalQuery);
-            $singleMemory = null;
-            $maxRankAny = -INF;
-
-            foreach ($memory as $entry) {
-                if (isset($entry['rank_any_fts']) && $entry['rank_any_fts'] > $maxRankAny) {
-                    $maxRankAny = $entry['rank_any_fts'];
-                    $singleMemory = $entry;
-                }
-            }
+            $singleMemory = chimSelectBestHybridMemoryCandidate($memory);
          
             if (!isset($singleMemory)) {
-                $singleMemory=["rank_any"=>null,"rank_all"=>null,"summary"=>null];
-                $singleMemory["distance"]=1.4;
-            }
-            else {
-                 $singleMemory['rank_any']=(($singleMemory["rank_any_fts"])+($singleMemory["rank_all_fts"])/2);
-                 $singleMemory['rank_all']=($singleMemory["rank_all_fts"]);
+                $singleMemory = [
+                    "rank_any" => null,
+                    "rank_all" => null,
+                    "summary" => null,
+                    "distance" => 1.4,
+                    "mixed_distance" => 1.4,
+                ];
             }
             
             /*error_log("
@@ -5243,13 +5314,17 @@ function DataSearchOghmaByVector($rawstring,$currentOghmaTopic,$locationCtx,$con
     
     Logger::info("Using DataSearchOghmaByVector");
     $rawstring=strtr($rawstring,["{$GLOBALS["PLAYER_NAME"]}:"=>""]);
-    $rawstring=strtr($rawstring,["Talking to The Narrator"=>""]);
+    $rawstring=strtr($rawstring,[
+        "Talking to The Narrator"=>"",
+        "Whispering to The Narrator"=>"",
+        "Speaking privately to The Narrator"=>""
+    ]);
 
     $pattern = "/\(Context location:[^)]+?\)/"; // Remove only the exact context location pattern
     $replacement = "";
     $TEST_TEXT = preg_replace($pattern, $replacement, $rawstring); 
                 
-    $pattern = '/\(talking to [^()]+\)/i';
+    $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
     $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
 
    
@@ -5452,135 +5527,18 @@ function call_llm_internal() {
         terminate();
     }
 
-    if (isset($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) && $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) {
+    /*
+    Player TTS
 
-         /* *****
-        Player TTS
-
-        Player TTS. We overwrite some confs an then restore them.
-        */
-        // Only process player TTS on the first attempt, not during fallback retry
-        if (!isset($GLOBALS["IN_FALLBACK_MODE"]) && in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && !Translation::isSavePlayerTranslationEnabled()) {
-            require(__DIR__."/../processor/player_tts.php");
-        }
-        $currentConnectorData=$GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"];
-        error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
-
-
-        if ($gameRequest[0] === "narrator_inputtext") {
-            require_once($GLOBALS["ENGINE_PATH"]."/functions".DIRECTORY_SEPARATOR."json_response.php");
-            if (function_exists('chimEnsureNarratorJsonResponseState')) {
-                chimEnsureNarratorJsonResponseState('DATA_FUNCTIONS_FAST_STANDARD');
-            }
-            if (
-                !empty($GLOBALS["PROMPT_ACTIONS_LIST"])
-                && isset($contextData[0]["content"])
-                && strpos($contextData[0]["content"], '<available_actions_list>') === false
-            ) {
-                $contextData[0]["content"] .= "\n" . $GLOBALS["PROMPT_ACTIONS_LIST"];
-            }
-        }
-
-        $buffer=$connectionHandler->fast_request($contextData,$overrideParameters,'standard');
-        snapshot_response_prompt_debug_data($currentConnectorData);
-        $preserveAsterisksInContext = isset($GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"]) ? (bool)$GLOBALS["PRESERVE_ASTERISKS_IN_CONTEXT"] : false;
-        $inlineNarrationMode = strtolower(trim((string)($GLOBALS["INLINE_NARRATION_MODE"] ?? '')));
-        if (!in_array($inlineNarrationMode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
-            $inlineNarrationMode = (isset($GLOBALS["INLINE_NARRATION_ENABLED"]) && $GLOBALS["INLINE_NARRATION_ENABLED"]) ? 'narrator' : 'disabled';
-        }
-        if ($inlineNarrationMode === 'disabled' && !$preserveAsterisksInContext) {
-            $buffer = preg_replace('/\*([^*]*\s+[^*]*)\*/', '', $buffer);
-        }
-
-        error_log("[STEP 1] Elapsed time: " . (microtime(true) - $startTime) . " seconds");
-
-        if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
-            require_once($GLOBALS["ENGINE_PATH"]."/functions".DIRECTORY_SEPARATOR."json_response.php");
-            $GLOBALS["COMMAND_PROMPT"]="";
-
-            setActions();
-        } else {
-            $GLOBALS["FUNC_LIST"][]="Talk";
-            $GLOBALS["COMMAND_PROMPT"]="";
-
-        }
-
-        $jsonformat= json_encode(["character"=>$GLOBALS["HERIKA_NAME"],
-        "listener"=>"specify who {$GLOBALS["HERIKA_NAME"]} is talking to, comma separated, max two listeners, in addressing order",
-        "message"=>"lines of dialogue",
-        "mood"=>"One of :".implode("|",normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "")),
-        "action"=>"One of :".implode("|",$GLOBALS["FUNC_LIST"]),
-        "target"=>"action target actor|action destination location name",
-        "item"=>"item identifier (REQUIRED for GiveItemTo: use exact BaseID:ItemName from inventory; for PickupItem: use exact RefID:ItemName from nearby_items)",
-        "lang"=>"language used, (es|en|fr|...)"]);
-
-
-        $minimalContextData = array_slice($contextData, -5);
-        $minimalContext=[];
-        foreach ($minimalContextData as $ele) {
-            if (strpos($ele["content"],"#MEMORY")===false) {
-                $minimalContext[]="{$ele["content"]}";
-            }
-        }
-        array_pop($minimalContext);
-
-        $minimalContext[]="$buffer";// Add whole generated content.
-
-        $buffer=preg_replace('/\([^)]*\)/', '', $buffer);//Remove text between space.
-        $contextData2=[
-            array('role' => 'system', 'content' => "Create a JSON object with this format: $jsonformat , using a 'Generated dialogue line' as source. "),
-            array('role' => 'user', 'content' => "* Available actions:\n".$GLOBALS["COMMAND_PROMPT"]),
-            array('role' => 'user', 'content' => "* Historic context information:\n".implode("\n",$minimalContext)),
-            array('role' => 'user', 'content' => "* Generated dialogue line: <$buffer>"),
-            array('role' => 'user', 'content' => "Convert the '* Generated dialogue line' , and ONLY the  '* Generated dialogue line' section, to a JSON object with this format: $jsonformat\n.You must infer some properties like action (check Available actions list ) and mood from context"),
-        ];
-
-        $connector=new LLMConnector();
-        $formatterConnectorId = class_exists('LLMRandomizer')
-            ? LLMRandomizer::getConnectorIdForField($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"], "llm_formatter_id")
-            : ($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]["llm_formatter_id"] ?? null);
-        $currentConnectorData=$connector->getById($formatterConnectorId);
-
-
-
-        $connector->setOldGlobals($currentConnectorData);
-
-        $connectionHandler = $connector->getConnector($currentConnectorData);
-
-        $buffer2=$connectionHandler->fast_request($contextData2,[],'formatter');
-        unset($GLOBALS["_JSON_BUFFER"]);
-        $finalRes=__jpd_decode_lazy($buffer2);
-        file_put_contents(__DIR__."/../log/output_from_llm_fast_step_2.log", $buffer2, FILE_APPEND);
-        file_put_contents(__DIR__."/../log/output_from_llm_fast_step_2.log", print_r($finalRes,true), FILE_APPEND);
-        unset($GLOBALS["_JSON_BUFFER"]);
-        $fakeObject["choices"][0]=[
-            "index"=>0,
-            "delta"=>["role"=>"assistant","content"=>json_encode($finalRes)]
-        ];
-
-        $connectionHandler->primary_handler=fopen("php://memory", "r+");// Total hack, we're emulating streaming mode.
-        $fakedStream='data: '.json_encode($fakeObject);
-        fwrite($connectionHandler->primary_handler,$fakedStream);
-        rewind($connectionHandler->primary_handler);
-
-        error_log("[CLEAN_CONTEXT_FOCUS_CHAT] Using 2-step schema, model: {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}" );
-
-    } else {
-
-        
-            /* *****
-        Player TTS
-
-        Player TTS. We overwrite some confs an then restore them.
-        */
-        // Only process player TTS on the first attempt, not during fallback retry
-        if (!isset($GLOBALS["IN_FALLBACK_MODE"]) && in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && !Translation::isSavePlayerTranslationEnabled()) {
-            require(__DIR__."/../processor/player_tts.php");
-        }
-
-        $connectionHandler->open($contextData,$overrideParameters);
-        snapshot_response_prompt_debug_data();
+    Player TTS. We overwrite some confs an then restore them.
+    */
+    // Only process player TTS on the first attempt, not during fallback retry
+    if (!isset($GLOBALS["IN_FALLBACK_MODE"]) && in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"]) && !Translation::isSavePlayerTranslationEnabled()) {
+        require(__DIR__."/../processor/player_tts.php");
     }
+
+    $connectionHandler->open($contextData,$overrideParameters);
+    snapshot_response_prompt_debug_data();
     error_log("[FALLBACK DEBUG] Checking primary_handler status: " . ($connectionHandler->primary_handler === false ? "FALSE" : "OK"));
     
     if ($connectionHandler->primary_handler === false) {
@@ -5867,6 +5825,19 @@ function call_llm_internal() {
                     
                     if (isset($actionParts2[1])) {
                         // Parameter part 
+                        $explicitActorRefTarget = chimNormalizeExplicitActorRefTarget($actionParts2[1]);
+                        $refAwarePlainActions = [
+                            "Attack", "GiveItemTo", "GiveGoldTo", "TradeItems",
+                            "Follow", "MoveTo", "Brawl"
+                        ];
+                        if ($explicitActorRefTarget !== "" &&
+                            in_array($actionParts2[0], $refAwarePlainActions, true) &&
+                            substr(trim($actionParts2[1]), 0, 1) !== "{") {
+                            $actions[$n] = "{$actionParts[0]}|{$actionParts[1]}|{$actionParts2[0]}@{$explicitActorRefTarget}";
+                            error_log("[ACTION POSTFILTER {$actionParts2[0]}] Preserving explicit actor target {$explicitActorRefTarget}");
+                            continue;
+                        }
+
                         if ($actionParts2[0]=="Attack") {
                             // Lets polish the parameters
                             $localtarget=$actionParts2[1];
@@ -6285,10 +6256,7 @@ function call_llm_internal() {
         }
     }
     
-    if (isset($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) && $GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]) {
-        ;//Was a faked stream
-    } else 
-        $connectionHandler->close('standard');
+    $connectionHandler->close('standard');
     //fwrite($fileLog, $totalBuffer . PHP_EOL); // Write the line to the file with a line break // DEBUG CODE
 
 

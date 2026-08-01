@@ -81,6 +81,170 @@ function pockettts_audio_cpp_model() {
 	return is_scalar($model) && trim(strval($model)) !== '' ? trim(strval($model)) : 'pocket-tts';
 }
 
+// Builds a PocketTTS request for either the Python or audio.cpp API.
+function pockettts_build_request($endpoint, $text, $voice, $language) {
+	$endpoint = normalize_endpoint_url($endpoint);
+	$isAudioCpp = pockettts_is_audio_cpp($endpoint);
+	if ($isAudioCpp) {
+		$data = [
+			'model' => pockettts_audio_cpp_model(),
+			'input' => $text,
+			'language' => $language ?: 'en',
+		];
+		$data = array_merge($data, pockettts_backend_voice_payload($voice));
+		return [
+			'url' => pockettts_audio_cpp_url($endpoint),
+			'data' => $data,
+			'audio_cpp' => true,
+		];
+	}
+
+	return [
+		'url' => $endpoint . '/tts_to_audio',
+		'data' => [
+			'text' => $text,
+			'speaker_wav' => $voice,
+			'language' => $language ?: 'en',
+		],
+		'audio_cpp' => false,
+	];
+}
+
+function pockettts_post_request(array $request) {
+	$options = [
+		'http' => [
+			'header' => "Content-type: application/json\r\nAccept: audio/wav\r\n",
+			'method' => 'POST',
+			'content' => json_encode($request['data']),
+		],
+	];
+	$context = stream_context_create($options);
+	$response = @file_get_contents($request['url'], false, $context);
+	$responseHeaders = isset($http_response_header) && is_array($http_response_header)
+		? $http_response_header
+		: [];
+	$httpCode = 0;
+	if (isset($responseHeaders[0]) && preg_match('/\s(\d{3})(?:\s|$)/', $responseHeaders[0], $matches)) {
+		$httpCode = intval($matches[1]);
+	}
+
+	return [
+		'response' => $response,
+		'http_code' => $httpCode,
+		'headers' => $responseHeaders,
+		'options' => $options,
+	];
+}
+
+function pockettts_probe_json($url) {
+	$ch = curl_init($url);
+	curl_setopt_array($ch, [
+		CURLOPT_RETURNTRANSFER => true,
+		CURLOPT_HTTPHEADER => ['Accept: application/json'],
+		CURLOPT_CONNECTTIMEOUT_MS => 350,
+		CURLOPT_TIMEOUT_MS => 1000,
+	]);
+	$response = curl_exec($ch);
+	$httpCode = intval(curl_getinfo($ch, CURLINFO_HTTP_CODE));
+	curl_close($ch);
+
+	return [
+		'ok' => is_string($response) && $httpCode >= 200 && $httpCode < 300,
+		'decoded' => is_string($response) ? json_decode($response, true) : null,
+	];
+}
+
+function pockettts_detect_endpoint_mode($endpoint) {
+	$endpoint = normalize_endpoint_url($endpoint);
+	$endpoint = preg_replace('#/(?:v1/audio/speech|tts_to_audio)/?$#', '', $endpoint);
+	$health = pockettts_probe_json($endpoint . '/health');
+	$models = $health['ok'] ? pockettts_probe_json($endpoint . '/v1/models') : ['ok' => false, 'decoded' => null];
+	if ($health['ok'] && $models['ok']) {
+		foreach (($models['decoded']['data'] ?? []) as $model) {
+			$modelId = strtolower(trim(strval($model['id'] ?? '')));
+			$family = strtolower(trim(strval($model['family'] ?? '')));
+			if ($modelId === 'pocket-tts' || $family === 'pocket_tts') {
+				return 'audio_cpp';
+			}
+		}
+	}
+
+	$providerInfo = pockettts_probe_json($endpoint . '/provider_info');
+	$provider = strtolower(trim(strval($providerInfo['decoded']['provider'] ?? '')));
+	if ($providerInfo['ok'] && in_array($provider, ['pockettts', 'pocket_tts', 'pocket-tts'], true)) {
+		return 'standard';
+	}
+
+	$openApi = pockettts_probe_json($endpoint . '/openapi.json');
+	if (!$openApi['ok'] || !is_array($openApi['decoded'])) {
+		return '';
+	}
+	$paths = array_keys(is_array($openApi['decoded']['paths'] ?? null) ? $openApi['decoded']['paths'] : []);
+	if (in_array('/languages', $paths, true) || in_array('/get_models_list', $paths, true)) {
+		return '';
+	}
+	if (in_array('/tts_to_audio_form', $paths, true)
+		|| (in_array('/tts_to_audio', $paths, true) && in_array('/voices/{voice_id}', $paths, true))) {
+		return 'standard';
+	}
+	return '';
+}
+
+function pockettts_should_try_fallback($endpoint, $httpCode) {
+	$httpCode = intval($httpCode);
+	return $httpCode === 0
+		|| (in_array($httpCode, [404, 405], true) && pockettts_detect_endpoint_mode($endpoint) === '');
+}
+
+// Finds a compatible PocketTTS service on the same host after a stale known port fails.
+function pockettts_find_fallback_endpoint($configuredEndpoint) {
+	$normalized = normalize_endpoint_url($configuredEndpoint);
+	$parts = parse_url($normalized);
+	$configuredPort = intval($parts['port'] ?? 0);
+	if (!in_array($configuredPort, [8020, 8024, 8086], true) || empty($parts['host'])) {
+		return null;
+	}
+
+	$scheme = strtolower(strval($parts['scheme'] ?? 'http'));
+	if (!in_array($scheme, ['http', 'https'], true)) {
+		return null;
+	}
+	$host = strval($parts['host']);
+	if (strpos($host, ':') !== false && $host[0] !== '[') {
+		$host = '[' . $host . ']';
+	}
+	$auth = '';
+	if (isset($parts['user'])) {
+		$auth = $parts['user'];
+		if (isset($parts['pass'])) {
+			$auth .= ':' . $parts['pass'];
+		}
+		$auth .= '@';
+	}
+	$path = strval($parts['path'] ?? '');
+	$path = preg_replace('#/(?:v1/audio/speech|tts_to_audio)/?$#', '', $path);
+	$path = $path === '/' ? '' : rtrim($path, '/');
+
+	foreach ([8086, 8024, 8020] as $port) {
+		if ($port === $configuredPort) {
+			continue;
+		}
+		$candidate = $scheme . '://' . $auth . $host . ':' . $port . $path;
+		$mode = pockettts_detect_endpoint_mode($candidate);
+		if ($mode === '') {
+			continue;
+		}
+		if ($mode === 'audio_cpp' && !pockettts_is_audio_cpp($candidate)) {
+			$candidate .= '/v1/audio/speech';
+		}
+		return [
+			'endpoint' => $candidate,
+			'mode' => $mode,
+		];
+	}
+	return null;
+}
+
 function pockettts_settings($settings,$resetAfter=false) {
 	if (pockettts_is_audio_cpp($GLOBALS["TTS"]["POCKETTTS"]["endpoint"] ?? '')) {
 		return;
@@ -175,8 +339,6 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		
 	    $starTime = microtime(true);
 
-		$url = normalize_endpoint_url($GLOBALS["TTS"]["POCKETTTS"]["endpoint"])."/tts_to_audio";
-
 		// Request headers
 		$headers = array(
 			'Accept: audio/wav',
@@ -233,32 +395,26 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		if (empty($voice))
 			$voice = $GLOBALS["TTS"]["POCKETTTS"]["voiceid"] ?? '';
 
-		if (pockettts_is_audio_cpp($GLOBALS["TTS"]["POCKETTTS"]["endpoint"] ?? '')) {
-			$url = pockettts_audio_cpp_url($GLOBALS["TTS"]["POCKETTTS"]["endpoint"]);
-			$data = array(
-				'model' => pockettts_audio_cpp_model(),
-				'input' => $newString,
-				'language' => $lang ?? 'en',
-			);
-			$data = array_merge($data, pockettts_backend_voice_payload($voice));
-		} else {
-			$data = array(
-				'text' => $newString,
-				'speaker_wav' => $voice,
-				'language' => $lang??'en'	//Defaults to english
-			);
+		$endpoint = normalize_endpoint_url($GLOBALS["TTS"]["POCKETTTS"]["endpoint"] ?? '');
+		$request = pockettts_build_request($endpoint, $newString, $voice, $lang);
+		$requestResult = pockettts_post_request($request);
+		$response = $requestResult['response'];
+		$options = $requestResult['options'];
+		$http_response_header = $requestResult['headers'];
+
+		if ($response === false && pockettts_should_try_fallback($endpoint, $requestResult['http_code'])) {
+			$fallback = pockettts_find_fallback_endpoint($endpoint);
+			if ($fallback !== null) {
+				$endpoint = $fallback['endpoint'];
+				$logEndpoint = preg_replace('#//[^/@]+@#', '//', $endpoint);
+				Logger::warn("PocketTTS endpoint unavailable; using compatible endpoint {$logEndpoint}");
+				$request = pockettts_build_request($endpoint, $newString, $voice, $lang);
+				$requestResult = pockettts_post_request($request);
+				$response = $requestResult['response'];
+				$options = $requestResult['options'];
+				$http_response_header = $requestResult['headers'];
+			}
 		}
-			
-		$options = array(
-			'http' => array(
-				'header' => "Content-type: application/json\r\n" .
-							"Accept: application/json\r\n",
-				'method' => 'POST',
-				'content' => json_encode($data)
-			)
-		);
-		$context = stream_context_create($options);
-		$response = file_get_contents($url, false, $context);
 
 		if ($response === FALSE) {
 			// Handle error
@@ -269,30 +425,11 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			$codename = str_replace("'", "+", $codename);
 			$codename=preg_replace('/[^a-zA-Z0-9_+]/u', '', $codename);
 			
-			if (pockettts_is_audio_cpp($GLOBALS["TTS"]["POCKETTTS"]["endpoint"] ?? '')) {
-				$data = array(
-					'model' => pockettts_audio_cpp_model(),
-					'input' => $newString,
-					'language' => $lang ?? 'en',
-				);
-				$data = array_merge($data, pockettts_backend_voice_payload($codename));
-			} else {
-				$data = array(
-					'text' => $newString,
-					'speaker_wav' => $codename,
-					'language' => $lang??"en"
-				);
-			}
-			$options = array(
-				'http' => array(
-					'header' => "Content-type: application/json\r\n" .
-								"Accept: application/json\r\n",
-					'method' => 'POST',
-					'content' => json_encode($data)
-				)
-			);
-			$context = stream_context_create($options);
-			$response = file_get_contents($url, false, $context);
+			$request = pockettts_build_request($endpoint, $newString, $codename, $lang);
+			$requestResult = pockettts_post_request($request);
+			$response = $requestResult['response'];
+			$options = $requestResult['options'];
+			$http_response_header = $requestResult['headers'];
 
 
 		}
@@ -353,7 +490,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 };
 
 /*
-$GLOBALS["TTS"]["POCKETTTS"]["endpoint"]='http://localhost:8020';
+$GLOBALS["TTS"]["POCKETTTS"]["endpoint"]='http://localhost:8024';
 $GLOBALS["TTS"]["POCKETTTS"]["voiceid"]='svenja';
 $GLOBALS["TTS"]["POCKETTTS"]["language"]='en';
 

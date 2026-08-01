@@ -346,7 +346,7 @@ function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
     $extended_data['background_life_last_updated'] = $last_gamets;
     $extended_data['background_life_player_unattached'] = true;
     $extended_data['middle_term_enabled'] = 1;
-    
+
 
     $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
     $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
@@ -417,16 +417,49 @@ if ($argv[1] == '3') {
         'background' => "He was born in a small village and grew up working in the mine 'Whistling Mine'",
         'speechStyle' => 'rude, mining oriented',
         'disposition' => 'friendly',
-        'goal' => "[Life goals]
-Earn some gold by mining and selling ores to merchants.
-* He must work in the mine 'Whistling Mine (Interior)' for the day , can sleep there too as there are beds available.
-* He sells irons to Thorgar, who is at the same location. (check inventory to know if he has ores to sell or must keep mining)
-* He sells Gold Ores to Jorl Stoneman, who is at Whiterun (it's a long travel, but Jorl is the only one buying gold ores at good price, 100 gold each!)
-* Some evenings, travels to Winterhold to have some drinks at the inn 'The Frozen Hearth', buy food and spend some time flirting and trying to pick up women.
-* He must eat/drink at least once a day.
+        'goal' => "
+[Life Goals]
+The character's primary goal is to make a living by mining ores and selling them for gold.
+
+1. Mining Work
+- The character must work at the mine \"Whistling Mine (Interior)\".
+- The mine contains beds, so the character can sleep there when needed.
+- While at the mine, the character should prioritize mining unless another urgent need requires attention.
+- Can't work all the time, use 8H rule: 8h working,8h resting,8h socializing. If hungry or thirsty, must first address survival needs before working.
+
+2. Selling Iron Ore
+- The character sells Iron Ore to Thorgar, who is located at \"Whistling Mine (Interior)\".
+- Before leaving the mine or changing activities, check the inventory:
+  - If the character has enough Iron Ore to sell, trade with Thorgar (Iron Ore aprox value is 7 gold coins each one).
+  - If there is no ore available, continue mining.
+
+3. Selling Gold Ore
+- Gold Ore is more valuable and should eventually be sold to Jorl Stoneman in Whiterun.
+- Jorl is the preferred buyer because he pays a high price (100 gold per Gold Ore).
+- Traveling to Whiterun is a long journey, so only make the trip when it is worthwhile (for example, when carrying a meaningful amount of Gold Ore).
+
+4. Social Activities
+- On some evenings, the character should travel to Winterhold.
+- At the inn \"The Frozen Hearth\", the character should:
+  - Buy food and drinks.
+  - Spend time socializing, flirting, and attempting to meet potential romantic partners.
+
+5. Survival Needs
+- The character must eat and drink at least once per day.
+- Maintain a supply of food and drinks in the inventory.
+- If supplies are low or missing (check inventory), prioritize traveling to \"The Frozen Hearth\" to purchase provisions.
+- Cannot work in the mine if hungry or thirsty; must first address survival needs.
+
+
 [Production]
-When at a working scenario, he produces iron ore (item refid:0x00071cf3) at a rate of 2 each hour.
-Sometimes he finds additional Gold Ore (item refid:0x0005acde) at a rate of 0.3 each hour.
+When working at the mine, the character produces resources over time:
+
+- Iron Ore (Item RefID: 0x00071cf3)
+  - Production rate: 2 units per hour.
+
+- Gold Ore (Item RefID: 0x0005acde)
+  - Production rate: 0.3 units per hour.
+  - Gold Ore is rare and should be preserved for selling to Jorl Stoneman.
 ",
     ];
 
@@ -506,7 +539,7 @@ if ($argv[1] == '6') {
         'gender' => 'female',
         'class' => 'merchant',
         'race' => 'imperial',
-        'location' => 'Solitude',
+        'location' => 'Whiterun',
         'appearance' => 'an elegant imperial journalist',
         'background' => 'Born in Cyrodiil to a family of historians, Cassia Valerius became fascinated by the stories of ordinary people living through extraordinary events. She travelled to Skyrim after the Civil War began, determined to document the truth beyond the official speeches of jarls and generals. She believes every citizen, from a miner to a noble, has a story worth recording.',
         'speechStyle' => 'professional, inquisitive and diplomatic. She asks precise questions, listens carefully, and often references history, politics and local rumors. She is polite but persistent when seeking the truth.',
@@ -532,13 +565,61 @@ When visiting a city, she collects information from citizens:
 - Problems affecting common people
 
 [Production]
-When at a city, tavern or social scenario, she generates gold (item refid:0x0000000f) at a rate of 1 each hour by selling written chronicles, reports and stories to publishers and nobles.
+When at a city, tavern or social scenario, and intent is work, she generates gold (item refid:0x0000000f) at a rate of 100 each hour by writing manuscripts... letters... for the illiterate
+
 ",
     ];
 
-    $startingPoint = 0x0004deb7;
+    $startingPoint = 0x2701EE0A;
     $inventoryItems = [
         ['refid' => '0x0000000F', 'qty' => 100],
+    ];
+
+    spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems);
+}
+
+if ($argv[1] == '7') {
+    echo getNameForItemReference("07000801") . PHP_EOL;
+}
+
+if ($argv[1] == '8') {
+    $npc_profile = [
+    'name' => 'Sees-the-Tide',
+    'gender' => 'male',
+    'class' => 'farmer',
+    'race' => 'argonian',
+    'location' => 'Windhelm',
+    'appearance' => 'a lean green-scaled Argonian wearing weathered fishing clothes, carrying nets that smell of river water and salt',
+    'background' => 'Born in Black Marsh, Sees-the-Tide travelled north searching for honest work after years of hardship. Like many Argonians, he eventually found employment on the Windhelm docks. Although he is not allowed to live within the city walls, he has built a modest life among the workers along the harbor. He knows the Sea of Ghosts, the White River and every fisherman in the port, believing that patience and hard work matter more than politics.',
+    'speechStyle' => 'Use a calm, measured, and pragmatic speaking style. Speak in fluent, natural English with clear, deliberate sentences, avoiding slang, exaggerated emotion, or unnecessary contractions. Favor concrete observations over opinions, and express feelings through restraint rather than intensity. Be courteous but reserved, respectful without excessive warmth, and let confidence come from quiet certainty instead of bravado. Prefer practical, descriptive language with occasional subtle metaphors drawn from nature, rivers, marshes, predators, prey, or the passage of seasons, but use them sparingly. Avoid broken grammar, Khajiit-like mannerisms (such as referring to oneself as "this one"), or excessive references to the Hist. The overall impression should be thoughtful, observant, patient, and quietly wise, with dialogue that feels grounded, concise, and purposeful.',
+    'disposition' => 'friendly',
+    'goal' => "[Life goals]
+Earn an honest living as one of Windhelm's most dependable fishermen while supporting the Argonian community on the docks.
+
+* Works at 'Windhelm Docks'
+* Inspect and repair fishing nets and equipment.
+* Spend most of the morning and afternoon fishing along the docks and nearby waters.
+* Sell freshly caught fish (River Betty, item refid:0x00106e1a, common price about 15 gold coins) to merchants, innkeepers and citizens.
+* Occasionally trade with sailors arriving from Dawnstar and Solitude.
+* Help other dock workers repair nets or unload fishing boats.
+* Eat and drink at least once every day.
+* Spend evenings around the docks or at Candlehearth Hall, listening to sailors and exchanging stories.
+* Sleeps at Candlehearth Hall.
+* Discusses weather conditions with sailors.
+* Talks about fish migrations and good fishing spots.
+* Shares rumors brought by incoming ships.
+* Watches for unusual creatures or strange objects in the water.
+* Greets other Argonians working on the docks.
+
+[Production]
+When at the docks, shoreline or fishing areas, and intent is work, he generates fish (River Betty, item refid:0x00106e1a)
+at a rate of 8 each hour.
+"
+];
+
+ $startingPoint = 0x27019D09;
+    $inventoryItems = [
+        ['refid' => '0x00106e1a', 'qty' => 10],
     ];
 
     spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems);

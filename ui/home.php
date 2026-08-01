@@ -770,7 +770,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 ");
                 $chimMode = (!isset($chimModeRow['error']) && !empty($chimModeRow) && isset($chimModeRow[0]['value'])) ? $chimModeRow[0]['value'] : 'STANDARD';
 
-                // Fetch Focus on Chat mode
+                // Fetch Compact Chat mode
                 $chimContextModeRow = fetch_widget_stats($conn, "
                     SELECT value 
                     FROM {$schema}.conf_opts 
@@ -906,7 +906,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                 <td>" . htmlspecialchars($chimModelLabel) . "</td>
                             </tr>
                             <tr>
-                                <td>Focus Chat</td>
+                                <td>Compact Chat</td>
                                 <td>" . htmlspecialchars($chimContextMode) . "</td>
                             </tr>
                             <tr>

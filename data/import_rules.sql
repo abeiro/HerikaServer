@@ -5,6 +5,7 @@ CREATE TABLE public.import_rules (
     match_race text,
     match_gender text,
     match_base text,
+    match_faction text,
     match_mods text[],
     action jsonb,
     profile integer,

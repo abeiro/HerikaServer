@@ -909,6 +909,7 @@ class NpcMaster
         $resolvedVoice = $voiceResolution['resolved_voice'];
         $originalVoice = $voiceResolution['original_voice'];
         $fallbackVoice = $voiceResolution['fallback_voice'];
+        $fallbackVoices = $voiceResolution['fallback_voices'] ?? ($fallbackVoice !== '' ? [$fallbackVoice] : []);
 
         if ($resolvedVoice !== '') {
             $GLOBALS['PATCH_OVERRIDE_VOICE'] = $resolvedVoice;
@@ -927,6 +928,12 @@ class NpcMaster
             $GLOBALS['TTS_NPC_FALLBACK_VOICE'] = $fallbackVoice;
         } else {
             unset($GLOBALS['TTS_NPC_FALLBACK_VOICE']);
+        }
+
+        if (!empty($fallbackVoices)) {
+            $GLOBALS['TTS_NPC_FALLBACK_VOICES'] = $fallbackVoices;
+        } else {
+            unset($GLOBALS['TTS_NPC_FALLBACK_VOICES']);
         }
 
         if ($resolvedVoice !== '') {
@@ -1561,19 +1568,12 @@ FROM restore
         $connectorData = null;
         $profileData = $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] ?? [];
         $connectorId = intval($profileData['tts_connector_id'] ?? 0);
+        $ttsConnector = new TTSConnector();
         if ($connectorId > 0) {
-            $ttsConnector = new TTSConnector();
             $connectorData = $ttsConnector->getById($connectorId);
-            return $ttsConnector->resolveNpcVoiceForConnector($currentNpcData, $connectorData);
         }
 
-        $voiceId = trim(strval($currentNpcData['voiceid'] ?? ''));
-        return [
-            'original_voice' => $voiceId,
-            'fallback_voice' => '',
-            'resolved_voice' => $voiceId,
-            'used_fallback' => false,
-        ];
+        return $ttsConnector->resolveNpcVoiceForConnector($currentNpcData, $connectorData);
     }
 
     private function applyNpcVoiceToTtsGlobals(string $voiceId): void

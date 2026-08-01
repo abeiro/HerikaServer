@@ -2,6 +2,7 @@
 
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."action_catalog.php");
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."chim_quest_engine.php");
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."oghma_aliases.php");
 
 /* CSV Import Processor - Called by csv_import.php endpoint
  * Handles CSV imports:
@@ -151,6 +152,11 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
             $normalized = strtolower(trim($colName));
             $headerMap[$normalized] = $i;
         }
+        $hasAliasesColumn = isset($headerMap['aliases']);
+        $databaseRows = $db->fetchAll("SELECT topic, coalesce(aliases, '') AS aliases FROM oghma");
+        [$canonicalOwners, $aliasOwners] = chimOghmaBuildAliasOwnerMaps(
+            is_array($databaseRows) ? $databaseRows : []
+        );
         
         // Process each data row
         while (($data = fgetcsv($handle, 0, ',')) !== false) {
@@ -427,6 +433,17 @@ function handleOghmaImport($csvData, $timestamp, $game_timestamp) {
             if (isset($headerMap['category']) && isset($data[$headerMap['category']])) {
                 $category = trim($data[$headerMap['category']]);
             }
+
+            $aliases = '';
+            if ($hasAliasesColumn && isset($data[$headerMap['aliases']])) {
+                $filtered = chimOghmaFilterAliases(
+                    $topic,
+                    trim($data[$headerMap['aliases']]),
+                    $canonicalOwners,
+                    $aliasOwners
+                );
+                $aliases = $filtered['aliases'];
+            }
             
             // Skip if required fields are missing
             if (empty($topic) || empty($topic_desc)) {
@@ -437,9 +454,7 @@ function handleOghmaImport($csvData, $timestamp, $game_timestamp) {
             
             // Insert or update record using upsertRowOnConflict
             try {
-                $db->upsertRowOnConflict(
-                    'oghma',
-                    array(
+                $values = array(
                         'topic' => $topic,
                         'topic_desc' => $topic_desc,
                         'knowledge_class' => $knowledge_class,
@@ -447,15 +462,27 @@ function handleOghmaImport($csvData, $timestamp, $game_timestamp) {
                         'knowledge_class_basic' => $knowledge_class_basic,
                         'tags' => $tags,
                         'category' => $category
-                    ),
+                );
+                if ($hasAliasesColumn) {
+                    $values['aliases'] = $aliases;
+                }
+                $db->upsertRowOnConflict(
+                    'oghma',
+                    $values,
                     'topic'
                 );
+
+                $canonicalOwners[chimOghmaComparableAliasKey($topic)] = $topic;
+                foreach (chimOghmaSplitAliases($aliases) as $alias) {
+                    $aliasOwners[chimOghmaComparableAliasKey($alias)][$topic] = true;
+                }
                 
                 // Update native_vector for search functionality
                 $vectorUpdateSql = "
                     UPDATE oghma
                     SET native_vector = 
-                          setweight(to_tsvector(coalesce(topic, '')), 'A')
+                          setweight(to_tsvector('simple', coalesce(topic, '')), 'A')
+                        || setweight(to_tsvector('simple', coalesce(aliases, '')), 'A')
                         || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
                         || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
                     WHERE topic = '" . $db->escape($topic) . "'

@@ -64,7 +64,7 @@ if (!function_exists('chimExtractDirectedListenerNamesFromText')) {
             return [];
         }
 
-        if (!preg_match('/\((talking|whispering|shouting)\s+to\s+([^)]+)\)/i', $text, $matches)) {
+        if (!preg_match('/\((talking|whispering|shouting|speaking privately)\s+to\s+([^)]+)\)/i', $text, $matches)) {
             return [];
         }
 

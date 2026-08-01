@@ -480,17 +480,19 @@ PROMPT;
             return null;
         }
 
-        // Validate and normalize
+        // Validate and normalize. Initial analysis may select only built-in types;
+        // custom types do not exist in this initialization context.
         $relationships = [];
-        $validTypes = ['romantic', 'platonic', 'familial', 'professional', 'rival', 'enemy', 'neutral'];
 
         foreach ($parsed['relationships'] as $target => $data) {
             $aff = isset($data['aff']) ? intval($data['aff']) : 0;
-            $type = isset($data['type']) ? strtolower($data['type']) : 'neutral';
+            $rawType = isset($data['type']) ? (string)$data['type'] : 'neutral';
+            $type = RelationshipManager::canonicalizeRelationshipType($rawType);
             $note = isset($data['note']) ? trim($data['note']) : '';
 
             $aff = max(-100, min(100, $aff));
-            if (!in_array($type, $validTypes) && !preg_match('/^[a-z]+$/', $type)) {
+            if ($type === null) {
+                Logger::info("[REL-LLM] REJECTED invented initial relationship type '{$rawType}' for {$target}; using neutral");
                 $type = 'neutral';
             }
 
@@ -932,8 +934,10 @@ Only suggest changes for SIGNIFICANT moments - not every interaction needs a cha
 {$outputKeyInstruction}
 
 Return JSON: {"changes": {"{$listenerKey}": {"delta": X, "reason": "brief"}}}
-If (and ONLY if) this exchange changed the relationship's NATURE - romance, betrayal,
-marriage, becoming enemies - also include "type", e.g.
+If (and ONLY if) this exchange changed the relationship's NATURE - a romance forming,
+a betrayal, marriage, becoming enemies - also include "type". "type" must be EXACTLY one
+of: romantic, platonic, familial, professional, rival, enemy, crush, ex, betrayed
+(the value is "romantic", never "romance"), e.g.
 {"changes": {"{$listenerKey}": {"delta": X, "type": "crush", "reason": "brief"}}}
 Be conservative: one passing line never flips a type. The change must be backed by sustained
 energy or real/implied history, and it must come from {$npcName}'s own expressed feelings -
@@ -1224,7 +1228,10 @@ REASON FORMAT - Keep it SHORT (under 15 words):
 
 TYPE CHANGES (rare - only for DEFINING moments):
 - Add "type" ONLY when this exchange visibly changed the NATURE of the relationship:
-  romance, betrayal, marriage, family reveal, becoming enemies.
+  a romance forming, a betrayal, marriage, a family reveal, becoming enemies.
+- "type" must be EXACTLY one of: romantic, platonic, familial, professional, rival,
+  enemy, crush, ex, betrayed. Never invent other labels: the value is "romantic",
+  NOT "romance"; "betrayed", NOT "betrayal"; "enemy", NOT "enemies".
 - Be conservative. One passing compliment, joke, or flirty line NEVER flips a type.
   A type change must be backed by sustained energy in this exchange or by the history
   between them - repeated warmth, declarations, a shared past, stated or clearly implied.
@@ -1243,6 +1250,13 @@ PROMPT;
         // Seeded defaults from before the type-change syntax existed teach a delta-only output;
         // upgrade them in place. Custom prompts that already know "type" are left alone.
         if (strpos($prompt, 'only for defining moments') !== false && strpos($prompt, '"type"') === false) {
+            return $fallback;
+        }
+        // Older defaults listed the defining MOMENTS ("romance, betrayal, marriage...") right where
+        // a type value was expected, so models copied them verbatim as types ("romance" instead of
+        // "romantic") and the sex-eligibility gates never matched. Supersede any prompt (seeded
+        // default or stale custom) still teaching that wording with the corrected fallback.
+        if (strpos($prompt, 'romance, betrayal') !== false) {
             return $fallback;
         }
         return $prompt;
@@ -1311,14 +1325,19 @@ PROMPT;
             'narrator', 'the narrator'
         ];
 
+        // Custom types become selectable only after the player has created and saved
+        // one in the relationship editor. The shared manager owns canonicalization.
+        $allowedCustomTypes = RelationshipManager::getCustomRelationshipTypes($currentRels);
+
         foreach ($changes as $target => $change) {
             $delta = intval($change['delta'] ?? 0);
-            $newType = $change['type'] ?? null;
-            if (is_string($newType)) {
-                $newType = strtolower(trim($newType));
-                if ($newType === '') {
-                    $newType = null;
-                }
+            $rawType = $change['type'] ?? null;
+            $newType = $rawType === null
+                ? null
+                : RelationshipManager::canonicalizeRelationshipType($rawType, $allowedCustomTypes);
+            if ($rawType !== null && $newType === null) {
+                $loggedType = is_scalar($rawType) ? (string)$rawType : gettype($rawType);
+                Logger::info("[REL-LLM] REJECTED invented type '{$loggedType}' for {$npc['npc_name']} -> {$target}: not an available type (delta still applies)");
             }
             $reason = $change['reason'] ?? '';
 
@@ -1484,12 +1503,14 @@ PROMPT;
                 // worker changed the same target; copying the pre-eval target would
                 // clobber that newer state.
                 $existingRels = RelationshipManager::normalizeRelationshipMap($extended['relationships'] ?? []);
+                $freshCustomTypes = RelationshipManager::getCustomRelationshipTypes($existingRels);
                 foreach ($applied as $target => $change) {
                     $freshRel = $existingRels[$target] ?? [];
                     $rebasedRel = $this->rebaseRelationshipChange(
                         $freshRel,
                         $currentRels[$target] ?? [],
-                        $change
+                        $change,
+                        $freshCustomTypes
                     );
                     $freshAff = (int)($freshRel['aff'] ?? 0);
                     $staleAff = (int)($change['old'] ?? 0);
@@ -1527,7 +1548,7 @@ PROMPT;
      * Apply an LLM relationship change to the latest DB value instead of the
      * stale value captured when the evaluation was queued.
      */
-    private function rebaseRelationshipChange($freshRel, $computedRel, $change) {
+    private function rebaseRelationshipChange($freshRel, $computedRel, $change, $allowedCustomTypes = []) {
         if (!is_array($freshRel)) {
             $freshRel = [];
         }
@@ -1547,9 +1568,9 @@ PROMPT;
         }
 
         $requestedType = $change['requested_type'] ?? null;
-        if (is_string($requestedType)) {
-            $requestedType = strtolower(trim($requestedType));
-        }
+        $requestedType = $requestedType === null
+            ? null
+            : RelationshipManager::canonicalizeRelationshipType($requestedType, $allowedCustomTypes);
 
         // ROMANTIC AUTO-PROMOTION GUARD (mirrors the main apply path): never let the concurrent-rebase apply a
         // romantic-leaning type on top of a non-romantic one. Romantic types are player-set, not model-assigned.

@@ -26,6 +26,7 @@ $distroDebuggerChimEmbedUrl = rtrim($distroDashboardRoot, '/') . '/distro_debugg
 $distroDatabaseManagerUrl = rtrim($distroDashboardRoot, '/') . '/database_manager.php';
 
 $TITLE = "Control Panel";
+$BODY_CLASS = 'hub-page';
 ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."head.html");
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl".DIRECTORY_SEPARATOR."navbar.php");
@@ -127,32 +128,37 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
     }
 }
 
-/* Actions in header */
-.cp-title .cp-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
 </style>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/hub-navigation.css?v=<?php echo filemtime(__DIR__ . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'hub-navigation.css'); ?>">
 
 <main>
-    <div class="cp-title" style="display:flex; align-items:center; justify-content:space-between; margin: 4px 0 8px 0;">
-        <div class="cp-actions">
-            <a href="<?php echo $webRoot; ?>/ui/tests/ai_agent_ini.php" target="_blank" class="btn-base btn-primary" title="Generate AIAgent.ini file for the mod file.">Create Custom AIAgent.ini</a>
-            <a href="<?php echo $webRoot; ?>/ui/core/migrate_profiles.php" class="btn-base btn-primary" title="Migrate all legacy conf_*.php profiles to the database and archive them.">⚙️ Migrate Legacy Profiles</a>
-            <a href="<?php echo $webRoot; ?>/ui/conf_wizard.php" class="btn-base btn-primary" title="Open the configuration wizard to edit profiles and settings.">(Legacy) Config Wizard</a>
+    <div class="config-navigation" aria-label="Control Panel sections">
+        <div class="tab-groups">
+            <section class="tab-group active" data-category="diagnostics">
+                <div class="tab-group-label">Diagnostics</div>
+                <div class="tab-buttons" role="tablist" aria-label="Diagnostics pages">
+                    <button class="tab-button active" data-tab="srvlogs"><span class="tab-icon" aria-hidden="true">&#x1F332;</span><span class="tab-label">Server Logs</span></button>
+                    <button class="tab-button" data-tab="requests"><span class="tab-icon" aria-hidden="true">&#x1F50D;</span><span class="tab-label">Request Logs</span></button>
+                    <button class="tab-button" data-tab="oghmaaudit"><span class="tab-icon" aria-hidden="true">&#x1F4D6;</span><span class="tab-label">Oghma Audit</span></button>
+                    <button class="tab-button" data-tab="rellogs"><span class="tab-icon" aria-hidden="true">&#x1F517;</span><span class="tab-label">Relationship Logs</span></button>
+                </div>
+            </section>
+            <section class="tab-group" data-category="monitoring">
+                <div class="tab-group-label">Monitoring</div>
+                <div class="tab-buttons" role="tablist" aria-label="Monitoring pages">
+                    <button class="tab-button" data-tab="audit"><span class="tab-icon" aria-hidden="true">&#x1F4CA;</span><span class="tab-label">Cost Breakdown</span></button>
+                    <button class="tab-button" data-tab="responses"><span class="tab-icon" aria-hidden="true">&#x1F4AC;</span><span class="tab-label">Response Queue</span></button>
+                </div>
+            </section>
+            <section class="tab-group" data-category="data-tools">
+                <div class="tab-group-label">Data &amp; Tools</div>
+                <div class="tab-buttons" role="tablist" aria-label="Data and tools pages">
+                    <button class="tab-button" data-tab="cache"><span class="tab-icon" aria-hidden="true">&#x1F3BC;</span><span class="tab-label">Audio &amp; Image Cache</span></button>
+                    <button class="tab-button" data-tab="playthrough"><span class="tab-icon" aria-hidden="true">&#x1F3AE;</span><span class="tab-label">Playthrough Manager</span></button>
+                    <button class="tab-button" data-tab="dbmgr"><span class="tab-icon" aria-hidden="true">&#x1F5C4;&#xFE0F;</span><span class="tab-label">Database Manager</span></button>
+                </div>
+            </section>
         </div>
-    </div>
-    <div class="tab-buttons">
-        <button class="tab-button active" data-tab="srvlogs"><span class="tab-icon" aria-hidden="true">&#x1F332;</span><span class="tab-label">Server Logs</span></button>
-        <button class="tab-button" data-tab="cache"><span class="tab-icon" aria-hidden="true">&#x1F3BC;</span><span class="tab-label">Audio &amp; Image Cache</span></button>
-        <button class="tab-button" data-tab="requests"><span class="tab-icon" aria-hidden="true">&#x1F50D;</span><span class="tab-label">Request Logs</span></button>
-        <button class="tab-button" data-tab="oghmaaudit"><span class="tab-icon" aria-hidden="true">&#x1F4D6;</span><span class="tab-label">Oghma Audit</span></button>
-        <button class="tab-button" data-tab="audit"><span class="tab-icon" aria-hidden="true">&#x1F4CA;</span><span class="tab-label">Cost Breakdown</span></button>
-        <button class="tab-button" data-tab="responses"><span class="tab-icon" aria-hidden="true">&#x1F4AC;</span><span class="tab-label">Response Queue</span></button>
-        <button class="tab-button" data-tab="rellogs"><span class="tab-icon" aria-hidden="true">&#x1F517;</span><span class="tab-label">Relationship Logs</span></button>
-        <button class="tab-button" data-tab="playthrough"><span class="tab-icon" aria-hidden="true">&#x1F3AE;</span><span class="tab-label">Playthrough Manager</span></button>
-        <button class="tab-button" data-tab="dbmgr"><span class="tab-icon" aria-hidden="true">&#x1F5C4;&#xFE0F;</span><span class="tab-label">Database Manager</span></button>
     </div>
 
     <div id="srvlogs" class="tab-content active">
@@ -162,7 +168,7 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
     </div>
     <div id="cache" class="tab-content">
         <div class="embed-wrap">
-            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/soundcache/"></iframe>
+            <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/cache_browser.php?embed=1"></iframe>
         </div>
     </div>
     <div id="requests" class="tab-content">
@@ -205,8 +211,12 @@ main { padding-top: 80px; padding-left: 10px; padding-right: 10px; }
 <script>
 (function(){
     const buttons = document.querySelectorAll('.tab-button');
+    const groups = document.querySelectorAll('.tab-group');
     const tabs = document.querySelectorAll('.tab-content');
     function activate(id){
+        const selectedButton = Array.from(buttons).find(button => button.dataset.tab === id);
+        if (!selectedButton) return;
+        groups.forEach(group => group.classList.toggle('active', group.contains(selectedButton)));
         buttons.forEach(b=>{ b.classList.toggle('active', b.dataset.tab===id); });
         tabs.forEach(t=>{
             const on = (t.id===id);

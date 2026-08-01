@@ -49183,8 +49183,13 @@ ALTER TABLE ONLY public.oghma_dynamic
 -- Name: oghma oghma_pkey; Type: CONSTRAINT; Schema: public; Owner: dwemer
 --
 
+ALTER TABLE public.oghma
+    ADD COLUMN aliases text DEFAULT ''::text NOT NULL;
+
 ALTER TABLE ONLY public.oghma
     ADD CONSTRAINT oghma_pkey PRIMARY KEY (topic);
+
+CREATE INDEX oghma_native_vector_idx ON public.oghma USING gin (native_vector);
 
 
 --

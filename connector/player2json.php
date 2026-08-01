@@ -234,6 +234,9 @@ class player2json
         }
         $this->_is_streaming = false; 
 
+        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "player2_health.php");
+        chimPlayer2HealthMarkUsed($this->_url);
+
     }
     
     public function open($contextData, $customParms)
