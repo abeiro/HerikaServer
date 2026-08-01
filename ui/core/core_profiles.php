@@ -323,6 +323,20 @@ h1.api-title {
 .setting-control select,
 .setting-control textarea { width:100%; }
 .setting-control textarea { min-height: 88px; }
+.profile-setting-sync-btn {
+    display:block;
+    width:max-content;
+    margin:5px 0 0 auto;
+    padding:4px 8px;
+    border:1px solid #4b4b4b;
+    border-radius:5px;
+    background:#303030;
+    color:#f3f3f3;
+    font-size:11px;
+    line-height:1.2;
+    cursor:pointer;
+}
+.profile-setting-sync-btn:hover { border-color:#f27c11; background:#383838; }
 .range-pair { display:flex; align-items:center; gap:8px; }
 .range-pair input[type="range"] { flex:1; accent-color: rgb(242,124,17); }
 .range-pair input[type="number"] { width:86px; min-width:86px; text-align:right; }
@@ -504,6 +518,15 @@ $__rpgOptions = array_values(array_filter($__rpgOptionsRaw, function($v){ return
 $__dynOptions = is_array($__confSchema['DYNAMIC_PROFILE_FIELDS']['values'] ?? null) ? $__confSchema['DYNAMIC_PROFILE_FIELDS']['values'] : [];
 $__dynHelp = (string)($__confSchema['DYNAMIC_PROFILE_FIELDS']['description'] ?? '');
 
+// Only profile metadata fields rendered by the visual editor may be copied in bulk.
+$profileSyncableMetadataKeys = [
+    'RECHAT_H', 'RECHAT_P', 'CORE_LANG', 'BORED_EVENT',
+    'DIARY_PROMPT', 'LANG_LLM_XTTS', 'QUEST_COMMENT', 'DIARY_COOLDOWN', 'COMBAT_BARK_COOLDOWN',
+    'CONTEXT_HISTORY', 'MAX_WORDS_LIMIT',
+    'QUEST_COMMENT_CHANCE', 'RECHAT_ALLOW_ACTIONS', 'CONTEXT_HISTORY_DIARY', 'BORED_EVENT_SERVERSIDE',
+    'CONTEXT_HISTORY_DYNAMIC_PROFILE',
+];
+
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     if ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
@@ -546,6 +569,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
         header('Content-Type: application/json');
     }
+    $requestedSyncSetting = $_POST['sync_profile_setting'] ?? (isset($_POST['sync_diary_prompt']) ? 'DIARY_PROMPT' : null);
+    $syncSettingKey = is_string($requestedSyncSetting) ? trim($requestedSyncSetting) : null;
+    $syncRequestInvalid = $syncSettingKey !== null && !in_array($syncSettingKey, $profileSyncableMetadataKeys, true);
+
     // Server-side merge of visual metadata with JSON editor content
     if (isset($_POST['meta_vis'])) {
         $base = [];
@@ -566,30 +593,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         }
         $_POST['metadata'] = json_encode($base, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
     }
-    $updated = $profiles->update($_POST["id"], $_POST);
+    $updated = $syncRequestInvalid ? false : $profiles->update($_POST["id"], $_POST);
     $syncedProfiles = null;
+    $syncError = $syncRequestInvalid ? 'This profile setting cannot be copied to all profiles.' : null;
 
-    if ($updated !== false && isset($_POST['sync_diary_prompt'])) {
+    if ($updated !== false && $syncSettingKey !== null) {
         $metadata = json_decode($_POST['metadata'] ?? '{}', true);
-        $diaryPrompt = is_array($metadata) ? trim((string)($metadata['DIARY_PROMPT'] ?? '')) : '';
+        $metadata = is_array($metadata) ? $metadata : [];
 
-        if ($diaryPrompt === '') {
-            $updated = false;
-            $syncError = 'Enter a diary prompt before applying it to all profiles.';
-        } else {
-            $encodedPrompt = json_encode($diaryPrompt, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-            $escapedPrompt = $GLOBALS['db']->escape($encodedPrompt);
+        if (array_key_exists($syncSettingKey, $metadata)) {
+            $encodedValue = json_encode($metadata[$syncSettingKey], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $escapedValue = $GLOBALS['db']->escape($encodedValue);
             $syncResult = $GLOBALS['db']->execQuery(
                 "UPDATE core_profiles
-                 SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{DIARY_PROMPT}', '{$escapedPrompt}'::jsonb, true)"
+                 SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{{$syncSettingKey}}', '{$escapedValue}'::jsonb, true)"
             );
+        } else {
+            $syncResult = $GLOBALS['db']->execQuery(
+                "UPDATE core_profiles
+                 SET metadata = COALESCE(metadata, '{}'::jsonb) - '{$syncSettingKey}'"
+            );
+        }
 
-            if ($syncResult === false) {
-                $updated = false;
-                $syncError = 'The profile was saved, but the diary prompt could not be applied to all profiles.';
-            } else {
-                $syncedProfiles = $profiles->getProfileCount();
-            }
+        if ($syncResult === false) {
+            $updated = false;
+            $syncError = 'The profile was saved, but the selected setting could not be copied to all profiles.';
+        } else {
+            $syncedProfiles = $profiles->getProfileCount();
         }
     }
 
@@ -598,6 +628,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
             'ok' => $updated !== false,
             'id' => $_POST['id'] ?? null,
             'synced_profiles' => $syncedProfiles,
+            'synced_setting' => $syncSettingKey,
             'error' => $updated === false ? ($syncError ?? $profiles->getLastError()) : null,
         ]);
         exit;
@@ -1995,14 +2026,18 @@ $ittById = $byId($ittRows);
         if (basicBtn){ basicBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
 const saveAllBtn = document.getElementById('btn_save_all');
         if (saveAllBtn){ saveAllBtn.addEventListener('click', function(ev){ try{ if (typeof showToast==='function') showToast('Saving all settings...'); saveProfileAjax(ev, 'core_profile_form'); }catch(_e){} }); }
-        const syncDiaryPromptBtn = document.getElementById('btn_sync_diary_prompt');
-        if (syncDiaryPromptBtn){ syncDiaryPromptBtn.addEventListener('click', function(ev){
-            if (!window.confirm('Apply this diary prompt to every profile? Other profile settings will not change.')) return;
-            try {
-                if (typeof showToast === 'function') showToast('Applying diary prompt...');
-                saveProfileAjax(ev, 'core_profile_form', true);
-            } catch(_e){}
-        }); }
+        document.querySelectorAll('.profile-setting-sync-btn').forEach(btn => {
+            btn.addEventListener('click', function(ev){
+                const settingKey = btn.dataset.settingKey || '';
+                const settingLabel = btn.dataset.settingLabel || 'this setting';
+                if (!settingKey) return;
+                if (!window.confirm('Copy "' + settingLabel + '" from this profile to all profiles? Other profile settings will not change.')) return;
+                try {
+                    if (typeof showToast === 'function') showToast('Copying ' + settingLabel + '...');
+                    saveProfileAjax(ev, 'core_profile_form', settingKey, settingLabel);
+                } catch(_e){}
+            });
+        });
         const backTopBtn = document.getElementById('btn_back_to_top');
         if (backTopBtn){ backTopBtn.addEventListener('click', function(){
             try { window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -2270,7 +2305,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
     })();
 
     // Save handler that keeps the user on the same profile and shows a toast
-    async function saveProfileAjax(ev, formId, syncDiaryPrompt){
+    async function saveProfileAjax(ev, formId, syncSettingKey, syncSettingLabel){
         try {
             if (typeof consolidation === 'function') {
                 const ok = consolidation(ev, formId);
@@ -2303,7 +2338,9 @@ const saveAllBtn = document.getElementById('btn_save_all');
         } else {
             if (!fd.has('create')) fd.append('create','1');
         }
-        if (syncDiaryPrompt === true) fd.append('sync_diary_prompt', '1');
+        if (typeof syncSettingKey === 'string' && syncSettingKey !== '') {
+            fd.append('sync_profile_setting', syncSettingKey);
+        }
         try {
             const res = await fetch('core_profiles.php', { method:'POST', headers:{ 'X-Requested-With': 'XMLHttpRequest' }, body: fd });
             let json = {};
@@ -2318,7 +2355,8 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 }
                 if (typeof showToast === 'function') {
                     const synced = Number(json.synced_profiles || 0);
-                    showToast(synced > 0 ? ('Diary prompt applied to ' + synced + ' profiles') : 'Profile saved');
+                    const label = syncSettingLabel || 'Setting';
+                    showToast(synced > 0 ? (label + ' copied to ' + synced + ' profiles') : 'Profile saved');
                 }
             } else {
                 if (typeof showToast === 'function') showToast('Save failed: ' + (json && json.error ? json.error : 'Unknown error'), true);
