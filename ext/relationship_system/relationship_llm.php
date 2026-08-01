@@ -386,8 +386,8 @@ class RelationshipLLM {
         $relationships = $this->parseResponse($response);
 
         if ($relationships === null) {
-            Logger::warn("[REL-LLM] Failed to parse response for {$npcName}: " . substr($response, 0, 200));
-            return ['ok' => false, 'error' => 'Failed to parse response', 'raw' => $response];
+            Logger::warn("[REL-LLM] Failed to parse response for {$npcName} (response length " . strlen($response) . ")");
+            return ['ok' => false, 'error' => 'Failed to parse response'];
         }
 
         // Save to NPC
@@ -446,6 +446,74 @@ PROMPT;
     /**
      * Parse LLM response into relationships array
      */
+    private function logMalformedResponseField($context, $value) {
+        $type = function_exists('get_debug_type') ? get_debug_type($value) : gettype($value);
+        Logger::warn("[REL-LLM] Ignoring malformed {$context} ({$type})");
+    }
+
+    /**
+     * Normalize one dynamic relationship change without trusting model-provided field types.
+     */
+    private function normalizeChangeData($change, $context) {
+        if (!is_array($change) || (!empty($change) && array_is_list($change))) {
+            $this->logMalformedResponseField("{$context} change", $change);
+            return [];
+        }
+
+        $normalized = [];
+        if (array_key_exists('delta', $change)) {
+            if (is_numeric($change['delta']) && !is_bool($change['delta'])) {
+                $normalized['delta'] = intval($change['delta']);
+            } else {
+                $this->logMalformedResponseField("{$context} delta", $change['delta']);
+            }
+        }
+
+        foreach (['type', 'reason', 'relation'] as $field) {
+            if (!array_key_exists($field, $change)) {
+                continue;
+            }
+            if (!is_string($change[$field])) {
+                $this->logMalformedResponseField("{$context} {$field}", $change[$field]);
+                continue;
+            }
+
+            $value = trim($change[$field]);
+            if ($value !== '') {
+                $normalized[$field] = $field === 'reason' ? $value : strtolower($value);
+            }
+        }
+
+        if (empty($normalized)) {
+            return [];
+        }
+        $normalized['delta'] = $normalized['delta'] ?? 0;
+        return $normalized;
+    }
+
+    /**
+     * Normalize a target-keyed map of dynamic relationship changes.
+     */
+    private function normalizeChangeMap($changes, $context) {
+        if (!is_array($changes) || (!empty($changes) && array_is_list($changes))) {
+            $this->logMalformedResponseField("{$context} changes", $changes);
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($changes as $target => $change) {
+            if (!is_string($target) || trim($target) === '') {
+                $this->logMalformedResponseField("{$context} target", $target);
+                continue;
+            }
+            $normalizedChange = $this->normalizeChangeData($change, $context);
+            if (!empty($normalizedChange)) {
+                $normalized[trim($target)] = $normalizedChange;
+            }
+        }
+        return $normalized;
+    }
+
     private function parseResponse($response) {
         // Handle markdown code blocks
         $jsonResponse = $response;
@@ -476,7 +544,11 @@ PROMPT;
             }
         }
 
-        if (!isset($parsed['relationships'])) {
+        if (!is_array($parsed)
+            || !array_key_exists('relationships', $parsed)
+            || !is_array($parsed['relationships'])
+            || (!empty($parsed['relationships']) && array_is_list($parsed['relationships']))) {
+            $this->logMalformedResponseField('initial relationships container', $parsed['relationships'] ?? $parsed);
             return null;
         }
 
@@ -485,11 +557,39 @@ PROMPT;
         $relationships = [];
 
         foreach ($parsed['relationships'] as $target => $data) {
-            $aff = isset($data['aff']) ? intval($data['aff']) : 0;
-            $rawType = isset($data['type']) ? (string)$data['type'] : 'neutral';
-            $type = RelationshipManager::canonicalizeRelationshipType($rawType);
-            $note = isset($data['note']) ? trim($data['note']) : '';
+            if (!is_string($target) || trim($target) === '') {
+                $this->logMalformedResponseField('initial relationship target', $target);
+                continue;
+            }
+            if (!is_array($data) || (!empty($data) && array_is_list($data))) {
+                $this->logMalformedResponseField('initial relationship entry', $data);
+                continue;
+            }
 
+            if (array_key_exists('aff', $data) && (!is_numeric($data['aff']) || is_bool($data['aff']))) {
+                $this->logMalformedResponseField('initial relationship affinity', $data['aff']);
+                continue;
+            }
+            $aff = array_key_exists('aff', $data) ? intval($data['aff']) : 0;
+
+            $rawType = 'neutral';
+            if (array_key_exists('type', $data)) {
+                if (is_string($data['type'])) {
+                    $rawType = strtolower(trim($data['type']));
+                } else {
+                    $this->logMalformedResponseField('initial relationship type', $data['type']);
+                }
+            }
+            $type = RelationshipManager::canonicalizeRelationshipType($rawType);
+
+            $note = '';
+            if (array_key_exists('note', $data)) {
+                if (is_string($data['note'])) {
+                    $note = trim($data['note']);
+                } else {
+                    $this->logMalformedResponseField('initial relationship note', $data['note']);
+                }
+            }
             $aff = max(-100, min(100, $aff));
             if ($type === null) {
                 Logger::info("[REL-LLM] REJECTED invented initial relationship type '{$rawType}' for {$target}; using neutral");
@@ -497,7 +597,8 @@ PROMPT;
             }
 
             // Normalize player references
-            $targetLower = strtolower(trim($target));
+            $target = trim($target);
+            $targetLower = strtolower($target);
             if (in_array($targetLower, ['narrator', 'the narrator'], true)) {
                 continue; // never track the narrator as a relationship target
             }
@@ -1181,6 +1282,11 @@ PROMPT;
             }
         }
 
+        if (!is_array($parsed) || (!empty($parsed) && array_is_list($parsed))) {
+            $this->logMalformedResponseField('NPC-to-NPC response', $parsed);
+            return ['speaker' => [], 'listener' => []];
+        }
+
         // Try standard format first
         $speakerData = $parsed['speaker'] ?? null;
         $listenerData = $parsed['listener'] ?? null;
@@ -1194,8 +1300,8 @@ PROMPT;
         }
 
         return [
-            'speaker' => $speakerData ?? [],
-            'listener' => $listenerData ?? []
+            'speaker' => $speakerData === null ? [] : $this->normalizeChangeData($speakerData, 'NPC-to-NPC speaker'),
+            'listener' => $listenerData === null ? [] : $this->normalizeChangeData($listenerData, 'NPC-to-NPC listener')
         ];
     }
 
@@ -1292,7 +1398,12 @@ PROMPT;
             }
         }
 
-        return $parsed['changes'] ?? [];
+        if (!is_array($parsed)) {
+            $this->logMalformedResponseField('dynamic response', $parsed);
+            return [];
+        }
+
+        return $this->normalizeChangeMap($parsed['changes'] ?? [], 'dynamic response');
     }
 
     /**
@@ -1300,6 +1411,14 @@ PROMPT;
      */
     private function applyChanges($npcId, $changes, $currentRels) {
         require_once $GLOBALS['ENGINE_PATH'] . "lib/core/npc_master.class.php";
+
+        if (!is_array($changes)) {
+            $this->logMalformedResponseField('apply changes container', $changes);
+            return [];
+        }
+        if (!is_array($currentRels)) {
+            $currentRels = [];
+        }
 
         $npcMaster = new NpcMaster();
         $npc = $npcMaster->getById($npcId);
@@ -1330,7 +1449,11 @@ PROMPT;
         $allowedCustomTypes = RelationshipManager::getCustomRelationshipTypes($currentRels);
 
         foreach ($changes as $target => $change) {
-            $delta = intval($change['delta'] ?? 0);
+            if (!is_string($target) || trim($target) === '' || !is_array($change)) {
+                $this->logMalformedResponseField('apply relationship change', $change);
+                continue;
+            }
+
             $rawType = $change['type'] ?? null;
             $newType = $rawType === null
                 ? null
@@ -1339,7 +1462,13 @@ PROMPT;
                 $loggedType = is_scalar($rawType) ? (string)$rawType : gettype($rawType);
                 Logger::info("[REL-LLM] REJECTED invented type '{$loggedType}' for {$npc['npc_name']} -> {$target}: not an available type (delta still applies)");
             }
-            $reason = $change['reason'] ?? '';
+            $target = trim($target);
+
+            $deltaValue = $change['delta'] ?? 0;
+            $delta = is_numeric($deltaValue) && !is_bool($deltaValue) ? intval($deltaValue) : 0;
+            $reason = is_string($change['reason'] ?? null) ? trim($change['reason']) : '';
+            $relation = is_string($change['relation'] ?? null) ? strtolower(trim($change['relation'])) : null;
+            $relation = $relation === '' ? null : $relation;
 
             // Skip titles/roles (but allow factions/groups)
             if (in_array(strtolower(trim($target)), $blockedTitles)) {
@@ -1351,6 +1480,10 @@ PROMPT;
             $target = RelationshipManager::normalizeTargetName($target);
 
             $targetExists = isset($currentRels[$target]);
+            if ($targetExists && !is_array($currentRels[$target])) {
+                $this->logMalformedResponseField('stored relationship entry', $currentRels[$target]);
+                continue;
+            }
 
             // REL LLMs often emit {"delta":0,"type":"neutral"} as a generic
             // "no meaningful change" shape. Do not let that create or downgrade
@@ -1367,8 +1500,15 @@ PROMPT;
                 $currentRels[$target] = ['aff' => 0, 'type' => 'neutral'];
             }
 
-            $oldAff = $currentRels[$target]['aff'];
-            $oldType = $currentRels[$target]['type'] ?? 'neutral';
+            $oldAffValue = $currentRels[$target]['aff'] ?? 0;
+            if (!is_numeric($oldAffValue) || is_bool($oldAffValue)) {
+                $this->logMalformedResponseField('stored relationship affinity', $oldAffValue);
+                continue;
+            }
+            $oldAff = intval($oldAffValue);
+            $oldType = is_string($currentRels[$target]['type'] ?? null)
+                ? $currentRels[$target]['type']
+                : 'neutral';
             $newAff = max(-100, min(100, $oldAff + $delta));
             $currentRels[$target]['aff'] = $newAff;
 
@@ -1447,10 +1587,10 @@ PROMPT;
             }
 
             // Handle relation field from LLM output (if provided)
-            if (!empty($change['relation'])) {
+            if ($relation !== null) {
                 // Only set relation if not already set, or if explicitly changing
                 if (empty($currentRels[$target]['relation'])) {
-                    $currentRels[$target]['relation'] = strtolower(trim($change['relation']));
+                    $currentRels[$target]['relation'] = $relation;
                 }
             }
 
@@ -1461,7 +1601,7 @@ PROMPT;
                 'type' => $finalType,
                 'base_type' => $oldType,
                 'requested_type' => $newType,
-                'relation' => $change['relation'] ?? null,
+                'relation' => $relation,
                 'reason' => $reason
             ];
 

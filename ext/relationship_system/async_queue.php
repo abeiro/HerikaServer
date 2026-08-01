@@ -19,6 +19,20 @@
 require_once $GLOBALS["ENGINE_PATH"] . "lib/logger.php";
 
 /**
+ * Convert malformed or unsuccessful LLM results into a retryable queue failure.
+ */
+function _relRequireLlmSuccess($result, $operation) {
+    if (is_array($result) && !empty($result['ok'])) {
+        return;
+    }
+
+    $error = is_array($result) && is_string($result['error'] ?? null)
+        ? substr($result['error'], 0, 300)
+        : 'invalid result';
+    throw new RuntimeException("{$operation} failed: {$error}");
+}
+
+/**
  * Queue a relationship evaluation for async processing
  *
  * @param array $evalData Array containing:
@@ -130,7 +144,7 @@ function _relQueueEvaluation($evalData) {
  * @param int $limit Max number of evaluations to process (default 5)
  * @return array Results of processing
  */
-function _relProcessQueue($limit = 5) {
+function _relProcessQueue($limit = 5, $relLLM = null) {
     if (!isset($GLOBALS['db']) || !$GLOBALS['db']) {
         return ['processed' => 0, 'error' => 'no database'];
     }
@@ -150,8 +164,10 @@ function _relProcessQueue($limit = 5) {
             return $results;
         }
 
-        require_once __DIR__ . "/relationship_llm.php";
-        $relLLM = new RelationshipLLM();
+        if ($relLLM === null) {
+            require_once __DIR__ . "/relationship_llm.php";
+            $relLLM = new RelationshipLLM();
+        }
 
         if (!$relLLM->isAvailable()) {
             Logger::warn("[REL-ASYNC] LLM not available, skipping queue processing");
@@ -178,6 +194,7 @@ function _relProcessQueue($limit = 5) {
                 // Lazy init for speaker NPC if not already done
                 if (!isset($lazyInitChecked[$data['npc_id']])) {
                     $initResult = $relLLM->analyzeNpc($data['npc_id'], false);
+                    _relRequireLlmSuccess($initResult, 'Speaker relationship initialization');
                     if (!empty($initResult['ok']) && empty($initResult['skipped'])) {
                         Logger::info("[REL-ASYNC] Lazy-initialized {$data['npc_name']}");
                     }
@@ -187,6 +204,7 @@ function _relProcessQueue($limit = 5) {
                 // Lazy init for listener NPC if applicable
                 if (!empty($data['listener_npc_id']) && !isset($lazyInitChecked[$data['listener_npc_id']])) {
                     $initResult = $relLLM->analyzeNpc($data['listener_npc_id'], false);
+                    _relRequireLlmSuccess($initResult, 'Listener relationship initialization');
                     if (!empty($initResult['ok']) && empty($initResult['skipped'])) {
                         Logger::info("[REL-ASYNC] Lazy-initialized {$data['listener_name']}");
                     }
@@ -210,6 +228,7 @@ function _relProcessQueue($limit = 5) {
                         $data['dialogue'],
                         $data['context']
                     );
+                    _relRequireLlmSuccess($evalResult, 'Relationship evaluation');
 
                     if ($evalResult['ok'] && !empty($evalResult['changes'])) {
                         Logger::info("[REL-ASYNC] Processed {$data['npc_name']}: " .
@@ -227,6 +246,7 @@ function _relProcessQueue($limit = 5) {
                         $data['dialogue'],
                         $data['context']
                     );
+                    _relRequireLlmSuccess($npcToNpcResult, 'NPC-to-NPC relationship evaluation');
 
                     if ($npcToNpcResult['ok']) {
                         $changes = count($npcToNpcResult['speaker']['changes'] ?? []) +
@@ -241,9 +261,10 @@ function _relProcessQueue($limit = 5) {
                 $successIds[] = $row['id'];
                 $results['processed']++;
 
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 $errorMsg = $e->getMessage();
-                $results['errors'][] = "NPC {$data['npc_id']}: " . $errorMsg;
+                $errorClass = get_class($e);
+                $results['errors'][] = "NPC {$data['npc_id']}: {$errorClass}: " . $errorMsg;
 
                 // RETRY LOGIC: Don't delete on first error!
                 // Only delete after REL_QUEUE_MAX_RETRIES attempts
@@ -251,14 +272,14 @@ function _relProcessQueue($limit = 5) {
 
                 if ($retryCount >= $maxRetries) {
                     // Exceeded max retries - log critical event and abandon
-                    Logger::error("[REL-ASYNC] ABANDONED after {$retryCount} retries: NPC {$data['npc_name']} - {$errorMsg}");
+                    Logger::error("[REL-ASYNC] ABANDONED after {$retryCount} retries: NPC {$data['npc_name']} - {$errorClass}: {$errorMsg}");
                     $abandonIds[] = $row['id'];
                     $results['abandoned']++;
                 } else {
                     // Increment retry count for next attempt
-                    $retryIds[] = ['id' => $row['id'], 'error' => substr($errorMsg, 0, 500)];
+                    $retryIds[] = ['id' => $row['id'], 'error' => substr("{$errorClass}: {$errorMsg}", 0, 500)];
                     $results['retried']++;
-                    Logger::warn("[REL-ASYNC] Retry {$retryCount}/" . $maxRetries . " for NPC {$data['npc_name']}: {$errorMsg}");
+                    Logger::warn("[REL-ASYNC] Retry {$retryCount}/" . $maxRetries . " for NPC {$data['npc_name']}: {$errorClass}: {$errorMsg}");
                 }
             }
         }
@@ -287,7 +308,7 @@ function _relProcessQueue($limit = 5) {
             );
         }
 
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         // Table might not exist - that's fine, nothing to process
         if (strpos($e->getMessage(), 'does not exist') === false) {
             Logger::error("[REL-ASYNC] Queue processing error: " . $e->getMessage());
@@ -405,7 +426,7 @@ function _relQueueNpcInit($npcId, $npcName) {
  *
  * @param int $limit Max number to process per request
  */
-function _relProcessInitQueue($limit = 5) {
+function _relProcessInitQueue($limit = 5, $relLLM = null) {
     if (!isset($GLOBALS['db']) || !$GLOBALS['db']) {
         return ['processed' => 0];
     }
@@ -424,8 +445,10 @@ function _relProcessInitQueue($limit = 5) {
             return $results;
         }
 
-        require_once __DIR__ . "/relationship_llm.php";
-        $relLLM = new RelationshipLLM();
+        if ($relLLM === null) {
+            require_once __DIR__ . "/relationship_llm.php";
+            $relLLM = new RelationshipLLM();
+        }
 
         if (!$relLLM->isAvailable()) {
             return ['processed' => 0, 'error' => 'LLM not available'];
@@ -447,23 +470,25 @@ function _relProcessInitQueue($limit = 5) {
             try {
                 // Analyze available relationship source data into JSONB.
                 $initResult = $relLLM->analyzeNpc($data['npc_id'], false);
+                _relRequireLlmSuccess($initResult, 'Queued relationship initialization');
                 if (!empty($initResult['ok']) && empty($initResult['skipped'])) {
                     Logger::info("[REL-ASYNC] Initialized relationships for {$data['npc_name']}");
                 }
                 $successIds[] = $row['id'];
                 $results['processed']++;
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 $errorMsg = $e->getMessage();
+                $errorClass = get_class($e);
                 $maxRetries = defined('REL_QUEUE_MAX_RETRIES') ? REL_QUEUE_MAX_RETRIES : 3;
 
                 if ($retryCount >= $maxRetries) {
-                    Logger::error("[REL-ASYNC] ABANDONED init after {$retryCount} retries: {$data['npc_name']} - {$errorMsg}");
+                    Logger::error("[REL-ASYNC] ABANDONED init after {$retryCount} retries: {$data['npc_name']} - {$errorClass}: {$errorMsg}");
                     $abandonIds[] = $row['id'];
                     $results['abandoned']++;
                 } else {
-                    $retryIds[] = ['id' => $row['id'], 'error' => substr($errorMsg, 0, 500)];
+                    $retryIds[] = ['id' => $row['id'], 'error' => substr("{$errorClass}: {$errorMsg}", 0, 500)];
                     $results['retried']++;
-                    Logger::warn("[REL-ASYNC] Init retry {$retryCount}/" . $maxRetries . " for {$data['npc_name']}: {$errorMsg}");
+                    Logger::warn("[REL-ASYNC] Init retry {$retryCount}/" . $maxRetries . " for {$data['npc_name']}: {$errorClass}: {$errorMsg}");
                 }
             }
         }
@@ -489,7 +514,7 @@ function _relProcessInitQueue($limit = 5) {
             );
         }
 
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         // Table might not exist - that's fine
         if (strpos($e->getMessage(), 'does not exist') === false) {
             Logger::error("[REL-ASYNC] Init queue error: " . $e->getMessage());
