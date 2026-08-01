@@ -3633,8 +3633,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     gap:8px;
     flex-wrap:wrap;
 }
+.pagination.npc-toolbar .npc-toolbar-main {
+    align-items:flex-start;
+    flex-wrap:nowrap;
+}
 .pagination.npc-toolbar .npc-toolbar-actions {
-    flex:1 1 auto;
+    flex:1 1 0;
     min-width:0;
     flex-wrap:wrap;
 }
@@ -3828,6 +3832,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     }
 }
 @media (max-width: 780px) {
+    .pagination.npc-toolbar .npc-toolbar-main {
+        flex-wrap:wrap;
+    }
     .pagination.npc-toolbar .npc-toolbar-tools,
     .pagination.npc-toolbar .npc-toolbar-actions,
     .pagination.npc-toolbar .npc-toolbar-pager,
