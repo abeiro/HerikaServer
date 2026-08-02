@@ -823,6 +823,16 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 ];
                 $chimModelLabel = isset($chimModelLabelMap[(string)$chimModel]) ? $chimModelLabelMap[(string)$chimModel] : (string)$chimModel;
 
+                $backgroundLifeNpcCountRow = fetch_widget_stats($conn, "
+                    SELECT COUNT(*) AS total
+                    FROM {$schema}.core_npc_master
+                    WHERE COALESCE(extended_data->>'background_life_enabled', 'false') = 'true'
+                ");
+                $backgroundLifeNpcCount = (!isset($backgroundLifeNpcCountRow['error'])
+                    && isset($backgroundLifeNpcCountRow[0]['total']))
+                    ? (int)$backgroundLifeNpcCountRow[0]['total']
+                    : 0;
+
 
                 $helperServiceRunning = false;
                 if (function_exists('herikaBackgroundProcessorIsRunning')) {
@@ -936,6 +946,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             <tr>
                                 <td>Compact Chat</td>
                                 <td>" . htmlspecialchars($chimContextMode) . "</td>
+                            </tr>
+                            <tr>
+                                <td>Background Life NPCs</td>
+                                <td>{$backgroundLifeNpcCount}</td>
                             </tr>
                             <tr>
                                 <td>Background Processor</td>
