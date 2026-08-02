@@ -2329,24 +2329,36 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             grid.classList.add('npc-editor-panels');
             Object.values(panels).forEach(function(panel){ grid.appendChild(panel); });
 
+            <?php
+            $editorMetadata = json_decode((string)($editItem['metadata'] ?? '{}'), true);
+            $editorReturnLocation = is_array($editorMetadata) && is_array($editorMetadata['npc_manager_return_location'] ?? null)
+                ? $editorMetadata['npc_manager_return_location']
+                : null;
+            ?>
             const targetId = <?= (int)($editItem['id'] ?? 0) ?>;
             const targetName = <?= json_encode((string)($editItem['npc_name'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
             const targetRefId = <?= json_encode((string)($editItem['refid'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+            const savedReturnLocation = <?= json_encode($editorReturnLocation, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+            const initialTeleportAction = savedReturnLocation ? 'return' : 'teleport';
+            const initialReturnName = savedReturnLocation && savedReturnLocation.name ? String(savedReturnLocation.name) : '';
             panels.actions.innerHTML = `
-                <p class="npc-editor-action-note">The game must be running and unpaused for Visit and Teleport.</p>
+                <p class="npc-editor-action-note">The game must be running and unpaused for Visit, Teleport, and Return NPC.</p>
                 <div class="npc-editor-action-list">
                     <article class="npc-editor-action-card">
                         <div><h3>Visit</h3><p>Move the player to this NPC's current position.</p></div>
                         <button type="button" class="btn-cancel" data-npc-action="visit">Visit</button>
                     </article>
                     <article class="npc-editor-action-card">
-                        <div><h3>Teleport</h3><p>Move this NPC to the player's current position.</p></div>
-                        <button type="button" class="btn-cancel" data-npc-action="teleport">Teleport</button>
+                        <div><h3 data-npc-teleport-title>${initialTeleportAction === 'return' ? 'Return NPC' : 'Teleport'}</h3><p data-npc-teleport-description>${initialTeleportAction === 'return' ? 'Send this NPC back to ' + (initialReturnName || 'their previous location') + '.' : "Move this NPC to the player's current position and save their previous location."}</p></div>
+                        <button type="button" class="btn-cancel" data-npc-action="${initialTeleportAction}" data-npc-teleport-button>${initialTeleportAction === 'return' ? 'Return NPC' : 'Teleport'}</button>
                     </article>
                 </div>
                 <p class="npc-editor-action-status" data-npc-action-status role="status" aria-live="polite"></p>`;
 
             const actionStatus = panels.actions.querySelector('[data-npc-action-status]');
+            const teleportButton = panels.actions.querySelector('[data-npc-teleport-button]');
+            const teleportTitle = panels.actions.querySelector('[data-npc-teleport-title]');
+            const teleportDescription = panels.actions.querySelector('[data-npc-teleport-description]');
             panels.actions.querySelectorAll('[data-npc-action]').forEach(function(button){
                 button.disabled = targetId <= 0;
                 button.addEventListener('click', async function(){
@@ -2366,6 +2378,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                             throw new Error((payload && payload.error) || ('HTTP ' + response.status));
                         }
                         actionStatus.textContent = (payload.data && payload.data.message) || 'Action sent.';
+                        if (button === teleportButton && payload.data && payload.data.next_action) {
+                            const nextAction = payload.data.next_action;
+                            const returnName = payload.data.return_location ? String(payload.data.return_location) : '';
+                            button.dataset.npcAction = nextAction;
+                            button.textContent = nextAction === 'return' ? 'Return NPC' : 'Teleport';
+                            teleportTitle.textContent = nextAction === 'return' ? 'Return NPC' : 'Teleport';
+                            teleportDescription.textContent = nextAction === 'return'
+                                ? 'Send this NPC back to ' + (returnName || 'their previous location') + '.'
+                                : "Move this NPC to the player's current position and save their previous location.";
+                        }
                     } catch (error) {
                         actionStatus.textContent = 'Action failed: ' + (error.message || error);
                         actionStatus.classList.add('is-error');

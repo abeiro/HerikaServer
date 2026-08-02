@@ -274,11 +274,37 @@ function chimNpcManagerFindNpc(array $input): array
     throw new InvalidArgumentException('NPC not found');
 }
 
+// Persist only the temporary return point without overwriting live NPC metadata updates.
+function chimNpcManagerSaveReturnLocation(int $npcId, ?array $returnLocation): bool
+{
+    if ($npcId <= 0) {
+        return false;
+    }
+
+    if ($returnLocation === null) {
+        return $GLOBALS['db']->execQuery(
+            "UPDATE core_npc_master SET metadata = COALESCE(metadata, '{}'::jsonb) - 'npc_manager_return_location' WHERE id = {$npcId}"
+        ) !== false;
+    }
+
+    $encoded = json_encode($returnLocation, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    if ($encoded === false) {
+        return false;
+    }
+    $locationLiteral = $GLOBALS['db']->escape($encoded);
+    return $GLOBALS['db']->execQuery(
+        "UPDATE core_npc_master SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{npc_manager_return_location}', '{$locationLiteral}'::jsonb, true) WHERE id = {$npcId}"
+    ) !== false;
+}
+
 function chimNpcManagerAction(array $input): array
 {
     $row = chimNpcManagerFindNpc($input);
     $action = strtolower(trim((string)($input['action'] ?? '')));
     $npcName = trim((string)($row['npc_name'] ?? 'NPC'));
+    $npcManager = new NpcMaster();
+    $metadata = $npcManager->getMetadata($row);
+    $returnLocationKey = 'npc_manager_return_location';
 
     if ($action === 'bgl_inception') {
         $idea = trim((string)($input['idea'] ?? ''));
@@ -291,7 +317,7 @@ function chimNpcManagerAction(array $input): array
         return ['message' => "Background Life thought set for {$npcName}."];
     }
 
-    if (!in_array($action, ['visit', 'teleport'], true)) {
+    if (!in_array($action, ['visit', 'teleport', 'return'], true)) {
         throw new InvalidArgumentException('Unsupported NPC action');
     }
 
@@ -300,6 +326,100 @@ function chimNpcManagerAction(array $input): array
         throw new InvalidArgumentException("{$npcName} does not have a valid RefID");
     }
     $npcRefid = '0x' . str_pad($refid, 8, '0', STR_PAD_LEFT);
+
+    if ($action === 'return') {
+        $returnLocation = $metadata[$returnLocationKey] ?? null;
+        if (!is_array($returnLocation)) {
+            throw new InvalidArgumentException("{$npcName} does not have a saved return location");
+        }
+
+        $locationName = trim((string)($returnLocation['name'] ?? ''));
+        $locationFormId = trim((string)($returnLocation['formid'] ?? ''));
+        if ($locationName === '' && $locationFormId === '') {
+            throw new InvalidArgumentException("{$npcName}'s saved return location is invalid");
+        }
+        if ($locationName === '' && $locationFormId !== '') {
+            $formIdLiteral = $GLOBALS['db']->escape($locationFormId);
+            $location = $GLOBALS['db']->fetchOne("SELECT name FROM locations WHERE formid = '{$formIdLiteral}' LIMIT 1");
+            $locationName = trim((string)($location['name'] ?? 'previous location'));
+        }
+
+        $targetName = str_replace('@', '', $npcName);
+        $locationName = str_replace('@', '', $locationName);
+        $roleCommand = $locationFormId !== ''
+            ? "rolecommand|TeleportNPCRaw@{$targetName}@{$locationFormId}@{$locationName}"
+            : "rolecommand|TeleportNPC@{$targetName}@{$locationName}";
+
+        $GLOBALS['db']->insert('responselog', [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => 'rolemaster',
+            'text' => '',
+            'action' => $roleCommand,
+            'tag' => '',
+        ]);
+
+        if (!chimNpcManagerSaveReturnLocation((int)$row['id'], null)) {
+            throw new RuntimeException('Saved return location could not be cleared');
+        }
+
+        return [
+            'message' => "Return command sent for {$npcName} to {$locationName}.",
+            'next_action' => 'teleport',
+            'return_location' => '',
+        ];
+    }
+
+    if ($action === 'teleport') {
+        if (is_array($metadata[$returnLocationKey] ?? null)) {
+            throw new InvalidArgumentException("Return {$npcName} before teleporting them again");
+        }
+
+        $lastCoords = $metadata['last_coords'] ?? null;
+        if (!is_array($lastCoords) && is_array($metadata['last_coords_history'] ?? null)) {
+            $history = $metadata['last_coords_history'];
+            $lastCoords = empty($history) ? null : end($history);
+        }
+        if (!is_array($lastCoords)) {
+            throw new InvalidArgumentException("{$npcName} does not have a tracked location to return to");
+        }
+
+        $locationName = trim((string)($lastCoords[3] ?? ''));
+        $locationFormId = trim((string)($lastCoords['location_formid'] ?? ''));
+        if ($locationFormId === '' && $locationName !== '') {
+            $locationLiteral = $GLOBALS['db']->escape($locationName);
+            $location = $GLOBALS['db']->fetchOne(
+                "SELECT name, formid FROM locations ORDER BY similarity(name, '{$locationLiteral}') DESC LIMIT 1"
+            );
+            if (is_array($location)) {
+                $locationName = trim((string)($location['name'] ?? $locationName));
+                $locationFormId = trim((string)($location['formid'] ?? ''));
+            }
+        }
+        if ($locationFormId === '' && is_numeric($lastCoords[0] ?? null) && is_numeric($lastCoords[1] ?? null)) {
+            $pointLiteral = $GLOBALS['db']->escape('(' . (float)$lastCoords[0] . ',' . (float)$lastCoords[1] . ')');
+            $location = $GLOBALS['db']->fetchOne(
+                "SELECT name, formid FROM locations WHERE coords IS NOT NULL ORDER BY coords <-> '{$pointLiteral}'::point LIMIT 1"
+            );
+            if (is_array($location)) {
+                $locationName = trim((string)($location['name'] ?? $locationName));
+                $locationFormId = trim((string)($location['formid'] ?? ''));
+            }
+        }
+        if ($locationName === '' && $locationFormId === '') {
+            throw new InvalidArgumentException("{$npcName}'s tracked return location is invalid");
+        }
+
+        $returnLocation = [
+            'name' => $locationName,
+            'formid' => $locationFormId,
+            'coords' => $lastCoords,
+            'saved_at' => time(),
+        ];
+        if (!chimNpcManagerSaveReturnLocation((int)$row['id'], $returnLocation)) {
+            throw new RuntimeException('Return location could not be saved');
+        }
+    }
 
     require_once LIB_PATH . DIRECTORY_SEPARATOR . 'scriptproxy_papyrus.php';
     $commandBuilder = new SkyrimCommandBuilder();
@@ -312,6 +432,8 @@ function chimNpcManagerAction(array $input): array
         'message' => $action === 'visit'
             ? "Visit command sent for {$npcName}."
             : "Teleport command sent for {$npcName}.",
+        'next_action' => $action === 'teleport' ? 'return' : null,
+        'return_location' => $action === 'teleport' ? $locationName : '',
     ];
 }
 
