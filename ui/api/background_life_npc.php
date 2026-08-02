@@ -84,16 +84,19 @@ try {
 
     $npc = chimBglResolveNpc($npcMaster, $refid, $npcName);
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        if ($operation === 'disable') {
+        if ($operation === 'enable' || $operation === 'disable') {
             if (!$npc) {
                 http_response_code(404);
                 throw new RuntimeException('NPC has not been discovered by CHIM');
             }
 
-            $status = chimBglSetEnabled($npcMaster, $npc, false);
+            $enabled = $operation === 'enable';
+            $status = chimBglSetEnabled($npcMaster, $npc, $enabled);
             echo json_encode([
                 'success' => true,
-                'message' => 'NPC removed from Background Life',
+                'message' => $enabled
+                    ? 'NPC added to Background Life'
+                    : 'NPC removed from Background Life',
                 'data' => $status,
             ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             exit;

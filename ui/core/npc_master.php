@@ -2171,13 +2171,84 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-editor-action-card h3 { margin:0 0 4px; color:#f2bd7f; font-size:1rem; }
 .npc-editor-action-card p { margin:0; color:#aaa; font-size:0.82rem; }
 .npc-editor-action-card textarea { min-height:84px; resize:vertical; }
-.npc-editor-action-card.is-inception { grid-template-columns:minmax(220px, 0.8fr) minmax(280px, 1.2fr) auto; }
 .npc-editor-action-status { min-height:1.2rem; margin:0; color:#aaa; font-size:0.82rem; }
 .npc-editor-action-status.is-error { color:#ef8f96; }
+.npc-bgl-dashboard { display:grid; gap:12px; }
+.npc-bgl-section {
+    padding:14px;
+    border:1px solid #444;
+    border-radius:8px;
+    background:#252525;
+}
+.npc-bgl-section-header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:10px;
+}
+.npc-bgl-section h3 { margin:0; color:#f2bd7f; font-size:1rem; }
+.npc-bgl-section p { margin:3px 0 0; color:#aaa; font-size:0.82rem; }
+.npc-bgl-summary {
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:8px;
+}
+.npc-bgl-summary-item {
+    min-width:0;
+    padding:10px;
+    border:1px solid #3d3d3d;
+    border-radius:6px;
+    background:#1d1d1d;
+}
+.npc-bgl-summary-item span { display:block; margin-bottom:4px; color:#888; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em; }
+.npc-bgl-summary-item strong { display:block; overflow-wrap:anywhere; color:#e7e7e7; font-size:0.9rem; }
+.npc-bgl-state-button,
+.npc-bgl-control,
+.npc-bgl-request {
+    border:1px solid #4a4a4a;
+    border-radius:6px;
+    background:#303030;
+    color:#eee;
+    cursor:pointer;
+}
+.npc-bgl-state-button { padding:8px 12px; font-weight:700; white-space:nowrap; }
+.npc-bgl-state-button.is-on { border-color:#4c9568; background:#294936; }
+.npc-bgl-control-grid,
+.npc-bgl-request-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
+.npc-bgl-control {
+    display:flex;
+    align-items:center;
+    gap:9px;
+    min-height:56px;
+    padding:10px;
+    text-align:left;
+}
+.npc-bgl-control-dot { width:9px; height:9px; flex:0 0 auto; border-radius:50%; background:#777; }
+.npc-bgl-control.is-on .npc-bgl-control-dot { background:#63c685; box-shadow:0 0 0 3px rgba(99,198,133,0.12); }
+.npc-bgl-control strong,
+.npc-bgl-control small { display:block; }
+.npc-bgl-control small { margin-top:2px; color:#999; font-size:0.72rem; }
+.npc-bgl-request { min-height:38px; padding:8px 10px; font-weight:700; }
+.npc-bgl-state-button:hover,
+.npc-bgl-control:hover,
+.npc-bgl-request:hover { border-color:rgba(242,124,17,0.75); background:#393939; }
+.npc-bgl-state-button:disabled,
+.npc-bgl-control:disabled,
+.npc-bgl-request:disabled { opacity:0.5; cursor:not-allowed; }
+.npc-bgl-inception { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:8px; margin-top:8px; }
+.npc-bgl-inception textarea { min-height:70px; resize:vertical; }
+.npc-bgl-events { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
+.npc-bgl-event { padding:9px 10px; border-left:3px solid #666; background:#1d1d1d; color:#ddd; font-size:0.84rem; }
+.npc-bgl-event-time { display:block; margin-top:4px; color:#888; font-size:0.72rem; }
+.npc-bgl-empty { margin:0; padding:10px; color:#888; text-align:center; }
 @media (max-width:700px) { .npc-editor-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 @media (max-width:850px) {
-    .npc-editor-action-card,
-    .npc-editor-action-card.is-inception { grid-template-columns:minmax(0, 1fr); }
+    .npc-editor-action-card { grid-template-columns:minmax(0, 1fr); }
+    .npc-bgl-summary,
+    .npc-bgl-control-grid,
+    .npc-bgl-request-grid { grid-template-columns:minmax(0, 1fr); }
+    .npc-bgl-inception { grid-template-columns:minmax(0, 1fr); }
 }
 </style>
 <script>
@@ -2259,6 +2330,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             Object.values(panels).forEach(function(panel){ grid.appendChild(panel); });
 
             const targetId = <?= (int)($editItem['id'] ?? 0) ?>;
+            const targetName = <?= json_encode((string)($editItem['npc_name'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+            const targetRefId = <?= json_encode((string)($editItem['refid'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
             panels.actions.innerHTML = `
                 <p class="npc-editor-action-note">The game must be running and unpaused for Visit and Teleport.</p>
                 <div class="npc-editor-action-list">
@@ -2270,11 +2343,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         <div><h3>Teleport</h3><p>Move this NPC to the player's current position.</p></div>
                         <button type="button" class="btn-cancel" data-npc-action="teleport">Teleport</button>
                     </article>
-                    <article class="npc-editor-action-card is-inception">
-                        <div><h3>Background Life Inception</h3><p>Give this NPC a one-time thought for their next Background Life decision.</p></div>
-                        <textarea data-npc-inception-idea placeholder="Enter the thought to influence their next decision"></textarea>
-                        <button type="button" class="btn-cancel" data-npc-action="bgl_inception">Set Thought</button>
-                    </article>
                 </div>
                 <p class="npc-editor-action-status" data-npc-action-status role="status" aria-live="polite"></p>`;
 
@@ -2283,13 +2351,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 button.disabled = targetId <= 0;
                 button.addEventListener('click', async function(){
                     const action = button.dataset.npcAction;
-                    const ideaField = panels.actions.querySelector('[data-npc-inception-idea]');
-                    const idea = action === 'bgl_inception' ? ideaField.value.trim() : '';
-                    if (action === 'bgl_inception' && !idea) {
-                        actionStatus.textContent = 'Enter a thought before setting Background Life inception.';
-                        actionStatus.classList.add('is-error');
-                        return;
-                    }
 
                     button.disabled = true;
                     actionStatus.textContent = 'Sending action...';
@@ -2298,14 +2359,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         const response = await fetch('../api/chim_npc_manager.php', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({operation:'action', action:action, id:targetId, idea:idea})
+                            body: JSON.stringify({operation:'action', action:action, id:targetId})
                         });
                         const payload = await response.json();
                         if (!response.ok || !payload || !payload.success) {
                             throw new Error((payload && payload.error) || ('HTTP ' + response.status));
                         }
                         actionStatus.textContent = (payload.data && payload.data.message) || 'Action sent.';
-                        if (action === 'bgl_inception') ideaField.value = '';
                     } catch (error) {
                         actionStatus.textContent = 'Action failed: ' + (error.message || error);
                         actionStatus.classList.add('is-error');
@@ -2315,6 +2375,241 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 });
             });
             if (targetId <= 0) actionStatus.textContent = 'Save this NPC before using actions.';
+
+            panels['background-life'].insertAdjacentHTML('beforeend', `
+                <div class="npc-bgl-dashboard span-2" data-npc-bgl-dashboard>
+                    <section class="npc-bgl-section">
+                        <div class="npc-bgl-section-header">
+                            <div><h3>Current Background Life</h3><p>Live status and most recently recorded activity for this NPC.</p></div>
+                            <button type="button" class="npc-bgl-state-button" data-bgl-enrollment disabled>Loading...</button>
+                        </div>
+                        <div class="npc-bgl-summary">
+                            <div class="npc-bgl-summary-item"><span>Status</span><strong data-bgl-summary="status">Loading...</strong></div>
+                            <div class="npc-bgl-summary-item"><span>Current Location</span><strong data-bgl-summary="location">Loading...</strong></div>
+                            <div class="npc-bgl-summary-item"><span>Latest Activity</span><strong data-bgl-summary="activity">Loading...</strong></div>
+                        </div>
+                    </section>
+                    <section class="npc-bgl-section">
+                        <div class="npc-bgl-section-header"><div><h3>Rules</h3><p>Per-NPC controls used by Background Life.</p></div></div>
+                        <div class="npc-bgl-control-grid">
+                            <button type="button" class="npc-bgl-control" data-bgl-setting="auto_actions" disabled><span class="npc-bgl-control-dot"></span><span><strong>Auto Actions</strong><small>Allow scheduled autonomous actions.</small></span></button>
+                            <button type="button" class="npc-bgl-control" data-bgl-setting="send_letters" disabled><span class="npc-bgl-control-dot"></span><span><strong>Send Letters</strong><small>Allow this NPC to send BgL letters.</small></span></button>
+                            <button type="button" class="npc-bgl-control" data-bgl-setting="hourly_tracking" disabled><span class="npc-bgl-control-dot"></span><span><strong>Hourly Tracking</strong><small>Keep the NPC's map location updated.</small></span></button>
+                        </div>
+                    </section>
+                    <section class="npc-bgl-section">
+                        <div class="npc-bgl-section-header"><div><h3>Immediate Actions</h3><p>The game should be running and unpaused when requesting live activity.</p></div></div>
+                        <div class="npc-bgl-request-grid">
+                            <button type="button" class="npc-bgl-request" data-bgl-request="action" disabled>Trigger Action</button>
+                            <button type="button" class="npc-bgl-request" data-bgl-request="letter" disabled>Send Letter</button>
+                            <button type="button" class="npc-bgl-request" data-bgl-request="track" disabled>Update Location</button>
+                        </div>
+                        <div class="npc-bgl-inception">
+                            <textarea data-bgl-inception-idea placeholder="Give this NPC a one-time thought for their next Background Life decision." disabled></textarea>
+                            <button type="button" class="npc-bgl-request" data-bgl-inception disabled>Set Thought</button>
+                        </div>
+                    </section>
+                    <section class="npc-bgl-section">
+                        <div class="npc-bgl-section-header"><div><h3>Recent Activity</h3><p>The five most recent Background Life events.</p></div></div>
+                        <ul class="npc-bgl-events" data-bgl-events><li class="npc-bgl-empty">Loading activity...</li></ul>
+                    </section>
+                    <p class="npc-editor-action-status" data-bgl-message role="status" aria-live="polite"></p>
+                </div>`);
+
+            const bglDashboard = panels['background-life'].querySelector('[data-npc-bgl-dashboard]');
+            const bglMessage = bglDashboard.querySelector('[data-bgl-message]');
+            const enrollmentButton = bglDashboard.querySelector('[data-bgl-enrollment]');
+            const settingButtons = Array.from(bglDashboard.querySelectorAll('[data-bgl-setting]'));
+            const requestButtons = Array.from(bglDashboard.querySelectorAll('[data-bgl-request]'));
+            const inceptionButton = bglDashboard.querySelector('[data-bgl-inception]');
+            const inceptionIdea = bglDashboard.querySelector('[data-bgl-inception-idea]');
+
+            async function npcBglRequest(url, options){
+                const response = await fetch(url, options);
+                let payload = null;
+                try { payload = await response.json(); } catch (_error) {}
+                if (!response.ok || !payload || !payload.success) {
+                    throw new Error((payload && payload.error) || ('HTTP ' + response.status));
+                }
+                return payload;
+            }
+
+            function npcBglPost(url, values){
+                const body = new FormData();
+                Object.entries(values).forEach(function(entry){ body.append(entry[0], entry[1]); });
+                return npcBglRequest(url, {method:'POST', body:body});
+            }
+
+            function setBglMessage(message, isError){
+                bglMessage.textContent = message || '';
+                bglMessage.classList.toggle('is-error', Boolean(isError));
+            }
+
+            function renderBglEvents(events){
+                const list = bglDashboard.querySelector('[data-bgl-events]');
+                list.replaceChildren();
+                if (!events.length) {
+                    const empty = document.createElement('li');
+                    empty.className = 'npc-bgl-empty';
+                    empty.textContent = 'No Background Life activity recorded yet.';
+                    list.appendChild(empty);
+                    return;
+                }
+                events.slice(0, 5).forEach(function(event){
+                    const item = document.createElement('li');
+                    item.className = 'npc-bgl-event';
+                    item.textContent = event.activity || 'Background Life activity';
+                    if (event.tamrielic_time) {
+                        const time = document.createElement('span');
+                        time.className = 'npc-bgl-event-time';
+                        time.textContent = event.tamrielic_time;
+                        item.appendChild(time);
+                    }
+                    list.appendChild(item);
+                });
+            }
+
+            function renderBglStatus(status, events){
+                const enabled = status.background_life_enabled === true;
+                const latest = events[0] || null;
+                bglDashboard.dataset.enabled = enabled ? '1' : '0';
+                enrollmentButton.dataset.enabled = enabled ? '1' : '0';
+                enrollmentButton.textContent = enabled ? 'Background Life On' : 'Background Life Off';
+                enrollmentButton.classList.toggle('is-on', enabled);
+                bglDashboard.querySelector('[data-bgl-summary="status"]').textContent = enabled ? 'Active' : 'Not active';
+                bglDashboard.querySelector('[data-bgl-summary="location"]').textContent = status.location || 'No tracked location';
+                bglDashboard.querySelector('[data-bgl-summary="activity"]').textContent = latest && latest.activity
+                    ? latest.activity
+                    : 'No activity recorded';
+
+                settingButtons.forEach(function(button){
+                    const active = status[button.dataset.bglSetting] === true;
+                    button.dataset.enabled = active ? '1' : '0';
+                    button.classList.toggle('is-on', active);
+                    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+                    button.disabled = !enabled;
+                });
+                requestButtons.forEach(function(button){ button.disabled = !enabled; });
+                inceptionButton.disabled = !enabled;
+                inceptionIdea.disabled = !enabled;
+                renderBglEvents(events);
+            }
+
+            async function loadBglData(){
+                if (targetId <= 0) {
+                    enrollmentButton.disabled = true;
+                    settingButtons.concat(requestButtons, [inceptionButton]).forEach(function(button){ button.disabled = true; });
+                    inceptionIdea.disabled = true;
+                    setBglMessage('Save this NPC before using Background Life controls.', false);
+                    renderBglStatus({background_life_enabled:false}, []);
+                    return;
+                }
+
+                const statusQuery = new URLSearchParams({refid:targetRefId, npc_name:targetName});
+                try {
+                    const statusPayload = await npcBglRequest('../api/background_life_npc.php?' + statusQuery.toString());
+                    let events = [];
+                    try {
+                        const detailQuery = new URLSearchParams({npc:targetName});
+                        const detailPayload = await npcBglRequest('../api/background_life_npc_detail.php?' + detailQuery.toString());
+                        events = Array.isArray(detailPayload.data && detailPayload.data.events) ? detailPayload.data.events : [];
+                    } catch (_error) {}
+                    enrollmentButton.disabled = false;
+                    renderBglStatus(statusPayload.data || {}, events);
+                } catch (error) {
+                    enrollmentButton.disabled = true;
+                    setBglMessage('Could not load Background Life: ' + (error.message || error), true);
+                }
+            }
+
+            enrollmentButton.addEventListener('click', async function(){
+                const enable = enrollmentButton.dataset.enabled !== '1';
+                enrollmentButton.disabled = true;
+                setBglMessage(enable ? 'Adding NPC to Background Life...' : 'Removing NPC from Background Life...', false);
+                try {
+                    const payload = await npcBglPost('../api/background_life_npc.php', {
+                        operation: enable ? 'enable' : 'disable',
+                        refid: targetRefId,
+                        npc_name: targetName
+                    });
+                    renderBglStatus(payload.data || {}, []);
+                    setBglMessage(payload.message || 'Background Life status saved.', false);
+                    await loadBglData();
+                } catch (error) {
+                    setBglMessage('Could not change Background Life: ' + (error.message || error), true);
+                } finally {
+                    enrollmentButton.disabled = false;
+                }
+            });
+
+            settingButtons.forEach(function(button){
+                button.addEventListener('click', async function(){
+                    const value = button.dataset.enabled !== '1';
+                    button.disabled = true;
+                    setBglMessage('Saving Background Life rule...', false);
+                    try {
+                        const payload = await npcBglPost('../api/background_life_npc.php', {
+                            operation:'toggle',
+                            refid:targetRefId,
+                            npc_name:targetName,
+                            setting:button.dataset.bglSetting,
+                            value:value ? '1' : '0'
+                        });
+                        renderBglStatus(payload.data || {}, []);
+                        setBglMessage(payload.message || 'Background Life rule saved.', false);
+                        await loadBglData();
+                    } catch (error) {
+                        setBglMessage('Could not save Background Life rule: ' + (error.message || error), true);
+                    } finally {
+                        button.disabled = bglDashboard.dataset.enabled !== '1';
+                    }
+                });
+            });
+
+            requestButtons.forEach(function(button){
+                button.addEventListener('click', async function(){
+                    button.disabled = true;
+                    setBglMessage('Processing Background Life request...', false);
+                    try {
+                        const payload = await npcBglPost('../api/background_life_request.php', {
+                            request_type:button.dataset.bglRequest,
+                            refid:targetRefId,
+                            npc_name:targetName
+                        });
+                        setBglMessage(payload.message || 'Background Life request processed.', false);
+                        await loadBglData();
+                    } catch (error) {
+                        setBglMessage('Background Life request failed: ' + (error.message || error), true);
+                    } finally {
+                        button.disabled = bglDashboard.dataset.enabled !== '1';
+                    }
+                });
+            });
+
+            inceptionButton.addEventListener('click', async function(){
+                const idea = inceptionIdea.value.trim();
+                if (!idea) {
+                    setBglMessage('Enter a thought before setting Background Life inception.', true);
+                    return;
+                }
+                inceptionButton.disabled = true;
+                setBglMessage('Setting Background Life thought...', false);
+                try {
+                    const payload = await npcBglRequest('../api/chim_npc_manager.php', {
+                        method:'POST',
+                        headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify({operation:'action', action:'bgl_inception', id:targetId, idea:idea})
+                    });
+                    inceptionIdea.value = '';
+                    setBglMessage((payload.data && payload.data.message) || 'Background Life thought saved.', false);
+                } catch (error) {
+                    setBglMessage('Could not set Background Life thought: ' + (error.message || error), true);
+                } finally {
+                    inceptionButton.disabled = bglDashboard.dataset.enabled !== '1';
+                }
+            });
+
+            loadBglData();
 
             const storageKey = tablist.dataset.storageKey || 'npc-editor-tab';
             function activate(section){
