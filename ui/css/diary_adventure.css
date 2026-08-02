@@ -180,33 +180,32 @@
     margin: 20px 0;
 }
 
-.calendar-mode-toggle .btn-base {
+body .calendar-mode-toggle form button.btn-base[type="submit"] {
     padding: 10px 20px;
     font-size: 1.1em;
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.3s ease;
+    background: #3b3b3b !important;
+    border: 2px solid #565656 !important;
+    color: #f5f1e8 !important;
 }
 
-.calendar-mode-toggle .btn-primary {
-    background-color: var(--log-accent);
-    color: var(--log-button-text);
-    border: 2px solid var(--log-accent-hover);
+body .calendar-mode-toggle form button.btn-primary[type="submit"] {
+    border-color: var(--log-accent) !important;
 }
 
-.calendar-mode-toggle .btn-secondary {
-    background-color: #6c757d;
-    color: var(--log-button-text);
-    border: 2px solid #545b62;
+body .calendar-mode-toggle form button.btn-secondary[type="submit"] {
+    border-color: #565656 !important;
 }
 
-.calendar-mode-toggle .btn-base:hover {
+body .calendar-mode-toggle form button.btn-base[type="submit"]:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.calendar-mode-toggle .btn-primary:hover {
-    background-color: var(--log-accent-hover);
+body .calendar-mode-toggle form button.btn-primary[type="submit"]:hover {
+    background: #484848 !important;
 }
 
 /* CSV Buttons Container */
@@ -347,13 +346,13 @@ main.container {
     margin: 8px 0;
 }
 
-.people-item {
+body .people-list form button.people-item[type="submit"] {
     width: 100%;
     padding: 12px 20px;
-    background-color: #4a4a4a;
-    border: 2px solid #555555;
+    background: #3b3b3b !important;
+    border: 2px solid #565656 !important;
     border-radius: 6px;
-    color: #f8f9fa;
+    color: #f5f1e8 !important;
     font-size: 16px;
     text-align: left;
     cursor: pointer;
@@ -363,9 +362,9 @@ main.container {
     align-items: center;
 }
 
-.people-item:hover {
-    background-color: #555555;
-    border-color: var(--log-accent);
+body .people-list form button.people-item[type="submit"]:hover {
+    background: #484848 !important;
+    border-color: var(--log-accent) !important;
     transform: translateX(5px);
 }
 
