@@ -1168,6 +1168,7 @@ if ($shouldFetchEvents) {
                                 <td>{$gameTimeDisplay}</td>
                                 <td>{$timeDisplay}</td>
                                 <td>
+                                    <button type='button' data-diary-audio-entry='{$row['rowid']}' onclick='event.stopPropagation(); toggleDiaryAudio(this, {$row['rowid']})' class='action-button diary-audio-button'>&#9654; Play</button>
                                     <button onclick='openEditModal(" . json_encode([
                                         'rowid' => $row['rowid'],
                                         'topic' => $topic,
@@ -1240,6 +1241,7 @@ if ($shouldFetchEvents) {
                             <td>{$gameTimeDisplay}</td>
                             <td>{$timeDisplay}</td>
                             <td>
+                                <button type='button' data-diary-audio-entry='{$row['rowid']}' onclick='event.stopPropagation(); toggleDiaryAudio(this, {$row['rowid']})' class='action-button diary-audio-button'>&#9654; Play</button>
                                 <button onclick='openEditModal(" . json_encode([
                                     'rowid' => $row['rowid'],
                                     'topic' => $topic,
@@ -1295,10 +1297,105 @@ if ($shouldFetchEvents) {
         <div id="entryModal" class="modal-backdrop">
             <div class="modal-container">
                 <div id="entryModalContent" class="entry-content"></div>
+                <div class="diary-audio-controls">
+                    <button type="button" id="entryModalAudioButton" class="diary-audio-button" onclick="toggleDiaryAudio(this, Number(this.dataset.diaryAudioEntry))">&#9654; Play Audio</button>
+                    <span id="diaryAudioStatus" class="diary-audio-status" aria-live="polite"></span>
+                </div>
             </div>
         </div>
 
         <script>
+            const diaryAudioEndpoint = <?php echo json_encode($webRoot . '/ui/api/chim_diary_audio.php'); ?>;
+            const diaryAudio = new Audio();
+            let activeDiaryEntryId = null;
+            let diaryAudioRequest = null;
+
+            function updateDiaryAudioControls(entryId, label, disabled = false) {
+                document.querySelectorAll(`[data-diary-audio-entry="${entryId}"]`).forEach(button => {
+                    const isModalButton = button.id === 'entryModalAudioButton';
+                    if (label === 'Play') {
+                        button.innerHTML = isModalButton ? '&#9654; Play Audio' : '&#9654; Play';
+                    } else {
+                        button.innerHTML = label;
+                    }
+                    button.disabled = disabled;
+                });
+            }
+
+            function setDiaryAudioStatus(message) {
+                const status = document.getElementById('diaryAudioStatus');
+                if (status) status.textContent = message || '';
+            }
+
+            function stopDiaryAudio() {
+                if (diaryAudioRequest) {
+                    diaryAudioRequest.abort();
+                    diaryAudioRequest = null;
+                }
+                diaryAudio.pause();
+                diaryAudio.removeAttribute('src');
+                diaryAudio.load();
+                if (activeDiaryEntryId !== null) {
+                    updateDiaryAudioControls(activeDiaryEntryId, 'Play');
+                }
+                activeDiaryEntryId = null;
+                setDiaryAudioStatus('');
+            }
+
+            async function toggleDiaryAudio(button, entryId) {
+                if (!entryId) return;
+
+                if (activeDiaryEntryId === entryId && diaryAudio.src) {
+                    if (diaryAudio.paused) {
+                        await diaryAudio.play();
+                        updateDiaryAudioControls(entryId, '&#10074;&#10074; Pause');
+                        setDiaryAudioStatus('Playing');
+                    } else {
+                        diaryAudio.pause();
+                        updateDiaryAudioControls(entryId, 'Play');
+                        setDiaryAudioStatus('Paused');
+                    }
+                    return;
+                }
+
+                stopDiaryAudio();
+                activeDiaryEntryId = entryId;
+                diaryAudioRequest = new AbortController();
+                updateDiaryAudioControls(entryId, 'Generating...', true);
+                setDiaryAudioStatus('Generating audio with the NPC voice...');
+
+                try {
+                    const response = await fetch(`${diaryAudioEndpoint}?entry=${encodeURIComponent(entryId)}`, {
+                        cache: 'no-store',
+                        signal: diaryAudioRequest.signal
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success || !result.audio_url) {
+                        throw new Error(result.error || 'Diary audio could not be generated.');
+                    }
+
+                    diaryAudioRequest = null;
+                    diaryAudio.src = result.audio_url;
+                    await diaryAudio.play();
+                    updateDiaryAudioControls(entryId, '&#10074;&#10074; Pause');
+                    setDiaryAudioStatus(`Playing ${result.author || 'NPC'} with ${result.connector || 'configured TTS'}`);
+                } catch (error) {
+                    if (error.name === 'AbortError') return;
+                    console.error('Diary audio failed:', error);
+                    updateDiaryAudioControls(entryId, 'Play');
+                    setDiaryAudioStatus(error.message || 'Diary audio failed.');
+                    activeDiaryEntryId = null;
+                }
+            }
+
+            diaryAudio.addEventListener('ended', () => {
+                if (activeDiaryEntryId !== null) {
+                    updateDiaryAudioControls(activeDiaryEntryId, 'Play');
+                }
+                activeDiaryEntryId = null;
+                setDiaryAudioStatus('');
+            });
+
             // Debug function to help us see what data we're receiving
             function debugLog(data) {
                 console.log('Data received:', data);
@@ -1317,6 +1414,10 @@ if ($shouldFetchEvents) {
                 try {
                     const entryData = typeof data === 'string' ? JSON.parse(data) : data;
                     content.innerHTML = entryData.content || '';
+                    const audioButton = document.getElementById('entryModalAudioButton');
+                    audioButton.dataset.diaryAudioEntry = entryData.rowid;
+                    const isCurrentEntryPlaying = activeDiaryEntryId === Number(entryData.rowid) && !diaryAudio.paused;
+                    updateDiaryAudioControls(Number(entryData.rowid), isCurrentEntryPlaying ? '&#10074;&#10074; Pause' : 'Play');
                     modal.style.display = 'block';
                     document.body.classList.add('modal-open');
                     // Focus on the modal content
@@ -1327,6 +1428,7 @@ if ($shouldFetchEvents) {
             }
 
             function closeEntryModal() {
+                stopDiaryAudio();
                 const modal = document.getElementById('entryModal');
                 if (modal) {
                     modal.style.display = 'none';

@@ -472,6 +472,8 @@ body.modal-open {
     padding: 0 !important;
     height: calc(100vh - 220px);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 #entryModal .entry-content {
@@ -482,9 +484,46 @@ body.modal-open {
     color: #000;
     font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;
     font-size: 1.2em;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+}
+
+.diary-audio-button {
+    background: var(--log-accent, #f27c11) !important;
+    background-image: none !important;
+    border: 1px solid var(--log-accent-hover, #ff963d) !important;
+    border-radius: 4px;
+    color: #fff !important;
+    cursor: pointer;
+    font-weight: 600;
+    padding: 6px 10px;
+}
+
+.diary-audio-button:hover:not(:disabled) {
+    background: var(--log-accent-hover, #ff963d) !important;
+}
+
+.diary-audio-button:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
+#entryModal .diary-audio-controls {
+    align-items: center;
+    background: #202024;
+    border: 1px solid rgba(242, 124, 17, 0.55);
+    border-top: 0;
+    border-radius: 0 0 6px 6px;
+    display: flex;
+    gap: 12px;
+    padding: 10px 14px;
+}
+
+.diary-audio-status {
+    color: #ddd;
+    font-size: 0.9rem;
 }
 
 #entryModal .entry-content::-webkit-scrollbar {
