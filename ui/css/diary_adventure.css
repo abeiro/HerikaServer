@@ -224,16 +224,17 @@ body .calendar-mode-toggle form button.btn-primary[type="submit"]:hover {
 
 .csv-buttons .btn-save,
 body .csv-buttons button.log-action-button[type="submit"] {
-    background: var(--log-accent) !important;
+    background: #2f714b !important;
     background-image: none !important;
-    border-color: var(--log-accent-hover) !important;
-    color: var(--log-button-text) !important;
+    border-color: #4c996b !important;
+    color: #ffffff !important;
 }
 
 .csv-buttons .btn-save:hover,
 body .csv-buttons button.log-action-button[type="submit"]:hover {
-    background: var(--log-accent-hover) !important;
-    color: var(--log-button-text) !important;
+    background: #2f714b !important;
+    border-color: #4c996b !important;
+    color: #ffffff !important;
 }
 
 /* Event Table Styles */
