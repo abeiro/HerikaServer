@@ -807,7 +807,7 @@ function renderCalendarHTML($calendar, $useTamrielicTime) {
     global $gregorianDays, $tamrielicDays;
     
     $daysOfWeek = $useTamrielicTime ? $tamrielicDays : $gregorianDays;
-    $html = "<table class='calendar'>";
+    $html = "<table class='calendar diary-calendar'>";
     
     // Render header
     $html .= "<tr>";
@@ -1039,7 +1039,7 @@ if ($shouldFetchEvents) {
         <!-- Calendar Container -->
         <div class="calendar-container <?php echo (isset($_GET['filter']) && $_GET['filter'] === 'people') ? 'hidden' : ''; ?>">
             <!-- Calendar Navigation -->
-            <div class="calendar-navigation">
+            <div class="calendar-navigation diary-calendar-navigation">
                 <?php
                 // Calculate previous and next month and year
                 if ($useTamrielicTime) {
@@ -1067,13 +1067,13 @@ if ($shouldFetchEvents) {
                     $nextMonthName = $tamrielicMonths[$nextMonthNum];
                     
                     // Link to previous month
-                    echo "<a href='?month={$prevMonthNum}&year={$prevYear}&tamrielic=true' class='btn-primary'>&laquo; {$prevMonthName}</a>";
+                    echo "<a href='?month={$prevMonthNum}&year={$prevYear}&tamrielic=true' class='diary-calendar-nav'>&laquo; {$prevMonthName}</a>";
                     
                     // Display current month and year
                     echo "<span><b>{$currentTamrielicMonth}, 4E {$currentTamrielicYear}</b></span>";
                     
                     // Link to next month
-                    echo "<a href='?month={$nextMonthNum}&year={$nextYear}&tamrielic=true' class='btn-primary'>{$nextMonthName} &raquo;</a>";
+                    echo "<a href='?month={$nextMonthNum}&year={$nextYear}&tamrielic=true' class='diary-calendar-nav'>{$nextMonthName} &raquo;</a>";
                 } else {
                     // Original Gregorian calendar navigation
                     $prevMonth = $month - 1;
@@ -1095,9 +1095,9 @@ if ($shouldFetchEvents) {
                     $nextMonthName = date('F', strtotime("$nextYear-$nextMonth-01 UTC"));
                     $currentMonthName = date('F', strtotime("$year-$month-01 UTC"));
 
-                    echo "<a href='?month={$prevMonth}&year={$prevYear}' class='btn-primary'>&laquo; {$prevMonthName}</a>";
+                    echo "<a href='?month={$prevMonth}&year={$prevYear}' class='diary-calendar-nav'>&laquo; {$prevMonthName}</a>";
                     echo "<span><b>{$currentMonthName} {$year}</b></span>";
-                    echo "<a href='?month={$nextMonth}&year={$nextYear}' class='btn-primary'>{$nextMonthName} &raquo;</a>";
+                    echo "<a href='?month={$nextMonth}&year={$nextYear}' class='diary-calendar-nav'>{$nextMonthName} &raquo;</a>";
                 }
                 ?>
             </div>
