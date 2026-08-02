@@ -1,5 +1,6 @@
 <?php
 
+ob_start();
 error_reporting(E_ERROR);
 
 header('Content-Type: application/json');
@@ -162,6 +163,22 @@ try {
     $isHttps = !empty($_SERVER['HTTPS']) && strtolower(strval($_SERVER['HTTPS'])) !== 'off';
     $origin = $host !== '' ? (($isHttps ? 'https' : 'http') . '://' . $host) : '';
     $audioUrl = $origin . rtrim($webRoot, '/') . '/soundcache/' . rawurlencode($expectedFile);
+
+    if (filter_input(INPUT_GET, 'raw', FILTER_VALIDATE_BOOLEAN)) {
+        $audioPath = $enginePath . 'soundcache' . DIRECTORY_SEPARATOR . $expectedFile;
+        if (!is_file($audioPath) || filesize($audioPath) < 1) {
+            throw new RuntimeException('The generated diary audio file is unavailable.');
+        }
+
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: audio/wav');
+        header('Content-Length: ' . filesize($audioPath));
+        header('Content-Disposition: inline; filename="' . basename($expectedFile) . '"');
+        readfile($audioPath);
+        exit;
+    }
 
     echo json_encode([
         'success' => true,
