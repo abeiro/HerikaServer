@@ -330,6 +330,7 @@ $history = "";
 // ─── Dynamic Biography ────────────────────────────────────────────────────────
 
 $dynamicBiography = buildDynamicBiography($GLOBALS, true, true, true);
+$dynamicBiography = $npcMaster->appendBackgroundLifeGoals($dynamicBiography, $currentNpcData);
 
 if (isset($extdata['middle_term_memory'])) {
     $middleTermMemory = end($extdata['middle_term_memory']);
@@ -810,7 +811,7 @@ Rules:
 
 2. Working scenarios
    - If the NPC was in a working scenario,(and last intent was a production intent) determine whether any goods were produced during the last `$idleHours` hours.
-   - Inspect the `[production]` subsection inside `<goals>` to find:
+   - Inspect the `[production]` subsection inside `<background_life_goals>` first, then `<goals>` if no Background Life production rule is defined, to find:
      - what item(s) are produced
      - the production rate (units per hour)
    - Calculate production only for the last `$idleHours` hours.
@@ -965,6 +966,7 @@ Rules:
 
         // Refetch the NPC data to update the dynamic biography with the new inventory state
         $dynamicBiography = buildDynamicBiography($GLOBALS, true, true, true);
+        $dynamicBiography = $npcMaster->appendBackgroundLifeGoals($dynamicBiography, $currentNpcData);
 
         if (isset($extdata['middle_term_memory'])) {
             $middleTermMemory = end($extdata['middle_term_memory']);
@@ -1152,7 +1154,7 @@ and after last inner thoughts presented in the <context_history>:
 
 * Intimate thoughts.
 * Evolution of the character's state of mind based on latest inner thoughts (if any) and events.
-* Consider the character's goals, desires, and motivations. (Special attention to <goals> [Life Goals] section in the character sheet. )
+* Consider the character's goals, desires, and motivations. Give special attention to <background_life_goals> when present; <goals> contains their general motivations.
 * Short (2 paragraphs max), concise, and focused on the character's perspective.
 $innerThoughtEnforceSocialice
 

@@ -509,6 +509,29 @@ if (!function_exists('chimNpcRelationshipSaveNeedsLock')) {
     }
 }
 
+if (!function_exists('chimMergeBackgroundLifeGoalsIntoPostedExtendedData')) {
+    function chimMergeBackgroundLifeGoalsIntoPostedExtendedData(): void
+    {
+        if (!array_key_exists('background_life_goals', $_POST)) {
+            return;
+        }
+
+        $extendedData = json_decode((string)($_POST['extended_data'] ?? '{}'), true);
+        if (!is_array($extendedData)) {
+            $extendedData = [];
+        }
+
+        $backgroundLifeGoals = trim((string)$_POST['background_life_goals']);
+        if ($backgroundLifeGoals === '') {
+            unset($extendedData['background_life_goals']);
+        } else {
+            $extendedData['background_life_goals'] = $backgroundLifeGoals;
+        }
+
+        $_POST['extended_data'] = json_encode($extendedData, JSON_UNESCAPED_UNICODE);
+    }
+}
+
 if (!function_exists('chimAcquireNpcRelationshipLock')) {
     function chimAcquireNpcRelationshipLock($npcId): ?int
     {
@@ -555,6 +578,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     if (chimUiAutoLockProfileEnabled()) {
         $_POST['lock_profile'] = 1;
     }
+    chimMergeBackgroundLifeGoalsIntoPostedExtendedData();
     if (file_exists(__DIR__."/../../ext/relationship_system/npc_save_handler.php")) {
         include(__DIR__."/../../ext/relationship_system/npc_save_handler.php");
     }
@@ -580,6 +604,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         if (chimUiAutoLockProfileEnabled()) {
             $_POST['lock_profile'] = 1;
         }
+        chimMergeBackgroundLifeGoalsIntoPostedExtendedData();
         if (file_exists(__DIR__."/../../ext/relationship_system/npc_save_handler.php")) {
             include(__DIR__."/../../ext/relationship_system/npc_save_handler.php");
         }
@@ -612,6 +637,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
     try {
         $id = intval($_POST['id'] ?? 0);
         $relationshipLockId = chimAcquireNpcRelationshipLock($id);
+        chimMergeBackgroundLifeGoalsIntoPostedExtendedData();
 
         // Server-side: extended_data already has feature toggles synced by JS, just ensure it's valid JSON
         // The client-side JS only includes values that differ from profile defaults
@@ -2089,13 +2115,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     <button type="button" class="npc-editor-tab is-active" role="tab" aria-selected="true" data-npc-editor-tab="general">🧭 General</button>
     <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="bios">📖 Roleplay</button>
     <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="relationships">🤝 Relationships</button>
+    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="background-life">🌍 Background Life</button>
     <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="info">🛠️ Info</button>
     <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="actions">⚡ Actions</button>
 </div>
 <style>
 .npc-editor-tabs {
     display:grid;
-    grid-template-columns:repeat(5, minmax(0, 1fr));
+    grid-template-columns:repeat(6, minmax(0, 1fr));
     gap:8px;
     margin-bottom:14px;
     padding:8px;
@@ -2127,6 +2154,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-editor-panels { display:block; }
 .npc-editor-panel[hidden] { display:none !important; }
 .npc-editor-panel[data-npc-editor-panel="bios"] { grid-template-columns:minmax(0, 1fr); }
+.npc-editor-panel[data-npc-editor-panel="background-life"] { grid-template-columns:minmax(0, 1fr); }
 .npc-editor-panel[data-npc-editor-panel="actions"] { grid-template-columns:minmax(0, 1fr); }
 .npc-editor-action-note { margin:0; color:#aaa; font-size:0.86rem; }
 .npc-editor-action-list { display:grid; gap:10px; }
@@ -2158,6 +2186,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         general: new Set(['npc_name','profile_id','lock_profile','npc_favorite','gender','race','base','refid','oghma_knowledge_tags','worldknowledge_tags','world_knowledge_tags','voiceid','faction','dynamic_profile','middle_term_enabled','individual_memory_enabled','auto_diary_enabled','auto_diary_wait_enabled','salutation_after_a_while','prompt_head']),
         bios: new Set(['core','npc_static_bio','appearance','personality','occupation','skills','speechstyle','goals']),
         relationships: new Set(['relationships','relationships_jsonb','middle_term_latest']),
+        'background-life': new Set(['background_life_goals']),
         info: new Set(['emote_moods','metadata','extended_data']),
         actions: new Set()
     };
@@ -2171,7 +2200,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             tablist.dataset.initialized = '1';
 
             const panels = {};
-            ['general','bios','relationships','info','actions'].forEach(function(section){
+            ['general','bios','relationships','background-life','info','actions'].forEach(function(section){
                 const panel = document.createElement('div');
                 panel.className = 'npc-editor-panel form-grid';
                 panel.dataset.npcEditorPanel = section;
@@ -2199,7 +2228,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 const label = unit.querySelector('label:not([for])');
                 if (label && label.textContent.replace(/\s+/g, ' ').trim() === 'Relationships') return 'relationships';
                 const tokens = tokensFor(unit);
-                for (const section of ['relationships','general','bios','info']) {
+                for (const section of ['relationships','general','bios','background-life','info']) {
                     if (tokens.some(function(token){ return fieldSections[section].has(token); })) return section;
                 }
                 return 'info';
@@ -2692,7 +2721,22 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <div class="form-item">
             <label for="goals">Goals</label>
             <textarea id="goals" name="goals" placeholder="Short and long-term objectives."><?= htmlspecialchars($editItem["goals"] ?? "") ?></textarea>
-            <small class="hint">Motivations and goals for the NPC.</small>
+            <small class="hint">General motivations and goals used during regular dialogue and Background Life.</small>
+        </div>
+
+        <?php
+        $backgroundLifeGoals = '';
+        if (!empty($editItem['extended_data'])) {
+            $backgroundLifeExtendedData = json_decode((string)$editItem['extended_data'], true);
+            if (is_array($backgroundLifeExtendedData)) {
+                $backgroundLifeGoals = trim((string)($backgroundLifeExtendedData['background_life_goals'] ?? ''));
+            }
+        }
+        ?>
+        <div class="form-item span-2">
+            <label for="background_life_goals">Background Life Goals</label>
+            <textarea id="background_life_goals" name="background_life_goals" placeholder="Goals, plans, or production rules for this NPC's Background Life."><?= htmlspecialchars($backgroundLifeGoals) ?></textarea>
+            <small class="hint">Used only for Background Life decisions. This content is not included in regular dialogue prompts.</small>
         </div>
 
 
@@ -3020,6 +3064,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 'individual_memory_enabled',
                 'auto_diary_enabled',
                 'auto_diary_wait_enabled',
+                'background_life_goals',
                 'chim_core_migrated',
                 'salutation_after_a_while',
                 'relationships',

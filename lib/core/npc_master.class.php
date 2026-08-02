@@ -1122,7 +1122,7 @@ class NpcMaster
 
         // Apply extended_data overrides (highest precedence - NPC level)
         // Reserved keys are excluded (system fields managed by dedicated subsystems/toggles)
-        $reservedKeys = ['middle_term_memory', 'middle_term_enabled', 'individual_memory_enabled', 'chim_core_migrated'];
+        $reservedKeys = ['middle_term_memory', 'middle_term_enabled', 'individual_memory_enabled', 'background_life_goals', 'chim_core_migrated'];
         $extendedData = json_decode($currentNpcData['extended_data'] ?? '{}', true);
         if (is_array($extendedData)) {
             foreach ($extendedData as $key => $value) {
@@ -1162,6 +1162,17 @@ class NpcMaster
     public function getExtendedData($currentNpcData): array
     {
         return json_decode($currentNpcData['extended_data'] ?? '{}', true) ?: [];
+    }
+
+    public function appendBackgroundLifeGoals(string $biography, $currentNpcData): string
+    {
+        $extendedData = $this->getExtendedData($currentNpcData);
+        $backgroundLifeGoals = trim((string)($extendedData['background_life_goals'] ?? ''));
+        if ($backgroundLifeGoals === '') {
+            return $biography;
+        }
+
+        return $biography . "\n\n<background_life_goals>\n{$backgroundLifeGoals}\n</background_life_goals>";
     }
 
     public function setExtendedData($currentNpcData, array $data)
