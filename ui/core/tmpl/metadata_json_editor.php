@@ -78,13 +78,15 @@ $localSchemaOverrides = [
 ];
 
 // Visual keys to expose (can be expanded easily)
-$visualKeys = [
-  "RECHAT_H","RECHAT_P","CORE_LANG","BORED_EVENT",
-  "DIARY_PROMPT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
-  "CONTEXT_HISTORY","MAX_WORDS_LIMIT",
-  "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE",
-  "CONTEXT_HISTORY_DYNAMIC_PROFILE"
-];
+$visualKeys = isset($profileSyncableMetadataKeys) && is_array($profileSyncableMetadataKeys)
+    ? $profileSyncableMetadataKeys
+    : [
+        "RECHAT_H","RECHAT_P","CORE_LANG","BORED_EVENT",
+        "DIARY_PROMPT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
+        "CONTEXT_HISTORY","MAX_WORDS_LIMIT",
+        "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE",
+        "CONTEXT_HISTORY_DYNAMIC_PROFILE"
+    ];
 
 // Organize visual keys into categories for display
 $visualGroups = [
@@ -230,7 +232,8 @@ function renderMetaSettingRow(string $key, array $schemaEntry, $value): string {
     $safeKey = htmlspecialchars($key);
     $html = '<div class="setting-row">';
     $html .= '<div>';
-    $html .= '<div class="setting-key"><span class="setting-icon">'.$icon.'</span><span>'.$label.'</span></div>';
+    $html .= '<div class="setting-key"><span class="setting-icon">'.$icon.'</span><span>'.$label.'</span>';
+    $html .= '<button type="button" class="profile-setting-sync-btn" data-setting-key="'.$safeKey.'" data-setting-label="'.$label.'" title="Copy this setting to every profile">Copy to all</button></div>';
     if (!empty($desc)) {
         $html .= '<div class="setting-desc">'.$desc.'</div>';
     }
@@ -245,9 +248,6 @@ function renderMetaSettingRow(string $key, array $schemaEntry, $value): string {
         $html .= '</label>';
     } else {
         $html .= renderMetaInput($key, $schemaEntry, $value, true);
-        if ($key === 'DIARY_PROMPT') {
-            $html .= '<button type="button" id="btn_sync_diary_prompt" class="btn-primary" style="margin-top:8px;">Apply to all profiles</button>';
-        }
     }
     $html .= '</div>';
     $html .= '</div>';
