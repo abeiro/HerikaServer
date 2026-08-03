@@ -10,6 +10,7 @@ if (!function_exists('chimGetVisibleEventLogExcludedTypes')) {
             'request',
             'infonpc_close',
             'addnpc',
+            'addbgnpc',
             'user_input',
             'infosave',
             'init',
