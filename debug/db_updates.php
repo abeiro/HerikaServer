@@ -6897,6 +6897,49 @@ if ($checkVersion("core_action") < 20260610003) {
     Logger::info("Applied patch core_action 20260610003");
 }
 
+if ($checkVersion("core_action") < 20260803001) {
+    Logger::debug("Applying core_action 20260803001 - add held item handoff action");
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name, action_name, description, return_message,
+            available_to_npc, available_to_followers, available_to_narrator,
+            is_activated, parameters_json, metadata, game_function,
+            import_version, script_proxy_program
+        ) VALUES (
+            'TakeHeldItem',
+            'Take_Held_Item',
+            '#HERIKA_NAME# accepts one exact physical item currently held by #PLAYER_NAME#. Use only the exact RefID:ItemName shown in <held_items>. Do not use this for equipped or inventory-only items.',
+            '#HERIKA_NAME# accepts #ITEM# from #PLAYER_NAME#.',
+            TRUE, TRUE, FALSE, TRUE,
+            '{\"type\":\"object\",\"required\":[\"item\"],\"properties\":{\"item\":{\"type\":\"string\",\"description\":\"REQUIRED: Exact RefID:ItemName from <held_items>.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"plugin_command\",\"confirmation\":{\"default_policy\":\"ask\"},\"followup\":{\"enabled\":false}}'::jsonb,
+            TRUE, 0, NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("core_action", 20260803001);
+        Logger::info("Applied patch core_action 20260803001");
+    } else {
+        Logger::error("Failed to apply patch core_action 20260803001");
+    }
+}
+
 //----------------------------------------------------
 
 // Relationship Evaluation and Initialization Queues

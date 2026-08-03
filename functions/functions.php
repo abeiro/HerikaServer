@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../lib/vr_items.php';
+
 // Functions to be provided to OpenAI
 $startTime=$GLOBALS["startTime"] ?? microtime(true);
 
@@ -2474,6 +2476,19 @@ function buildFunctionExecutionContextFromResponse($parsedResponse)
         $parameterData = buildFunctionParameterValueFromResponse($functionDef, is_array($parsedResponse) ? $parsedResponse : []);
         $parameterValue = $parameterData["parameter_value"];
         $missingRequired = $parameterData["missing_required"];
+    }
+
+    if (strcasecmp($functionCodeName, 'TakeHeldItem') === 0) {
+        $resolvedHeldItem = HeldItems::resolveHeldIdentifier(strval($parameterValue));
+        if ($resolvedHeldItem === null) {
+            Logger::warn('TakeHeldItem rejected because the requested RefID is not currently held by the player.');
+            $parameterValue = '';
+            if (!in_array('item', $missingRequired, true)) {
+                $missingRequired[] = 'item';
+            }
+        } else {
+            $parameterValue = $resolvedHeldItem;
+        }
     }
 
     return [
