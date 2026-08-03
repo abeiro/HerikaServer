@@ -126,6 +126,18 @@ class HeldItems
         self::saveState(self::emptyState());
     }
 
+    public static function hasHeldItems(): bool
+    {
+        $heldState = self::getHandState();
+        foreach (['both', 'left', 'right'] as $hand) {
+            if (self::normalizeHeldStateValue($heldState[$hand] ?? null) !== null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function resolveHeldIdentifier(string $identifier): ?string
     {
         $identifier = trim($identifier, " \t\n\r\0\x0B`");

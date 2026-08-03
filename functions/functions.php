@@ -2780,6 +2780,13 @@ chimTraceFunctionsIncludePhase(__LINE__, 'prompt_overrides_loaded', $startTime);
 // Delete non wanted functions
 
 chimTraceFunctionsIncludePhase(__LINE__, 'enabled_function_filter_start', $startTime);
+if (!HeldItems::hasHeldItems()) {
+    $GLOBALS["ENABLED_FUNCTIONS"] = array_values(array_filter(
+        $GLOBALS["ENABLED_FUNCTIONS"],
+        static fn($codeName) => strcasecmp((string) $codeName, 'TakeHeldItem') !== 0
+    ));
+}
+
 $enabledFunctionSet = array_fill_keys($GLOBALS["ENABLED_FUNCTIONS"], true);
 foreach ($GLOBALS["FUNCTIONS"] as $n => $v) {
     $codeName = getFunctionCodeName($v["name"]);
