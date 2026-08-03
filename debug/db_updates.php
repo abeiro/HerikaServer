@@ -7749,6 +7749,20 @@ if ($checkVersion("latest_diary_context") < 20260727001) {
     }
 }
 
+if ($checkVersion("faction_vanilla") < 20260803001) {
+    Logger::debug("Applying faction_vanilla 20260803001 - some description fixes for vanilla factions");
+
+    $migrationOk = $db->execQuery(file_get_contents(__DIR__."/../data/factions_vanilla.sql")) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("faction_vanilla", 20260803001);
+        Logger::info("Applied patch faction_vanilla 20260803001 - some description fixes for vanilla factions");
+    } else {
+        Logger::error("Failed to apply patch faction_vanilla 20260803001 - some description fixes for vanilla factions");
+    }
+}
+
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------
