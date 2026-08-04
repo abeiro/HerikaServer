@@ -157,6 +157,7 @@ $request = $argv[1];
 $dynamicBiography = buildDynamicBiography($GLOBALS, true, true);
 $npcMaster = new NpcMaster();
 $currentNpcData = $npcMaster->getByName($argv[1]);
+$dynamicBiography = $npcMaster->appendBackgroundLifeGoals($dynamicBiography, $currentNpcData);
 $extended_data = $npcMaster->getExtendedData($currentNpcData);
 $metadata = $npcMaster->getMetadata($currentNpcData);
 
@@ -403,6 +404,7 @@ This soliloquy should reflect what the character might have done over the last $
  * What activities they have engaged in. Detailed list.
  * What possible events or encounters might have occurred.
  * Intimate thoughts.
+ * Give special attention to <background_life_goals> when present; <goals> contains the character's general motivations.
 
 Always respect the character's last known location. If the character is currently in a specific place, generated content should occur in that same area or its surroundings.
 The character may express the intention to travel elsewhere, but such travel should only be described as a future plan, not an immediate action.

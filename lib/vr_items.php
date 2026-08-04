@@ -126,6 +126,41 @@ class HeldItems
         self::saveState(self::emptyState());
     }
 
+    public static function hasHeldItems(): bool
+    {
+        $heldState = self::getHandState();
+        foreach (['both', 'left', 'right'] as $hand) {
+            if (self::normalizeHeldStateValue($heldState[$hand] ?? null) !== null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function resolveHeldIdentifier(string $identifier): ?string
+    {
+        $identifier = trim($identifier, " \t\n\r\0\x0B`");
+        if (!preg_match('/^(0x[0-9a-f]{1,8})\s*:(.+)$/i', $identifier, $matches)) {
+            return null;
+        }
+
+        $requestedRefId = self::normalizeRefId($matches[1]);
+        if ($requestedRefId === null) {
+            return null;
+        }
+
+        $heldState = self::getHandState();
+        foreach (['both', 'left', 'right'] as $hand) {
+            $heldItem = self::normalizeHeldStateValue($heldState[$hand] ?? null);
+            if ($heldItem !== null && $heldItem['refid'] === $requestedRefId) {
+                return $requestedRefId . ':' . $heldItem['name'];
+            }
+        }
+
+        return null;
+    }
+
     private static function parseRawEvent(string $rawData): ?array
     {
         $parts = explode('^', $rawData, 4);

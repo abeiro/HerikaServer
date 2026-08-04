@@ -1804,7 +1804,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     if (strtoupper($splitNameBase[0]) == "__CLEAR_ALL__")
         $db->query("truncate table locations");
     else {
-
+        //error_log("[UTIL_LOCATION_NAME]  {$gameRequest[3]}");
         if ($splitNameBase[0] && $splitNameBase[1] && !in_array($splitNameBase[1], [241641])) { // Exception for Pellagua Farm) {
             $existingRecord = $db->fetchOne("SELECT * FROM locations WHERE formid = '{$splitNameBase[1]}'");
             error_log("[UTIL_LOCATION_NAME] Processing location: {$splitNameBase[0]} / {$splitNameBase[1]}");
@@ -1858,6 +1858,10 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     $splitNameBase = explode("/", $gameRequest[3]);
     if (strtoupper($splitNameBase[0]) == "__CLEAR_ALL__")
         $db->query("truncate table factions");
+
+    else if (strtoupper($splitNameBase[0]) == "__VANILLA_SYNC__")
+        $db->query("update factions set name=(select name from faction_vanilla where factions.formid=faction_vanilla.formid)
+     where name like '0%' and exists (select 1 from faction_vanilla where factions.formid=faction_vanilla.formid)");
     else {
 
         if ($splitNameBase[0] && $splitNameBase[1]) {

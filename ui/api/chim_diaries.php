@@ -32,6 +32,18 @@ $mode = isset($_GET['list']) ? $_GET['list'] : null;
 $person = isset($_GET['person']) ? $_GET['person'] : null;
 $entryId = isset($_GET['entry']) ? intval($_GET['entry']) : null;
 
+function diaryAudioEndpoint(int $entryId): string
+{
+    $scriptPath = strval($_SERVER['SCRIPT_NAME'] ?? '');
+    $uiPosition = strpos($scriptPath, '/ui/');
+    $webRoot = $uiPosition !== false ? substr($scriptPath, 0, $uiPosition) : '';
+    $host = trim(strval($_SERVER['HTTP_HOST'] ?? ''));
+    $isHttps = !empty($_SERVER['HTTPS']) && strtolower(strval($_SERVER['HTTPS'])) !== 'off';
+    $origin = $host !== '' ? (($isHttps ? 'https' : 'http') . '://' . $host) : '';
+
+    return $origin . rtrim($webRoot, '/') . '/ui/api/chim_diary_audio.php?entry=' . $entryId;
+}
+
 if ($mode === 'people') {
     // Return list of all people with diary entry counts
     $query = "
@@ -177,7 +189,8 @@ if ($mode === 'people') {
                 'content' => $result['content'],
                 'date' => $tamrielicDate,
                 'author' => $author,
-                'location' => $location
+                'location' => $location,
+                'audio_endpoint' => diaryAudioEndpoint(intval($result['rowid']))
             ]
         ]);
     } else {

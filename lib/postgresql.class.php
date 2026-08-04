@@ -487,7 +487,7 @@ class sql
         if (!$result) {
             Logger::error("SQL: updateRow failed {$query} " .$this->GetLastError() . $this->extract_caller() );
             return false;
-        }   
+        }
         return true;
     }
 

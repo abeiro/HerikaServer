@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../lib/vr_items.php';
+
 // Functions to be provided to OpenAI
 $startTime=$GLOBALS["startTime"] ?? microtime(true);
 
@@ -2476,6 +2478,19 @@ function buildFunctionExecutionContextFromResponse($parsedResponse)
         $missingRequired = $parameterData["missing_required"];
     }
 
+    if (strcasecmp($functionCodeName, 'TakeHeldItem') === 0) {
+        $resolvedHeldItem = HeldItems::resolveHeldIdentifier(strval($parameterValue));
+        if ($resolvedHeldItem === null) {
+            Logger::warn('TakeHeldItem rejected because the requested RefID is not currently held by the player.');
+            $parameterValue = '';
+            if (!in_array('item', $missingRequired, true)) {
+                $missingRequired[] = 'item';
+            }
+        } else {
+            $parameterValue = $resolvedHeldItem;
+        }
+    }
+
     return [
         "action_name" => $actionName,
         "function_def" => $functionDef,
@@ -2765,6 +2780,13 @@ chimTraceFunctionsIncludePhase(__LINE__, 'prompt_overrides_loaded', $startTime);
 // Delete non wanted functions
 
 chimTraceFunctionsIncludePhase(__LINE__, 'enabled_function_filter_start', $startTime);
+if (!HeldItems::hasHeldItems()) {
+    $GLOBALS["ENABLED_FUNCTIONS"] = array_values(array_filter(
+        $GLOBALS["ENABLED_FUNCTIONS"],
+        static fn($codeName) => strcasecmp((string) $codeName, 'TakeHeldItem') !== 0
+    ));
+}
+
 $enabledFunctionSet = array_fill_keys($GLOBALS["ENABLED_FUNCTIONS"], true);
 foreach ($GLOBALS["FUNCTIONS"] as $n => $v) {
     $codeName = getFunctionCodeName($v["name"]);

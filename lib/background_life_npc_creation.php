@@ -306,6 +306,7 @@ function chimBglSpawnNpc(array $npcProfile, int $startingPoint, array $inventory
     $extendedData['background_life_enabled'] = true;
     $extendedData['background_life_last_updated'] = $lastGamets;
     $extendedData['background_life_player_unattached'] = true;
+    $extendedData['background_life_goals'] = $npcProfile['goal'];
     $extendedData['middle_term_enabled'] = 1;
 
     $metadata = $npcMaster->getMetadata($npc);
@@ -318,7 +319,7 @@ function chimBglSpawnNpc(array $npcProfile, int $startingPoint, array $inventory
     $npc['personality'] = $npcProfile['disposition'];
     $npc['occupation'] = $npcProfile['class'];
     $npc['speechstyle'] = $npcProfile['speechStyle'];
-    $npc['goals'] = $npcProfile['goal'];
+    $npc['goals'] = '';
     $npc['lock_profile'] = null;
     $npc = $npcMaster->setMetadata($npc, $metadata);
     $npc = $npcMaster->setExtendedData($npc, $extendedData);

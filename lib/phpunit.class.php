@@ -137,6 +137,7 @@ class sql
         if (!$result) {
             Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
         }
+        return $result !== false;
     }
 
     public function upsertRow($table, $data, $where) {

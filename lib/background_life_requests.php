@@ -62,11 +62,15 @@ function chimBglNpcStatus(NpcMaster $npcMaster, ?array $npc, string $requestedRe
             'auto_actions' => false,
             'send_letters' => false,
             'hourly_tracking' => false,
+            'location' => '',
         ];
     }
 
     $extendedData = $npcMaster->getExtendedData($npc);
     $metadata = $npcMaster->getMetadata($npc);
+    $coordsValue = $metadata['last_coords'] ?? null;
+    $coords = is_array($coordsValue) ? $coordsValue : json_decode((string)$coordsValue, true);
+    $location = is_array($coords) ? trim((string)($coords[3] ?? '')) : '';
 
     return [
         'exists' => true,
@@ -77,6 +81,7 @@ function chimBglNpcStatus(NpcMaster $npcMaster, ?array $npc, string $requestedRe
         'auto_actions' => chimBglBoolean($extendedData['background_life_commands'] ?? false),
         'send_letters' => chimBglBoolean($extendedData['background_life_letters'] ?? false),
         'hourly_tracking' => chimBglBoolean($metadata['gps_track'] ?? false),
+        'location' => $location,
     ];
 }
 
