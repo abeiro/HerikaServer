@@ -993,6 +993,7 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
                 'last_letter' => $row["content"],
                 'diary_letters' => $diaryLetters,
                 'diary_thoughts' => $diaryThoughts,
+                'interior' => $coordsData['in_interior'],
             ];
 
         }
@@ -1034,6 +1035,7 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
                 'ingame_y' => $histCoord['y'],
                 'location' => $histCoord['location'],
                 'last_updated' => $histCoord['last_updated'] ? convert_gamets2skyrim_date($histCoord['last_updated']) . ", " . round(($last_gamets - $histCoord['last_updated']) * 0.0000024, 0) . " hours ago" : null,
+                'interior' => $histCoord['in_interior'] ?? false,
             ];
         }
 
@@ -1070,6 +1072,7 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
             'last_letter' => $marker['last_letter'],
             'diary_letters' => $marker['diary_letters'],
             'diary_thoughts' => $marker['diary_thoughts'],
+            'interior' => $marker['interior']
         ];
     }
 
@@ -2108,7 +2111,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     echo '</div>';
                     echo '<div class="marker-label">' . PHP_EOL;
                     echo "<a style='color:white;text-decoration:none' href='#dtl_{$marker["id"]}'>{$marker["name"]} &nbsp; ↗️</a></br>";
-                    echo '<small>(' . $marker['x'] . ', ' . $marker['y'] . '),' . $marker['tag'] . '</small>';
+                    echo '<small>(' . $marker['x'] . ', ' . $marker['y'] . '),' . $marker['tag'] . ' ' . ($marker['interior']==1 ? 'Interior':'') . '</small>';
                     echo '<img class="thumb" src="' . $marker['figure'] . '" />';
                     echo '<br/><small>Last reported:' . $marker['last_report'] . '</small>';
                     echo '<br/><small>Last tracked:' . $marker['last_pos_ts'] . '</small>';
@@ -2134,7 +2137,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             echo "<strong>" . $marker['name'] . "</strong><br/>";
                             echo "In-game: (" . $histCoord['ingame_x'] . ", " . $histCoord['ingame_y'] . ")<br/>";
                             if (!empty($histCoord['location'])) {
-                                echo "Location: " . $histCoord['location'] . "<br/>";
+                                echo "Location: " . $histCoord['location'] . ($histCoord['interior']==1 ? ' Interior':'') . "<br/>";
                             }
                             echo "Tracked: " . $histCoord['last_updated'] . "<br/>";
                             echo "</div>";
