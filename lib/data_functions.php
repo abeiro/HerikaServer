@@ -6002,15 +6002,18 @@ function call_llm_internal() {
 
                                 } 
                                 if (is_array($dbDestination) && isset($dbDestination["formid"])) {
+                                    // TravelToRaw change
                                     $destination=$dbDestination["formid"];
                                     error_log("[ACTION POSTFILTER TravelTo] found database entry for $localtarget => $destination => {$dbDestination["name"]}, similarity ({$dbDestination["sim"]})");
                                     $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
                                 
                                 } else if (is_array($dbDestinationRegion) && isset($dbDestinationRegion["formid"])) {
-
+                                    // TravelToRaw change
                                     $destination=$dbDestinationRegion["formid"];
+
                                     error_log("[ACTION POSTFILTER TravelTo] found database (searching by region) entry for $localtarget => $destination => {$dbDestinationRegion["name"]}, similarity ({$dbDestinationRegion["sim"]})");
-                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";
+
                                 } else if (stripos($destination,"outside")!==false) {
                                     $destination=DataLastKnownLocationHuman(true,false);
                                     error_log("[ACTION POSTFILTER TravelTo] reference to outside detected , $localtarget => $destination");
@@ -8122,5 +8125,143 @@ function getCardinalDirection($delta_x, $delta_y) {
     }
 }
 
+/*
+is_interior now represents a bitwise obtained result:
+
+Value	Meaning
+00	    Exists, exterior
+01	    Exists, interior
+10	    Doesn't exist
+11	    Reserved (or treat as invalid)
+Bits	Field
+0-1	    inside_entrance
+2-3	    location_center
+4-5	    raw_location_marker
+6-7	    outside_entrance
+*/
+
+function checkInterior(int $value) {
+    // if inside_entrance is interior, or location_center is interior or raw_location_marker is interior, we return true
+    $insideEntrance = ($value & 0b11) === 0b01;
+    $locationCenter = ($value & 0b1100) === 0b0100;
+    $rawLocationMarker = ($value & 0b110000) === 0b010000;
+
+    return $insideEntrance || $locationCenter || $rawLocationMarker;
+}
+
+function getInteriorRef($locationRow) {
+    // locationRow is a row result orm locations
+    
+    // e.g. 0x0001bdf1:0x1a0559e0;0x0001bdf1:0x1a0559e0;0x0010f63c:0x1a01c7b7
+    // 0x0001bdf1 is the type, 0x1a0559e0 is the reference formid
+    // types:
+    // 0x0001bdf1 locationCenterRefType
+    // 0x000130fb outsideEntranceMarkerRefType
+    // 0x000130fc insideMarkerRefType
+    // 0x0010f63c mapMarkerRefType
+    // so we must parse refs column on $locationRow and get the first reference with this types and precedence order:
+    // 1) insideMarkerRefType
+    // 2) locationCenterRefType
+    // 3) mapMarkerRefType
+
+    $refs = explode(';', $locationRow['refs']);
+    $precedence = [
+        '0x000130fc', // insideMarkerRefType
+        '0x0001bdf1', // locationCenterRefType
+        '0x0010f63c', // mapMarkerRefType
+    ];
+    
+    foreach ($precedence as $type) {
+        foreach ($refs as $ref) {
+            list($refType, $refFormid) = explode(':', $ref);
+            if ($refType === $type) {
+                return $refFormid;
+            }
+        }
+    }
+    return null;
+}
+
+/**
+ * Resolve a TravelTo location using exact + fuzzy matching and optional coord distance.
+ *
+ * @param string $location
+ * @param array $currentNpcData
+ * @param object $db
+ * @return array|null
+ */
+function resolveTravelLocation($location, $currentNpcData, $db)
+{
+    $cnLocation = $db->escape($location);
+
+    if (strcasecmp($cnLocation, 'random') === 0) {
+        return $db->fetchOne(
+            "SELECT name, region, hold, formid, coords
+             FROM locations
+             ORDER BY CASE WHEN name = region THEN 1 ELSE 0 END DESC, random()
+             LIMIT 1"
+        );
+    }
+
+    $npcPoint = getNpcLastCoordsPoint($currentNpcData);
+    $metaData=json_decode($currentNpcData['metadata'] ?? '{}', true);
+    $pointSql = '';
+    $orderByDistanceSql = '';
+    if (!empty($npcPoint) && $metaData["last_coords"]["world"]=="Skyrim") {// Only use coords on global worldspace
+        $npcPointEsc = $db->escape($npcPoint);
+        $pointSql = ", coords <-> '{$npcPointEsc}'::point AS dist";
+        $orderByDistanceSql = ', dist ASC';
+    }
+
+    // Prefer exact matches first, then fuzzy similarity. If we know NPC coords,
+    // nearest matching marker is preferred when names collide.
+   
+
+    $loc = $db->fetchOne(
+    "SELECT 
+        name,
+        region,
+        hold,
+        formid,
+        coords,
+        is_interior,refs,
+        (
+            (is_interior & 3) = 1 OR
+            (is_interior & 12) = 4 OR
+            (is_interior & 48) = 16
+        ) AS has_interior
+        $pointSql,
+        GREATEST(
+            COALESCE(similarity(name, '$cnLocation'), 0),
+            COALESCE(similarity(name||' (Interior)', '$cnLocation'), 0),
+            COALESCE(similarity(region, '$cnLocation'), 0),
+            COALESCE(similarity(hold, '$cnLocation'), 0)
+        ) AS sim,
+        CASE
+            WHEN lower(name) = lower('$cnLocation') THEN 3
+            WHEN lower(name||' (Interior)') = lower('$cnLocation')
+                 AND (
+                    (is_interior & 3) = 1 OR
+                    (is_interior & 12) = 4 OR
+                    (is_interior & 48) = 16
+                 )
+            THEN 4
+            WHEN lower(region) = lower('$cnLocation') THEN 2
+            WHEN lower(hold) = lower('$cnLocation') THEN 1
+            ELSE 0
+        END AS exact_rank
+     FROM locations
+     WHERE formid IS NOT NULL
+     ORDER BY exact_rank DESC$orderByDistanceSql, sim DESC
+     LIMIT 1"
+);
+
+    if (strpos($location, '(Interior)') !== false && checkInterior($loc['is_interior'])) {
+        // Interior location requested, we should return an interior reference.
+        $loc["direct_destination_ref"] = getInteriorRef($loc);
+    }
+
+    return $loc ?: null;
+}
 
 ?>
