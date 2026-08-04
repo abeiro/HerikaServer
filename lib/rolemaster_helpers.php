@@ -1954,7 +1954,15 @@ function getLocationsNearNpcCoords($npcName) {
     $closestLocationsNames=[];
 
     foreach ($closestLocations as &$location) {
-        $key=($location['name'] ?? '') . ($location['is_interior'] ? ' (Interior)' : '');
+        $key=$location['name'];
+        if (checkInterior($location['is_interior'])) {// If any reference is interior, we append "(Interior)" to the name for clarity and duplicate the entry.
+            $key .= ' (Interior)';
+            if ($location['tags'])
+                $label=" \"$key\" ({$location['tags']})";
+            else
+                $label=" \"$key\"";
+            $closestLocationsNames[$key] = $label;
+        }
         if ($location['tags'])
             $label=" \"$key\" ({$location['tags']})";
         else

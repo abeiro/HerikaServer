@@ -1929,6 +1929,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 $pointEsc = $db->escape($pointLiteral);
 
                 // Abandoned Shack locations is bugged as is child of Batte-Born Farm.
+                // We will search locations with at least one exterior reference
                 $closestLocations = $db->fetchOne(
                     "SELECT
                     name,
@@ -1940,7 +1941,13 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     is_interior,
                     coords <-> '{$pointEsc}'::point AS distance
                 FROM locations
-                WHERE coords IS NOT NULL and is_interior=0
+                WHERE coords IS NOT NULL 
+                and (
+                    ((is_interior & 3) = 0 AND (is_interior & 3) != 2) OR
+                    ((is_interior & 12) = 0 AND (is_interior & 12) != 8) OR
+                    ((is_interior & 48) = 0 AND (is_interior & 48) != 32) OR
+                    ((is_interior & 192) = 0 AND (is_interior & 192) != 128)
+                    )
                 and name<>'Abandoned Shack'
                 ORDER BY distance ASC
                 LIMIT 1"
