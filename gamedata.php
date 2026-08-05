@@ -910,7 +910,7 @@ function handleMarketStockUpdate(array $data): void
     $stockJson = $db->escape(json_encode($stock));
 
     $sql = "UPDATE public.factions
-               SET stock = '{$stockJson}'::jsonb,gold=$gold,player_rank=$rank,gamets=".time()."
+               SET stock = '{$stockJson}'::jsonb,gold=$gold,player_rank=$rank,localts=".time()."
              WHERE formid = '{$factionFormId}'";
 
     $result = $db->execQuery($sql);
