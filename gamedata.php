@@ -895,12 +895,23 @@ function handleMarketStockUpdate(array $data): void
                 $existing = $db->fetchOne("select * from descriptions where baseid='{$baseid}' and plugin='{$pluginName}'");
                 if (!$existing || sizeof($existing) === 0) {
                     // Insert. if exists, will throw error.
-                    $db->insert("descriptions_custom", [
+                    $db->upsertRowTrx("descriptions_custom", [
                         'baseid' => $baseid,
                         'plugin' => $pluginName,
                         'name' => trim($item['name'])
-                    ]);
+                    ],
+                    "baseid='{$baseid}' and plugin='{$pluginName}'"
+                    );
                 }
+                 $db->upsertRowTrx("market_cache", [
+                        'baseid' => $item['itemid'],
+                        'plugin' => $pluginName,
+                        'name' => trim($item['name']),
+                        'enchantment' => isset($item['enchantment']) ? ($item['enchantment']) : null,
+                        'price' => intval($item['gold'] + (isset($item['enchantment']) ? ($item['enchantment']) : 0)),
+                ],
+                "baseid='{$item['itemid']}' and plugin='{$pluginName}'");
+                    
             }
 
 
@@ -910,7 +921,7 @@ function handleMarketStockUpdate(array $data): void
     $stockJson = $db->escape(json_encode($stock));
 
     $sql = "UPDATE public.factions
-               SET stock = '{$stockJson}'::jsonb,gold=$gold,player_rank=$rank,gamets=".time()."
+               SET stock = '{$stockJson}'::jsonb,gold=$gold,player_rank=$rank,localts=".time()."
              WHERE formid = '{$factionFormId}'";
 
     $result = $db->execQuery($sql);

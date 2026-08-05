@@ -7805,6 +7805,25 @@ if ($checkVersion("faction_vanilla") < 20260803001) {
     }
 }
 
+if ($checkVersion("market_cache") < 20260805001) {
+    Logger::debug("Applying market_cache 20260805001 - initial market cache setup");
+
+    $migrationOk = $db->execQuery(file_get_contents(__DIR__."/../data/market_cache.sql")) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("market_cache", 20260805001);
+        Logger::info("Applied patch market_cache 20260805001 - initial market cache setup");
+    } else {
+        Logger::error("Failed to apply patch market_cache 20260805001 - initial market cache setup");
+    }
+}
+
+//----------------------------------------------------
+// AUDIT REQUEST RESPONSE - Store the response text for audit requests
+// Version 20260806001
+//----------------------------------------------------
+$db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"response\"  text");
+
 
 Logger::info(__FILE__." update file processed");
 

@@ -258,6 +258,7 @@ if (checkLastCallsFor($GLOBALS['HERIKA_NAME'])) {
 }
 
 // ─── Guard: Require at Least One Prior Interaction ───────────────────────────
+// if background_life_player_unattached is true, we can skip this guard 
 
 $lastInteractionRow = $db->fetchOne(
     "SELECT max(gamets) AS gamets FROM speech
@@ -681,8 +682,8 @@ if (is_array($closestLocations) && count($closestLocations) > 0) {
     $history .= "\n";
 }
 
-$history .= "\nCurrent location: $LAST_REPORTED_LOCATION\n";
-$history .= "\nCurrent date and hour: " . convert_gamets2skyrim_long_date($last_gamets) . "\n";
+$postHistory = "\nCurrent location: $LAST_REPORTED_LOCATION\n";
+$postHistory .= "\nCurrent date and hour: " . convert_gamets2skyrim_long_date($last_gamets) . "\n";
 
 // ─── Check last Idles  ───────────────────────────────────
 
@@ -791,7 +792,7 @@ if ($isIdleAction && $idleHours > 1) {// If last Idle was Socialize, there a cha
         ],
         [
             'role' => 'user',
-            'content' => "<context_history>\nContext History (chronological order)\n... $historyShort\n</context_history>",
+            'content' => "<context_history>\nContext History (chronological order)\n... $historyShort\n</context_history>\n$postHistory\n",
             "cache_control" => ["type" => "ephemeral"]
         ],
         [
@@ -870,6 +871,7 @@ Rules:
     $connectionHandler = $connector->getConnector($currentConnectorData);
     $preResponse = $connectionHandler->fast_request($preStep1Prompt, ['MAX_TOKENS' => 1024], 'backgroundlife');
     
+    // Keep timestamp of last LLM call for this NPC to avoid too frequent calls
     updateLastLLMCall($GLOBALS['HERIKA_NAME']);
     
     $parsedResponse = __jpd_decode_lazy($preResponse);
@@ -1119,8 +1121,10 @@ foreach ($inventory as $item) {
 }
 if (!isset($goldFound)) {
     $lastMinuteNotes .= "\nNote: {$GLOBALS['HERIKA_NAME']} has no gold coins. Should work to get some coins. Check goals->production to know how to earn gold.\n";
+    $lastMinuteNotesSpeakContext .= "\nNote: {$GLOBALS['HERIKA_NAME']} has no gold coins, so cannot buy anything.\n";
     error_log("[BGL RUN] $npcNameEscDb — has no gold!");
-}
+} else 
+    $lastMinuteNotesSpeakContext="";
 
 // ─── Step 1: Inner-Thought Soliloquy ─────────────────────────────────────────
 if ($wasSocializeIntentAction && !$bypassInnerThoughts) {
@@ -1174,7 +1178,7 @@ PROMPT_EN,
 
 $step1Prompt = array_merge($systemPrompts[$lang], [
     ['role' => 'user', 'content' => "<character_sheet>\n{$GLOBALS['HERIKA_NAME']}:\n$dynamicBiography\n</character_sheet>", "cache_control" => ["type" => "ephemeral"]],
-    ['role' => 'user', 'content' => "<context_history>\nContext History (chronological order)\n$history\n</context_history>{$lastMinuteNotes}", "cache_control" => ["type" => "ephemeral"]],
+    ['role' => 'user', 'content' => "<context_history>\nContext History (chronological order)\n$history\n</context_history>{$postHistory}\n{$lastMinuteNotes}", "cache_control" => ["type" => "ephemeral"]],
     ['role' => 'user', 'content' => $userPrompts[$lang], "cache_control" => ["type" => "ephemeral"]],
 ]);
 
@@ -1224,7 +1228,7 @@ $step2Content = "You are responsible for deciding a single action"
     . "$dynamicBiography\n\n";
 
 if ($isFullMode) {
-    $step2Content .= "<context_history>\nContext History (chronological order)\n$history\n</context_history>{$lastMinuteNotes}\n\n";
+    $step2Content .= "<context_history>\nContext History (chronological order)\n$history\n</context_history>{$postHistory} {$lastMinuteNotes}\n\n";
 }
 
 $step2Content .= "<text>\n$innerThoughtBuffer\n</text>\n\n";
@@ -1286,6 +1290,7 @@ if (!isset($extdata['background_life_player_unattached']) || $extdata['backgroun
 
 if (!$bypassTradingActions) {
     $step2Content .= <<<PROMPT
+
 BuyItem:<NPC name>:<itemid>:<count>:<total_gold_spent>,<NPC name>:<itemid>:<count>:<total_gold_spent>
 - Buy items from another NPC.
 - Required after a previously agreed trade so inventories can be updated.
@@ -1386,8 +1391,8 @@ if (!$isSpeakAction) {
 
 if (!$bypassTradingActions) {
     $step2Content .= "Examples ```\n\n"
-        . "<action>BuyItem:Adrianne Avenicci:000721E8:1:5,Adrianne Avenicci:000721E6:2:16</action>\n"
-        . "<reason>I agreed to buy two items from Adrianne Avenicci</reason>\n"
+        . "<action>BuyItem:Adrianne Avenicci:000721E8:1:5,Adrianne Avenicci:00065C97:2:16</action>\n"
+        . "<reason>I agreed to buy two items from Adrianne Avenicci, 1 Cooked Beef (5 gold), 2 Bread (16 gold)</reason>\n"
         . "```";
 
     $step2Content .= "Examples ```\n\n"
@@ -1405,7 +1410,7 @@ For example:
 * To Sell/Buy Item to a trader that maybe is not present: MoveTo:<NPC/Actor name> ->(next iteration) SpeakTo:<NPC/Actor name> ->(next iteration) SellItem:.. 
 * To gift items without taking money: SpeakTo:<NPC/Actor name> ->(next iteration) GiveItemTo:<NPC/Actor name>:<itemid>:<count>
 * To give money without trading items: SpeakTo:<NPC/Actor name> ->(next iteration) GiveGoldTo:<NPC/Actor name>:<amount>
-* Buy food at an inn: SpeakTo:<NPC innkeeper> ->(next iteration),BuyItem:<NPC/Actor name> ->(next iteration) StayAtPlace:Inn 
+* Buy food at an inn: SpeakTo:<NPC innkeeper> ... ->(next iteration),BuyItem:<NPC/Actor name>... ->(next iteration) StayAtPlace:Inn ...
 * Relax/Socialize at an inn: SpeakTo:<NPC/Actor name> ->(next iteration) ->(next iteration) StayAtPlace:Inn 
 * Relax at home: SpeakTo:<NPC/Actor name> ->(next iteration) StayAtPlace:Home:Sleep
 * Generally speaking, try to Speak to an NPC before trading with him/her, unless the NPC is not present. If the NPC is not present, use MoveTo:<NPC name> to reach him/her first.
@@ -1490,7 +1495,7 @@ if (!empty($parsed['action'])) {
             break;
         case 'SpeakTo':
             $historyWithInnerThought = $history
-                . "\n\n<inner_thought>\n{$innerThoughtBuffer}\n</inner_thought>\n";
+                . "\n{$postHistory}\n$lastMinuteNotesSpeakContext\n<inner_thought>\n{$innerThoughtBuffer}\n</inner_thought>\n";
             handleSpeakToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db, $connectionHandler, $dynamicBiography, $historyWithInnerThought, $lastEventParsed['location']);
             unset($parsed['notification']);   // Prevent letter dispatch if SpeakTo action is chosen
             //unset($parsed['rumor']);   // Prevent rumor dispatch if SpeakTo action is chosen
@@ -1530,7 +1535,7 @@ if (!empty($parsed['action'])) {
             break;
         case 'SendLetter':
             $historyWithInnerThought = $history
-                . "\n\n<inner_thought>\n{$innerThoughtBuffer}\n</inner_thought>\n";
+                . "\n{$postHistory}\n<inner_thought>\n{$innerThoughtBuffer}\n</inner_thought>\n";
             handleSendLetter($parsed['reason'], $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db, $connectionHandler, $dynamicBiography, $historyWithInnerThought, $lastEventParsed['location']);
             error_log("[BGL RUN] Chosen action: SendLetter. No new action will be issued. Reason: {$parsed['reason']}");
             unset($parsed['notification']);

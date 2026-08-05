@@ -1040,8 +1040,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
     $vendorFactionsNpcBelongs = $db->fetchAll("SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
         formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
 
-    error_log("[handleSpeakToAction] Query to obtain vendor faction chest: SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE
-        formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
+    error_log("[handleSpeakToAction] Query to obtain vendor faction chest: SELECT name,formid,vendor_cont,stock,gold,player_rank FROM factions WHERE formid IN ('" . implode("','", $factionsArray) . "') and vendor_cont is not null and vendor_cont<>'00000000'");
 
     if ($vendorFactionsNpcBelongs && sizeof($vendorFactionsNpcBelongs) > 0 && !empty($vendorFactionsNpcBelongs[0]['stock'])) {
         $stockString = " $resolvedName can sell these items: ";
@@ -1359,8 +1358,16 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         $gold = isset($args[3]) ? (int) $args[3] : 0;
 
         $isMalformed = ($targetNpcName === '' || $itemId === '' || $count <= 0);
-        if ($tradeType !== 'GiveItemTo' && $gold < 0) {
-            $isMalformed = true;
+        if ($tradeType !== 'GiveItemTo' && $gold <= 0) {
+            
+            $dbGoldValueRow=$db->fetchOne("select price from market_cache where baseid='$itemId'");
+            if ($dbGoldValueRow && isset($dbGoldValueRow['price'])) {
+                $gold = (int)$dbGoldValueRow['price'] * $count;
+                error_log("[handleTradeItemsAction] [$tradeType] Corrected zero price for: $itemId to $gold (count: $count)");
+            } else {
+                error_log("[handleTradeItemsAction] [$tradeType] Could not determine gold value for item: $itemId. Skipping transaction.");
+                $isMalformed = true;
+            }
         }
 
         if ($isMalformed) {
@@ -1473,6 +1480,18 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         ]);
         triggerNpcUpdate($npcName);
         return false;
+    } else {
+        $db->insert('eventlog', [
+            'ts' => $last_ts,
+            'gamets' => $last_gamets + 11,
+            'type' => 'innerchat',
+            'data' => "The Narrator: $npcName completed the transaction $tradeType with $targetNpcName",
+            'sess' => $momentum,
+            'localts' => time(),
+            'people' => "|$npcName|$resolvedName|",
+            'location' => null,
+            'party' => '',
+        ]);
     }
 
     // Schedule inventory updates for source and all unique targets after processing.
