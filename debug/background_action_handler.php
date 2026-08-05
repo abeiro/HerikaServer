@@ -1480,6 +1480,18 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         ]);
         triggerNpcUpdate($npcName);
         return false;
+    } else {
+        $db->insert('eventlog', [
+            'ts' => $last_ts,
+            'gamets' => $last_gamets + 10,
+            'type' => 'innerchat',
+            'data' => "The Narrator: $npcName completed the transaction $tradeType with $targetNpcName",
+            'sess' => $momentum,
+            'localts' => time(),
+            'people' => "|$npcName|$resolvedName|",
+            'location' => null,
+            'party' => '',
+        ]);
     }
 
     // Schedule inventory updates for source and all unique targets after processing.
