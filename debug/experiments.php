@@ -249,7 +249,14 @@ function resolveFormIdToDecimal($formId)
 
     return (int) $raw;
 }
+/*
+$npc_profile = array
+    name => name
+    class => noble,merchant,warrior,assassin,mage,beggar,farmer,bard,soldier,forsworn
+    gender => male,female
+    race => nord,breton,redguard,orc,imperial,argonian
 
+*/
 function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
 {
     if (!is_array($npc_profile) || empty($npc_profile['name'])) {
@@ -584,16 +591,16 @@ if ($argv[1] == '7') {
 
 if ($argv[1] == '8') {
     $npc_profile = [
-    'name' => 'Sees-the-Tide',
-    'gender' => 'male',
-    'class' => 'farmer',
-    'race' => 'argonian',
-    'location' => 'Windhelm',
-    'appearance' => 'a lean green-scaled Argonian wearing weathered fishing clothes, carrying nets that smell of river water and salt',
-    'background' => 'Born in Black Marsh, Sees-the-Tide travelled north searching for honest work after years of hardship. Like many Argonians, he eventually found employment on the Windhelm docks. Although he is not allowed to live within the city walls, he has built a modest life among the workers along the harbor. He knows the Sea of Ghosts, the White River and every fisherman in the port, believing that patience and hard work matter more than politics.',
-    'speechStyle' => 'Use a calm, measured, and pragmatic speaking style. Speak in fluent, natural English with clear, deliberate sentences, avoiding slang, exaggerated emotion, or unnecessary contractions. Favor concrete observations over opinions, and express feelings through restraint rather than intensity. Be courteous but reserved, respectful without excessive warmth, and let confidence come from quiet certainty instead of bravado. Prefer practical, descriptive language with occasional subtle metaphors drawn from nature, rivers, marshes, predators, prey, or the passage of seasons, but use them sparingly. Avoid broken grammar, Khajiit-like mannerisms (such as referring to oneself as "this one"), or excessive references to the Hist. The overall impression should be thoughtful, observant, patient, and quietly wise, with dialogue that feels grounded, concise, and purposeful.',
-    'disposition' => 'friendly',
-    'goal' => "[Life goals]
+        'name' => 'Sees-the-Tide',
+        'gender' => 'male',
+        'class' => 'farmer',
+        'race' => 'argonian',
+        'location' => 'Windhelm',
+        'appearance' => 'a lean green-scaled Argonian wearing weathered fishing clothes, carrying nets that smell of river water and salt',
+        'background' => 'Born in Black Marsh, Sees-the-Tide travelled north searching for honest work after years of hardship. Like many Argonians, he eventually found employment on the Windhelm docks. Although he is not allowed to live within the city walls, he has built a modest life among the workers along the harbor. He knows the Sea of Ghosts, the White River and every fisherman in the port, believing that patience and hard work matter more than politics.',
+        'speechStyle' => 'Use a calm, measured, and pragmatic speaking style. Speak in fluent, natural English with clear, deliberate sentences, avoiding slang, exaggerated emotion, or unnecessary contractions. Favor concrete observations over opinions, and express feelings through restraint rather than intensity. Be courteous but reserved, respectful without excessive warmth, and let confidence come from quiet certainty instead of bravado. Prefer practical, descriptive language with occasional subtle metaphors drawn from nature, rivers, marshes, predators, prey, or the passage of seasons, but use them sparingly. Avoid broken grammar, Khajiit-like mannerisms (such as referring to oneself as "this one"), or excessive references to the Hist. The overall impression should be thoughtful, observant, patient, and quietly wise, with dialogue that feels grounded, concise, and purposeful.',
+        'disposition' => 'friendly',
+        'goal' => "[Life goals]
 Earn an honest living as one of Windhelm's most dependable fishermen while supporting the Argonian community on the docks.
 
 * Works at 'Windhelm Docks'
@@ -615,9 +622,9 @@ Earn an honest living as one of Windhelm's most dependable fishermen while suppo
 When at the docks, shoreline or fishing areas, and intent is work, he generates fish (River Betty, item refid:0x00106e1a)
 at a rate of 8 each hour.
 "
-];
+    ];
 
- $startingPoint = 0x27019D09;
+    $startingPoint = 0x27019D09;
     $inventoryItems = [
         ['refid' => '0x00106e1a', 'qty' => 10],
     ];
@@ -629,7 +636,7 @@ if ($argv[1] == '9') {
 
     $npcMaster = new NpcMaster();
     $npc = $npcMaster->getByName("Lydia");
-    $testData=resolveTravelLocation("Elysium Estate Basement", $npc, $GLOBALS["db"]);
+    $testData = resolveTravelLocation("Elysium Estate Basement", $npc, $GLOBALS["db"]);
     print_r($testData);
     if (checkInterior($testData["is_interior"])) {
         echo "Interior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
@@ -649,8 +656,8 @@ if ($argv[1] == '9') {
         )
     );
     */
-     // This works
-     $db->insert(
+    // This works
+    $db->insert(
         'responselog',
         [
             'localts' => time(),
@@ -662,5 +669,106 @@ if ($argv[1] == '9') {
         ]
     );
 }
+if ($argv[1] == '10') {
+    // ----------------------------------------------------
+    // NPC 1 - Customer looking for a plumber
+    // ----------------------------------------------------
+    $npc_profile = [
+        'name' => 'Hroldar Stone',
+        'gender' => 'male',
+        'class' => 'noble',
+        'race' => 'nord',
+        'location' => 'Whiterun',
+        'appearance' => 'a middle-aged nord homeowner',
+        'background' => 'Hroldar recently discovered that the water pipes in his house are leaking badly. He has spent days asking around Whiterun for someone capable of repairing them.',
+        'speechStyle' => 'friendly, practical and direct. He explains his plumbing problem clearly and immediately asks whether someone can repair it.',
+        'disposition' => 'friendly',
+        'goal' => "
+[Primary Goal]
+Find a qualified plumber.
 
+- Ask nearby citizens whether they know a plumber.
+- If someone identifies themselves as a plumber, begin negotiating immediately.
+- Explain the plumbing issue.
+- Ask for an estimated price.
+- Negotiate politely.
+- If both parties agree on a price, hire the plumber.
+- After hiring, accompany the plumber to inspect the problem.
+- Eat/drink at least once per day.
+",
+    ];
+
+    $startingPoint = 0x2701EE0A;
+
+    $inventoryItems = [
+        ['refid' => '0x0000000F', 'qty' => 500], // enough gold to pay
+    ];
+
+    spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems);
+
+
+    // ----------------------------------------------------
+    // NPC 2 - Plumber
+    // ----------------------------------------------------
+    $npc_profile = [
+        'name' => 'Lucan Pipewright',
+        'gender' => 'male',
+        'class' => 'farmer',
+        'race' => 'imperial',
+        'location' => 'Whiterun',
+        'appearance' => 'a sturdy imperial craftsman carrying plumbing tools',
+        'background' => 'Lucan travels across Skyrim repairing pipes, wells and water systems for homes and businesses. He earns his living by accepting repair contracts.',
+        'speechStyle' => 'professional, confident and honest. He asks questions about the problem before offering a price.',
+        'disposition' => 'friendly',
+        'goal' => "
+[Primary Goal]
+Earn gold by repairing plumbing.
+
+- Walk around Whiterun looking for customers.
+- If someone says they need a plumber, introduce yourself immediately.
+- Ask what the problem is.
+- Inspect the situation before giving an estimate.
+- Negotiate a fair price.
+- If a deal is reached, perform the repair.
+- Receive payment after completing the work.
+- Continue searching for more customers.
+- Eat/drink at least once per day.
+
+[Production]
+When actively repairing plumbing for a customer, generate 10 gold worth of service value per hour.
+",
+    ];
+
+    $inventoryItems = [
+        ['refid' => '0x0000000F', 'qty' => 50],
+    ];
+
+    spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems);
+}
+
+if ($argv[1] == '11') {
+    foreach (DataLastDataExpandedFor("Hulda",-10) as $row) {
+        $historic[] = $row["content"];
+
+    }
+    print_r(implode("\n", $historic)    );
+}
+
+if ($argv[1] == '12') {
+     $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Lydia");
+    
+    // This does not work, because the TravelToRaw only accepts location formid.
+    $db->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'text' => "TakeHeldItem@0xFF000FF2:Alto Wine",
+            'actor' => "Lydia",
+            'action' => 'command'
+        )
+    );
+    
+}
 ?>
