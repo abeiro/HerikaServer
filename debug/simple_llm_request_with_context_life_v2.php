@@ -682,8 +682,8 @@ if (is_array($closestLocations) && count($closestLocations) > 0) {
     $history .= "\n";
 }
 
-$history .= "\nCurrent location: $LAST_REPORTED_LOCATION\n";
-$history .= "\nCurrent date and hour: " . convert_gamets2skyrim_long_date($last_gamets) . "\n";
+$postHistory = "\nCurrent location: $LAST_REPORTED_LOCATION\n";
+$postHistory .= "\nCurrent date and hour: " . convert_gamets2skyrim_long_date($last_gamets) . "\n";
 
 // ─── Check last Idles  ───────────────────────────────────
 
@@ -792,7 +792,7 @@ if ($isIdleAction && $idleHours > 1) {// If last Idle was Socialize, there a cha
         ],
         [
             'role' => 'user',
-            'content' => "<context_history>\nContext History (chronological order)\n... $historyShort\n</context_history>",
+            'content' => "<context_history>\nContext History (chronological order)\n... $historyShort\n</context_history>\n$postHistory\n",
             "cache_control" => ["type" => "ephemeral"]
         ],
         [
@@ -1178,7 +1178,7 @@ PROMPT_EN,
 
 $step1Prompt = array_merge($systemPrompts[$lang], [
     ['role' => 'user', 'content' => "<character_sheet>\n{$GLOBALS['HERIKA_NAME']}:\n$dynamicBiography\n</character_sheet>", "cache_control" => ["type" => "ephemeral"]],
-    ['role' => 'user', 'content' => "<context_history>\nContext History (chronological order)\n$history\n</context_history>{$lastMinuteNotes}", "cache_control" => ["type" => "ephemeral"]],
+    ['role' => 'user', 'content' => "<context_history>\nContext History (chronological order)\n$history\n</context_history>{$postHistory}\n{$lastMinuteNotes}", "cache_control" => ["type" => "ephemeral"]],
     ['role' => 'user', 'content' => $userPrompts[$lang], "cache_control" => ["type" => "ephemeral"]],
 ]);
 
@@ -1228,7 +1228,7 @@ $step2Content = "You are responsible for deciding a single action"
     . "$dynamicBiography\n\n";
 
 if ($isFullMode) {
-    $step2Content .= "<context_history>\nContext History (chronological order)\n$history\n</context_history>{$lastMinuteNotes}\n\n";
+    $step2Content .= "<context_history>\nContext History (chronological order)\n$history\n</context_history>{$postHistory} {$lastMinuteNotes}\n\n";
 }
 
 $step2Content .= "<text>\n$innerThoughtBuffer\n</text>\n\n";
@@ -1495,7 +1495,7 @@ if (!empty($parsed['action'])) {
             break;
         case 'SpeakTo':
             $historyWithInnerThought = $history
-                . "\n$lastMinuteNotesSpeakContext\n<inner_thought>\n{$innerThoughtBuffer}\n</inner_thought>\n";
+                . "\n{$postHistory}\n$lastMinuteNotesSpeakContext\n<inner_thought>\n{$innerThoughtBuffer}\n</inner_thought>\n";
             handleSpeakToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db, $connectionHandler, $dynamicBiography, $historyWithInnerThought, $lastEventParsed['location']);
             unset($parsed['notification']);   // Prevent letter dispatch if SpeakTo action is chosen
             //unset($parsed['rumor']);   // Prevent rumor dispatch if SpeakTo action is chosen
@@ -1535,7 +1535,7 @@ if (!empty($parsed['action'])) {
             break;
         case 'SendLetter':
             $historyWithInnerThought = $history
-                . "\n\n<inner_thought>\n{$innerThoughtBuffer}\n</inner_thought>\n";
+                . "\n{$postHistory}\n<inner_thought>\n{$innerThoughtBuffer}\n</inner_thought>\n";
             handleSendLetter($parsed['reason'], $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db, $connectionHandler, $dynamicBiography, $historyWithInnerThought, $lastEventParsed['location']);
             error_log("[BGL RUN] Chosen action: SendLetter. No new action will be issued. Reason: {$parsed['reason']}");
             unset($parsed['notification']);
