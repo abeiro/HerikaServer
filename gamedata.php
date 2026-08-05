@@ -901,6 +901,15 @@ function handleMarketStockUpdate(array $data): void
                         'name' => trim($item['name'])
                     ]);
                 }
+                 $db->upsertRow("market_cache", [
+                        'baseid' => $item['itemid'],
+                        'plugin' => $pluginName,
+                        'name' => trim($item['name']),
+                        'enchantment' => isset($item['enchantment']) ? ($item['enchantment']) : null,
+                        'price' => intval($item['gold'] + (isset($item['enchantment']) ? ($item['enchantment']) : 0)),
+                ],
+                "baseid='$baseid' and plugin='$pluginName'");
+                    
             }
 
 

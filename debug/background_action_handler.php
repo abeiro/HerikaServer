@@ -1358,8 +1358,16 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         $gold = isset($args[3]) ? (int) $args[3] : 0;
 
         $isMalformed = ($targetNpcName === '' || $itemId === '' || $count <= 0);
-        if ($tradeType !== 'GiveItemTo' && $gold < 0) {
-            $isMalformed = true;
+        if ($tradeType !== 'GiveItemTo' && $gold <= 0) {
+            
+            $dbGoldValueRow=$db->fetchOne("select price from market_cache where baseid='$itemId'");
+            if ($dbGoldValueRow && isset($dbGoldValueRow['price'])) {
+                $gold = (int)$dbGoldValueRow['price'] * $count;
+                error_log("[handleTradeItemsAction] [$tradeType] Corrected zero price for: $itemId to $gold (count: $count)");
+            } else {
+                error_log("[handleTradeItemsAction] [$tradeType] Could not determine gold value for item: $itemId. Skipping transaction.");
+                $isMalformed = true;
+            }
         }
 
         if ($isMalformed) {
