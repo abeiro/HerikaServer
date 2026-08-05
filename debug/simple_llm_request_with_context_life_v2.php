@@ -131,6 +131,7 @@ function getBGLStyleFallback(string $promptKey): string
         . " propose one of the defined actions that would make sense for the development of the story.";
 }
 
+
 // ─── Argument Parsing ─────────────────────────────────────────────────────────
 
 $npcName = $argv[1];

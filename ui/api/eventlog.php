@@ -69,14 +69,18 @@ if ($sinceGamets > 0) {
          LIMIT $limit"
     );
 } else if ($sinceRowId > 0) {
-    // Filter by rowid - for incremental updates
+    // Read the next contiguous rowid window so advancing the cursor cannot skip older rows in a burst.
     $results = $db->fetchAll(
         "SELECT type, data, people, gamets, localts, ts, rowid
-         FROM eventlog a
-         WHERE $typeFilter
-         AND rowid > $sinceRowId
-         ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
-         LIMIT 50"
+         FROM (
+             SELECT type, data, people, gamets, localts, ts, rowid
+             FROM eventlog a
+             WHERE $typeFilter
+             AND rowid > $sinceRowId
+             ORDER BY rowid ASC
+             LIMIT $limit
+         ) incremental_events
+         ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC"
     );
 } else {
     // Normal paginated query - get most recent events by game timestamp (gamets)

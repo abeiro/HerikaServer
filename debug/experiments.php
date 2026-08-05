@@ -624,4 +624,43 @@ at a rate of 8 each hour.
 
     spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems);
 }
+
+if ($argv[1] == '9') {
+
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Lydia");
+    $testData=resolveTravelLocation("Elysium Estate Basement", $npc, $GLOBALS["db"]);
+    print_r($testData);
+    if (checkInterior($testData["is_interior"])) {
+        echo "Interior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
+    } else {
+        echo "Exterior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
+    }
+    /*
+    // This does not work, because the TravelToRaw only accepts location formid.
+    $db->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'text' => "TravelToRaw@-16772904",
+            'actor' => "Lydia",
+            'action' => 'command'
+        )
+    );
+    */
+     // This works
+     $db->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x000A2C94@TravelTo/-16772904",
+            'tag' => '',
+        ]
+    );
+}
+
 ?>

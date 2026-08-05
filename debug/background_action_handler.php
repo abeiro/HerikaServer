@@ -83,6 +83,8 @@ function checkLastCallsFor($npcName)
     return count($recentCalls) >= 6;
 }
 
+
+
 /**
  * Build a PostgreSQL point literal from NPC metadata last_coords.
  *
@@ -116,62 +118,7 @@ function getNpcLastCoordsPoint($currentNpcData)
     return '(' . floatval($x) . ',' . floatval($y) . ')';
 }
 
-/**
- * Resolve a TravelTo location using exact + fuzzy matching and optional coord distance.
- *
- * @param string $location
- * @param array $currentNpcData
- * @param object $db
- * @return array|null
- */
-function resolveTravelLocation($location, $currentNpcData, $db)
-{
-    $cnLocation = $db->escape($location);
 
-    if (strcasecmp($cnLocation, 'random') === 0) {
-        return $db->fetchOne(
-            "SELECT name, region, hold, formid, coords
-             FROM locations
-             ORDER BY CASE WHEN name = region THEN 1 ELSE 0 END DESC, random()
-             LIMIT 1"
-        );
-    }
-
-    $npcPoint = getNpcLastCoordsPoint($currentNpcData);
-    $pointSql = '';
-    $orderByDistanceSql = '';
-    if (!empty($npcPoint)) {
-        $npcPointEsc = $db->escape($npcPoint);
-        $pointSql = ", coords <-> '{$npcPointEsc}'::point AS dist";
-        $orderByDistanceSql = ', dist ASC';
-    }
-
-    // Prefer exact matches first, then fuzzy similarity. If we know NPC coords,
-    // nearest matching marker is preferred when names collide.
-    $loc = $db->fetchOne(
-        "SELECT name, region, hold, formid, coords
-                $pointSql,
-                GREATEST(
-                    COALESCE(similarity(name, '$cnLocation'), 0),
-                    COALESCE(similarity(name||' (Interior)', '$cnLocation'), 0),
-                    COALESCE(similarity(region, '$cnLocation'), 0),
-                    COALESCE(similarity(hold, '$cnLocation'), 0)
-                ) AS sim,
-                CASE
-                    WHEN lower(name) = lower('$cnLocation') THEN 3
-                    WHEN lower(name||' (Interior)') = lower('$cnLocation') and is_interior=1 THEN 4
-                    WHEN lower(region) = lower('$cnLocation') THEN 2
-                    WHEN lower(hold) = lower('$cnLocation') THEN 1
-                    ELSE 0
-                END AS exact_rank
-         FROM locations
-         WHERE formid IS NOT NULL
-         ORDER BY exact_rank DESC$orderByDistanceSql, sim DESC
-         LIMIT 1"
-    );
-
-    return $loc ?: null;
-}
 /**
  * Handle TravelTo action for NPC background life
  * 
@@ -190,6 +137,8 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
     $locId = resolveTravelLocation($location, $currentNpcData, $db);
     $requestedLocation = $db->escape($location);
     $resolvedLocation = $locId['name'] ?? $requestedLocation;
+
+    $resolvedLocationInterior= checkInterior($locId['is_interior'] ?? 0) ? ' (Interior)' : '';
 
     if (strcasecmp($requestedLocation, 'random') === 0) {
         error_log("[handleTravelToAction] random picked: " . print_r($locId, true));
@@ -220,6 +169,16 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
     $refHexString = convertSignedToUnsignedHex(hexdec($currentNpcData["refid"]));
     $locHexString = (convertHex($locId["formid"]));
 
+    // Use direct_destination_ref if available
+    if ($locId["direct_destination_ref"] ?? false) {
+        $locDecString = hexdec($locId["direct_destination_ref"]);
+        if ($locDecString >= 0x80000000) {
+            $locDecString -= 0x100000000;
+        }
+    } else {
+        $locDecString = ($locId["formid"]);
+    }
+
     error_log("Using refid $refHexString , location $locHexString");
     // Insert response log entry for travel command
     $db->insert(
@@ -229,7 +188,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|BackgroundCmd@$refHexString@TravelTo/{$locId["formid"]}",
+            'action' => "rolecommand|BackgroundCmd@$refHexString@TravelTo/{$locDecString}",
             'tag' => '',
         ]
     );
@@ -272,7 +231,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => ($location == $resolvedLocation) ? "$npcName starts travelling to $location. Reason: {$GLOBALS["LAST_REASON"]}" : "$npcName starts travelling to $location (resolved as $resolvedLocation). Reason: {$GLOBALS["LAST_REASON"]}",
+            'data' => ($location == $resolvedLocation) ? "$npcName starts travelling to $location. Reason: {$GLOBALS["LAST_REASON"]}" : "$npcName starts travelling to $location (resolved as $resolvedLocation $resolvedLocationInterior). Reason: {$GLOBALS["LAST_REASON"]}",
             'category' => 'travel',
         ]
     );
@@ -297,6 +256,7 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
     $locId = resolveTravelLocation($location, $currentNpcData, $db);
     $requestedLocation = $db->escape($location);
     $resolvedLocation = $locId['name'] ?? $requestedLocation;
+    $resolvedLocationInterior= checkInterior($locId['is_interior'] ?? 0) ? ' (Interior)' : '';
     $intent = trim((string) $intent);
     $intentSuffix = $intent !== '' ? ":$intent" : '';
     $intentText = $intent !== '' ? " with intent '$intent'" : '';
@@ -340,7 +300,7 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
             'ts' => $last_ts,
             'gamets' => $last_gamets,
             'localts' => time(),
-            'data' => "$npcName stays at current location ($requestedLocation, resolved as $resolvedLocation)$intentText. Reason: {$GLOBALS["LAST_REASON"]}",
+            'data' => "$npcName stays at current location ($requestedLocation, resolved as $resolvedLocation $resolvedLocationInterior)$intentText. Reason: {$GLOBALS["LAST_REASON"]}",
             'category' => $intent,
         ]
     );

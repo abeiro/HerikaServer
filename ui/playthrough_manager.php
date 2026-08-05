@@ -277,9 +277,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message .= '<p><strong>Error:</strong> Profile schema does not exist.</p>';
                     goto SWITCH_ABORT;
                 }
+
+                // Keep the live public schema intact if recreating or cloning the snapshot fails.
+                if (!@pg_query($adminConn, 'BEGIN')) {
+                    $message .= '<p><strong>Error:</strong> Failed to start profile switch.</p>';
+                    goto SWITCH_ABORT;
+                }
                 
                 // Recreate public schema
                 if (!pts_recreate_public_schema($adminConn)) {
+                    @pg_query($adminConn, 'ROLLBACK');
                     $message .= '<p><strong>Error:</strong> Failed to recreate public schema.</p>';
                     goto SWITCH_ABORT;
                 }
@@ -287,18 +294,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Clone profile schema to public
                 $cloneResult = pts_clone_schema($adminConn, $targetSchemaName, 'public');
                 if (!$cloneResult['success']) {
+                    @pg_query($adminConn, 'ROLLBACK');
                     $message .= '<p><strong>Error:</strong> Failed to load profile.</p>';
                     $message .= '<pre>'.h($cloneResult['error']).'</pre>';
                     goto SWITCH_ABORT;
                 }
                 
                 // Mark active
-                pg_query($adminConn, 'BEGIN');
-                pg_query($adminConn, 'UPDATE chim_meta.playthrough_profiles SET is_active = false');
-                $resU = pg_query_params($adminConn, 'UPDATE chim_meta.playthrough_profiles SET is_active = true WHERE id=$1', [$profileId]);
-                if ($resU) {
-                    pg_query($adminConn, 'COMMIT');
-                    pg_query($adminConn, 'TRUNCATE table public.database_versioning'); // So views and functiosn get recreated on next server starttup
+                $clearActive = @pg_query($adminConn, 'UPDATE chim_meta.playthrough_profiles SET is_active = false');
+                $resU = $clearActive
+                    ? @pg_query_params($adminConn, 'UPDATE chim_meta.playthrough_profiles SET is_active = true WHERE id=$1', [$profileId])
+                    : false;
+                $resetVersioning = $resU
+                    ? @pg_query($adminConn, 'TRUNCATE TABLE public.database_versioning')
+                    : false;
+                if ($resetVersioning && @pg_query($adminConn, 'COMMIT')) {
                     $message .= '<p><strong>✅ Switched to profile:</strong> '.h($targetName).'</p>';
                     $message .= '<div style="background:#4a1e0d; border:2px solid #dc2626; border-radius:8px; padding:15px; margin-top:15px;">';
                     $message .= '<p style="color:#fbbf24; font-weight:bold; margin:0 0 10px 0;">⚠️ RESTART REQUIRED</p>';
@@ -311,8 +321,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message .= '<p style="margin:8px 0 0 0; font-size:0.9em; color:#ccc;">Database connections were terminated during the schema switch.</p>';
                     $message .= '</div>';
                 } else {
-                    pg_query($adminConn, 'ROLLBACK');
-                    $message .= '<p><strong>Warning:</strong> Profile loaded but failed to mark active.</p>';
+                    @pg_query($adminConn, 'ROLLBACK');
+                    $message .= '<p><strong>Error:</strong> Profile switch failed. The current public database was preserved.</p>';
                 }
             } else {
                 // Legacy dump-based: slow restore
