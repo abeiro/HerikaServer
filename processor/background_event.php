@@ -107,11 +107,12 @@ if (is_array($bgevent)) {
                         $targetNpcData = $npcManager->getByRefid($targetRefid);
                         if (isset($targetNpcData) && isset($targetNpcData["npc_name"])) {
                             $npcDestinationname = $targetNpcData["npc_name"];
-                            if ($bgevent["description"])
+                            if ($bgevent["description"]) {
                                 if ($bgevent["event"] == "start")
                                     $bgevent["description"] .= " (target is: {$npcDestinationname})";
-                            if ($bgevent["event"] == "end")
-                                $bgevent["description"] .= "(target was: {$npcDestinationname})";
+                                if ($bgevent["event"] == "end")
+                                    $bgevent["description"] .= "(target was: {$npcDestinationname})";
+                            }
                         }
                     }
 
