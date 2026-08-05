@@ -7818,18 +7818,18 @@ if ($checkVersion("market_cache") < 20260805001) {
     }
 }
 
-if ($checkVersion("default_npc_tags") < 20260805002) {
-    Logger::debug("Applying default_npc_tags 20260805002 - refresh verified merchant and child tags");
+if ($checkVersion("default_npc_tags") < 20260805003) {
+    Logger::debug("Applying default_npc_tags 20260805003 - apply complete default NPC tag audit");
 
     $migrationPath = __DIR__ . "/../data/default_npc_tag_audit_20260805.sql";
     $migrationOk = is_readable($migrationPath)
         && $db->execQuery(file_get_contents($migrationPath)) !== false;
 
     if ($migrationOk) {
-        $updateVersion("default_npc_tags", 20260805002);
-        Logger::info("Applied patch default_npc_tags 20260805002");
+        $updateVersion("default_npc_tags", 20260805003);
+        Logger::info("Applied patch default_npc_tags 20260805003");
     } else {
-        Logger::error("Failed to apply patch default_npc_tags 20260805002");
+        Logger::error("Failed to apply patch default_npc_tags 20260805003");
     }
 }
 
