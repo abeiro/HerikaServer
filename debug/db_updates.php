@@ -7818,6 +7818,12 @@ if ($checkVersion("market_cache") < 20260805001) {
     }
 }
 
+//----------------------------------------------------
+// AUDIT REQUEST RESPONSE - Store the response text for audit requests
+// Version 20260806001
+//----------------------------------------------------
+$db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"response\"  text");
+
 
 Logger::info(__FILE__." update file processed");
 
