@@ -170,3 +170,44 @@ if (!function_exists('chimDeleteLatestVisibleEventLogRows')) {
         ];
     }
 }
+
+if (!function_exists('chimDeleteEventLogRow')) {
+    function chimDeleteEventLogRow($db, $rowId)
+    {
+        $rowId = intval($rowId);
+        if ($rowId <= 0) {
+            return [
+                'ok' => false,
+                'deleted_count' => 0,
+                'message' => 'Invalid event row.',
+            ];
+        }
+
+        $visibleWhereClause = chimBuildVisibleEventLogWhereClause($db);
+        $existing = $db->fetchOne("SELECT rowid FROM eventlog WHERE rowid={$rowId} AND {$visibleWhereClause} LIMIT 1");
+        if (!$existing) {
+            return [
+                'ok' => true,
+                'rowid' => $rowId,
+                'deleted_count' => 0,
+                'message' => 'Event is no longer available.',
+            ];
+        }
+
+        if (!$db->delete('eventlog', "rowid={$rowId}")) {
+            return [
+                'ok' => false,
+                'rowid' => $rowId,
+                'deleted_count' => 0,
+                'message' => 'Failed to delete event.',
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'rowid' => $rowId,
+            'deleted_count' => 1,
+            'message' => 'Event deleted.',
+        ];
+    }
+}
