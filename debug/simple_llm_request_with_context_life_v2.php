@@ -195,6 +195,7 @@ $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 
 $extdata = $npcMaster->getExtendedData($currentNpcData);
 $metadata = $npcMaster->getMetadata($currentNpcData);
+$playerUnattached = !empty($extdata['background_life_player_unattached']);
 
 
 // Guardrail, if background_life_last_updated_ec exceeds 2, skip processing to avoid infinite loops or repeated errors
@@ -236,10 +237,11 @@ $lastIssuedAction = $db->fetchOne(
      WHERE actorname='$npcNameEsc' 
      ORDER BY gamets DESC, ts ASC"
 );
+$lastIssuedAction = is_array($lastIssuedAction) ? $lastIssuedAction : [];
 
-if ($lastIssuedAction["gamets"] && ($lastIssuedAction["action"] == "TravelTo" || $lastIssuedAction["action"] == "MoveTo")) {
+if (!empty($lastIssuedAction['gamets']) && in_array(($lastIssuedAction['action'] ?? ''), ['TravelTo', 'MoveTo'], true)) {
     $npcIsTravelling = true;
-    $npcIsTravellingStarted = $lastIssuedAction["gamets"];
+    $npcIsTravellingStarted = $lastIssuedAction['gamets'];
 } else {
     $npcIsTravelling = false;
     $npcIsTravellingStarted = 0;
@@ -265,7 +267,7 @@ $lastInteractionRow = $db->fetchOne(
 );
 
 if (empty($lastInteractionRow['gamets'])) {
-    if ($extdata["background_life_player_unattached"]) {
+    if ($playerUnattached) {
         error_log('[BGL RUN] No prior interaction found but background_life_player_unattached is true');
     } else {
         error_log('[BGL RUN] No prior interaction found, but background_life_player_unattached is false — skipping.');
@@ -340,7 +342,7 @@ if (isset($extdata['middle_term_memory'])) {
 
 // ─── Dialogue History ─────────────────────────────────────────────────────────
 
-if ($extdata["background_life_player_unattached"] === true) {
+if ($playerUnattached) {
 
     $sqlFilter = " AND gamets < $lastItGamets"
         . " AND type NOT IN ('prechat','itemfound','npcspellcast','innerchat','infoaction')";
@@ -357,7 +359,7 @@ $contextDataHistoric = DataLastDataExpandedFor($GLOBALS['HERIKA_NAME'], -100, $s
     $GLOBALS['HERIKA_NAME'] ?? ''
 );*/
 
-if ($extdata['background_life_player_unattached']) {
+if ($playerUnattached) {
     // NPC unattached, so maybe does not nothing about player
     foreach ($contextDataHistoric as $entry) {
         $line = trim($entry['content']);
@@ -493,7 +495,10 @@ $backgroundEventRows = $db->fetchAll(
 );
 
 foreach ($backgroundEventRows as $event) {
-    $eventParsed = json_decode($event['data'], true);
+    $eventParsed = json_decode((string) ($event['data'] ?? ''), true);
+    if (!is_array($eventParsed)) {
+        continue;
+    }
 
     if (empty($eventParsed['source']) || $eventParsed['source'] !== 'AIAgent.esp') {
         continue;
@@ -501,7 +506,7 @@ foreach ($backgroundEventRows as $event) {
     if (empty($eventParsed['description']) || $eventParsed['description'] === 'unknown') {
         continue;
     }
-    if ($eventParsed['actor'] !== $GLOBALS['HERIKA_NAME']) {
+    if (($eventParsed['actor'] ?? '') !== $GLOBALS['HERIKA_NAME']) {
         continue;
     }
 
@@ -517,7 +522,7 @@ foreach ($backgroundEventRows as $event) {
     $hoursPassed = round(($last_gamets - $event['gamets']) * GAMETS_TO_HOURS, 2);
 }
 
-$lastIssuedBgEvent = $lastEventParsed;
+$lastIssuedBgEvent = array_merge(['name' => '', 'event' => '', 'location' => null], $lastEventParsed);
 // Append last known speech location
 if ($lastLocRow['location']) {
     $bgEvents[] = [
@@ -750,6 +755,9 @@ $lastBackgroundAction = $db->fetchOne(
      ORDER BY gamets DESC, localts DESC
      LIMIT 1"
 );
+$lastBackgroundAction = is_array($lastBackgroundAction)
+    ? array_merge(['action' => '', 'fullcall' => '', 'gamets' => 0], $lastBackgroundAction)
+    : ['action' => '', 'fullcall' => '', 'gamets' => 0];
 
 $isIdleAction = !empty($lastBackgroundAction)
     && (
@@ -883,14 +891,45 @@ Rules:
     } else {
         $action = '';
     }
-    if (isset($parsedResponse['reasoning'])) {
-        $reasoning = $parsedResponse['reasoning'];
+    if (isset($parsedResponse['reasoning']) && is_scalar($parsedResponse['reasoning'])) {
+        $reasoning = (string) $parsedResponse['reasoning'];
     } else {
         $reasoning = '';
     }
 
 
     if ($action) {
+        $validatedActions = [];
+        foreach ($action as $candidateAction) {
+            if (!is_scalar($candidateAction)) {
+                error_log("[BGL RUN] $npcNameEsc — Ignoring non-scalar idle production/consumption action.");
+                continue;
+            }
+            $candidateAction = trim((string) $candidateAction);
+            if ($candidateAction === '' || strcasecmp($candidateAction, 'DoNothing') === 0) {
+                continue;
+            }
+
+            $candidateParts = array_map('trim', explode(':', $candidateAction, 3));
+            $candidateType = $candidateParts[0] ?? '';
+            $candidateItem = strtr(strtolower((string) ($candidateParts[1] ?? '')), ['0x' => '']);
+            $candidateCount = (string) ($candidateParts[2] ?? '');
+            if (count($candidateParts) !== 3
+                || !in_array($candidateType, ['Consume', 'Produced'], true)
+                || !preg_match('/^[0-9a-f]{1,8}$/', $candidateItem)
+                || !ctype_digit($candidateCount)
+                || (int) $candidateCount < 1) {
+                error_log("[BGL RUN] $npcNameEsc — Ignoring malformed idle production/consumption action: $candidateAction");
+                continue;
+            }
+
+            $validatedActions[] = "$candidateType:$candidateItem:$candidateCount";
+        }
+        $action = $validatedActions;
+    }
+
+    if ($action) {
+        $actionText = [];
         $actionTextDescription = [];
         foreach ($action as $singleAction) {
             error_log("[BGL RUN] $npcNameEsc — Idle production/consumption detected: $singleAction. Reasoning: $reasoning");
@@ -994,6 +1033,9 @@ $lastBackgroundAction = $db->fetchOne(
      ORDER BY gamets DESC, localts DESC
      LIMIT 1"
 );
+$lastBackgroundAction = is_array($lastBackgroundAction)
+    ? array_merge(['action' => '', 'fullcall' => '', 'gamets' => 0], $lastBackgroundAction)
+    : ['action' => '', 'fullcall' => '', 'gamets' => 0];
 
 $isSpeakAction = !empty($lastBackgroundAction)
     && (
@@ -1009,10 +1051,13 @@ $lang = (($npcMetadata['CORE_LANG'] ?? '') === 'es' || ($profileMetadata['CORE_L
 
 
 // Hinter
-error_log(date("YMd H:i:s") . " [BGL RUN] HINT $npcNameEsc — last action: {$lastBackgroundAction['action']}, last event: <{$lastIssuedBgEvent['name']}> <{$lastIssuedBgEvent['event']}>, npcIsTravelling: " . ($npcIsTravelling ? 'true' : 'false'));
+$lastBackgroundActionName = (string) ($lastBackgroundAction['action'] ?? '');
+$lastIssuedBgEventName = strtolower((string) ($lastIssuedBgEvent['name'] ?? ''));
+$lastIssuedBgEventState = strtolower((string) ($lastIssuedBgEvent['event'] ?? ''));
+error_log(date("YMd H:i:s") . " [BGL RUN] HINT $npcNameEsc — last action: $lastBackgroundActionName, last event: <$lastIssuedBgEventName> <$lastIssuedBgEventState>, npcIsTravelling: " . ($npcIsTravelling ? 'true' : 'false'));
 if (
-    strtolower($lastIssuedBgEvent["name"]) == "sandbox" && $lastIssuedBgEvent["event"] == "start" && $npcIsTravelling
-    || strtolower($lastIssuedBgEvent["name"]) == "travelto" && $lastIssuedBgEvent["event"] == "end" && $npcIsTravelling
+    ($lastIssuedBgEventName === 'sandbox' && $lastIssuedBgEventState === 'start' && $npcIsTravelling)
+    || ($lastIssuedBgEventName === 'travelto' && $lastIssuedBgEventState === 'end' && $npcIsTravelling)
 ) {
     // Last action was MoveTo or TravelTo.
     // Last event was a Sandbox event. This means the NPC reached destination
@@ -1135,7 +1180,7 @@ $systemPrompts = [
     'en' => [['role' => 'system', 'content' => 'You are a writing assistant. Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls).']],
 ];
 
-$noteAboutPlayer = $extdata['background_life_player_unattached']
+$noteAboutPlayer = $playerUnattached
     ? ""
     : "Important note: {$GLOBALS['PLAYER_NAME']} and {$GLOBALS['HERIKA_NAME']} are NOT in the same place after the <context_history> events.";
 
@@ -1218,6 +1263,25 @@ $lettersEnabled = isset($extdata['background_life_letters']) && $extdata['backgr
 
 $innerThoughtStyle = loadBGLStylePrompt('background_life_innerthought');
 
+$repeatWindowStart = $last_gamets - (24 / GAMETS_TO_HOURS);
+$recentBackgroundActions = $db->fetchAll(
+    "SELECT action, fullcall FROM actions_issued"
+    . " WHERE actorname='$npcNameEscDb' AND original='backgroundaction'"
+    . " AND gamets >= $repeatWindowStart ORDER BY gamets DESC, localts DESC LIMIT 20"
+);
+$recentBackgroundActions = is_array($recentBackgroundActions) ? $recentBackgroundActions : [];
+$recentActionSignatureCounts = [];
+foreach ($recentBackgroundActions as $recentActionRow) {
+    $recentSignature = normalizeBackgroundActionSignature($recentActionRow['fullcall'] ?? ($recentActionRow['action'] ?? ''));
+    if ($recentSignature !== '') {
+        $recentActionSignatureCounts[$recentSignature] = ($recentActionSignatureCounts[$recentSignature] ?? 0) + 1;
+    }
+}
+$blockedActionSignatures = array_keys(array_filter(
+    $recentActionSignatureCounts,
+    static fn ($count): bool => $count >= 2
+));
+
 $step2Content = "You are responsible for deciding a single action"
     . " based on the character's inner thoughts and the provided context.\n"
     . "Character's name is {$GLOBALS['HERIKA_NAME']}.\n"
@@ -1225,6 +1289,12 @@ $step2Content = "You are responsible for deciding a single action"
 
 if ($isFullMode) {
     $step2Content .= "<context_history>\nContext History (chronological order)\n$history\n</context_history>{$lastMinuteNotes}\n\n";
+}
+
+if (!empty($blockedActionSignatures)) {
+    $step2Content .= "Repetition guard: Do not choose these recently repeated actions: "
+        . implode(', ', $blockedActionSignatures)
+        . ". Choose a different useful action or Continue.\n\n";
 }
 
 $step2Content .= "<text>\n$innerThoughtBuffer\n</text>\n\n";
@@ -1277,7 +1347,7 @@ PROMPT;
 }
 
 
-if (!isset($extdata['background_life_player_unattached']) || $extdata['background_life_player_unattached'] == false) {
+if (!$playerUnattached) {
     $returnHomeAction = "ReturnHome
 - Return to the base location to meet {$GLOBALS['PLAYER_NAME']}.
 - Use only after all current goals have been completed.";
@@ -1341,8 +1411,8 @@ PROMPT3;
 // Hinter
 
 if (
-    (strtolower($lastIssuedBgEvent["name"]) == "sandbox" && $lastIssuedBgEvent["event"] == "start" && $npcIsTravelling)
-    || (strtolower($lastIssuedBgEvent["name"]) == "travelto" && $lastIssuedBgEvent["event"] == "end" && $npcIsTravelling)
+    ($lastIssuedBgEventName === 'sandbox' && $lastIssuedBgEventState === 'start' && $npcIsTravelling)
+    || ($lastIssuedBgEventName === 'travelto' && $lastIssuedBgEventState === 'end' && $npcIsTravelling)
 ) {
 
     // Last action was MoveTo or TravelTo.
@@ -1442,6 +1512,13 @@ $parsed = [
     'rumor' => '',
     'reason' => manual_get_tag_content($decisionBuffer, 'reason')
 ];
+
+if (backgroundActionRepeatLimitReached($parsed['action'], $recentBackgroundActions)) {
+    $blockedAction = trim((string) $parsed['action']);
+    error_log("[BGL RUN] Repetition guard blocked action for $npcNameEsc: $blockedAction");
+    $parsed['action'] = 'Continue';
+    $parsed['reason'] = "Skipped repeated action: $blockedAction";
+}
 
 print_r($parsed);
 
@@ -1580,7 +1657,7 @@ if ($innerThoughtBuffer && $recordInnerThoughts) {
     ]);
     $cnName = $db->escape($GLOBALS['HERIKA_NAME']);
     $checkLatestDiaryEntry = $db->fetchOne("SELECT * FROM diarylog WHERE topic='Journal Note' AND people='$cnName' ORDER BY gamets DESC, ts DESC LIMIT 1");
-    $latestDiaryGamets = (float) $checkLatestDiaryEntry['gamets'];
+    $latestDiaryGamets = (float) ($checkLatestDiaryEntry['gamets'] ?? 0);
     if ($last_gamets - $latestDiaryGamets < (1 / GAMETS_TO_HOURS) * 4) {
         // If the last diary entry was less than 4 hours ago, we skip adding a new diary entry to avoid cluttering the diary with too many entries in a short time.
         $recordDiaryEntry = false;
@@ -1607,7 +1684,7 @@ if ($innerThoughtBuffer && $recordInnerThoughts) {
 
 $currentNpcData = $npcMaster->getByName($npcName);
 $extdata = $npcMaster->getExtendedData($currentNpcData);
-if (!$extdata['background_life_enabled']) {
+if (empty($extdata['background_life_enabled'])) {
     $extdata['background_life_enabled'] = true;
     $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
     $npcMaster->updateByArray($currentNpcData);

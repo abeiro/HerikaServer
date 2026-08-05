@@ -2,6 +2,65 @@
 
 
 /**
+ * Reduce a Background Life action to the command and target fields that define
+ * the behavior, excluding generated reasoning and other volatile text.
+ */
+function normalizeBackgroundActionSignature($action): string
+{
+    $action = trim((string) $action);
+    if ($action === '') {
+        return '';
+    }
+
+    $parts = array_map('trim', explode(':', $action));
+    $command = strtolower((string) ($parts[0] ?? ''));
+    if (!in_array($command, ['stayatplace', 'travelto', 'moveto', 'findnpc', 'speakto'], true)) {
+        return '';
+    }
+
+    if ($command === 'stayatplace') {
+        return $command . ':' . strtolower((string) ($parts[2] ?? ''));
+    }
+
+    return $command . ':' . strtolower((string) ($parts[1] ?? ''));
+}
+
+
+/**
+ * Block a third identical decision within the current in-game day.
+ */
+function backgroundActionRepeatLimitReached($action, array $recentActionRows, int $allowedMatches = 2): bool
+{
+    $candidate = normalizeBackgroundActionSignature($action);
+    if ($candidate === '') {
+        return false;
+    }
+
+    $matches = 0;
+    foreach ($recentActionRows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+
+        $recordedAction = trim((string) ($row['fullcall'] ?? ''));
+        if ($recordedAction === '') {
+            $recordedAction = trim((string) ($row['action'] ?? ''));
+        }
+        if (normalizeBackgroundActionSignature($recordedAction) !== $candidate) {
+            continue;
+        }
+
+        $matches++;
+        if ($matches >= $allowedMatches) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+/**
  * Force-trigger an NPC background life update on the next mid-term BGL check.
  *
  * Resets the NPC's `background_life_last_updated` timestamp to 0 so that the
