@@ -1056,7 +1056,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
         'data' => "The Narrator: $npcName approaches $resolvedName to speak.$stockString",
         'sess' => $momentum,
         'localts' => time(),
-        'people' => $npcName,
+        'people' => "|$npcName|$resolvedName|",
         'location' => $lastEventLocation,
         'party' => '',
     ]);
@@ -1105,8 +1105,22 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             ? "<character_sheet>\n{$resolvedName}:\n{$targetNpcDataBasicProfile}\n</character_sheet>\n\n"
             : '';
 
+        foreach (DataLastDataExpandedFor($targetNpcData['npc_name'],-10) as $row) {
+            $historicTarget[] = $row["content"];
+
+        }
+        if (empty($historicTarget)) {
+            $contextTargetHistory="";
+        } else 
+            $contextTargetHistory = implode("\n", $historicTarget);
+        
+
+        $targetHistoryBlock = !empty($historicTarget)
+            ? "<context_history_target>\n{$targetNpcData['npc_name']}'s point of view history:\n{$contextTargetHistory}\n</context_history_target>\n\n"
+            : '';
+
         $historyBlock = !empty($contextHistory)
-            ? "<context_history>\n{$contextHistory}\n$stockString\n</context_history>\n\n"
+            ? "<context_history>\n{$targetNpcData['npc_name']}'s point of view history:\n{$contextHistory}\n$stockString\n</context_history>\n\n"
             : '';
 
         $dialoguePrompt = [
@@ -1119,7 +1133,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             ],
             [
                 'role' => 'user',
-                'content' => "{$contextBlock}"
+                'content' => "{$contextBlock}\n".($targetHistoryBlock ? $targetHistoryBlock : '')
                     . "{$historyBlock}"
                     . "(at this point {$GLOBALS["HERIKA_NAME"]} thinks to himsel/herself:{$GLOBALS['LAST_REASON']})\n"
                     . "Write a brief, immersive dialogue between $npcName and $resolvedName.\n"
