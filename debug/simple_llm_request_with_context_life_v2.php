@@ -45,6 +45,7 @@ chimRuntimeBootstrap($enginePath, [
 require_once $enginePath . 'lib/model_dynmodel.php';
 require_once $enginePath . 'lib/chat_helper_functions.php';
 require_once $enginePath . 'lib/data_functions.php';
+require_once $enginePath . 'lib/background_life_action_guard.php';
 require_once $enginePath . 'lib/logger.php';
 require_once $enginePath . 'lib/utils_game_timestamp.php';
 require_once $enginePath . 'lib/rolemaster_helpers.php';
@@ -901,29 +902,15 @@ Rules:
     if ($action) {
         $validatedActions = [];
         foreach ($action as $candidateAction) {
-            if (!is_scalar($candidateAction)) {
-                error_log("[BGL RUN] $npcNameEsc — Ignoring non-scalar idle production/consumption action.");
-                continue;
-            }
-            $candidateAction = trim((string) $candidateAction);
-            if ($candidateAction === '' || strcasecmp($candidateAction, 'DoNothing') === 0) {
-                continue;
-            }
-
-            $candidateParts = array_map('trim', explode(':', $candidateAction, 3));
-            $candidateType = $candidateParts[0] ?? '';
-            $candidateItem = strtr(strtolower((string) ($candidateParts[1] ?? '')), ['0x' => '']);
-            $candidateCount = (string) ($candidateParts[2] ?? '');
-            if (count($candidateParts) !== 3
-                || !in_array($candidateType, ['Consume', 'Produced'], true)
-                || !preg_match('/^[0-9a-f]{1,8}$/', $candidateItem)
-                || !ctype_digit($candidateCount)
-                || (int) $candidateCount < 1) {
-                error_log("[BGL RUN] $npcNameEsc — Ignoring malformed idle production/consumption action: $candidateAction");
+            $normalizedAction = normalizeBackgroundIdleInventoryAction($candidateAction);
+            if ($normalizedAction === null) {
+                if (is_scalar($candidateAction) && strcasecmp(trim((string) $candidateAction), 'DoNothing') !== 0) {
+                    error_log("[BGL RUN] $npcNameEsc — Ignoring malformed idle production/consumption action: $candidateAction");
+                }
                 continue;
             }
 
-            $validatedActions[] = "$candidateType:$candidateItem:$candidateCount";
+            $validatedActions[] = $normalizedAction;
         }
         $action = $validatedActions;
     }
