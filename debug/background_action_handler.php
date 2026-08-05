@@ -1483,7 +1483,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
     } else {
         $db->insert('eventlog', [
             'ts' => $last_ts,
-            'gamets' => $last_gamets + 10,
+            'gamets' => $last_gamets + 11,
             'type' => 'innerchat',
             'data' => "The Narrator: $npcName completed the transaction $tradeType with $targetNpcName",
             'sess' => $momentum,
