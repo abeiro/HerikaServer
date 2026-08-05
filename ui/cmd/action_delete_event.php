@@ -25,28 +25,26 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     exit;
 }
 
-$deleteCount = intval($_POST['count'] ?? 0);
-if (!in_array($deleteCount, [5, 10, 20, 50, 100], true)) {
+$rowId = intval($_POST['rowid'] ?? 0);
+if ($rowId <= 0) {
     http_response_code(400);
     echo json_encode([
         'ok' => false,
-        'message' => 'Unsupported delete count.',
+        'message' => 'Invalid event row.',
     ]);
     exit;
 }
 
 try {
-    $db = $GLOBALS["db"];
-    $result = chimDeleteLatestVisibleEventLogRows($db, $deleteCount);
+    $result = chimDeleteEventLogRow($GLOBALS['db'], $rowId);
     if (empty($result['ok'])) {
-        http_response_code(400);
+        http_response_code(500);
     }
-
     echo json_encode($result);
 } catch (Throwable $e) {
     http_response_code(500);
     echo json_encode([
         'ok' => false,
-        'message' => 'Failed to delete latest events.',
+        'message' => 'Failed to delete event.',
     ]);
 }

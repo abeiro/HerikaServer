@@ -410,7 +410,7 @@ if (isset($_GET["cleanlog"]) && $_GET["cleanlog"]) {
 // Handle delete_last for event log
 if (isset($_GET['delete_last'])) {
     $delCount = (int)$_GET['delete_last'];
-    if (in_array($delCount, [20, 50, 100])) {
+    if (in_array($delCount, [5, 10, 20, 50, 100], true)) {
         $deleteResult = chimDeleteLatestVisibleEventLogRows($db, $delCount, '', $eventLogHiddenTypes);
         $deletedCount = intval($deleteResult['deleted_count'] ?? 0);
         $redirectParams = $eventLogCurrentPageParams;
@@ -606,7 +606,8 @@ function getTimeColor($time) {
             echo "<button id='deleteSelectedBtn' onclick='deleteSelectedEvents()' class='btn-base btn-danger' style='padding: 6px 10px; font-size: 0.8em; display: none;'>🗑️ Delete Selected (<span id='selectedCount'>0</span>)</button>";
             echo "<div style='display: inline-flex; gap: 5px; align-items: center; flex-wrap: nowrap; white-space: nowrap;'>";
             echo "<select id='delete-action-select' style='padding: 5px 8px; border-radius: 4px; border: 1px solid #666; background: #2a2a2a; color: #f8f9fa; min-width: 170px; font-size: 0.8em;'>";
-            echo "<option value=''>Delete...</option>";
+            echo "<option value='5' selected>Delete Latest 5</option>";
+            echo "<option value='10'>Delete Latest 10</option>";
             echo "<option value='20'>Delete Latest 20</option>";
             echo "<option value='50'>Delete Latest 50</option>";
             echo "<option value='100'>Delete Latest 100</option>";
@@ -2090,7 +2091,7 @@ function handleDeletePresetAction() {
     }
 
     const deleteCount = parseInt(action, 10);
-    if (![20, 50, 100].includes(deleteCount)) {
+    if (![5, 10, 20, 50, 100].includes(deleteCount)) {
         if (select) {
             select.value = '';
         }
