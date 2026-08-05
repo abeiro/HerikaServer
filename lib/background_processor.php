@@ -129,3 +129,45 @@ function herikaEnsureBackgroundProcessorRunning(bool $logFailures = true): bool
 
     return false;
 }
+
+/**
+ * Periodically verify the processor while game requests are active.
+ *
+ * A shared lock file keeps concurrent PHP requests from probing or starting the
+ * daemon together. The timestamp is written before the probe so a failed start
+ * is retried on the next interval instead of causing a request storm.
+ */
+function herikaMaintainBackgroundProcessorRunning(int $intervalSeconds = 30): bool
+{
+    $intervalSeconds = max(5, min(300, $intervalSeconds));
+    $lockPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'herika_background_processor_maintenance.lock';
+    $lockHandle = @fopen($lockPath, 'c+');
+
+    if (!is_resource($lockHandle)) {
+        return herikaEnsureBackgroundProcessorRunning(true);
+    }
+
+    if (!@flock($lockHandle, LOCK_EX | LOCK_NB)) {
+        @fclose($lockHandle);
+        return true;
+    }
+
+    try {
+        @rewind($lockHandle);
+        $lastCheck = (int) trim((string) @stream_get_contents($lockHandle));
+        $now = time();
+        if ($lastCheck > 0 && ($now - $lastCheck) < $intervalSeconds) {
+            return true;
+        }
+
+        @ftruncate($lockHandle, 0);
+        @rewind($lockHandle);
+        @fwrite($lockHandle, (string) $now);
+        @fflush($lockHandle);
+
+        return herikaEnsureBackgroundProcessorRunning(true);
+    } finally {
+        @flock($lockHandle, LOCK_UN);
+        @fclose($lockHandle);
+    }
+}
