@@ -366,6 +366,9 @@ if (!function_exists('race_icon_web_path')) {
         } elseif ($_POST['action'] === 'toggle_bg_life_setting') {
             handleToggleBgLifeSetting();
             exit;
+        } elseif ($_POST['action'] === 'toggle_all_bg_life_settings') {
+            handleToggleAllBgLifeSettings();
+            exit;
         } elseif ($_POST['action'] === 'create_rumor') {
             [$rumorFlash, $rumorFormData] = handleCreateRumor();
         } elseif ($_POST['action'] === 'update_rumor') {
@@ -549,6 +552,69 @@ if (!function_exists('race_icon_web_path')) {
         }
     }
 
+    // Apply one Background Life rule to every currently enrolled NPC.
+    function handleToggleAllBgLifeSettings() {
+        global $adminConn;
+
+        $setting = trim((string) ($_POST['setting'] ?? ''));
+        $value = filter_var($_POST['value'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $settings = [
+            'bg_life_commands' => [
+                'column' => 'extended_data',
+                'key' => 'background_life_commands',
+                'label' => 'Automatic Actions',
+            ],
+            'bg_life_letters' => [
+                'column' => 'extended_data',
+                'key' => 'background_life_letters',
+                'label' => 'Letters',
+            ],
+            'gps_track' => [
+                'column' => 'metadata',
+                'key' => 'gps_track',
+                'label' => 'Tracking',
+            ],
+        ];
+
+        if (!isset($settings[$setting])) {
+            echo json_encode(['ok' => false, 'message' => 'Invalid setting']);
+            return;
+        }
+
+        $config = $settings[$setting];
+        $column = $config['column'];
+        $query = "
+            UPDATE core_npc_master
+            SET {$column} = jsonb_set(
+                COALESCE({$column}, '{}'::jsonb),
+                ARRAY[$1]::text[],
+                to_jsonb($2::boolean),
+                true
+            )
+            WHERE LOWER(COALESCE(extended_data->>'background_life_enabled', 'false'))
+                IN ('true', '1', 't', 'on')
+        ";
+        $result = pg_query_params($adminConn, $query, [$config['key'], $value ? 'true' : 'false']);
+
+        if (!$result) {
+            echo json_encode(['ok' => false, 'message' => 'Update failed']);
+            return;
+        }
+
+        $updatedCount = pg_affected_rows($result);
+        echo json_encode([
+            'ok' => true,
+            'message' => sprintf(
+                '%s %s for %d Background Life NPC%s',
+                $config['label'],
+                $value ? 'enabled' : 'disabled',
+                $updatedCount,
+                $updatedCount === 1 ? '' : 's'
+            ),
+            'updated_count' => $updatedCount,
+        ]);
+    }
+
     function handleSaveBglSettings() {
         $cooldownHours = isset($_POST['bgl_trigger_hours']) ? floatval($_POST['bgl_trigger_hours']) : 24;
         $cooldownHours = chimNormalizeBackgroundLifeTriggerHours($cooldownHours);
@@ -603,8 +669,39 @@ $mapImageUrl = '../data/maps/Map_of_Skyrim.png?v=7';
     $result  =pg_query($adminConn,"select max(gamets) as last_gamets from eventlog");
     $res = pg_fetch_assoc($result);
     $last_gamets = $res["last_gamets"];
-    $currentDate=convert_gamets2skyrim_date($last_gamets);
+$currentDate=convert_gamets2skyrim_date($last_gamets);
 $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
+
+$bglBulkState = [
+    'total' => 0,
+    'bg_life_commands' => 0,
+    'bg_life_letters' => 0,
+    'gps_track' => 0,
+];
+$bglBulkResult = pg_query($adminConn, "
+    SELECT
+        COUNT(*) AS total,
+        COUNT(*) FILTER (
+            WHERE LOWER(COALESCE(extended_data->>'background_life_commands', 'false'))
+                IN ('true', '1', 't', 'on')
+        ) AS bg_life_commands,
+        COUNT(*) FILTER (
+            WHERE LOWER(COALESCE(extended_data->>'background_life_letters', 'false'))
+                IN ('true', '1', 't', 'on')
+        ) AS bg_life_letters,
+        COUNT(*) FILTER (
+            WHERE LOWER(COALESCE(metadata->>'gps_track', 'false'))
+                IN ('true', '1', 't', 'on')
+        ) AS gps_track
+    FROM core_npc_master
+    WHERE LOWER(COALESCE(extended_data->>'background_life_enabled', 'false'))
+        IN ('true', '1', 't', 'on')
+");
+if ($bglBulkResult && ($bglBulkRow = pg_fetch_assoc($bglBulkResult))) {
+    foreach ($bglBulkState as $key => $unused) {
+        $bglBulkState[$key] = (int) ($bglBulkRow[$key] ?? 0);
+    }
+}
 
     // Filter mode: show all NPCs with tracked coords, or only BG-Life enabled ones
     $showAllCoords = isset($_GET['show_all_coords']) && $_GET['show_all_coords'] === '1';
@@ -677,6 +774,7 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
             $extData   = json_decode($row['extended_data'], true);
             
             // Parse background life settings
+            $backgroundLifeEnabled = isset($extData['background_life_enabled']) ? (bool)$extData['background_life_enabled'] : false;
             $bgLifeCommands = isset($extData['background_life_commands']) ? (bool)$extData['background_life_commands'] : false;
             $bgLifeLetters = isset($extData['background_life_letters']) ? (bool)$extData['background_life_letters'] : false;
             $gpsTrack = isset($meta['gps_track']) ? (bool)$meta['gps_track'] : false;
@@ -748,6 +846,7 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
                 'last_pos_ts' => $coordsData["last_updated"]?convert_gamets2skyrim_date($coordsData["last_updated"]).",hours ago:".round(($last_gamets-$coordsData["last_updated"]) *0.0000024,0):null,
                 'last_report' => convert_gamets2skyrim_date($row["last_report"]).",hours ago:".round(($last_gamets-$row["last_report"]) *0.0000024,0),
                 'coords_history' => $coordsHistory,
+                'background_life_enabled' => $backgroundLifeEnabled,
                 'bg_life_commands' => $bgLifeCommands,
                 'bg_life_letters' => $bgLifeLetters,
                 'gps_track' => $gpsTrack,
@@ -1973,6 +2072,47 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         background: rgb(255, 145, 38);
     }
 
+    .bgl-bulk-settings {
+        display: grid;
+        gap: 8px;
+        padding-top: 10px;
+        border-top: 1px solid #4a4a4a;
+    }
+
+    .bgl-bulk-settings-title {
+        color: #ddd;
+        font-size: 13px;
+        font-weight: bold;
+    }
+
+    .bgl-bulk-settings-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .bgl-bulk-toggle {
+        min-height: 36px;
+        padding: 7px 9px;
+        border: 1px solid #555;
+        border-radius: 6px;
+        background: #353535;
+        color: #fff;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .bgl-bulk-toggle:hover:not(:disabled) {
+        border-color: rgb(242, 124, 17);
+        background: #404040;
+    }
+
+    .bgl-bulk-toggle:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+    }
+
     .bgl-settings-message {
         padding: 8px 10px;
         border-radius: 6px;
@@ -2405,6 +2545,35 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     </div>
                     <div class="bgl-settings-help">Controls how many in-game hours pass before eligible Background Life NPCs automatically run their next update.</div>
                     <button type="submit" class="bgl-settings-save">Save</button>
+                    <div class="bgl-bulk-settings">
+                        <div class="bgl-bulk-settings-title">All Background Life NPCs</div>
+                        <div class="bgl-bulk-settings-grid">
+                            <?php
+                            $bglBulkControls = [
+                                'bg_life_commands' => 'Automatic Actions',
+                                'bg_life_letters' => 'Letters',
+                                'gps_track' => 'Tracking',
+                            ];
+                            foreach ($bglBulkControls as $setting => $label):
+                                $enabledCount = $bglBulkState[$setting];
+                                $totalCount = $bglBulkState['total'];
+                                $allEnabled = $totalCount > 0 && $enabledCount === $totalCount;
+                                $buttonText = ($allEnabled ? 'Disable All ' : 'Enable All ') . $label;
+                            ?>
+                                <button
+                                    type="button"
+                                    class="bgl-bulk-toggle"
+                                    data-setting="<?php echo htmlspecialchars($setting, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-label="<?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-enabled-count="<?php echo $enabledCount; ?>"
+                                    data-total="<?php echo $totalCount; ?>"
+                                    title="<?php echo $enabledCount; ?> of <?php echo $totalCount; ?> enabled"
+                                    onclick="toggleAllBgLifeSettings(this)"
+                                    <?php echo $totalCount === 0 ? 'disabled' : ''; ?>><?php echo htmlspecialchars($buttonText); ?></button>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="bgl-settings-help">Enable or disable each rule for every NPC currently enrolled in Background Life.</div>
+                    </div>
                 </form>
                 <div class="bgl-settings-card">
                     <h3>📍 NPC Markers</h3>
@@ -2433,6 +2602,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 id="dtl_<?php echo $marker['id'] ?>"
                                 class="marker-item"
                                 data-npc-name="<?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                data-bgl-enrolled="<?php echo $marker['background_life_enabled'] ? '1' : '0'; ?>"
                                 title="View recent events for <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>"
                                 style="border-left-color:<?php echo $marker['color']; ?>;">
                                 <div class="marker-card-identity">
@@ -2631,11 +2801,65 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             });
         }
 
+        function updateBulkToggleState(setting, delta) {
+            const button = document.querySelector('.bgl-bulk-toggle[data-setting="' + setting + '"]');
+            if (!button) {
+                return;
+            }
+
+            const total = Number(button.getAttribute('data-total')) || 0;
+            const currentCount = Number(button.getAttribute('data-enabled-count')) || 0;
+            const enabledCount = Math.max(0, Math.min(total, currentCount + delta));
+            const allEnabled = total > 0 && enabledCount === total;
+            const label = button.getAttribute('data-label') || 'Setting';
+
+            button.setAttribute('data-enabled-count', String(enabledCount));
+            button.setAttribute('title', enabledCount + ' of ' + total + ' enabled');
+            button.textContent = (allEnabled ? 'Disable All ' : 'Enable All ') + label;
+        }
+
+        function toggleAllBgLifeSettings(button) {
+            const setting = button.getAttribute('data-setting');
+            const label = button.getAttribute('data-label') || 'setting';
+            const total = Number(button.getAttribute('data-total')) || 0;
+            const enabledCount = Number(button.getAttribute('data-enabled-count')) || 0;
+            const value = !(total > 0 && enabledCount === total);
+            const actionLabel = value ? 'enable' : 'disable';
+
+            if (total === 0 || !window.confirm('Are you sure you want to ' + actionLabel + ' ' + label.toLowerCase() + ' for all Background Life NPCs?')) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'toggle_all_bg_life_settings');
+            formData.append('setting', setting);
+            formData.append('value', value ? '1' : '0');
+
+            button.disabled = true;
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.ok) {
+                    throw new Error(data.message || 'Update failed');
+                }
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+                button.disabled = false;
+            });
+        }
+
         function toggleBgLifeSetting(button) {
             const npcId = button.getAttribute('data-npc-id');
             const setting = button.getAttribute('data-setting');
             const label = button.getAttribute('data-label');
-            const value = button.getAttribute('data-enabled') !== '1';
+            const wasEnabled = button.getAttribute('data-enabled') === '1';
+            const value = !wasEnabled;
             
             const formData = new FormData();
             formData.append('action', 'toggle_bg_life_setting');
@@ -2658,6 +2882,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     const stateText = value ? 'enabled' : 'disabled';
                     button.setAttribute('aria-label', label + ': ' + stateText);
                     button.setAttribute('title', label + ': ' + stateText);
+                    const markerCard = button.closest('.marker-item');
+                    if (markerCard && markerCard.getAttribute('data-bgl-enrolled') === '1') {
+                        updateBulkToggleState(setting, value ? 1 : -1);
+                    }
                 } else {
                     alert('Error: ' + (data.message || 'Unknown error'));
                 }
