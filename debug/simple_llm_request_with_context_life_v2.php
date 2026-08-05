@@ -258,6 +258,7 @@ if (checkLastCallsFor($GLOBALS['HERIKA_NAME'])) {
 }
 
 // ─── Guard: Require at Least One Prior Interaction ───────────────────────────
+// if background_life_player_unattached is true, we can skip this guard 
 
 $lastInteractionRow = $db->fetchOne(
     "SELECT max(gamets) AS gamets FROM speech
@@ -870,6 +871,7 @@ Rules:
     $connectionHandler = $connector->getConnector($currentConnectorData);
     $preResponse = $connectionHandler->fast_request($preStep1Prompt, ['MAX_TOKENS' => 1024], 'backgroundlife');
     
+    // Keep timestamp of last LLM call for this NPC to avoid too frequent calls
     updateLastLLMCall($GLOBALS['HERIKA_NAME']);
     
     $parsedResponse = __jpd_decode_lazy($preResponse);
@@ -1286,6 +1288,7 @@ if (!isset($extdata['background_life_player_unattached']) || $extdata['backgroun
 
 if (!$bypassTradingActions) {
     $step2Content .= <<<PROMPT
+
 BuyItem:<NPC name>:<itemid>:<count>:<total_gold_spent>,<NPC name>:<itemid>:<count>:<total_gold_spent>
 - Buy items from another NPC.
 - Required after a previously agreed trade so inventories can be updated.
@@ -1386,8 +1389,8 @@ if (!$isSpeakAction) {
 
 if (!$bypassTradingActions) {
     $step2Content .= "Examples ```\n\n"
-        . "<action>BuyItem:Adrianne Avenicci:000721E8:1:5,Adrianne Avenicci:000721E6:2:16</action>\n"
-        . "<reason>I agreed to buy two items from Adrianne Avenicci</reason>\n"
+        . "<action>BuyItem:Adrianne Avenicci:000721E8:1:5,Adrianne Avenicci:00065C97:2:16</action>\n"
+        . "<reason>I agreed to buy two items from Adrianne Avenicci, 1 Cooked Beef (5 gold), 2 Bread (16 gold)</reason>\n"
         . "```";
 
     $step2Content .= "Examples ```\n\n"
@@ -1405,7 +1408,7 @@ For example:
 * To Sell/Buy Item to a trader that maybe is not present: MoveTo:<NPC/Actor name> ->(next iteration) SpeakTo:<NPC/Actor name> ->(next iteration) SellItem:.. 
 * To gift items without taking money: SpeakTo:<NPC/Actor name> ->(next iteration) GiveItemTo:<NPC/Actor name>:<itemid>:<count>
 * To give money without trading items: SpeakTo:<NPC/Actor name> ->(next iteration) GiveGoldTo:<NPC/Actor name>:<amount>
-* Buy food at an inn: SpeakTo:<NPC innkeeper> ->(next iteration),BuyItem:<NPC/Actor name> ->(next iteration) StayAtPlace:Inn 
+* Buy food at an inn: SpeakTo:<NPC innkeeper> ... ->(next iteration),BuyItem:<NPC/Actor name>... ->(next iteration) StayAtPlace:Inn ...
 * Relax/Socialize at an inn: SpeakTo:<NPC/Actor name> ->(next iteration) ->(next iteration) StayAtPlace:Inn 
 * Relax at home: SpeakTo:<NPC/Actor name> ->(next iteration) StayAtPlace:Home:Sleep
 * Generally speaking, try to Speak to an NPC before trading with him/her, unless the NPC is not present. If the NPC is not present, use MoveTo:<NPC name> to reach him/her first.
