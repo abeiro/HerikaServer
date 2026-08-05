@@ -1121,8 +1121,10 @@ foreach ($inventory as $item) {
 }
 if (!isset($goldFound)) {
     $lastMinuteNotes .= "\nNote: {$GLOBALS['HERIKA_NAME']} has no gold coins. Should work to get some coins. Check goals->production to know how to earn gold.\n";
+    $lastMinuteNotesSpeakContext .= "\nNote: {$GLOBALS['HERIKA_NAME']} has no gold coins, so cannot buy anything.\n";
     error_log("[BGL RUN] $npcNameEscDb — has no gold!");
-}
+} else 
+    $lastMinuteNotesSpeakContext="";
 
 // ─── Step 1: Inner-Thought Soliloquy ─────────────────────────────────────────
 if ($wasSocializeIntentAction && !$bypassInnerThoughts) {
@@ -1493,7 +1495,7 @@ if (!empty($parsed['action'])) {
             break;
         case 'SpeakTo':
             $historyWithInnerThought = $history
-                . "\n\n<inner_thought>\n{$innerThoughtBuffer}\n</inner_thought>\n";
+                . "\n$lastMinuteNotesSpeakContext\n<inner_thought>\n{$innerThoughtBuffer}\n</inner_thought>\n";
             handleSpeakToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db, $connectionHandler, $dynamicBiography, $historyWithInnerThought, $lastEventParsed['location']);
             unset($parsed['notification']);   // Prevent letter dispatch if SpeakTo action is chosen
             //unset($parsed['rumor']);   // Prevent rumor dispatch if SpeakTo action is chosen
