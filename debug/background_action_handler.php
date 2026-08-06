@@ -272,7 +272,7 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
     $intent = trim((string) $intent);
     $intentSuffix = $intent !== '' ? ":$intent" : '';
     $intentText = $intent !== '' ? " with intent '$intent'" : '';
-
+    $previousIntent = $db->fetchOne("SELECT category FROM bgl_history WHERE npc='$npcName' ORDER BY gamets DESC LIMIT 1");
     if (strcasecmp($requestedLocation, 'random') === 0) {
         error_log("[handleStayAtPlaceAction] random picked: " . print_r($locId, true));
     }
@@ -343,8 +343,11 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
     );
 
     if (strtolower($intent) === 'socialize') {
-        if (rand(0, 1)) {
-            triggerNpcUpdate($npcName);
+        // If last intent was not socialize, we will trigger an update to the NPC to make it more dynamic and social.
+        if (strtolower($previousIntent['category']) !== 'socialize') {
+            if (rand(0, 1)) {
+                triggerNpcUpdate($npcName);
+            }
         }
     }
     return true;
@@ -1453,13 +1456,17 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         // - GiveItemTo:Target:itemid:count:0
         $gold = isset($args[3]) ? (int) $args[3] : 0;
 
+        
         $isMalformed = ($targetNpcName === '' || $itemId === '' || $count <= 0);
+        $itemId = preg_replace('/^0x/i', '', strtolower($itemId));
         if ($tradeType !== 'GiveItemTo' && $gold <= 0) {
 
-            $dbGoldValueRow = $db->fetchOne("select price from market_cache where baseid='$itemId'");
+            $dbGoldValueRow = $db->fetchOne("select price from market_cache where UPPER(baseid)=UPPER('$itemId')");
             if ($dbGoldValueRow && isset($dbGoldValueRow['price'])) {
+                // Price correction: If the gold value is zero, we can attempt to correct it by fetching the price from the market_cache table.
                 $gold = (int) $dbGoldValueRow['price'] * $count;
                 error_log("[handleTradeItemsAction] [$tradeType] Corrected zero price for: $itemId to $gold (count: $count)");
+                $isMalformed = false;
             } else {
                 error_log("[handleTradeItemsAction] [$tradeType] Could not determine gold value for item: $itemId. Skipping transaction.");
                 $isMalformed = true;
@@ -1475,8 +1482,8 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
                     'ts' => $last_ts,
                     'gamets' => $last_gamets,
                     'localts' => time(),
-                    'data' => "$npcName tried trading, but the transaction was malformed. Reason: {$GLOBALS["LAST_REASON"]}",
-                    'category' => 'error',
+                    'data' => "$npcName tried trading, but the transaction was malformed. <$transactionRaw>, Reason: {$GLOBALS["LAST_REASON"]}",
+                    'category' => 'warning',
                 ]
             );
             continue;
@@ -1493,7 +1500,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
                     'gamets' => $last_gamets,
                     'localts' => time(),
                     'data' => "$npcName tried trading, but the target NPC '$targetNpcName' was not found. Reason: {$GLOBALS["LAST_REASON"]}",
-                    'category' => 'error',
+                    'category' => 'warning',
                 ]
             );
             continue;
@@ -1501,7 +1508,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
 
         $resolvedName = $targetNpc['name'];
         $targetRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($targetNpc['refid'])));
-        $itemId = preg_replace('/^0x/i', '', strtolower($itemId));
+        
 
         if ($tradeType === 'BuyItem') {
             // Buyer receives item and pays gold; seller loses item and receives gold.
@@ -1603,7 +1610,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
                 'ts' => $last_ts,
                 'gamets' => $last_gamets,
                 'localts' => time(),
-                'data' => "$npcName tried trading, but the target NPC '$targetNpcName' was not found. Reason: {$GLOBALS["LAST_REASON"]}",
+                'data' => "$npcName $npcName tried to $tradeType with $targetNpcName, but no valid transactions were processed. <$actionArgument>",
                 'category' => 'error',
             ]
         );
@@ -1621,6 +1628,17 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
             'location' => null,
             'party' => '',
         ]);
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets,
+                'localts' => time(),
+                'data' => "$npcName completed $processed transactions  out of " . sizeof($transactions) . ". Reason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'trade',
+            ]
+        );
     }
 
     // Schedule inventory updates for source and all unique targets after processing.

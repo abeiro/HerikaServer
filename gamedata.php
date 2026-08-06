@@ -925,7 +925,7 @@ function handleMarketStockUpdate(array $data): void
                         'baseid' => $item['itemid'],
                         'plugin' => $pluginName,
                         'name' => trim($item['name']),
-                        'enchantment' => isset($item['enchantment']) ? ($item['enchantment']) : null,
+                        'enchantment' => isset($item['enchantment']) ? ($item['enchantment']) : 0,
                         'price' => intval($item['gold'] + (isset($item['enchantment']) ? ($item['enchantment']) : 0)),
                     ],
                     ["baseid" => $item['itemid'], "plugin" => $pluginName]

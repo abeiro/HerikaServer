@@ -300,7 +300,7 @@ function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
     $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
     $npc['speechstyle'] = $npc_profile['speechStyle'];
     //$npc['goals'] = $npc_profile['goal'];
-    
+
     $npc['lock_profile'] = null;
 
     $extended_data = $npcMaster->getExtendedData($npc);
@@ -753,17 +753,17 @@ When actively repairing plumbing for a customer, generate 10 gold worth of servi
 }
 
 if ($argv[1] == '11') {
-    foreach (DataLastDataExpandedFor("Hulda",-10) as $row) {
+    foreach (DataLastDataExpandedFor("Hulda", -10) as $row) {
         $historic[] = $row["content"];
 
     }
-    print_r(implode("\n", $historic)    );
+    print_r(implode("\n", $historic));
 }
 
 if ($argv[1] == '12') {
-     $npcMaster = new NpcMaster();
+    $npcMaster = new NpcMaster();
     $npc = $npcMaster->getByName("Lydia");
-    
+
     // This does not work, because the TravelToRaw only accepts location formid.
     $db->insert(
         'responselog',
@@ -775,6 +775,20 @@ if ($argv[1] == '12') {
             'action' => 'command'
         )
     );
-    
+
+}
+
+if ($argv[1] == '13') {
+    $GLOBALS["db"]->upsertRowTrx(
+        "market_cache",
+        [
+            'baseid' => "2602481F",
+            'plugin' => "AIAgent.esp",
+            'name' => "Scroll of Identity",
+            'price' => 0
+        ],
+        ["baseid" => "2602481F", "plugin" => "AIAgent.esp"]
+    );
+
 }
 ?>

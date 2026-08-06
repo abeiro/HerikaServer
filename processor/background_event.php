@@ -148,8 +148,10 @@ if (is_array($bgevent)) {
 
                         if ($bgevent["name"] == "TravelTo" || $bgevent["name"] == "MoveTo") {
                             $message="{$npcData["npc_name"]} reaches destination";
+                            $category="travel";
                         } else {
                             $message="{$npcData["npc_name"]} {$bgevent["event"]} {$bgevent["name"]}";
+                            $category="other";
                         }
 
                         $GLOBALS["db"]->insert(
@@ -159,7 +161,8 @@ if (is_array($bgevent)) {
                                 'ts' => $gameRequest[1],
                                 'gamets' => $gameRequest[2],
                                 'localts' => time(),
-                                'data' => $message
+                                'data' => $message,
+                                'category' => $category,
                             ]
                         );
                     }
