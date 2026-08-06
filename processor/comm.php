@@ -298,42 +298,42 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 }
 
 if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about this)
-    $now = time();
-    $db->delete("eventlog", " 1=1");
-    $db->delete("quests", " 1=1");
-    $db->delete("speech", " 1=1 ");
-    $db->delete("currentmission", " 1=1 ");
-    $db->delete("diarylog", " 1=1 ");
-    $db->delete("books", " 1=1 ");
-
-    if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
-        $results = $db->query("select gamets_truncated,uid from memory_summary where gamets_truncated>{$gameRequest[2]}");
-        while ($memoryRow = $db->fetchArray($results)) {
-            deleteElement($memoryRow["uid"]);
+    try {
+        $db->execQuery("BEGIN");
+        $db->delete("eventlog", " 1=1");
+        $db->delete("quests", " 1=1");
+        $db->delete("speech", " 1=1 ");
+        $db->delete("currentmission", " 1=1 ");
+        $db->delete("diarylog", " 1=1 ");
+        $db->delete("books", " 1=1 ");
+        $db->delete("memory_summary", " 1=1 ");
+        $db->delete("memory", " 1=1 ");
+        if (function_exists('chimQuestEngineResetRuntime')) {
+            chimQuestEngineResetRuntime(true);
         }
-    }
-    $db->delete("memory_summary", " 1=1 ");
-    $db->delete("memory", " 1=1 ");
-    if (function_exists('chimQuestEngineResetRuntime')) {
-        chimQuestEngineResetRuntime(true);
-    }
 
-    //$db->delete("diarylogv2", "true");
-    //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
-    //die(print_r($gameRequest,true));
-    $db->update("responselog", "sent=0", "sent=1 and (action='AASPGDialogueHerika2Branch1Topic')");
-    $db->insert(
-        'eventlog',
-        array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'type' => $gameRequest[0],
-            'data' => $gameRequest[3],
-            'sess' => 'pending',
-            'localts' => time(),
-            'people' => resolvePeopleForIncomingEvent($gameRequest[0], $gameRequest[3] ?? "")
-        )
-    );
+        //$db->delete("diarylogv2", "true");
+        //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
+        //die(print_r($gameRequest,true));
+        $db->update("responselog", "sent=0", "sent=1 and (action='AASPGDialogueHerika2Branch1Topic')");
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'type' => $gameRequest[0],
+                'data' => $gameRequest[3],
+                'sess' => 'pending',
+                'localts' => time(),
+                'people' => resolvePeopleForIncomingEvent($gameRequest[0], $gameRequest[3] ?? "")
+            )
+        );
+        $db->execQuery("COMMIT");
+    } catch (Throwable $e) {
+        $db->execQuery("ROLLBACK");
+        Logger::error("New-game wipe failed: " . $e->getMessage());
+        throw $e;
+    }
 
     // Delete TTS(STT cache
     $directory = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache";
