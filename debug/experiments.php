@@ -626,6 +626,7 @@ Earn an honest living as one of Windhelm's most dependable fishermen while suppo
 [Production]
 When at the docks, shoreline or fishing areas, and intent is work, he generates fish (River Betty, item refid:0x00106e1a)
 at a rate of 8 each hour.
+Must sell fish to merchants,(e.g at Candlehearth Hall), innkeepers and citizens to earn gold, once he has fishes (River Betty, item refid:0x00106e1a) in his inventory.
 "
     ];
 
