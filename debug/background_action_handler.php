@@ -1596,17 +1596,17 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
             'location' => null,
             'party' => '',
         ]);
-         $db->insert(
-                'bgl_history',
-                [
-                    'npc' => $npcName,
-                    'ts' => $last_ts,
-                    'gamets' => $last_gamets,
-                    'localts' => time(),
-                    'data' => "$npcName tried trading, but the target NPC '$targetNpcName' was not found. Reason: {$GLOBALS["LAST_REASON"]}",
-                    'category' => 'error',
-                ]
-            );
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets,
+                'localts' => time(),
+                'data' => "$npcName tried trading, but the target NPC '$targetNpcName' was not found. Reason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'error',
+            ]
+        );
         triggerNpcUpdate($npcName);
         return false;
     } else {
