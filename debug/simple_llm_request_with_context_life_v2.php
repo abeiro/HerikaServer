@@ -545,7 +545,7 @@ if (isset($metadata['last_coords']) && !empty($metadata['last_coords'][3])) {
     // error_log("[BGL RUN]  Last reported location: " . json_encode($coords) . " => rich location: " . json_encode($richLocation));
     if ($richLocation && !empty($richLocation['name'])) {
         $LAST_REPORTED_LOCATION = $richLocation['name'];
-        if ($richLocation['is_interior']) {
+        if (checkInterior($richLocation['is_interior'])) {
             $LAST_REPORTED_LOCATION .= " (Interior)";
         }
     }
@@ -1120,7 +1120,7 @@ foreach ($inventory as $item) {
     }
 }
 if (!isset($goldFound)) {
-    $lastMinuteNotes .= "\nNote: {$GLOBALS['HERIKA_NAME']} has no gold coins. Should work to get some coins. Check goals->production to know how to earn gold.\n";
+    $lastMinuteNotes .= "\nNote: {$GLOBALS['HERIKA_NAME']} has no gold coins. Should work to get some coins. Check background_life_goals->production to know how to earn gold.\n";
     $lastMinuteNotesSpeakContext .= "\nNote: {$GLOBALS['HERIKA_NAME']} has no gold coins, so cannot buy anything.\n";
     error_log("[BGL RUN] $npcNameEscDb — has no gold!");
 } else 
