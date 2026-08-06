@@ -300,9 +300,17 @@ user request: actor \"a\" leaves the place
             $instructionText = trim($response["instruction"] ?? 'No instruction text');
             $action = !empty($response["action"]) ? "{$response["action"]} " . ($response["target"] ?? "") : "";
             if (!empty($GLOBALS["ROLEMASTER_BORED_MODE"])) {
+                $canonicalListener = chimRolemasterBoredCanonicalActor(
+                    (string)($response["target"] ?? ""),
+                    $GLOBALS["ROLEMASTER_BORED_ALLOWED_ACTORS"] ?? []
+                );
                 $instructionText .= chimRolemasterBoredListenerRequirement(
                     (string)($response["target"] ?? ""),
                     $GLOBALS["ROLEMASTER_BORED_ALLOWED_ACTORS"] ?? []
+                );
+                Logger::info(
+                    "Queued bored rolemaster instruction for '{$characterName}'"
+                    . ($canonicalListener === null ? " without a valid listener" : " with listener '{$canonicalListener}'")
                 );
             }
         
@@ -379,7 +387,11 @@ user request: actor \"a\" leaves the place
                 if (empty($response["instructions"])) {
                     Logger::warn("Discarded bored rolemaster response because it omitted the selected actor or used no eligible nearby actors");
                 } elseif (count($response["instructions"]) !== $originalInstructionCount) {
-                    Logger::warn("Removed invalid or off-scene actors from bored rolemaster response");
+                    $discardedCount = $originalInstructionCount - count($response["instructions"]);
+                    Logger::info(
+                        "Discarded {$discardedCount} secondary or invalid bored rolemaster instruction(s); "
+                        . "the listener will respond through normal dialogue routing"
+                    );
                 }
             }
             $allOk=!empty($response["instructions"]);

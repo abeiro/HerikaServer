@@ -31,9 +31,9 @@ final class RolemasterBoredRoutingTest extends TestCase
 
         $filtered = chimRolemasterFilterBoredInstructions($instructions, $actors, 'Camilla Valerius');
 
-        $this->assertCount(2, $filtered);
+        $this->assertCount(1, $filtered);
         $this->assertSame('Camilla Valerius', $filtered[0]['character']);
-        $this->assertSame('Lucan Valerius', $filtered[1]['character']);
+        $this->assertSame('Answer Lucan', $filtered[0]['instruction']);
         $this->assertSame(
             [],
             chimRolemasterFilterBoredInstructions(
@@ -72,7 +72,11 @@ final class RolemasterBoredRoutingTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            'The first instruction must use the selected initiating actor: Camilla Valerius.',
+            'Return exactly one instruction, using the selected initiating actor: Camilla Valerius.',
+            $rules
+        );
+        $this->assertStringContainsString(
+            "Do not generate the listener's reply.",
             $rules
         );
         $this->assertStringContainsString(
