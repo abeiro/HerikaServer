@@ -54,7 +54,8 @@ function markAsErrored($npcName)
     $npcManager->updateExtendedKeysByName($npcName, $extended);
 }
 
-function gameIsPaused() {
+function gameIsPaused()
+{
     // Check $GLOBALS["LAST_GAMETS_BGL"] against the last run on DB
     $localLastGameTs = $GLOBALS["db"]->fetchAll('SELECT max(gamets) AS last_gamets FROM eventlog');
     $lastGameTs = $localLastGameTs[0]['last_gamets'] ?? 0;
@@ -138,7 +139,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
     $requestedLocation = $db->escape($location);
     $resolvedLocation = $locId['name'] ?? $requestedLocation;
 
-    $resolvedLocationInterior= checkInterior($locId['is_interior'] ?? 0) ? ' (Interior)' : '';
+    $resolvedLocationInterior = checkInterior($locId['is_interior'] ?? 0) ? ' (Interior)' : '';
 
     if (strcasecmp($requestedLocation, 'random') === 0) {
         error_log("[handleTravelToAction] random picked: " . print_r($locId, true));
@@ -162,6 +163,17 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
             'location' => null,
             'party' => '',
         ]);
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets,
+                'localts' => time(),
+                'data' => ($location == $resolvedLocation) ? "$npcName failed to travel to $location. Reason: {$GLOBALS["LAST_REASON"]}" : "$npcName starts travelling to $location (resolved as $resolvedLocation $resolvedLocationInterior). Reason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'error',
+            ]
+        );
         triggerNpcUpdate($npcName);
         return false;
     }
@@ -256,7 +268,7 @@ function handleStayAtPlaceAction($location, $currentNpcData, $npcName, $last_ts,
     $locId = resolveTravelLocation($location, $currentNpcData, $db);
     $requestedLocation = $db->escape($location);
     $resolvedLocation = $locId['name'] ?? $requestedLocation;
-    $resolvedLocationInterior= checkInterior($locId['is_interior'] ?? 0) ? ' (Interior)' : '';
+    $resolvedLocationInterior = checkInterior($locId['is_interior'] ?? 0) ? ' (Interior)' : '';
     $intent = trim((string) $intent);
     $intentSuffix = $intent !== '' ? ":$intent" : '';
     $intentText = $intent !== '' ? " with intent '$intent'" : '';
@@ -647,6 +659,17 @@ function handleMoveToAction($targetNpcName, $currentNpcData, $npcName, $last_ts,
                 'location' => null,
                 'party' => '',
             ]);
+            $db->insert(
+                'bgl_history',
+                [
+                    'npc' => $npcName,
+                    'ts' => $last_ts,
+                    'gamets' => $last_gamets,
+                    'localts' => time(),
+                    'data' => " $npcName cannot move to $targetNpcName because it is a location, not an NPC. Use TravelTo instead.",
+                    'category' => 'error',
+                ]
+            );
             triggerNpcUpdate($npcName);
         } else {
             $db->insert('eventlog', [
@@ -660,6 +683,18 @@ function handleMoveToAction($targetNpcName, $currentNpcData, $npcName, $last_ts,
                 'location' => null,
                 'party' => '',
             ]);
+
+            $db->insert(
+                'bgl_history',
+                [
+                    'npc' => $npcName,
+                    'ts' => $last_ts,
+                    'gamets' => $last_gamets,
+                    'localts' => time(),
+                    'data' => "$npcName didn't find any $targetNpcName. $npcName desists from this action and continue with normal life",
+                    'category' => 'error',
+                ]
+            );
             triggerNpcUpdate($npcName);
         }
         return false;
@@ -746,6 +781,17 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             'location' => null,
             'party' => '',
         ]);
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets,
+                'localts' => time(),
+                'data' => "$npcName didn't find $targetNpcName. $npcName desists from this action and continue with normal life",
+                'category' => 'error',
+            ]
+        );
         triggerNpcUpdate($npcName);
         return false;
     }
@@ -916,6 +962,18 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             'party' => '',
         ]);
 
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets,
+                'localts' => time(),
+                'data' => "$npcName could not find $resolvedName. (hint: Seems like $resolvedName is at {$detectedLocation[3]} {$detectedLocation["state"]}. Use action MoveTo:$resolvedName to move $npcName near to $resolvedName at that location) ",
+                'category' => 'error',
+            ]
+        );
+
         triggerNpcUpdate($npcName); // Force NPC to update its background life data on the next mid-term check, which should lead it to discover the new location and update accordingly.
     } else {
         error_log("[handleFindNPCAction] $npcName could not find $resolvedName. No recent location data available.");
@@ -931,6 +989,18 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             'location' => null,
             'party' => '',
         ]);
+
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => time(),
+                'gamets' => $last_gamets,
+                'localts' => time(),
+                'data' => "$npcName could not find any trace of $resolvedName",
+                'category' => 'error',
+            ]
+        );
         triggerNpcUpdate($npcName); // Force NPC to update its background life data on the next mid-term check, which should lead it to discover the new location and update accordingly.
     }
 
@@ -1031,7 +1101,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                 error_log("[handleSpeakToAction] Vendor faction container data not received in time for $resolvedName. Proceeding without stock information.");
                 sleep(1);
             }
-            if (!gameIsPaused()) 
+            if (!gameIsPaused())
                 $retryCount++;
             sleep(1);
         }
@@ -1105,15 +1175,15 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             ? "<character_sheet>\n{$resolvedName}:\n{$targetNpcDataBasicProfile}\n</character_sheet>\n\n"
             : '';
 
-        foreach (DataLastDataExpandedFor($targetNpcData['npc_name'],-10) as $row) {
+        foreach (DataLastDataExpandedFor($targetNpcData['npc_name'], -10) as $row) {
             $historicTarget[] = $row["content"];
 
         }
         if (empty($historicTarget)) {
-            $contextTargetHistory="";
-        } else 
+            $contextTargetHistory = "";
+        } else
             $contextTargetHistory = implode("\n", $historicTarget);
-        
+
 
         $targetHistoryBlock = !empty($historicTarget)
             ? "<context_history_target>\n{$targetNpcData['npc_name']}'s point of view history:\n{$contextTargetHistory}\n</context_history_target>\n\n"
@@ -1133,7 +1203,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             ],
             [
                 'role' => 'user',
-                'content' => "{$contextBlock}\n".($targetHistoryBlock ? $targetHistoryBlock : '')
+                'content' => "{$contextBlock}\n" . ($targetHistoryBlock ? $targetHistoryBlock : '')
                     . "{$historyBlock}"
                     . "(at this point {$GLOBALS["HERIKA_NAME"]} thinks to himsel/herself:{$GLOBALS['LAST_REASON']})\n"
                     . "Write a brief, immersive dialogue between $npcName and $resolvedName.\n"
@@ -1296,6 +1366,18 @@ function handleGiveGoldToAction($actionArgument, $currentNpcData, $npcName, $las
             'location' => null,
             'party' => '',
         ]);
+
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets,
+                'localts' => time(),
+                'data' => "$npcName tried to give gold away, but no valid transfers were processed. Reason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'error',
+            ]
+        );
         triggerNpcUpdate($npcName);
         return false;
     }
@@ -1373,10 +1455,10 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
 
         $isMalformed = ($targetNpcName === '' || $itemId === '' || $count <= 0);
         if ($tradeType !== 'GiveItemTo' && $gold <= 0) {
-            
-            $dbGoldValueRow=$db->fetchOne("select price from market_cache where baseid='$itemId'");
+
+            $dbGoldValueRow = $db->fetchOne("select price from market_cache where baseid='$itemId'");
             if ($dbGoldValueRow && isset($dbGoldValueRow['price'])) {
-                $gold = (int)$dbGoldValueRow['price'] * $count;
+                $gold = (int) $dbGoldValueRow['price'] * $count;
                 error_log("[handleTradeItemsAction] [$tradeType] Corrected zero price for: $itemId to $gold (count: $count)");
             } else {
                 error_log("[handleTradeItemsAction] [$tradeType] Could not determine gold value for item: $itemId. Skipping transaction.");
@@ -1386,12 +1468,34 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
 
         if ($isMalformed) {
             error_log("[handleTradeItemsAction] [$tradeType] Malformed transaction skipped: $transactionRaw");
+            $db->insert(
+                'bgl_history',
+                [
+                    'npc' => $npcName,
+                    'ts' => $last_ts,
+                    'gamets' => $last_gamets,
+                    'localts' => time(),
+                    'data' => "$npcName tried trading, but the transaction was malformed. Reason: {$GLOBALS["LAST_REASON"]}",
+                    'category' => 'error',
+                ]
+            );
             continue;
         }
 
         $targetNpc = resolveNpcByName($targetNpcName, $db);
         if ($targetNpc === null) {
             error_log("[handleTradeItemsAction] [$tradeType] Target NPC not found: $targetNpcName");
+            $db->insert(
+                'bgl_history',
+                [
+                    'npc' => $npcName,
+                    'ts' => $last_ts,
+                    'gamets' => $last_gamets,
+                    'localts' => time(),
+                    'data' => "$npcName tried trading, but the target NPC '$targetNpcName' was not found. Reason: {$GLOBALS["LAST_REASON"]}",
+                    'category' => 'error',
+                ]
+            );
             continue;
         }
 
@@ -1492,6 +1596,17 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
             'location' => null,
             'party' => '',
         ]);
+         $db->insert(
+                'bgl_history',
+                [
+                    'npc' => $npcName,
+                    'ts' => $last_ts,
+                    'gamets' => $last_gamets,
+                    'localts' => time(),
+                    'data' => "$npcName tried trading, but the target NPC '$targetNpcName' was not found. Reason: {$GLOBALS["LAST_REASON"]}",
+                    'category' => 'error',
+                ]
+            );
         triggerNpcUpdate($npcName);
         return false;
     } else {
