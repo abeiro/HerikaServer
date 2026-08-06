@@ -38,7 +38,6 @@ function chimRolemasterBoredCanonicalActor(string $actorName, array $actorMap): 
 
 function chimRolemasterFilterBoredInstructions(array $instructions, array $actorMap, string $seedActor): array
 {
-    $valid = [];
     $seedInstruction = null;
 
     foreach ($instructions as $instruction) {
@@ -52,22 +51,12 @@ function chimRolemasterFilterBoredInstructions(array $instructions, array $actor
         }
 
         $instruction['character'] = $canonicalActor;
-        if ($seedActor !== '' && strcasecmp($canonicalActor, $seedActor) === 0) {
+        if ($seedActor !== '' && strcasecmp($canonicalActor, $seedActor) === 0 && $seedInstruction === null) {
             $seedInstruction = $instruction;
-        } else {
-            $valid[] = $instruction;
         }
     }
 
-    if ($seedActor !== '' && $seedInstruction === null) {
-        return [];
-    }
-
-    if ($seedInstruction !== null) {
-        array_unshift($valid, $seedInstruction);
-    }
-
-    return $valid;
+    return $seedInstruction === null ? [] : [$seedInstruction];
 }
 
 function chimRolemasterBoredListenerRequirement(string $target, array $actorMap): string
@@ -90,6 +79,7 @@ function chimRolemasterDefaultBoredEventRules(): string
 * Do not target or comment on {PLAYER_NAME} merely because time passed or the player is idle.
 * Prefer a natural NPC-to-NPC interaction or scene action. Involve the player only when recent player activity clearly requires a response.
 * When an instruction targets another nearby actor, direct the dialogue to that actor.
+* Do not generate the listener's reply. Normal dialogue routing will let the listener respond after the initiating actor speaks.
 PROMPT;
 }
 
@@ -106,7 +96,7 @@ function chimRolemasterRenderBoredEventRules(
     $seedActor = trim($seedActor);
     $seedActorRule = $seedActor === ''
         ? ''
-        : "* The first instruction must use the selected initiating actor: {$seedActor}.";
+        : "* Return exactly one instruction, using the selected initiating actor: {$seedActor}.";
     $nearbyActors = implode(', ', array_values($actorMap));
 
     $rendered = str_replace(

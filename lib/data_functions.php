@@ -879,15 +879,22 @@ function DataDequeue($timestamp = 0)
     } else {
         $clause="";
     }
-    // Use atomic UPDATE...RETURNING to prevent race conditions where multiple concurrent
-    // requests could fetch the same dialogue before it's marked as sent
+    // Claim pending responses atomically, then return them in their original queue order.
     $results = $db->fetchAll(
-        "UPDATE responselog 
-         SET sent=1 
-         WHERE rowid IN (
-             SELECT rowid FROM responselog WHERE sent=0 $clause ORDER BY rowid ASC
+        "WITH queued AS (
+             SELECT rowid
+             FROM responselog
+             WHERE sent=0 $clause
+             ORDER BY rowid ASC
+             FOR UPDATE SKIP LOCKED
+         ), claimed AS (
+             UPDATE responselog AS response
+             SET sent=1
+             FROM queued
+             WHERE response.rowid=queued.rowid
+             RETURNING response.*
          )
-         RETURNING *, rowid"
+         SELECT * FROM claimed ORDER BY rowid ASC"
     );
     
     $finalData = array();
