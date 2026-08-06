@@ -417,6 +417,20 @@ function buildInventoryMetadataValue(array $items): array
                 'keywords' => isset($item['keywords']) ? sanitizeItemKeywordList($item['keywords']) : [],
                 'goldvalue' => isset($item['goldvalue']) ? intval($item['goldvalue']) : 0,
             ];
+            $pluginRow = chimGetLoadedGamePluginByRuntimeFormId($item['baseid']);
+            $pluginName = ($pluginRow !== null) ? $pluginRow['plugin_name'] : '';
+            if ($pluginName !== '') {
+                $GLOBALS["db"]->upsertRowTrx(
+                    "market_cache",
+                    [
+                        'baseid' => $item['baseid'],
+                        'plugin' => $pluginName,
+                        'name' => trim($item['name']),
+                        'price' => intval($item['goldvalue'] ),
+                    ],
+                    ["baseid" => $item['baseid'], "plugin" => $pluginName]
+                );
+            }
         }
     }
 
@@ -895,23 +909,28 @@ function handleMarketStockUpdate(array $data): void
                 $existing = $db->fetchOne("select * from descriptions where baseid='{$baseid}' and plugin='{$pluginName}'");
                 if (!$existing || sizeof($existing) === 0) {
                     // Insert. if exists, will throw error.
-                    $db->upsertRowTrx("descriptions_custom", [
-                        'baseid' => $baseid,
-                        'plugin' => $pluginName,
-                        'name' => trim($item['name'])
-                    ],
-                    "baseid='{$baseid}' and plugin='{$pluginName}'"
+                    $db->upsertRowTrx(
+                        "descriptions_custom",
+                        [
+                            'baseid' => $baseid,
+                            'plugin' => $pluginName,
+                            'name' => trim($item['name'])
+                        ],
+                        ["baseid" => $baseid, "plugin" => $pluginName]
                     );
                 }
-                 $db->upsertRowTrx("market_cache", [
+                $db->upsertRowTrx(
+                    "market_cache",
+                    [
                         'baseid' => $item['itemid'],
                         'plugin' => $pluginName,
                         'name' => trim($item['name']),
                         'enchantment' => isset($item['enchantment']) ? ($item['enchantment']) : null,
                         'price' => intval($item['gold'] + (isset($item['enchantment']) ? ($item['enchantment']) : 0)),
-                ],
-                "baseid='{$item['itemid']}' and plugin='{$pluginName}'");
-                    
+                    ],
+                    ["baseid" => $item['itemid'], "plugin" => $pluginName]
+                );
+
             }
 
 
@@ -921,7 +940,7 @@ function handleMarketStockUpdate(array $data): void
     $stockJson = $db->escape(json_encode($stock));
 
     $sql = "UPDATE public.factions
-               SET stock = '{$stockJson}'::jsonb,gold=$gold,player_rank=$rank,localts=".time()."
+               SET stock = '{$stockJson}'::jsonb,gold=$gold,player_rank=$rank,localts=" . time() . "
              WHERE formid = '{$factionFormId}'";
 
     $result = $db->execQuery($sql);
