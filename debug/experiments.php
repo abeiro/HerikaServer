@@ -299,12 +299,17 @@ function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
     $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
     $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
     $npc['speechstyle'] = $npc_profile['speechStyle'];
-    $npc['goals'] = $npc_profile['goal'];
+    //$npc['goals'] = $npc_profile['goal'];
+    
     $npc['lock_profile'] = null;
 
-    $metadata = $npcMaster->getExtendedData($npc);
+    $extended_data = $npcMaster->getExtendedData($npc);
+    $extended_data['background_life_goals'] = $npc_profile['goal'] ?? [];
+    $metadata = $npcMaster->getMetadata($npc);
     $metadata['gps_track'] = true;
+
     $npc = $npcMaster->setMetadata($npc, $metadata);
+    $npc = $npcMaster->setExtendedData($npc, $extended_data);
     $npcMaster->updateByArray($npc);
 
     $refid = isset($npc['refid']) ? $npc['refid'] : null;
@@ -353,12 +358,12 @@ function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
     $extended_data['background_life_last_updated'] = $last_gamets;
     $extended_data['background_life_player_unattached'] = true;
     $extended_data['middle_term_enabled'] = 1;
-
+    $extended_data['background_life_goals'] = $npc_profile['goal'] ?? [];
 
     $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
     $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
     $npc['speechstyle'] = $npc_profile['speechStyle'];
-    $npc['goals'] = $npc_profile['goal'];
+    //$npc['goals'] = $npc_profile['goal'];
     $npc['lock_profile'] = null;
 
     $metadata = $npcMaster->getExtendedData($npc);
