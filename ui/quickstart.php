@@ -361,6 +361,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
 
         $localLlmPresetApplied = false;
         if ($localLlmPreset === true) {
+            $localLlmContextOptions = chimNormalizePromptContextOptions([
+                'enabled_sections' => [
+                    'roleplay_instructions',
+                    'world',
+                    'knowledge',
+                    'available_actions_list',
+                    'nearby_actors',
+                    'nearby_items',
+                    'adventuring_party',
+                    'scene_notes',
+                    'paralinguistic_tags',
+                ],
+                'enabled_character_subsections' => [
+                    'basic_summary',
+                    'groups',
+                    'personality',
+                    'relationships',
+                    'occupation',
+                    'skills',
+                    'speech_style',
+                    'goals',
+                    'middle_term_memory',
+                    'group',
+                    'storyline_starring',
+                    'quest_topics',
+                ],
+                'enabled_appearance_subsections' => [
+                    'appearance',
+                    'equipment',
+                    'inventory',
+                    'current_activity',
+                    'current_condition',
+                    'reanimation_status',
+                ],
+                'enabled_general_subsections' => [
+                    'current_plans',
+                ],
+                'enabled_nearby_actor_subsections' => [
+                    'equipment',
+                    'current_activity',
+                ],
+                'enabled_nearby_item_subsections' => [
+                    'group_duplicates',
+                ],
+            ]);
+            $localLlmContextJson = json_encode($localLlmContextOptions, JSON_UNESCAPED_SLASHES);
+            if ($localLlmContextJson === false) {
+                echo json_encode(['ok'=>false,'error'=>'Unable to prepare the Local LLM context preset']);
+                exit;
+            }
+            $localLlmContextValue = $GLOBALS['db']->escapeLiteral($localLlmContextJson);
+            $localLlmContextDescription = $GLOBALS['db']->escapeLiteral(chimGetSchemaDescription('PROMPT_CONTEXT_OPTIONS'));
             $localLlmPresetSaved = $GLOBALS['db']->execQuery(
                 "WITH updated_profiles AS (
                     UPDATE core_profiles
@@ -374,6 +426,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
                         ),
                         '{MAX_WORDS_LIMIT}', '\"60\"'::jsonb, true
                     )
+                    RETURNING id
+                 ),
+                 updated_context_options AS (
+                    INSERT INTO public.general_settings (id, value, description, updated_at)
+                    VALUES ('PROMPT_CONTEXT_OPTIONS', {$localLlmContextValue}, {$localLlmContextDescription}, CURRENT_TIMESTAMP)
+                    ON CONFLICT (id) DO UPDATE SET
+                        value = EXCLUDED.value,
+                        description = EXCLUDED.description,
+                        updated_at = CURRENT_TIMESTAMP
                     RETURNING id
                  )
                  INSERT INTO conf_opts (id, value) VALUES
@@ -898,7 +959,7 @@ echo '<section class="qs-section">
                             </div>
                         </div>
                     </div>
-                    <small class="form-text">Recommended for local small and medium models. Applies a compact 40-event context, shorter 60-word responses, and enables Compact Chat for all current profiles. New profiles inherit the smaller defaults.</small>
+                    <small class="form-text">Recommended for local small and medium models. Applies a compact 40-event context, shorter 60-word responses, enables Compact Chat, and trims high-cost secondary context while preserving roleplay, actions, memory, inventory, and Oghma knowledge. New profiles inherit the smaller defaults.</small>
                 </div>
                 <p class="qs-note warning-text3">
                     Once done click Save and startup Skyrim with the AIAgent mod installed. Please read the <a href="https://dwemerdynamics.com/chim/index.html" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
