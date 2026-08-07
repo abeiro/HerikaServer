@@ -63,6 +63,70 @@ function chimBglHistoryCategory(string $activity): string
     return 'activity';
 }
 
+function chimBglActivityCategory(string $category, string $activity = ''): string
+{
+    $category = strtolower(trim($category));
+    if ($category === '') {
+        $category = chimBglHistoryCategory($activity);
+    }
+
+    return [
+        'rest' => 'sleep',
+        'social' => 'socialize',
+        'movement' => 'travel',
+    ][$category] ?? $category;
+}
+
+function chimBglActivityIcon(string $category, string $activity = ''): string
+{
+    $category = chimBglActivityCategory($category, $activity);
+
+    return [
+        'error' => '❌',
+        'work' => '🛠️',
+        'travel' => '👣',
+        'sleep' => '😴',
+        'produce_consume' => '🍽️',
+        'socialize' => '🥂',
+        'dialogue' => '💬',
+        'relax' => '🪑',
+        'trade' => '💰',
+        'guard' => '🛡️',
+        'move' => '🚶',
+        'return_home' => '🏠',
+        'find' => '🔎',
+        'give' => '🎁',
+        'letter' => '✉️',
+        'warning' => '⚠️',
+        'activity' => '✨',
+    ][$category] ?? '✨';
+}
+
+function chimBglActivityLabel(string $category, string $activity = ''): string
+{
+    $category = chimBglActivityCategory($category, $activity);
+
+    return [
+        'error' => 'Error',
+        'work' => 'Work',
+        'travel' => 'Travel',
+        'sleep' => 'Sleep',
+        'produce_consume' => 'Produce / Consume',
+        'socialize' => 'Socialize',
+        'dialogue' => 'Dialogue',
+        'relax' => 'Relax',
+        'trade' => 'Trade',
+        'guard' => 'Guard',
+        'move' => 'Move',
+        'return_home' => 'Return Home',
+        'find' => 'Find',
+        'give' => 'Give',
+        'letter' => 'Letter',
+        'warning' => 'Warning',
+        'activity' => 'Activity',
+    ][$category] ?? ucwords(str_replace('_', ' ', $category));
+}
+
 // Keep the dashboard usable while an existing install is waiting for migrations.
 function chimBglHistoryCategorySelect(sql $db): string
 {
@@ -179,6 +243,10 @@ function chimBglDashboardPayload(sql $db, string $enginePath, string $webRoot, b
     $where = $showAllCoords
         ? "master.metadata->>'last_coords' IS NOT NULL"
         : "COALESCE(master.extended_data->>'background_life_enabled', 'false') = 'true'";
+    $categorySelect = chimBglHistoryCategorySelect($db);
+    $latestCategorySelect = $categorySelect === ''
+        ? 'NULL::text AS category'
+        : 'history.category AS category';
     $rows = $db->fetchAll(
         "SELECT master.id,
                 master.npc_name,
@@ -187,10 +255,11 @@ function chimBglDashboardPayload(sql $db, string $enginePath, string $webRoot, b
                 master.metadata,
                 master.extended_data,
                 latest.data AS latest_activity,
-                latest.gamets AS latest_gamets
+                latest.gamets AS latest_gamets,
+                latest.category AS latest_category
          FROM core_npc_master master
          LEFT JOIN LATERAL (
-             SELECT history.data, history.gamets
+             SELECT history.data, history.gamets, {$latestCategorySelect}
              FROM bgl_history history
              WHERE history.npc = master.npc_name
              ORDER BY history.gamets DESC, history.ts DESC, history.rowid DESC
@@ -215,6 +284,11 @@ function chimBglDashboardPayload(sql $db, string $enginePath, string $webRoot, b
         $npcName = trim((string)($row['npc_name'] ?? 'Unknown NPC'));
         $refid = chimBglNormalizeRefId((string)($row['refid'] ?? ''));
         $latestGamets = (int)($row['latest_gamets'] ?? 0);
+        $latestActivity = trim((string)($row['latest_activity'] ?? ''));
+        $activityCategory = chimBglActivityCategory(
+            (string)($row['latest_category'] ?? ''),
+            $latestActivity
+        );
 
         $npcs[] = [
             'npc_id' => (int)($row['id'] ?? 0),
@@ -229,7 +303,10 @@ function chimBglDashboardPayload(sql $db, string $enginePath, string $webRoot, b
                 $npcName,
                 $metadata
             ),
-            'activity' => trim((string)($row['latest_activity'] ?? '')),
+            'activity' => $latestActivity,
+            'activity_category' => $activityCategory,
+            'activity_icon' => chimBglActivityIcon($activityCategory, $latestActivity),
+            'activity_label' => chimBglActivityLabel($activityCategory, $latestActivity),
             'tamrielic_time' => $latestGamets > 0 ? convert_gamets2skyrim_long_date2($latestGamets) : '',
             'gamets' => $latestGamets,
             'auto_actions' => chimBglBoolean($extended['background_life_commands'] ?? false),

@@ -28,6 +28,7 @@ require_once $enginePath . 'lib/rolemaster_helpers.php';
 require_once $enginePath . 'lib/scriptproxy_papyrus.php';
 require_once $enginePath . 'lib/background_life_requests.php';
 require_once $enginePath . 'lib/background_life_npc_creation.php';
+require_once $enginePath . 'lib/background_life_dashboard.php';
 require_once $enginePath . 'lib/core/player.class.php';
 require_once $enginePath . 'lib/core/npc_master.class.php';
 require_once $enginePath . 'lib/core/api_badge.class.php';
@@ -708,9 +709,13 @@ if ($bglBulkResult && ($bglBulkRow = pg_fetch_assoc($bglBulkResult))) {
     $whereClause = $showAllCoords
         ? "metadata->>'last_coords' IS NOT NULL"
         : "extended_data->>'background_life_enabled' = 'true'";
+    $categorySelect = chimBglHistoryCategorySelect($db);
+    $latestCategorySelect = $categorySelect === ''
+        ? 'NULL::text AS category'
+        : 'history.category AS category';
 
     $query = "
-    select A.*,B.content FROM 
+    select A.*,B.content,C.data as last_activity,C.gamets as last_activity_gamets,C.category as last_action_cat FROM
     (SELECT
         npc_name,metadata,extended_data,id,refid,race,extended_data->>'background_life_last_updated' as last_report,
         metadata->>'last_coords' as last_coords,metadata->>'last_coords_history' as last_coords_history
@@ -734,6 +739,13 @@ if ($bglBulkResult && ($bglBulkRow = pg_fetch_assoc($bglBulkResult))) {
         ) t
         WHERE rn = 1
     ) B ON (B.people=A.npc_name)
+    LEFT JOIN LATERAL (
+        SELECT history.data, history.gamets, {$latestCategorySelect}
+        FROM public.bgl_history history
+        WHERE history.npc = A.npc_name
+        ORDER BY history.gamets DESC, history.ts DESC, history.rowid DESC
+        LIMIT 1
+    ) C ON TRUE
     order by A.npc_name asc
 ";
     //error_log($query);
@@ -831,6 +843,12 @@ if ($bglBulkResult && ($bglBulkRow = pg_fetch_assoc($bglBulkResult))) {
                 }
             }
             
+            $lastActivity = trim((string)($row['last_activity'] ?? ''));
+            $lastActivityCategory = chimBglActivityCategory(
+                (string)($row['last_action_cat'] ?? ''),
+                $lastActivity
+            );
+
             $markers[] = [
                 'name'        => $row['npc_name'],
                 'ingame_x'    => (int) $x,
@@ -845,6 +863,10 @@ if ($bglBulkResult && ($bglBulkRow = pg_fetch_assoc($bglBulkResult))) {
                 'refid'       => $row["refid"],
                 'last_pos_ts' => $coordsData["last_updated"]?convert_gamets2skyrim_date($coordsData["last_updated"]).",hours ago:".round(($last_gamets-$coordsData["last_updated"]) *0.0000024,0):null,
                 'last_report' => convert_gamets2skyrim_date($row["last_report"]).",hours ago:".round(($last_gamets-$row["last_report"]) *0.0000024,0),
+                'last_activity' => $lastActivity,
+                'last_action_cat' => $lastActivityCategory,
+                'last_action_icon' => chimBglActivityIcon($lastActivityCategory, $lastActivity),
+                'last_action_label' => chimBglActivityLabel($lastActivityCategory, $lastActivity),
                 'coords_history' => $coordsHistory,
                 'background_life_enabled' => $backgroundLifeEnabled,
                 'bg_life_commands' => $bgLifeCommands,
@@ -923,6 +945,10 @@ if ($bglBulkResult && ($bglBulkRow = pg_fetch_assoc($bglBulkResult))) {
             'refid'       => $marker['refid'],
             'last_pos_ts' => $marker["last_pos_ts"],
             'last_report' => $marker["last_report"],
+            'last_activity' => $marker['last_activity'],
+            'last_action_cat' => $marker['last_action_cat'],
+            'last_action_icon' => $marker['last_action_icon'],
+            'last_action_label' => $marker['last_action_label'],
             'coords_history' => $translatedHistory,
             'bg_life_commands' => $marker['bg_life_commands'],
             'bg_life_letters' => $marker['bg_life_letters'],
@@ -1221,8 +1247,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-radius: 50%;
         border: 2px solid white;
         box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 11px;
+        line-height: 1;
         z-index: 10;
         position: relative;
         transform-origin: center;
@@ -1509,6 +1538,44 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         font-weight: 700;
         letter-spacing: 0.08em;
         text-transform: uppercase;
+    }
+
+    .marker-card-activity {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 8px;
+        align-items: center;
+        margin: 2px 0 8px;
+        padding: 7px 8px;
+        border: 1px solid #3f3f46;
+        border-radius: 6px;
+        background: #222227;
+    }
+
+    .marker-card-activity-icon {
+        font-size: 20px;
+        line-height: 1;
+        text-align: center;
+    }
+
+    .marker-card-activity-copy {
+        min-width: 0;
+    }
+
+    .marker-card-activity-title {
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .marker-card-activity-summary {
+        margin-top: 2px;
+        overflow: hidden;
+        color: #aaaab2;
+        font-size: 10px;
+        line-height: 1.3;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .marker-card-actions {
@@ -2415,6 +2482,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
                     echo '<div class="marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%; transform: translate(calc(-50% + ' . $offsetX . 'px), calc(-50% + ' . $offsetY . 'px));">';
                     echo '<div class="marker-dot" id="mkr_' . $marker['id'] . '" data-npc-name="' . $markerName . '" role="button" tabindex="0" title="View recent events for ' . $markerName . '" aria-label="View recent events for ' . $markerName . '" style="width: ' . ($marker['size'] * 2) . 'px; height: ' . ($marker['size'] * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.8;">';
+                    echo htmlspecialchars($marker['last_action_icon'], ENT_QUOTES, 'UTF-8');
                     echo '</div>';
                     echo '<div class="marker-label">' . PHP_EOL;
                     echo "<a style='color:white;text-decoration:none' href='#dtl_{$marker["id"]}'>{$marker["name"]} &nbsp; ↗️</a></br>";
@@ -2422,6 +2490,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     echo '<img class="thumb" src="' . $marker['figure'] . '" />';
                     echo '<br/><small>Last reported:' . $marker['last_report'] . '</small>';
                     echo '<br/><small>Last tracked:' . $marker['last_pos_ts'] . '</small>';
+                    echo '<br/><small>Last activity: ' . htmlspecialchars($marker['last_action_icon'] . ' ' . $marker['last_action_label'], ENT_QUOTES, 'UTF-8') . '</small>';
                     echo '</div>';
                     echo '</div>' . PHP_EOL;
                     
@@ -2612,6 +2681,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                         <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="event.stopPropagation(); pulseAnimation('mkr_<?php echo $marker['id'] ?>')" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map" title="Show on map">👀</span>
                                         <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="window.open('https://gamemap.uesp.net/sr/?world=skyrim&layer=day&x=<?php echo $marker['ingame_x'] ?>&y=<?php echo $marker['ingame_y'] ?>&zoom=8', '_blank'); event.stopPropagation();" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map" title="UESP Map">🗺️</span>
                                     </h4>
+                                </div>
+                                <div class="marker-card-activity">
+                                    <span class="marker-card-activity-icon" aria-hidden="true"><?php echo htmlspecialchars($marker['last_action_icon'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <div class="marker-card-activity-copy">
+                                        <div class="marker-card-activity-title">Last activity: <?php echo htmlspecialchars($marker['last_action_label'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                        <div class="marker-card-activity-summary" title="<?php echo htmlspecialchars($marker['last_activity'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($marker['last_activity'] !== '' ? $marker['last_activity'] : 'No recent activity recorded.', ENT_QUOTES, 'UTF-8'); ?></div>
+                                    </div>
                                 </div>
                                 <div class="marker-card-row-label">Actions</div>
                                 <div class="marker-card-actions">
