@@ -67,8 +67,7 @@
         function renderCamera() {
             clampPan();
             canvas.style.transform = 'translate3d(' + state.x + 'px, ' + state.y + 'px, 0) scale(' + state.scale + ')';
-            canvas.style.setProperty('--bgl-marker-scale', String(1 / state.zoom));
-            canvas.style.setProperty('--bgl-marker-hover-scale', String(1.1 / state.zoom));
+            canvas.style.setProperty('--bgl-info-scale', String(1 / state.zoom));
             zoomValue.textContent = Math.round(state.zoom * 100) + '%';
         }
 
