@@ -7861,6 +7861,37 @@ if ($checkVersion("default_npc_tags") < 20260805003) {
     }
 }
 
+if ($checkVersion("background_life_enrollment") < 20260806001) {
+    Logger::debug("Applying background_life_enrollment 20260806001 - restore enrollment implied by active rules");
+
+    $migrationOk = $db->execQuery(
+        "UPDATE public.core_npc_master
+         SET extended_data = jsonb_set(
+             COALESCE(extended_data, '{}'::jsonb),
+             '{background_life_enabled}',
+             'true'::jsonb,
+             true
+         )
+         WHERE LOWER(COALESCE(extended_data->>'background_life_enabled', 'false'))
+                   NOT IN ('true', '1', 't', 'on')
+           AND (
+               LOWER(COALESCE(extended_data->>'background_life_commands', 'false'))
+                   IN ('true', '1', 't', 'on')
+               OR LOWER(COALESCE(extended_data->>'background_life_letters', 'false'))
+                   IN ('true', '1', 't', 'on')
+               OR LOWER(COALESCE(metadata->>'gps_track', 'false'))
+                   IN ('true', '1', 't', 'on')
+           )"
+    ) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("background_life_enrollment", 20260806001);
+        Logger::info("Applied patch background_life_enrollment 20260806001");
+    } else {
+        Logger::error("Failed to apply patch background_life_enrollment 20260806001");
+    }
+}
+
 //----------------------------------------------------
 // AUDIT REQUEST RESPONSE - Store the response text for audit requests
 // Version 20260806001

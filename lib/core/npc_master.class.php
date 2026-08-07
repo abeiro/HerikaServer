@@ -1480,17 +1480,6 @@ FROM restore
             error_log("[NPC RESTORE] Failed to restore NPC relationships: " . $e->getMessage());
         }
 
-        $bglife_q="UPDATE public.core_npc_master
-        SET extended_data = jsonb_set(
-            extended_data,
-            '{background_life_enabled}',   -- JSON path
-            'false'::jsonb,                -- new value
-            true                           -- create if missing (optional)
-        )
-        WHERE (extended_data ->> 'background_life_enabled')::boolean = true";
-
-        $GLOBALS["db"]->execQuery($bglife_q);
-
         // RELATIONSHIP SYSTEM: Clear "future" relationship data from NPCs that weren't restored
         // NPCs added AFTER the save timestamp don't have history entries, so they keep their
         // current (future) state. We need to clear their relationship data to prevent paradoxes.
