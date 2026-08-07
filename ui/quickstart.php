@@ -348,6 +348,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         if ($pid <= 0) { echo json_encode(['ok'=>false,'error'=>'No profile found']); exit; }
         $oghma  = $truthy($_POST['oghma_infinium'] ?? null);
         $player2Force = $truthy($_POST['player2_force_all_llm'] ?? null);
+        $localLlmPreset = $truthy($_POST['local_llm_preset'] ?? null);
         if ($oghma !== null && !chimSetGeneralSetting('OGHMA_INFINIUM', $oghma, chimGetSchemaDescription('OGHMA_INFINIUM'))) {
             echo json_encode(['ok'=>false,'error'=>'Unable to save Oghma Infinium']);
             exit;
@@ -358,7 +359,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
             $player2ConnectorId = LLMRandomizer::setPlayer2ForceEnabled($player2Force ? true : false);
         }
 
-        echo json_encode(['ok'=>true, 'id'=>$pid, 'player2_connector_id' => $player2ConnectorId]);
+        $localLlmPresetApplied = false;
+        if ($localLlmPreset === true) {
+            $localLlmPresetSaved = $GLOBALS['db']->execQuery(
+                "WITH updated_profiles AS (
+                    UPDATE core_profiles
+                    SET metadata = jsonb_set(
+                        jsonb_set(
+                            jsonb_set(
+                                jsonb_set(COALESCE(metadata, '{}'::jsonb), '{CONTEXT_HISTORY}', '\"40\"'::jsonb, true),
+                                '{CONTEXT_HISTORY_DIARY}', '\"40\"'::jsonb, true
+                            ),
+                            '{CONTEXT_HISTORY_DYNAMIC_PROFILE}', '\"30\"'::jsonb, true
+                        ),
+                        '{MAX_WORDS_LIMIT}', '\"60\"'::jsonb, true
+                    )
+                    RETURNING id
+                 )
+                 INSERT INTO conf_opts (id, value) VALUES
+                    ('CONTEXT_HISTORY', '40'),
+                    ('CONTEXT_HISTORY_DIARY', '40'),
+                    ('CONTEXT_HISTORY_DYNAMIC_PROFILE', '30'),
+                    ('MAX_WORDS_LIMIT', '60'),
+                    ('chim_context_mode', '1')
+                 ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value"
+            );
+            if ($localLlmPresetSaved === false) {
+                echo json_encode(['ok'=>false,'error'=>'Unable to apply the Local LLM preset']);
+                exit;
+            }
+            $localLlmPresetApplied = true;
+        }
+
+        echo json_encode([
+            'ok'=>true,
+            'id'=>$pid,
+            'player2_connector_id' => $player2ConnectorId,
+            'local_llm_preset_applied' => $localLlmPresetApplied,
+        ]);
         exit;
     }
 
@@ -847,6 +885,21 @@ echo '<section class="qs-section">
                     <div class="qs-general-connector-title">Other Connectors Used:</div>
                     ' . ($generalLlmConnectorListHtml !== '' ? $generalLlmConnectorListHtml : '<div class="qs-general-connector-empty">No additional general-settings connectors are configured.</div>') . '
                 </div>
+                <div class="form-group qs-field qs-local-llm-preset">
+                    <div class="qs-toggle-block">
+                        <div class="qs-toggle-header">
+                            <label class="qs-toggle-title" for="qs_local_llm_preset">Optimize for Local LLMs</label>
+                            <div class="qs-toggle-control">
+                                <input class="form-check-input qs-switch-input" type="checkbox" id="qs_local_llm_preset" value="1">
+                                <label class="form-check-label qs-switch-label" for="qs_local_llm_preset">
+                                    <span class="qs-switch-track"></span>
+                                    <span class="qs-switch-copy" data-off="Off" data-on="On"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="form-text">Recommended for local small and medium models. Applies a compact 40-event context, shorter 60-word responses, and enables Compact Chat for all current profiles. New profiles inherit the smaller defaults.</small>
+                </div>
                 <p class="qs-note warning-text3">
                     Once done click Save and startup Skyrim with the AIAgent mod installed. Please read the <a href="https://dwemerdynamics.com/chim/index.html" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
                 </p>
@@ -1247,8 +1300,13 @@ async function saveQuickstartAndDB(){
     // 2) Save profile metadata flags
     const fdm = new FormData();
     try { fdm.append("player2_force_all_llm", document.getElementById("qs_player2_force_all_llm").checked ? "1" : "0"); } catch(_e){}
+    try { fdm.append("local_llm_preset", document.getElementById("qs_local_llm_preset").checked ? "1" : "0"); } catch(_e){}
     fdm.append("qs_action", "profile_quicksave_metadata");
-    await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
+    const profileResponse = await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
+    const profileResult = await profileResponse.json();
+    if (!profileResponse.ok || !profileResult.ok) {
+      throw new Error(profileResult.error || "Unable to save profile settings");
+    }
 
     // 3) Save quickstart selections to the database
     const form = document.getElementById("top");
