@@ -1225,18 +1225,17 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         justify-content: center;
         z-index: 10;
         position: relative;
-        transform: scale(var(--bgl-marker-scale, 1));
         transform-origin: center;
         transition: transform 0.15s ease;
     }
 
     .marker:hover .marker-dot {
-        transform: scale(var(--bgl-marker-hover-scale, 1.1));
+        transform: scale(1.1);
     }
 
     .history-marker {
         position: absolute;
-        transform: translate(-50%, -50%) scale(var(--bgl-marker-scale, 1));
+        transform: translate(-50%, -50%);
         transform-origin: center;
         border-radius: 50%;
         border: 1px solid rgba(255, 255, 255, 0.6);
@@ -1250,7 +1249,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         opacity: 1;
         box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
         z-index: 15;
-        transform: translate(-50%, -50%) scale(var(--bgl-marker-hover-scale, 1.1));
+        transform: translate(-50%, -50%) scale(1.1);
     }
 
     .history-marker-label {
@@ -1261,10 +1260,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-radius: 4px;
         white-space: nowrap;
         font-size: 12px;
-        top: 12px;
+        top: calc(12px * var(--bgl-info-scale, 1));
         left: 50%;
-        transform: translateX(-50%);
-        margin-top: 3px;
+        transform: translateX(-50%) scale(var(--bgl-info-scale, 1));
+        transform-origin: top center;
+        margin-top: calc(3px * var(--bgl-info-scale, 1));
         border: 1px solid rgba(255, 255, 255, 0.4);
         display: none;
         z-index: 20;
@@ -1283,11 +1283,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-radius: 6px;
         white-space: nowrap;
         font-size: 14px;
-        top: calc(15px * var(--bgl-marker-scale, 1));
+        top: calc(15px * var(--bgl-info-scale, 1));
         left: 50%;
-        transform: translateX(-50%) scale(var(--bgl-marker-scale, 1));
+        transform: translateX(-50%) scale(var(--bgl-info-scale, 1));
         transform-origin: top center;
-        margin-top: calc(5px * var(--bgl-marker-scale, 1));
+        margin-top: calc(5px * var(--bgl-info-scale, 1));
         border: 2px solid rgb(242, 124, 17);
         display: none;
         z-index: 20;
@@ -2188,7 +2188,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         opacity: 0.8;
         transition: all 0.3s ease;
         border: none;
-        transform: scale(var(--bgl-marker-scale, 1));
         transform-origin: center;
     }
 
@@ -2202,9 +2201,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .location-marker-caption {
         position: absolute;
-        top: calc(30px * var(--bgl-marker-scale, 1));
+        top: 30px;
         left: 50%;
-        transform: translateX(-50%) scale(var(--bgl-marker-scale, 1));
+        transform: translateX(-50%);
         transform-origin: top center;
         color: #ece7dc;
         font-size: 10px;
@@ -2220,7 +2219,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .location-marker:hover .location-marker-icon {
         opacity: 1;
-        transform: scale(var(--bgl-marker-hover-scale, 1.1));
+        transform: scale(1.1);
     }
 
     .location-marker:hover .location-marker-icon img {
@@ -2235,11 +2234,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-radius: 6px;
         white-space: nowrap;
         font-size: 14px;
-        top: calc(15px * var(--bgl-marker-scale, 1));
+        top: calc(15px * var(--bgl-info-scale, 1));
         left: 50%;
-        transform: translateX(-50%) scale(var(--bgl-marker-scale, 1));
+        transform: translateX(-50%) scale(var(--bgl-info-scale, 1));
         transform-origin: top center;
-        margin-top: calc(5px * var(--bgl-marker-scale, 1));
+        margin-top: calc(5px * var(--bgl-info-scale, 1));
         border: none;
         display: none;
         z-index: 30;
