@@ -441,8 +441,16 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			
 		} else {
 			$FFMPEG_FILTER='-filter:a "adelay=150|150"';
+		
 		}
 		
+		// audio.cpp seems to ad a big silence at the beginnig
+		$isAudioCpp = pockettts_is_audio_cpp($endpoint);
+		if ($isAudioCpp) {
+			$FFMPEG_FILTER='-filter:a "atrim=start=0.3,asetpts=PTS-STARTPTS"';
+		}
+
+
 		if (isset($GLOBALS["TTS"]["POCKETTTS"]["RESET"]) && $GLOBALS["TTS"]["POCKETTTS"]["RESET"]) {
 			pockettts_settings([]);
 		}

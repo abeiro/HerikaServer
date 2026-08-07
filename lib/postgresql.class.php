@@ -559,6 +559,7 @@ class sql
 
     public function upsertRowTrx($table, $data, $whereCondition) {
         $startTime = microtime(true);
+        $query = "";
         // Start a transaction
         $this->re_connect();
         pg_query(self::$link, "BEGIN");
@@ -570,8 +571,8 @@ class sql
             $i = 0;
     
             foreach ($whereCondition as $column => $value) {
-                $whereClauses[] = "$column = $" . (++$i); // Explicitly cast as TEXT
-                $whereParams[] = (string) $value; // Convert value to string
+                $whereClauses[] = "$column = $" . (++$i);
+                $whereParams[] = $value;
             }
     
             
@@ -588,11 +589,13 @@ class sql
             if (pg_num_rows($checkResult) > 0) {
                 // Row exists, perform an UPDATE (excluding WHERE fields)
                 $setClauses = [];
-                $params = [];
+                // Parameter positions $1..$n are reserved for WHERE values.
+                $params = $whereParams;
+                
                 foreach ($data as $column => $value) {
                     if (!array_key_exists($column, $whereCondition)) { // Exclude WHERE fields
-                        $setClauses[] = "$column = $" . (++$i); // Explicitly cast as TEXT
-                        $params[] = (string) $value; // Convert value to string
+                        $setClauses[] = "$column = $" . (++$i);
+                        $params[] = $value;
                     }
                 }
     
@@ -602,9 +605,6 @@ class sql
     
                 $setSql = implode(', ', $setClauses);
                 $query = "UPDATE $table SET $setSql WHERE $whereSql";
-    
-                // Merge params: first the update values, then the WHERE values
-                $params = array_merge($params, $whereParams);
             } else {
                 // Row does not exist, perform an INSERT
                 $i = 0;
@@ -613,8 +613,8 @@ class sql
                 $params = [];
     
                 foreach ($data as $index => $value) {
-                    $placeholders[] = '$' . (++$i) ; // Explicitly cast as TEXT
-                    $params[] = (string) $value; // Convert value to string
+                    $placeholders[] = '$' . (++$i) ;
+                    $params[] = $value;
                 }
     
                 $columnList = implode(', ', $columns);

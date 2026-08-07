@@ -216,7 +216,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     error_log("[BGL] Checking active events NPCs");
     
     // BgL commands
-    $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' ");
+    $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' order by random() ");
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata = json_decode($npc["extended_data"], true);
         $mustInstructBypassBgl=false;

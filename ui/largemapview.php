@@ -852,7 +852,7 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
         : "extended_data->>'background_life_enabled' = 'true'";
 
     $query = "
-    select A.*,B.content FROM 
+    select A.*,B.content,C.category as last_action_cat FROM 
     (SELECT
         npc_name,metadata,extended_data,id,refid,race,extended_data->>'background_life_last_updated' as last_report,
         metadata->>'last_coords' as last_coords,metadata->>'last_coords_history' as last_coords_history
@@ -876,6 +876,19 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
         ) t
         WHERE rn = 1
     ) B ON (B.people=A.npc_name)
+    LEFT JOIN  (
+    SELECT category,npc
+        FROM (
+            SELECT
+                category,npc,
+                ROW_NUMBER() OVER (
+                    PARTITION BY npc
+                    ORDER BY gamets DESC
+                ) AS rn
+            FROM public.bgl_history
+        ) t
+        WHERE rn = 1
+    ) C ON (C.npc=A.npc_name)
     order by A.npc_name asc
 ";
     //error_log($query);
@@ -978,7 +991,7 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
                 'ingame_y'    => (int) $y,
                 'ingame_z'    => (int) $z,
                 'color'       => generateRandomColor($row['npc_name']),
-                'size'        => 10,
+                'size'        => 15,
                 'tag'         => $coordsData[3],
                 'portrait'    => isset($meta["portrait"]) ? $meta["portrait"] : '',
                 'race'        => $row['race'],
@@ -994,6 +1007,7 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
                 'diary_letters' => $diaryLetters,
                 'diary_thoughts' => $diaryThoughts,
                 'interior' => $coordsData['in_interior'],
+                'last_action_cat'=> strtolower($row['last_action_cat'])
             ];
 
         }
@@ -1072,7 +1086,8 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
             'last_letter' => $marker['last_letter'],
             'diary_letters' => $marker['diary_letters'],
             'diary_thoughts' => $marker['diary_thoughts'],
-            'interior' => $marker['interior']
+            'interior' => $marker['interior'],
+            'last_action_cat'=> $marker['last_action_cat']
         ];
     }
 
@@ -1286,6 +1301,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         justify-content: center;
         z-index: 10;
         position: relative;
+        font-size: 14px;
+        text-align: center;
+        vertical-align: middle;
+        padding-top:3px;
     }
 
     .history-marker {
@@ -2105,16 +2124,36 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     // Apply grid offset
                     $offsetX = $marker['offset_x'];
                     $offsetY = $marker['offset_y'];
+                    if ($marker['last_action_cat'] == 'error') {
+                        $symbol='❌';
+                    } else if ($marker['last_action_cat'] == 'work') {
+                        $symbol='👷‍♀️';
+                    } else if ($marker['last_action_cat'] == 'travel') {
+                        $symbol='👣';
+                    } else if ($marker['last_action_cat'] == 'sleep') {
+                        $symbol='😴';
+                    } else if ($marker['last_action_cat'] == 'produce_consume') {
+                        $symbol='🧠';
+                    } else if ($marker['last_action_cat'] == 'socialize') {
+                        $symbol='🥂';
+                    } else if ($marker['last_action_cat'] == 'dialogue') {
+                        $symbol='💬';
+                    } else if ($marker['last_action_cat'] == 'relax') {
+                        $symbol='💆‍♂️';
+                    } else {
+                        $symbol='';
+                    }
 
                     echo '<div class="marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%; transform: translate(calc(-50% + ' . $offsetX . 'px), calc(-50% + ' . $offsetY . 'px));">';
                     echo '<div class="marker-dot" id="mkr_' . $marker['id'] . '" style="width: ' . ($marker['size'] * 2) . 'px; height: ' . ($marker['size'] * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.8;">';
-                    echo '</div>';
+                    echo ($symbol ?? '') . '</div>';
                     echo '<div class="marker-label">' . PHP_EOL;
                     echo "<a style='color:white;text-decoration:none' href='#dtl_{$marker["id"]}'>{$marker["name"]} &nbsp; ↗️</a></br>";
                     echo '<small>(' . $marker['x'] . ', ' . $marker['y'] . '),' . $marker['tag'] . ' ' . ($marker['interior']==1 ? 'Interior':'') . '</small>';
                     echo '<img class="thumb" src="' . $marker['figure'] . '" />';
                     echo '<br/><small>Last reported:' . $marker['last_report'] . '</small>';
                     echo '<br/><small>Last tracked:' . $marker['last_pos_ts'] . '</small>';
+                    echo '<br/><small>Last activity:' . ($symbol ?? '') . ' ' . $marker['last_action_cat'] . '</small>';
                     echo '</div>';
                     echo '</div>' . PHP_EOL;
                     
@@ -2768,7 +2807,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     }
 
     // Query Background Life history entries
-    $bglHistoryQuery = "SELECT rowid,npc,gamets,convert_gamets2skyrim_date(gamets) as gamedate,to_timestamp(localts) as localdate,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 50";
+    $bglHistoryQuery = "SELECT rowid,npc,gamets,category,convert_gamets2skyrim_date(gamets) as gamedate,to_timestamp(localts) as localdate,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 50";
     $bglHistoryResult = pg_query($adminConn, $bglHistoryQuery);
     $bglHistoryRows = [];
     if ($bglHistoryResult) {
@@ -2792,7 +2831,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                             <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">npc</th>
                             <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">gamets</th>
                             <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">gamedate</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">localdate</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">localdate</th>
+                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">category</th>
                             <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">data</th>
                         </tr>
                     </thead>
@@ -2804,6 +2844,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['gamets'] ?? '')); ?></td>
                                 <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['gamedate'] ?? '')); ?></td>
                                 <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) ($historyRow['localdate'] ?? '')); ?></td>
+                                <td style="padding: 12px; color: #bbb; white-space: nowrap;"><?php echo htmlspecialchars((string) strtolower($historyRow['category'] ?? '')); ?></td>
                                 <td style="padding: 12px; color: #fff;"><?php echo nl2br(htmlspecialchars((string) ($historyRow['data'] ?? ''))); ?></td>
                             </tr>
                         <?php endforeach; ?>

@@ -7662,6 +7662,34 @@ if ($checkVersion("prompts") < 20260727001) {
     }
 }
 
+if ($checkVersion("prompts") < 20260805001) {
+    Logger::debug("Applying prompts 20260805001 - keep bored Director dialogue chronological");
+
+    require_once(__DIR__ . "/../lib/rolemaster_bored.php");
+    $boredEventRules = $db->escape(chimRolemasterDefaultBoredEventRules());
+    $description = $db->escape(
+        "Additional Rolemaster rules used only for autonomous bored events. "
+        . "Supports {SEED_ACTOR_RULE}, {SEED_ACTOR}, {NEARBY_ACTORS}, and {PLAYER_NAME} placeholders. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_rules', '{$boredEventRules}', '{$description}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260805001);
+        Logger::info("Applied patch prompts 20260805001 - kept bored Director dialogue chronological");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260805001");
+    }
+}
+
 if ($checkVersion("memory_summary") < 20260721001) {
     Logger::debug("Applying memory_summary 20260721001 - normalize diary memory owners");
 
@@ -7804,6 +7832,40 @@ if ($checkVersion("faction_vanilla") < 20260803001) {
         Logger::error("Failed to apply patch faction_vanilla 20260803001 - some description fixes for vanilla factions");
     }
 }
+
+if ($checkVersion("market_cache") < 20260805001) {
+    Logger::debug("Applying market_cache 20260805001 - initial market cache setup");
+
+    $migrationOk = $db->execQuery(file_get_contents(__DIR__."/../data/market_cache.sql")) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("market_cache", 20260805001);
+        Logger::info("Applied patch market_cache 20260805001 - initial market cache setup");
+    } else {
+        Logger::error("Failed to apply patch market_cache 20260805001 - initial market cache setup");
+    }
+}
+
+if ($checkVersion("default_npc_tags") < 20260805003) {
+    Logger::debug("Applying default_npc_tags 20260805003 - apply complete default NPC tag audit");
+
+    $migrationPath = __DIR__ . "/../data/default_npc_tag_audit_20260805.sql";
+    $migrationOk = is_readable($migrationPath)
+        && $db->execQuery(file_get_contents($migrationPath)) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("default_npc_tags", 20260805003);
+        Logger::info("Applied patch default_npc_tags 20260805003");
+    } else {
+        Logger::error("Failed to apply patch default_npc_tags 20260805003");
+    }
+}
+
+//----------------------------------------------------
+// AUDIT REQUEST RESPONSE - Store the response text for audit requests
+// Version 20260806001
+//----------------------------------------------------
+$db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"response\"  text");
 
 
 Logger::info(__FILE__." update file processed");

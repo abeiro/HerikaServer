@@ -849,7 +849,8 @@ class openrouterjson
                         'request' => json_encode($data),
                         'result' => $error["message"],
                         'connector'=>$this->name,
-                        'url'=>$this->_url
+                        'url'=>$this->_url,
+                        'response'=>$error["message"],
                     ));
             }
             return null;
@@ -868,7 +869,8 @@ class openrouterjson
                             'request' => json_encode($data),
                             'result' => $error_message,
                             'connector'=>$this->name,
-                            'url'=>$this->_url
+                            'url'=>$this->_url,
+                            'response'=>$response,
                         ));
                 }
 
@@ -1060,33 +1062,40 @@ class openrouterjson
         if (!isset($json_response["usage"]))
             $json_response["usage"]=[];
         
+        $rowid=0;
+
         if ($json_response) {
                 if ($GLOBALS["db"]) {
-                    $GLOBALS["db"]->insert(
+                    $rowid = $GLOBALS["db"]->insertReturningId(
                     'audit_request',
                         array(
                             'request' => json_encode($this->_dataSent),
                             'result' => "Ok",
                             'usage'=>json_encode($json_response["usage"]),
                             'connector'=>$callName,
-                            'url'=>$this->_url
-                        ));
+                            'url'=>$this->_url,
+                            'response'=>$this->_buffer
+                        ),"rowid");
                 }
                 
         }
         else {
                 if ($GLOBALS["db"]) {
-                    $GLOBALS["db"]->insert(
+                    $rowid = $GLOBALS["db"]->insertReturningId(
                     'audit_request',
                         array(
                             'request' => json_encode($this->_dataSent),
                             'result' => "ERROR|INVALID JSON RESPONSE",
                             'connector'=>$this->name,
-                            'url'=>$this->_url
-                        ));
+                            'url'=>$this->_url,
+                            'response'=>$this->_buffer
+                        ),"rowid");
                 }
         }
         // Write the buffer to the log file without timestamp separators
+        if ($rowid > 0) {
+            file_put_contents(__DIR__."/../log/output_from_llm.log", "Request ID: $rowid\n", FILE_APPEND);
+        }
         file_put_contents(__DIR__."/../log/output_from_llm.log", $this->_buffer . "\n", FILE_APPEND);
         file_put_contents(__DIR__."/../log/output_from_llm.log","\n== ".date(DATE_ATOM)." END\n\n", FILE_APPEND);
         return $this->_buffer;
@@ -1391,13 +1400,13 @@ class openrouterjson
             $json_response = false;
         }
 
-
+        $rowid=0;
         if ($json_response) {
             $text_response=json_decode($json_response,true);
             
             // Check for API error response (e.g., {"error": {"message": "..."}})
             if (is_array($text_response) && isset($text_response["error"])) {
-                file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);
+                
                 $errorMsg = "ERROR|API_ERROR";
                 if (is_array($text_response["error"]) && isset($text_response["error"]["message"])) {
                     $errorMsg .= "|" . substr($text_response["error"]["message"], 0, 200);
@@ -1406,65 +1415,83 @@ class openrouterjson
                 }
                 error_log("[fast_request] API error from '{$this->_url}': " . json_encode($text_response["error"]));
                 if ($GLOBALS["db"]) {
-                    $GLOBALS["db"]->insert(
+                    $rowid = $GLOBALS["db"]->insertReturningId(
                     'audit_request',
                         array(
                             'request' => json_encode($data),
                             'result' => $errorMsg,
                             'connector'=>$callName,
-                            'url'=>$this->_url
-                        ));
+                            'url'=>$this->_url,
+                            'response'=>$json_response,
+                        ), "rowid");
                 }
+                file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\nRequest id:{$rowid}\n=\n", FILE_APPEND);
+                file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);
+                file_put_contents(__DIR__."/../log/context_sent_to_llm_fast.log",date(DATE_ATOM)."\n=\nRequest id:{$rowid}\n=\n", FILE_APPEND);
+
+
                 return "";
             }
            
             if (is_valid_array($text_response)) {
-                file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n".json_encode($text_response,JSON_PRETTY_PRINT)."\n=\n", FILE_APPEND);
+                
                 if ($GLOBALS["db"]) {
-                    $GLOBALS["db"]->insert(
+                    $rowid = $GLOBALS["db"]->insertReturningId(
                     'audit_request',
                         array(
                             'request' => json_encode($data),
                             'result' => "Ok",
                             'usage'=>json_encode($text_response["usage"]),
                             'connector'=>$callName,
-                            'url'=>$this->_url
-                        ));
+                            'url'=>$this->_url,
+                            'response'=>$json_response,
+                        ), "rowid");
                 }
+                file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\nRequest id:{$rowid}\n=\n", FILE_APPEND);
+                file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n".json_encode($text_response,JSON_PRETTY_PRINT)."\n=\n", FILE_APPEND);
+                file_put_contents(__DIR__."/../log/context_sent_to_llm_fast.log",date(DATE_ATOM)."\n=\nRequest id:{$rowid}\n=\n", FILE_APPEND);
                 return $text_response["choices"][0]["message"]["content"];    
             }
             else {
-                file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);
+                
                 if ($GLOBALS["db"]) {
-                    $GLOBALS["db"]->insert(
+                    $rowid = $GLOBALS["db"]->insertReturningId(
                     'audit_request',
                         array(
                             'request' => json_encode($data),
                             'result' => "ERROR|INVALID JSON RESPONSE|" . substr($json_response, 0, 200),
                             'connector'=>$callName,
-                            'url'=>$this->_url
-                        ));
+                            'url'=>$this->_url,
+                            'response'=>$json_response,
+                        ), "rowid");
                 }
+                file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\nRequest id:{$rowid}\n=\n", FILE_APPEND);
+                file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);
+                file_put_contents(__DIR__."/../log/context_sent_to_llm_fast.log",date(DATE_ATOM)."\n=\nRequest id:{$rowid}\n=\n", FILE_APPEND);
                 error_log("[fast_request] Invalid JSON from '{$this->_url}': " . substr($json_response, 0, 500));
                 return "";
                 
             }
             
         } else {
-            file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$json_response}\n=\n", FILE_APPEND);
+            
             $lastError = error_get_last();
             $errorDetail = $lastError ? $lastError['message'] : 'unknown';
             error_log("[fast_request] No response from '{$this->_url}': {$errorDetail}");
             if ($GLOBALS["db"]) {
-                $GLOBALS["db"]->insert(
+                $rowid = $GLOBALS["db"]->insertReturningId(
                 'audit_request',
                     array(
                         'request' => json_encode($data),
                         'result' => "ERROR|NO RESPONSE|" . substr($errorDetail, 0, 200),
                         'connector'=>$this->name,
-                        'url'=>$this->_url
-                    ));
+                        'url'=>$this->_url,
+                        'response'=>$errorDetail,
+                    ), "rowid");
             }
+            file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\nRequest id:{$rowid}\n=\n", FILE_APPEND);
+            file_put_contents(__DIR__."/../log/output_from_llm_fast.log",date(DATE_ATOM)."\n=\n{$errorDetail}\n=\n", FILE_APPEND);
+            file_put_contents(__DIR__."/../log/context_sent_to_llm_fast.log",date(DATE_ATOM)."\n=\nRequest id:{$rowid}\n=\n", FILE_APPEND);
         }
             
     }
