@@ -898,14 +898,16 @@ body .settings-tabs .settings-tab.is-active {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
+    height: 36px;
     background: #333;
     color: #fff;
     border: 1px solid #4a4a4a;
     border-radius: 8px;
-    padding: 10px 16px;
+    padding: 7px 12px;
     cursor: pointer;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
     text-decoration: none;
 }
 

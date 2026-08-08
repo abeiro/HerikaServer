@@ -9,7 +9,9 @@ chimRuntimeBootstrap($enginePath, [
 ]);
 
 require_once($enginePath . 'lib' . DIRECTORY_SEPARATOR . 'logger.php');
+require_once($enginePath . 'lib' . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'narrator.class.php');
 require_once($enginePath . 'lib' . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'player.class.php');
+require_once($enginePath . 'lib' . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'core_profiles.class.php');
 require_once($enginePath . 'lib' . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'tts_connector.class.php');
 
 const CHIM_PORTABLE_MAX_BYTES = 1048576;
@@ -91,6 +93,69 @@ function chimPortableGlobalFields(): array
     ];
 }
 
+function chimPortableNarratorFields(): array
+{
+    return [
+        'roleplay_name' => ['type' => 'narrator_name', 'default' => Narrator::DEFAULT_ROLEPLAY_NAME],
+        'enabled' => ['type' => 'boolean_10', 'default' => true],
+        'welcome_enabled' => ['type' => 'boolean_10', 'default' => false],
+        'random_enabled' => ['type' => 'boolean_10', 'default' => false],
+        'bored_enabled' => ['type' => 'boolean_10', 'default' => false],
+        'books_only_narrator' => ['type' => 'boolean_10', 'default' => false],
+        'hide_from_context' => ['type' => 'boolean_10', 'default' => true],
+        'inline_narration_mode' => ['type' => 'narration_mode', 'default' => 'disabled'],
+        'preserve_asterisks_in_context' => ['type' => 'boolean_10', 'default' => false],
+        'remove_asterisks_from_player_input' => ['type' => 'boolean_10', 'default' => true],
+        'remove_asterisks_from_npc_output' => ['type' => 'boolean_10', 'default' => true],
+        'remove_player_autochat_asterisks' => ['type' => 'boolean_10', 'default' => true],
+        'diary_enabled' => ['type' => 'boolean_10', 'default' => false],
+        'auto_diary_enabled' => ['type' => 'boolean_10', 'default' => false],
+        'only_diary_access' => ['type' => 'boolean_10', 'default' => false],
+        'random_chance' => ['type' => 'integer', 'default' => 15, 'min' => 1, 'max' => 100],
+        'random_cooldown' => ['type' => 'integer', 'default' => 2, 'min' => 0, 'max' => 10],
+        'bored_chance' => ['type' => 'integer', 'default' => 25, 'min' => 1, 'max' => 100],
+        'welcome_cooldown' => ['type' => 'integer', 'default' => 10, 'min' => 1, 'max' => 1440],
+        'quest_comment_enabled' => ['type' => 'boolean_10', 'default' => false],
+        'quest_comment_chance' => ['type' => 'integer', 'default' => 10, 'min' => 1, 'max' => 100],
+        'quest_comment_cooldown' => ['type' => 'integer', 'default' => 3, 'min' => 1, 'max' => 60],
+        'dynamic_profile' => ['type' => 'boolean_10', 'default' => false],
+        'dynamic_profile_fields' => ['type' => 'dynamic_profile_fields', 'default' => []],
+        'voiceid' => ['type' => 'string', 'default' => 'TheNarrator'],
+        'core' => ['type' => 'string', 'default' => ''],
+        'background' => ['type' => 'string', 'default' => ''],
+        'personality' => ['type' => 'string', 'default' => ''],
+        'speechstyle' => ['type' => 'string', 'default' => ''],
+        'goals' => ['type' => 'string', 'default' => ''],
+        'oghma_knowledge' => ['type' => 'string', 'default' => 'knowall'],
+        'prompt_head' => ['type' => 'string', 'default' => ''],
+    ];
+}
+
+function chimPortableNarratorPromptKeys(): array
+{
+    return [
+        'dialogue_line_inline_response_narrator',
+        'inline_narration_prompt_narrator',
+        'dialogue_line_inline_response_npc',
+        'inline_narration_prompt_npc',
+        'narrator_welcome_prompt',
+        'player_speech_style_prompt',
+        'random_narration_prompt',
+        'narrator_bored_prompt',
+        'quest_comment_prompt',
+    ];
+}
+
+function chimPortableScopeInfo(string $scope): array
+{
+    $scopes = [
+        'player' => ['package_type' => 'chim_player_settings', 'display_name' => 'Player settings'],
+        'narration' => ['package_type' => 'chim_narration_settings', 'display_name' => 'Narration settings'],
+        'global' => ['package_type' => 'chim_global_settings', 'display_name' => 'Global Settings'],
+    ];
+    return $scopes[$scope] ?? [];
+}
+
 function chimPortableServerVersion(string $enginePath): string
 {
     $versionPath = $enginePath . '.version_number.txt';
@@ -156,6 +221,35 @@ function chimPortableNormalize($value, string $type, bool &$valid)
         return chimNormalizePromptContextOptions($value);
     }
 
+    if ($type === 'narrator_name') {
+        try {
+            return Narrator::normalizeRoleplayName($value);
+        } catch (InvalidArgumentException $e) {
+            $valid = false;
+            return null;
+        }
+    }
+
+    if ($type === 'narration_mode') {
+        $mode = strtolower(trim(strval($value ?? '')));
+        if (!in_array($mode, ['disabled', 'narrator', 'npc', 'text_only'], true)) {
+            $valid = false;
+            return null;
+        }
+        return $mode;
+    }
+
+    if ($type === 'dynamic_profile_fields') {
+        if (!is_array($value)) {
+            $valid = false;
+            return null;
+        }
+        $allowed = ['personality', 'speechstyle', 'goals'];
+        return array_values(array_unique(array_filter($value, static function ($field) use ($allowed) {
+            return is_string($field) && in_array($field, $allowed, true);
+        })));
+    }
+
     $valid = false;
     return null;
 }
@@ -180,8 +274,9 @@ function chimPortableTypedGlobalValue(string $name, string $type)
 function chimPortableDownload(string $scope, string $enginePath): void
 {
     $version = chimPortableServerVersion($enginePath);
+    $scopeInfo = chimPortableScopeInfo($scope);
     $export = [
-        'package_type' => $scope === 'player' ? 'chim_player_settings' : 'chim_global_settings',
+        'package_type' => $scopeInfo['package_type'],
         'export_version' => $version,
         'exported_at' => date('c'),
         'settings' => [],
@@ -213,6 +308,48 @@ function chimPortableDownload(string $scope, string $enginePath): void
 
         $safeName = trim(strval(preg_replace('/[^a-z0-9_-]+/i', '_', strtolower(trim(strval($allPlayerData['player_name'] ?? 'player'))))), '_');
         $filename = ($safeName !== '' ? $safeName : 'player') . '_player_settings.json';
+    } elseif ($scope === 'narration') {
+        $narrator = new Narrator();
+        $allNarratorData = $narrator->getAll();
+        foreach (chimPortableNarratorFields() as $name => $config) {
+            $type = $config['type'];
+            $raw = array_key_exists($name, $allNarratorData) ? $allNarratorData[$name] : $config['default'];
+            if ($type === 'boolean_10') {
+                $export['settings'][$name] = is_bool($raw)
+                    ? $raw
+                    : in_array(strtolower(trim(strval($raw))), ['1', 'true', 'yes', 'on'], true);
+            } elseif ($type === 'integer') {
+                $export['settings'][$name] = intval($raw);
+            } elseif ($type === 'dynamic_profile_fields') {
+                $export['settings'][$name] = $narrator->getDynamicProfileFields();
+            } else {
+                $export['settings'][$name] = strval($raw);
+            }
+        }
+
+        $export['profile'] = null;
+        $profileId = $narrator->getProfileId();
+        if ($profileId !== null) {
+            $profile = (new CoreProfile())->readOne($profileId);
+            if (is_array($profile) && trim(strval($profile['label'] ?? '')) !== '') {
+                $export['profile'] = ['label' => strval($profile['label'])];
+            }
+        }
+
+        $export['prompts'] = array_fill_keys(chimPortableNarratorPromptKeys(), null);
+        $promptRows = $GLOBALS['db']->fetchAll(
+            'SELECT prompt_key, custom_prompt FROM prompts WHERE prompt_key IN (' .
+            implode(', ', array_map([$GLOBALS['db'], 'escapeLiteral'], chimPortableNarratorPromptKeys())) . ')'
+        );
+        foreach (is_array($promptRows) ? $promptRows : [] as $promptRow) {
+            $promptKey = strval($promptRow['prompt_key'] ?? '');
+            if (array_key_exists($promptKey, $export['prompts'])) {
+                $export['prompts'][$promptKey] = $promptRow['custom_prompt'] === null
+                    ? null
+                    : strval($promptRow['custom_prompt']);
+            }
+        }
+        $filename = 'chim_narration_settings.json';
     } else {
         foreach (chimPortableGlobalFields() as $name => $type) {
             $export['settings'][$name] = chimPortableTypedGlobalValue($name, $type);
@@ -229,9 +366,10 @@ function chimPortableDownload(string $scope, string $enginePath): void
 
 function chimPortableImport(string $scope, array $export, string $enginePath): array
 {
-    $expectedType = $scope === 'player' ? 'chim_player_settings' : 'chim_global_settings';
+    $scopeInfo = chimPortableScopeInfo($scope);
+    $expectedType = $scopeInfo['package_type'];
     if (($export['package_type'] ?? '') !== $expectedType) {
-        throw new InvalidArgumentException('This file is not a ' . ($scope === 'player' ? 'Player' : 'Global Settings') . ' export.');
+        throw new InvalidArgumentException('This file is not a ' . $scopeInfo['display_name'] . ' export.');
     }
 
     $exportVersion = trim(strval($export['export_version'] ?? ''));
@@ -242,7 +380,9 @@ function chimPortableImport(string $scope, array $export, string $enginePath): a
         throw new InvalidArgumentException('The export does not contain valid settings.');
     }
 
-    $manifest = $scope === 'player' ? chimPortablePlayerFields() : chimPortableGlobalFields();
+    $manifest = $scope === 'player'
+        ? chimPortablePlayerFields()
+        : ($scope === 'narration' ? chimPortableNarratorFields() : chimPortableGlobalFields());
     $settings = $export['settings'];
     $applied = [];
     $skippedInvalid = [];
@@ -321,6 +461,105 @@ function chimPortableImport(string $scope, array $export, string $enginePath): a
                     $skippedInvalid[] = 'tts_connector';
                 }
             }
+        } elseif ($scope === 'narration') {
+            $narrator = new Narrator();
+            foreach ($manifest as $name => $config) {
+                if (!array_key_exists($name, $settings)) {
+                    continue;
+                }
+                $type = $config['type'];
+                $valid = false;
+                $value = chimPortableNormalize($settings[$name], $type, $valid);
+                if ($valid && $type === 'integer') {
+                    $valid = $value >= $config['min'] && $value <= $config['max'];
+                }
+                if (!$valid) {
+                    $skippedInvalid[] = $name;
+                    continue;
+                }
+
+                if ($name === 'roleplay_name') {
+                    $currentRoleplayName = $narrator->getRoleplayName();
+                    $playerName = trim(strval($GLOBALS['PLAYER_NAME'] ?? ''));
+                    if ($playerName !== '' && strcasecmp($value, $playerName) === 0) {
+                        $skippedInvalid[] = $name;
+                        $warnings[] = 'Narrator Name matched the player name and was left unchanged.';
+                        continue;
+                    }
+                    if (strcasecmp($value, $currentRoleplayName) !== 0) {
+                        $matchingNpc = $db->fetchOne(
+                            'SELECT npc_name FROM core_npc_master WHERE LOWER(npc_name) = LOWER(' .
+                            $db->escapeLiteral($value) . ') LIMIT 1'
+                        );
+                        if (is_array($matchingNpc)) {
+                            $skippedInvalid[] = $name;
+                            $warnings[] = 'Narrator Name matched an existing NPC and was left unchanged.';
+                            continue;
+                        }
+                    }
+                }
+
+                if ($type === 'dynamic_profile_fields') {
+                    if (!$narrator->setDynamicProfileFields($value)) {
+                        throw new RuntimeException('Could not import narrator dynamic profile fields.');
+                    }
+                } else {
+                    $storedValue = $type === 'boolean_10' ? ($value ? '1' : '0') : strval($value);
+                    if (!$narrator->set($name, $storedValue)) {
+                        throw new RuntimeException("Could not import narrator setting {$name}.");
+                    }
+                }
+                $applied[] = $name;
+            }
+
+            if (array_key_exists('profile', $export)) {
+                $profileRef = $export['profile'];
+                if (is_array($profileRef) && trim(strval($profileRef['label'] ?? '')) !== '') {
+                    $profileLabel = trim(strval($profileRef['label']));
+                    $profile = $db->fetchOne(
+                        'SELECT id FROM core_profiles WHERE LOWER(label) = LOWER(' . $db->escapeLiteral($profileLabel) . ') LIMIT 1'
+                    );
+                    if (is_array($profile) && !empty($profile['id'])) {
+                        if (!$narrator->set('profile_id', strval($profile['id']))) {
+                            throw new RuntimeException('Could not import the Narrator profile.');
+                        }
+                        $applied[] = 'profile';
+                    } else {
+                        $warnings[] = "Profile '{$profileLabel}' was not found; the current Narrator profile was left unchanged.";
+                    }
+                } elseif ($profileRef !== null) {
+                    $skippedInvalid[] = 'profile';
+                }
+            }
+
+            if (array_key_exists('prompts', $export)) {
+                if (!is_array($export['prompts'])) {
+                    $skippedInvalid[] = 'prompts';
+                } else {
+                    $allowedPromptKeys = chimPortableNarratorPromptKeys();
+                    foreach ($export['prompts'] as $promptKey => $customPrompt) {
+                        if (!in_array($promptKey, $allowedPromptKeys, true)) {
+                            $skippedUnknown[] = 'prompts.' . $promptKey;
+                            continue;
+                        }
+                        if ($customPrompt !== null && !is_string($customPrompt)) {
+                            $skippedInvalid[] = 'prompts.' . $promptKey;
+                            continue;
+                        }
+                        $customPrompt = $customPrompt === null || trim($customPrompt) === '' ? null : trim($customPrompt);
+                        $customPromptSql = $customPrompt === null ? 'NULL' : $db->escapeLiteral($customPrompt);
+                        $updated = $db->execQuery(
+                            'UPDATE prompts SET custom_prompt = ' . $customPromptSql .
+                            ', updated_at = ' . $db->escapeLiteral(date('Y-m-d H:i:s')) .
+                            ' WHERE prompt_key = ' . $db->escapeLiteral($promptKey)
+                        );
+                        if ($updated === false) {
+                            throw new RuntimeException("Could not import narrator prompt {$promptKey}.");
+                        }
+                        $applied[] = 'prompts.' . $promptKey;
+                    }
+                }
+            }
         } else {
             foreach ($manifest as $name => $type) {
                 if (!array_key_exists($name, $settings)) {
@@ -345,6 +584,8 @@ function chimPortableImport(string $scope, array $export, string $enginePath): a
         $transactionStarted = false;
         if ($scope === 'global') {
             chimLoadGeneralSettingsIntoGlobals();
+        } elseif ($scope === 'narration') {
+            $narrator->loadIntoGlobals();
         }
     } catch (Throwable $e) {
         if ($transactionStarted) {
@@ -364,7 +605,7 @@ function chimPortableImport(string $scope, array $export, string $enginePath): a
 }
 
 $scope = strtolower(trim(strval($_GET['scope'] ?? '')));
-if (!in_array($scope, ['player', 'global'], true)) {
+if (!in_array($scope, ['player', 'narration', 'global'], true)) {
     chimPortableJsonResponse(['ok' => false, 'error' => 'Invalid settings scope.'], 400);
 }
 

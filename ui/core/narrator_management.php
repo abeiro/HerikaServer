@@ -831,6 +831,48 @@ if (!$isEmbed) {
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     }
 
+    .narrator-settings-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+    }
+
+    .narrator-settings-actions .btn-save {
+        margin-bottom: 0;
+    }
+
+    .btn-narrator-transfer {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        height: 36px;
+        padding: 6px 12px;
+        border: 1px solid #4a4a4a;
+        border-radius: 6px;
+        background: #333;
+        color: #fff;
+        cursor: pointer;
+        font-size: 0.85em;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .btn-narrator-transfer:hover:not(:disabled) {
+        background: #414141;
+        border-color: rgba(242, 124, 17, 0.65);
+        color: #fff;
+        text-decoration: none;
+    }
+
+    .btn-narrator-transfer:disabled {
+        opacity: 0.6;
+        cursor: wait;
+    }
+
     /* Toast Notification */
     .toast-notification {
         position: fixed;
@@ -1345,7 +1387,12 @@ if (!$isEmbed) {
         </div>
 
         <form method="post" action="">
-            <button type="submit" class="btn-save" name="save_narrator" value="1">Save Narration Settings</button>
+            <div class="narrator-settings-actions">
+                <button type="submit" class="btn-save" name="save_narrator" value="1">Save Narration Settings</button>
+                <a class="btn-narrator-transfer" href="<?php echo $webRoot; ?>/ui/cmd/settings_portability.php?scope=narration&amp;action=export">&#128228; Export Narration</a>
+                <button type="button" class="btn-narrator-transfer" id="import_narration_settings_btn">&#128229; Import Narration</button>
+                <input type="file" id="import_narration_settings_file" accept="application/json,.json" hidden>
+            </div>
 
             <div class="content-grid">
                 <!-- Core Settings Section -->
@@ -1878,6 +1925,20 @@ if (!$isEmbed) {
         </div>
     </div>
 </main>
+
+<script src="<?php echo $webRoot; ?>/ui/js/settings-portability.js?v=<?php echo (int) @filemtime(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'js' . DIRECTORY_SEPARATOR . 'settings-portability.js'); ?>"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof window.chimInitSettingsImport === 'function') {
+        window.chimInitSettingsImport({
+            scope: 'narration',
+            endpoint: <?php echo json_encode($webRoot . '/ui/cmd/settings_portability.php'); ?>,
+            importButtonId: 'import_narration_settings_btn',
+            fileInputId: 'import_narration_settings_file'
+        });
+    }
+});
+</script>
 
 <script>
 const narratorAdvancedPrompts = <?php

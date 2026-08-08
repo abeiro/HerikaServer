@@ -8,8 +8,17 @@
             return;
         }
 
-        const expectedType = options.scope === 'player' ? 'chim_player_settings' : 'chim_global_settings';
-        const displayName = options.scope === 'player' ? 'Player settings' : 'Global Settings';
+        const scopeDetails = {
+            player: { packageType: 'chim_player_settings', displayName: 'Player settings' },
+            narration: { packageType: 'chim_narration_settings', displayName: 'Narration settings' },
+            global: { packageType: 'chim_global_settings', displayName: 'Global Settings' }
+        };
+        const details = scopeDetails[options.scope];
+        if (!details) {
+            return;
+        }
+        const expectedType = details.packageType;
+        const displayName = details.displayName;
 
         importButton.addEventListener('click', function () {
             fileInput.click();
@@ -39,7 +48,13 @@
                 return;
             }
 
-            const settingCount = Object.keys(exportData.settings).length;
+            let settingCount = Object.keys(exportData.settings).length;
+            if (options.scope === 'narration') {
+                settingCount += exportData.prompts && typeof exportData.prompts === 'object'
+                    ? Object.keys(exportData.prompts).length
+                    : 0;
+                settingCount += exportData.profile ? 1 : 0;
+            }
             const exportVersion = exportData.export_version || 'unknown';
             const confirmed = window.confirm(
                 'Import ' + settingCount + ' ' + displayName + ' fields from CHIM ' + exportVersion + '?\n\n' +
