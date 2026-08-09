@@ -4365,6 +4365,7 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS refs text"
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS cleared boolean");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS world text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS chim_added int");
 $db->execQuery("
 CREATE OR REPLACE VIEW public.locations_v
 as
