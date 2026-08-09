@@ -1932,6 +1932,7 @@ function getLocationsNearNpcCoords($npcName) {
     $db = $GLOBALS['db'];
     $pointLiteral = '(' . $x . ',' . $y . ')';
     $pointEsc = $db->escape($pointLiteral);
+    $worldEsc = $db->escape($lastCoords["world"] ?? '');
 
     // Abandoned Shack locations is bugged as is child of Batte-Born Farm.
     $closestLocations = $db->fetchAll(
@@ -1947,13 +1948,16 @@ function getLocationsNearNpcCoords($npcName) {
          FROM locations
          WHERE coords IS NOT NULL
          and name<>'Abandoned Shack'
-         ORDER BY distance ASC
-         LIMIT 25"
+         and coords <-> '{$pointEsc}'::point < 6000
+         and world IN ('{$worldEsc}','')
+         ORDER BY case when world = '{$worldEsc}' then coords <-> '{$pointEsc}'::point else (coords <-> '{$pointEsc}'::point) + 100000 end ASC
+         LIMIT 35"
     );
 
     $closestLocationsNames=[];
 
     foreach ($closestLocations as &$location) {
+        //$key=$location['name'].' '.$location['distance'];
         $key=$location['name'];
         if (checkInterior($location['is_interior'])) {// If any reference is interior, we append "(Interior)" to the name for clarity and duplicate the entry.
             $key .= ' (Interior)';
