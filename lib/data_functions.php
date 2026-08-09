@@ -8214,7 +8214,8 @@ function resolveTravelLocation($location, $currentNpcData, $db)
     $metaData=json_decode($currentNpcData['metadata'] ?? '{}', true);
     $pointSql = '';
     $orderByDistanceSql = '';
-    if (!empty($npcPoint) && $metaData["last_coords"]["world"]=="Skyrim") {// Only use coords on global worldspace
+    if (!empty($npcPoint) && ($metaData["last_coords"]["world"]=="Skyrim") || $metaData["last_coords"]["world"]=="Whiterun") {// Only use coords on global worldspace
+    
         $npcPointEsc = $db->escape($npcPoint);
         $pointSql = ", coords <-> '{$npcPointEsc}'::point AS dist";
         $orderByDistanceSql = ', dist ASC';
@@ -8224,8 +8225,8 @@ function resolveTravelLocation($location, $currentNpcData, $db)
     // nearest matching marker is preferred when names collide.
    
 
-    $loc = $db->fetchOne(
-    "SELECT 
+    $query = "
+    SELECT
         name,
         region,
         hold,
@@ -8259,9 +8260,12 @@ function resolveTravelLocation($location, $currentNpcData, $db)
         END AS exact_rank
      FROM locations
      WHERE formid IS NOT NULL
-     ORDER BY exact_rank DESC$orderByDistanceSql, sim DESC
-     LIMIT 1"
-);
+     ORDER BY exact_rank DESC, sim DESC$orderByDistanceSql
+     LIMIT 1";
+
+
+    //error_log("resolveTravelLocation query: $query");
+    $loc = $db->fetchOne($query);
 
     if (strpos($location, '(Interior)') !== false && checkInterior($loc['is_interior'])) {
         // Interior location requested, we should return an interior reference.
