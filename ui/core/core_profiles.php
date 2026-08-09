@@ -21,6 +21,7 @@ require_once "{$enginePath}/lib/core/tts_connector.class.php";
 require_once "{$enginePath}/lib/core/itt_connector.class.php";
 require_once "{$enginePath}/lib/core/api_badge.class.php";
 require_once "{$enginePath}/lib/core/import_rules.class.php";
+require_once "{$enginePath}/lib/core/prisma_settings_catalog.php";
 
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
 //function include from below file
@@ -521,13 +522,7 @@ $__dynOptions = is_array($__confSchema['DYNAMIC_PROFILE_FIELDS']['values'] ?? nu
 $__dynHelp = (string)($__confSchema['DYNAMIC_PROFILE_FIELDS']['description'] ?? '');
 
 // Only profile metadata fields rendered by the visual editor may be copied in bulk.
-$profileSyncableMetadataKeys = [
-    'RECHAT_H', 'RECHAT_P', 'CORE_LANG', 'BORED_EVENT',
-    'DIARY_PROMPT', 'LANG_LLM_XTTS', 'QUEST_COMMENT', 'DIARY_COOLDOWN', 'COMBAT_BARK_COOLDOWN',
-    'CONTEXT_HISTORY', 'MAX_WORDS_LIMIT',
-    'QUEST_COMMENT_CHANCE', 'RECHAT_ALLOW_ACTIONS', 'CONTEXT_HISTORY_DIARY', 'BORED_EVENT_SERVERSIDE',
-    'CONTEXT_HISTORY_DYNAMIC_PROFILE',
-];
+$profileSyncableMetadataKeys = chimPrismaProfileSyncableMetadataKeys();
 
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
