@@ -551,7 +551,7 @@ if ($argv[1] == '6') {
         'gender' => 'female',
         'class' => 'merchant',
         'race' => 'imperial',
-        'location' => 'Whiterun',
+        'location' => 'Markarth',
         'appearance' => 'an elegant imperial journalist',
         'background' => 'Born in Cyrodiil to a family of historians, Cassia Valerius became fascinated by the stories of ordinary people living through extraordinary events. She travelled to Skyrim after the Civil War began, determined to document the truth beyond the official speeches of jarls and generals. She believes every citizen, from a miner to a noble, has a story worth recording.',
         'speechStyle' => 'professional, inquisitive and diplomatic. She asks precise questions, listens carefully, and often references history, politics and local rumors. She is polite but persistent when seeking the truth.',
@@ -582,7 +582,7 @@ When at a city, tavern or social scenario, and intent is work, she generates gol
 ",
     ];
 
-    $startingPoint = 0x2701EE0A;
+    $startingPoint = 0x36f9d;
     $inventoryItems = [
         ['refid' => '0x0000000F', 'qty' => 100],
     ];
@@ -608,7 +608,7 @@ if ($argv[1] == '8') {
         'goal' => "[Life goals]
 Earn an honest living as one of Windhelm's most dependable fishermen while supporting the Argonian community on the docks.
 
-* Works at 'Windhelm Docks'
+* Works at 'Windhelm Docks Area'
 * Inspect and repair fishing nets and equipment.
 * Spend most of the morning and afternoon fishing along the docks and nearby waters.
 * Sell freshly caught fish (River Betty, item refid:0x00106e1a, common price about 15 gold coins) to merchants, innkeepers and citizens.
@@ -630,7 +630,7 @@ Must sell fish to merchants,(e.g at Candlehearth Hall), innkeepers and citizens 
 "
     ];
 
-    $startingPoint = 0x27019D09;
+    $startingPoint = 0x02016865;
     $inventoryItems = [
         ['refid' => '0x00106e1a', 'qty' => 10],
     ];
@@ -638,17 +638,16 @@ Must sell fish to merchants,(e.g at Candlehearth Hall), innkeepers and citizens 
     spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems);
 }
 
-if ($argv[1] == '9') {
+
+if ($argv[1] == '9a') {
 
     $npcMaster = new NpcMaster();
     $npc = $npcMaster->getByName("Lydia");
-    $testData = resolveTravelLocation("Elysium Estate Basement", $npc, $GLOBALS["db"]);
-    print_r($testData);
-    if (checkInterior($testData["is_interior"])) {
-        echo "Interior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
-    } else {
-        echo "Exterior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
-    }
+    $meta=$npcMaster->getMetaData($npc);
+    print_r($meta["last_coords"]);
+    
+    print_r(getLocationsNearNpcCoords("Lydia"));
+
     /*
     // This does not work, because the TravelToRaw only accepts location formid.
     $db->insert(
@@ -662,7 +661,11 @@ if ($argv[1] == '9') {
         )
     );
     */
+    //die();
     // This works
+    // Jorvasrk 1014097
+    // Silver-Blood Inn
+
     $db->insert(
         'responselog',
         [
@@ -670,7 +673,54 @@ if ($argv[1] == '9') {
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|BackgroundCmd@0x000A2C94@TravelTo/-16772904",
+            'action' => "rolecommand|BackgroundCmd@0x000A2C94@TravelTo/468592",
+            'tag' => '',
+        ]
+    );
+}
+
+if ($argv[1] == '9') {
+
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Cassia Valerius");
+    $meta=$npcMaster->getMetaData($npc);
+    print_r($meta["last_coords"]);
+    $testData = resolveTravelLocation("Silver-Blood Inn", $npc, $GLOBALS["db"]);
+    print_r($testData);
+    if (checkInterior($testData["is_interior"])) {
+        echo "Interior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
+    } else {
+        echo "Exterior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
+    }
+
+    print_r(getLocationsNearNpcCoords("Cassia Valerius"));
+
+    /*
+    // This does not work, because the TravelToRaw only accepts location formid.
+    $db->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'text' => "TravelToRaw@-16772904",
+            'actor' => "Lydia",
+            'action' => 'command'
+        )
+    );
+    */
+    die();
+    // This works
+    // Jorvasrk 1014097
+    // Silver-Blood Inn
+
+    $db->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x000A2C94@TravelTo/225181",
             'tag' => '',
         ]
     );
