@@ -6653,7 +6653,7 @@ function GetExpression($mood) {
      "CombatShout"
      ];
      
-     $result="";
+     $result="MoodNeutral";
      if ($mood=="sarcastic") {
         $result= array_rand(array_flip(["DialoguePuzzled"]), 1);
          
@@ -6690,6 +6690,18 @@ function GetExpression($mood) {
          
      } else if ($mood=="smirking") {
         $result= array_rand(array_flip(["DialogueHappy"]), 1);
+     } else if (in_array($mood, ["sexy", "kindly", "lovely", "seductive", "happy"], true)) {
+        $result="DialogueHappy";
+     } else if (in_array($mood, ["desperate", "scared", "pleading"], true)) {
+        $result="DialogueFear";
+     } else if (in_array($mood, ["assertive", "angry"], true)) {
+        $result="DialogueAnger";
+     } else if ($mood=="sad") {
+        $result="DialogueSad";
+     } else if ($mood=="surprised") {
+        $result="DialogueSurprise";
+     } else if (in_array($mood, ["drunk", "shy"], true)) {
+        $result="DialoguePuzzled";
      
          
      } else if ($mood=="serious") {
