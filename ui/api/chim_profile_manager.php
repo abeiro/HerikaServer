@@ -131,6 +131,7 @@ function chimProfileManagerDetail(CoreProfile $profiles, int $id): array
             'description' => (string)($definition['description'] ?? ''),
             'enabled' => array_key_exists($name, $metadata),
             'value' => $metadata[$name] ?? '',
+            'global_value' => $definition['global_value'] ?? '',
         ];
         if ($field['type'] === 'boolean' && $field['enabled']) $field['value'] = chimProfileManagerBool($field['value']);
         if (!empty($definition['values'])) {

@@ -500,6 +500,7 @@ if (!function_exists('chimGetOverrideableGeneralSettingsCatalog')) {
                 'description' => trim(strval($rowMap[$id]['description'] ?? ($descriptions[$id] ?? chimGetSchemaDescription($id)))),
                 'category' => chimGetOverrideableGeneralSettingCategory($id),
                 'ui_label' => chimPrettySettingLabel($id),
+                'global_value' => $rowMap[$id]['value'] ?? ($definition['default'] ?? ''),
             ];
 
             if (!empty($definition['values']) && is_array($definition['values'])) {
