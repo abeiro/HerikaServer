@@ -126,6 +126,33 @@ final class HistoricContextTest extends DatabaseTestCase
         $this->assertContains("Prisoner: Keep your voice down.", $contents);
     }
 
+    public function testBuildHistoricContextKeepsInjectedEventForOffSceneRecipient(): void
+    {
+        $injectedEvent = "(Camilla wrote to Farengar that the Prisoner will ask for the sealed letter.)";
+        $this->insertEvent("inputtext", $injectedEvent, "|Camilla|Lydia|", 90, 90, 90);
+
+        for ($index = 0; $index < 8; $index++) {
+            $this->insertEvent(
+                "inputtext",
+                "(Unrelated quest event {$index}.)",
+                "|Belethor|",
+                100 + $index,
+                100 + $index,
+                100 + $index
+            );
+        }
+
+        $lydiaContents = array_map(static function (array $row): string {
+            return (string)($row["content"] ?? "");
+        }, buildHistoricContext("Lydia", -5));
+        $ysoldaContents = array_map(static function (array $row): string {
+            return (string)($row["content"] ?? "");
+        }, buildHistoricContext("Ysolda", -5));
+
+        $this->assertContains($injectedEvent, $lydiaContents);
+        $this->assertNotContains($injectedEvent, $ysoldaContents);
+    }
+
     public function testBuildHistoricContextIncludesNarratorRowsForSharedAudience(): void
     {
         $this->insertEvent(
