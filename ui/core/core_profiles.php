@@ -304,6 +304,11 @@ h1.api-title {
 .provider-grid { display:grid; grid-template-columns: 1fr; gap:12px; align-items:start; }
 .provider-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; }
 .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.profile-global-overrides > summary { cursor:pointer; list-style:none; margin-bottom:0; }
+.profile-global-overrides > summary::-webkit-details-marker { display:none; }
+.profile-global-overrides > summary::after { content:'\25B8'; color:rgb(242, 124, 17); font-size:18px; }
+.profile-global-overrides[open] > summary { margin-bottom:8px; }
+.profile-global-overrides[open] > summary::after { content:'\25BE'; }
 .provider-title { display:flex; align-items:center; gap:10px; color:#e0e0e0; }
 .provider-icon { width:28px; height:28px; border-radius:6px; background:#3a3a3a; display:flex; align-items:center; justify-content:center; font-size:16px; }
 .provider-body { display:flex; gap:8px; align-items:center; }
@@ -2234,13 +2239,13 @@ const saveAllBtn = document.getElementById('btn_save_all');
     </div>
     
     <!-- Global Settings Overrides -->
-    <div class="provider-card" style="margin-bottom:8px;">
-        <div class="provider-head">
+    <details class="provider-card profile-global-overrides" style="margin-bottom:8px;">
+        <summary class="provider-head">
             <div class="provider-title">
                 <div class="provider-icon">&#x1F310;</div>
                 <div>Global Settings Overrides</div>
             </div>
-        </div>
+        </summary>
         <div class="provider-body" style="display:block;">
             <small style="color:#9fb1c9; display:block; margin-bottom:8px;">Override global settings for this profile. Changes here take precedence over global configurations.</small>
             <?php
@@ -2277,7 +2282,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
             include(__DIR__."/tmpl/override_editor.php");
             ?>
         </div>
-    </div>
+    </details>
     
     <!-- JSON Editor (second chunk) in collapsible -->
     <details id="metadata_section" class="collapsible">
