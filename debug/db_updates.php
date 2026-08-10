@@ -7862,6 +7862,21 @@ if ($checkVersion("default_npc_tags") < 20260805003) {
     }
 }
 
+if ($checkVersion("eventlog_session_payload") < 20260807001) {
+    Logger::debug("Applying eventlog_session_payload 20260807001 - allow complete routing snapshots");
+
+    $migrationOk = $db->execQuery(
+        "ALTER TABLE public.eventlog ALTER COLUMN sess TYPE text"
+    ) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("eventlog_session_payload", 20260807001);
+        Logger::info("Applied patch eventlog_session_payload 20260807001");
+    } else {
+        Logger::error("Failed to apply patch eventlog_session_payload 20260807001");
+    }
+}
+
 //----------------------------------------------------
 // AUDIT REQUEST RESPONSE - Store the response text for audit requests
 // Version 20260806001
