@@ -25,6 +25,7 @@
         const recipients = new Map([[npcId, npcName]]);
         let searchTimer = null;
         let searchGeneration = 0;
+        let selectedEventType = '';
 
         root.innerHTML = `
             <div class="npc-event-history-shell span-2">
@@ -48,6 +49,12 @@
                         <div><h3>Recent Events</h3><p>The latest events routed to this NPC. Deleting a shared event removes it for every listed recipient.</p></div>
                         <button type="button" class="btn-cancel" data-history-refresh>Refresh</button>
                     </div>
+                    <div class="npc-event-history-filterbar">
+                        <label>Event type
+                            <select data-history-event-type><option value="">All visible events</option></select>
+                        </label>
+                        <span class="npc-event-history-filter-note" data-history-filter-note>Using Event Log visibility filters.</span>
+                    </div>
                     <div class="npc-event-history-list" data-history-list><p class="npc-event-history-empty">Open this tab to load recent events.</p></div>
                 </section>
             </div>`;
@@ -60,6 +67,8 @@
         const list = root.querySelector('[data-history-list]');
         const injectButton = root.querySelector('[data-history-inject]');
         const refreshButton = root.querySelector('[data-history-refresh]');
+        const eventTypeSelect = root.querySelector('[data-history-event-type]');
+        const filterNote = root.querySelector('[data-history-filter-note]');
 
         function setStatus(message, isError) {
             status.textContent = message || '';
@@ -122,18 +131,49 @@
             }
         }
 
+        function renderFilters(filters) {
+            const types = Array.isArray(filters.event_types) ? filters.event_types : [];
+            const hiddenTypes = Array.isArray(filters.hidden_event_types) ? filters.hidden_event_types : [];
+            const selected = String(filters.selected_event_type || selectedEventType);
+            eventTypeSelect.replaceChildren(new Option('All visible events', ''));
+            types.forEach(function (entry) {
+                const type = String(entry.type || '');
+                if (!type) return;
+                eventTypeSelect.appendChild(new Option(type + ' (' + Number(entry.total || 0) + ')', type));
+            });
+            eventTypeSelect.value = selected;
+            selectedEventType = eventTypeSelect.value;
+            filterNote.textContent = hiddenTypes.length
+                ? 'Hidden by Event Log: ' + hiddenTypes.join(', ')
+                : 'Using Event Log visibility filters.';
+        }
+
         function renderEvents(events) {
             list.replaceChildren();
             if (!events.length) {
                 list.appendChild(element('p', 'npc-event-history-empty', 'No events are recorded for this NPC yet.'));
                 return;
             }
+            const tableWrap = element('div', 'npc-event-history-table-wrap');
+            const table = element('table', 'npc-event-history-table');
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            ['Event', 'Events', 'People Present', 'Tamrielic Time', 'Time (UTC)', ''].forEach(function (label) {
+                headerRow.appendChild(element('th', '', label));
+            });
+            thead.appendChild(headerRow);
+            const tbody = document.createElement('tbody');
             events.forEach(function (event) {
-                const card = element('article', 'npc-event-history-card');
-                const header = element('div', 'npc-event-history-card-header');
-                const title = element('div');
-                title.appendChild(element('strong', '', event.manual_injection ? 'Injected Event' : (event.type || 'Event')));
-                title.appendChild(element('span', '', event.tamrielic_time || event.local_time || 'Unknown time'));
+                const row = document.createElement('tr');
+                row.appendChild(element('td', 'npc-event-history-type', event.type || 'Event'));
+                row.appendChild(element('td', 'npc-event-history-data', event.data || ''));
+                row.appendChild(element(
+                    'td',
+                    'npc-event-history-audience',
+                    Array.isArray(event.recipients) ? event.recipients.join(', ') : ''
+                ));
+                row.appendChild(element('td', '', event.tamrielic_time || ''));
+                row.appendChild(element('td', '', event.local_time || ''));
                 const deleteButton = element('button', 'npc-event-history-delete', 'Delete');
                 deleteButton.type = 'button';
                 deleteButton.addEventListener('click', async function () {
@@ -154,14 +194,14 @@
                         deleteButton.disabled = false;
                     }
                 });
-                header.append(title, deleteButton);
-                card.appendChild(header);
-                card.appendChild(element('p', 'npc-event-history-data', event.data || ''));
-                if (Array.isArray(event.recipients) && event.recipients.length) {
-                    card.appendChild(element('p', 'npc-event-history-audience', 'NPCs: ' + event.recipients.join(', ')));
-                }
-                list.appendChild(card);
+                const actions = document.createElement('td');
+                actions.appendChild(deleteButton);
+                row.appendChild(actions);
+                tbody.appendChild(row);
             });
+            table.append(thead, tbody);
+            tableWrap.appendChild(table);
+            list.appendChild(tableWrap);
         }
 
         async function load() {
@@ -169,8 +209,10 @@
             refreshButton.disabled = true;
             list.replaceChildren(element('p', 'npc-event-history-empty', 'Loading recent events...'));
             try {
-                const query = new URLSearchParams({operation: 'history', id: String(npcId), limit: '50'});
+                const query = new URLSearchParams({operation: 'history', id: String(npcId), limit: '100'});
+                if (selectedEventType) query.set('event_type', selectedEventType);
                 const data = await requestJson(apiUrl + '?' + query.toString(), {cache: 'no-store'});
+                renderFilters(data.filters || {});
                 renderEvents(Array.isArray(data.events) ? data.events : []);
             } catch (error) {
                 list.replaceChildren(element('p', 'npc-event-history-empty is-error', 'History failed to load: ' + (error.message || error)));
@@ -184,6 +226,10 @@
             searchTimer = setTimeout(searchNpcRecipients, 250);
         });
         refreshButton.addEventListener('click', load);
+        eventTypeSelect.addEventListener('change', function () {
+            selectedEventType = eventTypeSelect.value;
+            load();
+        });
         injectButton.addEventListener('click', async function () {
             const text = eventText.value.trim();
             if (!text) {

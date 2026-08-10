@@ -292,15 +292,29 @@ function chimNpcManagerHistory(array $input): array
 {
     $npc = chimNpcManagerFindNpc($input);
     $npcName = trim((string)($npc['npc_name'] ?? ''));
-    $limit = max(1, min(100, (int)($input['limit'] ?? 50)));
+    $limit = max(1, min(100, (int)($input['limit'] ?? 100)));
+    $selectedEventType = trim((string)($input['event_type'] ?? ''));
+    $hiddenEventTypes = chimGetPersistedEventLogHiddenTypes($GLOBALS['db']);
     $peopleWhere = chimBuildNpcEventLogPeopleWhereClause($GLOBALS['db'], $npcName, 'a.people');
-    $visibleWhere = chimBuildVisibleEventLogWhereClause($GLOBALS['db']);
+    $visibleWhere = chimBuildVisibleEventLogWhereClause(
+        $GLOBALS['db'],
+        $selectedEventType,
+        $hiddenEventTypes
+    );
     $rows = $GLOBALS['db']->fetchAll(
         "SELECT a.rowid, a.type, a.data, a.people, a.gamets, a.localts, a.ts, a.sess
          FROM eventlog a
          WHERE {$visibleWhere} AND {$peopleWhere}
          ORDER BY a.gamets DESC, a.ts DESC, a.localts DESC, a.rowid DESC
          LIMIT {$limit}"
+    );
+    $visibleTypesWhere = chimBuildVisibleEventLogWhereClause($GLOBALS['db'], '', $hiddenEventTypes);
+    $eventTypes = $GLOBALS['db']->fetchAll(
+        "SELECT a.type, COUNT(*) AS total
+         FROM eventlog a
+         WHERE {$visibleTypesWhere} AND {$peopleWhere}
+         GROUP BY a.type
+         ORDER BY a.type ASC"
     );
 
     $events = array_map(static function ($row) {
@@ -312,7 +326,7 @@ function chimNpcManagerHistory(array $input): array
             'recipients' => chimNpcManagerEventRecipients($row['people'] ?? ''),
             'gamets' => $gamets,
             'tamrielic_time' => $gamets > 0 ? convert_gamets2skyrim_long_date2($gamets) : '',
-            'local_time' => !empty($row['localts']) ? gmdate('Y-m-d H:i:s', (int)$row['localts']) . ' UTC' : '',
+            'local_time' => !empty($row['localts']) ? gmdate('d-m-Y H:i:s', (int)$row['localts']) : '',
             'manual_injection' => strtolower((string)($row['type'] ?? '')) === 'inputtext'
                 && (string)($row['sess'] ?? '') === 'npc_editor',
         ];
@@ -321,6 +335,16 @@ function chimNpcManagerHistory(array $input): array
     return [
         'npc' => ['id' => (int)$npc['id'], 'name' => $npcName],
         'events' => $events,
+        'filters' => [
+            'selected_event_type' => $selectedEventType,
+            'hidden_event_types' => $hiddenEventTypes,
+            'event_types' => array_map(static function ($row) {
+                return [
+                    'type' => (string)($row['type'] ?? ''),
+                    'total' => (int)($row['total'] ?? 0),
+                ];
+            }, (array)$eventTypes),
+        ],
     ];
 }
 
