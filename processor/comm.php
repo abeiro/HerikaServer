@@ -1934,14 +1934,17 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 "rz" => $splitNameBase[11] ?? '',
             ];
 
+            error_log(print_r($splitNameBase, true));
             // Patch to get location name from coords. Can help with "Fake" locations.
             if (($splitNameBase[8] ?? '') == "1" 
-            || (($splitNameBase[8] ?? '') == "0" && in_array($splitNameBase[6] ?? '', ["Whiterun","Solitude","Riften","Windhelm","Markarth"]))) {
+            || (($splitNameBase[8] ?? '') == "0" && in_array(strtolower($splitNameBase[6] ?? ''), ["whiterun","solitude","riften","windhelm","markarth"]))) {
                 $pointLiteral = '(' . $splitNameBase[1] . ',' . $splitNameBase[2] . ')';
 
-                if (($splitNameBase[8] ?? '') == "0" && in_array($splitNameBase[6] ?? '', ["Whiterun","Solitude","Riften","Windhelm","Markarth"])) {
+                if (($splitNameBase[8] ?? '') == "0" && in_array(strtolower($splitNameBase[6] ?? ''), ["whiterun","solitude","riften","windhelm","markarth"])) {
                     // In major cities, we can use the real coords, as they match world coord.
-                    $pointLiteral = '(' . $splitNameBase[9] . ',' . $splitNameBase[10] . ')';
+                    if (isset($splitNameBase[9]) && isset($splitNameBase[10]) && $splitNameBase[9] !== '' && $splitNameBase[10] !== '') {
+                        $pointLiteral = '(' . $splitNameBase[9] . ',' . $splitNameBase[10] . ')';
+                    }
                 }  
                 
                 $pointEsc = $db->escape($pointLiteral);
@@ -1980,13 +1983,14 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
                 }
 
-                if (($splitNameBase[8] ?? '') == "0" && ($splitNameBase[6] ?? '') == "Whiterun") {
-                    // IN whiterun world, we can use the real coords,as the match world coord.
-                    $meta['last_coords'][0] = $splitNameBase[9];
-                    $meta['last_coords'][1] = $splitNameBase[10];
-                    $meta['last_coords'][2] =  $splitNameBase[11];
-                    $meta['last_coords']['real_coords'] = "1";
-                    
+                if (($splitNameBase[8] ?? '') == "0" && in_array(strtolower($splitNameBase[6] ?? ''), ["whiterun","solitude","riften","windhelm","markarth"])) {
+                    // In major cities, we can use the real coords, as they match world coord.
+                    if (isset($splitNameBase[9]) && isset($splitNameBase[10]) && $splitNameBase[9] !== '' && $splitNameBase[10] !== '') {
+                        $meta['last_coords'][0] = $splitNameBase[9];
+                        $meta['last_coords'][1] = $splitNameBase[10];
+                        $meta['last_coords'][2] =  $splitNameBase[11];
+                        $meta['last_coords']['real_coords'] = "1";
+                    }
                 }
             }
 
