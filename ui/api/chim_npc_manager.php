@@ -295,6 +295,28 @@ function chimNpcManagerHistory(array $input): array
     $limit = max(1, min(100, (int)($input['limit'] ?? 100)));
     $selectedEventType = trim((string)($input['event_type'] ?? ''));
     $hiddenEventTypes = chimGetPersistedEventLogHiddenTypes($GLOBALS['db']);
+    // Keep NPC History aligned with the PHP Adventure Log's default narrative event list.
+    $allowedEventTypes = [
+        'im_alive',
+        'chat',
+        'infoaction',
+        'rpg_word',
+        'rpg_lvlup',
+        'rechat',
+        'quest',
+        'itemfound',
+        'inputtext',
+        'goodnight',
+        'goodmorning',
+        'ginputtext',
+        'death',
+        'combatendmighty',
+        'combatend',
+    ];
+    $escapedAllowedEventTypes = array_map(static function ($eventType) {
+        return "'" . $GLOBALS['db']->escape($eventType) . "'";
+    }, $allowedEventTypes);
+    $allowedTypesWhere = 'a.type IN (' . implode(',', $escapedAllowedEventTypes) . ')';
     $peopleWhere = chimBuildNpcEventLogPeopleWhereClause($GLOBALS['db'], $npcName, 'a.people');
     $visibleWhere = chimBuildVisibleEventLogWhereClause(
         $GLOBALS['db'],
@@ -304,7 +326,7 @@ function chimNpcManagerHistory(array $input): array
     $rows = $GLOBALS['db']->fetchAll(
         "SELECT a.rowid, a.type, a.data, a.people, a.gamets, a.localts, a.ts, a.sess
          FROM eventlog a
-         WHERE {$visibleWhere} AND {$peopleWhere}
+         WHERE {$allowedTypesWhere} AND {$visibleWhere} AND {$peopleWhere}
          ORDER BY a.gamets DESC, a.ts DESC, a.localts DESC, a.rowid DESC
          LIMIT {$limit}"
     );
@@ -312,7 +334,7 @@ function chimNpcManagerHistory(array $input): array
     $eventTypes = $GLOBALS['db']->fetchAll(
         "SELECT a.type, COUNT(*) AS total
          FROM eventlog a
-         WHERE {$visibleTypesWhere} AND {$peopleWhere}
+         WHERE {$allowedTypesWhere} AND {$visibleTypesWhere} AND {$peopleWhere}
          GROUP BY a.type
          ORDER BY a.type ASC"
     );
