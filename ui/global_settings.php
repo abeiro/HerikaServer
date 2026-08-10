@@ -894,6 +894,35 @@ body .settings-tabs .settings-tab.is-active {
     border-color: rgba(106, 169, 255, 0.62);
 }
 
+.btn-settings-transfer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 36px;
+    background: #333;
+    color: #fff;
+    border: 1px solid #4a4a4a;
+    border-radius: 8px;
+    padding: 7px 12px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.btn-settings-transfer:hover:not(:disabled) {
+    background: #414141;
+    border-color: rgba(242, 124, 17, 0.65);
+    color: #fff;
+    text-decoration: none;
+}
+
+.btn-settings-transfer:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
 .btn-action {
     background: #8b0000;
     border: 1px solid #a52a2a;
@@ -1357,6 +1386,9 @@ body .settings-tabs .settings-tab.is-active {
         <div class="page-header-row">
             <h1 class="gs-title">Global Settings</h1>
             <div class="page-header-actions">
+                <a class="btn-settings-transfer" href="<?php echo $webRoot; ?>/ui/cmd/settings_portability.php?scope=global&amp;action=export">&#128228; Export Settings</a>
+                <button type="button" id="import_global_settings_btn" class="btn-settings-transfer">&#128229; Import Settings</button>
+                <input type="file" id="import_global_settings_file" accept="application/json,.json" hidden>
                 <button type="button" id="global_connector_test_btn" class="btn-action-blue">Test Global Connectors</button>
                 <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
             </div>
@@ -1731,6 +1763,20 @@ body .settings-tabs .settings-tab.is-active {
         </div>
     </div>
 </main>
+
+<script src="<?php echo $webRoot; ?>/ui/js/settings-portability.js?v=<?php echo (int) @filemtime(__DIR__ . DIRECTORY_SEPARATOR . 'js' . DIRECTORY_SEPARATOR . 'settings-portability.js'); ?>"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof window.chimInitSettingsImport === 'function') {
+        window.chimInitSettingsImport({
+            scope: 'global',
+            endpoint: <?php echo json_encode($webRoot . '/ui/cmd/settings_portability.php'); ?>,
+            importButtonId: 'import_global_settings_btn',
+            fileInputId: 'import_global_settings_file'
+        });
+    }
+});
+</script>
 
 <script>
 (() => {
