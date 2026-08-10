@@ -38,7 +38,7 @@
                     <input type="search" class="npc-event-recipient-search" data-history-recipient-search placeholder="Search NPC profiles">
                     <div class="npc-event-search-results" data-history-search-results hidden></div>
                     <label class="npc-event-history-label" for="npc-event-history-text-${npcId}">Event</label>
-                    <textarea id="npc-event-history-text-${npcId}" class="npc-event-history-text" data-history-event-text maxlength="4000" placeholder="Character A wrote to Character B that the Player will come and ask for the item."></textarea>
+                    <textarea id="npc-event-history-text-${npcId}" class="npc-event-history-text" data-history-event-text maxlength="4000" placeholder="A gave B a sweetroll."></textarea>
                     <div class="npc-event-history-actions">
                         <span class="npc-event-history-status" data-history-status role="status" aria-live="polite"></span>
                         <button type="button" class="btn-cancel" data-history-inject>Inject Event</button>
