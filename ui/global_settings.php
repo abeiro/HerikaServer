@@ -8,6 +8,7 @@ $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "prisma_settings_catalog.php");
 
 chimRuntimeBootstrap($enginePath, [
     'load_general_settings' => true,
@@ -35,100 +36,9 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.htm
 $saveSuccess = isset($_GET['_saved']) && $_GET['_saved'] === '1';
 $clearReanimationResult = null;
 $promptContextSectionTitle = 'Context Selections';
-$promptContextOptionFields = [
-    [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
-    [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
-    [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
-    [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
-];
-
-$gsSections = [
-    'Prompt & Rechat' => [
-        [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
-        [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
-        [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
-        [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
-    ],
-    'Oghma' => [
-        [ 'name' => 'OGHMA_INFINIUM', 'type' => 'boolean' ],
-        [ 'name' => 'OGHMA_AMOUNT', 'type' => 'select', 'values' => ['1', '2', '3'] ],
-        [ 'name' => 'RACIAL_OGHMA', 'type' => 'boolean' ],
-        [ 'name' => 'LOCATION_OGHMA', 'type' => 'boolean' ],
-        [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
-    ],
-    'Memory' => [
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@TXTAI_URL', 'type' => 'url' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
-        [ 'name' => 'PLAYER_WORST_MEMORY_GAME_DAYS', 'type' => 'integer', 'min' => 0, 'max' => 365, 'default' => 7, 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.' ],
-    ],
-    'Misc' => [
-        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
-        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
-        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
-        [ 'name' => 'BGL_TRIGGER_HOURS', 'type' => 'number', 'min' => 1, 'max' => 720, 'step' => 0.1, 'default' => 24 ],
-        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
-    ],
-    'Quests' => [
-        [ 'name' => 'CHIM_AI_QUEST_PROGRESSION', 'type' => 'boolean' ],
-        [ 'name' => 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT', 'type' => 'boolean' ],
-    ],
-    'Global Connectors' => [
-        [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'CORE_CONNECTOR_SCENECLASSIFIER', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'CORE_CONNECTOR_BGL', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
-    ],
-    'Context' => [
-        [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
-        [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
-        [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
-        [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
-        [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
-        [ 'name' => 'TRANSFORMATION_DETECTION', 'type' => 'boolean' ],
-        [ 'name' => 'POWER_AWARENESS_ENABLED', 'type' => 'boolean' ],
-        [ 'name' => 'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE', 'type' => 'integer', 'min' => 0 ],
-        [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
-    ],
-    $promptContextSectionTitle => $promptContextOptionFields,
-    'Translation' => [
-        [ 'name' => 'TRANSLATION_FUNCTION', 'type' => 'select', 'values' => ['none', 'DeepL'] ],
-        [ 'name' => 'TRANSLATION@settings@translate_audio', 'type' => 'boolean' ],
-        [ 'name' => 'TRANSLATION@settings@translate_text', 'type' => 'boolean' ],
-        [ 'name' => 'TRANSLATION@settings@save_translated_text', 'type' => 'boolean' ],
-        [ 'name' => 'TRANSLATION@settings@translate_player_audio', 'type' => 'boolean' ],
-        [ 'name' => 'TRANSLATION@settings@save_translated_player_text', 'type' => 'boolean' ],
-        [ 'name' => 'TRANSLATION@DeepL@source_language', 'type' => 'string' ],
-        [ 'name' => 'TRANSLATION@DeepL@target_language', 'type' => 'string' ],
-        [ 'name' => 'TRANSLATION@DeepL@url', 'type' => 'url' ],
-        [ 'name' => 'TRANSLATION@DeepL@player_source_language', 'type' => 'string' ],
-        [ 'name' => 'TRANSLATION@DeepL@player_target_language', 'type' => 'string' ],
-    ],
-];
-
-$settingsTabs = [
-    'prompt-rechat' => '💬 Prompt & Rechat',
-    'ai-memory' => '🧠 Memory & Others',
-    'context-knowledge' => '📚 Context & Knowledge',
-    'global-connectors' => '🔌 Global Connectors',
-];
-
-$sectionTabs = [
-    'Prompt & Rechat' => 'prompt-rechat',
-    'Memory' => 'ai-memory',
-    'Misc' => 'ai-memory',
-    'Quests' => 'ai-memory',
-    'Translation' => 'ai-memory',
-    'Oghma' => 'context-knowledge',
-    'Context' => 'context-knowledge',
-    $promptContextSectionTitle => 'context-knowledge',
-    'Global Connectors' => 'global-connectors',
-];
+$gsSections = chimPrismaGlobalSettingsSections();
+$settingsTabs = chimPrismaGlobalSettingsTabs();
+$sectionTabs = chimPrismaGlobalSettingsSectionTabs();
 
 $tabControlPanels = [
     'prompt-rechat' => 'settings-panel-prompt-rechat-prompt-rechat',
@@ -136,6 +46,14 @@ $tabControlPanels = [
     'context-knowledge' => 'settings-panel-context-knowledge-oghma',
     'global-connectors' => 'settings-panel-global-connectors-global-connectors',
 ];
+
+// Paired connector toggles remain beside their connector instead of appearing twice.
+$pairedConnectorToggles = ['RELATIONSHIP_SYSTEM_ENABLED', 'SCENE_CLASSIFIER_ENABLED', 'OGHMA_CUSTOM'];
+foreach ($gsSections as $sectionName => $fields) {
+    $gsSections[$sectionName] = array_values(array_filter($fields, static function (array $field) use ($pairedConnectorToggles): bool {
+        return !in_array($field['name'] ?? '', $pairedConnectorToggles, true);
+    }));
+}
 
 function pretty_label(string $flatName): string
 {
