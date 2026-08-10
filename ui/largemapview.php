@@ -1144,7 +1144,7 @@ if ($result) {
                 if (strpos(strtolower($poi['tags']), 'falmer') !== false) {
                     $symbol .= '👽';
                 }
-                
+
                 if (strpos(strtolower($poi['tags']), 'guild') !== false) {
                     $symbol .= '🛡️';
                 }
@@ -1173,7 +1173,7 @@ if ($result) {
                     $symbol .= '🌾';
                 }
 
-                $symbol= $symbol ?: '📍';
+                $symbol = $symbol ?: '📍';
                 $nearbyPOIs[] = [
                     'name' => $poi['name'],
                     'region' => $poi['region'],
@@ -1389,8 +1389,7 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl/head.html");
     main {
         padding-top: 10px;
         padding-bottom: 20px;
-        padding-left: 5%;
-        padding-right: 5%;
+        
         width: 100%;
         margin: 0;
     }
@@ -1478,7 +1477,7 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl/head.html");
     }
 
     .map-section {
-        flex: 0 0 75%;
+        margin-left:480px;
     }
 
     .sidebar-section {
@@ -1486,6 +1485,10 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl/head.html");
         display: flex;
         flex-direction: column;
         gap: 10px;
+        left: 10px;
+        width: 400px;
+        z-index: 2000;
+        position:fixed;
     }
 
     .map-container {
@@ -1500,6 +1503,7 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl/head.html");
         box-sizing: border-box;
         border-radius: 8px;
         overflow: visible;
+        left: 0px;
     }
 
     .map-container img {
@@ -1514,7 +1518,7 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl/head.html");
         position: absolute;
         transform: translate(-50%, -50%);
         cursor: pointer;
-        z-index: 10;
+        z-index: 40;
     }
 
     .marker-dot {
@@ -1550,6 +1554,9 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl/head.html");
         z-index: 15;
     }
 
+    .info-section {
+        margin-left:480px;
+    }
     .poi-marker-icon {
         width: 60px;
         height: 60px;
@@ -2355,131 +2362,6 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl/head.html");
 <main>
     <div class="container">
         <div class="content-wrapper">
-            <div class="map-section">
-
-                <div class="map-container" style="width: 200%;">
-                    <img src="<?php echo $mapImageUrl; ?>" alt="Skyrim Map" id="mapImage">
-
-                    <?php
-                    // Render NPC markers
-                    foreach ($translatedMarkers as $marker) {
-                        // Calculate position as percentage for responsive scaling
-                        $percentX = ($marker['x'] / $mapWidth) * 100;
-                        $percentY = ($marker['y'] / $mapHeight) * 100;
-                        // Apply grid offset
-                        $offsetX = $marker['offset_x'];
-                        $offsetY = $marker['offset_y'];
-                        if ($marker['last_action_cat'] == 'error') {
-                            $symbol = '❌';
-                        } else if ($marker['last_action_cat'] == 'work') {
-                            $symbol = '👷‍♀️';
-                        } else if ($marker['last_action_cat'] == 'travel') {
-                            $symbol = '👣';
-                        } else if ($marker['last_action_cat'] == 'sleep') {
-                            $symbol = '😴';
-                        } else if ($marker['last_action_cat'] == 'produce_consume') {
-                            $symbol = '🧠';
-                        } else if ($marker['last_action_cat'] == 'socialize') {
-                            $symbol = '🥂';
-                        } else if ($marker['last_action_cat'] == 'dialogue') {
-                            $symbol = '💬';
-                        } else if ($marker['last_action_cat'] == 'relax') {
-                            $symbol = '💆‍♂️';
-                        } else {
-                            $symbol = '';
-                        }
-
-                        echo '<div class="marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%; transform: translate(calc(-50% + ' . $offsetX . 'px), calc(-50% + ' . $offsetY . 'px));">';
-                        echo '<div class="marker-dot" id="mkr_' . $marker['id'] . '" style="width: ' . ($marker['size'] * 2) . 'px; height: ' . ($marker['size'] * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.8;">';
-                        echo ($symbol ?? '') . '</div>';
-                        echo '<div class="marker-label">' . PHP_EOL;
-                        echo "<a style='color:white;text-decoration:none' href='#dtl_{$marker["id"]}'>{$marker["name"]} &nbsp; ↗️</a></br>";
-                        echo '<small>(' . $marker['x'] . ', ' . $marker['y'] . '),' . $marker['tag'] . ' ' . ($marker['interior'] == 1 ? 'Interior' : '') . '</small>';
-                        echo '<img class="thumb" src="' . $marker['figure'] . '" />';
-                        echo '<br/><small>Last reported:' . $marker['last_report'] . '</small>';
-                        echo '<br/><small>Last tracked:' . $marker['last_pos_ts'] . '</small>';
-                        echo '<br/><small>Last activity:' . ($symbol ?? '') . ' ' . $marker['last_action_cat'] . '</small>';
-                        echo '</div>';
-                        echo '</div>' . PHP_EOL;
-
-                        // Render history markers
-                        if (!empty($marker['coords_history'])) {
-                            $size_modifier = 2;
-                            foreach ($marker['coords_history'] as $index => $histCoord) {
-                                if ($histCoord['x'] == $marker['x'] && $histCoord['y'] == $marker['y'])
-                                    continue; // Skip same place
-                    
-                                $histPercentX = ($histCoord['x'] / $mapWidth) * 100;
-                                $histPercentY = ($histCoord['y'] / $mapHeight) * 100;
-                                // Make history markers smaller: 5px radius instead of 10px
-                                $size_modifier += 0.5;
-                                $histSize = round($size_modifier, 0);
-
-
-                                echo '<div class="history-marker" style="left: ' . $histPercentX . '%; top: ' . $histPercentY . '%; width: ' . ($histSize * 2) . 'px; height: ' . ($histSize * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.3;">';
-                                echo '<div class="history-marker-label">' . PHP_EOL;
-                                echo "<strong>" . $marker['name'] . "</strong><br/>";
-                                echo "In-game: (" . $histCoord['ingame_x'] . ", " . $histCoord['ingame_y'] . ")<br/>";
-                                if (!empty($histCoord['location'])) {
-                                    echo "Location: " . $histCoord['location'] . ($histCoord['interior'] == 1 ? ' Interior' : '') . "<br/>";
-                                }
-                                echo "Tracked: " . $histCoord['last_updated'] . "<br/>";
-                                echo "</div>";
-                                echo '</div>' . PHP_EOL;
-                            }
-                        }
-                    }
-
-                    // Render POI markers
-                    foreach ($translatedPOIMarkers as $location) {
-                        $percentX = ($location['x'] / $mapWidth) * 100;
-                        $percentY = ($location['y'] / $mapHeight) * 100;
-
-
-                        echo '<div class="location-marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%;">';
-                        echo '<div class="poi-marker-icon">';
-                        echo htmlspecialchars($location['symbol'] ?? '📍');
-                        echo '</div>';
-                        echo '<div class="location-marker-label">';
-                        echo '<div class="location-name">' . htmlspecialchars($location['name']) . '</div>';
-                        echo '<div class="location-desc">' . htmlspecialchars($location['description']) . '</div>';
-                        echo '<div class="location-tags">' . htmlspecialchars($location['tags']) . '</div>';
-                        echo '<div class="location-coords">';
-                        echo 'Type: ' . htmlspecialchars($location['type']) . '<br/>';
-                        echo 'Coords: ' . $location['ingame_x'] . ', ' . $location['ingame_y'] . '<br/>';
-                        echo 'FormID: ' . htmlspecialchars($location['formID']) . '<br/>';
-                        echo 'Tags: ' . htmlspecialchars($location['tags']) . '<br/>';
-                        echo '' . htmlspecialchars($location['symbol']) . '<br/>';
-                        echo '</div>';
-                        echo '</div>';
-                        echo '</div>' . PHP_EOL;
-                    }
-
-                    // Render passive location markers
-                    foreach ($passiveMarkers as $location) {
-                        $percentX = ($location['x'] / $mapWidth) * 100;
-                        $percentY = ($location['y'] / $mapHeight) * 100;
-                        $iconPath = $webRoot . '/ui/images/map icons/' . $location['icon'];
-
-                        echo '<div class="location-marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%;">';
-                        echo '<div class="location-marker-icon">';
-                        echo '<img src="' . htmlspecialchars($iconPath) . '" alt="' . htmlspecialchars($location['name']) . '" />';
-                        echo '</div>';
-                        echo '<div class="location-marker-label">';
-                        echo '<div class="location-name">' . htmlspecialchars($location['name']) . '</div>';
-                        echo '<div class="location-desc">' . htmlspecialchars($location['description']) . '</div>';
-                        echo '<div class="location-coords">';
-                        echo 'Type: ' . htmlspecialchars($location['type']) . '<br/>';
-                        echo 'Coords: ' . $location['ingame_x'] . ', ' . $location['ingame_y'] . '<br/>';
-                        echo 'FormID: ' . htmlspecialchars($location['formID']);
-                        echo '</div>';
-                        echo '</div>';
-                        echo '</div>' . PHP_EOL;
-                    }
-                    ?>
-                </div>
-            </div>
-
             <div class="sidebar-section">
                 <div class="bgl-instructions-box collapsed">
                     <h3>📖 How Background Life Works</h3>
@@ -2648,831 +2530,651 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl/head.html");
                     </div>
                 </div>
             </div>
+            <div class="map-section">
+
+                <div class="map-container" style="width: 200%;">
+                    <img src="<?php echo $mapImageUrl; ?>" alt="Skyrim Map" id="mapImage">
+
+                    <?php
+                    // Render NPC markers
+                    foreach ($translatedMarkers as $marker) {
+                        // Calculate position as percentage for responsive scaling
+                        $percentX = ($marker['x'] / $mapWidth) * 100;
+                        $percentY = ($marker['y'] / $mapHeight) * 100;
+                        // Apply grid offset
+                        $offsetX = $marker['offset_x'];
+                        $offsetY = $marker['offset_y'];
+                        if ($marker['last_action_cat'] == 'error') {
+                            $symbol = '❌';
+                        } else if ($marker['last_action_cat'] == 'work') {
+                            $symbol = '👷‍♀️';
+                        } else if ($marker['last_action_cat'] == 'travel') {
+                            $symbol = '👣';
+                        } else if ($marker['last_action_cat'] == 'sleep') {
+                            $symbol = '😴';
+                        } else if ($marker['last_action_cat'] == 'produce_consume') {
+                            $symbol = '🧠';
+                        } else if ($marker['last_action_cat'] == 'socialize') {
+                            $symbol = '🥂';
+                        } else if ($marker['last_action_cat'] == 'dialogue') {
+                            $symbol = '💬';
+                        } else if ($marker['last_action_cat'] == 'relax') {
+                            $symbol = '💆‍♂️';
+                        } else {
+                            $symbol = '';
+                        }
+
+                        echo '<div class="marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%; transform: translate(calc(-50% + ' . $offsetX . 'px), calc(-50% + ' . $offsetY . 'px));">';
+                        echo '<div class="marker-dot" id="mkr_' . $marker['id'] . '" style="width: ' . ($marker['size'] * 2) . 'px; height: ' . ($marker['size'] * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.8;">';
+                        echo ($symbol ?? '') . '</div>';
+                        echo '<div class="marker-label">' . PHP_EOL;
+                        echo "<a style='color:white;text-decoration:none' href='#dtl_{$marker["id"]}'>{$marker["name"]} &nbsp; ↗️</a></br>";
+                        echo '<small>(' . $marker['x'] . ', ' . $marker['y'] . '),' . $marker['tag'] . ' ' . ($marker['interior'] == 1 ? 'Interior' : '') . '</small>';
+                        echo '<img class="thumb" src="' . $marker['figure'] . '" />';
+                        echo '<br/><small>Last reported:' . $marker['last_report'] . '</small>';
+                        echo '<br/><small>Last tracked:' . $marker['last_pos_ts'] . '</small>';
+                        echo '<br/><small>Last activity:' . ($symbol ?? '') . ' ' . $marker['last_action_cat'] . '</small>';
+                        echo '</div>';
+                        echo '</div>' . PHP_EOL;
+
+                        // Render history markers
+                        if (!empty($marker['coords_history'])) {
+                            $size_modifier = 2;
+                            foreach ($marker['coords_history'] as $index => $histCoord) {
+                                if ($histCoord['x'] == $marker['x'] && $histCoord['y'] == $marker['y'])
+                                    continue; // Skip same place
+                    
+                                $histPercentX = ($histCoord['x'] / $mapWidth) * 100;
+                                $histPercentY = ($histCoord['y'] / $mapHeight) * 100;
+                                // Make history markers smaller: 5px radius instead of 10px
+                                $size_modifier += 0.5;
+                                $histSize = round($size_modifier, 0);
+
+
+                                echo '<div class="history-marker" style="left: ' . $histPercentX . '%; top: ' . $histPercentY . '%; width: ' . ($histSize * 2) . 'px; height: ' . ($histSize * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.3;">';
+                                echo '<div class="history-marker-label">' . PHP_EOL;
+                                echo "<strong>" . $marker['name'] . "</strong><br/>";
+                                echo "In-game: (" . $histCoord['ingame_x'] . ", " . $histCoord['ingame_y'] . ")<br/>";
+                                if (!empty($histCoord['location'])) {
+                                    echo "Location: " . $histCoord['location'] . ($histCoord['interior'] == 1 ? ' Interior' : '') . "<br/>";
+                                }
+                                echo "Tracked: " . $histCoord['last_updated'] . "<br/>";
+                                echo "</div>";
+                                echo '</div>' . PHP_EOL;
+                            }
+                        }
+                    }
+
+                    // Render POI markers
+                    foreach ($translatedPOIMarkers as $location) {
+                        $percentX = ($location['x'] / $mapWidth) * 100;
+                        $percentY = ($location['y'] / $mapHeight) * 100;
+
+
+                        echo '<div class="location-marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%;">';
+                        echo '<div class="poi-marker-icon">';
+                        echo htmlspecialchars($location['symbol'] ?? '📍');
+                        echo '</div>';
+                        echo '<div class="location-marker-label">';
+                        echo '<div class="location-name">' . htmlspecialchars($location['name']) . '</div>';
+                        echo '<div class="location-desc">' . htmlspecialchars($location['description']) . '</div>';
+                        echo '<div class="location-tags">' . htmlspecialchars($location['tags']) . '</div>';
+                        echo '<div class="location-coords">';
+                        echo 'Type: ' . htmlspecialchars($location['type']) . '<br/>';
+                        echo 'Coords: ' . $location['ingame_x'] . ', ' . $location['ingame_y'] . '<br/>';
+                        echo 'FormID: ' . htmlspecialchars($location['formID']) . '<br/>';
+                        echo 'Tags: ' . htmlspecialchars($location['tags']) . '<br/>';
+                        echo '' . htmlspecialchars($location['symbol']) . '<br/>';
+                        echo '</div>';
+                        echo '</div>';
+                        echo '</div>' . PHP_EOL;
+                    }
+
+                    // Render passive location markers
+                    foreach ($passiveMarkers as $location) {
+                        $percentX = ($location['x'] / $mapWidth) * 100;
+                        $percentY = ($location['y'] / $mapHeight) * 100;
+                        $iconPath = $webRoot . '/ui/images/map icons/' . $location['icon'];
+
+                        echo '<div class="location-marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%;">';
+                        echo '<div class="location-marker-icon">';
+                        echo '<img src="' . htmlspecialchars($iconPath) . '" alt="' . htmlspecialchars($location['name']) . '" />';
+                        echo '</div>';
+                        echo '<div class="location-marker-label">';
+                        echo '<div class="location-name">' . htmlspecialchars($location['name']) . '</div>';
+                        echo '<div class="location-desc">' . htmlspecialchars($location['description']) . '</div>';
+                        echo '<div class="location-coords">';
+                        echo 'Type: ' . htmlspecialchars($location['type']) . '<br/>';
+                        echo 'Coords: ' . $location['ingame_x'] . ', ' . $location['ingame_y'] . '<br/>';
+                        echo 'FormID: ' . htmlspecialchars($location['formID']);
+                        echo '</div>';
+                        echo '</div>';
+                        echo '</div>' . PHP_EOL;
+                    }
+                    ?>
+                </div>
+            </div>
+
+        
         </div>
     </div>
-    <span class="open-new-window" onclick="openInNewWindow()" title="Open in new window">↗️</span>
-    <span class="open-new-window-2" onclick="location.href='mapview.php'" title="Refresh">🔄</span>
-    <script>
-        // NPC Diary Data - embedded directly in page
-        const npcDiaryData = <?php echo json_encode(array_combine(
-            array_column($translatedMarkers, 'name'),
-            array_map(function ($m) {
-            return [
-                'letters' => $m['diary_letters'],
-                'thoughts' => $m['diary_thoughts'],
-                'letter_count' => count($m['diary_letters']),
-                'thought_count' => count($m['diary_thoughts'])
-            ];
-        }, $translatedMarkers)
-        ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    <div class="info-section">
+        <span class="open-new-window" onclick="openInNewWindow()" title="Open in new window">↗️</span>
+        <span class="open-new-window-2" onclick="location.href='mapview.php'" title="Refresh">🔄</span>
+        <script>
+            // NPC Diary Data - embedded directly in page
+            const npcDiaryData = <?php echo json_encode(array_combine(
+                array_column($translatedMarkers, 'name'),
+                array_map(function ($m) {
+                return [
+                    'letters' => $m['diary_letters'],
+                    'thoughts' => $m['diary_thoughts'],
+                    'letter_count' => count($m['diary_letters']),
+                    'thought_count' => count($m['diary_thoughts'])
+                ];
+            }, $translatedMarkers)
+            ), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 
-        function openInNewWindow() {
-            window.open(window.location.href, '_blank');
-        }
-
-        function toggleShowAllCoords(enabled) {
-            const url = new URL(window.location.href);
-            if (enabled) {
-                url.searchParams.set('show_all_coords', '1');
-            } else {
-                url.searchParams.delete('show_all_coords');
-            }
-            window.location.href = url.toString();
-        }
-
-        function updateMapWidthFromSlider() {
-            const slider = document.getElementById('mapWidthSlider');
-            setMapWidth(slider.value + '%');
-        }
-
-        function setMapWidth(width) {
-            const mapContainer = document.querySelector('.map-container');
-            const numericValue = Math.min(400, Math.max(50, parseInt(width, 10) || 400));
-            const normalizedWidth = numericValue + '%';
-
-            mapContainer.style.width = normalizedWidth;
-
-            const slider = document.getElementById('mapWidthSlider');
-            if (slider) {
-                slider.value = numericValue;
-                document.getElementById('widthValue').textContent = numericValue;
+            function openInNewWindow() {
+                window.open(window.location.href, '_blank');
             }
 
-            localStorage.setItem('mapViewWidth', normalizedWidth);
-        }
+            function toggleShowAllCoords(enabled) {
+                const url = new URL(window.location.href);
+                if (enabled) {
+                    url.searchParams.set('show_all_coords', '1');
+                } else {
+                    url.searchParams.delete('show_all_coords');
+                }
+                window.location.href = url.toString();
+            }
 
-        document.addEventListener('DOMContentLoaded', function () {
-            const savedWidth = localStorage.getItem('mapViewWidth');
-            setMapWidth(savedWidth || '200%');
-        });
+            function updateMapWidthFromSlider() {
+                const slider = document.getElementById('mapWidthSlider');
+                setMapWidth(slider.value + '%');
+            }
 
-        function requestAction(npcName) {
-            const formData = new FormData();
-            formData.append('action', 'request_action');
-            formData.append('npc_name', npcName);
-            showProcessing()
+            function setMapWidth(width) {
+                const mapContainer = document.querySelector('.map-container');
+                const numericValue = Math.min(400, Math.max(50, parseInt(width, 10) || 400));
+                const normalizedWidth = numericValue + '%';
 
-            fetch(window.location.href, {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.ok) {
-                        alert(data.message || 'Action request sent!');
-                    } else {
-                        alert('Error: ' + (data.message || 'Unknown error'));
-                    }
-                    hideProcessing()
+                mapContainer.style.width = normalizedWidth;
+
+                const slider = document.getElementById('mapWidthSlider');
+                if (slider) {
+                    slider.value = numericValue;
+                    document.getElementById('widthValue').textContent = numericValue;
+                }
+
+                localStorage.setItem('mapViewWidth', normalizedWidth);
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const savedWidth = localStorage.getItem('mapViewWidth');
+                setMapWidth(savedWidth || '200%');
+            });
+
+            function requestAction(npcName) {
+                const formData = new FormData();
+                formData.append('action', 'request_action');
+                formData.append('npc_name', npcName);
+                showProcessing()
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
                 })
-                .catch(error => {
-                    console.error('Error:', error);
-                    hideProcessing()
-                    alert('Request failed');
-                });
-        }
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.ok) {
+                            alert(data.message || 'Action request sent!');
+                        } else {
+                            alert('Error: ' + (data.message || 'Unknown error'));
+                        }
+                        hideProcessing()
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        hideProcessing()
+                        alert('Request failed');
+                    });
+            }
 
-        function requestReporting(npcName) {
-            const formData = new FormData();
-            formData.append('action', 'request_reporting');
-            formData.append('npc_name', npcName);
-            showProcessing()
-            fetch(window.location.href, {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.ok) {
-                        alert(data.message || 'Reporting request sent!');
-                    } else {
-                        alert('Error: ' + (data.message || 'Unknown error'));
-                    }
-                    hideProcessing();
+            function requestReporting(npcName) {
+                const formData = new FormData();
+                formData.append('action', 'request_reporting');
+                formData.append('npc_name', npcName);
+                showProcessing()
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
                 })
-                .catch(error => {
-                    console.error('Error:', error);
-                    hideProcessing();
-                    alert('Request failed');
-                });
-        }
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.ok) {
+                            alert(data.message || 'Reporting request sent!');
+                        } else {
+                            alert('Error: ' + (data.message || 'Unknown error'));
+                        }
+                        hideProcessing();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        hideProcessing();
+                        alert('Request failed');
+                    });
+            }
 
-        function updateCoords(npcName) {
-            const formData = new FormData();
-            formData.append('action', 'update_coords');
-            formData.append('npc_name', npcName);
-            showProcessing()
-            fetch(window.location.href, {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.ok) {
-                        alert(data.message || 'Coords update sent!');
-                        // Reload the page after a short delay to see updates
-                        setTimeout(() => {
-                            location.reload();
-                        }, 200);
-                    } else {
-                        alert('Error: ' + (data.message || 'Unknown error'));
-                    }
-                    hideProcessing();
-
+            function updateCoords(npcName) {
+                const formData = new FormData();
+                formData.append('action', 'update_coords');
+                formData.append('npc_name', npcName);
+                showProcessing()
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
                 })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Request failed');
-                    hideProcessing();
-                });
-        }
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.ok) {
+                            alert(data.message || 'Coords update sent!');
+                            // Reload the page after a short delay to see updates
+                            setTimeout(() => {
+                                location.reload();
+                            }, 200);
+                        } else {
+                            alert('Error: ' + (data.message || 'Unknown error'));
+                        }
+                        hideProcessing();
 
-        function updateAllCoords() {
-            const formData = new FormData();
-            formData.append('action', 'update_all_coords');
-            showProcessing()
-            fetch(window.location.href, {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.ok) {
-                        alert(data.message || 'All coords update sent!');
-                        // Reload the page after a short delay to see updates
-                        setTimeout(() => {
-                            location.reload();
-                        }, 200);
-                    } else {
-                        alert('Error: ' + (data.message || 'Unknown error'));
-                    }
-                    hideProcessing();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Request failed');
+                        hideProcessing();
+                    });
+            }
 
+            function updateAllCoords() {
+                const formData = new FormData();
+                formData.append('action', 'update_all_coords');
+                showProcessing()
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
                 })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Request failed');
-                    hideProcessing();
-                });
-        }
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.ok) {
+                            alert(data.message || 'All coords update sent!');
+                            // Reload the page after a short delay to see updates
+                            setTimeout(() => {
+                                location.reload();
+                            }, 200);
+                        } else {
+                            alert('Error: ' + (data.message || 'Unknown error'));
+                        }
+                        hideProcessing();
 
-        function toggleBgLifeSetting(checkbox) {
-            const npcId = checkbox.getAttribute('data-npc-id');
-            const setting = checkbox.getAttribute('data-setting');
-            const value = checkbox.checked;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Request failed');
+                        hideProcessing();
+                    });
+            }
 
-            const formData = new FormData();
-            formData.append('action', 'toggle_bg_life_setting');
-            formData.append('npc_id', npcId);
-            formData.append('setting', setting);
-            formData.append('value', value ? '1' : '0');
+            function toggleBgLifeSetting(checkbox) {
+                const npcId = checkbox.getAttribute('data-npc-id');
+                const setting = checkbox.getAttribute('data-setting');
+                const value = checkbox.checked;
 
-            fetch(window.location.href, {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.ok) {
-                        // Show success message without alert
-                        console.log(data.message);
-                        // Optional: show a brief toast notification
-                    } else {
-                        alert('Error: ' + (data.message || 'Unknown error'));
+                const formData = new FormData();
+                formData.append('action', 'toggle_bg_life_setting');
+                formData.append('npc_id', npcId);
+                formData.append('setting', setting);
+                formData.append('value', value ? '1' : '0');
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.ok) {
+                            // Show success message without alert
+                            console.log(data.message);
+                            // Optional: show a brief toast notification
+                        } else {
+                            alert('Error: ' + (data.message || 'Unknown error'));
+                            // Revert checkbox on error
+                            checkbox.checked = !value;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Request failed');
                         // Revert checkbox on error
                         checkbox.checked = !value;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Request failed');
-                    // Revert checkbox on error
-                    checkbox.checked = !value;
-                });
-        }
-
-        function toggleInstructions() {
-            const box = document.querySelector('.bgl-instructions-box');
-            const btn = document.querySelector('.toggle-instructions-btn');
-
-            if (box.classList.contains('collapsed')) {
-                box.classList.remove('collapsed');
-                btn.textContent = 'Hide Instructions';
-            } else {
-                box.classList.add('collapsed');
-                btn.textContent = 'Show Instructions';
-            }
-        }
-
-        function togglePanel(panelId, button) {
-            const panel = document.getElementById(panelId);
-            if (!panel) {
-                return;
+                    });
             }
 
-            panel.classList.toggle('collapsed');
-            if (button) {
-                button.textContent = panel.classList.contains('collapsed') ? 'Show Form' : 'Hide Form';
-            }
-        }
+            function toggleInstructions() {
+                const box = document.querySelector('.bgl-instructions-box');
+                const btn = document.querySelector('.toggle-instructions-btn');
 
-        function showProcessing() {
-
-            processingMessage = document.createElement('div');
-            processingMessage.textContent = 'Processing...';
-            processingMessage.style.position = 'fixed';
-            processingMessage.style.top = '50%';
-            processingMessage.style.left = '50%';
-            processingMessage.style.transform = 'translate(-50%, -50%)';
-            processingMessage.style.backgroundColor = '#000';
-            processingMessage.style.color = '#fff';
-            processingMessage.style.padding = '10px 20px';
-            processingMessage.style.borderRadius = '8px';
-            processingMessage.style.zIndex = '10001';
-            processingMessage.id = "processing_wheel";
-            document.body.appendChild(processingMessage);
-        }
-        function hideProcessing() {
-            processingMessage.innerHTML = '';
-            processingMessage.style.zIndex = '-10001';
-
-        }
-
-        var processingMessage;
-        function pulseAnimation(id) {
-            const el = document.getElementById(id);
-
-            el.classList.add("pulsing");
-
-            setTimeout(() => {
-                el.classList.remove("pulsing");
-            }, 5000); // 3 seconds
-        }
-
-        // Letters & Thoughts Modal Functions
-        let currentDiaryTab = 'letters';
-
-        function viewDiary(npcName) {
-            const modal = document.getElementById('diaryModal');
-            const modalContent = document.getElementById('diaryModalContent');
-            const modalTitle = document.getElementById('diaryModalTitle');
-
-            // Show modal
-            modal.style.display = 'block';
-            modalTitle.textContent = npcName + "'s Letters & Thoughts";
-
-            // Get data from embedded npcDiaryData
-            const data = npcDiaryData[npcName];
-
-            if (data) {
-                renderDiaryContent(data);
-            } else {
-                modalContent.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">💭</p><p>No data found for this NPC</p></div>';
-            }
-        }
-
-        function renderDiaryContent(data) {
-            const modalContent = document.getElementById('diaryModalContent');
-
-            let html = '';
-
-            // Tab buttons
-            html += '<div style="display: flex; border-bottom: 2px solid #3a3a3a; margin-bottom: 20px;">';
-            html += '<button id="lettersTab" onclick="switchDiaryTab(\'letters\')" style="flex: 1; padding: 12px; background: ' + (currentDiaryTab === 'letters' ? '#8844ff' : '#2a2a2a') + '; border: none; color: white; cursor: pointer; font-size: 1em; transition: background 0.3s;">✉️ Letters (' + data.letter_count + ')</button>';
-            html += '<button id="thoughtsTab" onclick="switchDiaryTab(\'thoughts\')" style="flex: 1; padding: 12px; background: ' + (currentDiaryTab === 'thoughts' ? '#8844ff' : '#2a2a2a') + '; border: none; color: white; cursor: pointer; font-size: 1em; transition: background 0.3s;">💭 Inner Thoughts (' + data.thought_count + ')</button>';
-            html += '</div>';
-
-            // Letters content
-            html += '<div id="lettersContent" style="display: ' + (currentDiaryTab === 'letters' ? 'block' : 'none') + '; max-height: 55vh; overflow-y: auto;">';
-            if (data.letters && data.letters.length > 0) {
-                data.letters.forEach((entry) => {
-                    html += renderEntry(entry, '#4488ff');
-                });
-            } else {
-                html += '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">✉️</p><p>No letters found</p></div>';
-            }
-            html += '</div>';
-
-            // Thoughts content
-            html += '<div id="thoughtsContent" style="display: ' + (currentDiaryTab === 'thoughts' ? 'block' : 'none') + '; max-height: 55vh; overflow-y: auto;">';
-            if (data.thoughts && data.thoughts.length > 0) {
-                data.thoughts.forEach((entry) => {
-                    html += renderEntry(entry, '#8844ff');
-                });
-            } else {
-                html += '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">💭</p><p>No inner thoughts found</p></div>';
-            }
-            html += '</div>';
-
-            modalContent.innerHTML = html;
-        }
-
-        function renderEntry(entry, borderColor) {
-            let html = '<div style="background: #2a2a2a; padding: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 4px solid ' + borderColor + ';">';
-            html += '<div style="display: flex; justify-content: space-between; margin-bottom: 10px;">';
-            html += '<strong style="color: ' + borderColor + '; font-size: 1.1em;">' + escapeHtml(entry.topic || 'Journal Entry') + '</strong>';
-            html += '<span style="color: #888; font-size: 0.9em;">' + escapeHtml(entry.skyrim_date || 'Unknown date') + '</span>';
-            html += '</div>';
-
-            if (entry.content) {
-                html += '<div style="color: #ddd; margin-bottom: 10px; line-height: 1.6; white-space: pre-wrap;">' + escapeHtml(entry.content) + '</div>';
+                if (box.classList.contains('collapsed')) {
+                    box.classList.remove('collapsed');
+                    btn.textContent = 'Hide Instructions';
+                } else {
+                    box.classList.add('collapsed');
+                    btn.textContent = 'Show Instructions';
+                }
             }
 
-            html += '<div style="display: flex; gap: 15px; color: #888; font-size: 0.85em; padding-top: 8px; border-top: 1px solid #3a3a3a;">';
-            if (entry.location) {
-                html += '<span>📍 ' + escapeHtml(entry.location) + '</span>';
+            function togglePanel(panelId, button) {
+                const panel = document.getElementById(panelId);
+                if (!panel) {
+                    return;
+                }
+
+                panel.classList.toggle('collapsed');
+                if (button) {
+                    button.textContent = panel.classList.contains('collapsed') ? 'Show Form' : 'Hide Form';
+                }
             }
-            if (entry.tags) {
-                html += '<span>🏷️ ' + escapeHtml(entry.tags) + '</span>';
+
+            function showProcessing() {
+
+                processingMessage = document.createElement('div');
+                processingMessage.textContent = 'Processing...';
+                processingMessage.style.position = 'fixed';
+                processingMessage.style.top = '50%';
+                processingMessage.style.left = '50%';
+                processingMessage.style.transform = 'translate(-50%, -50%)';
+                processingMessage.style.backgroundColor = '#000';
+                processingMessage.style.color = '#fff';
+                processingMessage.style.padding = '10px 20px';
+                processingMessage.style.borderRadius = '8px';
+                processingMessage.style.zIndex = '10001';
+                processingMessage.id = "processing_wheel";
+                document.body.appendChild(processingMessage);
             }
-            html += '</div>';
-            html += '</div>';
+            function hideProcessing() {
+                processingMessage.innerHTML = '';
+                processingMessage.style.zIndex = '-10001';
 
-            return html;
-        }
-
-        function switchDiaryTab(tab) {
-            currentDiaryTab = tab;
-
-            const lettersContent = document.getElementById('lettersContent');
-            const thoughtsContent = document.getElementById('thoughtsContent');
-            const lettersTab = document.getElementById('lettersTab');
-            const thoughtsTab = document.getElementById('thoughtsTab');
-
-            if (tab === 'letters') {
-                lettersContent.style.display = 'block';
-                thoughtsContent.style.display = 'none';
-                lettersTab.style.background = '#8844ff';
-                thoughtsTab.style.background = '#2a2a2a';
-            } else {
-                lettersContent.style.display = 'none';
-                thoughtsContent.style.display = 'block';
-                lettersTab.style.background = '#2a2a2a';
-                thoughtsTab.style.background = '#8844ff';
             }
-        }
 
-        function closeDiaryModal() {
-            const modal = document.getElementById('diaryModal');
-            modal.style.display = 'none';
-        }
+            var processingMessage;
+            function pulseAnimation(id) {
+                const el = document.getElementById(id);
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+                el.classList.add("pulsing");
+                el.scrollIntoView({ behavior: "smooth", block: "center"});        
 
-        // Close modal when clicking outside
-        window.onclick = function (event) {
-            const modal = document.getElementById('diaryModal');
-            if (event.target == modal) {
-                closeDiaryModal();
+
+                setTimeout(() => {
+                    el.classList.remove("pulsing");
+                }, 5000); // 3 seconds
             }
-        }
-    </script>
 
-    <!-- Letters & Thoughts Modal -->
-    <div id="diaryModal"
-        style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(5px);">
-        <div
-            style="background-color: #1a1a1a; margin: 5% auto; padding: 0; border: 2px solid #8844ff; width: 80%; max-width: 900px; border-radius: 12px; box-shadow: 0 4px 20px rgba(136, 68, 255, 0.3);">
+            // Letters & Thoughts Modal Functions
+            let currentDiaryTab = 'letters';
+
+            function viewDiary(npcName) {
+                const modal = document.getElementById('diaryModal');
+                const modalContent = document.getElementById('diaryModalContent');
+                const modalTitle = document.getElementById('diaryModalTitle');
+
+                // Show modal
+                modal.style.display = 'block';
+                modalTitle.textContent = npcName + "'s Letters & Thoughts";
+
+                // Get data from embedded npcDiaryData
+                const data = npcDiaryData[npcName];
+
+                if (data) {
+                    renderDiaryContent(data);
+                } else {
+                    modalContent.innerHTML = '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">💭</p><p>No data found for this NPC</p></div>';
+                }
+            }
+
+            function renderDiaryContent(data) {
+                const modalContent = document.getElementById('diaryModalContent');
+
+                let html = '';
+
+                // Tab buttons
+                html += '<div style="display: flex; border-bottom: 2px solid #3a3a3a; margin-bottom: 20px;">';
+                html += '<button id="lettersTab" onclick="switchDiaryTab(\'letters\')" style="flex: 1; padding: 12px; background: ' + (currentDiaryTab === 'letters' ? '#8844ff' : '#2a2a2a') + '; border: none; color: white; cursor: pointer; font-size: 1em; transition: background 0.3s;">✉️ Letters (' + data.letter_count + ')</button>';
+                html += '<button id="thoughtsTab" onclick="switchDiaryTab(\'thoughts\')" style="flex: 1; padding: 12px; background: ' + (currentDiaryTab === 'thoughts' ? '#8844ff' : '#2a2a2a') + '; border: none; color: white; cursor: pointer; font-size: 1em; transition: background 0.3s;">💭 Inner Thoughts (' + data.thought_count + ')</button>';
+                html += '</div>';
+
+                // Letters content
+                html += '<div id="lettersContent" style="display: ' + (currentDiaryTab === 'letters' ? 'block' : 'none') + '; max-height: 55vh; overflow-y: auto;">';
+                if (data.letters && data.letters.length > 0) {
+                    data.letters.forEach((entry) => {
+                        html += renderEntry(entry, '#4488ff');
+                    });
+                } else {
+                    html += '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">✉️</p><p>No letters found</p></div>';
+                }
+                html += '</div>';
+
+                // Thoughts content
+                html += '<div id="thoughtsContent" style="display: ' + (currentDiaryTab === 'thoughts' ? 'block' : 'none') + '; max-height: 55vh; overflow-y: auto;">';
+                if (data.thoughts && data.thoughts.length > 0) {
+                    data.thoughts.forEach((entry) => {
+                        html += renderEntry(entry, '#8844ff');
+                    });
+                } else {
+                    html += '<div style="text-align: center; padding: 40px; color: #888;"><p style="font-size: 1.2em;">💭</p><p>No inner thoughts found</p></div>';
+                }
+                html += '</div>';
+
+                modalContent.innerHTML = html;
+            }
+
+            function renderEntry(entry, borderColor) {
+                let html = '<div style="background: #2a2a2a; padding: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 4px solid ' + borderColor + ';">';
+                html += '<div style="display: flex; justify-content: space-between; margin-bottom: 10px;">';
+                html += '<strong style="color: ' + borderColor + '; font-size: 1.1em;">' + escapeHtml(entry.topic || 'Journal Entry') + '</strong>';
+                html += '<span style="color: #888; font-size: 0.9em;">' + escapeHtml(entry.skyrim_date || 'Unknown date') + '</span>';
+                html += '</div>';
+
+                if (entry.content) {
+                    html += '<div style="color: #ddd; margin-bottom: 10px; line-height: 1.6; white-space: pre-wrap;">' + escapeHtml(entry.content) + '</div>';
+                }
+
+                html += '<div style="display: flex; gap: 15px; color: #888; font-size: 0.85em; padding-top: 8px; border-top: 1px solid #3a3a3a;">';
+                if (entry.location) {
+                    html += '<span>📍 ' + escapeHtml(entry.location) + '</span>';
+                }
+                if (entry.tags) {
+                    html += '<span>🏷️ ' + escapeHtml(entry.tags) + '</span>';
+                }
+                html += '</div>';
+                html += '</div>';
+
+                return html;
+            }
+
+            function switchDiaryTab(tab) {
+                currentDiaryTab = tab;
+
+                const lettersContent = document.getElementById('lettersContent');
+                const thoughtsContent = document.getElementById('thoughtsContent');
+                const lettersTab = document.getElementById('lettersTab');
+                const thoughtsTab = document.getElementById('thoughtsTab');
+
+                if (tab === 'letters') {
+                    lettersContent.style.display = 'block';
+                    thoughtsContent.style.display = 'none';
+                    lettersTab.style.background = '#8844ff';
+                    thoughtsTab.style.background = '#2a2a2a';
+                } else {
+                    lettersContent.style.display = 'none';
+                    thoughtsContent.style.display = 'block';
+                    lettersTab.style.background = '#2a2a2a';
+                    thoughtsTab.style.background = '#8844ff';
+                }
+            }
+
+            function closeDiaryModal() {
+                const modal = document.getElementById('diaryModal');
+                modal.style.display = 'none';
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // Close modal when clicking outside
+            window.onclick = function (event) {
+                const modal = document.getElementById('diaryModal');
+                if (event.target == modal) {
+                    closeDiaryModal();
+                }
+            }
+        </script>
+
+        <!-- Letters & Thoughts Modal -->
+        <div id="diaryModal"
+            style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(5px);">
             <div
-                style="background: linear-gradient(135deg, #8844ff 0%, #6622cc 100%); padding: 20px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center;">
-                <h2 id="diaryModalTitle"
-                    style="margin: 0; color: white; font-family: 'MagicCards', sans-serif; letter-spacing: 1.5px;">💭✉️
-                    Letters & Thoughts</h2>
-                <span onclick="closeDiaryModal()"
-                    style="color: white; font-size: 32px; font-weight: bold; cursor: pointer; transition: transform 0.2s;"
-                    onmouseover="this.style.transform='scale(1.2)'"
-                    onmouseout="this.style.transform='scale(1)'">&times;</span>
-            </div>
-            <div id="diaryModalContent" style="padding: 20px; color: #fff;">
-                Loading...
-            </div>
-        </div>
-    </div>
-
-    <style>
-        .loading-spinner {
-            border: 4px solid #2a2a2a;
-            border-top: 4px solid #8844ff;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
-
-    <?php
-    // Rumors section
-    $rumorGametsPerDay = (int) round(24 / 0.0000024);
-
-    // Query current rumors based on per-rumor duration
-    $currentRumorsQuery = "SELECT id, gamets, ts, hold, content, type, COALESCE(rumor_length_days, 7) AS rumor_length_days FROM rumors WHERE (gamets + (COALESCE(rumor_length_days, 7) * $1)) > $2 ORDER BY gamets DESC";
-    $currentRumorsResult = pg_query_params($adminConn, $currentRumorsQuery, [$rumorGametsPerDay, $last_gamets]);
-    $currentRumors = [];
-    if ($currentRumorsResult) {
-        while ($row = pg_fetch_assoc($currentRumorsResult)) {
-            $currentRumors[] = $row;
-        }
-    }
-
-    // Query outdated rumors based on per-rumor duration
-    $outdatedRumorsQuery = "SELECT id, gamets, ts, hold, content, type, COALESCE(rumor_length_days, 7) AS rumor_length_days FROM rumors WHERE (gamets + (COALESCE(rumor_length_days, 7) * $1)) <= $2 ORDER BY gamets DESC";
-    $outdatedRumorsResult = pg_query_params($adminConn, $outdatedRumorsQuery, [$rumorGametsPerDay, $last_gamets]);
-    $outdatedRumors = [];
-    if ($outdatedRumorsResult) {
-        while ($row = pg_fetch_assoc($outdatedRumorsResult)) {
-            $outdatedRumors[] = $row;
-        }
-    }
-
-    // Query Background Life history entries
-    $bglHistoryQuery = "SELECT rowid,npc,gamets,category,convert_gamets2skyrim_date(gamets) as gamedate,to_timestamp(localts) as localdate,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 50";
-    $bglHistoryResult = pg_query($adminConn, $bglHistoryQuery);
-    $bglHistoryRows = [];
-    if ($bglHistoryResult) {
-        while ($row = pg_fetch_assoc($bglHistoryResult)) {
-            $bglHistoryRows[] = $row;
-        }
-    }
-    ?>
-
-    <!-- Background Life History -->
-    <div class="info-panel" style="margin-top: 30px;">
-        <h3>📚 Background Life History</h3>
-        <?php if (empty($bglHistoryRows)): ?>
-            <p style="color: #888; font-style: italic;">No history rows found</p>
-        <?php else: ?>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                    <thead>
-                        <tr style="background: #1a1a1a; border-bottom: 2px solid rgb(242, 124, 17);">
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">rowid
-                            </th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">npc
-                            </th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">gamets
-                            </th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
-                                gamedate</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
-                                localdate</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
-                                category</th>
-                            <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">data
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($bglHistoryRows as $historyRow): ?>
-                            <tr style="border-bottom: 1px solid #333;">
-                                <td style="padding: 12px; color: #ddd; white-space: nowrap;">
-                                    <?php echo htmlspecialchars((string) ($historyRow['rowid'] ?? '')); ?>
-                                </td>
-                                <td style="padding: 12px; color: #ddd; white-space: nowrap;">
-                                    <?php echo htmlspecialchars((string) ($historyRow['npc'] ?? '')); ?>
-                                </td>
-                                <td style="padding: 12px; color: #bbb; white-space: nowrap;">
-                                    <?php echo htmlspecialchars((string) ($historyRow['gamets'] ?? '')); ?>
-                                </td>
-                                <td style="padding: 12px; color: #bbb; white-space: nowrap;">
-                                    <?php echo htmlspecialchars((string) ($historyRow['gamedate'] ?? '')); ?>
-                                </td>
-                                <td style="padding: 12px; color: #bbb; white-space: nowrap;">
-                                    <?php echo htmlspecialchars((string) ($historyRow['localdate'] ?? '')); ?>
-                                </td>
-                                <td style="padding: 12px; color: #bbb; white-space: nowrap;">
-                                    <?php echo htmlspecialchars((string) strtolower($historyRow['category'] ?? '')); ?>
-                                </td>
-                                <td style="padding: 12px; color: #fff;">
-                                    <?php echo nl2br(htmlspecialchars((string) ($historyRow['data'] ?? ''))); ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
-    </div>
-
-    <div class="info-panel collapsible-panel <?php echo !empty($spawnNpcFlash['message']) ? '' : 'collapsed'; ?>"
-        id="create-background-npc" style="margin-top: 30px;">
-        <h3>🧬 Create Background Life NPC</h3>
-        <button type="button" class="toggle-panel-btn"
-            onclick="togglePanel('create-background-npc', this)"><?php echo !empty($spawnNpcFlash['message']) ? 'Hide Form' : 'Show Form'; ?></button>
-        <div class="collapsible-body">
-            <?php if (!empty($spawnNpcFlash['message'])): ?>
-                <?php
-                $isSpawnSuccess = ($spawnNpcFlash['type'] ?? '') === 'success';
-                $spawnFlashBg = $isSpawnSuccess ? 'rgba(42, 122, 59, 0.22)' : 'rgba(122, 42, 42, 0.24)';
-                $spawnFlashBorder = $isSpawnSuccess ? '#4caf50' : '#d65c5c';
-                $spawnFlashText = $isSpawnSuccess ? '#d6ffd9' : '#ffd6d6';
-                ?>
-                <div class="info-panel"
-                    style="margin-bottom: 20px; background: <?php echo $spawnFlashBg; ?>; border: 1px solid <?php echo $spawnFlashBorder; ?>; color: <?php echo $spawnFlashText; ?>;">
-                    <?php echo nl2br(htmlspecialchars($spawnNpcFlash['message'])); ?>
-                </div>
-            <?php endif; ?>
-
-            <form method="post" action="">
-                <input type="hidden" name="action" value="create_background_npc">
+                style="background-color: #1a1a1a; margin: 5% auto; padding: 0; border: 2px solid #8844ff; width: 80%; max-width: 900px; border-radius: 12px; box-shadow: 0 4px 20px rgba(136, 68, 255, 0.3);">
                 <div
-                    style="display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 14px; margin-top: 16px;">
-                    <div>
-                        <label for="npc_name"
-                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Name</label>
-                        <input id="npc_name" name="npc_name" type="text" required
-                            value="<?php echo htmlspecialchars($spawnNpcFormData['name'] ?? ''); ?>"
-                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                    </div>
-                    <div>
-                        <label for="npc_gender"
-                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Gender</label>
-                        <select id="npc_gender" name="npc_gender" required
-                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                            <?php $npcGenderValue = (string) ($spawnNpcFormData['gender'] ?? 'male'); ?>
-                            <option value="male" <?php echo ($npcGenderValue === 'male') ? 'selected' : ''; ?>>male
-                            </option>
-                            <option value="female" <?php echo ($npcGenderValue === 'female') ? 'selected' : ''; ?>>female
-                            </option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="npc_class"
-                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Class</label>
-                        <select id="npc_class" name="npc_class" required
-                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                            <?php
-                            $npcClassValue = (string) ($spawnNpcFormData['class'] ?? 'farmer');
-                            $npcClassOptions = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'forsworn'];
-                            foreach ($npcClassOptions as $npcClassOption):
-                                ?>
-                                <option value="<?php echo htmlspecialchars($npcClassOption); ?>" <?php echo ($npcClassValue === $npcClassOption) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($npcClassOption); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="npc_race"
-                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Race</label>
-                        <select id="npc_race" name="npc_race" required
-                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                            <?php
-                            $npcRaceValue = (string) ($spawnNpcFormData['race'] ?? 'Nord');
-                            $npcRaceOptions = ['Nord', 'Imperial', 'Argonian', 'RedGuard', 'Orc', 'Breton'];
-                            foreach ($npcRaceOptions as $npcRaceOption):
-                                ?>
-                                <option value="<?php echo htmlspecialchars($npcRaceOption); ?>" <?php echo ($npcRaceValue === $npcRaceOption) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($npcRaceOption); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="npc_location"
-                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Location</label>
-                        <input id="npc_location" name="npc_location" type="text" list="npc-location-options" required
-                            value="<?php echo htmlspecialchars($spawnNpcFormData['location'] ?? ''); ?>"
-                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                        <datalist id="npc-location-options">
-                            <?php foreach ($npcLocationOptions as $npcLocationOption): ?>
-                                <option value="<?php echo htmlspecialchars($npcLocationOption[0]); ?>"
-                                    label="<?php echo htmlspecialchars($npcLocationOption[1] . ' (' . ($npcLocationOption[2] ? 'Interior' : 'Exterior') . ' ' . $npcLocationOption[3] . ', ' . $npcLocationOption[4] . ')'); ?>">
-                                </option>
-                            <?php endforeach; ?>
-                        </datalist>
-                    </div>
-                    <div>
-                        <label for="npc_disposition"
-                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Disposition</label>
-                        <input id="npc_disposition" name="npc_disposition" type="text"
-                            value="<?php echo htmlspecialchars($spawnNpcFormData['disposition'] ?? 'friendly'); ?>"
-                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                    </div>
-                    <div>
-                        <label for="npc_starting_point"
-                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Starting Point
-                            (FormID) (will use location if empty)</label>
-                        <input id="npc_starting_point" name="npc_starting_point" type="text"
-                            value="<?php echo htmlspecialchars($spawnNpcFormData['starting_point'] ?? '0x0002b0dd'); ?>"
-                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                    </div>
-                    <div>
-                        <label for="npc_inventory_gold"
-                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Gold Qty
-                            (0x0000000F)</label>
-                        <input id="npc_inventory_gold" name="npc_inventory_gold" type="number" min="0" step="1"
-                            value="<?php echo htmlspecialchars($spawnNpcFormData['gold_qty'] ?? '100'); ?>"
-                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                    </div>
-                    <div>
-                        <label for="npc_inventory_iron_ore"
-                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Iron Ore Qty
-                            (0x00071cf3)</label>
-                        <input id="npc_inventory_iron_ore" name="npc_inventory_iron_ore" type="number" min="0" step="1"
-                            value="<?php echo htmlspecialchars($spawnNpcFormData['iron_ore_qty'] ?? '10'); ?>"
-                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                    </div>
+                    style="background: linear-gradient(135deg, #8844ff 0%, #6622cc 100%); padding: 20px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                    <h2 id="diaryModalTitle"
+                        style="margin: 0; color: white; font-family: 'MagicCards', sans-serif; letter-spacing: 1.5px;">
+                        💭✉️
+                        Letters & Thoughts</h2>
+                    <span onclick="closeDiaryModal()"
+                        style="color: white; font-size: 32px; font-weight: bold; cursor: pointer; transition: transform 0.2s;"
+                        onmouseover="this.style.transform='scale(1.2)'"
+                        onmouseout="this.style.transform='scale(1)'">&times;</span>
                 </div>
-
-                <div style="margin-top: 16px;">
-                    <label for="npc_appearance"
-                        style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Appearance</label>
-                    <input id="npc_appearance" name="npc_appearance" type="text"
-                        value="<?php echo htmlspecialchars($spawnNpcFormData['appearance'] ?? ''); ?>"
-                        style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                <div id="diaryModalContent" style="padding: 20px; color: #fff;">
+                    Loading...
                 </div>
-
-                <div style="margin-top: 16px;">
-                    <label for="npc_speech_style"
-                        style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Speech
-                        Style</label>
-                    <input id="npc_speech_style" name="npc_speech_style" type="text" required
-                        value="<?php echo htmlspecialchars($spawnNpcFormData['speech_style'] ?? ''); ?>"
-                        style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
-                </div>
-
-                <div style="margin-top: 16px;">
-                    <label for="npc_background"
-                        style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Background</label>
-                    <textarea id="npc_background" name="npc_background" rows="3" required
-                        style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($spawnNpcFormData['background'] ?? ''); ?></textarea>
-                </div>
-
-                <div style="margin-top: 16px;">
-                    <label for="npc_goal"
-                        style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Goals</label>
-                    <textarea id="npc_goal" name="npc_goal" rows="12" required
-                        style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($spawnNpcFormData['goal'] ?? ''); ?></textarea>
-                </div>
-
-                <div style="margin-top: 18px; display: flex; justify-content: flex-end;">
-                    <button type="submit"
-                        style="padding: 10px 18px; border-radius: 8px; border: 1px solid rgb(242, 124, 17); background: rgb(242, 124, 17); color: #121212; font-weight: 700; cursor: pointer;">
-                        Spawn Background NPC
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="rumors-section" style="margin-top: 40px;">
-        <div class="page-header" style="margin-bottom: 20px;">
-            <h1>📰 Rumors</h1>
-        </div>
-
-        <?php if (!empty($rumorFlash['message'])): ?>
-            <?php
-            $isSuccessFlash = ($rumorFlash['type'] ?? '') === 'success';
-            $flashBg = $isSuccessFlash ? 'rgba(42, 122, 59, 0.22)' : 'rgba(122, 42, 42, 0.24)';
-            $flashBorder = $isSuccessFlash ? '#4caf50' : '#d65c5c';
-            $flashText = $isSuccessFlash ? '#d6ffd9' : '#ffd6d6';
-            ?>
-            <div class="info-panel"
-                style="margin-bottom: 20px; background: <?php echo $flashBg; ?>; border: 1px solid <?php echo $flashBorder; ?>; color: <?php echo $flashText; ?>;">
-                <?php echo htmlspecialchars($rumorFlash['message']); ?>
             </div>
-        <?php endif; ?>
+        </div>
 
-        <!-- Current Rumors -->
-        <div class="info-panel" style="margin-bottom: 30px;">
-            <h3>🔥 Current Rumors</h3>
-            <?php if (empty($currentRumors)): ?>
-                <p style="color: #888; font-style: italic;">No current rumors</p>
+        <style>
+            .loading-spinner {
+                border: 4px solid #2a2a2a;
+                border-top: 4px solid #8844ff;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                animation: spin 1s linear infinite;
+                margin: 0 auto 15px;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+
+        <?php
+        // Rumors section
+        $rumorGametsPerDay = (int) round(24 / 0.0000024);
+
+        // Query current rumors based on per-rumor duration
+        $currentRumorsQuery = "SELECT id, gamets, ts, hold, content, type, COALESCE(rumor_length_days, 7) AS rumor_length_days FROM rumors WHERE (gamets + (COALESCE(rumor_length_days, 7) * $1)) > $2 ORDER BY gamets DESC";
+        $currentRumorsResult = pg_query_params($adminConn, $currentRumorsQuery, [$rumorGametsPerDay, $last_gamets]);
+        $currentRumors = [];
+        if ($currentRumorsResult) {
+            while ($row = pg_fetch_assoc($currentRumorsResult)) {
+                $currentRumors[] = $row;
+            }
+        }
+
+        // Query outdated rumors based on per-rumor duration
+        $outdatedRumorsQuery = "SELECT id, gamets, ts, hold, content, type, COALESCE(rumor_length_days, 7) AS rumor_length_days FROM rumors WHERE (gamets + (COALESCE(rumor_length_days, 7) * $1)) <= $2 ORDER BY gamets DESC";
+        $outdatedRumorsResult = pg_query_params($adminConn, $outdatedRumorsQuery, [$rumorGametsPerDay, $last_gamets]);
+        $outdatedRumors = [];
+        if ($outdatedRumorsResult) {
+            while ($row = pg_fetch_assoc($outdatedRumorsResult)) {
+                $outdatedRumors[] = $row;
+            }
+        }
+
+        // Query Background Life history entries
+        $bglHistoryQuery = "SELECT rowid,npc,gamets,category,convert_gamets2skyrim_date(gamets) as gamedate,to_timestamp(localts) as localdate,data FROM \"public\".\"bgl_history\" order by gamets desc,ts desc,rowid desc limit 50";
+        $bglHistoryResult = pg_query($adminConn, $bglHistoryQuery);
+        $bglHistoryRows = [];
+        if ($bglHistoryResult) {
+            while ($row = pg_fetch_assoc($bglHistoryResult)) {
+                $bglHistoryRows[] = $row;
+            }
+        }
+        ?>
+
+        <!-- Background Life History -->
+        <div class="info-panel" style="margin-top: 30px;">
+            <h3>📚 Background Life History</h3>
+            <?php if (empty($bglHistoryRows)): ?>
+                <p style="color: #888; font-style: italic;">No history rows found</p>
             <?php else: ?>
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
                         <thead>
                             <tr style="background: #1a1a1a; border-bottom: 2px solid rgb(242, 124, 17);">
                                 <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
-                                    Hold</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
-                                    Type</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
-                                    Lasts</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
-                                    Content</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
-                                    In-Game Date</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
-                                    Age</th>
-                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
-                                    Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($currentRumors as $rumor): ?>
-                                <?php
-                                $rumorDate = convert_gamets2skyrim_date($rumor['gamets']);
-                                $hoursAgo = round(($last_gamets - $rumor['gamets']) * 0.0000024, 1);
-                                ?>
-                                <tr style="border-bottom: 1px solid #333;">
-                                    <td style="padding: 12px; color: #ddd;">
-                                        <?php echo htmlspecialchars($rumor['hold'] ?? 'Unknown'); ?>
-                                    </td>
-                                    <td style="padding: 12px; color: #bbb; font-size: 12px;">
-                                        <?php echo htmlspecialchars($rumor['type'] ?? 'General'); ?>
-                                    </td>
-                                    <td style="padding: 12px; color: #bbb; font-size: 12px; white-space: nowrap;">
-                                        <?php echo (int) ($rumor['rumor_length_days'] ?? 7); ?> days
-                                    </td>
-                                    <td style="padding: 12px; color: #fff;"><?php echo htmlspecialchars($rumor['content']); ?>
-                                    </td>
-                                    <td style="padding: 12px; color: #bbb; font-size: 12px; white-space: nowrap;">
-                                        <?php echo htmlspecialchars($rumorDate); ?>
-                                    </td>
-                                    <td style="padding: 12px; color: #888; font-size: 12px; white-space: nowrap;">
-                                        <?php echo $hoursAgo; ?> hours ago
-                                    </td>
-                                    <td style="padding: 12px;">
-                                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '?edit_rumor_id=' . urlencode((string) ($rumor['id'] ?? '')) . '#create-rumor'); ?>"
-                                            style="color: rgb(242, 124, 17); font-weight: 600; text-decoration: none;">Edit</a>
-                                        <form method="post" action="" style="display: inline; margin-left: 12px;"
-                                            onsubmit="return confirm('Delete this rumor?');">
-                                            <input type="hidden" name="action" value="delete_rumor">
-                                            <input type="hidden" name="rumor_id"
-                                                value="<?php echo (int) ($rumor['id'] ?? 0); ?>">
-                                            <button type="submit"
-                                                style="background: none; border: none; padding: 0; color: #d65c5c; font-weight: 600; text-decoration: none; cursor: pointer;">Delete</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
-        </div>
-
-        <!-- Outdated Rumors -->
-        <div class="info-panel">
-            <h3>📜 Outdated Rumors</h3>
-            <?php if (empty($outdatedRumors)): ?>
-                <p style="color: #888; font-style: italic;">No outdated rumors</p>
-            <?php else: ?>
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                        <thead>
-                            <tr style="background: #1a1a1a; border-bottom: 2px solid #666;">
-                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Hold</th>
-                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Type</th>
-                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Lasts</th>
-                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Content</th>
-                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">In-Game Date
+                                    rowid
                                 </th>
-                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Age</th>
-                                <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Actions</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                    npc
+                                </th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                    gamets
+                                </th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                    gamedate</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                    localdate</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                    category</th>
+                                <th style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                    data
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($outdatedRumors as $rumor): ?>
-                                <?php
-                                $rumorDate = convert_gamets2skyrim_date($rumor['gamets']);
-                                $hoursAgo = round(($last_gamets - $rumor['gamets']) * 0.0000024, 1);
-                                ?>
-                                <tr style="border-bottom: 1px solid #333; opacity: 0.6;">
-                                    <td style="padding: 12px; color: #888;">
-                                        <?php echo htmlspecialchars($rumor['hold'] ?? 'Unknown'); ?>
+                            <?php foreach ($bglHistoryRows as $historyRow): ?>
+                                <tr style="border-bottom: 1px solid #333;">
+                                    <td style="padding: 12px; color: #ddd; white-space: nowrap;">
+                                        <?php echo htmlspecialchars((string) ($historyRow['rowid'] ?? '')); ?>
                                     </td>
-                                    <td style="padding: 12px; color: #777; font-size: 12px;">
-                                        <?php echo htmlspecialchars($rumor['type'] ?? 'General'); ?>
+                                    <td style="padding: 12px; color: #ddd; white-space: nowrap;">
+                                        <?php echo htmlspecialchars((string) ($historyRow['npc'] ?? '')); ?>
                                     </td>
-                                    <td style="padding: 12px; color: #777; font-size: 12px; white-space: nowrap;">
-                                        <?php echo (int) ($rumor['rumor_length_days'] ?? 7); ?> days
+                                    <td style="padding: 12px; color: #bbb; white-space: nowrap;">
+                                        <?php echo htmlspecialchars((string) ($historyRow['gamets'] ?? '')); ?>
                                     </td>
-                                    <td style="padding: 12px; color: #999;"><?php echo htmlspecialchars($rumor['content']); ?>
+                                    <td style="padding: 12px; color: #bbb; white-space: nowrap;">
+                                        <?php echo htmlspecialchars((string) ($historyRow['gamedate'] ?? '')); ?>
                                     </td>
-                                    <td style="padding: 12px; color: #777; font-size: 12px; white-space: nowrap;">
-                                        <?php echo htmlspecialchars($rumorDate); ?>
+                                    <td style="padding: 12px; color: #bbb; white-space: nowrap;">
+                                        <?php echo htmlspecialchars((string) ($historyRow['localdate'] ?? '')); ?>
                                     </td>
-                                    <td style="padding: 12px; color: #666; font-size: 12px; white-space: nowrap;">
-                                        <?php echo $hoursAgo; ?> hours ago
+                                    <td style="padding: 12px; color: #bbb; white-space: nowrap;">
+                                        <?php echo htmlspecialchars((string) strtolower($historyRow['category'] ?? '')); ?>
                                     </td>
-                                    <td style="padding: 12px;">
-                                        <a href="<?php echo htmlspecialchars(getRumorPagePath() . '?edit_rumor_id=' . urlencode((string) ($rumor['id'] ?? '')) . '#create-rumor'); ?>"
-                                            style="color: #bbb; font-weight: 600; text-decoration: none;">Edit</a>
-                                        <form method="post" action="" style="display: inline; margin-left: 12px;"
-                                            onsubmit="return confirm('Delete this rumor?');">
-                                            <input type="hidden" name="action" value="delete_rumor">
-                                            <input type="hidden" name="rumor_id"
-                                                value="<?php echo (int) ($rumor['id'] ?? 0); ?>">
-                                            <button type="submit"
-                                                style="background: none; border: none; padding: 0; color: #d65c5c; font-weight: 600; text-decoration: none; cursor: pointer;">Delete</button>
-                                        </form>
+                                    <td style="padding: 12px; color: #fff;">
+                                        <?php echo nl2br(htmlspecialchars((string) ($historyRow['data'] ?? ''))); ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -3482,73 +3184,404 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl/head.html");
             <?php endif; ?>
         </div>
 
-
-
-        <div class="info-panel collapsible-panel <?php echo ($editingRumorId > 0 || (($rumorFlash['type'] ?? '') === 'error')) ? '' : 'collapsed'; ?>"
-            id="create-rumor" style="margin-top: 30px;">
-            <h3><?php echo ($editingRumorId > 0) ? 'Edit Rumor' : 'Create Rumor'; ?></h3>
+        <div class="info-panel collapsible-panel <?php echo !empty($spawnNpcFlash['message']) ? '' : 'collapsed'; ?>"
+            id="create-background-npc" style="margin-top: 30px;">
+            <h3>🧬 Create Background Life NPC</h3>
             <button type="button" class="toggle-panel-btn"
-                onclick="togglePanel('create-rumor', this)"><?php echo ($editingRumorId > 0 || (($rumorFlash['type'] ?? '') === 'error')) ? 'Hide Form' : 'Show Form'; ?></button>
+                onclick="togglePanel('create-background-npc', this)"><?php echo !empty($spawnNpcFlash['message']) ? 'Hide Form' : 'Show Form'; ?></button>
             <div class="collapsible-body">
+                <?php if (!empty($spawnNpcFlash['message'])): ?>
+                    <?php
+                    $isSpawnSuccess = ($spawnNpcFlash['type'] ?? '') === 'success';
+                    $spawnFlashBg = $isSpawnSuccess ? 'rgba(42, 122, 59, 0.22)' : 'rgba(122, 42, 42, 0.24)';
+                    $spawnFlashBorder = $isSpawnSuccess ? '#4caf50' : '#d65c5c';
+                    $spawnFlashText = $isSpawnSuccess ? '#d6ffd9' : '#ffd6d6';
+                    ?>
+                    <div class="info-panel"
+                        style="margin-bottom: 20px; background: <?php echo $spawnFlashBg; ?>; border: 1px solid <?php echo $spawnFlashBorder; ?>; color: <?php echo $spawnFlashText; ?>;">
+                        <?php echo nl2br(htmlspecialchars($spawnNpcFlash['message'])); ?>
+                    </div>
+                <?php endif; ?>
+
                 <form method="post" action="">
-                    <input type="hidden" name="action"
-                        value="<?php echo ($editingRumorId > 0) ? 'update_rumor' : 'create_rumor'; ?>">
-                    <?php if ($editingRumorId > 0): ?>
-                        <input type="hidden" name="rumor_id" value="<?php echo (int) $editingRumorId; ?>">
-                    <?php endif; ?>
+                    <input type="hidden" name="action" value="create_background_npc">
                     <div
-                        style="display: grid; grid-template-columns: minmax(220px, 280px) minmax(200px, 1fr) minmax(160px, 180px); gap: 18px; margin-top: 16px;">
+                        style="display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 14px; margin-top: 16px;">
                         <div>
-                            <label for="rumor_hold"
-                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Hold</label>
-                            <select id="rumor_hold" name="rumor_hold" required
-                                style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px;">
-                                <option value="">Select hold</option>
-                                <?php foreach (chimGetRumorHoldOptions() as $holdOption): ?>
-                                    <option value="<?php echo htmlspecialchars($holdOption); ?>" <?php echo (($rumorFormData['hold'] ?? '') === $holdOption) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($holdOption); ?>
+                            <label for="npc_name"
+                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Name</label>
+                            <input id="npc_name" name="npc_name" type="text" required
+                                value="<?php echo htmlspecialchars($spawnNpcFormData['name'] ?? ''); ?>"
+                                style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label for="npc_gender"
+                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Gender</label>
+                            <select id="npc_gender" name="npc_gender" required
+                                style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                                <?php $npcGenderValue = (string) ($spawnNpcFormData['gender'] ?? 'male'); ?>
+                                <option value="male" <?php echo ($npcGenderValue === 'male') ? 'selected' : ''; ?>>male
+                                </option>
+                                <option value="female" <?php echo ($npcGenderValue === 'female') ? 'selected' : ''; ?>>
+                                    female
+                                </option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="npc_class"
+                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Class</label>
+                            <select id="npc_class" name="npc_class" required
+                                style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                                <?php
+                                $npcClassValue = (string) ($spawnNpcFormData['class'] ?? 'farmer');
+                                $npcClassOptions = ['beggar', 'warrior', 'assassin', 'mage', 'farmer', 'soldier', 'merchant', 'noble', 'forsworn'];
+                                foreach ($npcClassOptions as $npcClassOption):
+                                    ?>
+                                    <option value="<?php echo htmlspecialchars($npcClassOption); ?>" <?php echo ($npcClassValue === $npcClassOption) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($npcClassOption); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div>
-                            <label for="rumor_type"
-                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Type</label>
-                            <input id="rumor_type" name="rumor_type" type="text"
-                                value="<?php echo htmlspecialchars($rumorFormData['type'] ?? ''); ?>"
-                                placeholder="General"
+                            <label for="npc_race"
+                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Race</label>
+                            <select id="npc_race" name="npc_race" required
+                                style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                                <?php
+                                $npcRaceValue = (string) ($spawnNpcFormData['race'] ?? 'Nord');
+                                $npcRaceOptions = ['Nord', 'Imperial', 'Argonian', 'RedGuard', 'Orc', 'Breton'];
+                                foreach ($npcRaceOptions as $npcRaceOption):
+                                    ?>
+                                    <option value="<?php echo htmlspecialchars($npcRaceOption); ?>" <?php echo ($npcRaceValue === $npcRaceOption) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($npcRaceOption); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="npc_location"
+                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Location</label>
+                            <input id="npc_location" name="npc_location" type="text" list="npc-location-options"
+                                required value="<?php echo htmlspecialchars($spawnNpcFormData['location'] ?? ''); ?>"
+                                style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                            <datalist id="npc-location-options">
+                                <?php foreach ($npcLocationOptions as $npcLocationOption): ?>
+                                    <option value="<?php echo htmlspecialchars($npcLocationOption[0]); ?>"
+                                        label="<?php echo htmlspecialchars($npcLocationOption[1] . ' (' . ($npcLocationOption[2] ? 'Interior' : 'Exterior') . ' ' . $npcLocationOption[3] . ', ' . $npcLocationOption[4] . ')'); ?>">
+                                    </option>
+                                <?php endforeach; ?>
+                            </datalist>
+                        </div>
+                        <div>
+                            <label for="npc_disposition"
+                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Disposition</label>
+                            <input id="npc_disposition" name="npc_disposition" type="text"
+                                value="<?php echo htmlspecialchars($spawnNpcFormData['disposition'] ?? 'friendly'); ?>"
                                 style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
                         </div>
                         <div>
-                            <label for="rumor_length_days"
-                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Rumor
-                                Length (Days)</label>
-                            <input id="rumor_length_days" name="rumor_length_days" type="number" min="1" step="1"
-                                value="<?php echo htmlspecialchars($rumorFormData['length_days'] ?? '7'); ?>"
-                                placeholder="7"
+                            <label for="npc_starting_point"
+                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Starting
+                                Point
+                                (FormID) (will use location if empty)</label>
+                            <input id="npc_starting_point" name="npc_starting_point" type="text"
+                                value="<?php echo htmlspecialchars($spawnNpcFormData['starting_point'] ?? '0x0002b0dd'); ?>"
+                                style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label for="npc_inventory_gold"
+                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Gold Qty
+                                (0x0000000F)</label>
+                            <input id="npc_inventory_gold" name="npc_inventory_gold" type="number" min="0" step="1"
+                                value="<?php echo htmlspecialchars($spawnNpcFormData['gold_qty'] ?? '100'); ?>"
+                                style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label for="npc_inventory_iron_ore"
+                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Iron Ore
+                                Qty
+                                (0x00071cf3)</label>
+                            <input id="npc_inventory_iron_ore" name="npc_inventory_iron_ore" type="number" min="0"
+                                step="1"
+                                value="<?php echo htmlspecialchars($spawnNpcFormData['iron_ore_qty'] ?? '10'); ?>"
                                 style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
                         </div>
                     </div>
-                    <div style="margin-top: 18px;">
-                        <label for="rumor_content"
-                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Content</label>
-                        <textarea id="rumor_content" name="rumor_content" rows="4" required
-                            placeholder="Write the rumor text here..."
-                            style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($rumorFormData['content'] ?? ''); ?></textarea>
+
+                    <div style="margin-top: 16px;">
+                        <label for="npc_appearance"
+                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Appearance</label>
+                        <input id="npc_appearance" name="npc_appearance" type="text"
+                            value="<?php echo htmlspecialchars($spawnNpcFormData['appearance'] ?? ''); ?>"
+                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
                     </div>
-                    <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 12px;">
-                        <?php if ($editingRumorId > 0): ?>
-                            <a href="<?php echo htmlspecialchars(getRumorPagePath() . '#create-rumor'); ?>"
-                                style="padding: 10px 18px; border-radius: 8px; border: 1px solid #555; background: #242424; color: #f2f2f2; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
-                                Cancel Edit
-                            </a>
-                        <?php endif; ?>
+
+                    <div style="margin-top: 16px;">
+                        <label for="npc_speech_style"
+                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Speech
+                            Style</label>
+                        <input id="npc_speech_style" name="npc_speech_style" type="text" required
+                            value="<?php echo htmlspecialchars($spawnNpcFormData['speech_style'] ?? ''); ?>"
+                            style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                    </div>
+
+                    <div style="margin-top: 16px;">
+                        <label for="npc_background"
+                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Background</label>
+                        <textarea id="npc_background" name="npc_background" rows="3" required
+                            style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($spawnNpcFormData['background'] ?? ''); ?></textarea>
+                    </div>
+
+                    <div style="margin-top: 16px;">
+                        <label for="npc_goal"
+                            style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Goals</label>
+                        <textarea id="npc_goal" name="npc_goal" rows="12" required
+                            style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($spawnNpcFormData['goal'] ?? ''); ?></textarea>
+                    </div>
+
+                    <div style="margin-top: 18px; display: flex; justify-content: flex-end;">
                         <button type="submit"
                             style="padding: 10px 18px; border-radius: 8px; border: 1px solid rgb(242, 124, 17); background: rgb(242, 124, 17); color: #121212; font-weight: 700; cursor: pointer;">
-                            <?php echo ($editingRumorId > 0) ? 'Save Rumor' : 'Create Rumor'; ?>
+                            Spawn Background NPC
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <div id="rumors-section" style="margin-top: 40px;">
+            <div class="page-header" style="margin-bottom: 20px;">
+                <h1>📰 Rumors</h1>
+            </div>
+
+            <?php if (!empty($rumorFlash['message'])): ?>
+                <?php
+                $isSuccessFlash = ($rumorFlash['type'] ?? '') === 'success';
+                $flashBg = $isSuccessFlash ? 'rgba(42, 122, 59, 0.22)' : 'rgba(122, 42, 42, 0.24)';
+                $flashBorder = $isSuccessFlash ? '#4caf50' : '#d65c5c';
+                $flashText = $isSuccessFlash ? '#d6ffd9' : '#ffd6d6';
+                ?>
+                <div class="info-panel"
+                    style="margin-bottom: 20px; background: <?php echo $flashBg; ?>; border: 1px solid <?php echo $flashBorder; ?>; color: <?php echo $flashText; ?>;">
+                    <?php echo htmlspecialchars($rumorFlash['message']); ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Current Rumors -->
+            <div class="info-panel" style="margin-bottom: 30px;">
+                <h3>🔥 Current Rumors</h3>
+                <?php if (empty($currentRumors)): ?>
+                    <p style="color: #888; font-style: italic;">No current rumors</p>
+                <?php else: ?>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead>
+                                <tr style="background: #1a1a1a; border-bottom: 2px solid rgb(242, 124, 17);">
+                                    <th
+                                        style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                        Hold</th>
+                                    <th
+                                        style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                        Type</th>
+                                    <th
+                                        style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                        Lasts</th>
+                                    <th
+                                        style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                        Content</th>
+                                    <th
+                                        style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                        In-Game Date</th>
+                                    <th
+                                        style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                        Age</th>
+                                    <th
+                                        style="padding: 12px; text-align: left; color: rgb(242, 124, 17); font-weight: bold;">
+                                        Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($currentRumors as $rumor): ?>
+                                    <?php
+                                    $rumorDate = convert_gamets2skyrim_date($rumor['gamets']);
+                                    $hoursAgo = round(($last_gamets - $rumor['gamets']) * 0.0000024, 1);
+                                    ?>
+                                    <tr style="border-bottom: 1px solid #333;">
+                                        <td style="padding: 12px; color: #ddd;">
+                                            <?php echo htmlspecialchars($rumor['hold'] ?? 'Unknown'); ?>
+                                        </td>
+                                        <td style="padding: 12px; color: #bbb; font-size: 12px;">
+                                            <?php echo htmlspecialchars($rumor['type'] ?? 'General'); ?>
+                                        </td>
+                                        <td style="padding: 12px; color: #bbb; font-size: 12px; white-space: nowrap;">
+                                            <?php echo (int) ($rumor['rumor_length_days'] ?? 7); ?> days
+                                        </td>
+                                        <td style="padding: 12px; color: #fff;">
+                                            <?php echo htmlspecialchars($rumor['content']); ?>
+                                        </td>
+                                        <td style="padding: 12px; color: #bbb; font-size: 12px; white-space: nowrap;">
+                                            <?php echo htmlspecialchars($rumorDate); ?>
+                                        </td>
+                                        <td style="padding: 12px; color: #888; font-size: 12px; white-space: nowrap;">
+                                            <?php echo $hoursAgo; ?> hours ago
+                                        </td>
+                                        <td style="padding: 12px;">
+                                            <a href="<?php echo htmlspecialchars(getRumorPagePath() . '?edit_rumor_id=' . urlencode((string) ($rumor['id'] ?? '')) . '#create-rumor'); ?>"
+                                                style="color: rgb(242, 124, 17); font-weight: 600; text-decoration: none;">Edit</a>
+                                            <form method="post" action="" style="display: inline; margin-left: 12px;"
+                                                onsubmit="return confirm('Delete this rumor?');">
+                                                <input type="hidden" name="action" value="delete_rumor">
+                                                <input type="hidden" name="rumor_id"
+                                                    value="<?php echo (int) ($rumor['id'] ?? 0); ?>">
+                                                <button type="submit"
+                                                    style="background: none; border: none; padding: 0; color: #d65c5c; font-weight: 600; text-decoration: none; cursor: pointer;">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Outdated Rumors -->
+            <div class="info-panel">
+                <h3>📜 Outdated Rumors</h3>
+                <?php if (empty($outdatedRumors)): ?>
+                    <p style="color: #888; font-style: italic;">No outdated rumors</p>
+                <?php else: ?>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead>
+                                <tr style="background: #1a1a1a; border-bottom: 2px solid #666;">
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Hold</th>
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Type</th>
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Lasts</th>
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Content
+                                    </th>
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">In-Game
+                                        Date
+                                    </th>
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Age</th>
+                                    <th style="padding: 12px; text-align: left; color: #888; font-weight: bold;">Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($outdatedRumors as $rumor): ?>
+                                    <?php
+                                    $rumorDate = convert_gamets2skyrim_date($rumor['gamets']);
+                                    $hoursAgo = round(($last_gamets - $rumor['gamets']) * 0.0000024, 1);
+                                    ?>
+                                    <tr style="border-bottom: 1px solid #333; opacity: 0.6;">
+                                        <td style="padding: 12px; color: #888;">
+                                            <?php echo htmlspecialchars($rumor['hold'] ?? 'Unknown'); ?>
+                                        </td>
+                                        <td style="padding: 12px; color: #777; font-size: 12px;">
+                                            <?php echo htmlspecialchars($rumor['type'] ?? 'General'); ?>
+                                        </td>
+                                        <td style="padding: 12px; color: #777; font-size: 12px; white-space: nowrap;">
+                                            <?php echo (int) ($rumor['rumor_length_days'] ?? 7); ?> days
+                                        </td>
+                                        <td style="padding: 12px; color: #999;">
+                                            <?php echo htmlspecialchars($rumor['content']); ?>
+                                        </td>
+                                        <td style="padding: 12px; color: #777; font-size: 12px; white-space: nowrap;">
+                                            <?php echo htmlspecialchars($rumorDate); ?>
+                                        </td>
+                                        <td style="padding: 12px; color: #666; font-size: 12px; white-space: nowrap;">
+                                            <?php echo $hoursAgo; ?> hours ago
+                                        </td>
+                                        <td style="padding: 12px;">
+                                            <a href="<?php echo htmlspecialchars(getRumorPagePath() . '?edit_rumor_id=' . urlencode((string) ($rumor['id'] ?? '')) . '#create-rumor'); ?>"
+                                                style="color: #bbb; font-weight: 600; text-decoration: none;">Edit</a>
+                                            <form method="post" action="" style="display: inline; margin-left: 12px;"
+                                                onsubmit="return confirm('Delete this rumor?');">
+                                                <input type="hidden" name="action" value="delete_rumor">
+                                                <input type="hidden" name="rumor_id"
+                                                    value="<?php echo (int) ($rumor['id'] ?? 0); ?>">
+                                                <button type="submit"
+                                                    style="background: none; border: none; padding: 0; color: #d65c5c; font-weight: 600; text-decoration: none; cursor: pointer;">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+
+
+            <div class="info-panel collapsible-panel <?php echo ($editingRumorId > 0 || (($rumorFlash['type'] ?? '') === 'error')) ? '' : 'collapsed'; ?>"
+                id="create-rumor" style="margin-top: 30px;">
+                <h3><?php echo ($editingRumorId > 0) ? 'Edit Rumor' : 'Create Rumor'; ?></h3>
+                <button type="button" class="toggle-panel-btn"
+                    onclick="togglePanel('create-rumor', this)"><?php echo ($editingRumorId > 0 || (($rumorFlash['type'] ?? '') === 'error')) ? 'Hide Form' : 'Show Form'; ?></button>
+                <div class="collapsible-body">
+                    <form method="post" action="">
+                        <input type="hidden" name="action"
+                            value="<?php echo ($editingRumorId > 0) ? 'update_rumor' : 'create_rumor'; ?>">
+                        <?php if ($editingRumorId > 0): ?>
+                            <input type="hidden" name="rumor_id" value="<?php echo (int) $editingRumorId; ?>">
+                        <?php endif; ?>
+                        <div
+                            style="display: grid; grid-template-columns: minmax(220px, 280px) minmax(200px, 1fr) minmax(160px, 180px); gap: 18px; margin-top: 16px;">
+                            <div>
+                                <label for="rumor_hold"
+                                    style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Hold</label>
+                                <select id="rumor_hold" name="rumor_hold" required
+                                    style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px;">
+                                    <option value="">Select hold</option>
+                                    <?php foreach (chimGetRumorHoldOptions() as $holdOption): ?>
+                                        <option value="<?php echo htmlspecialchars($holdOption); ?>" <?php echo (($rumorFormData['hold'] ?? '') === $holdOption) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($holdOption); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="rumor_type"
+                                    style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Type</label>
+                                <input id="rumor_type" name="rumor_type" type="text"
+                                    value="<?php echo htmlspecialchars($rumorFormData['type'] ?? ''); ?>"
+                                    placeholder="General"
+                                    style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label for="rumor_length_days"
+                                    style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Rumor
+                                    Length (Days)</label>
+                                <input id="rumor_length_days" name="rumor_length_days" type="number" min="1" step="1"
+                                    value="<?php echo htmlspecialchars($rumorFormData['length_days'] ?? '7'); ?>"
+                                    placeholder="7"
+                                    style="width: 100%; padding: 10px 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box;">
+                            </div>
+                        </div>
+                        <div style="margin-top: 18px;">
+                            <label for="rumor_content"
+                                style="display: block; margin-bottom: 8px; color: #f2c48f; font-weight: 600;">Content</label>
+                            <textarea id="rumor_content" name="rumor_content" rows="4" required
+                                placeholder="Write the rumor text here..."
+                                style="width: 100%; padding: 12px; background: #171717; color: #f5f5f5; border: 1px solid #444; border-radius: 8px; box-sizing: border-box; resize: vertical;"><?php echo htmlspecialchars($rumorFormData['content'] ?? ''); ?></textarea>
+                        </div>
+                        <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 12px;">
+                            <?php if ($editingRumorId > 0): ?>
+                                <a href="<?php echo htmlspecialchars(getRumorPagePath() . '#create-rumor'); ?>"
+                                    style="padding: 10px 18px; border-radius: 8px; border: 1px solid #555; background: #242424; color: #f2f2f2; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center;">
+                                    Cancel Edit
+                                </a>
+                            <?php endif; ?>
+                            <button type="submit"
+                                style="padding: 10px 18px; border-radius: 8px; border: 1px solid rgb(242, 124, 17); background: rgb(242, 124, 17); color: #121212; font-weight: 700; cursor: pointer;">
+                                <?php echo ($editingRumorId > 0) ? 'Save Rumor' : 'Create Rumor'; ?>
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
