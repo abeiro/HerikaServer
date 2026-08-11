@@ -171,8 +171,8 @@ $RELLLM_CONNECTOR=5; // Relationship Management default (Mistral Small 3.2 24B)
 //[AI/LLM Connectors]
 //OpenRouter JSON
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$CONNECTOR["openrouterjson"]["model"]="z-ai/glm-4.7"; //LLM model.
-$CONNECTOR["openrouterjson"]["reasoning_model"]=true; //This is a reasoning model, could output CoT.
+$CONNECTOR["openrouterjson"]["model"]="deepseek/deepseek-v4-flash"; //LLM model.
+$CONNECTOR["openrouterjson"]["reasoning_model"]=false; //This is a reasoning model, could output CoT.
 $CONNECTOR["openrouterjson"]["fallback_models"]=""; //comma separated models.
 $CONNECTOR["openrouterjson"]["PROVIDER"]=""; //use only this list of providers from OpenRouter
 $CONNECTOR["openrouterjson"]["providers_sort"]="default"; //Prioritize providers on selected attribute.
