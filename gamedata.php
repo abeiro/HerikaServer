@@ -233,6 +233,7 @@ function handleEquipmentUpdate(array $data, NpcMaster $npcMaster): void
 
     $npcMaster->updateMetadataKeysByName($actorName, [
         'equipment' => buildEquipmentMetadataValue($equipment),
+        'last_equipment_update_gamets' => $data['gamets'] ?? null,
     ]);
 
     Logger::debug("[gamedata.php] Updated equipment for {$actorType}: {$actorName}");
@@ -416,6 +417,8 @@ function buildInventoryMetadataValue(array $items): array
                 'count' => intval($item['count']),
                 'keywords' => isset($item['keywords']) ? sanitizeItemKeywordList($item['keywords']) : [],
                 'goldvalue' => isset($item['goldvalue']) ? intval($item['goldvalue']) : 0,
+                'equipped' => !empty($item['equipped']),
+                'is_quest_item' => !empty($item['is_quest_item']),
             ];
             $pluginRow = chimGetLoadedGamePluginByRuntimeFormId($item['baseid']);
             $pluginName = ($pluginRow !== null) ? $pluginRow['plugin_name'] : '';
@@ -458,6 +461,9 @@ function buildStatsMetadataValue(array $stats): array
         'stamina' => isset($stats['stamina']) ? floatval($stats['stamina']) : 0,
         'stamina_max' => isset($stats['stamina_max']) ? floatval($stats['stamina_max']) : 0,
         'scale' => isset($stats['scale']) ? floatval($stats['scale']) : 1.0,
+        'is_essential' => !empty($stats['is_essential']),
+        'is_protected' => !empty($stats['is_protected']),
+        'is_dead' => !empty($stats['is_dead']),
     ];
 }
 
@@ -775,6 +781,7 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void
 
     $npcMaster->updateMetadataKeysByName($actorName, [
         'stats' => buildStatsMetadataValue($stats),
+        'last_stats_update_gamets' => $data['gamets'] ?? null,
     ]);
 
     Logger::debug("[gamedata.php] Updated stats for {$actorType}: {$actorName}");
