@@ -2425,7 +2425,7 @@ function functionExecutionParameterValueIsEmpty($parameterValue)
     return trim(strval($parameterValue)) === "";
 }
 
-function buildFunctionParameterValueFromResponse($functionDef, $parsedResponse)
+function buildFunctionParameterValueFromResponse($functionDef, $parsedResponse, $forceObject = false)
 {
     $properties = $functionDef["parameters"]["properties"] ?? [];
     $requiredParameters = [];
@@ -2443,7 +2443,7 @@ function buildFunctionParameterValueFromResponse($functionDef, $parsedResponse)
         }
     }
 
-    if (count($properties) > 1) {
+    if ($forceObject || count($properties) > 1) {
         $parameters = [];
         foreach ($properties as $parameterName => $parameterSchema) {
             if (array_key_exists($parameterName, $parsedResponse)) {
@@ -2481,7 +2481,12 @@ function buildFunctionExecutionContextFromResponse($parsedResponse)
     $missingRequired = [];
 
     if (is_array($functionDef)) {
-        $parameterData = buildFunctionParameterValueFromResponse($functionDef, is_array($parsedResponse) ? $parsedResponse : []);
+        $forceObjectParameters = isset($GLOBALS['HERIKA_GROUPED_ACTION_SPECS'][$functionCodeName]);
+        $parameterData = buildFunctionParameterValueFromResponse(
+            $functionDef,
+            is_array($parsedResponse) ? $parsedResponse : [],
+            $forceObjectParameters
+        );
         $parameterValue = $parameterData["parameter_value"];
         $missingRequired = $parameterData["missing_required"];
     }

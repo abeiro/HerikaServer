@@ -188,6 +188,36 @@
         }
     }
 
+    if (!function_exists('chimGetActionResponseFieldDescriptions')) {
+        // Keeps the shared JSON envelope aligned with the currently active grouped action modes.
+        function chimGetActionResponseFieldDescriptions(): array
+        {
+            $modeChoices = [];
+            $modeValues = [''];
+            foreach (($GLOBALS['HERIKA_GROUPED_ACTION_SPECS'] ?? []) as $spec) {
+                $actionName = trim(strval($spec['action_name'] ?? ''));
+                $variants = is_array($spec['variants'] ?? null) ? array_keys($spec['variants']) : [];
+                if ($actionName !== '' && count($variants) > 0) {
+                    $modeChoices[] = $actionName . '=' . implode('|', $variants);
+                    $modeValues = array_merge($modeValues, $variants);
+                }
+            }
+
+            $playerName = strval($GLOBALS['PLAYER_NAME'] ?? 'the player');
+            $modeDescription = count($modeChoices) > 0
+                ? 'For a grouped action, select exactly one active mode: ' . implode('; ', $modeChoices) . '. Leave blank for Talk or an individual action.'
+                : 'Leave blank unless the selected action description explicitly lists a mode.';
+
+            return [
+                'mode' => $modeDescription,
+                'mode_enum' => array_values(array_unique($modeValues)),
+                'target' => "Actor, recipient, or destination required by the selected action. Prefer exact Name [RefID: XXXXXXXX] from people_present for actors. For Travel_To use the destination; Consume uses the exact BaseID:ItemName inventory identifier; TeleportNPC uses the actor to teleport; SpawnItem and SpawnGold use the recipient; SpawnNPC uses the SNQE template key; KillTarget uses the victim; CreateNewNPC and DirectorCommand use their requested brief. Use '{$playerName}', PLAYER, or me for player-targeted actions. For grouped actions, put the variant in mode, never target. Leave blank when no target is needed.",
+                'item' => 'Actual item, spell, location, or crime detail required by the selected action. Use exact shown identifiers for inventory, held, or nearby items. Handle_Crime add_bounty uses the crime type here. TeleportNPC uses the destination and SpawnItem uses the item name. For grouped actions, put the variant in mode, never item. Leave blank when no item or detail is needed.',
+                'amount' => 'Positive integer quantity when required. It is required for SpawnItem, SpawnNPC, SpawnGold, Give in gold mode, and Handle_Crime add_bounty when item is Custom; optional for Give in item mode. Omit it when the selected action does not use an amount.',
+            ];
+        }
+    }
+
     chimRefreshJsonResponseState(true);
 
     // specify the available actions which will be made available in the context
@@ -295,6 +325,7 @@
         $moodDescription = empty($moods)
             ? "choose exactly one mood while speaking, never combine moods"
             : "choose exactly one mood while speaking from this list, never combine moods: ".implode("|", $moods);
+        $actionFieldDescriptions = chimGetActionResponseFieldDescriptions();
     
         // Auto-detect language from TTS config if LLM_LANG not set
         if (!isset($GLOBALS["LLM_LANG"]) && isset($GLOBALS["LANG_LLM_XTTS"]) && $GLOBALS["LANG_LLM_XTTS"]) {
@@ -354,9 +385,10 @@
                     "message"=>$messageDescription,
                     "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor (prefer exact Name [RefID: XXXXXXXX] from people_present, otherwise use actor name). For TeleportNPC, this is the actor to teleport. For SpawnItem and SpawnGold, this is the actor who should receive the spawned item or gold. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. For DirectorCommand, this is a short freeform director brief describing the scene instruction or event to stage. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
-                    "item"=>"item identifier (REQUIRED for GiveItemTo: use exact BaseID:ItemName from inventory; for Take_Held_Item: use exact RefID:ItemName from shown in <held_items>, for PickupItem: use exact RefID:ItemName from nearby_items; for CastSpell: use exact spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnGold and SpawnNPC and CreateNewNPC and DirectorCommand.",
-                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC or SpawnGold. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC or DirectorCommand. Use a positive integer when needed.",
+                    "mode"=>$actionFieldDescriptions["mode"],
+                    "target"=>$actionFieldDescriptions["target"],
+                    "item"=>$actionFieldDescriptions["item"],
+                    "amount"=>$actionFieldDescriptions["amount"],
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                 ];
             } else {
@@ -366,9 +398,10 @@
                     "message"=>$messageDescription,
                     "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor (prefer exact Name [RefID: XXXXXXXX] from people_present, otherwise use actor name). For TeleportNPC, this is the actor to teleport. For SpawnItem and SpawnGold, this is the actor who should receive the spawned item or gold. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. For DirectorCommand, this is a short freeform director brief describing the scene instruction or event to stage. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
-                    "item"=>"item identifier (REQUIRED for GiveItemTo: use exact BaseID:ItemName from inventory; for Take_Held_Item: use exact RefID:ItemName from shown in <held_items>,for PickupItem: use exact RefID:ItemName from nearby_items; for CastSpell: use exact spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnGold and SpawnNPC and CreateNewNPC and DirectorCommand.",
-                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC or SpawnGold. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC or DirectorCommand. Use a positive integer when needed."
+                    "mode"=>$actionFieldDescriptions["mode"],
+                    "target"=>$actionFieldDescriptions["target"],
+                    "item"=>$actionFieldDescriptions["item"],
+                    "amount"=>$actionFieldDescriptions["amount"]
                 ];
             }
         } else {
@@ -378,9 +411,10 @@
                     "listener"=>$listenerDesc,
                     "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor (prefer exact Name [RefID: XXXXXXXX] from people_present, otherwise use actor name). For TeleportNPC, this is the actor to teleport. For SpawnItem and SpawnGold, this is the actor who should receive the spawned item or gold. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. For DirectorCommand, this is a short freeform director brief describing the scene instruction or event to stage. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
-                    "item"=>"item identifier (REQUIRED for GiveItemTo: use exact BaseID:ItemName from inventory; for Take_Held_Item: use exact RefID:ItemName from shown in <held_items>,for PickupItem: use exact RefID:ItemName from nearby_items; for CastSpell: use exact spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnGold and SpawnNPC and CreateNewNPC and DirectorCommand.",
-                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC or SpawnGold. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC or DirectorCommand. Use a positive integer when needed.",
+                    "mode"=>$actionFieldDescriptions["mode"],
+                    "target"=>$actionFieldDescriptions["target"],
+                    "item"=>$actionFieldDescriptions["item"],
+                    "amount"=>$actionFieldDescriptions["amount"],
                     "lang"=>isset($GLOBALS["LLM_LANG"])?$GLOBALS["LLM_LANG"]:"en|es|fr|de|it|pt|ru|zh-cn|ja|ko|ar|pl|tr|cs|nl|hu|hi",
                     "message"=>$messageDescription
                 ];
@@ -390,9 +424,10 @@
                     "listener"=>$listenerDesc,
                     "mood"=>$moodDescription,
                     "action"=>implode("|",$GLOBALS["FUNC_LIST"]),
-                    "target"=>"action target actor (prefer exact Name [RefID: XXXXXXXX] from people_present, otherwise use actor name). For TeleportNPC, this is the actor to teleport. For SpawnItem and SpawnGold, this is the actor who should receive the spawned item or gold. For SpawnNPC, this is the SNQE NPC template key to spawn near {$GLOBALS["PLAYER_NAME"]}. For KillTarget, this is the actor to kill. For CreateNewNPC, this is a short creation brief for the new nearby NPC. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target.",
-                    "item"=>"item identifier (REQUIRED for GiveItemTo: use exact BaseID:ItemName from inventory; for Take_Held_Item: use exact RefID:ItemName from shown in <held_items>, for PickupItem: use exact RefID:ItemName from nearby_items; for CastSpell: use exact spell name from spells) OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). Leave blank when the chosen action does not need an item, including SpawnGold and SpawnNPC and CreateNewNPC.",
-                    "amount"=>"quantity to give or spawn only when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC or SpawnGold. Optional when action is GiveItemTo. Leave blank for other actions such as KillTarget or TeleportNPC or CreateNewNPC. Use a positive integer when needed.",
+                    "mode"=>$actionFieldDescriptions["mode"],
+                    "target"=>$actionFieldDescriptions["target"],
+                    "item"=>$actionFieldDescriptions["item"],
+                    "amount"=>$actionFieldDescriptions["amount"],
                     "message"=>$messageDescription
                 ];
             }
@@ -432,6 +467,7 @@
         $moods=normalizeEmoteMoods($GLOBALS["EMOTEMOODS"] ?? "");
         shuffle($moods);
         $moodDescription = "choose exactly one mood while speaking, never combine moods";
+        $actionFieldDescriptions = chimGetActionResponseFieldDescriptions();
         $listenerDescription = chimIsVisionRequest()
             ? "leave blank unless {$promptCharacterName} directly addresses someone while explaining the Soulgaze vision"
             : "specify who {$promptCharacterName} is talking to, comma separated, max two listeners, in addressing order";
@@ -493,17 +529,23 @@
                                 "description" => "a valid action (refer to available actions list)",
                                 "enum" => $GLOBALS["FUNC_LIST"]
                             ),
+                        "mode" => array(
+                            "type" => "string",
+                            "description" => $actionFieldDescriptions["mode"],
+                            "enum" => $actionFieldDescriptions["mode_enum"]
+                        ),
                         "target" => array(
                             "type" => "string",
-                "description" => "action target actor (prefer exact Name [RefID: XXXXXXXX] from people_present, otherwise use actor name)| destination when action is Travel_To|exact BaseID:ItemName inventory identifier when action is Consume| actor to teleport when action is TeleportNPC| actor to receive spawned gold when action is SpawnGold| actor to receive the spawned item when action is SpawnItem| SNQE NPC template key when action is SpawnNPC| actor to kill when action is KillTarget| short creation brief when action is CreateNewNPC| short freeform director brief when action is DirectorCommand. Use '{$GLOBALS["PLAYER_NAME"]}', PLAYER, or me for player-targeted narrator actions. Leave blank when the chosen action does not need a target. Also used for specifying destination when using Travel_To"
+                            "description" => $actionFieldDescriptions["target"]
                         ),
                         "item" => array(
                             "type" => "string",
-                "description" => "item identifier (REQUIRED for GiveItemTo: use exact BaseID:ItemName from inventory;for Take_Held_Item: use exact RefID:ItemName from shown in <held_items>, for PickupItem: use exact RefID:ItemName from nearby_items or the representative RefID:ItemName shown in grouped ITEM DESCRIPTIONS; for CastSpell: use exact spell name from spells) OR amount of gold (REQUIRED when action is GiveGoldTo - number as string, e.g. '50') OR destination location name (REQUIRED when action is TeleportNPC) OR item name from the descriptions database (REQUIRED when action is SpawnItem). For Consume, leave item blank unless target is empty and you need item as the same exact BaseID:ItemName inventory identifier fallback. Leave item blank for SpawnGold and SpawnNPC and CreateNewNPC and DirectorCommand."
+                            "description" => $actionFieldDescriptions["item"]
                         ),
                         "amount" => array(
                             "type" => "integer",
-                "description" => "quantity to give or spawn when the chosen action supports it. REQUIRED when action is SpawnItem or SpawnNPC or SpawnGold. Optional when action is GiveItemTo. Leave blank for CreateNewNPC and DirectorCommand. Use a positive integer."
+                            "minimum" => 1,
+                            "description" => $actionFieldDescriptions["amount"]
                         )
                     ),
                     "required" => [
@@ -512,6 +554,7 @@
                         "message",
                         "mood",
                         "action",
+                        "mode",
                         "target",
                         "item"
                     ],
@@ -652,6 +695,13 @@
             $actions_str = "string";
         }
 
+        $modeValues = chimGetActionResponseFieldDescriptions()['mode_enum'];
+        $modes_quoted = [];
+        foreach ($modeValues as $mode) {
+            $modes_quoted[] = '"\"'.$mode.'\""';
+        }
+        $modes_str = "(".implode(' | ', $modes_quoted).")";
+
         // build the string for zonos tts tones
         $zonos_tones_str = zonosIsActive()
             ? '"," ws root-response-tone-happiness "," ws root-response-tone-sadness "," ws root-response-tone-disgust "," ws root-response-tone-fear ","'.
@@ -660,13 +710,16 @@
 
         // using a quoted heredoc to avoid having to escape everything
         $GLOBALS["grammar"] = <<<'EOD'
-        root ::= "{" ws root-character "," ws root-listener "," ws root-message "," ws root-mood "," ws root-action "," ws root-target {$ZONOS}"}" ws
+        root ::= "{" ws root-character "," ws root-listener "," ws root-message "," ws root-mood "," ws root-action "," ws root-mode "," ws root-target "," ws root-item ("," ws root-amount)? {$ZONOS}"}" ws
         root-character ::= "\"character\"" ":" ws string
         root-listener ::= "\"listener\"" ":" ws string
         root-message ::= "\"message\"" ":" ws string
         root-mood ::= "\"mood\"" ":" ws {$MOODS}
         root-action ::= "\"action\"" ":" ws {$ACTIONS}
+        root-mode ::= "\"mode\"" ":" ws {$MODES}
         root-target ::= "\"target\"" ":" ws string
+        root-item ::= "\"item\"" ":" ws string
+        root-amount ::= "\"amount\"" ":" ws positive-integer
         root-response-tone-happiness ::= "\"response-tone-happiness\"" ":" ws number
         root-response-tone-sadness ::= "\"response-tone-sadness\"" ":" ws number
         root-response-tone-disgust ::= "\"response-tone-disgust\"" ":" ws number
@@ -683,6 +736,7 @@
         )* "\"" ws
 
         number ::= ("-"? ([0-9] | [1-9] [0-9]*)) ("." [0-9]+)? ([eE] [-+]? [0-9]+)? ws
+        positive-integer ::= [1-9] [0-9]* ws
 
         # Optional space: by convention, applied in this grammar after literal chars when allowed
         ws ::= ([ \t\n] ws)?
@@ -692,6 +746,7 @@
         $GLOBALS["grammar"]=str_replace('{$ZONOS}', $zonos_tones_str, $GLOBALS["grammar"]);
         $GLOBALS["grammar"]=str_replace('{$MOODS}', $moods_str, $GLOBALS["grammar"]);
         $GLOBALS["grammar"]=str_replace('{$ACTIONS}', $actions_str, $GLOBALS["grammar"]);
+        $GLOBALS["grammar"]=str_replace('{$MODES}', $modes_str, $GLOBALS["grammar"]);
     }
 
     Function zonosIsActive() {

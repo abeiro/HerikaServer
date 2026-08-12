@@ -139,6 +139,68 @@ final class CoreRequestStabilityTest extends TestCase
         $this->assertFalse(zonosIsActive());
     }
 
+    public function testGroupedActionsUseModeAcrossJsonTemplatesAndGrammar(): void
+    {
+        $trackedGlobals = [
+            'HERIKA_GROUPED_ACTION_SPECS', 'FUNC_LIST', 'EMOTEMOODS', 'LANG_LLM_XTTS',
+            'TTSFUNCTION', 'INLINE_NARRATION_MODE', 'INLINE_NARRATION_ENABLED',
+            'use_emotions_expression', 'FEATURES', 'responseTemplate',
+            'structuredOutputTemplate', 'grammar',
+        ];
+        $previousGlobals = [];
+        foreach ($trackedGlobals as $globalName) {
+            $previousGlobals[$globalName] = [
+                'exists' => array_key_exists($globalName, $GLOBALS),
+                'value' => $GLOBALS[$globalName] ?? null,
+            ];
+        }
+
+        $GLOBALS['HERIKA_GROUPED_ACTION_SPECS'] = [
+            'GroupedStartCombat' => [
+                'action_name' => 'Start_Combat',
+                'variants' => ['lethal' => 'Attack', 'brawl' => 'Brawl'],
+            ],
+        ];
+        $GLOBALS['FUNC_LIST'] = ['Start_Combat', 'Talk'];
+        $GLOBALS['EMOTEMOODS'] = 'neutral';
+        $GLOBALS['LANG_LLM_XTTS'] = false;
+        $GLOBALS['TTSFUNCTION'] = '';
+        $GLOBALS['INLINE_NARRATION_MODE'] = 'disabled';
+        $GLOBALS['INLINE_NARRATION_ENABLED'] = false;
+        $GLOBALS['use_emotions_expression'] = false;
+        $GLOBALS['FEATURES']['MISC']['JSON_DIALOGUE_FORMAT_REORDER'] = false;
+
+        try {
+            setResponseTemplate();
+            setStructuredOutputTemplate();
+            setGBNFGrammar();
+
+            $this->assertArrayHasKey('mode', $GLOBALS['responseTemplate']);
+            $this->assertStringContainsString('Start_Combat=lethal|brawl', $GLOBALS['responseTemplate']['mode']);
+            $this->assertStringContainsString('never target', $GLOBALS['responseTemplate']['target']);
+            $this->assertStringContainsString('never item', $GLOBALS['responseTemplate']['item']);
+
+            $schema = $GLOBALS['structuredOutputTemplate']['json_schema']['schema'];
+            $this->assertArrayHasKey('mode', $schema['properties']);
+            $this->assertContains('mode', $schema['required']);
+            $this->assertSame(['', 'lethal', 'brawl'], $schema['properties']['mode']['enum']);
+            $this->assertSame(1, $schema['properties']['amount']['minimum']);
+
+            $this->assertStringContainsString('root-mode', $GLOBALS['grammar']);
+            $this->assertStringContainsString('("\"\"" | "\"lethal\"" | "\"brawl\"")', $GLOBALS['grammar']);
+            $this->assertStringContainsString('root-item', $GLOBALS['grammar']);
+            $this->assertStringContainsString('root-amount', $GLOBALS['grammar']);
+        } finally {
+            foreach ($previousGlobals as $globalName => $previous) {
+                if ($previous['exists']) {
+                    $GLOBALS[$globalName] = $previous['value'];
+                } else {
+                    unset($GLOBALS[$globalName]);
+                }
+            }
+        }
+    }
+
     public function testDynamicProfileBatchIsQueuedAndConsumedOnce(): void
     {
         $db = new DynamicProfileQueueTestDb();

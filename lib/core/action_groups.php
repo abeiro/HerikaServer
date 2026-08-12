@@ -11,19 +11,19 @@ function herikaActionGroupsGetSpecs()
     $specs = [
         'GroupedHandleCrime' => [
             'action_name' => 'Handle_Crime',
-            'description' => 'Choose one guard response to the player\'s crime. Put add_bounty, arrest, forgive, or pay_bounty in target. For add_bounty, put the crime type in item and a Custom gold value in amount.',
-            'selector' => 'target',
+            'description' => 'Choose one guard response to the player\'s crime with mode. For add_bounty, put the crime type in item and a Custom gold value in amount.',
+            'selector' => 'mode',
             'variants' => [
                 'add_bounty' => 'AddBounty',
                 'arrest' => 'ArrestPlayer',
                 'forgive' => 'ForgiveCrime',
-                'pay_bounty' => 'PayBounty',
+                'collect_bounty_payment' => 'PayBounty',
             ],
             'parameters' => [
                 'type' => 'object',
-                'required' => ['target'],
+                'required' => ['mode'],
                 'properties' => [
-                    'target' => [
+                    'mode' => [
                         'type' => 'string',
                         'description' => 'Guard response to perform.',
                     ],
@@ -38,149 +38,149 @@ function herikaActionGroupsGetSpecs()
                         'description' => 'Required only for a Custom bounty; the gold amount to add.',
                     ],
                 ],
+                'additionalProperties' => false,
             ],
         ],
         'GroupedStartCombat' => [
             'action_name' => 'Start_Combat',
-            'description' => 'Start combat with the actor in target. Put lethal or nonlethal in item; nonlethal uses protected brawl behavior.',
-            'selector' => 'item',
+            'description' => 'Start combat with the actor in target. Select lethal or brawl with mode; brawl uses protected non-lethal behavior.',
+            'selector' => 'mode',
             'variants' => [
                 'lethal' => 'Attack',
-                'nonlethal' => 'Brawl',
+                'brawl' => 'Brawl',
             ],
             'parameters' => [
                 'type' => 'object',
-                'required' => ['target', 'item'],
+                'required' => ['mode', 'target'],
                 'properties' => [
+                    'mode' => [
+                        'type' => 'string',
+                        'description' => 'Whether combat is lethal or a protected brawl.',
+                    ],
                     'target' => [
                         'type' => 'string',
                         'description' => 'Target NPC, actor, or being.',
                     ],
-                    'item' => [
-                        'type' => 'string',
-                        'description' => 'Whether combat is lethal or non-lethal.',
-                    ],
                 ],
+                'additionalProperties' => false,
             ],
         ],
         'GroupedFollow' => [
             'action_name' => 'Follow',
-            'description' => 'Put actor, player, or approach_player in item. For actor mode, put the nearby actor to follow in target; otherwise leave target blank.',
-            'selector' => 'item',
+            'description' => 'Select follow_actor, follow_player, or approach_player with mode. For follow_actor, put the nearby actor in target.',
+            'selector' => 'mode',
             'variants' => [
-                'actor' => 'Follow',
-                'player' => 'FollowPlayer',
+                'follow_actor' => 'Follow',
+                'follow_player' => 'FollowPlayer',
                 'approach_player' => 'ComeCloser',
             ],
             'parameters' => [
                 'type' => 'object',
-                'required' => ['item'],
+                'required' => ['mode'],
                 'properties' => [
-                    'target' => [
-                        'type' => 'string',
-                        'description' => 'Required only for actor mode; the nearby actor to follow.',
-                    ],
-                    'item' => [
+                    'mode' => [
                         'type' => 'string',
                         'description' => 'Following behavior to use.',
                     ],
+                    'target' => [
+                        'type' => 'string',
+                        'description' => 'Required only for follow_actor; the nearby actor to follow.',
+                    ],
                 ],
+                'additionalProperties' => false,
             ],
         ],
         'GroupedSetPace' => [
             'action_name' => 'Set_Pace',
-            'description' => 'Adjust the NPC\'s movement pace. Put faster or slower in target and leave item blank.',
-            'selector' => 'target',
+            'description' => 'Adjust the NPC\'s movement pace by selecting faster or slower with mode.',
+            'selector' => 'mode',
             'variants' => [
                 'faster' => 'IncreaseWalkSpeed',
                 'slower' => 'DecreaseWalkSpeed',
             ],
             'parameters' => [
                 'type' => 'object',
-                'required' => ['target'],
+                'required' => ['mode'],
                 'properties' => [
-                    'target' => [
+                    'mode' => [
                         'type' => 'string',
                         'description' => 'Whether to move faster or slower.',
                     ],
-                    'item' => [
-                        'type' => 'string',
-                        'description' => 'Keep it blank.',
-                    ],
                 ],
+                'additionalProperties' => false,
             ],
         ],
         'GroupedGive' => [
             'action_name' => 'Give',
-            'description' => 'Give an exact inventory item or Gold to another actor or the player.',
+            'description' => 'Give an inventory item or gold to the actor in target. Select item or gold with mode; use item only for an inventory item and amount for the quantity.',
+            'selector' => 'mode',
             'variants' => [
                 'item' => 'GiveItemTo',
                 'gold' => 'GiveGoldTo',
             ],
             'parameters' => [
                 'type' => 'object',
-                'required' => ['target', 'item'],
+                'required' => ['mode', 'target'],
                 'properties' => [
+                    'mode' => [
+                        'type' => 'string',
+                        'description' => 'Whether to give an inventory item or gold.',
+                    ],
                     'target' => [
                         'type' => 'string',
-                        'description' => 'Actor who will receive the item.',
+                        'description' => 'Actor who will receive the item or gold.',
                     ],
                     'item' => [
                         'type' => 'string',
-                        'description' => 'Use Gold for currency, otherwise use the exact item name from inventory.',
+                        'description' => 'Required for item mode; use the exact item identifier from inventory. Leave blank for gold.',
                     ],
                     'amount' => [
                         'type' => 'integer',
                         'minimum' => 1,
-                        'description' => 'Number of items or gold pieces to give. Defaults to 1.',
+                        'description' => 'Required for gold. Optional for an item and defaults to 1.',
                     ],
                 ],
+                'additionalProperties' => false,
             ],
         ],
         'GroupedExchange' => [
             'action_name' => 'Exchange',
-            'description' => 'Open normal trading or let the player give a gift to the NPC. Put trade or accept_gift in target and leave item blank.',
-            'selector' => 'target',
+            'description' => 'Open normal trading or let the player give a gift to the NPC. Select trade or receive_gift with mode.',
+            'selector' => 'mode',
             'variants' => [
                 'trade' => 'OpenInventory',
-                'accept_gift' => 'OpenInventory2',
+                'receive_gift' => 'OpenInventory2',
             ],
             'parameters' => [
                 'type' => 'object',
-                'required' => ['target'],
+                'required' => ['mode'],
                 'properties' => [
-                    'target' => [
+                    'mode' => [
                         'type' => 'string',
-                        'description' => 'Use trade for normal exchange or accept_gift when the player is giving items.',
-                    ],
-                    'item' => [
-                        'type' => 'string',
-                        'description' => 'Keep it blank.',
+                        'description' => 'Use trade for normal exchange or receive_gift when the player is giving items.',
                     ],
                 ],
+                'additionalProperties' => false,
             ],
         ],
         'GroupedGesture' => [
             'action_name' => 'Perform_Gesture',
-            'description' => 'Perform a visual drinking or toast gesture. Put drink or toast in target and leave item blank. This does not consume an inventory item.',
-            'selector' => 'target',
+            'description' => 'Perform a visual drinking or toast gesture by selecting drink_gesture or toast with mode. This does not consume an inventory item.',
+            'selector' => 'mode',
             'variants' => [
-                'drink' => 'Drink',
+                'drink_gesture' => 'Drink',
                 'toast' => 'Toast',
             ],
             'parameters' => [
                 'type' => 'object',
-                'required' => ['target'],
+                'required' => ['mode'],
                 'properties' => [
-                    'target' => [
+                    'mode' => [
                         'type' => 'string',
                         'description' => 'Visual gesture to perform.',
                     ],
-                    'item' => [
-                        'type' => 'string',
-                        'description' => 'Keep it blank.',
-                    ],
                 ],
+                'additionalProperties' => false,
             ],
         ],
     ];
@@ -365,19 +365,33 @@ function herikaActionGroupsResolveExecution($groupCode, $parameter)
     $legacyParameter = '';
 
     if ($groupCode === 'GroupedHandleCrime') {
-        $outcome = herikaActionGroupsNormalizeChoice($payload['outcome'] ?? ($payload['target'] ?? ''));
+        $outcome = herikaActionGroupsNormalizeChoice($payload['mode'] ?? ($payload['outcome'] ?? ($payload['target'] ?? '')));
+        if ($outcome === 'pay_bounty') {
+            $outcome = 'collect_bounty_payment';
+        }
         $selectedCode = strval($variants[$outcome] ?? '');
         if ($outcome === '') {
-            $missing[] = 'outcome';
+            $missing[] = 'mode';
         } elseif ($selectedCode === '') {
-            $missing[] = 'available outcome';
+            $missing[] = 'available mode';
         } elseif ($outcome === 'add_bounty') {
             $crimeType = trim(strval($payload['crime_type'] ?? ($payload['item'] ?? '')));
             if ($crimeType === '') {
-                $missing[] = 'crime_type';
+                $missing[] = 'item';
             } else {
-                $legacyParameter = $crimeType;
-                if (strcasecmp($crimeType, 'Custom') === 0) {
+                $allowedCrimeTypes = $spec['parameters']['properties']['item']['enum'] ?? [];
+                $canonicalCrimeType = '';
+                foreach ($allowedCrimeTypes as $allowedCrimeType) {
+                    if (strcasecmp($crimeType, strval($allowedCrimeType)) === 0) {
+                        $canonicalCrimeType = strval($allowedCrimeType);
+                        break;
+                    }
+                }
+                if ($canonicalCrimeType === '') {
+                    $missing[] = 'valid item';
+                }
+                $legacyParameter = $canonicalCrimeType;
+                if ($canonicalCrimeType === 'Custom') {
                     $amount = intval($payload['amount'] ?? 0);
                     if ($amount <= 0) {
                         $missing[] = 'amount';
@@ -389,8 +403,8 @@ function herikaActionGroupsResolveExecution($groupCode, $parameter)
         }
     } elseif ($groupCode === 'GroupedStartCombat') {
         $mode = herikaActionGroupsNormalizeChoice($payload['mode'] ?? ($payload['item'] ?? ''));
-        if ($mode === 'non_lethal') {
-            $mode = 'nonlethal';
+        if (in_array($mode, ['nonlethal', 'non_lethal'], true)) {
+            $mode = 'brawl';
         }
         $selectedCode = strval($variants[$mode] ?? '');
         $legacyParameter = trim(strval($payload['target'] ?? ''));
@@ -403,51 +417,73 @@ function herikaActionGroupsResolveExecution($groupCode, $parameter)
     } elseif ($groupCode === 'GroupedFollow') {
         $mode = herikaActionGroupsNormalizeChoice($payload['mode'] ?? ($payload['item'] ?? ''));
         $target = trim(strval($payload['target'] ?? ''));
-        if ($mode === '') {
-            $mode = $target !== '' ? 'actor' : 'player';
+        if ($mode === 'actor') {
+            $mode = 'follow_actor';
+        } elseif ($mode === 'player') {
+            $mode = 'follow_player';
+        } elseif ($mode === '' && $target !== '') {
+            $mode = 'follow_actor';
         }
         $selectedCode = strval($variants[$mode] ?? '');
         if ($selectedCode === '') {
             $missing[] = 'mode';
-        } elseif ($mode === 'actor') {
+        } elseif ($mode === 'follow_actor') {
             $legacyParameter = $target;
             if ($target === '') {
                 $missing[] = 'target';
             }
         }
     } elseif ($groupCode === 'GroupedSetPace') {
-        $pace = herikaActionGroupsNormalizeChoice($payload['pace'] ?? ($payload['target'] ?? ''));
+        $pace = herikaActionGroupsNormalizeChoice($payload['mode'] ?? ($payload['pace'] ?? ($payload['target'] ?? '')));
         $selectedCode = strval($variants[$pace] ?? '');
         if ($selectedCode === '') {
-            $missing[] = 'pace';
+            $missing[] = 'mode';
         }
     } elseif ($groupCode === 'GroupedGive') {
+        $mode = herikaActionGroupsNormalizeChoice($payload['mode'] ?? '');
         $target = trim(strval($payload['target'] ?? ''));
         $item = trim(strval($payload['item'] ?? ''));
-        $amount = max(1, intval($payload['amount'] ?? 1));
-        $isGold = in_array(strtolower($item), ['gold', 'coins', 'septims'], true);
-        $selectedCode = strval($variants[$isGold ? 'gold' : 'item'] ?? '');
+        $legacyGoldSentinel = in_array(strtolower($item), ['gold', 'coins', 'septims'], true);
+        if ($mode === '') {
+            $mode = $legacyGoldSentinel ? 'gold' : ($item !== '' ? 'item' : '');
+        }
+        $selectedCode = strval($variants[$mode] ?? '');
         if ($target === '') {
             $missing[] = 'target';
         }
-        if ($item === '') {
-            $missing[] = 'item';
-        }
         if ($selectedCode === '') {
-            $missing[] = $isGold ? 'Gold transfer' : 'item transfer';
-        } elseif ($isGold) {
-            $legacyParameter = ['target' => $target, 'item' => strval($amount)];
-        } else {
+            $missing[] = 'mode';
+        } elseif ($mode === 'gold') {
+            $amount = intval($payload['amount'] ?? 0);
+            if ($amount <= 0) {
+                $missing[] = 'amount';
+            } else {
+                $legacyParameter = ['target' => $target, 'item' => strval($amount)];
+            }
+        } elseif ($mode === 'item') {
+            if ($item === '') {
+                $missing[] = 'item';
+            }
+            $amount = array_key_exists('amount', $payload) ? intval($payload['amount']) : 1;
+            if ($amount <= 0) {
+                $missing[] = 'amount';
+            }
             $legacyParameter = ['target' => $target, 'item' => $item, 'amount' => $amount];
         }
     } elseif ($groupCode === 'GroupedExchange') {
         $mode = herikaActionGroupsNormalizeChoice($payload['mode'] ?? ($payload['target'] ?? ''));
+        if ($mode === 'accept_gift') {
+            $mode = 'receive_gift';
+        }
         $selectedCode = strval($variants[$mode] ?? '');
         if ($selectedCode === '') {
             $missing[] = 'mode';
         }
     } elseif ($groupCode === 'GroupedGesture') {
-        $gesture = herikaActionGroupsNormalizeChoice($payload['gesture'] ?? ($payload['target'] ?? ''));
+        $gesture = herikaActionGroupsNormalizeChoice($payload['mode'] ?? ($payload['gesture'] ?? ($payload['target'] ?? '')));
+        if ($gesture === 'drink') {
+            $gesture = 'drink_gesture';
+        }
         $selectedCode = strval($variants[$gesture] ?? '');
         if ($selectedCode === '') {
             $missing[] = 'gesture';
