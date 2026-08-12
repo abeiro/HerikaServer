@@ -61,4 +61,17 @@ require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]
 require_once($rootEnginePath . "lib" .DIRECTORY_SEPARATOR."chat_helper_functions.php");
 $db = new sql();
 require_once(__DIR__."/db_updates.php");
+
+require_once($rootEnginePath . "lib" . DIRECTORY_SEPARATOR . "database" . DIRECTORY_SEPARATOR . "MigrationRunner.php");
+$commit = getenv('HERIKA_APPLICATION_COMMIT') ?: null;
+$migrationRunner = \HerikaServer\Database\MigrationRunner::connect($rootEnginePath, null, $commit);
+$migrationRunner->repairLegacyBaseline();
+$appliedMigrations = $migrationRunner->migrate();
+$migrationProblems = $migrationRunner->verify();
+if ($migrationProblems !== []) {
+    throw new RuntimeException("Database verification failed:\n- " . implode("\n- ", $migrationProblems));
+}
+echo $appliedMigrations === []
+    ? "Schema migrations already current.\n"
+    : "Applied schema migrations: " . implode(', ', $appliedMigrations) . "\n";
 ?>

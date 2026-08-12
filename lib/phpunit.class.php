@@ -2,13 +2,13 @@
 
 class sql
 {
-    private static $link = null;
+    private $link = null;
 
     public function __construct()
     {
-        $connString = "host=localhost dbname=testdb user=dwemer password=dwemer";
-        self::$link = pg_connect($connString);
-        if (!self::$link) {
+        $connString = getenv('HERIKA_TEST_DATABASE_DSN') ?: "host=localhost dbname=testdb user=dwemer password=dwemer";
+        $this->link = pg_connect($connString, PGSQL_CONNECT_FORCE_NEW);
+        if (!$this->link) {
             die("Error in connection: " . pg_last_error());
         }
     }
@@ -20,9 +20,9 @@ class sql
 
     public function close()
     {
-        if (self::$link) {
-            pg_close(self::$link);
-            self::$link = null;
+        if ($this->link) {
+            pg_close($this->link);
+            $this->link = null;
         }
     }
 
@@ -39,42 +39,43 @@ class sql
         //error_log($query);
         $params = array_values($data);
         //error_log(print_r($params,true));
-        $result = pg_query_params(self::$link, $query, $params);
+        $result = pg_query_params($this->link, $query, $params);
         if (!$result) {
-            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error($this->link) . print_r(debug_backtrace(), true));
         }
     }
 
     public function query($query)
     {
-        return pg_query(self::$link, $query);
+        return pg_query($this->link, $query);
     }
 
     public function delete($table, $where = "FALSE")
     {
         $query = "DELETE FROM $table WHERE $where";
-        pg_query(self::$link, $query);
+        pg_query($this->link, $query);
     }
 
     public function update($table, $set, $where = "FALSE")
     {
         $query = "UPDATE $table SET $set WHERE $where";
-        pg_query(self::$link, $query);
+        pg_query($this->link, $query);
     }
 
     public function execQuery($sqlquery)
     {
-        $result = pg_query(self::$link, $sqlquery);
+        $result = pg_query($this->link, $sqlquery);
         if (!$result) {
-            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error($this->link) . print_r(debug_backtrace(), true));
         }
+        return $result;
     }
 
     public function fetchAll($q)
     {
-        $result = pg_query(self::$link, $q);
+        $result = pg_query($this->link, $q);
         if (!$result) {
-            Logger::error(pg_last_error(self::$link));
+            Logger::error(pg_last_error($this->link));
             return [];
         }
 
@@ -89,9 +90,9 @@ class sql
     
     public function fetchOne($q)
     {
-        $result = pg_query(self::$link, $q);
+        $result = pg_query($this->link, $q);
         if (!$result) {
-            Logger::error(pg_last_error(self::$link));
+            Logger::error(pg_last_error($this->link));
             return [];
         }
 
@@ -113,7 +114,15 @@ class sql
     public function escape($string)
     {
         if ($string)
-            return pg_escape_string(self::$link,$string);
+            return pg_escape_string($this->link,$string);
+        else
+            return "";
+    }
+
+    public function escapeLiteral($string)
+    {
+        if ($string !== null)
+            return pg_escape_literal($this->link, strval($string));
         else
             return "";
     }
@@ -133,9 +142,9 @@ class sql
 
         $query = "UPDATE $table SET $set WHERE $where";
         
-        $result = pg_query_params(self::$link, $query, $params);
+        $result = pg_query_params($this->link, $query, $params);
         if (!$result) {
-            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error($this->link) . print_r(debug_backtrace(), true));
         }
         return $result !== false;
     }
@@ -143,10 +152,10 @@ class sql
     public function upsertRow($table, $data, $where) {
         // Check if the row exists
         $checkQuery = "SELECT 1 FROM $table WHERE $where LIMIT 1";
-        $checkResult = pg_query(self::$link, $checkQuery);
+        $checkResult = pg_query($this->link, $checkQuery);
 
         if (!$checkResult) {
-            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error($this->link) . print_r(debug_backtrace(), true));
             return false;
         }
 
@@ -182,9 +191,9 @@ class sql
         }
 
         // Execute the query
-        $result = pg_query_params(self::$link, $query, $params);
+        $result = pg_query_params($this->link, $query, $params);
         if (!$result) {
-            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error($this->link) . print_r(debug_backtrace(), true));
             return false;
         }
 
@@ -193,7 +202,7 @@ class sql
 
     public function upsertRowTrx($table, $data, $whereCondition) {
         // Start a transaction
-        pg_query(self::$link, "BEGIN");
+        pg_query($this->link, "BEGIN");
     
         try {
             // Extract WHERE condition keys and values
@@ -211,10 +220,10 @@ class sql
     
             // Check if the row exists and lock it
             $checkQuery = "SELECT 1 FROM $table WHERE $whereSql FOR UPDATE";
-            $checkResult = pg_query_params(self::$link, $checkQuery, $whereParams);
+            $checkResult = pg_query_params($this->link, $checkQuery, $whereParams);
     
             if (!$checkResult) {
-                throw new Exception(pg_last_error(self::$link));
+                throw new Exception(pg_last_error($this->link));
             }
     
             if (pg_num_rows($checkResult) > 0) {
@@ -257,18 +266,18 @@ class sql
             // error_log($query . " " . print_r($params, true));
     
             // Execute the query
-            $result = pg_query_params(self::$link, $query, $params);
+            $result = pg_query_params($this->link, $query, $params);
             if (!$result) {
-                throw new Exception(pg_last_error(self::$link));
+                throw new Exception(pg_last_error($this->link));
             }
     
             // Commit transaction
-            pg_query(self::$link, "COMMIT");
+            pg_query($this->link, "COMMIT");
     
             return true;
         } catch (Exception $e) {
             // Rollback on error
-            pg_query(self::$link, "ROLLBACK");
+            pg_query($this->link, "ROLLBACK");
             Logger::error($e->getMessage() . print_r(debug_backtrace(), true));
             return false;
         }
@@ -281,7 +290,7 @@ class sql
     
         // Take care of escaping here instead of requiring it before every upsert call
         $values = array_map(function($value) {
-            return pg_escape_literal(self::$link, $value);
+            return pg_escape_literal($this->link, $value);
         }, array_values($data));
         $valuesString = implode(', ', $values);
     
@@ -298,10 +307,10 @@ class sql
         $sqlquery = "INSERT INTO $tableName ($columns) VALUES ($valuesString) " .
                     "ON CONFLICT ($conflictTarget) DO UPDATE SET $updateString;";
     
-        $result = pg_query(self::$link, $sqlquery);
+        $result = pg_query($this->link, $sqlquery);
     
         if (!$result) {
-            Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
+            Logger::error(pg_last_error($this->link) . print_r(debug_backtrace(), true));
             return false; // Indicate failure
         }
     
