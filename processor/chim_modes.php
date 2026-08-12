@@ -47,6 +47,11 @@ $EXECUTION_MODE_=$db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'
 $EXECUTION_MODE=isset($EXECUTION_MODE_["value"])?$EXECUTION_MODE_["value"]:"STANDARD";
 
 $EXECUTION_MODE=strtoupper($EXECUTION_MODE);
+// A validated plugin routing snapshot can override the saved mode for this request only.
+$REQUEST_EXECUTION_MODE = strtoupper(trim((string)($GLOBALS["CHIM_REQUEST_EXECUTION_MODE"] ?? "")));
+if ($REQUEST_EXECUTION_MODE !== "") {
+    $EXECUTION_MODE = $REQUEST_EXECUTION_MODE;
+}
 
 // Retire the old free-form Spawn mode without leaving upgraded installs stuck in it.
 if ($EXECUTION_MODE === "SPAWN") {
