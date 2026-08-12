@@ -2,6 +2,7 @@
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . 'game_plugins.php');
 require_once(__DIR__ . DIRECTORY_SEPARATOR . 'npc_master.class.php');
+require_once(__DIR__ . DIRECTORY_SEPARATOR . 'action_groups.php');
 
 function herikaGetRetiredActionCodes()
 {
