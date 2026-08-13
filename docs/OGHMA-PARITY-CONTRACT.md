@@ -12,8 +12,11 @@ Each server owns its PHP implementation, schema, game catalog, and UI; no runtim
   deterministic and auditable.
 - Exact ordinary creature and object mentions are valid retrieval signals. Generic single-word senses
   still require concrete context.
-- Multiword tags are considered only after topic/alias extraction abstains. A tag must have bounded,
-  unambiguous ownership; otherwise retrieval records the rejection and abstains.
+- Canonical topics and reviewed aliases identify articles directly. The separate `retrieval_phrases`
+  field contains the small set of reviewed phrases allowed to identify an article after ordinary
+  extraction abstains. Reviewed singular/plural pairs are canonicalized before owner counts.
+- Ordinary tags are relational metadata. They may add a bounded ranking bonus to an already
+  identified topic, but they never create a topic by themselves.
 - A selected connector may be called at most once, only after deterministic abstention on an explicit
   unresolved knowledge request. Its bounded suggestion must resolve to exactly one catalog topic.
 - Public outcomes are `grounded`, `no_match`, `fallback_succeeded`, `fallback_unresolved`,
@@ -27,10 +30,11 @@ and the supplying layer for enablement, topic count, result limit, race/location
 fallback timeout, and connector selection.
 
 Knowledge-class negatives are evaluated before positive classes. Advanced access is preferred, then
-basic access, then denied. Every packaged basic description carries `common`, which new NPCs receive;
-specialist classes grant advanced descriptions. Legacy or custom rows with an empty class remain
-unrestricted. `knowall` remains an explicit advanced override. Denied selections are represented as
-structured denials rather than fabricated lore.
+basic access, then denied. Ordinary packaged basic descriptions carry `common`, which new NPCs
+receive; reviewed deep-lore subjects carry `esoteric` instead. Specialist classes grant advanced
+descriptions. Legacy or custom rows with an empty class remain unrestricted. `knowall` remains an
+explicit advanced override. Denied selections are represented as structured denials rather than
+fabricated lore.
 
 ## Prompt and native Skyrim context
 

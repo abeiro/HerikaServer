@@ -62,6 +62,31 @@ function chimOghmaSplitAliasValues(string $value): array
     ));
 }
 
+function chimOghmaReviewedPhraseCanonicalization(): array
+{
+    static $canonicalization = null;
+    if (is_array($canonicalization)) {
+        return $canonicalization;
+    }
+    $path = dirname(__DIR__) . '/resources/oghma/skyrim-official/ontology.json';
+    $ontology = is_file($path) ? json_decode((string) file_get_contents($path), true) : [];
+    $canonicalization = [];
+    foreach (($ontology['retrieval_phrase_canonicalization'] ?? []) as $variant => $canonical) {
+        $variantKey = chimOghmaStrictEntityPhrase((string) $variant);
+        $canonicalKey = chimOghmaStrictEntityPhrase((string) $canonical);
+        if ($variantKey !== '' && $canonicalKey !== '') {
+            $canonicalization[$variantKey] = $canonicalKey;
+        }
+    }
+    return $canonicalization;
+}
+
+function chimOghmaCanonicalizeReviewedPhrase(string $phrase): string
+{
+    $normalized = chimOghmaStrictEntityPhrase($phrase);
+    return chimOghmaReviewedPhraseCanonicalization()[$normalized] ?? $normalized;
+}
+
 // Build the per-request canonical, alias, compact-name, and prefix indexes.
 function chimOghmaEntityLexicon($db): array
 {
@@ -77,12 +102,14 @@ function chimOghmaEntityLexicon($db): array
     }
 
     $rows = $db->fetchAll(
-        "SELECT topic, coalesce(aliases, '') AS aliases, coalesce(tags, '') AS tags,
+        "SELECT topic, coalesce(aliases, '') AS aliases,
+                coalesce(retrieval_phrases, '') AS retrieval_phrases, coalesce(tags, '') AS tags,
                 coalesce(category, '') AS category
            FROM public.oghma
           ORDER BY topic"
     );
     $phrases = [];
+    $retrievalPhrases = [];
     $tagPhrases = [];
     $topicCategories = [];
     foreach ($rows as $row) {
@@ -100,10 +127,22 @@ function chimOghmaEntityLexicon($db): array
                 $phrases[$phrase]['alias_owners'][$topic] = true;
             }
         }
+        foreach (chimOghmaSplitAliasValues(strval($row['retrieval_phrases'] ?? '')) as $retrievalPhrase) {
+            $phrase = chimOghmaStrictEntityPhrase($retrievalPhrase);
+            $canonicalPhrase = chimOghmaCanonicalizeReviewedPhrase($phrase);
+            if ($phrase !== '' && $canonicalPhrase !== '') {
+                $retrievalPhrases[$canonicalPhrase]['owners'][$topic] = true;
+                $retrievalPhrases[$canonicalPhrase]['variants'][$phrase] = true;
+                $retrievalPhrases[$canonicalPhrase]['variants'][$canonicalPhrase] = true;
+            }
+        }
         foreach (chimOghmaSplitAliasValues(strval($row['tags'] ?? '')) as $tag) {
             $phrase = chimOghmaStrictEntityPhrase($tag);
-            if ($phrase !== '') {
-                $tagPhrases[$phrase]['owners'][$topic] = true;
+            $canonicalPhrase = chimOghmaCanonicalizeReviewedPhrase($phrase);
+            if ($phrase !== '' && $canonicalPhrase !== '') {
+                $tagPhrases[$canonicalPhrase]['owners'][$topic] = true;
+                $tagPhrases[$canonicalPhrase]['variants'][$phrase] = true;
+                $tagPhrases[$canonicalPhrase]['variants'][$canonicalPhrase] = true;
             }
         }
     }
@@ -150,21 +189,43 @@ function chimOghmaEntityLexicon($db): array
         $byTopic[$topic][] = $entry;
         $byCompact[$entry['compact']][] = $entry;
     }
+    $retrievalPhraseEntries = [];
+    $maximumRetrievalPhraseTokens = 2;
+    foreach ($retrievalPhrases as $canonicalPhrase => $owners) {
+        $ownerTopics = array_keys($owners['owners'] ?? []);
+        foreach (array_keys($owners['variants'] ?? []) as $phrase) {
+            $tokenCount = count(preg_split('/\s+/u', $phrase) ?: []);
+            if ($tokenCount < 2 || isset($phrases[$phrase])) {
+                continue;
+            }
+            $retrievalPhraseEntries[$phrase] = [
+                'phrase' => $phrase,
+                'canonical_phrase' => $canonicalPhrase,
+                'owners' => $ownerTopics,
+                'owner_count' => count($ownerTopics),
+                'token_count' => $tokenCount,
+            ];
+            $maximumRetrievalPhraseTokens = max($maximumRetrievalPhraseTokens, $tokenCount);
+        }
+    }
     $tagPhraseEntries = [];
     $maximumTagTokens = 2;
-    foreach ($tagPhrases as $phrase => $owners) {
+    foreach ($tagPhrases as $canonicalPhrase => $owners) {
         $ownerTopics = array_keys($owners['owners'] ?? []);
-        $tokenCount = count(preg_split('/\s+/u', $phrase) ?: []);
-        if ($tokenCount < 2 || isset($phrases[$phrase])) {
-            continue;
+        foreach (array_keys($owners['variants'] ?? []) as $phrase) {
+            $tokenCount = count(preg_split('/\s+/u', $phrase) ?: []);
+            if ($tokenCount < 2 || isset($phrases[$phrase])) {
+                continue;
+            }
+            $tagPhraseEntries[$phrase] = [
+                'phrase' => $phrase,
+                'canonical_phrase' => $canonicalPhrase,
+                'owners' => $ownerTopics,
+                'owner_count' => count($ownerTopics),
+                'token_count' => $tokenCount,
+            ];
+            $maximumTagTokens = max($maximumTagTokens, $tokenCount);
         }
-        $tagPhraseEntries[$phrase] = [
-            'phrase' => $phrase,
-            'owners' => $ownerTopics,
-            'owner_count' => count($ownerTopics),
-            'token_count' => $tokenCount,
-        ];
-        $maximumTagTokens = max($maximumTagTokens, $tokenCount);
     }
     $cache = [
         'entries' => $entries,
@@ -176,6 +237,8 @@ function chimOghmaEntityLexicon($db): array
         'prefix_owners' => $prefixOwners,
         'phrase_owners' => $phrases,
         'topic_categories' => $topicCategories,
+        'retrieval_phrase_entries' => $retrievalPhraseEntries,
+        'maximum_retrieval_phrase_tokens' => $maximumRetrievalPhraseTokens,
         'tag_phrase_entries' => $tagPhraseEntries,
         'maximum_tag_tokens' => $maximumTagTokens,
     ];
@@ -187,7 +250,7 @@ function chimOghmaEntityLexicon($db): array
     return $cache;
 }
 
-// Resolve exact, low-frequency multiword tag combinations only after entity extraction abstains.
+// Resolve only explicitly curated retrieval phrases after ordinary entity extraction abstains.
 function chimOghmaTagFallbackEntities(array $lexicon, string $text, int $amount, float $requestScore): array
 {
     $normalized = chimOghmaStrictEntityPhrase($text);
@@ -198,11 +261,11 @@ function chimOghmaTagFallbackEntities(array $lexicon, string $text, int $amount,
     $speakerLabelEnd = $speakerLabel !== '' ? strlen($speakerLabel) : 0;
     preg_match_all('/[\p{L}\p{N}]+/u', $normalized, $wordMatches, PREG_OFFSET_CAPTURE);
     $words = $wordMatches[0] ?? [];
-    $tagEntries = $lexicon['tag_phrase_entries'] ?? [];
+    $tagEntries = $lexicon['retrieval_phrase_entries'] ?? [];
     if ($tagEntries === [] || count($words) < 2) {
         return ['entities' => [], 'rejected' => [], 'decisions' => []];
     }
-    $maximumTagTokens = max(2, intval($lexicon['maximum_tag_tokens'] ?? 2));
+    $maximumTagTokens = max(2, intval($lexicon['maximum_retrieval_phrase_tokens'] ?? 2));
     $matchedEntries = [];
     for ($start = 0; $start < count($words); $start++) {
         $maximumLength = min($maximumTagTokens, count($words) - $start);
@@ -250,8 +313,8 @@ function chimOghmaTagFallbackEntities(array $lexicon, string $text, int $amount,
         if ($phrase === '') {
             continue;
         }
-        if (intval($entry['owner_count'] ?? 0) > 3) {
-            $decision = ['phrase' => $phrase, 'reason' => 'tag_too_many_owners', 'source' => 'tag',
+        if (intval($entry['owner_count'] ?? 0) !== 1) {
+            $decision = ['phrase' => $phrase, 'reason' => 'retrieval_phrase_ambiguous', 'source' => 'retrieval_phrase',
                 'start' => intval($matched['position']), 'owner_count' => intval($entry['owner_count'] ?? 0),
                 'topics' => array_values($entry['owners'] ?? [])];
             $rejected[] = $decision;
@@ -260,7 +323,7 @@ function chimOghmaTagFallbackEntities(array $lexicon, string $text, int $amount,
         }
         $position = intval($matched['position']);
         if ($speakerLabelEnd > 0 && $position < $speakerLabelEnd) {
-            $decision = ['phrase' => $phrase, 'reason' => 'tag_speaker_label', 'source' => 'tag',
+            $decision = ['phrase' => $phrase, 'reason' => 'retrieval_phrase_speaker_label', 'source' => 'retrieval_phrase',
                 'start' => $position, 'owner_count' => intval($entry['owner_count'] ?? 0),
                 'topics' => array_values($entry['owners'] ?? [])];
             $rejected[] = $decision;
@@ -284,34 +347,19 @@ function chimOghmaTagFallbackEntities(array $lexicon, string $text, int $amount,
     $candidates = [];
     foreach ($byTopic as $candidate) {
         $ownerCounts = array_values($candidate['phrases']);
-        $uniqueMatch = count($ownerCounts) === 1 && intval($ownerCounts[0]) === 1;
-        $supportCount = count($ownerCounts);
-        if (!$uniqueMatch && ($supportCount < 2 || $requestScore < 0.5)) {
-            $reason = $supportCount < 2 ? 'tag_insufficient_support' : 'tag_requires_explicit_request';
-            $decision = ['topic' => strval($candidate['topic']), 'phrase' => strval(array_key_first($candidate['phrases'])),
-                'reason' => $reason, 'source' => 'tag', 'start' => intval($candidate['start']),
-                'support_count' => $supportCount];
-            $rejected[] = $decision;
-            $decisions[] = $decision;
-            continue;
-        }
-        $score = $uniqueMatch ? 0.72 : 0.66 + min(0.12, ($supportCount - 2) * 0.06);
-        if ($requestScore >= 0.5) {
-            $score += 0.10;
-        }
         $phrase = strval(array_key_first($candidate['phrases']));
         $candidates[] = [
             'topic' => strval($candidate['topic']),
             'phrase' => $phrase,
             'entity_phrase' => $phrase,
-            'source' => $uniqueMatch ? 'exact unique tag fallback' : 'corroborated tag fallback',
+            'source' => 'exact safe retrieval phrase',
             'start' => intval($candidate['start']),
             'end' => intval($candidate['start']) + strlen($phrase),
-            'score' => $score,
-            'context_score' => $score,
+            'score' => 0.82,
+            'context_score' => 0.82,
             'mention_count' => 1,
-            'tag_phrases' => array_keys($candidate['phrases']),
-            'tag_owner_counts' => $ownerCounts,
+            'retrieval_phrases' => array_keys($candidate['phrases']),
+            'retrieval_phrase_owner_counts' => $ownerCounts,
         ];
     }
     usort($candidates, static function (array $left, array $right): int {
@@ -320,11 +368,38 @@ function chimOghmaTagFallbackEntities(array $lexicon, string $text, int $amount,
     });
     $candidates = array_slice($candidates, 0, max(1, $amount));
     foreach ($candidates as $candidate) {
-        $decisions[] = ['topic' => $candidate['topic'], 'phrase' => $candidate['phrase'], 'reason' => 'tag_selected',
+        $decisions[] = ['topic' => $candidate['topic'], 'phrase' => $candidate['phrase'], 'reason' => 'retrieval_phrase_selected',
             'source' => $candidate['source'], 'start' => $candidate['start'],
-            'support_count' => count($candidate['tag_phrases'] ?? [])];
+            'support_count' => count($candidate['retrieval_phrases'] ?? [])];
     }
     return ['entities' => $candidates, 'rejected' => $rejected, 'decisions' => $decisions];
+}
+
+// Relational tags can strengthen an already identified topic but never create one.
+function chimOghmaApplyRelationalTagSupport(array $lexicon, string $text, array $entities): array
+{
+    if ($entities === [] || ($lexicon['tag_phrase_entries'] ?? []) === []) {
+        return $entities;
+    }
+    $normalized = ' ' . chimOghmaStrictEntityPhrase($text) . ' ';
+    foreach ($entities as &$entity) {
+        $topic = strval($entity['topic'] ?? '');
+        $matched = [];
+        foreach ($lexicon['tag_phrase_entries'] as $phrase => $entry) {
+            if (str_contains($normalized, ' ' . $phrase . ' ')
+                && in_array($topic, $entry['owners'] ?? [], true)) {
+                $matched[] = $phrase;
+            }
+        }
+        if ($matched !== []) {
+            $entity['relational_tag_phrases'] = array_values(array_unique($matched));
+            $bonus = min(0.08, count($entity['relational_tag_phrases']) * 0.04);
+            $entity['score'] = floatval($entity['score'] ?? 0.0) + $bonus;
+            $entity['context_score'] = floatval($entity['context_score'] ?? 0.0) + $bonus;
+        }
+    }
+    unset($entity);
+    return $entities;
 }
 
 // Produce bounded word windows used to compare STT fragments with catalog names.
@@ -1336,6 +1411,7 @@ function chimOghmaExtractEntities($db, string $text, int $amount, bool $allowTag
         }
     }
 
+    $entities = chimOghmaApplyRelationalTagSupport($lexicon, $text, $entities);
     usort($entities, static function (array $left, array $right): int {
         $mentionDifference = intval($right['mention_count']) <=> intval($left['mention_count']);
         if ($mentionDifference !== 0) {

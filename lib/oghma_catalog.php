@@ -6,8 +6,12 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . 'oghma_parity.php';
 
 final class ChimOghmaCatalogManager
 {
-    private const FIELDS = [
+    private const FIELDS_V1 = [
         'topic', 'aliases', 'topic_desc', 'knowledge_class', 'topic_desc_basic',
+        'knowledge_class_basic', 'tags', 'category',
+    ];
+    private const FIELDS_V2 = [
+        'topic', 'aliases', 'retrieval_phrases', 'topic_desc', 'knowledge_class', 'topic_desc_basic',
         'knowledge_class_basic', 'tags', 'category',
     ];
 
@@ -70,13 +74,13 @@ final class ChimOghmaCatalogManager
                 $values = [];
                 foreach ($chunk as $row) {
                     $columns = [$version];
-                    foreach (self::FIELDS as $field) $columns[] = (string) $row[$field];
+                    foreach (self::FIELDS_V2 as $field) $columns[] = (string) $row[$field];
                     $columns[] = (string) $row['row_sha256'];
                     $values[] = '(' . implode(', ', array_map(fn(string $value): string => $this->literal($value), $columns)) . ')';
                 }
                 $this->execute(
                     'INSERT INTO public.oghma_catalog_entries '
-                    . '(catalog_version, topic, aliases, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic, tags, category, row_sha256) VALUES '
+                    . '(catalog_version, topic, aliases, retrieval_phrases, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic, tags, category, row_sha256) VALUES '
                     . implode(', ', $values)
                 );
             }
@@ -113,17 +117,18 @@ final class ChimOghmaCatalogManager
             );
 
             $legacy = $this->db->fetchAll(
-                "SELECT ctid::text AS legacy_ctid, topic, aliases, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic, tags, category "
+                "SELECT ctid::text AS legacy_ctid, topic, aliases, retrieval_phrases, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic, tags, category "
                 . "FROM public.oghma WHERE source_type = 'legacy' ORDER BY topic"
             );
             $factoryTopics = [];
             $customTopics = [];
             foreach ($legacy as $row) {
                 $topic = (string) ($row['topic'] ?? '');
-                $legacyChecksum = $this->rowChecksum($row);
+                $legacyChecksums = $this->rowChecksums($row);
+                $legacyChecksum = $legacyChecksums[0];
                 $matchesFactory = (isset($entries[$topic])
-                    && hash_equals((string) $entries[$topic]['row_sha256'], $legacyChecksum))
-                    || isset($legacyFactoryChecksums[$legacyChecksum]);
+                    && in_array((string) $entries[$topic]['row_sha256'], $legacyChecksums, true))
+                    || array_filter($legacyChecksums, static fn(string $checksum): bool => isset($legacyFactoryChecksums[$checksum])) !== [];
                 $source = $matchesFactory ? 'factory' : 'custom';
                 $sql = "UPDATE public.oghma SET source_type = '{$source}', updated_at = CURRENT_TIMESTAMP";
                 if ($matchesFactory && isset($entries[$topic])) {
@@ -160,7 +165,7 @@ final class ChimOghmaCatalogManager
                     if (isset($hidden[$topic])) {$hiddenCount++; continue;}
                     if (isset($custom[$topic])) {$collisions[] = $topic; continue;}
                     $columns = [];
-                    foreach (self::FIELDS as $field) $columns[] = (string) $row[$field];
+                    foreach (self::FIELDS_V2 as $field) $columns[] = (string) $row[$field];
                     $columns[] = 'factory';
                     $columns[] = $catalogVersion;
                     $columns[] = (string) $row['row_sha256'];
@@ -171,7 +176,7 @@ final class ChimOghmaCatalogManager
                 if ($values !== []) {
                     $this->execute(
                         'INSERT INTO public.oghma '
-                        . '(topic, aliases, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic, tags, category, source_type, source_catalog_version, source_checksum) VALUES '
+                        . '(topic, aliases, retrieval_phrases, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic, tags, category, source_type, source_catalog_version, source_checksum) VALUES '
                         . implode(', ', $values)
                     );
                 }
@@ -249,9 +254,11 @@ final class ChimOghmaCatalogManager
         $manifest = json_decode($manifestRaw, true, 32, JSON_THROW_ON_ERROR);
         if (!is_array($manifest) || array_is_list($manifest)
             || ($manifest['contract'] ?? null) !== CHIM_OGHMA_PARITY_VERSION
-            || intval($manifest['format_version'] ?? 0) !== 1) {
+            || !in_array(intval($manifest['format_version'] ?? 0), [1, 2], true)) {
             throw new InvalidArgumentException('invalid_oghma_manifest');
         }
+        $formatVersion = intval($manifest['format_version']);
+        $packageFields = $this->fieldsForFormat($formatVersion);
         $version = $this->validateVersion((string) ($manifest['catalog_version'] ?? ''));
         $articlesName = (string) ($manifest['articles_file'] ?? '');
         if ($articlesName !== 'articles.json') throw new InvalidArgumentException('invalid_oghma_articles_file');
@@ -269,7 +276,7 @@ final class ChimOghmaCatalogManager
         foreach ($rows as $index => $row) {
             if (!is_array($row) || array_is_list($row)) throw new InvalidArgumentException('invalid_oghma_article_' . $index);
             $article = [];
-            foreach (self::FIELDS as $field) {
+            foreach ($packageFields as $field) {
                 if (!is_string($row[$field] ?? null) || !mb_check_encoding($row[$field], 'UTF-8')) {
                     throw new InvalidArgumentException('invalid_oghma_article_' . $index . '_' . $field);
                 }
@@ -278,11 +285,14 @@ final class ChimOghmaCatalogManager
             if ($article['topic'] === '' || mb_strlen($article['topic'], 'UTF-8') > 256 || $article['topic_desc'] === '') {
                 throw new InvalidArgumentException('invalid_oghma_article_' . $index);
             }
-            $checksum = $this->rowChecksum($article);
+            $checksum = $this->rowChecksum($article, $packageFields);
             if (!is_string($row['row_sha256'] ?? null) || !hash_equals($checksum, $row['row_sha256'])) {
                 throw new InvalidArgumentException('oghma_row_checksum_mismatch_' . $article['topic']);
             }
             if (isset($articles[$article['topic']])) throw new InvalidArgumentException('duplicate_oghma_topic_' . $article['topic']);
+            if ($formatVersion === 1) {
+                $article['retrieval_phrases'] = '';
+            }
             $articles[$article['topic']] = $article + ['row_sha256' => $checksum];
         }
         ksort($articles, SORT_STRING);
@@ -313,7 +323,7 @@ final class ChimOghmaCatalogManager
     private function catalogEntries(string $version): array
     {
         $rows = $this->db->fetchAll(
-            'SELECT topic, aliases, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic, tags, category, row_sha256 '
+            'SELECT topic, aliases, retrieval_phrases, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic, tags, category, row_sha256 '
             . 'FROM public.oghma_catalog_entries WHERE catalog_version = ' . $this->literal($version) . ' ORDER BY topic'
         );
         $entries = [];
@@ -321,11 +331,25 @@ final class ChimOghmaCatalogManager
         return $entries;
     }
 
-    private function rowChecksum(array $row): string
+    private function fieldsForFormat(int $formatVersion): array
+    {
+        return $formatVersion === 2 ? self::FIELDS_V2 : self::FIELDS_V1;
+    }
+
+    private function rowChecksum(array $row, array $fields = self::FIELDS_V2): string
     {
         $ordered = [];
-        foreach (self::FIELDS as $field) $ordered[$field] = (string) ($row[$field] ?? '');
+        foreach ($fields as $field) $ordered[$field] = (string) ($row[$field] ?? '');
         return hash('sha256', json_encode($ordered, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    }
+
+    /** Compare both package generations while classifying pre-catalog legacy rows. */
+    private function rowChecksums(array $row): array
+    {
+        return array_values(array_unique([
+            $this->rowChecksum($row, self::FIELDS_V2),
+            $this->rowChecksum($row, self::FIELDS_V1),
+        ]));
     }
 
     private function event(string $type, string $version, ?string $previous, array $details): void

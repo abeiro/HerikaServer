@@ -164,28 +164,44 @@ final class OghmaParityTest extends TestCase
         $root = dirname(__DIR__, 2);
         $manager = new ChimOghmaCatalogManager($fakeDb, $root);
         $package = $manager->plan($manager->activePackagePath());
-        $this->assertSame('skyrim-official-20260813-v1.2', $package['catalog_version']);
+        $this->assertSame('skyrim-official-20260813-v1.3', $package['catalog_version']);
         $this->assertCount(1562, $package['articles']);
-        $this->assertSame('ada0e765e494a4356487da020f775e991d4732648c722c56cb9cbdff9e24d565', $package['articles_sha256']);
-        $this->assertSame('195d2f8e64d434b85cd102ea9fa0a747957ba319b4cbf9faf69c14559126d34e', $package['manifest_sha256']);
+        $this->assertSame('910584b8b50a8f7403b5468939f8d174ffe9d7fdf57ec2f39085877f3149d006', $package['articles_sha256']);
+        $this->assertSame('e1f0c8eb0cddda7e671f05d9baf834b626850edab5c4f265932ce341476ada01', $package['manifest_sha256']);
     }
 
-    public function testEveryPackagedBasicArticleUsesTheCommonClass(): void
+    public function testPackagedBasicClassesFollowTheReviewedOntology(): void
     {
+        $root = dirname(__DIR__, 2);
         $articles = json_decode(
-            (string) file_get_contents(dirname(__DIR__, 2) . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.2/articles.json'),
+            (string) file_get_contents($root . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.3/articles.json'),
             true,
             64,
             JSON_THROW_ON_ERROR
         );
+        $ontology = json_decode(
+            (string) file_get_contents($root . '/resources/oghma/skyrim-official/ontology.json'),
+            true,
+            32,
+            JSON_THROW_ON_ERROR
+        );
+        $allowed = array_fill_keys($ontology['knowledge_classes'], true);
         $common = 0;
+        $esoteric = 0;
+        $safeRetrievalPhrases = 0;
         $unknown = [];
         foreach ($articles as $article) {
             $basicClasses = preg_split('/\s*[,;|]\s*/u', (string) $article['knowledge_class_basic'], -1, PREG_SPLIT_NO_EMPTY) ?: [];
             if (in_array('common', array_map('strtolower', $basicClasses), true)) $common++;
+            if (in_array('esoteric', array_map('strtolower', $basicClasses), true)) $esoteric++;
+            $this->assertNotContains('rift reach', $basicClasses, $article['topic']);
+            foreach ($basicClasses as $class) $this->assertArrayHasKey(strtolower($class), $allowed, $article['topic']);
+            if (trim((string) $article['retrieval_phrases']) !== '') $safeRetrievalPhrases++;
             if (strtolower(trim((string) $article['knowledge_class'])) === 'blocked') $unknown[] = $article;
         }
-        $this->assertSame(1562, $common);
+        $this->assertSame(1509, $common);
+        $this->assertSame(53, $esoteric);
+        $this->assertSame(3, $safeRetrievalPhrases);
         $this->assertCount(2, $unknown);
         foreach ($unknown as $article) {
             $this->assertSame('basic', chimOghmaAccessDecision($article, ['common'])['level'], $article['topic']);

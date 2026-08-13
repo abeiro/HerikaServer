@@ -1,5 +1,5 @@
 {
-    "schema_version": 202608130001,
+    "schema_version": 202608130002,
     "extensions": [
         "pg_trgm",
         "vector"
@@ -2442,6 +2442,11 @@
                     "udt_schema": "pg_catalog",
                     "udt_name": "timestamptz",
                     "nullable": false
+                },
+                "retrieval_phrases": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
                 }
             }
         },
@@ -2569,6 +2574,11 @@
                 "row_sha256": {
                     "udt_schema": "pg_catalog",
                     "udt_name": "bpchar",
+                    "nullable": false
+                },
+                "retrieval_phrases": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
                     "nullable": false
                 }
             }

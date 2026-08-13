@@ -22,6 +22,9 @@ with useful family prose, and adds durable lore subjects missing from the catalo
 - Equipment variants consolidated: **237** into **29** families
 - Ingredient articles retaining explicit gameplay effects: **169**
 - Distinctive named concoctions retained unchanged: **23**
+- Common basic articles: **1509**
+- Esoteric basic articles: **53**
+- Curated standalone retrieval phrases: **3**
 
 The catalog remains intentionally broad because ordinary creature and object mentions are expected
 to retrieve Oghma context. Every retired equipment or generic potion/poison name remains an alias of
@@ -41,8 +44,13 @@ individual articles.
 - Accept only established alternate names and spellings as aliases; leave ordinary language and
   speculative STT variants to guarded fuzzy matching.
 - Keep tags as related concepts rather than alternate names. Tags may be shared by many articles;
-  they support catalog browsing and frequency-aware contextual scoring but never enter the unique
-  topic/alias entity lexicon.
+  they support catalog browsing and bounded corroboration of an existing topic/alias match but never
+  create an article identity.
+- Put only manually reviewed, standalone-safe identity cues in `retrieval_phrases`. Canonicalize only
+  the singular/plural pairs listed in the ontology before calculating phrase ownership; do not stem
+  names such as Ashlands or Aldmeris.
+- Validate every knowledge class against the checked-in ontology. Use `common` for ordinary basic
+  knowledge and `esoteric` for the reviewed deep-lore set.
 - Do not overwrite user-authored rows. The versioned factory catalog is imported and activated
 atomically; exact factory rows are classified, custom topic collisions survive, hidden factory
 rows stay hidden, and an operator can roll the factory projection back.

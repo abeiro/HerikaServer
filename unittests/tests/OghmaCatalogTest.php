@@ -37,7 +37,7 @@ final class OghmaCatalogTest extends DatabaseTestCase
             'category' => 'items',
         ];
         $v1 = $this->writePackage($fixture['v1'], $fixture['v1_articles'], false, [$retiredFactory]);
-        $v2 = $this->writePackage($fixture['v2'], $fixture['v2_articles']);
+        $v2 = $this->writePackage($fixture['v2'], $fixture['v2_articles'], false, [], 2);
 
         require_once dirname(__DIR__, 2) . '/lib/phpunit.class.php';
         $db = new sql();
@@ -64,6 +64,8 @@ final class OghmaCatalogTest extends DatabaseTestCase
         $second = $manager->activate($fixture['v2']);
         $this->assertSame(1, $second['custom_collisions']);
         $this->assertProjection($db, $fixture['expected_after_v2']);
+        $v2Factory = $db->fetchOne("SELECT retrieval_phrases FROM public.oghma WHERE topic = 'meridia'");
+        $this->assertSame('Colored Rooms', $v2Factory['retrieval_phrases'] ?? null);
 
         $rollback = $manager->rollback();
         $this->assertSame('rolled_back', $rollback['status']);
@@ -82,7 +84,7 @@ final class OghmaCatalogTest extends DatabaseTestCase
         $this->temporaryRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'chim-oghma-parity-' . bin2hex(random_bytes(6));
         mkdir($this->temporaryRoot, 0700, true);
         $valid = $this->writePackage($fixture['v1'], $fixture['v1_articles']);
-        $corrupt = $this->writePackage('fixture-corrupt-v1', $fixture['v2_articles'], true);
+        $corrupt = $this->writePackage('fixture-corrupt-v1', $fixture['v2_articles'], true, [], 2);
 
         require_once dirname(__DIR__, 2) . '/lib/phpunit.class.php';
         $db = new sql();
@@ -101,14 +103,23 @@ final class OghmaCatalogTest extends DatabaseTestCase
         $db->close();
     }
 
-    private function writePackage(string $version, array $rows, bool $corrupt = false, array $legacyFactoryRows = []): string
+    private function writePackage(
+        string $version,
+        array $rows,
+        bool $corrupt = false,
+        array $legacyFactoryRows = [],
+        int $formatVersion = 1
+    ): string
     {
         $directory = $this->temporaryRoot . DIRECTORY_SEPARATOR . $version;
         mkdir($directory, 0700, true);
         $articles = [];
         foreach ($rows as $row) {
             $ordered = [];
-            foreach (['topic','aliases','topic_desc','knowledge_class','topic_desc_basic','knowledge_class_basic','tags','category'] as $field) {
+            $fields = $formatVersion === 2
+                ? ['topic','aliases','retrieval_phrases','topic_desc','knowledge_class','topic_desc_basic','knowledge_class_basic','tags','category']
+                : ['topic','aliases','topic_desc','knowledge_class','topic_desc_basic','knowledge_class_basic','tags','category'];
+            foreach ($fields as $field) {
                 $ordered[$field] = (string) ($row[$field] ?? '');
             }
             $ordered['row_sha256'] = hash('sha256', json_encode($ordered, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
@@ -118,7 +129,7 @@ final class OghmaCatalogTest extends DatabaseTestCase
         file_put_contents($directory . DIRECTORY_SEPARATOR . 'articles.json', $articlesJson);
         $manifest = [
             'contract' => CHIM_OGHMA_PARITY_VERSION,
-            'format_version' => 1,
+            'format_version' => $formatVersion,
             'catalog_version' => $version,
             'articles_file' => 'articles.json',
             'articles_sha256' => $corrupt ? str_repeat('0', 64) : hash('sha256', $articlesJson),

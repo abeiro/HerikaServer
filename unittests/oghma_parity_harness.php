@@ -7,7 +7,9 @@ require_once dirname(__DIR__) . '/lib/oghma_parity.php';
 require_once dirname(__DIR__) . '/lib/oghma_retrieval.php';
 
 $fixturePath = __DIR__ . '/fixtures/oghma-parity-v1.json';
-$articlesPath = dirname(__DIR__) . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1/articles.json';
+$catalogRoot = dirname(__DIR__) . '/resources/oghma/skyrim-official';
+$activeVersion = trim((string) file_get_contents($catalogRoot . '/active-catalog-version.txt'));
+$articlesPath = $catalogRoot . '/catalogs/' . $activeVersion . '/articles.json';
 $fixture = json_decode((string) file_get_contents($fixturePath), true, 128, JSON_THROW_ON_ERROR);
 $catalog = json_decode((string) file_get_contents($articlesPath), true, 128, JSON_THROW_ON_ERROR);
 $iterations = 500;
@@ -29,16 +31,23 @@ foreach ($fixture['retrieval_cases'] as $case) {
     $extraction = chimOghmaExtractEntities($fixtureDb, (string) $case['input'], intval($case['limit']));
     $actual = array_values(array_column($extraction['entities'], 'topic'));
     $sources = array_values(array_column($extraction['entities'], 'source'));
+    $relationalTags = array_values(array_unique(array_merge(...array_map(
+        static fn(array $entity): array => $entity['relational_tag_phrases'] ?? [],
+        $extraction['entities']
+    ))));
     $reasons = array_values(array_unique(array_column(array_merge(
         $extraction['tag_decisions'] ?? [], $extraction['rejected'] ?? []
     ), 'reason')));
     if ($actual !== $case['topics']
         || (isset($case['expected_sources']) && $sources !== $case['expected_sources'])
+        || (isset($case['expected_relational_tags']) && $relationalTags !== $case['expected_relational_tags'])
         || (isset($case['required_rejections']) && array_diff($case['required_rejections'], $reasons) !== [])
         || (isset($case['required_tag_decisions']) && array_diff($case['required_tag_decisions'], $reasons) !== [])
         || (array_key_exists('fallback_eligible', $case) && $extraction['fallback_eligible'] !== $case['fallback_eligible'])) {
         $correctnessFailures[] = ['id'=>$case['id'], 'expected'=>$case['topics'], 'actual'=>$actual,
-            'expected_sources'=>$case['expected_sources']??null, 'actual_sources'=>$sources, 'actual_reasons'=>$reasons];
+            'expected_sources'=>$case['expected_sources']??null, 'actual_sources'=>$sources,
+            'expected_relational_tags'=>$case['expected_relational_tags']??null,
+            'actual_relational_tags'=>$relationalTags, 'actual_reasons'=>$reasons];
     }
 }
 
