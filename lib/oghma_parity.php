@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 const CHIM_OGHMA_PARITY_VERSION = 'oghma-parity-v1';
+const CHIM_OGHMA_STATUSES = [
+    'grounded','no_match','fallback_succeeded','fallback_unresolved','fallback_failed','fallback_disabled',
+    'fallback_unconfigured','disabled','ineligible','unavailable','not_run','legacy',
+];
 
 if (!function_exists('chimOghmaBool')) {
     function chimOghmaBool($value, bool $default = false): bool

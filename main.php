@@ -2256,11 +2256,9 @@ error_log("[OGHMA CHECK] OGHMA_EXTRACTOR_FALLBACK=" . var_export($GLOBALS['OGHMA
     . " | OGHMA_INFINIUM=" . var_export($GLOBALS["OGHMA_INFINIUM"] ?? null, true)
     . " (enabled=" . ($oghmaInfiniumEnabled ? 'Y' : 'N') . ")");
 
-if ($oghmaInfiniumEnabled) {
-    if (!isset($GLOBALS["OGHMA_CALLED"])) {// Avoid double call
-        require(__DIR__."/processor/oghma.php");
-        $GLOBALS["OGHMA_CALLED"] = true;
-    }
+if (!isset($GLOBALS["OGHMA_CALLED"])) {// Avoid double call
+    require(__DIR__."/processor/oghma.php");
+    $GLOBALS["OGHMA_CALLED"] = true;
 }
 chimRequestPerformanceMark('oghma_ready');
 

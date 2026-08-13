@@ -1,5 +1,21 @@
 {
+  "format": "oghma-parity-fixture.v1",
   "contract": "oghma-parity-v1",
+  "algorithm_version": "oghma-parity-v1",
+  "status_vocabulary": [
+    "grounded",
+    "no_match",
+    "fallback_succeeded",
+    "fallback_unresolved",
+    "fallback_failed",
+    "fallback_disabled",
+    "fallback_unconfigured",
+    "disabled",
+    "ineligible",
+    "unavailable",
+    "not_run",
+    "legacy"
+  ],
   "catalog": [
     {"topic":"whiterun","aliases":"White Run","tags":"nord city, cloud district","category":"place"},
     {"topic":"daedric_princes","aliases":"Daedra, Daedric Prince","tags":"oblivion lords, daedric worship","category":"lore"},
@@ -23,7 +39,12 @@
     {"topic":"frostbite_venom","aliases":"","tags":"spider venom, poison","category":"items"},
     {"topic":"dwarven_equipment","aliases":"Dwarven Armor","tags":"dwemer metal, equipment","category":"equipment"},
     {"topic":"mythic_dawn","aliases":"","tags":"mehrunes dagon, cult","category":"lore"},
-    {"topic":"silus_vesuius's_house","aliases":"Mythic Dawn Museum","tags":"dawnstar museum, mythic dawn","category":"place"}
+    {"topic":"silus_vesuius's_house","aliases":"Mythic Dawn Museum","tags":"dawnstar museum, mythic dawn","category":"place"},
+    {"topic":"red_mountain","aliases":"red peak, holy ward","tags":"tribunal pilgrimage, volcanic sacred place, pilgrimage, shared historical conflict","category":"locations"},
+    {"topic":"ghostfence","aliases":"holy ward","tags":"tribunal pilgrimage, magical barrier, shared historical conflict","category":"locations"},
+    {"topic":"ashlands","aliases":"","tags":"volcanic sacred place, ash storm country, shared historical conflict","category":"regions"},
+    {"topic":"dunmer","aliases":"dark elves","tags":"living gods religion, shared historical conflict","category":"races"},
+    {"topic":"ash_storms","aliases":"ash storm country","tags":"weather hazard","category":"phenomena"}
   ],
   "retrieval_cases": [
     {"id":"canonical","input":"Tell me about Whiterun.","limit":3,"topics":["whiterun"]},
@@ -48,7 +69,17 @@
     {"id":"multi_alias_order","input":"The Deep Elves built Black Reach beneath Skyrim.","limit":3,"topics":["dwemer","blackreach"]},
     {"id":"longest_alias","input":"A traveler gave its other name as Mythic Dawn Museum.","limit":1,"topics":["silus_vesuius's_house"]},
     {"id":"nested_lore_item","input":"We moved from magicka potions to steadfast ward in one conversation.","limit":2,"topics":["magicka_potions","steadfast_ward"]},
-    {"id":"nested_spell_item","input":"We moved from frostbite venom to dwarven equipment in one conversation.","limit":2,"topics":["frostbite_venom","dwarven_equipment"]}
+    {"id":"nested_spell_item","input":"We moved from frostbite venom to dwarven equipment in one conversation.","limit":2,"topics":["frostbite_venom","dwarven_equipment"]},
+    {"id":"unique_multiword_tag","input":"We encountered a magical barrier during the journey.","limit":1,"topics":["ghostfence"],"expected_sources":["exact unique tag fallback"]},
+    {"id":"corroborated_shared_tags","input":"Tell me the lore about the tribunal pilgrimage and its volcanic sacred place.","limit":1,"topics":["red_mountain"],"expected_sources":["corroborated tag fallback"]},
+    {"id":"shared_tag_needs_corroboration","input":"Tell me the lore about the tribunal pilgrimage.","limit":1,"topics":[],"required_rejections":["tag_insufficient_support"]},
+    {"id":"shared_tags_need_explicit_request","input":"We passed the tribunal pilgrimage and volcanic sacred place yesterday.","limit":1,"topics":[],"required_rejections":["tag_requires_explicit_request"]},
+    {"id":"overly_shared_tag_abstains","input":"Tell me the lore about the shared historical conflict.","limit":1,"topics":[],"required_rejections":["tag_too_many_owners"]},
+    {"id":"single_word_tag_abstains","input":"Tell me the lore about pilgrimage.","limit":1,"topics":[]},
+    {"id":"corrupt_tag_abstains","input":"Tell me the lore about the wether hazerd.","limit":1,"topics":[]},
+    {"id":"tag_speaker_label_abstains","input":"magical barrier: We should keep moving.","limit":1,"topics":[],"required_rejections":["tag_speaker_label"]},
+    {"id":"canonical_precedes_tags","input":"Tell me about red mountain and the magical barrier.","limit":2,"topics":["red_mountain"],"expected_sources":["exact canonical"]},
+    {"id":"alias_precedes_tag","input":"Tell me about the ash storm country.","limit":1,"topics":["ash_storms"],"expected_sources":["exact alias"]}
   ],
   "eligibility_cases": [
     {"request_type":"inputtext","eligible":true},
@@ -72,6 +103,13 @@
     {"id":"denied_negative","advanced":"mage,!vampire","basic":"common,!vampire","tags":["mage","common","vampire"],"level":"denied","reason":"negative_class"},
     {"id":"denied_missing","advanced":"mage","basic":"scholar","tags":["warrior"],"level":"denied","reason":"knowledge_classes_not_authorized"},
     {"id":"knowall_override","advanced":"!vampire","basic":"!vampire","tags":["knowall","vampire"],"level":"advanced","reason":"knowall"}
+  ],
+  "suggestion_cases": [
+    {"id":"canonical","suggestions":["red_mountain"],"topics":["red_mountain"]},
+    {"id":"alias","suggestions":["red peak"],"topics":["red_mountain"]},
+    {"id":"ambiguous_alias","suggestions":["holy ward"],"topics":[]},
+    {"id":"tag_is_not_identity","suggestions":["magical barrier"],"topics":[]},
+    {"id":"invented","suggestions":["dwemer moon gate"],"topics":[]}
   ],
   "xml_case": {
     "status":"grounded",

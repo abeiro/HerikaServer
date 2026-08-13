@@ -164,6 +164,20 @@ foreach ($matches[1] as $match) {
         'category' => (string) $source['category'],
     ];
     if ($article['topic'] === '' || $article['topic_desc'] === '') throw new RuntimeException('Oghma topic or description is empty.');
+    $advancedClasses = array_values(array_filter(array_map(
+        static fn(string $value): string => strtolower(trim($value)),
+        preg_split('/\s*[,;|]\s*/u', $article['knowledge_class']) ?: []
+    )));
+    if (!in_array('blocked', $advancedClasses, true)) {
+        $basicClasses = array_values(array_filter(array_map(
+            static fn(string $value): string => trim($value),
+            preg_split('/\s*[,;|]\s*/u', $article['knowledge_class_basic']) ?: []
+        )));
+        if (!in_array('common', array_map('strtolower', $basicClasses), true)) array_unshift($basicClasses, 'common');
+        $article['knowledge_class_basic'] = implode(', ', $basicClasses);
+    } else {
+        $article['knowledge_class_basic'] = 'blocked';
+    }
     $article['row_sha256'] = hash('sha256', canonicalOghmaRow($article));
     $articles[$article['topic']] = $article;
 }
@@ -198,6 +212,15 @@ $manifest = [
     'articles_file' => 'articles.json',
     'articles_sha256' => hash('sha256', $articlesJson),
     'row_count' => count($articles),
+    'default_basic_class' => 'common',
+    'default_basic_row_count' => count(array_filter(
+        $articles,
+        static fn(array $article): bool => in_array(
+            'common',
+            array_map('strtolower', preg_split('/\s*[,;|]\s*/u', $article['knowledge_class_basic']) ?: []),
+            true
+        )
+    )),
     'legacy_factory_source' => $legacyReference,
     'legacy_factory_row_count' => count($legacyRows),
     'legacy_factory_row_sha256' => $legacyChecksums,

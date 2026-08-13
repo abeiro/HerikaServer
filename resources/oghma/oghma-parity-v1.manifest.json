@@ -5,15 +5,31 @@
     "repository": "Dwemer-Dynamics/ALMSIVIserver",
     "base_commit": "383ddfbfa839f182bd8811151b03913b6d4564b1",
     "oracle": "unittests/fixtures/oghma-parity-v1.json",
-    "oracle_sha256": "fc8bf0740cee32d511d81e886aec7905fc7e74592993f11131c33697c93042da"
+    "oracle_sha256": "97e1c251e4b81656f2a09cca9276d13f36a48d711647fbfb3d198f15c2c3f5f1"
   },
   "algorithm": {
     "name": "grounded-v3.1-herika",
     "files": {
-      "lib/oghma_retrieval.php": "4944948db036a0ef85eb2daa42f39b982b88eda35597cb9606def8bfcde8cf9e",
-      "lib/oghma_parity.php": "5309b5d9286df9c9d17e3019ffe443571733a3d134092b9ef831ee38d782c421",
-      "processor/oghma.php": "19f510331dd31bf78e44c38f2f7cb5a56a08c885fc18d94432ad243756fd3c69"
+      "lib/oghma_retrieval.php": "5d0c3fff998f643a48e2e6790898d85f6b1a03d0ec8633e62598cb082aa5d59b",
+      "lib/oghma_parity.php": "fd8f6ee03f9315f93bd454f7dfeebad2a0535e4ed9540434b7d855c5426a4285",
+      "processor/oghma.php": "188f8ddfb0b4ca2ee973fdf133821184171c038c4e69e40d679206359c28851f"
     }
+  },
+  "runtime": {
+    "trace_statuses": [
+      "grounded",
+      "no_match",
+      "fallback_succeeded",
+      "fallback_unresolved",
+      "fallback_failed",
+      "fallback_disabled",
+      "fallback_unconfigured",
+      "disabled",
+      "ineligible",
+      "unavailable",
+      "not_run",
+      "legacy"
+    ]
   },
   "settings": {
     "precedence": ["global", "core_profile", "npc"],
@@ -24,15 +40,16 @@
       "racial_context_enabled": true,
       "location_context_enabled": true,
       "extractor_fallback_enabled": false,
-      "extractor_timeout_ms": 1500
+      "extractor_timeout_ms": 1500,
+      "knowledge_tags": "common"
     },
-    "schema_sha256": "48d63895c0446e6ac51101e2017abb80b92dfad0883f6b4ed850e629373e4565"
+    "schema_sha256": "c5a2acb3fb173e3ccd7b73c5e90d6b2d3779c8c9743871488caf190285d14616"
   },
   "catalog": {
     "version": "skyrim-official-20260813-v1",
     "rows": 1562,
-    "articles_sha256": "245c3ae415ca32689cc3429e106843eea194cf6dae5a87a2ed3105551d30594a",
-    "manifest_sha256": "f3751a142161bfc5416c2b6c745d2f8c84bb43ee2ccab966b7f2cba12d366471"
+    "articles_sha256": "c7733dfbd2033498d4ae8f1c5e792cc12e4599f13122d2329df0e62efa7c543a",
+    "manifest_sha256": "c4ff1eb3c07d49f54e3adc08b5c39f1640e7510372ad2a71c8f92c5a34e22a16"
   },
   "prompt_output": {
     "format": "canonical XML fragment",

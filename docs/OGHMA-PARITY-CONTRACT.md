@@ -1,7 +1,7 @@
 # Oghma parity contract v1
 
-`oghma-parity-v1` freezes the observable behavior shared with the ALMSIVI reference implementation.
-HerikaServer owns its PHP implementation, schema, catalog, and UI; no runtime package or code is shared.
+`oghma-parity-v1` freezes the observable behavior independently implemented by CHIM and ALMSIVI.
+Each server owns its PHP implementation, schema, game catalog, and UI; no runtime package or code is shared.
 
 ## Retrieval
 
@@ -16,7 +16,9 @@ HerikaServer owns its PHP implementation, schema, catalog, and UI; no runtime pa
   unambiguous ownership; otherwise retrieval records the rejection and abstains.
 - A selected connector may be called at most once, only after deterministic abstention on an explicit
   unresolved knowledge request. Its bounded suggestion must resolve to exactly one catalog topic.
-- Top-level outcomes are `grounded`, `not_found`, `fallback_succeeded`, or `fallback_failed`.
+- Public outcomes are `grounded`, `no_match`, `fallback_succeeded`, `fallback_unresolved`,
+  `fallback_failed`, `fallback_disabled`, `fallback_unconfigured`, `disabled`, `ineligible`, and
+  `unavailable`; `not_run` and `legacy` are read-only compatibility states.
 
 ## Settings and access
 
@@ -25,8 +27,9 @@ and the supplying layer for enablement, topic count, result limit, race/location
 fallback timeout, and connector selection.
 
 Knowledge-class negatives are evaluated before positive classes. Advanced access is preferred, then
-basic access, then denied. `knowall` is an explicit advanced override. Denied selections are represented
-as structured denials rather than fabricated lore.
+basic access, then denied. New NPCs receive `common`, which grants the catalog's basic descriptions;
+specialist classes grant advanced descriptions. `knowall` remains an explicit advanced override. Denied
+selections are represented as structured denials rather than fabricated lore.
 
 ## Prompt and native Skyrim context
 

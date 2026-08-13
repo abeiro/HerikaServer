@@ -1268,6 +1268,9 @@ function chimOghmaExtractEntities($db, string $text, int $amount, bool $allowTag
             $existingCompact = chimOghmaCompactEntityKey(strval($existing['entity_phrase'] ?? ''));
             if (intval($candidate['end']) - intval($candidate['start'])
                     > intval($existing['end']) - intval($existing['start'])
+                && (str_contains(strval($existing['source'] ?? ''), 'phonetic')
+                    || chimOghmaNormalizeTopicKey(strval($candidate['topic'] ?? ''))
+                        !== chimOghmaNormalizeTopicKey(strval($existing['topic'] ?? '')))
                 && str_contains($candidateCompact, $existingCompact)
                 && intval($candidate['literal_distance'] ?? PHP_INT_MAX) <= 3) {
                 $candidatePool[$overlapIndex] = $candidate;

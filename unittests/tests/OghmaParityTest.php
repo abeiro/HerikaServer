@@ -55,10 +55,28 @@ final class OghmaParityTest extends TestCase
         }
     }
 
+    public function testSharedStatusVocabulary(): void
+    {
+        $this->assertSame(self::$fixture['status_vocabulary'], CHIM_OGHMA_STATUSES);
+    }
+
     public function testEligibilityNeverRunsOnTimerOrActionFamilies(): void
     {
         foreach (self::$fixture['eligibility_cases'] as $case) {
             $this->assertSame($case['eligible'], chimOghmaRequestEligible([$case['request_type']]), $case['request_type']);
+        }
+    }
+
+    public function testFallbackSuggestionsUseTheSharedCatalogIdentityRules(): void
+    {
+        $db = $this->catalogDatabase();
+        foreach (self::$fixture['suggestion_cases'] as $case) {
+            $actual = [];
+            foreach ($case['suggestions'] as $suggestion) {
+                $topic = chimOghmaResolveTopicName($db, $suggestion);
+                if ($topic !== null && !in_array($topic, $actual, true)) $actual[] = $topic;
+            }
+            $this->assertSame($case['topics'], $actual, $case['id']);
         }
     }
 
@@ -148,8 +166,30 @@ final class OghmaParityTest extends TestCase
         $package = $manager->plan($manager->activePackagePath());
         $this->assertSame('skyrim-official-20260813-v1', $package['catalog_version']);
         $this->assertCount(1562, $package['articles']);
-        $this->assertSame('245c3ae415ca32689cc3429e106843eea194cf6dae5a87a2ed3105551d30594a', $package['articles_sha256']);
-        $this->assertSame('f3751a142161bfc5416c2b6c745d2f8c84bb43ee2ccab966b7f2cba12d366471', $package['manifest_sha256']);
+        $this->assertSame('c7733dfbd2033498d4ae8f1c5e792cc12e4599f13122d2329df0e62efa7c543a', $package['articles_sha256']);
+        $this->assertSame('c4ff1eb3c07d49f54e3adc08b5c39f1640e7510372ad2a71c8f92c5a34e22a16', $package['manifest_sha256']);
+    }
+
+    public function testCommonDefaultHasBasicCatalogCoverageWithoutUnblockingUnknownItems(): void
+    {
+        $articles = json_decode(
+            (string) file_get_contents(dirname(__DIR__, 2) . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1/articles.json'),
+            true,
+            64,
+            JSON_THROW_ON_ERROR
+        );
+        $common = 0;
+        $blocked = [];
+        foreach ($articles as $article) {
+            $basicClasses = preg_split('/\s*[,;|]\s*/u', (string) $article['knowledge_class_basic'], -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            if (in_array('common', array_map('strtolower', $basicClasses), true)) $common++;
+            if (strtolower(trim((string) $article['knowledge_class'])) === 'blocked') $blocked[] = $article;
+        }
+        $this->assertSame(1560, $common);
+        $this->assertCount(2, $blocked);
+        foreach ($blocked as $article) {
+            $this->assertSame('denied', chimOghmaAccessDecision($article, ['common'])['level'], $article['topic']);
+        }
     }
 
     public function testContractManifestPinsOracleAlgorithmSettingsAndCatalog(): void
@@ -162,11 +202,13 @@ final class OghmaParityTest extends TestCase
             JSON_THROW_ON_ERROR
         );
         $this->assertSame(CHIM_OGHMA_PARITY_VERSION, $manifest['contract']);
+        $this->assertSame(CHIM_OGHMA_STATUSES, $manifest['runtime']['trace_statuses']);
         $this->assertSame(hash_file('sha256', dirname(__DIR__) . '/fixtures/oghma-parity-v1.json'), $manifest['reference']['oracle_sha256']);
         foreach ($manifest['algorithm']['files'] as $path => $checksum) {
             $this->assertSame(hash_file('sha256', $root . '/' . $path), $checksum, $path);
         }
         $this->assertSame(hash_file('sha256', $root . '/conf/conf_schema.json'), $manifest['settings']['schema_sha256']);
+        $this->assertSame('common', $manifest['settings']['defaults']['knowledge_tags']);
         $catalogManifest = $root . '/resources/oghma/skyrim-official/catalogs/'
             . $manifest['catalog']['version'] . '/manifest.json';
         $this->assertSame(hash_file('sha256', $catalogManifest), $manifest['catalog']['manifest_sha256']);

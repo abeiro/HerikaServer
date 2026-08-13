@@ -42,7 +42,7 @@ $request = is_array($gameRequest ?? null) ? $gameRequest : [];
 $settings = chimOghmaEffectiveSettings();
 $eligible = chimOghmaRequestEligible($request);
 $inputText = $eligible ? chimOghmaInputText($request, $db) : '';
-$status = 'not_found';
+$status = !$settings['values']['enabled'] ? 'disabled' : ($eligible ? 'no_match' : 'ineligible');
 $GLOBALS['OGHMA_PARITY_RESULT'] = chimOghmaNewResult($status, $settings, $eligible, $inputText);
 $result =& $GLOBALS['OGHMA_PARITY_RESULT'];
 $result['request_type'] = (string) ($request[0] ?? '');
@@ -66,7 +66,7 @@ try {
 
 try {
 if ($settings['values']['enabled'] && $eligible) {
-    $knowledgeTags = chimOghmaKnowledgeValues($GLOBALS['OGHMA_KNOWLEDGE'] ?? '');
+$knowledgeTags = chimOghmaKnowledgeValues($GLOBALS['OGHMA_KNOWLEDGE'] ?? 'common');
     $characterName = strtolower(trim((string) ($GLOBALS['HERIKA_NAME'] ?? '')));
     if ($characterName !== '' && !in_array($characterName, $knowledgeTags, true)) $knowledgeTags[] = $characterName;
 
@@ -109,7 +109,7 @@ if ($settings['values']['enabled'] && $eligible) {
                 $result['status'] = 'fallback_succeeded';
             } else {
                 $result['fallback']['status'] = 'fallback_unresolved';
-                $result['status'] = 'fallback_failed';
+                $result['status'] = 'fallback_unresolved';
             }
         } catch (Throwable $error) {
             $result['fallback']['error'] = 'provider_unavailable';
@@ -120,7 +120,7 @@ if ($settings['values']['enabled'] && $eligible) {
         $result['fallback']['status'] = $settings['values']['extractor_fallback_enabled']
             ? 'fallback_unconfigured'
             : 'fallback_disabled';
-        $result['status'] = 'not_found';
+        $result['status'] = $result['fallback']['status'];
     }
 
     foreach (array_slice($result['topics'], 0, $settings['values']['topic_count']) as $topic) {
@@ -141,12 +141,12 @@ if ($settings['values']['enabled'] && $eligible) {
     }
 }
 } catch (Throwable $error) {
-    $result['status'] = 'not_found';
+    $result['status'] = 'unavailable';
     $result['error'] = 'retrieval_unavailable';
     error_log('[OGHMA] Retrieval failed without blocking the game response: ' . $error->getMessage());
 }
 
-if ($result['status'] === 'not_found' && $result['articles'] !== []) {
+if ($result['status'] === 'no_match' && $result['articles'] !== []) {
     $result['status'] = 'grounded';
 }
 

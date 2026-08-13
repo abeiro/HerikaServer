@@ -878,6 +878,9 @@ class NpcMaster
     private function composeKnowledgeString($misc, $codename)
     {
         $miscParts = array_unique(array_filter(array_map('trim', explode(',', $misc))));
+        if (! in_array('common', array_map('strtolower', $miscParts), true)) {
+            array_unshift($miscParts, 'common');
+        }
         if (! in_array($codename, $miscParts)) {
             $miscParts[] = $codename;
         }

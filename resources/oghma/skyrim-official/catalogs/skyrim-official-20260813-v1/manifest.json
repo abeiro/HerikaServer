@@ -5,8 +5,10 @@
     "game": "The Elder Scrolls V: Skyrim",
     "source": "HerikaServer reviewed factory catalog",
     "articles_file": "articles.json",
-    "articles_sha256": "245c3ae415ca32689cc3429e106843eea194cf6dae5a87a2ed3105551d30594a",
+    "articles_sha256": "c7733dfbd2033498d4ae8f1c5e792cc12e4599f13122d2329df0e62efa7c543a",
     "row_count": 1562,
+    "default_basic_class": "common",
+    "default_basic_row_count": 1560,
     "legacy_factory_source": "a49434ab829168eda0bd1954bbfd4e6751a61d90",
     "legacy_factory_row_count": 1849,
     "legacy_factory_row_sha256": [
