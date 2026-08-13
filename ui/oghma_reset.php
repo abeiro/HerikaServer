@@ -81,11 +81,14 @@ try {
         throw new Exception("Could not read SQL file");
     }
 
-    // Legacy Oghma dumps contain three positional values from the original schema.
-    // Name those columns so resets remain compatible with newer optional columns.
+    // Factory dumps predate the optional aliases column, so name their eight
+    // fields explicitly when resetting a newer database schema.
     $sqlContent = str_replace(
         'INSERT INTO public.oghma VALUES (',
-        'INSERT INTO public.oghma (topic, topic_desc, native_vector) VALUES (',
+        'INSERT INTO public.oghma ('
+            . 'topic, topic_desc, native_vector, knowledge_class, '
+            . 'topic_desc_basic, knowledge_class_basic, tags, category'
+            . ') VALUES (',
         $sqlContent
     );
 
