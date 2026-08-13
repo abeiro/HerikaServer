@@ -208,20 +208,8 @@ function herikaQuickstartApplyTtsSelection(TTSConnector $connector, $selectedDri
     if ($previousPreferredId > 0 && $previousPreferredId !== $selectedId) {
         $GLOBALS['db']->query("UPDATE core_profiles SET tts_connector_id = {$selectedId} WHERE tts_connector_id = {$previousPreferredId}");
     }
+    // QuickStart configures NPC and narrator TTS; Player TTS remains opt-in in Player Management.
     $GLOBALS['db']->query("UPDATE core_profiles SET tts_connector_id = {$selectedId} WHERE tts_connector_id IS NULL OR default_narrator = '1' OR default_npc = '1'");
-
-    if (!class_exists('Player')) {
-        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
-    }
-
-    try {
-        $player = new Player();
-        $currentPlayerConnectorId = intval($player->get('tts_connector_id') ?? 0);
-        if ($currentPlayerConnectorId <= 0 || $currentPlayerConnectorId === $previousPreferredId || $currentPlayerConnectorId === $selectedId) {
-            $player->set('tts_connector_id', strval($selectedId));
-        }
-    } catch (Throwable $_e) {
-    }
 
     return $selectedId;
 }
