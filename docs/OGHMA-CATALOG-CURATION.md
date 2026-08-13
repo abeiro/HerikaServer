@@ -2,22 +2,27 @@
 
 This review applies the conservative parts of the ALMSIVI Morrowind catalog workflow to Skyrim's
 factory Oghma data. It keeps ordinary object and creature coverage, removes only deterministic
-duplicates and walkthrough-only material, and adds durable lore subjects missing from the catalog.
+duplicates and walkthrough-only material, replaces repetitive equipment and bottled-effect templates
+with useful family prose, and adds durable lore subjects missing from the catalog.
 
 ## Inventory result
 
 - Baseline rows: **1849**
-- Final rows: **1807**
-- Retired or merged rows: **87**
-- Corrected canonical keys: **4**
-- Added canonical articles: **45**
-- Accepted aliases: **377**
-- Rejected alias collisions or canonical variants: **45**
+- Final rows: **1562**
+- Retired or merged rows: **373**
+- Corrected canonical keys: **5**
+- Added canonical articles: **86**
+- Accepted aliases: **661**
+- Rejected alias collisions or canonical variants: **50**
+- Equipment variants consolidated: **237** into **29** families
+- Ingredient articles retaining explicit gameplay effects: **169**
+- Distinctive named concoctions retained unchanged: **23**
 
 The catalog remains intentionally broad because ordinary creature and object mentions are expected
-to retrieve Oghma context. This pass does not remove generic ingredients, equipment, or spells as a
-class. It consolidates exact duplicates, shout-word duplicates, potion strength tiers, and dragon-claw
-solutions while preserving their spoken names as aliases.
+to retrieve Oghma context. Every retired equipment or generic potion/poison name remains an alias of
+a reviewed family article. Ingredient entries and their explicit `Alchemy effects:` lists remain
+canonical and unchanged. Distinctive quest, regional, supernatural, and named concoctions also remain
+individual articles.
 
 ## Editorial rules
 
@@ -25,6 +30,8 @@ solutions while preserving their spoken names as aliases.
 - Exclude puzzle solutions and walkthrough instructions.
 - Prefer one canonical article plus aliases over duplicate prose.
 - Preserve advanced and basic knowledge tiers.
+- Preserve ingredient lists and gameplay effects rather than flattening alchemy ingredients.
+- Keep distinctive named concoctions separate from mass-produced bottled effects.
 - Keep aliases collision-free against canonical topics and other aliases.
 - Do not automatically overwrite an existing user's database; the bundled catalog is applied only
   to new installs or an explicit Oghma Factory Reset.
@@ -35,7 +42,19 @@ aedra, aetherius, aldmeri_pantheon, alteration, ancestral_worship, anu, aurbis, 
 
 ## Skyrim consolidation articles
 
-dragon_claws, healing_potions, magicka_potions, stamina_potions
+blackreach, dragon_claws, healing_potions, magicka_potions, stamina_potions
+
+## Equipment families
+
+improved_bonemold_equipment, ancient_nord_equipment, banded_iron_equipment, bonemold_equipment, chitin_equipment, daedric_equipment, dawnguard_equipment, dragonbone_equipment, dragonplate_equipment, dragonscale_equipment, dwarven_equipment, ebony_equipment, elven_equipment, falmer_equipment, forsworn_equipment, fur_equipment, glass_equipment, hide_equipment, iron_equipment, leather_equipment, nordic_equipment, orcish_equipment, scaled_equipment, stalhrim_light_equipment, stalhrim_equipment, steel_plate_equipment, steel_equipment, thalmor_equipment, vampire_equipment
+
+## Generic potion and poison families
+
+skill_potions, regeneration_potions, resistance_potions, utility_potions, vitality_potions, curative_potions, damaging_poisons, magicka_poisons, stamina_poisons, control_poisons, aversion_poisons
+
+## Distinctive concoctions retained unchanged
+
+disguised_invisibility_potion, esberns_potion, falmer_blood_elixir, frostbite_venom, ice_wraith_bane, ice_wraith_essence, lotus_extract, mystic_venom, nightshade_extract, philter_of_the_phantom, potion_of_blood, potion_of_conflict, potion_of_escape, potion_of_keenshot, potion_of_larceny, potion_of_plunder, potion_of_waterwalking, potion_of_well_being, soul_husk_extract, stallions_potion, unknown_potion, vaerminas_torpor, white_phial
 
 ## Removed walkthrough-only topics
 
@@ -44,17 +63,17 @@ arkngthamz_puzzle, dimhollow_cavern_puzzle, fahlbtharz_puzzle, ustengrav_puzzle
 ## Category counts
 
 {
-  "": 10,
+  "": 8,
   "artifacts": 58,
   "creatures": 63,
   "eastmarch": 60,
-  "equipment": 235,
+  "equipment": 29,
   "falkreath": 51,
   "figures": 86,
   "haafingar": 53,
   "hjaalmarch": 37,
-  "items": 263,
-  "locationother": 50,
+  "items": 225,
+  "locationother": 51,
   "lore": 237,
   "pale": 47,
   "reach": 64,
@@ -69,5 +88,6 @@ arkngthamz_puzzle, dimhollow_cavern_puzzle, fahlbtharz_puzzle, ustengrav_puzzle
 
 The topic inventory and stable draft prose for the new lore subjects were adapted from the reviewed
 `morrowind-official-3e427-v4` ALMSIVI catalog. 15 setting-sensitive articles were rewritten for the
-Skyrim 4E 201 setting. Skyrim-specific consolidation prose was authored for dragon claws and the
-three common restorative potion families. No official game book text is copied into this repository.
+Skyrim 4E 201 setting. Skyrim-specific consolidation prose was authored for dragon claws, restorative
+potions, equipment families, and generic bottled effects. No official game book text is copied into
+this repository.
