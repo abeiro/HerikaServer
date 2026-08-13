@@ -143,7 +143,7 @@ try {
         );
     }
 
-    // Update the native_vector for all entries
+    // Tags remain contextual metadata so broad concepts do not pollute the legacy full-text identity vector.
     $vectorUpdateQuery = "
         UPDATE $schema.oghma
         SET native_vector = 

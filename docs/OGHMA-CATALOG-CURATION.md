@@ -13,6 +13,8 @@ with useful family prose, and adds durable lore subjects missing from the catalo
 - Corrected canonical keys: **7**
 - Added canonical articles: **86**
 - Accepted aliases: **819**
+- Search tag assignments: **13203** across **4612** case-insensitive values
+- Tags per article: **6-12** (average **8.45**)
 - Rejected alias collisions or canonical variants: **58**
 - Knowledge-class corrections: **11**
 - Missing categories restored: **8**
@@ -38,8 +40,9 @@ individual articles.
 - Keep aliases collision-free against canonical topics and other aliases.
 - Accept only established alternate names and spellings as aliases; leave ordinary language and
   speculative STT variants to guarded fuzzy matching.
-- Leave the legacy `tags` field empty until it has a defined namespaced vocabulary and a retrieval
-  role; aliases and categories are the current retrieval metadata.
+- Keep tags as related concepts rather than alternate names. Tags may be shared by many articles;
+  they support catalog browsing and frequency-aware contextual scoring but never enter the unique
+  topic/alias entity lexicon.
 - Do not automatically overwrite an existing user's database; the bundled catalog is applied only
   to new installs or an explicit Oghma Factory Reset.
 
