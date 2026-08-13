@@ -135,7 +135,7 @@ function oghmaCatalogRowsFromSql(string $sql, array $aliases): array
 }
 
 $root = dirname(__DIR__);
-$version = trim((string) ($argv[1] ?? 'skyrim-official-20260813-v1.3'));
+$version = trim((string) ($argv[1] ?? 'skyrim-official-20260813-v1.4'));
 if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/D', $version) !== 1) {
     throw new InvalidArgumentException('Invalid catalog version.');
 }
@@ -156,6 +156,7 @@ $allowedClasses = array_fill_keys(array_map(
     $ontology['knowledge_classes'] ?? []
 ), true);
 $classCorrections = is_array($ontology['class_corrections'] ?? null) ? $ontology['class_corrections'] : [];
+$advancedClassRules = is_array($ontology['advanced_class_rules'] ?? null) ? $ontology['advanced_class_rules'] : [];
 $esotericTopics = is_array($ontology['esoteric_basic_topics'] ?? null) ? $ontology['esoteric_basic_topics'] : [];
 $safeRetrievalPhrases = is_array($ontology['safe_retrieval_phrases'] ?? null) ? $ontology['safe_retrieval_phrases'] : [];
 $phraseCanonicalization = is_array($ontology['retrieval_phrase_canonicalization'] ?? null)
@@ -219,6 +220,22 @@ foreach ($matches[1] as $match) {
         if (!in_array($class, $basicClasses, true)) $basicClasses[] = $class;
     }
     $tagKeys = array_fill_keys(array_map('oghmaCatalogPhraseKey', oghmaCatalogValues($article['tags'])), true);
+    foreach ($advancedClassRules as $class => $rule) {
+        if (!is_array($rule) || !isset($allowedClasses[mb_strtolower((string) $class, 'UTF-8')])) {
+            throw new RuntimeException('Advanced knowledge-class rule is invalid: ' . $class);
+        }
+        $categoryMatch = in_array($article['category'], $rule['category_any'] ?? [], true);
+        $tagMatch = false;
+        foreach ($rule['tag_any'] ?? [] as $tag) {
+            if (isset($tagKeys[oghmaCatalogPhraseKey((string) $tag)])) {
+                $tagMatch = true;
+                break;
+            }
+        }
+        if (($categoryMatch || $tagMatch) && !in_array($class, $advancedClasses, true)) {
+            $advancedClasses[] = (string) $class;
+        }
+    }
     if (isset($esotericTopics[$article['topic']])) {
         foreach ($esotericTopics[$article['topic']] as $evidenceTag) {
             if (!isset($tagKeys[oghmaCatalogPhraseKey((string) $evidenceTag)])) {
@@ -248,6 +265,7 @@ foreach ($matches[1] as $match) {
         }
     }
     $article['retrieval_phrases'] = implode(', ', $retrievalPhrases);
+    $article['knowledge_class'] = implode(', ', $advancedClasses);
     $article['knowledge_class_basic'] = implode(', ', $basicClasses);
     $article['row_sha256'] = hash('sha256', canonicalOghmaRow($article, true));
     $articles[$article['topic']] = $article;
@@ -311,6 +329,13 @@ $manifest = [
         )
     )),
     'esoteric_basic_row_count' => count($esotericTopics),
+    'advanced_class_counts' => array_reduce($articles, static function (array $counts, array $article): array {
+        foreach (oghmaCatalogValues($article['knowledge_class']) as $class) {
+            $key = mb_strtolower($class, 'UTF-8');
+            $counts[$key] = ($counts[$key] ?? 0) + 1;
+        }
+        return $counts;
+    }, []),
     'safe_retrieval_phrase_count' => array_sum(array_map(
         static fn(array $phrases): int => count($phrases),
         $safeRetrievalPhrases

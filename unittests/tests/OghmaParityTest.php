@@ -94,6 +94,24 @@ final class OghmaParityTest extends TestCase
         }
     }
 
+    public function testPackagedCatalogAccessMatrixCoversRepresentativeNpcClasses(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $articles = json_decode(
+            (string) file_get_contents($root . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.4/articles.json'),
+            true,
+            64,
+            JSON_THROW_ON_ERROR
+        );
+        $articles = array_column($articles, null, 'topic');
+        foreach (self::$fixture['catalog_access_matrix'] as $case) {
+            $topic = $case['topics']['chim'];
+            $this->assertArrayHasKey($topic, $articles, $case['id']);
+            $decision = chimOghmaAccessDecision($articles[$topic], $case['tags']['chim']);
+            $this->assertSame($case['level'], $decision['level'], $case['id'] . ':' . $topic);
+        }
+    }
+
     public function testEffectiveSettingsReportGlobalProfileAndNpcSources(): void
     {
         $GLOBALS['OGHMA_INFINIUM'] = true;
@@ -164,17 +182,17 @@ final class OghmaParityTest extends TestCase
         $root = dirname(__DIR__, 2);
         $manager = new ChimOghmaCatalogManager($fakeDb, $root);
         $package = $manager->plan($manager->activePackagePath());
-        $this->assertSame('skyrim-official-20260813-v1.3', $package['catalog_version']);
+        $this->assertSame('skyrim-official-20260813-v1.4', $package['catalog_version']);
         $this->assertCount(1562, $package['articles']);
-        $this->assertSame('910584b8b50a8f7403b5468939f8d174ffe9d7fdf57ec2f39085877f3149d006', $package['articles_sha256']);
-        $this->assertSame('e1f0c8eb0cddda7e671f05d9baf834b626850edab5c4f265932ce341476ada01', $package['manifest_sha256']);
+        $this->assertSame('d2456c0f9c4df12a76874d275407ef13dfe86c75c806a71a0cfe1747ba470b05', $package['articles_sha256']);
+        $this->assertSame('59bca5bdd8ad38a85ce8935f5c56e23fe0c867c9d2e708c9ef8d718fd91967fb', $package['manifest_sha256']);
     }
 
     public function testPackagedBasicClassesFollowTheReviewedOntology(): void
     {
         $root = dirname(__DIR__, 2);
         $articles = json_decode(
-            (string) file_get_contents($root . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.3/articles.json'),
+            (string) file_get_contents($root . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.4/articles.json'),
             true,
             64,
             JSON_THROW_ON_ERROR
@@ -189,19 +207,33 @@ final class OghmaParityTest extends TestCase
         $common = 0;
         $esoteric = 0;
         $safeRetrievalPhrases = 0;
+        $advancedClassCounts = [];
         $unknown = [];
         foreach ($articles as $article) {
             $basicClasses = preg_split('/\s*[,;|]\s*/u', (string) $article['knowledge_class_basic'], -1, PREG_SPLIT_NO_EMPTY) ?: [];
             if (in_array('common', array_map('strtolower', $basicClasses), true)) $common++;
             if (in_array('esoteric', array_map('strtolower', $basicClasses), true)) $esoteric++;
+            $this->assertFalse(
+                in_array('common', array_map('strtolower', $basicClasses), true)
+                && in_array('esoteric', array_map('strtolower', $basicClasses), true),
+                $article['topic']
+            );
+            foreach (preg_split('/\s*[,;|]\s*/u', (string) $article['knowledge_class'], -1, PREG_SPLIT_NO_EMPTY) ?: [] as $class) {
+                $key = strtolower($class);
+                $advancedClassCounts[$key] = ($advancedClassCounts[$key] ?? 0) + 1;
+            }
             $this->assertNotContains('rift reach', $basicClasses, $article['topic']);
             foreach ($basicClasses as $class) $this->assertArrayHasKey(strtolower($class), $allowed, $article['topic']);
             if (trim((string) $article['retrieval_phrases']) !== '') $safeRetrievalPhrases++;
             if (strtolower(trim((string) $article['knowledge_class'])) === 'blocked') $unknown[] = $article;
         }
-        $this->assertSame(1509, $common);
-        $this->assertSame(53, $esoteric);
+        $this->assertSame(1476, $common);
+        $this->assertSame(86, $esoteric);
         $this->assertSame(3, $safeRetrievalPhrases);
+        $this->assertSame(146, $advancedClassCounts['healer']);
+        $this->assertSame(620, $advancedClassCounts['traveler']);
+        $this->assertSame(31, $advancedClassCounts['warrior']);
+        $this->assertSame(32, $advancedClassCounts['merchant']);
         $this->assertCount(2, $unknown);
         foreach ($unknown as $article) {
             $this->assertSame('basic', chimOghmaAccessDecision($article, ['common'])['level'], $article['topic']);

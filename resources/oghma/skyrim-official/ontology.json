@@ -89,7 +89,63 @@
   "class_corrections": {
     "rift reach": ["rift", "reach"]
   },
+  "advanced_class_rules": {
+    "healer": {
+      "tag_any": ["disease", "restoration", "restore health", "cure disease", "regenerate health", "fortify health"]
+    },
+    "traveler": {
+      "category_any": ["eastmarch", "falkreath", "haafingar", "hjaalmarch", "locationother", "pale", "reach", "rift", "solstheim", "whiterun", "winterhold"]
+    },
+    "warrior": {
+      "category_any": ["equipment"]
+    },
+    "merchant": {
+      "category_any": ["equipment"]
+    }
+  },
+  "cross_product_class_equivalents": {
+    "smith": "blacksmith",
+    "dunmer": "darkelf",
+    "altmer": "highelf",
+    "bosmer": "woodelf",
+    "thieves_guild": "thievesguild",
+    "imperial_legion": "legion",
+    "mages_guild": "collegeofwinterhold"
+  },
   "esoteric_basic_topics": {
+    "aedra_and_daedra": ["cosmology"],
+    "aetherius": ["Aurbis"],
+    "amulet_of_kings": ["Dragonfires"],
+    "anu": ["Cosmology"],
+    "auriels_bow": ["Aedric artifact"],
+    "azura_star": ["Daedric artifacts"],
+    "bloodworm_helm": ["Necromancy"],
+    "chimarvamidium": ["Ancient Tales of the Dwemer"],
+    "chronicles_of_nchuleft": ["Dwemer Freehold Colony"],
+    "daedric_crescent": ["Daedric architecture"],
+    "dawnbreaker": ["Daedric Prince"],
+    "earthbones": ["creation myth"],
+    "ebony_blade": ["Daedric Prince"],
+    "ebony_mail": ["Daedric artifact"],
+    "ehlnofey": ["creation myth"],
+    "lorkhaj": ["Lunar Lattice"],
+    "lunar_lattice": ["cosmic barrier"],
+    "mace_of_molag_bal": ["Daedric Prince"],
+    "masque_of_clavicus_vile": ["Daedric Prince of wishes"],
+    "mundus": ["cosmology"],
+    "necromancer_amulet": ["Order of the Black Worm"],
+    "on_oblivion": ["Oblivion"],
+    "padomay": ["creation myth"],
+    "psijic_order": ["Old Ways"],
+    "saviors_hide": ["Daedric Prince"],
+    "sithis": ["Void"],
+    "spellbreaker": ["Daedric Prince"],
+    "staff_of_hasedoki": ["legendary artifacts"],
+    "staff_of_magnus": ["metaphysical battery"],
+    "umbra": ["cursed blades"],
+    "wabbajack": ["Chaos"],
+    "wild_hunt": ["rituals"],
+    "wulfharth": ["Red Mountain"],
     "an_accounting_of_the_scrolls": ["elder scrolls", "forbidden knowledge"],
     "apocrypha": ["black books", "forbidden knowledge"],
     "aurbis": ["psijic order"],

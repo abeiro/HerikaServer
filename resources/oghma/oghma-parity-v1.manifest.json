@@ -5,7 +5,7 @@
     "repository": "Dwemer-Dynamics/ALMSIVIserver",
     "base_commit": "383ddfbfa839f182bd8811151b03913b6d4564b1",
     "oracle": "unittests/fixtures/oghma-parity-v1.json",
-    "oracle_sha256": "f08a0184dee2fa1862771000622730293e2d5f318b37f1717a777e37945affd3"
+    "oracle_sha256": "e3a75b69e14ed12e2ff94d1706d1e53a5dec7b7e486e4eba4ac8a3aaf5930a9f"
   },
   "algorithm": {
     "name": "grounded-v3.1-herika",
@@ -46,10 +46,10 @@
     "schema_sha256": "c5a2acb3fb173e3ccd7b73c5e90d6b2d3779c8c9743871488caf190285d14616"
   },
   "catalog": {
-    "version": "skyrim-official-20260813-v1.3",
+    "version": "skyrim-official-20260813-v1.4",
     "rows": 1562,
-    "articles_sha256": "910584b8b50a8f7403b5468939f8d174ffe9d7fdf57ec2f39085877f3149d006",
-    "manifest_sha256": "e1f0c8eb0cddda7e671f05d9baf834b626850edab5c4f265932ce341476ada01"
+    "articles_sha256": "d2456c0f9c4df12a76874d275407ef13dfe86c75c806a71a0cfe1747ba470b05",
+    "manifest_sha256": "59bca5bdd8ad38a85ce8935f5c56e23fe0c867c9d2e708c9ef8d718fd91967fb"
   },
   "prompt_output": {
     "format": "canonical XML fragment",
