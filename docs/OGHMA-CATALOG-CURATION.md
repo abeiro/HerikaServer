@@ -10,10 +10,13 @@ with useful family prose, and adds durable lore subjects missing from the catalo
 - Baseline rows: **1849**
 - Final rows: **1562**
 - Retired or merged rows: **373**
-- Corrected canonical keys: **5**
+- Corrected canonical keys: **7**
 - Added canonical articles: **86**
-- Accepted aliases: **661**
-- Rejected alias collisions or canonical variants: **50**
+- Accepted aliases: **819**
+- Rejected alias collisions or canonical variants: **58**
+- Knowledge-class corrections: **11**
+- Missing categories restored: **8**
+- Missing basic descriptions restored: **2**
 - Equipment variants consolidated: **237** into **29** families
 - Ingredient articles retaining explicit gameplay effects: **169**
 - Distinctive named concoctions retained unchanged: **23**
@@ -33,6 +36,10 @@ individual articles.
 - Preserve ingredient lists and gameplay effects rather than flattening alchemy ingredients.
 - Keep distinctive named concoctions separate from mass-produced bottled effects.
 - Keep aliases collision-free against canonical topics and other aliases.
+- Accept only established alternate names and spellings as aliases; leave ordinary language and
+  speculative STT variants to guarded fuzzy matching.
+- Leave the legacy `tags` field empty until it has a defined namespaced vocabulary and a retrieval
+  role; aliases and categories are the current retrieval metadata.
 - Do not automatically overwrite an existing user's database; the bundled catalog is applied only
   to new installs or an explicit Oghma Factory Reset.
 
@@ -63,8 +70,7 @@ arkngthamz_puzzle, dimhollow_cavern_puzzle, fahlbtharz_puzzle, ustengrav_puzzle
 ## Category counts
 
 {
-  "": 8,
-  "artifacts": 58,
+  "artifacts": 59,
   "creatures": 63,
   "eastmarch": 60,
   "equipment": 29,
@@ -80,7 +86,7 @@ arkngthamz_puzzle, dimhollow_cavern_puzzle, fahlbtharz_puzzle, ustengrav_puzzle
   "rift": 81,
   "solstheim": 67,
   "spells": 244,
-  "whiterun": 62,
+  "whiterun": 69,
   "winterhold": 39
 }
 
@@ -89,5 +95,6 @@ arkngthamz_puzzle, dimhollow_cavern_puzzle, fahlbtharz_puzzle, ustengrav_puzzle
 The topic inventory and stable draft prose for the new lore subjects were adapted from the reviewed
 `morrowind-official-3e427-v4` ALMSIVI catalog. 15 setting-sensitive articles were rewritten for the
 Skyrim 4E 201 setting. Skyrim-specific consolidation prose was authored for dragon claws, restorative
-potions, equipment families, and generic bottled effects. No official game book text is copied into
-this repository.
+potions, equipment families, and generic bottled effects. Alternate-name aliases were cross-checked
+against that reviewed catalog and explicit names in Skyrim's existing article prose. No official game
+book text is copied into this repository.
