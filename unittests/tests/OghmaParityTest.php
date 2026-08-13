@@ -164,31 +164,31 @@ final class OghmaParityTest extends TestCase
         $root = dirname(__DIR__, 2);
         $manager = new ChimOghmaCatalogManager($fakeDb, $root);
         $package = $manager->plan($manager->activePackagePath());
-        $this->assertSame('skyrim-official-20260813-v1.1', $package['catalog_version']);
+        $this->assertSame('skyrim-official-20260813-v1.2', $package['catalog_version']);
         $this->assertCount(1562, $package['articles']);
-        $this->assertSame('c7733dfbd2033498d4ae8f1c5e792cc12e4599f13122d2329df0e62efa7c543a', $package['articles_sha256']);
-        $this->assertSame('8a6b2c0f9c8cff1d8d626e4411cf6e7f05273d9da497b6ac541cf0dc29692514', $package['manifest_sha256']);
+        $this->assertSame('ada0e765e494a4356487da020f775e991d4732648c722c56cb9cbdff9e24d565', $package['articles_sha256']);
+        $this->assertSame('195d2f8e64d434b85cd102ea9fa0a747957ba319b4cbf9faf69c14559126d34e', $package['manifest_sha256']);
     }
 
-    public function testCommonDefaultHasBasicCatalogCoverageWithoutUnblockingUnknownItems(): void
+    public function testEveryPackagedBasicArticleUsesTheCommonClass(): void
     {
         $articles = json_decode(
-            (string) file_get_contents(dirname(__DIR__, 2) . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.1/articles.json'),
+            (string) file_get_contents(dirname(__DIR__, 2) . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.2/articles.json'),
             true,
             64,
             JSON_THROW_ON_ERROR
         );
         $common = 0;
-        $blocked = [];
+        $unknown = [];
         foreach ($articles as $article) {
             $basicClasses = preg_split('/\s*[,;|]\s*/u', (string) $article['knowledge_class_basic'], -1, PREG_SPLIT_NO_EMPTY) ?: [];
             if (in_array('common', array_map('strtolower', $basicClasses), true)) $common++;
-            if (strtolower(trim((string) $article['knowledge_class'])) === 'blocked') $blocked[] = $article;
+            if (strtolower(trim((string) $article['knowledge_class'])) === 'blocked') $unknown[] = $article;
         }
-        $this->assertSame(1560, $common);
-        $this->assertCount(2, $blocked);
-        foreach ($blocked as $article) {
-            $this->assertSame('denied', chimOghmaAccessDecision($article, ['common'])['level'], $article['topic']);
+        $this->assertSame(1562, $common);
+        $this->assertCount(2, $unknown);
+        foreach ($unknown as $article) {
+            $this->assertSame('basic', chimOghmaAccessDecision($article, ['common'])['level'], $article['topic']);
         }
     }
 

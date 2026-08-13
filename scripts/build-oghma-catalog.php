@@ -117,7 +117,7 @@ function oghmaCatalogRowsFromSql(string $sql, array $aliases): array
 }
 
 $root = dirname(__DIR__);
-$version = trim((string) ($argv[1] ?? 'skyrim-official-20260813-v1.1'));
+$version = trim((string) ($argv[1] ?? 'skyrim-official-20260813-v1.2'));
 if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/D', $version) !== 1) {
     throw new InvalidArgumentException('Invalid catalog version.');
 }
@@ -164,20 +164,12 @@ foreach ($matches[1] as $match) {
         'category' => (string) $source['category'],
     ];
     if ($article['topic'] === '' || $article['topic_desc'] === '') throw new RuntimeException('Oghma topic or description is empty.');
-    $advancedClasses = array_values(array_filter(array_map(
-        static fn(string $value): string => strtolower(trim($value)),
-        preg_split('/\s*[,;|]\s*/u', $article['knowledge_class']) ?: []
+    $basicClasses = array_values(array_filter(array_map(
+        static fn(string $value): string => trim($value),
+        preg_split('/\s*[,;|]\s*/u', $article['knowledge_class_basic']) ?: []
     )));
-    if (!in_array('blocked', $advancedClasses, true)) {
-        $basicClasses = array_values(array_filter(array_map(
-            static fn(string $value): string => trim($value),
-            preg_split('/\s*[,;|]\s*/u', $article['knowledge_class_basic']) ?: []
-        )));
-        if (!in_array('common', array_map('strtolower', $basicClasses), true)) array_unshift($basicClasses, 'common');
-        $article['knowledge_class_basic'] = implode(', ', $basicClasses);
-    } else {
-        $article['knowledge_class_basic'] = 'blocked';
-    }
+    if (!in_array('common', array_map('strtolower', $basicClasses), true)) array_unshift($basicClasses, 'common');
+    $article['knowledge_class_basic'] = implode(', ', $basicClasses);
     $article['row_sha256'] = hash('sha256', canonicalOghmaRow($article));
     $articles[$article['topic']] = $article;
 }

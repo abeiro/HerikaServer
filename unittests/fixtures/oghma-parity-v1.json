@@ -97,6 +97,7 @@
   ],
   "access_cases": [
     {"id":"unrestricted_advanced","advanced":"","basic":"","tags":[],"level":"advanced","reason":"unrestricted"},
+    {"id":"unrestricted_basic","advanced":"mage","basic":"","tags":["warrior"],"level":"basic","reason":"unrestricted"},
     {"id":"advanced_positive","advanced":"mage, scholar","basic":"common","tags":["mage"],"level":"advanced","reason":"positive_class"},
     {"id":"negative_falls_to_basic","advanced":"mage,!vampire","basic":"common","tags":["mage","vampire","common"],"level":"basic","reason":"positive_class"},
     {"id":"basic_positive","advanced":"mage","basic":"common","tags":["common"],"level":"basic","reason":"positive_class"},

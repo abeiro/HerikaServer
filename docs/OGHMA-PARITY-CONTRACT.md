@@ -27,9 +27,10 @@ and the supplying layer for enablement, topic count, result limit, race/location
 fallback timeout, and connector selection.
 
 Knowledge-class negatives are evaluated before positive classes. Advanced access is preferred, then
-basic access, then denied. New NPCs receive `common`, which grants the catalog's basic descriptions;
-specialist classes grant advanced descriptions. `knowall` remains an explicit advanced override. Denied
-selections are represented as structured denials rather than fabricated lore.
+basic access, then denied. Every packaged basic description carries `common`, which new NPCs receive;
+specialist classes grant advanced descriptions. Legacy or custom rows with an empty class remain
+unrestricted. `knowall` remains an explicit advanced override. Denied selections are represented as
+structured denials rather than fabricated lore.
 
 ## Prompt and native Skyrim context
 
