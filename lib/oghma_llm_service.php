@@ -195,7 +195,9 @@ function callLLMFast($contextData, $customParms = []) {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10); // Short timeout for fast extraction
+    $timeoutMs = max(250, min(3000, intval($GLOBALS['OGHMA_EXTRACTOR_TIMEOUT_MS'] ?? 1500)));
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, min(750, $timeoutMs));
+    curl_setopt($ch, CURLOPT_TIMEOUT_MS, $timeoutMs);
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

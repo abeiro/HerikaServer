@@ -43,8 +43,11 @@ individual articles.
 - Keep tags as related concepts rather than alternate names. Tags may be shared by many articles;
   they support catalog browsing and frequency-aware contextual scoring but never enter the unique
   topic/alias entity lexicon.
-- Do not automatically overwrite an existing user's database; the bundled catalog is applied only
-  to new installs or an explicit Oghma Factory Reset.
+- Do not overwrite user-authored rows. The versioned factory catalog is imported and activated
+atomically; exact factory rows are classified, custom topic collisions survive, hidden factory
+rows stay hidden, and an operator can roll the factory projection back.
+The first activation classifies the retired factory rows against checksums generated from the pinned
+pre-curation base commit `a49434ab829168eda0bd1954bbfd4e6751a61d90`, rather than a moving branch name.
 
 ## New lore coverage
 

@@ -83,6 +83,18 @@ if (!function_exists('chimRuntimeImportConfigVariables')) {
     }
 }
 
+if (!function_exists('chimRuntimeReadConfigVariables')) {
+    /** Load each config in its own scope so defaults cannot overwrite later active values. */
+    function chimRuntimeReadConfigVariables(string $path): array
+    {
+        return (static function (string $configPath): array {
+            require($configPath);
+            unset($configPath);
+            return get_defined_vars();
+        })($path);
+    }
+}
+
 if (!function_exists('chimRuntimeEnsureDbUpdates')) {
     function chimRuntimeEnsureDbUpdates(string $enginePath): void
     {
@@ -173,15 +185,24 @@ if (!function_exists('chimRuntimeBootstrap')) {
 
         $confPath = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
         $confSamplePath = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php";
+        $preconfigured = [];
+        if (getenv('PHPUNIT_TEST')) {
+            foreach ($GLOBALS as $name => $value) {
+                if (is_string($name) && preg_match('/^[A-Z][A-Z0-9_]*$/', $name)) {
+                    $preconfigured[$name] = $value;
+                }
+            }
+        }
 
         if (file_exists($confSamplePath)) {
-            require_once($confSamplePath);
+            chimRuntimeImportConfigVariables(chimRuntimeReadConfigVariables($confSamplePath));
         }
         if (file_exists($confPath)) {
-            require_once($confPath);
+            chimRuntimeImportConfigVariables(chimRuntimeReadConfigVariables($confPath));
         }
-
-        chimRuntimeImportConfigVariables(get_defined_vars());
+        foreach ($preconfigured as $name => $value) {
+            $GLOBALS[$name] = $value;
+        }
 
         if (empty($GLOBALS["DBDRIVER"])) {
             throw new \RuntimeException("DBDRIVER is not configured during runtime bootstrap.");

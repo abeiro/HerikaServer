@@ -85,7 +85,7 @@ final class MigrationRunner
                 'name' => 'legacy_baseline',
                 'type' => 'baseline',
                 'path' => $contractPath,
-                'checksum' => hash('sha256', $contract),
+                'checksum' => self::sourceChecksum($contract),
             ],
         ];
         $directory = rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'migrations';
@@ -115,7 +115,7 @@ final class MigrationRunner
                 'name' => $match[2],
                 'type' => $match[3],
                 'path' => $path,
-                'checksum' => hash('sha256', $contents),
+                'checksum' => self::sourceChecksum($contents),
             ];
         }
         ksort($migrations, SORT_NUMERIC);
@@ -247,6 +247,12 @@ final class MigrationRunner
             throw new RuntimeException('Could not inspect migration transaction control.');
         }
         return preg_match('/(^|;)\s*(BEGIN|START\s+TRANSACTION|COMMIT|ROLLBACK)\b/i', $withoutDollarBodies) === 1;
+    }
+
+    /** Keep migration identities stable when Git checks files out with platform-native line endings. */
+    private static function sourceChecksum(string $contents): string
+    {
+        return hash('sha256', str_replace(["\r\n", "\r"], "\n", $contents));
     }
 
     private function contractPath(): string

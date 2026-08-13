@@ -40,8 +40,10 @@ function chimGlobalSettingsLabel(string $name): string
         'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory', 'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile', 'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'CORE_CONNECTOR_BGL' => 'Background Life', 'RELLLM_CONNECTOR' => 'Relationship Manager',
-        'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time', 'OGHMA_INFINIUM' => 'Oghma Infinium',
-        'OGHMA_AMOUNT' => 'Oghma Articles Amount', 'RACIAL_OGHMA' => 'Force Racial Oghma',
+        'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time', 'OGHMA_INFINIUM' => 'Enable Oghma',
+        'OGHMA_AMOUNT' => 'Oghma Topic Count', 'OGHMA_RESULT_LIMIT' => 'Oghma Result Limit',
+        'OGHMA_EXTRACTOR_FALLBACK' => 'Oghma Extractor Fallback',
+        'OGHMA_EXTRACTOR_TIMEOUT_MS' => 'Extractor Timeout (ms)', 'RACIAL_OGHMA' => 'Force Racial Oghma',
         'LOCATION_OGHMA' => 'Force Location Oghma', 'DETECT_MAGIC_EVENT' => 'Detect Magic Events',
     ];
     if (isset($custom[$name])) {

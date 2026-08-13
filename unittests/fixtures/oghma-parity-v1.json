@@ -1,0 +1,100 @@
+{
+  "contract": "oghma-parity-v1",
+  "catalog": [
+    {"topic":"whiterun","aliases":"White Run","tags":"nord city, cloud district","category":"place"},
+    {"topic":"daedric_princes","aliases":"Daedra, Daedric Prince","tags":"oblivion lords, daedric worship","category":"lore"},
+    {"topic":"meridia","aliases":"Lady of Light","tags":"colored rooms, beacon quest","category":"person"},
+    {"topic":"the_pale","aliases":"Pale","tags":"northern hold, dawnstar region","category":"place"},
+    {"topic":"glass_equipment","aliases":"Glass Armor, Glass Weapons","tags":"malachite equipment, light armor","category":"equipment"},
+    {"topic":"dwemer","aliases":"Dwarves, Deep Elves","tags":"ancient race, tonal architecture","category":"people"},
+    {"topic":"blackreach","aliases":"","tags":"underground city, ancient ruin","category":"place"},
+    {"topic":"college_of_winterhold","aliases":"Winterhold College","tags":"mage guild, magic school","category":"faction"},
+    {"topic":"nightingales","aliases":"","tags":"thieves guild, nocturnal oath","category":"faction"},
+    {"topic":"dark_brotherhood","aliases":"","tags":"assassin guild, night mother","category":"faction"},
+    {"topic":"draugr","aliases":"","tags":"ancient ruin, nord undead","category":"creature"},
+    {"topic":"dragon_priests","aliases":"","tags":"ancient ruin, masked priests","category":"creature"},
+    {"topic":"nordic_ruins","aliases":"","tags":"ancient ruin, burial tomb","category":"place"},
+    {"topic":"boethiah","aliases":"Prince","tags":"anticipations, daedric cult","category":"person"},
+    {"topic":"mehrunes_dagon","aliases":"Prince","tags":"destruction, daedric cult","category":"person"},
+    {"topic":"magicka","aliases":"Magic","tags":"arcane energy, spellcasting","category":"lore"},
+    {"topic":"magicka_potions","aliases":"Potion of Magicka","tags":"alchemy, spellcasting","category":"items"},
+    {"topic":"steadfast_ward","aliases":"","tags":"ward spell, restoration","category":"spells"},
+    {"topic":"frostbite","aliases":"","tags":"frost spell, destruction","category":"spells"},
+    {"topic":"frostbite_venom","aliases":"","tags":"spider venom, poison","category":"items"},
+    {"topic":"dwarven_equipment","aliases":"Dwarven Armor","tags":"dwemer metal, equipment","category":"equipment"},
+    {"topic":"mythic_dawn","aliases":"","tags":"mehrunes dagon, cult","category":"lore"},
+    {"topic":"silus_vesuius's_house","aliases":"Mythic Dawn Museum","tags":"dawnstar museum, mythic dawn","category":"place"}
+  ],
+  "retrieval_cases": [
+    {"id":"canonical","input":"Tell me about Whiterun.","limit":3,"topics":["whiterun"]},
+    {"id":"ordinary_alias","input":"I saw a Daedra by the road.","limit":3,"topics":["daedric_princes"]},
+    {"id":"compact_name","input":"We should descend into Black Reach.","limit":3,"topics":["blackreach"]},
+    {"id":"accented_compact","input":"Méridia sent another beacon.","limit":3,"topics":["meridia"]},
+    {"id":"stt_phonetic","input":"The speech transcript returned mareedia.","limit":3,"topics":["meridia"]},
+    {"id":"speaker_label","input":"Daedra: I traveled through Whiterun yesterday.","limit":3,"topics":["whiterun"],"required_rejections":["speaker_label"]},
+    {"id":"speaker_only","input":"Daedra: We should leave now.","limit":3,"topics":[],"required_rejections":["speaker_label"]},
+    {"id":"skyrim_homonym","input":"Her face looked pale blue in the cold.","limit":3,"topics":[],"required_rejections":["wrong_sense"]},
+    {"id":"conversation_order","input":"We left Whiterun, met the Dwemer scholars, then discussed Meridia.","limit":3,"topics":["whiterun","dwemer","meridia"]},
+    {"id":"topic_limit","input":"Whiterun, Dwemer, Meridia, and Blackreach all matter here.","limit":2,"topics":["whiterun","dwemer"]},
+    {"id":"deduplicate_topic","input":"Whiterun guards said White Run was safe.","limit":3,"topics":["whiterun"]},
+    {"id":"ordinary_creature","input":"A draugr blocked the doorway.","limit":3,"topics":["draugr"]},
+    {"id":"ordinary_object","input":"Her glass armor caught the torchlight.","limit":3,"topics":["glass_equipment"]},
+    {"id":"unique_tag","input":"I heard whispers about the night mother.","limit":3,"topics":["dark_brotherhood"],"required_tag_decisions":["tag_selected"]},
+    {"id":"overly_shared_tag","input":"Tell me about the ancient ruin.","limit":3,"topics":[],"required_rejections":["tag_too_many_owners"],"fallback_eligible":true},
+    {"id":"ambiguous_alias","input":"Tell me about the Prince.","limit":3,"topics":[],"fallback_eligible":true},
+    {"id":"ordinary_weather","input":"The rain is getting worse and we should find shelter.","limit":3,"topics":[],"fallback_eligible":false},
+    {"id":"negated_request","input":"Do not tell me about something; just keep walking.","limit":3,"topics":[],"fallback_eligible":false},
+    {"id":"punctuation_case","input":"DWEMER—what happened to them?","limit":3,"topics":["dwemer"]},
+    {"id":"multi_alias_order","input":"The Deep Elves built Black Reach beneath Skyrim.","limit":3,"topics":["dwemer","blackreach"]},
+    {"id":"longest_alias","input":"A traveler gave its other name as Mythic Dawn Museum.","limit":1,"topics":["silus_vesuius's_house"]},
+    {"id":"nested_lore_item","input":"We moved from magicka potions to steadfast ward in one conversation.","limit":2,"topics":["magicka_potions","steadfast_ward"]},
+    {"id":"nested_spell_item","input":"We moved from frostbite venom to dwarven equipment in one conversation.","limit":2,"topics":["frostbite_venom","dwarven_equipment"]}
+  ],
+  "eligibility_cases": [
+    {"request_type":"inputtext","eligible":true},
+    {"request_type":"inputtext_s","eligible":true},
+    {"request_type":"ginputtext","eligible":true},
+    {"request_type":"ginputtext_s","eligible":true},
+    {"request_type":"rechat","eligible":true},
+    {"request_type":"continue","eligible":true},
+    {"request_type":"instruction","eligible":true},
+    {"request_type":"suggestion","eligible":true},
+    {"request_type":"combat","eligible":false},
+    {"request_type":"funcret","eligible":false},
+    {"request_type":"action","eligible":false},
+    {"request_type":"timer","eligible":false}
+  ],
+  "access_cases": [
+    {"id":"unrestricted_advanced","advanced":"","basic":"","tags":[],"level":"advanced","reason":"unrestricted"},
+    {"id":"advanced_positive","advanced":"mage, scholar","basic":"common","tags":["mage"],"level":"advanced","reason":"positive_class"},
+    {"id":"negative_falls_to_basic","advanced":"mage,!vampire","basic":"common","tags":["mage","vampire","common"],"level":"basic","reason":"positive_class"},
+    {"id":"basic_positive","advanced":"mage","basic":"common","tags":["common"],"level":"basic","reason":"positive_class"},
+    {"id":"denied_negative","advanced":"mage,!vampire","basic":"common,!vampire","tags":["mage","common","vampire"],"level":"denied","reason":"negative_class"},
+    {"id":"denied_missing","advanced":"mage","basic":"scholar","tags":["warrior"],"level":"denied","reason":"knowledge_classes_not_authorized"},
+    {"id":"knowall_override","advanced":"!vampire","basic":"!vampire","tags":["knowall","vampire"],"level":"advanced","reason":"knowall"}
+  ],
+  "xml_case": {
+    "status":"grounded",
+    "articles":[
+      {"topic":"Méridia & Her Beacon","source":"conversation","access":"advanced","reason":"positive_class","content":"Light < darkness & burns \"undead\"."},
+      {"topic":"Secret Prince","source":"conversation","access":"denied","reason":"negative_class","content":""}
+    ]
+  },
+  "catalog_lifecycle": {
+    "v1":"fixture-skyrim-v1",
+    "v2":"fixture-skyrim-v2",
+    "custom_topic":"whiterun",
+    "factory_topic":"meridia",
+    "v1_articles":[
+      {"topic":"whiterun","aliases":"White Run","topic_desc":"Factory Whiterun v1","knowledge_class":"","topic_desc_basic":"Whiterun v1","knowledge_class_basic":"","tags":"hold","category":"place"},
+      {"topic":"meridia","aliases":"","topic_desc":"Factory Meridia v1","knowledge_class":"","topic_desc_basic":"Meridia v1","knowledge_class_basic":"","tags":"prince","category":"person"}
+    ],
+    "v2_articles":[
+      {"topic":"whiterun","aliases":"White Run","topic_desc":"Factory Whiterun v2","knowledge_class":"","topic_desc_basic":"Whiterun v2","knowledge_class_basic":"","tags":"hold","category":"place"},
+      {"topic":"meridia","aliases":"","topic_desc":"Factory Meridia v2","knowledge_class":"","topic_desc_basic":"Meridia v2","knowledge_class_basic":"","tags":"prince","category":"person"}
+    ],
+    "custom_content":"User-authored Whiterun lore",
+    "expected_after_v2":{"whiterun":"User-authored Whiterun lore","meridia":"Factory Meridia v2"},
+    "expected_after_rollback":{"whiterun":"User-authored Whiterun lore","meridia":"Factory Meridia v1"}
+  }
+}

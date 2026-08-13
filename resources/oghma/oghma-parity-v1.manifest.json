@@ -1,0 +1,48 @@
+{
+  "contract": "oghma-parity-v1",
+  "status": "review_candidate_unpublished",
+  "reference": {
+    "repository": "Dwemer-Dynamics/ALMSIVIserver",
+    "base_commit": "383ddfbfa839f182bd8811151b03913b6d4564b1",
+    "oracle": "unittests/fixtures/oghma-parity-v1.json",
+    "oracle_sha256": "fc8bf0740cee32d511d81e886aec7905fc7e74592993f11131c33697c93042da"
+  },
+  "algorithm": {
+    "name": "grounded-v3.1-herika",
+    "files": {
+      "lib/oghma_retrieval.php": "4944948db036a0ef85eb2daa42f39b982b88eda35597cb9606def8bfcde8cf9e",
+      "lib/oghma_parity.php": "5309b5d9286df9c9d17e3019ffe443571733a3d134092b9ef831ee38d782c421",
+      "processor/oghma.php": "19f510331dd31bf78e44c38f2f7cb5a56a08c885fc18d94432ad243756fd3c69"
+    }
+  },
+  "settings": {
+    "precedence": ["global", "core_profile", "npc"],
+    "defaults": {
+      "enabled": true,
+      "topic_count": 1,
+      "result_limit": 3,
+      "racial_context_enabled": true,
+      "location_context_enabled": true,
+      "extractor_fallback_enabled": false,
+      "extractor_timeout_ms": 1500
+    },
+    "schema_sha256": "48d63895c0446e6ac51101e2017abb80b92dfad0883f6b4ed850e629373e4565"
+  },
+  "catalog": {
+    "version": "skyrim-official-20260813-v1",
+    "rows": 1562,
+    "articles_sha256": "245c3ae415ca32689cc3429e106843eea194cf6dae5a87a2ed3105551d30594a",
+    "manifest_sha256": "f3751a142161bfc5416c2b6c745d2f8c84bb43ee2ccab966b7f2cba12d366471"
+  },
+  "prompt_output": {
+    "format": "canonical XML fragment",
+    "root": "oghma",
+    "assertion": "OghmaParityTest::testXmlFragmentIsCanonicalUtf8AndRepresentsDeniedAccess"
+  },
+  "performance": {
+    "harness": "unittests/oghma_parity_harness.php",
+    "representative_iterations": 500,
+    "deterministic_p95_budget_ms": 25,
+    "fallback_latency_reported_separately": true
+  }
+}

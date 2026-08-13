@@ -1,0 +1,152 @@
+<?php
+
+declare(strict_types=1);
+
+require_once 'DatabaseTestCase.php';
+require_once dirname(__DIR__, 2) . '/lib/oghma_catalog.php';
+
+final class OghmaCatalogTest extends DatabaseTestCase
+{
+    private string $temporaryRoot = '';
+
+    public function tearDown(): void
+    {
+        parent::tearDown();
+        if ($this->temporaryRoot !== '' && is_dir($this->temporaryRoot)) {
+            foreach (glob($this->temporaryRoot . DIRECTORY_SEPARATOR . '*') ?: [] as $directory) {
+                foreach (glob($directory . DIRECTORY_SEPARATOR . '*') ?: [] as $file) @unlink($file);
+                @rmdir($directory);
+            }
+            @rmdir($this->temporaryRoot);
+        }
+    }
+
+    public function testCatalogActivationRollbackAndCustomPreservation(): void
+    {
+        $fixture = $this->fixture()['catalog_lifecycle'];
+        $this->temporaryRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'chim-oghma-parity-' . bin2hex(random_bytes(6));
+        mkdir($this->temporaryRoot, 0700, true);
+        $retiredFactory = [
+            'topic' => 'retired_factory_fixture',
+            'aliases' => '',
+            'topic_desc' => 'Factory prose retired by the curated catalog.',
+            'knowledge_class' => '',
+            'topic_desc_basic' => '',
+            'knowledge_class_basic' => '',
+            'tags' => 'fixture',
+            'category' => 'items',
+        ];
+        $v1 = $this->writePackage($fixture['v1'], $fixture['v1_articles'], false, [$retiredFactory]);
+        $v2 = $this->writePackage($fixture['v2'], $fixture['v2_articles']);
+
+        require_once dirname(__DIR__, 2) . '/lib/phpunit.class.php';
+        $db = new sql();
+        $db->execQuery('DELETE FROM public.oghma');
+        $legacyValues = array_map(fn(string $value): string => $db->escapeLiteral($value), array_values($retiredFactory));
+        $db->execQuery(
+            'INSERT INTO public.oghma (topic, aliases, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic, tags, category, source_type) VALUES ('
+            . implode(', ', $legacyValues) . ", 'legacy')"
+        );
+        $manager = new ChimOghmaCatalogManager($db, dirname(__DIR__, 2));
+        $manager->import($v1);
+        $first = $manager->activate($fixture['v1']);
+        $this->assertSame(2, $first['projected']);
+        $this->assertSame(1, $first['legacy_factory_classified']);
+        $retiredCount = $db->fetchOne("SELECT count(*) AS count FROM public.oghma WHERE topic = 'retired_factory_fixture'");
+        $this->assertSame(0, intval($retiredCount['count'] ?? -1));
+
+        $db->execQuery(
+            "UPDATE public.oghma SET topic_desc = " . $db->escapeLiteral($fixture['custom_content'])
+            . ", source_type = 'custom', source_catalog_version = NULL, source_checksum = " . $db->escapeLiteral(str_repeat('a', 64))
+            . " WHERE topic = " . $db->escapeLiteral($fixture['custom_topic'])
+        );
+        $manager->import($v2);
+        $second = $manager->activate($fixture['v2']);
+        $this->assertSame(1, $second['custom_collisions']);
+        $this->assertProjection($db, $fixture['expected_after_v2']);
+
+        $rollback = $manager->rollback();
+        $this->assertSame('rolled_back', $rollback['status']);
+        $this->assertSame($fixture['v1'], $rollback['catalog_version']);
+        $this->assertProjection($db, $fixture['expected_after_rollback']);
+
+        $custom = $db->fetchOne("SELECT source_type, source_catalog_version FROM public.oghma WHERE topic = 'whiterun'");
+        $this->assertSame('custom', $custom['source_type']);
+        $this->assertSame('', (string) ($custom['source_catalog_version'] ?? ''));
+        $db->close();
+    }
+
+    public function testCorruptPackageCannotChangeActiveCatalog(): void
+    {
+        $fixture = $this->fixture()['catalog_lifecycle'];
+        $this->temporaryRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'chim-oghma-parity-' . bin2hex(random_bytes(6));
+        mkdir($this->temporaryRoot, 0700, true);
+        $valid = $this->writePackage($fixture['v1'], $fixture['v1_articles']);
+        $corrupt = $this->writePackage('fixture-corrupt-v1', $fixture['v2_articles'], true);
+
+        require_once dirname(__DIR__, 2) . '/lib/phpunit.class.php';
+        $db = new sql();
+        $db->execQuery('DELETE FROM public.oghma');
+        $manager = new ChimOghmaCatalogManager($db, dirname(__DIR__, 2));
+        $manager->import($valid);
+        $manager->activate($fixture['v1']);
+        try {
+            $manager->import($corrupt);
+            $this->fail('Corrupt package was accepted.');
+        } catch (InvalidArgumentException $error) {
+            $this->assertSame('oghma_articles_checksum_mismatch', $error->getMessage());
+        }
+        $active = $manager->activeCatalog();
+        $this->assertSame($fixture['v1'], $active['catalog_version']);
+        $db->close();
+    }
+
+    private function writePackage(string $version, array $rows, bool $corrupt = false, array $legacyFactoryRows = []): string
+    {
+        $directory = $this->temporaryRoot . DIRECTORY_SEPARATOR . $version;
+        mkdir($directory, 0700, true);
+        $articles = [];
+        foreach ($rows as $row) {
+            $ordered = [];
+            foreach (['topic','aliases','topic_desc','knowledge_class','topic_desc_basic','knowledge_class_basic','tags','category'] as $field) {
+                $ordered[$field] = (string) ($row[$field] ?? '');
+            }
+            $ordered['row_sha256'] = hash('sha256', json_encode($ordered, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            $articles[] = $ordered;
+        }
+        $articlesJson = json_encode($articles, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        file_put_contents($directory . DIRECTORY_SEPARATOR . 'articles.json', $articlesJson);
+        $manifest = [
+            'contract' => CHIM_OGHMA_PARITY_VERSION,
+            'format_version' => 1,
+            'catalog_version' => $version,
+            'articles_file' => 'articles.json',
+            'articles_sha256' => $corrupt ? str_repeat('0', 64) : hash('sha256', $articlesJson),
+            'row_count' => count($articles),
+            'legacy_factory_row_sha256' => array_map(function (array $row): string {
+                $ordered = [];
+                foreach (['topic','aliases','topic_desc','knowledge_class','topic_desc_basic','knowledge_class_basic','tags','category'] as $field) {
+                    $ordered[$field] = (string) ($row[$field] ?? '');
+                }
+                return hash('sha256', json_encode($ordered, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            }, $legacyFactoryRows),
+        ];
+        file_put_contents($directory . DIRECTORY_SEPARATOR . 'manifest.json',
+            json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
+        return $directory;
+    }
+
+    private function assertProjection(sql $db, array $expected): void
+    {
+        foreach ($expected as $topic => $description) {
+            $row = $db->fetchOne('SELECT topic_desc FROM public.oghma WHERE topic = ' . $db->escapeLiteral($topic));
+            $this->assertSame($description, $row['topic_desc'] ?? null, $topic);
+        }
+    }
+
+    private function fixture(): array
+    {
+        $raw = file_get_contents(dirname(__DIR__) . '/fixtures/oghma-parity-v1.json');
+        return json_decode((string) $raw, true, 64, JSON_THROW_ON_ERROR);
+    }
+}

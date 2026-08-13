@@ -37,6 +37,9 @@ $password = 'dwemer';
 
 // Initialize message variable
 $message = '';
+if (isset($_GET['message']) && is_string($_GET['message']) && trim($_GET['message']) !== '') {
+    $message .= '<p>' . htmlspecialchars($_GET['message'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>';
+}
 
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
@@ -66,6 +69,15 @@ function oghma_filter_alias_input($conn, string $topic, string $aliases): array
         $aliasOwners[chimOghmaComparableAliasKey($alias)][$topic] = true;
     }
     return $filtered;
+}
+
+function oghma_row_checksum(array $row): string
+{
+    $ordered = [];
+    foreach (['topic', 'aliases', 'topic_desc', 'knowledge_class', 'topic_desc_basic', 'knowledge_class_basic', 'tags', 'category'] as $field) {
+        $ordered[$field] = (string) ($row[$field] ?? '');
+    }
+    return hash('sha256', json_encode($ordered, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
 /********************************************************************
@@ -98,9 +110,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 topic_desc_basic, 
                 knowledge_class_basic, 
                 tags, 
-                category
+                category,
+                source_type,
+                source_catalog_version,
+                source_checksum,
+                updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'custom', NULL, $9, CURRENT_TIMESTAMP)
             ON CONFLICT (topic)
             DO UPDATE SET
                 aliases              = EXCLUDED.aliases,
@@ -109,8 +125,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 topic_desc_basic     = EXCLUDED.topic_desc_basic,
                 knowledge_class_basic= EXCLUDED.knowledge_class_basic,
                 tags                 = EXCLUDED.tags,
-                category             = EXCLUDED.category
+                category             = EXCLUDED.category,
+                source_type          = 'custom',
+                source_catalog_version = NULL,
+                source_checksum      = EXCLUDED.source_checksum,
+                updated_at           = CURRENT_TIMESTAMP
         ";
+        $checksum = oghma_row_checksum(compact(
+            'topic', 'aliases', 'topic_desc', 'knowledge_class', 'topic_desc_basic',
+            'knowledge_class_basic', 'tags', 'category'
+        ));
         $result = pg_query_params($conn, $query, [
             $topic,
             $aliases,
@@ -119,7 +143,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
             $topic_desc_basic,
             $knowledge_class_basic,
             $tags,
-            $category
+            $category,
+            $checksum
         ]);
 
         if ($result) {
@@ -236,9 +261,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 topic_desc_basic,
                                 knowledge_class_basic,
                                 tags,
-                                category
+                                category,
+                                source_type,
+                                source_catalog_version,
+                                source_checksum,
+                                updated_at
                             )
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'custom', NULL, $10, CURRENT_TIMESTAMP)
                             ON CONFLICT (topic)
                             DO UPDATE SET
                                 aliases              = CASE
@@ -250,8 +279,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 topic_desc_basic     = EXCLUDED.topic_desc_basic,
                                 knowledge_class_basic= EXCLUDED.knowledge_class_basic,
                                 tags                 = EXCLUDED.tags,
-                                category             = EXCLUDED.category
+                                category             = EXCLUDED.category,
+                                source_type          = 'custom',
+                                source_catalog_version = NULL,
+                                source_checksum      = EXCLUDED.source_checksum,
+                                updated_at           = CURRENT_TIMESTAMP
                         ";
+                        $checksum = oghma_row_checksum(compact(
+                            'topic', 'aliases', 'topic_desc', 'knowledge_class', 'topic_desc_basic',
+                            'knowledge_class_basic', 'tags', 'category'
+                        ));
                         $result = pg_query_params($conn, $query, [
                             $topic,
                             $aliases,
@@ -261,7 +298,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $knowledge_class_basic,
                             $tags,
                             $category,
-                            $hasAliasesColumn ? 'true' : 'false'
+                            $hasAliasesColumn ? 'true' : 'false',
+                            $checksum
                         ]);
 
                         if ($result) {
@@ -453,11 +491,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_dynamic_example') {
  *  4) DELETE ALL
  ********************************************************************/
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_all') {
-    $truncateQuery = "TRUNCATE TABLE {$schema}.oghma RESTART IDENTITY";
+    $truncateQuery = "DELETE FROM {$schema}.oghma WHERE source_type = 'custom'";
     $truncateResult = pg_query($conn, $truncateQuery);
 
     if ($truncateResult) {
-        $message .= "<p style='color: #ff6464; font-weight: bold;'>All Oghma entries have been deleted successfully.</p>";
+        $message .= "<p style='color: #ff6464; font-weight: bold;'>All custom Oghma entries have been deleted. Factory entries were preserved.</p>";
     } else {
         $message .= "<p>Error deleting entries: " . pg_last_error($conn) . "</p>";
     }
@@ -470,10 +508,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $topic = $_POST['topic'] ?? '';
     
     if (!empty($topic)) {
+        pg_query($conn, 'BEGIN');
+        $hideQuery = "
+            INSERT INTO {$schema}.oghma_factory_overrides (topic, action, updated_at)
+            SELECT topic, 'hide', CURRENT_TIMESTAMP FROM {$schema}.oghma
+            WHERE topic = $1 AND source_type = 'factory'
+            ON CONFLICT (topic) DO UPDATE SET action = 'hide', updated_at = CURRENT_TIMESTAMP
+        ";
+        $hideResult = pg_query_params($conn, $hideQuery, [$topic]);
         $query = "DELETE FROM {$schema}.oghma WHERE topic = $1";
-        $result = pg_query_params($conn, $query, [$topic]);
+        $result = $hideResult ? pg_query_params($conn, $query, [$topic]) : false;
 
         if ($result) {
+            pg_query($conn, 'COMMIT');
             $message .= "<p>Entry '$topic' has been deleted successfully.</p>";
             
             // Redirect to maintain filters
@@ -485,6 +532,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             header('Location: ' . $redirectUrl);
             exit;
         } else {
+            pg_query($conn, 'ROLLBACK');
             $message .= "<p>Error deleting entry: " . pg_last_error($conn) . "</p>";
         }
     } else {
@@ -525,9 +573,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 topic_desc_basic = $5,
                 knowledge_class_basic = $6,
                 tags = $7,
-                category = $8
+                category = $8,
+                source_type = 'custom',
+                source_catalog_version = NULL,
+                source_checksum = $10,
+                updated_at = CURRENT_TIMESTAMP
             WHERE topic = $9
         ";
+
+        $checksum = oghma_row_checksum([
+            'topic' => $topic_new,
+            'aliases' => $aliases_new,
+            'topic_desc' => $topic_desc_new,
+            'knowledge_class' => $knowledge_class_new,
+            'topic_desc_basic' => $topic_desc_basic_new,
+            'knowledge_class_basic' => $knowledge_class_basic_new,
+            'tags' => $tags_new,
+            'category' => $category_new,
+        ]);
 
         $update_result = pg_query_params($conn, $update_sql, [
             $topic_new,
@@ -538,7 +601,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $knowledge_class_basic_new,
             $tags_new,
             $category_new,
-            $topic_original
+            $topic_original,
+            $checksum
         ]);
 
         if ($update_result) {
@@ -1573,25 +1637,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     </div>
                 </form>
                 
-                <p style="margin-top: 15px;">All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
+                <p style="margin-top: 15px;">Uploads are stored as <strong>custom</strong> entries. Updating a factory topic creates a protected custom override that future catalog activations will not overwrite.</p>
             </div>
 
             <div class="content-section">
                 <h2>Database Management</h2>
                 <p>Verify uploads: <br><b>Server Actions &rarr; Database Manager &rarr; dwemer &rarr; public &rarr; oghma</b></p>
-                <p>View conversation usage: <br><b>Server Actions &rarr; Database Manager &rarr; dwemer &rarr; public &rarr; audit_memory</b></p>
+                <p>View grounded, rejected, access, and fallback decisions in <a href="oghma_audit.php">Oghma Audit</a>.</p>
+                <?php
+                $catalogStatusResult = pg_query($conn, "
+                    SELECT c.catalog_version, c.manifest_sha256, c.row_count,
+                           count(*) FILTER (WHERE o.source_type = 'factory') AS factory_rows,
+                           count(*) FILTER (WHERE o.source_type = 'custom') AS custom_rows,
+                           count(*) FILTER (WHERE o.source_type = 'legacy') AS legacy_rows
+                    FROM public.oghma_catalogs c CROSS JOIN public.oghma o
+                    WHERE c.state = 'active'
+                    GROUP BY c.catalog_version, c.manifest_sha256, c.row_count
+                ");
+                $catalogStatus = $catalogStatusResult ? (pg_fetch_assoc($catalogStatusResult) ?: []) : [];
+                ?>
+                <div style="margin-top:12px; padding:12px; border:1px solid #555; border-radius:8px; background:#242424;">
+                    <strong>Parity:</strong> oghma-parity-v1<br>
+                    <strong>Active catalog:</strong> <?php echo htmlspecialchars($catalogStatus['catalog_version'] ?? 'not activated'); ?><br>
+                    <strong>Manifest:</strong> <code><?php echo htmlspecialchars($catalogStatus['manifest_sha256'] ?? 'unavailable'); ?></code><br>
+                    <strong>Projection:</strong> <?php echo intval($catalogStatus['factory_rows'] ?? 0); ?> factory,
+                    <?php echo intval($catalogStatus['custom_rows'] ?? 0); ?> custom,
+                    <?php echo intval($catalogStatus['legacy_rows'] ?? 0); ?> awaiting classification
+                </div>
                 
                 <div class="button-group" style="margin-top: 20px;">
                     <form action="" method="post" style="display: inline;">
                         <input type="hidden" name="action" value="delete_all">
-                        <input type="submit" class="btn-danger" value="Delete All Entries" 
-                               onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
+                        <input type="submit" class="btn-danger" value="Delete All Custom Entries"
+                               onclick="return confirm('Delete every custom Oghma entry? Factory entries will be preserved.');">
                     </form>
                     
-                    <form action="<?php echo $webRoot; ?>/ui/oghma_reset.php" method="post" style="display: inline;">
-                        <input type="submit" class="btn-danger" value="Factory Reset Database" 
-                               onclick="return confirm('Are you sure you want to reset the Oghma database to factory settings? This will delete all current entries and restore the default ones.');">
-                    </form>
+                    <a class="btn-danger" href="<?php echo $webRoot; ?>/ui/oghma_reset.php">Validate / Plan Catalog Change</a>
                 </div>
                 
                 <p style="margin-top: 15px;">Download backup: <a href="https://discord.gg/NDn9qud2ug" target="_blank" rel="noopener" style="color: yellow;">Discord CSV files channel</a></p>
@@ -1686,7 +1767,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $whereSql = empty($conditions) ? '' : 'WHERE ' . implode(' AND ', $conditions);
             $query = "
                 SELECT topic, aliases, topic_desc, knowledge_class, topic_desc_basic,
-                       knowledge_class_basic, tags, category
+                       knowledge_class_basic, tags, category, source_type, source_catalog_version
                 FROM $schema.oghma
                 $whereSql
                 ORDER BY topic $order
@@ -1706,6 +1787,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <th>Knowledge Class (Basic)</th>
                     <th>Tags</th>
                     <th>Category</th>
+                    <th>Source</th>
                     <th>Action</th> 
                   </tr>';
 
@@ -1720,6 +1802,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $knowledge_class_basic= htmlspecialchars($row['knowledge_class_basic']?? '');
                     $tags                 = htmlspecialchars($row['tags']                 ?? '');
                     $category             = htmlspecialchars($row['category']             ?? '');
+                    $sourceType            = htmlspecialchars($row['source_type']          ?? 'legacy');
+                    $sourceVersion         = htmlspecialchars($row['source_catalog_version'] ?? '');
 
                     // Normal row display
                     echo '<tr>';
@@ -1759,6 +1843,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     
                     echo '<td>' . nl2br($tags) . '</td>';
                     echo '<td>' . nl2br($category) . '</td>';
+                    echo '<td><strong>' . $sourceType . '</strong>'
+                        . ($sourceVersion !== '' ? '<br><small>' . $sourceVersion . '</small>' : '') . '</td>';
 
                     // Action column
                     echo '<td style="white-space: nowrap;">';

@@ -234,7 +234,7 @@ function herikaQuickstartGetGeneralLlmConnectorSummary($db): array {
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'RELLLM_CONNECTOR' => 'Relationship Management',
-        'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
+        'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Oghma Extractor Fallback',
     ];
 
     $summary = [];

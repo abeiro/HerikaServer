@@ -21,6 +21,17 @@ final class MigrationRunnerTest extends DatabaseTestCase
         $this->assertSame([], $this->runner()->verify());
     }
 
+    public function testSourceChecksumsIgnorePlatformLineEndings(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $manifest = MigrationRunner::sourceManifest($root);
+
+        $this->assertSame(
+            'ac8c57acf20be2bcbd47291e1925673aa69751aa89fad5d9f66fd4c4cc7dccbb',
+            $manifest[MigrationRunner::BASELINE_VERSION]['checksum']
+        );
+    }
+
     public function testVerifyDetectsStructuralSchemaDrift(): void
     {
         $connection = pg_connect('host=localhost dbname=testdb user=dwemer password=dwemer');
@@ -55,11 +66,14 @@ final class MigrationRunnerTest extends DatabaseTestCase
         $baselineName = MigrationRunner::BASELINE_VERSION . '_contract.json';
         copy($root . '/database/baseline/' . $baselineName, $baselineDirectory . '/' . $baselineName);
         copy($root . '/database/schema-contract.json', $fixture . '/database/schema-contract.json');
-        copy(
-            $root . '/database/migrations/202608120001_audit_request_response.sql',
-            $migrationDirectory . '/202608120001_audit_request_response.sql'
-        );
-        $failingMigration = $migrationDirectory . '/202608120002_rollback_probe.sql';
+        $copiedMigrations = [];
+        foreach (glob($root . '/database/migrations/*.sql') ?: [] as $sourceMigration) {
+            $destination = $migrationDirectory . DIRECTORY_SEPARATOR . basename($sourceMigration);
+            copy($sourceMigration, $destination);
+            $copiedMigrations[] = $destination;
+        }
+        $failingVersion = MigrationRunner::latestVersion($root) + 1;
+        $failingMigration = $migrationDirectory . '/' . $failingVersion . '_rollback_probe.sql';
         file_put_contents(
             $failingMigration,
             "CREATE TABLE public.migration_rollback_probe (id integer);\n"
@@ -78,7 +92,7 @@ final class MigrationRunnerTest extends DatabaseTestCase
 
             $table = pg_fetch_result(pg_query($connection, "SELECT to_regclass('public.migration_rollback_probe')"), 0, 0);
             $ledger = pg_fetch_result(
-                pg_query($connection, 'SELECT count(*) FROM chim_meta.schema_migrations WHERE version=202608120002'),
+                pg_query_params($connection, 'SELECT count(*) FROM chim_meta.schema_migrations WHERE version=$1', [$failingVersion]),
                 0,
                 0
             );
@@ -87,7 +101,7 @@ final class MigrationRunnerTest extends DatabaseTestCase
         } finally {
             pg_close($connection);
             unlink($failingMigration);
-            unlink($migrationDirectory . '/202608120001_audit_request_response.sql');
+            foreach ($copiedMigrations as $copiedMigration) unlink($copiedMigration);
             unlink($fixture . '/database/schema-contract.json');
             unlink($baselineDirectory . '/' . $baselineName);
             rmdir($migrationDirectory);
