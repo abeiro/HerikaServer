@@ -1631,7 +1631,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <div class="action-container">
                 <button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>
                 <div class="search-container">
-                    <input type="text" id="searchBox" placeholder="Search topics..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">
+                    <input type="text" id="searchBox" placeholder="Search topics, aliases, or tags..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">
                     <button onclick="applySearch()" class="action-button edit">Search</button>
                 </div>
             </div>
@@ -1666,7 +1666,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
 
             <?php
-            // Build query. Letter filters remain canonical-topic based; free text searches aliases too.
+            // Build query. Letter filters remain canonical-topic based; free text searches identity and related metadata.
             $searchTerm = isset($_GET['search']) ? trim((string) $_GET['search']) : '';
             $conditions = [];
             $params = [];
@@ -1681,7 +1681,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             if ($searchTerm !== '') {
                 $params[] = '%' . $searchTerm . '%';
                 $placeholder = '$' . count($params);
-                $conditions[] = "(topic ILIKE {$placeholder} OR coalesce(aliases, '') ILIKE {$placeholder})";
+                $conditions[] = "(topic ILIKE {$placeholder} OR coalesce(aliases, '') ILIKE {$placeholder} OR coalesce(tags, '') ILIKE {$placeholder})";
             }
             $whereSql = empty($conditions) ? '' : 'WHERE ' . implode(' AND ', $conditions);
             $query = "
@@ -1990,7 +1990,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <input type="text" name="knowledge_class_basic_new" id="edit_knowledge_class_basic">
 
                 <label for="edit_tags">Tags:</label>
-                <small>Not currently in use.</small>
+                <small>Related concepts for catalog search and contextual retrieval. Separate tags by commas.</small>
                 <input type="text" name="tags_new" id="edit_tags">
 
                 <label for="edit_category">Category:</label>
@@ -2041,7 +2041,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <input type="text" name="knowledge_class_basic" id="knowledge_class_basic">
 
                 <label for="tags">Tags:</label>
-                <small>Not currently in use.</small>
+                <small>Related concepts for catalog search and contextual retrieval. Separate tags by commas.</small>
                 <input type="text" name="tags" id="tags">
 
                 <label for="category">Category:</label>

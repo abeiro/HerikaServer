@@ -156,6 +156,7 @@ if (!function_exists('chimOghmaFilterAliases')) {
 if (!function_exists('chimOghmaNativeVectorSql')) {
     function chimOghmaNativeVectorSql(): string
     {
+        // Keep related-concept tags out of legacy full-text ranking; guarded retrieval handles them separately.
         return "
             setweight(to_tsvector('simple', coalesce(topic, '')), 'A')
             || setweight(to_tsvector('simple', coalesce(aliases, '')), 'A')
