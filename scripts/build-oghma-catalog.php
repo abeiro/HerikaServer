@@ -117,7 +117,7 @@ function oghmaCatalogRowsFromSql(string $sql, array $aliases): array
 }
 
 $root = dirname(__DIR__);
-$version = trim((string) ($argv[1] ?? 'skyrim-official-20260813-v1'));
+$version = trim((string) ($argv[1] ?? 'skyrim-official-20260813-v1.1'));
 if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/D', $version) !== 1) {
     throw new InvalidArgumentException('Invalid catalog version.');
 }

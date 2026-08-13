@@ -164,16 +164,16 @@ final class OghmaParityTest extends TestCase
         $root = dirname(__DIR__, 2);
         $manager = new ChimOghmaCatalogManager($fakeDb, $root);
         $package = $manager->plan($manager->activePackagePath());
-        $this->assertSame('skyrim-official-20260813-v1', $package['catalog_version']);
+        $this->assertSame('skyrim-official-20260813-v1.1', $package['catalog_version']);
         $this->assertCount(1562, $package['articles']);
         $this->assertSame('c7733dfbd2033498d4ae8f1c5e792cc12e4599f13122d2329df0e62efa7c543a', $package['articles_sha256']);
-        $this->assertSame('c4ff1eb3c07d49f54e3adc08b5c39f1640e7510372ad2a71c8f92c5a34e22a16', $package['manifest_sha256']);
+        $this->assertSame('8a6b2c0f9c8cff1d8d626e4411cf6e7f05273d9da497b6ac541cf0dc29692514', $package['manifest_sha256']);
     }
 
     public function testCommonDefaultHasBasicCatalogCoverageWithoutUnblockingUnknownItems(): void
     {
         $articles = json_decode(
-            (string) file_get_contents(dirname(__DIR__, 2) . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1/articles.json'),
+            (string) file_get_contents(dirname(__DIR__, 2) . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.1/articles.json'),
             true,
             64,
             JSON_THROW_ON_ERROR

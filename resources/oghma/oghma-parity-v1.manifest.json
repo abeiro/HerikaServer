@@ -46,10 +46,10 @@
     "schema_sha256": "c5a2acb3fb173e3ccd7b73c5e90d6b2d3779c8c9743871488caf190285d14616"
   },
   "catalog": {
-    "version": "skyrim-official-20260813-v1",
+    "version": "skyrim-official-20260813-v1.1",
     "rows": 1562,
     "articles_sha256": "c7733dfbd2033498d4ae8f1c5e792cc12e4599f13122d2329df0e62efa7c543a",
-    "manifest_sha256": "c4ff1eb3c07d49f54e3adc08b5c39f1640e7510372ad2a71c8f92c5a34e22a16"
+    "manifest_sha256": "8a6b2c0f9c8cff1d8d626e4411cf6e7f05273d9da497b6ac541cf0dc29692514"
   },
   "prompt_output": {
     "format": "canonical XML fragment",
