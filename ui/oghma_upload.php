@@ -1539,27 +1539,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <h2>Database Management</h2>
                 <p>Verify uploads: <br><b>Server Actions &rarr; Database Manager &rarr; dwemer &rarr; public &rarr; oghma</b></p>
                 <p>View grounded, rejected, access, and fallback decisions in <a href="oghma_audit.php">Oghma Audit</a>.</p>
-                <?php
-                $catalogStatusResult = pg_query($conn, "
-                    SELECT c.catalog_version, c.manifest_sha256, c.row_count,
-                           count(*) FILTER (WHERE o.source_type = 'factory') AS factory_rows,
-                           count(*) FILTER (WHERE o.source_type = 'custom') AS custom_rows,
-                           count(*) FILTER (WHERE o.source_type = 'legacy') AS legacy_rows
-                    FROM public.oghma_catalogs c CROSS JOIN public.oghma o
-                    WHERE c.state = 'active'
-                    GROUP BY c.catalog_version, c.manifest_sha256, c.row_count
-                ");
-                $catalogStatus = $catalogStatusResult ? (pg_fetch_assoc($catalogStatusResult) ?: []) : [];
-                ?>
-                <div style="margin-top:12px; padding:12px; border:1px solid #555; border-radius:8px; background:#242424;">
-                    <strong>Parity:</strong> oghma-parity-v1<br>
-                    <strong>Active catalog:</strong> <?php echo htmlspecialchars($catalogStatus['catalog_version'] ?? 'not activated'); ?><br>
-                    <strong>Manifest:</strong> <code><?php echo htmlspecialchars($catalogStatus['manifest_sha256'] ?? 'unavailable'); ?></code><br>
-                    <strong>Projection:</strong> <?php echo intval($catalogStatus['factory_rows'] ?? 0); ?> factory,
-                    <?php echo intval($catalogStatus['custom_rows'] ?? 0); ?> custom,
-                    <?php echo intval($catalogStatus['legacy_rows'] ?? 0); ?> awaiting classification
-                </div>
-                
+
                 <div class="button-group" style="margin-top: 20px;">
                     <form action="" method="post" style="display: inline;">
                         <input type="hidden" name="action" value="delete_all">
