@@ -1763,14 +1763,14 @@ function populateKnowledgeTable(knowledge) {
                 
                 // Category
                 if (item.category) {
-                    extraInfo += `<span style="background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 1.5em;">ðŸ“ ${item.category}</span>`;
+                    extraInfo += `<span style="background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 5px; font-size: 1.5em;"><span aria-hidden="true">&#128193;</span> ${item.category}</span>`;
                 }
                 
                 // Knowledge Class (Advanced) - Orange tags
                 if (item.knowledge_class) {
                     const knowledgeClasses = item.knowledge_class.split(',').map(tag => tag.trim()).filter(tag => tag);
                     knowledgeClasses.forEach(knowledgeClass => {
-                        extraInfo += `<span style="background: rgba(242, 124, 17, 0.2); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 1.5em; font-weight: 500;">ðŸ”¸ ${knowledgeClass}</span>`;
+                        extraInfo += `<span style="background: rgba(242, 124, 17, 0.2); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 1.5em; font-weight: 500;"><span aria-hidden="true">&#128312;</span> ${knowledgeClass}</span>`;
                     });
                 }
                 
@@ -1778,7 +1778,7 @@ function populateKnowledgeTable(knowledge) {
                 if (item.knowledge_class_basic) {
                     const basicClasses = item.knowledge_class_basic.split(',').map(tag => tag.trim()).filter(tag => tag);
                     basicClasses.forEach(basicClass => {
-                        extraInfo += `<span style="background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 1.5em;">ðŸ”¹ ${basicClass}</span>`;
+                        extraInfo += `<span style="background: rgba(242, 124, 17, 0.15); color: rgb(242, 124, 17); padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 1.5em;"><span aria-hidden="true">&#128313;</span> ${basicClass}</span>`;
                     });
                 }
                 
@@ -1786,7 +1786,7 @@ function populateKnowledgeTable(knowledge) {
                 if (item.tags) {
                     const tags = item.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
                     tags.forEach(tag => {
-                        extraInfo += `<span style="background: rgba(74, 158, 255, 0.15); color: #4a9eff; padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 0.75em;">ðŸ·ï¸ ${tag}</span>`;
+                        extraInfo += `<span style="background: rgba(74, 158, 255, 0.15); color: #4a9eff; padding: 2px 6px; border-radius: 3px; margin-right: 3px; font-size: 0.75em;"><span aria-hidden="true">&#127991;&#65039;</span> ${tag}</span>`;
                     });
                 }
                 
