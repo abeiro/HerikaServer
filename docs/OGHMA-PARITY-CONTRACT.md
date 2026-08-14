@@ -57,9 +57,10 @@ identity is unavailable. Dynamic Oghma remains a separate subsystem.
 
 ## Catalog lifecycle and evidence
 
-Factory packages are immutable, versioned, UTF-8 validated, and checksum verified before writes.
-Import does not activate. Activation and rollback replace only the factory projection in one database
+The checked-in current factory package is UTF-8 validated and checksum verified before writes.
+Synchronization replaces only the factory projection in one database
 transaction. User-authored rows, custom collisions, and factory hide choices survive by default.
+Git revert plus redeploy is the rollback path for factory data changes.
 
 The frozen fixture, catalog manifest, contract manifest, and lifecycle tests are the repository review
 evidence. The larger retrieval and latency harness is maintained separately from the product repository;

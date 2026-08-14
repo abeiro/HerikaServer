@@ -18,12 +18,9 @@ $manager = new ChimOghmaCatalogManager($GLOBALS['db'], $root);
 try {
     $result = match ($command) {
         'plan' => $manager->plan($argv[2] ?? $manager->activePackagePath()),
-        'import' => $manager->import($argv[2] ?? $manager->activePackagePath()),
-        'activate' => $manager->activate($argv[2] ?? throw new InvalidArgumentException('Catalog version is required.')),
-        'provision' => $manager->provisionActivePackage(),
-        'rollback' => $manager->rollback($argv[2] ?? null),
+        'sync', 'provision' => $manager->synchronize($argv[2] ?? $manager->activePackagePath()),
         'status' => $manager->status(),
-        default => throw new InvalidArgumentException('Usage: php scripts/oghma-catalog.php plan|import|activate|provision|rollback|status [path|version]'),
+        default => throw new InvalidArgumentException('Usage: php scripts/oghma-catalog.php plan|sync|status [package-path]'),
     };
     if ($command === 'plan') {
         $result = [

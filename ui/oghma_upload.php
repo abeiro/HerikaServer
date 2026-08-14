@@ -1547,7 +1547,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                onclick="return confirm('Delete every custom Oghma entry? Factory entries will be preserved.');">
                     </form>
                     
-                    <a class="btn-danger" href="<?php echo $webRoot; ?>/ui/oghma_reset.php">Validate / Plan Catalog Change</a>
+                    <a class="btn-danger" href="<?php echo $webRoot; ?>/ui/oghma_reset.php">Sync Factory Catalog</a>
                 </div>
             </div>
         </div>

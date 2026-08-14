@@ -21,7 +21,7 @@ final class OghmaCatalogTest extends DatabaseTestCase
         }
     }
 
-    public function testCatalogActivationRollbackAndCustomPreservation(): void
+    public function testCurrentDatasetSyncReplacesFactoryAndPreservesCustom(): void
     {
         $fixture = $this->fixture()['catalog_lifecycle'];
         $this->temporaryRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'chim-oghma-parity-' . bin2hex(random_bytes(6));
@@ -48,8 +48,7 @@ final class OghmaCatalogTest extends DatabaseTestCase
             . implode(', ', $legacyValues) . ", 'legacy')"
         );
         $manager = new ChimOghmaCatalogManager($db, dirname(__DIR__, 2));
-        $manager->import($v1);
-        $first = $manager->activate($fixture['v1']);
+        $first = $manager->synchronize($v1);
         $this->assertSame(2, $first['projected']);
         $this->assertSame(1, $first['legacy_factory_classified']);
         $retiredCount = $db->fetchOne("SELECT count(*) AS count FROM public.oghma WHERE topic = 'retired_factory_fixture'");
@@ -60,17 +59,21 @@ final class OghmaCatalogTest extends DatabaseTestCase
             . ", source_type = 'custom', source_catalog_version = NULL, source_checksum = " . $db->escapeLiteral(str_repeat('a', 64))
             . " WHERE topic = " . $db->escapeLiteral($fixture['custom_topic'])
         );
-        $manager->import($v2);
-        $second = $manager->activate($fixture['v2']);
+        $second = $manager->synchronize($v2);
         $this->assertSame(1, $second['custom_collisions']);
         $this->assertProjection($db, $fixture['expected_after_v2']);
         $v2Factory = $db->fetchOne("SELECT retrieval_phrases FROM public.oghma WHERE topic = 'meridia'");
         $this->assertSame('Colored Rooms', $v2Factory['retrieval_phrases'] ?? null);
 
-        $rollback = $manager->rollback();
-        $this->assertSame('rolled_back', $rollback['status']);
-        $this->assertSame($fixture['v1'], $rollback['catalog_version']);
-        $this->assertProjection($db, $fixture['expected_after_rollback']);
+        $this->assertSame('synchronized', $second['status']);
+        $catalogs = $db->fetchAll('SELECT catalog_version, state, previous_catalog_version FROM public.oghma_catalogs');
+        $this->assertSame([[
+            'catalog_version' => $fixture['v2'],
+            'state' => 'active',
+            'previous_catalog_version' => null,
+        ]], $catalogs);
+        $events = $db->fetchOne('SELECT count(*) AS count FROM public.oghma_catalog_events');
+        $this->assertSame(0, intval($events['count'] ?? -1));
 
         $custom = $db->fetchOne("SELECT source_type, source_catalog_version FROM public.oghma WHERE topic = 'whiterun'");
         $this->assertSame('custom', $custom['source_type']);
@@ -90,10 +93,9 @@ final class OghmaCatalogTest extends DatabaseTestCase
         $db = new sql();
         $db->execQuery('DELETE FROM public.oghma');
         $manager = new ChimOghmaCatalogManager($db, dirname(__DIR__, 2));
-        $manager->import($valid);
-        $manager->activate($fixture['v1']);
+        $manager->synchronize($valid);
         try {
-            $manager->import($corrupt);
+            $manager->synchronize($corrupt);
             $this->fail('Corrupt package was accepted.');
         } catch (InvalidArgumentException $error) {
             $this->assertSame('oghma_articles_checksum_mismatch', $error->getMessage());
@@ -118,7 +120,7 @@ final class OghmaCatalogTest extends DatabaseTestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('invalid_oghma_alias_separator_');
         try {
-            $manager->import($package);
+            $manager->synchronize($package);
         } finally {
             $db->close();
         }
