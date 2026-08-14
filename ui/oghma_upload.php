@@ -1549,8 +1549,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     
                     <a class="btn-danger" href="<?php echo $webRoot; ?>/ui/oghma_reset.php">Validate / Plan Catalog Change</a>
                 </div>
-                
-                <p style="margin-top: 15px;">Download backup: <a href="https://discord.gg/NDn9qud2ug" target="_blank" rel="noopener" style="color: yellow;">Discord CSV files channel</a></p>
             </div>
         </div>
         <div class="full-width-section">
