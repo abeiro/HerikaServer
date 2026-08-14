@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 VOCABULARY_PATH = ROOT / "resources" / "oghma" / "canonical-knowledge-vocabulary-v1.json"
 ONTOLOGY_PATH = ROOT / "resources" / "oghma" / "skyrim-official" / "ontology.json"
 BIOGRAPHIES_PATH = ROOT / "data" / "bio_templates_20250913.sql"
-MIGRATION_PATH = ROOT / "data" / "canonical_npc_knowledge_tags_20260813.sql"
+MIGRATION_PATH = ROOT / "data" / "canonical_npc_knowledge_tags_20260813_v2.sql"
 EVIDENCE_PATH = ROOT / "data" / "canonical_npc_knowledge_tag_evidence.json"
 REPORT_PATH = ROOT / "docs" / "evidence" / "oghma-canonical-vocabulary" / "biography-classification-manifest.json"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -280,10 +280,9 @@ def main() -> int:
     parser.add_argument("--max-cost", type=float, default=8.0)
     parser.add_argument("--api-key-env", default="OPENROUTER_API_KEY")
     parser.add_argument("--checkpoint", type=Path, default=ROOT / "build" / "skyrim-biography-tags.json")
+    parser.add_argument("--reuse-evidence", action="store_true")
     args = parser.parse_args()
     api_key = os.getenv(args.api_key_env, "").strip()
-    if not api_key:
-        raise RuntimeError(f"Missing {args.api_key_env}")
     vocabulary = read_json(VOCABULARY_PATH)
     ontology = read_json(ONTOLOGY_PATH)
     source_rows = parse_sql_rows(BIOGRAPHIES_PATH)
@@ -317,16 +316,34 @@ def main() -> int:
     )
     signals = evidence_signals(vocabulary)
     vocabulary_sha = hashlib.sha256(VOCABULARY_PATH.read_bytes()).hexdigest()
-    checkpoint = read_json(args.checkpoint) if args.checkpoint.exists() else {
-        "format": "chim.skyrim-biography-tags-checkpoint.v1",
-        "model": MODEL,
-        "vocabulary_sha256": vocabulary_sha,
-        "items": {},
-        "usage": [],
-    }
+    reused_report: dict[str, Any] = {}
+    if args.reuse_evidence:
+        evidence = read_json(EVIDENCE_PATH)
+        evidence_items = list(evidence.get("items", []))
+        if (evidence.get("vocabulary_sha256") != vocabulary_sha
+                or {str(item.get("npc_name", "")) for item in evidence_items} != {row["id"] for row in rows}):
+            raise RuntimeError("Existing evidence does not match the frozen biographies and vocabulary")
+        checkpoint = {
+            "format": "chim.skyrim-biography-tags-checkpoint.v1",
+            "model": MODEL,
+            "vocabulary_sha256": vocabulary_sha,
+            "items": {str(item["npc_name"]): list(item.get("glm_claims", [])) for item in evidence_items},
+            "usage": [],
+        }
+        reused_report = read_json(REPORT_PATH)
+    else:
+        checkpoint = read_json(args.checkpoint) if args.checkpoint.exists() else {
+            "format": "chim.skyrim-biography-tags-checkpoint.v1",
+            "model": MODEL,
+            "vocabulary_sha256": vocabulary_sha,
+            "items": {},
+            "usage": [],
+        }
     if checkpoint["vocabulary_sha256"] != vocabulary_sha:
         raise RuntimeError("Checkpoint vocabulary does not match the frozen vocabulary")
     pending = [row for row in rows if row["id"] not in checkpoint["items"]]
+    if pending and not api_key:
+        raise RuntimeError(f"Missing {args.api_key_env}")
     batches = [pending[index:index + args.batch_size] for index in range(0, len(pending), args.batch_size)]
     spent = sum(float(item.get("cost", 0.0)) for item in checkpoint["usage"])
     for start in range(0, len(batches), args.workers):
@@ -356,6 +373,8 @@ def main() -> int:
     evidence_rows = []
     final_tags: dict[str, list[str]] = {}
     tag_counts: Counter[str] = Counter()
+    region_policy_counts: Counter[str] = Counter()
+    region_tags = set(vocabulary["product_specific"]["chim"]["regions"])
     rejected = 0
     for row in rows:
         tags = ["common"]
@@ -388,31 +407,65 @@ def main() -> int:
             if tag in allowed_ontology and tag not in tags:
                 tags.append(tag)
             accepted.append(claim)
+        legacy_regions: list[str] = []
+        for current in re.split(r"\s*[,;|]\s*", row["current_tags"]):
+            current_key = normalized(current)
+            for target in vocabulary["legacy_aliases"].get(current_key, [current_key] if current_key else []):
+                if target in region_tags and target not in legacy_regions:
+                    legacy_regions.append(target)
+        glm_regions = [tag for tag in tags if tag in region_tags]
+        if not legacy_regions:
+            region_policy = "glm_only" if glm_regions else "none"
+        elif not glm_regions:
+            region_policy = "legacy_fallback"
+            tags.extend(tag for tag in legacy_regions if tag not in tags)
+        elif set(legacy_regions) & set(glm_regions):
+            region_policy = "legacy_plus_glm"
+            tags.extend(tag for tag in legacy_regions if tag not in tags)
+        else:
+            region_policy = "glm_replacement"
+        final_regions = [tag for tag in tags if tag in region_tags]
+        region_policy_counts[region_policy] += 1
         final_tags[row["id"]] = tags
         tag_counts.update(tags)
-        evidence_rows.append({"npc_name": row["id"], "tags": tags, "glm_claims": accepted})
+        evidence_rows.append({
+            "npc_name": row["id"], "tags": tags, "glm_claims": accepted,
+            "region_decision": {
+                "policy": region_policy,
+                "legacy_regions": legacy_regions,
+                "glm_regions": glm_regions,
+                "final_regions": final_regions,
+            },
+        })
 
     usage = checkpoint["usage"]
+    usage_report = reused_report.get("usage") if args.reuse_evidence else {
+        "calls": len(usage),
+        "prompt_tokens": sum(item["prompt_tokens"] for item in usage),
+        "completion_tokens": sum(item["completion_tokens"] for item in usage),
+        "total_tokens": sum(item["total_tokens"] for item in usage),
+        "cost": sum(item["cost"] for item in usage),
+        "request_seconds_median": statistics.median(item["seconds"] for item in usage) if usage else 0,
+        "provider_failed_abstentions": sum(
+            item.get("provider") == "provider_failed_abstention" for item in usage
+        ),
+    }
     report = {
-        "format": "chim.skyrim-biography-knowledge-classification.v1",
+        "format": "chim.skyrim-biography-knowledge-classification.v2",
         "model": MODEL,
         "vocabulary_sha256": vocabulary_sha,
         "biography_count": len(rows),
         "glm_completed_count": len(rows),
-        "rejected_claim_count": rejected,
+        "rejected_claim_count": int(reused_report.get("rejected_claim_count", 0)) + rejected,
         "tag_counts": dict(sorted(tag_counts.items())),
-        "usage": {
-            "calls": len(usage),
-            "prompt_tokens": sum(item["prompt_tokens"] for item in usage),
-            "completion_tokens": sum(item["completion_tokens"] for item in usage),
-            "total_tokens": sum(item["total_tokens"] for item in usage),
-            "cost": sum(item["cost"] for item in usage),
-            "request_seconds_median": statistics.median(item["seconds"] for item in usage) if usage else 0,
-            "provider_failed_abstentions": sum(
-                item.get("provider") == "provider_failed_abstention" for item in usage
-            ),
+        "region_policy": {
+            "description": "Keep evidence-validated GLM corrections; otherwise preserve legacy biography regions.",
+            "counts": dict(sorted(region_policy_counts.items())),
         },
+        "usage": usage_report,
     }
+    if args.reuse_evidence:
+        report["classification_reused_from_evidence_sha256"] = hashlib.sha256(EVIDENCE_PATH.read_bytes()).hexdigest()
     if args.apply:
         values = ",\n".join(
             f"    ({sql_literal(name)}, {sql_literal(', '.join(tags))})"
@@ -429,11 +482,34 @@ def main() -> int:
             "   SET oghma_knowledge_tags = canonical.tags\n"
             "  FROM canonical_npc_knowledge_tags AS canonical\n"
             " WHERE lower(bio.npc_name) = lower(canonical.npc_name);\n"
+            "CREATE OR REPLACE FUNCTION pg_temp.chim_merge_canonical_regions(current_tags text, canonical_tags text)\n"
+            "RETURNS text LANGUAGE sql IMMUTABLE AS $$\n"
+            "    WITH region_tags(tag) AS (VALUES\n"
+            "        ('eastmarch'),('falkreath'),('haafingar'),('hjaalmarch'),('pale'),\n"
+            "        ('reach'),('rift'),('solstheim'),('whiterun'),('winterhold')\n"
+            "    ), candidates AS (\n"
+            "        SELECT lower(btrim(value)) AS tag, 0 AS source_order, ordinal\n"
+            "          FROM regexp_split_to_table(COALESCE(current_tags, ''), '\\s*,\\s*') WITH ORDINALITY AS item(value, ordinal)\n"
+            "         WHERE btrim(value) <> '' AND lower(btrim(value)) NOT IN (SELECT tag FROM region_tags)\n"
+            "        UNION ALL\n"
+            "        SELECT lower(btrim(value)) AS tag, 1 AS source_order, ordinal\n"
+            "          FROM regexp_split_to_table(COALESCE(canonical_tags, ''), '\\s*,\\s*') WITH ORDINALITY AS item(value, ordinal)\n"
+            "         WHERE lower(btrim(value)) IN (SELECT tag FROM region_tags)\n"
+            "    ), deduplicated AS (\n"
+            "        SELECT tag, min(source_order) AS source_order, min(ordinal) AS ordinal\n"
+            "          FROM candidates GROUP BY tag\n"
+            "    )\n"
+            "    SELECT COALESCE(string_agg(tag, ', ' ORDER BY source_order, ordinal), '') FROM deduplicated;\n"
+            "$$;\n"
+            "UPDATE public.core_npc_master AS master\n"
+            "   SET oghma_knowledge_tags = pg_temp.chim_merge_canonical_regions(master.oghma_knowledge_tags, canonical.tags)\n"
+            "  FROM canonical_npc_knowledge_tags AS canonical\n"
+            " WHERE canonical.npc_name = trim(both '_' from lower(regexp_replace(master.npc_name, '[^A-Za-z0-9]+', '_', 'g')));\n"
             "COMMIT;\n"
         )
         MIGRATION_PATH.write_text(migration, encoding="utf-8", newline="\n")
         write_json(EVIDENCE_PATH, {
-            "format": "chim.skyrim-biography-knowledge-evidence.v1",
+            "format": "chim.skyrim-biography-knowledge-evidence.v2",
             "vocabulary_sha256": vocabulary_sha,
             "items": evidence_rows,
         })

@@ -57,3 +57,7 @@ one-way: new data is always written with canonical IDs.
 GLM runs only after deterministic audits and article-access matrices pass against this frozen file.
 It extracts evidence-bearing occupation, organization, and stable-residence claims, or abstains.
 Independent deterministic mappers in each repository make the final tag decision.
+
+For CHIM regions, an evidence-backed GLM region replaces a conflicting legacy region. If GLM
+abstains, the existing biography region is preserved; overlapping GLM and legacy regions are
+merged. This keeps established location familiarity without restoring known misclassifications.

@@ -57,4 +57,16 @@ final class OghmaAliasesTest extends TestCase
             chimOghmaComparableAliasKey("Shor's Stone")
         );
     }
+
+    public function testCommaBearingAliasUsesUnderscoreBeforeSerialization(): void
+    {
+        $stored = chimOghmaEncodeAliasName('Zergonipal, Shrine') . ', Shrine of Malacath';
+
+        $this->assertSame('Zergonipal_Shrine, Shrine of Malacath', $stored);
+        $this->assertSame(['Zergonipal_Shrine', 'Shrine of Malacath'], chimOghmaSplitAliases($stored));
+        $this->assertSame(
+            chimOghmaComparableAliasKey('Zergonipal, Shrine'),
+            chimOghmaComparableAliasKey('Zergonipal_Shrine')
+        );
+    }
 }

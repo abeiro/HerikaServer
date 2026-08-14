@@ -33,10 +33,12 @@ $manifestPath = $source . '/manifest.json';
 $articles = $readJson($articlesPath);
 $manifest = $readJson($manifestPath);
 $sourceRaw = (string) file_get_contents($articlesPath);
+$sourceRawSha = hash('sha256', $sourceRaw);
 $sourceNormalizedSha = hash('sha256', str_replace("\r\n", "\n", $sourceRaw));
-if (($manifest['articles_sha256'] ?? '') !== $sourceNormalizedSha) {
+if (!in_array(($manifest['articles_sha256'] ?? ''), [$sourceRawSha, $sourceNormalizedSha], true)) {
     throw new RuntimeException('Source catalog is not frozen by its manifest checksum');
 }
+$sourceArticlesSha = (string) $manifest['articles_sha256'];
 $sourceVersion = (string) ($manifest['catalog_version'] ?? basename($source));
 
 $canonicalize = static function ($value) use ($vocabulary): array {
@@ -112,6 +114,7 @@ if (!mkdir($output, 0777, true) && !is_dir($output)) {
 $encoded = json_encode($articles, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 file_put_contents($output . '/articles.json', $encoded . PHP_EOL);
 $manifest['catalog_version'] = $version;
+$manifest['alias_serialization'] = 'comma-separated; internal commas encoded as underscores';
 $manifest['articles_sha256'] = hash_file('sha256', $output . '/articles.json');
 $manifest['ontology_sha256'] = hash_file('sha256', $ontologyPath);
 $manifest['canonical_vocabulary_sha256'] = hash_file('sha256', $vocabularyPath);
@@ -121,7 +124,7 @@ $manifest['basic_class_counts'] = $basicCounts;
 $manifest['classification_revision'] = [
     'source_catalog_version' => $sourceVersion,
     'source_manifest_sha256' => hash_file('sha256', $manifestPath),
-    'source_articles_sha256' => $sourceNormalizedSha,
+    'source_articles_sha256' => $sourceArticlesSha,
     'policy' => 'frozen canonical vocabulary plus explicit organization and guard signals',
 ];
 file_put_contents(

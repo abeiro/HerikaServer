@@ -69,6 +69,11 @@ function oghmaCatalogValues(string $value): array
     ), static fn(string $item): bool => $item !== ''));
 }
 
+function oghmaCatalogAliasStorage(string $value): string
+{
+    return trim(preg_replace('/\s*[|;]\s*/u', ', ', $value) ?? $value);
+}
+
 function oghmaCatalogPhraseKey(string $value): string
 {
     $value = mb_strtolower(trim(str_replace('_', ' ', $value)), 'UTF-8');
@@ -215,7 +220,7 @@ foreach ($matches[1] as $match) {
     $source = array_combine(OGHMA_CATALOG_FIELDS, $values);
     $article = [
         'topic' => trim((string) $source['topic']),
-        'aliases' => $aliases[trim((string) $source['topic'])] ?? '',
+        'aliases' => oghmaCatalogAliasStorage($aliases[trim((string) $source['topic'])] ?? ''),
         'retrieval_phrases' => '',
         'topic_desc' => (string) $source['topic_desc'],
         'knowledge_class' => (string) $source['knowledge_class'],
@@ -342,6 +347,7 @@ $manifest = [
     'contract' => 'oghma-parity-v1',
     'format_version' => 2,
     'catalog_version' => $version,
+    'alias_serialization' => 'comma-separated; internal commas encoded as underscores',
     'game' => 'The Elder Scrolls V: Skyrim',
     'source' => 'HerikaServer reviewed factory catalog',
     'articles_file' => 'articles.json',

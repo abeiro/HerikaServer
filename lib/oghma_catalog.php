@@ -282,6 +282,9 @@ final class ChimOghmaCatalogManager
                 }
                 $article[$field] = $field === 'topic' ? trim($row[$field]) : $row[$field];
             }
+            if (preg_match('/[|;]/u', $article['aliases']) === 1) {
+                throw new InvalidArgumentException('invalid_oghma_alias_separator_' . $article['topic']);
+            }
             if ($article['topic'] === '' || mb_strlen($article['topic'], 'UTF-8') > 256 || $article['topic_desc'] === '') {
                 throw new InvalidArgumentException('invalid_oghma_article_' . $index);
             }

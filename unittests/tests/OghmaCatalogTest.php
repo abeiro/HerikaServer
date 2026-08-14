@@ -103,6 +103,27 @@ final class OghmaCatalogTest extends DatabaseTestCase
         $db->close();
     }
 
+    public function testCatalogRejectsLegacyAliasSeparators(): void
+    {
+        $fixture = $this->fixture()['catalog_lifecycle'];
+        $this->temporaryRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'chim-oghma-parity-' . bin2hex(random_bytes(6));
+        mkdir($this->temporaryRoot, 0700, true);
+        $rows = $fixture['v1_articles'];
+        $rows[0]['aliases'] = 'Legacy Pipe|Second Alias';
+        $package = $this->writePackage('fixture-invalid-aliases-v1', $rows);
+
+        require_once dirname(__DIR__, 2) . '/lib/phpunit.class.php';
+        $db = new sql();
+        $manager = new ChimOghmaCatalogManager($db, dirname(__DIR__, 2));
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('invalid_oghma_alias_separator_');
+        try {
+            $manager->import($package);
+        } finally {
+            $db->close();
+        }
+    }
+
     private function writePackage(
         string $version,
         array $rows,
