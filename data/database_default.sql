@@ -1051,7 +1051,7 @@ ALTER SEQUENCE public.dynamic_bio_id_seq OWNED BY public.dynamic_bio.id;
 CREATE TABLE public.eventlog (
     type character varying(128),
     data text,
-    sess character varying(1024),
+    sess text,
     gamets bigint NOT NULL,
     localts bigint NOT NULL,
     ts bigint,

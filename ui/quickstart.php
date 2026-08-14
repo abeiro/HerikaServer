@@ -208,20 +208,8 @@ function herikaQuickstartApplyTtsSelection(TTSConnector $connector, $selectedDri
     if ($previousPreferredId > 0 && $previousPreferredId !== $selectedId) {
         $GLOBALS['db']->query("UPDATE core_profiles SET tts_connector_id = {$selectedId} WHERE tts_connector_id = {$previousPreferredId}");
     }
+    // QuickStart configures NPC and narrator TTS; Player TTS remains opt-in in Player Management.
     $GLOBALS['db']->query("UPDATE core_profiles SET tts_connector_id = {$selectedId} WHERE tts_connector_id IS NULL OR default_narrator = '1' OR default_npc = '1'");
-
-    if (!class_exists('Player')) {
-        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
-    }
-
-    try {
-        $player = new Player();
-        $currentPlayerConnectorId = intval($player->get('tts_connector_id') ?? 0);
-        if ($currentPlayerConnectorId <= 0 || $currentPlayerConnectorId === $previousPreferredId || $currentPlayerConnectorId === $selectedId) {
-            $player->set('tts_connector_id', strval($selectedId));
-        }
-    } catch (Throwable $_e) {
-    }
 
     return $selectedId;
 }
@@ -348,6 +336,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         if ($pid <= 0) { echo json_encode(['ok'=>false,'error'=>'No profile found']); exit; }
         $oghma  = $truthy($_POST['oghma_infinium'] ?? null);
         $player2Force = $truthy($_POST['player2_force_all_llm'] ?? null);
+        $localLlmPreset = $truthy($_POST['local_llm_preset'] ?? null);
         if ($oghma !== null && !chimSetGeneralSetting('OGHMA_INFINIUM', $oghma, chimGetSchemaDescription('OGHMA_INFINIUM'))) {
             echo json_encode(['ok'=>false,'error'=>'Unable to save Oghma Infinium']);
             exit;
@@ -358,7 +347,105 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
             $player2ConnectorId = LLMRandomizer::setPlayer2ForceEnabled($player2Force ? true : false);
         }
 
-        echo json_encode(['ok'=>true, 'id'=>$pid, 'player2_connector_id' => $player2ConnectorId]);
+        $localLlmPresetApplied = false;
+        if ($localLlmPreset === true) {
+            $localLlmContextOptions = chimNormalizePromptContextOptions([
+                'enabled_sections' => [
+                    'roleplay_instructions',
+                    'world',
+                    'knowledge',
+                    'available_actions_list',
+                    'nearby_actors',
+                    'nearby_items',
+                    'adventuring_party',
+                    'scene_notes',
+                    'paralinguistic_tags',
+                ],
+                'enabled_character_subsections' => [
+                    'basic_summary',
+                    'groups',
+                    'personality',
+                    'relationships',
+                    'occupation',
+                    'skills',
+                    'speech_style',
+                    'goals',
+                    'middle_term_memory',
+                    'group',
+                    'storyline_starring',
+                    'quest_topics',
+                ],
+                'enabled_appearance_subsections' => [
+                    'appearance',
+                    'equipment',
+                    'inventory',
+                    'current_activity',
+                    'current_condition',
+                    'reanimation_status',
+                ],
+                'enabled_general_subsections' => [
+                    'current_plans',
+                ],
+                'enabled_nearby_actor_subsections' => [
+                    'equipment',
+                    'current_activity',
+                ],
+                'enabled_nearby_item_subsections' => [
+                    'group_duplicates',
+                ],
+            ]);
+            $localLlmContextJson = json_encode($localLlmContextOptions, JSON_UNESCAPED_SLASHES);
+            if ($localLlmContextJson === false) {
+                echo json_encode(['ok'=>false,'error'=>'Unable to prepare the Local LLM context preset']);
+                exit;
+            }
+            $localLlmContextValue = $GLOBALS['db']->escapeLiteral($localLlmContextJson);
+            $localLlmContextDescription = $GLOBALS['db']->escapeLiteral(chimGetSchemaDescription('PROMPT_CONTEXT_OPTIONS'));
+            $localLlmPresetSaved = $GLOBALS['db']->execQuery(
+                "WITH updated_profiles AS (
+                    UPDATE core_profiles
+                    SET metadata = jsonb_set(
+                        jsonb_set(
+                            jsonb_set(
+                                jsonb_set(COALESCE(metadata, '{}'::jsonb), '{CONTEXT_HISTORY}', '\"40\"'::jsonb, true),
+                                '{CONTEXT_HISTORY_DIARY}', '\"40\"'::jsonb, true
+                            ),
+                            '{CONTEXT_HISTORY_DYNAMIC_PROFILE}', '\"30\"'::jsonb, true
+                        ),
+                        '{MAX_WORDS_LIMIT}', '\"60\"'::jsonb, true
+                    )
+                    RETURNING id
+                 ),
+                 updated_context_options AS (
+                    INSERT INTO public.general_settings (id, value, description, updated_at)
+                    VALUES ('PROMPT_CONTEXT_OPTIONS', {$localLlmContextValue}, {$localLlmContextDescription}, CURRENT_TIMESTAMP)
+                    ON CONFLICT (id) DO UPDATE SET
+                        value = EXCLUDED.value,
+                        description = EXCLUDED.description,
+                        updated_at = CURRENT_TIMESTAMP
+                    RETURNING id
+                 )
+                 INSERT INTO conf_opts (id, value) VALUES
+                    ('CONTEXT_HISTORY', '40'),
+                    ('CONTEXT_HISTORY_DIARY', '40'),
+                    ('CONTEXT_HISTORY_DYNAMIC_PROFILE', '30'),
+                    ('MAX_WORDS_LIMIT', '60'),
+                    ('chim_context_mode', '1')
+                 ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value"
+            );
+            if ($localLlmPresetSaved === false) {
+                echo json_encode(['ok'=>false,'error'=>'Unable to apply the Local LLM preset']);
+                exit;
+            }
+            $localLlmPresetApplied = true;
+        }
+
+        echo json_encode([
+            'ok'=>true,
+            'id'=>$pid,
+            'player2_connector_id' => $player2ConnectorId,
+            'local_llm_preset_applied' => $localLlmPresetApplied,
+        ]);
         exit;
     }
 
@@ -802,8 +889,8 @@ echo '<section class="qs-section">
                 <div id="qs_llm_connectors_cards_default" style="' . $llmCardsDefaultStyle . '">
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F579;&#xFE0F; <b>Standard</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: GLM 4.7 (z-ai/glm-4.7)</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.38/M input | $1.74/M output</div>
+                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: DeepSeek V4 Flash (deepseek/deepseek-v4-flash)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.14/M input | $0.28/M output</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F3C3;&#x200D;&#x2642;&#xFE0F; <b>Fast</b></div>
@@ -846,6 +933,21 @@ echo '<section class="qs-section">
                 <div class="qs-general-connector-wrap">
                     <div class="qs-general-connector-title">Other Connectors Used:</div>
                     ' . ($generalLlmConnectorListHtml !== '' ? $generalLlmConnectorListHtml : '<div class="qs-general-connector-empty">No additional general-settings connectors are configured.</div>') . '
+                </div>
+                <div class="form-group qs-field qs-local-llm-preset">
+                    <div class="qs-toggle-block">
+                        <div class="qs-toggle-header">
+                            <label class="qs-toggle-title" for="qs_local_llm_preset">Optimize for Local LLMs</label>
+                            <div class="qs-toggle-control">
+                                <input class="form-check-input qs-switch-input" type="checkbox" id="qs_local_llm_preset" value="1">
+                                <label class="form-check-label qs-switch-label" for="qs_local_llm_preset">
+                                    <span class="qs-switch-track"></span>
+                                    <span class="qs-switch-copy" data-off="Off" data-on="On"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="form-text">Recommended for local small and medium models. Applies a compact 40-event context, shorter 60-word responses, enables Compact Chat, and trims high-cost secondary context while preserving roleplay, actions, memory, inventory, and Oghma knowledge. New profiles inherit the smaller defaults.</small>
                 </div>
                 <p class="qs-note warning-text3">
                     Once done click Save and startup Skyrim with the AIAgent mod installed. Please read the <a href="https://dwemerdynamics.com/chim/index.html" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
@@ -1247,8 +1349,13 @@ async function saveQuickstartAndDB(){
     // 2) Save profile metadata flags
     const fdm = new FormData();
     try { fdm.append("player2_force_all_llm", document.getElementById("qs_player2_force_all_llm").checked ? "1" : "0"); } catch(_e){}
+    try { fdm.append("local_llm_preset", document.getElementById("qs_local_llm_preset").checked ? "1" : "0"); } catch(_e){}
     fdm.append("qs_action", "profile_quicksave_metadata");
-    await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
+    const profileResponse = await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
+    const profileResult = await profileResponse.json();
+    if (!profileResponse.ok || !profileResult.ok) {
+      throw new Error(profileResult.error || "Unable to save profile settings");
+    }
 
     // 3) Save quickstart selections to the database
     const form = document.getElementById("top");

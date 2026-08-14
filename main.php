@@ -133,6 +133,11 @@ MAIN FLOW
 $gameRequest = explode("|", $receivedData);
 $GLOBALS["gameRequest"] = &$gameRequest;
 unset($GLOBALS["CHIM_TURN_PEOPLE_SNAPSHOT"]);
+unset($GLOBALS["CHIM_REQUEST_EXECUTION_MODE"]);
+$requestRoutingSnapshot = chimDecodePlayerRoutingSnapshotField($gameRequest[4] ?? "");
+if (($requestRoutingSnapshot["execution_mode"] ?? "") !== "") {
+    $GLOBALS["CHIM_REQUEST_EXECUTION_MODE"] = $requestRoutingSnapshot["execution_mode"];
+}
 
 
 $startTime = microtime(true);
@@ -1704,7 +1709,6 @@ if (!isset($GLOBALS["CACHE_PARTY"])) {
     $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 } 
 
-$requestRoutingSnapshot = chimDecodePlayerRoutingSnapshotField($gameRequest[4] ?? "");
 $requestAudienceSnapshot = (string)($requestRoutingSnapshot["audience"] ?? "");
 $requestPresentActorsSnapshot = chimSetCurrentTurnPresentActorsSnapshot(
     $requestRoutingSnapshot["present_actors"] ?? []

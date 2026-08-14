@@ -1802,12 +1802,18 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     $splitNameBase = explode("/", $gameRequest[3]);
     if (strtoupper($splitNameBase[0]) == "__CLEAR_ALL__")
-        $db->query("truncate table locations");
+        $db->query("delete from locations where COALESCE(chim_added,0)<>1");
     else {
         //error_log("[UTIL_LOCATION_NAME]  {$gameRequest[3]}");
         if ($splitNameBase[0] && $splitNameBase[1] && !in_array($splitNameBase[1], [241641])) { // Exception for Pellagua Farm) {
             $existingRecord = $db->fetchOne("SELECT * FROM locations WHERE formid = '{$splitNameBase[1]}'");
-            error_log("[UTIL_LOCATION_NAME] Processing location: {$splitNameBase[0]} / {$splitNameBase[1]}");
+            error_log("[UTIL_LOCATION_NAME] Processing location: {$splitNameBase[0]} / {$splitNameBase[1]}, <{$splitNameBase[7]},{$splitNameBase[8]}>");
+            if (strtoupper($splitNameBase[4]) == "CUSTOM") {
+                $chim_added=1;
+            }
+            else 
+                $chim_added=0;
+
             if ($existingRecord) {
                 $db->updateRow(
                     'locations',
@@ -1823,10 +1829,11 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         'refs' => (isset($splitNameBase[9]) && $splitNameBase[9]) ? $splitNameBase[9] : null,
                         'cleared' => intval($splitNameBase[10]) > 0 ? "TRUE" : "FALSE",
                         'updated_at' => 'NOW()',
-                        'world' => $splitNameBase[11] ?? ''
+                        'world' => $splitNameBase[11] ?? '',
+                        "chim_added" => $chim_added
 
                     ),
-                    "formid = '{$splitNameBase[1]}'"
+                    "formid = '{$splitNameBase[1]}' and chim_added<>1"
                 );
             } else {
                 $db->insert(
@@ -1844,7 +1851,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         'refs' => (isset($splitNameBase[9]) && $splitNameBase[9]) ? $splitNameBase[9] : null,
                         'cleared' => intval($splitNameBase[10]) > 0 ? "TRUE" : "FALSE",
                         'updated_at' => 'NOW()',
-                        'world' => $splitNameBase[11] ?? ''
+                        'world' => $splitNameBase[11] ?? '',
+                        "chim_added" => $chim_added
                     )
                 );
             }
@@ -1921,13 +1929,26 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 "world" => $splitNameBase[6] ?? '',
                 "in_interior" => $splitNameBase[7] ?? '',
                 "real_coords" => $splitNameBase[8] ?? '',
+                "rx" => $splitNameBase[9] ?? '',
+                "ry" => $splitNameBase[10] ?? '',
+                "rz" => $splitNameBase[11] ?? '',
             ];
 
+            error_log(print_r($splitNameBase, true));
             // Patch to get location name from coords. Can help with "Fake" locations.
-            if (($splitNameBase[8] ?? '') == "1") {
+            if (($splitNameBase[8] ?? '') == "1" 
+            || (($splitNameBase[8] ?? '') == "0" && in_array(strtolower($splitNameBase[6] ?? ''), ["whiterun","solitude","riften","windhelm","markarth"]))) {
                 $pointLiteral = '(' . $splitNameBase[1] . ',' . $splitNameBase[2] . ')';
-                $pointEsc = $db->escape($pointLiteral);
 
+                if (($splitNameBase[8] ?? '') == "0" && in_array(strtolower($splitNameBase[6] ?? ''), ["whiterun","solitude","riften","windhelm","markarth"])) {
+                    // In major cities, we can use the real coords, as they match world coord.
+                    if (isset($splitNameBase[9]) && isset($splitNameBase[10]) && $splitNameBase[9] !== '' && $splitNameBase[10] !== '') {
+                        $pointLiteral = '(' . $splitNameBase[9] . ',' . $splitNameBase[10] . ')';
+                    }
+                }  
+                
+                $pointEsc = $db->escape($pointLiteral);
+                $worldEsc = $db->escape($splitNameBase[6] ?? '');
                 // Abandoned Shack locations is bugged as is child of Batte-Born Farm.
                 // We will search locations with at least one exterior reference
                 $closestLocations = $db->fetchOne(
@@ -1938,7 +1959,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     hold,
                     coords,
                     tags,
-                    is_interior,
+                    is_interior,world,
                     coords <-> '{$pointEsc}'::point AS distance
                 FROM locations
                 WHERE coords IS NOT NULL 
@@ -1949,6 +1970,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     ((is_interior & 192) = 0 AND (is_interior & 192) != 128)
                     )
                 and name<>'Abandoned Shack'
+                and world='{$worldEsc}'
                 ORDER BY distance ASC
                 LIMIT 1"
                 );
@@ -1959,6 +1981,16 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     $meta['last_coords']['location_formid'] = $closestLocations['formid'];
                     $meta['last_coords']['modified'] = true;
 
+                }
+
+                if (($splitNameBase[8] ?? '') == "0" && in_array(strtolower($splitNameBase[6] ?? ''), ["whiterun","solitude","riften","windhelm","markarth"])) {
+                    // In major cities, we can use the real coords, as they match world coord.
+                    if (isset($splitNameBase[9]) && isset($splitNameBase[10]) && $splitNameBase[9] !== '' && $splitNameBase[10] !== '') {
+                        $meta['last_coords'][0] = $splitNameBase[9];
+                        $meta['last_coords'][1] = $splitNameBase[10];
+                        $meta['last_coords'][2] =  $splitNameBase[11];
+                        $meta['last_coords']['real_coords'] = "1";
+                    }
                 }
             }
 

@@ -2842,6 +2842,7 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
     $result = [
         "audience" => "",
         "present_actors" => [],
+        "execution_mode" => "",
     ];
     $rawField = trim((string)$rawField);
     if ($rawField === "") {
@@ -2865,6 +2866,21 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
     }
 
     $result["present_actors"] = chimNormalizePresentActors($payload["present_actors"] ?? []);
+    $executionMode = strtoupper(trim((string)($payload["execution_mode"] ?? "")));
+    if (in_array($executionMode, [
+        "STANDARD",
+        "WHISPER",
+        "CLOSE",
+        "SHOUT",
+        "NARRATOR",
+        "DIRECTOR",
+        "CHEATMODE",
+        "AUTOCHAT",
+        "INJECTION_LOG",
+        "INJECTION_CHAT",
+    ], true)) {
+        $result["execution_mode"] = $executionMode;
+    }
     return $result;
 }
 

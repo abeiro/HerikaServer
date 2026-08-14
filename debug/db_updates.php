@@ -4365,6 +4365,7 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS refs text"
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS cleared boolean");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS world text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS chim_added int");
 $db->execQuery("
 CREATE OR REPLACE VIEW public.locations_v
 as
@@ -7858,6 +7859,21 @@ if ($checkVersion("default_npc_tags") < 20260805003) {
         Logger::info("Applied patch default_npc_tags 20260805003");
     } else {
         Logger::error("Failed to apply patch default_npc_tags 20260805003");
+    }
+}
+
+if ($checkVersion("eventlog_session_payload") < 20260807001) {
+    Logger::debug("Applying eventlog_session_payload 20260807001 - allow complete routing snapshots");
+
+    $migrationOk = $db->execQuery(
+        "ALTER TABLE public.eventlog ALTER COLUMN sess TYPE text"
+    ) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("eventlog_session_payload", 20260807001);
+        Logger::info("Applied patch eventlog_session_payload 20260807001");
+    } else {
+        Logger::error("Failed to apply patch eventlog_session_payload 20260807001");
     }
 }
 

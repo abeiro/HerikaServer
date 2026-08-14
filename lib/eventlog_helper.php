@@ -56,6 +56,24 @@ if (!function_exists('chimBuildVisibleEventLogWhereClause')) {
     }
 }
 
+if (!function_exists('chimBuildNpcEventLogPeopleWhereClause')) {
+    // Match one NPC token without allowing partial-name matches or far-away audience markers.
+    function chimBuildNpcEventLogPeopleWhereClause($db, $npcName, $peopleColumn = 'people')
+    {
+        $peopleColumn = trim((string)$peopleColumn);
+        if (!preg_match('/^(?:[A-Za-z_][A-Za-z0-9_]*\.)?[A-Za-z_][A-Za-z0-9_]*$/', $peopleColumn)) {
+            $peopleColumn = 'people';
+        }
+
+        $escapedNpcName = $db->escape(trim((string)$npcName));
+        return "EXISTS (
+            SELECT 1
+            FROM unnest(string_to_array(trim(BOTH '|' FROM COALESCE({$peopleColumn}, '')), '|')) AS chim_person(person_name)
+            WHERE lower(regexp_replace(btrim(chim_person.person_name), ' \\((busy|hostile|in combat|restrained)\\)$', '', 'i')) = lower('{$escapedNpcName}')
+        )";
+    }
+}
+
 if (!function_exists('chimGetVisibleEventLogTypes')) {
     function chimGetVisibleEventLogTypes($db, $additionalExcludedTypes = [])
     {

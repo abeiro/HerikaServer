@@ -1251,6 +1251,8 @@ class openaijson
         } else {
             $GLOBALS["DEBUG_DATA"]["RAW"]=$this->_buffer;
             $parsedResponse=__jpd_decode_lazy($this->_buffer);   // USE JPD_LAZY?
+            if (isset($parsedResponse[0]) && is_array($parsedResponse[0]))
+                $parsedResponse=$parsedResponse[0];
             if (is_array($parsedResponse)) {
                 if (!empty($parsedResponse["action"])) {
                     if (!isset($parsedResponse["target"]))    

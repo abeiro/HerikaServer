@@ -1445,7 +1445,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
 
     $processed = 0;
     $targetRefsToRefresh = [];
-
+    $targetNpcNames="";
     foreach ($transactions as $transactionRaw) {
         $args = array_map('trim', explode(':', $transactionRaw));
         $targetNpcName = $args[0] ?? '';
@@ -1490,6 +1490,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         }
 
         $targetNpc = resolveNpcByName($targetNpcName, $db);
+        $targetNpcNames.= $targetNpcName;
         if ($targetNpc === null) {
             error_log("[handleTradeItemsAction] [$tradeType] Target NPC not found: $targetNpcName");
             $db->insert(
@@ -1621,7 +1622,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
             'ts' => $last_ts,
             'gamets' => $last_gamets + 11,
             'type' => 'innerchat',
-            'data' => "The Narrator: $npcName completed the transaction $tradeType with $targetNpcName",
+            'data' => "The Narrator: $npcName completed the transaction $tradeType with $targetNpcNames",
             'sess' => $momentum,
             'localts' => time(),
             'people' => "|$npcName|$resolvedName|",
