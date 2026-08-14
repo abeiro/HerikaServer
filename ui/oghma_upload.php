@@ -1483,13 +1483,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <!-- Regular Oghma Content -->
             <div id="oghma-header-content">
                 <p>Oghma matches conversation topics to articles. NPCs receive the most detailed version they are allowed to know; if no version matches their knowledge, they know nothing about the topic.</p>
-
-                <details class="header-note">
-                    <summary>Article editing tips</summary>
-                    <p>Use lowercase topic titles with underscores instead of spaces &mdash; "Fishy Stick" becomes <code>fishy_stick</code>.</p>
-                    <p><code>common</code> marks an article as public basic knowledge. Use it only on articles, not NPC tags. An empty basic class is also unrestricted.</p>
-                    <p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&amp;gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Read the Project Oghma guide</a></p>
-                </details>
             </div>
             
             <!-- Dynamic Oghma Content -->
@@ -1533,6 +1526,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 </form>
                 
                 <p style="margin-top: 15px;">Uploads are stored as <strong>custom</strong> entries. Updating a factory topic creates a protected custom override that future catalog activations will not overwrite.</p>
+
+                <details class="header-note">
+                    <summary>Article editing tips</summary>
+                    <p>Use lowercase topic titles with underscores instead of spaces &mdash; "Fishy Stick" becomes <code>fishy_stick</code>.</p>
+                    <p><code>common</code> marks an article as public basic knowledge. Use it only on articles, not NPC tags. An empty basic class is also unrestricted.</p>
+                    <p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&amp;gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Read the Project Oghma guide</a></p>
+                </details>
             </div>
 
             <div class="content-section">
