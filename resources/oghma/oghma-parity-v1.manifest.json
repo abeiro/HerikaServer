@@ -11,9 +11,9 @@
     "name": "grounded-v3.1-herika",
     "files": {
       "lib/oghma_retrieval.php": "b772972bb46556c2b475fe3eb66a3d2f0b115d4fd98ba8fd364a159b3cdee699",
-      "lib/oghma_parity.php": "1b843302e40137208bfb73950e01d11423ef38d49602b9eb31c07d50a6fe3cd0",
-      "lib/oghma_forced_context.php": "eaa8839b8d4ac1a6472e46c34e4ba18fbb93178b9ce83b009acbabb72abc5a88",
-      "processor/oghma.php": "188f8ddfb0b4ca2ee973fdf133821184171c038c4e69e40d679206359c28851f"
+      "lib/oghma_parity.php": "3ebb221bc0555695770ad98832f202ec8f512c5e8ad8a987f07004d19955ae3b",
+      "lib/oghma_forced_context.php": "98f8fed46afe2acf82fb0d0eafdc81ba290139466b2e0c66adf93ac485ff284f",
+      "processor/oghma.php": "04b81803ccd59efe7fc4ad9da6d495dd0fc783237f2e3faf8d6b301b54ea5563"
     }
   },
   "runtime": {

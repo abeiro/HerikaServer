@@ -434,7 +434,11 @@ if (!function_exists('chimOghmaAppendForcedRows')) {
         }
         $added = 0;
         foreach ($rows as $row) {
-            if ($added >= $limit || chimOghmaTopicWasInjected($row['topic'] ?? '')) {
+            $resultLimit = max(1, intval($GLOBALS['OGHMA_PARITY_RESULT']['settings']['values']['result_limit'] ?? 1));
+            if ($added >= $limit || count($GLOBALS['OGHMA_PARITY_RESULT']['articles'] ?? []) >= $resultLimit) {
+                break;
+            }
+            if (chimOghmaTopicWasInjected($row['topic'] ?? '')) {
                 continue;
             }
             $topic = trim((string) ($row['topic'] ?? ''));
@@ -473,9 +477,32 @@ if (!function_exists('chimOghmaInjectForcedContext')) {
         )));
         $knowledgeTags[] = (string) ($GLOBALS['HERIKA_NAME'] ?? '');
         $added = 0;
+        $hasCapacity = static function (): bool {
+            $resultLimit = max(1, intval($GLOBALS['OGHMA_PARITY_RESULT']['settings']['values']['result_limit'] ?? 1));
+            return count($GLOBALS['OGHMA_PARITY_RESULT']['articles'] ?? []) < $resultLimit;
+        };
+
+        $locationEnabled = isOghmaEnabled($GLOBALS['LOCATION_OGHMA'] ?? true);
+        if ($locationEnabled && $hasCapacity()) {
+            $locationSignals = chimOghmaCollectLocationSignalGroups($db);
+            $added += chimOghmaAppendForcedRows(
+                chimOghmaFindRowsForSignals($db, $locationSignals['location']),
+                $knowledgeTags,
+                'location',
+                1
+            );
+            if ($hasCapacity()) {
+                $added += chimOghmaAppendForcedRows(
+                    chimOghmaFindRowsForSignals($db, $locationSignals['hold']),
+                    $knowledgeTags,
+                    'hold',
+                    1
+                );
+            }
+        }
 
         $racialEnabled = isOghmaEnabled($GLOBALS['RACIAL_OGHMA'] ?? true);
-        if ($racialEnabled) {
+        if ($racialEnabled && $hasCapacity()) {
             $currentNpcData = is_array($GLOBALS['CHIM_CORE_CURRENT_NPC_DATA'] ?? null)
                 ? $GLOBALS['CHIM_CORE_CURRENT_NPC_DATA']
                 : [];
@@ -490,23 +517,6 @@ if (!function_exists('chimOghmaInjectForcedContext')) {
                 $knowledgeTags,
                 'race',
                 4
-            );
-        }
-
-        $locationEnabled = isOghmaEnabled($GLOBALS['LOCATION_OGHMA'] ?? true);
-        if ($locationEnabled) {
-            $locationSignals = chimOghmaCollectLocationSignalGroups($db);
-            $added += chimOghmaAppendForcedRows(
-                chimOghmaFindRowsForSignals($db, $locationSignals['location']),
-                $knowledgeTags,
-                'location',
-                1
-            );
-            $added += chimOghmaAppendForcedRows(
-                chimOghmaFindRowsForSignals($db, $locationSignals['hold']),
-                $knowledgeTags,
-                'hold',
-                1
             );
         }
 

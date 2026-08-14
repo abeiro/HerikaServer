@@ -47,7 +47,7 @@ if (!function_exists('chimOghmaEffectiveSettings')) {
     function chimOghmaEffectiveSettings(): array
     {
         $topicCount = max(1, min(3, intval($GLOBALS['OGHMA_AMOUNT'] ?? 1)));
-        $resultLimit = max(1, min(5, intval($GLOBALS['OGHMA_RESULT_LIMIT'] ?? $topicCount)));
+        $resultLimit = max(1, min(5, intval($GLOBALS['OGHMA_RESULT_LIMIT'] ?? 3)));
         $fallbackSetting = array_key_exists('OGHMA_EXTRACTOR_FALLBACK', $GLOBALS)
             ? $GLOBALS['OGHMA_EXTRACTOR_FALLBACK']
             : ($GLOBALS['OGHMA_CUSTOM'] ?? false);

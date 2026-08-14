@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 require_once dirname(__DIR__, 2) . '/lib/oghma_parity.php';
 require_once dirname(__DIR__, 2) . '/lib/oghma_retrieval.php';
 require_once dirname(__DIR__, 2) . '/lib/oghma_catalog.php';
+require_once dirname(__DIR__, 2) . '/lib/oghma_forced_context.php';
 
 final class OghmaParityTest extends TestCase
 {
@@ -23,7 +24,8 @@ final class OghmaParityTest extends TestCase
     {
         foreach (['OGHMA_INFINIUM','OGHMA_AMOUNT','OGHMA_RESULT_LIMIT','OGHMA_EXTRACTOR_FALLBACK',
             'OGHMA_EXTRACTOR_TIMEOUT_MS','OGHMA_CUSTOM','CORE_CONNECTOR_OGHMA_CUSTOM',
-            'RACIAL_OGHMA','LOCATION_OGHMA','CHIM_CORE_CURRENT_PROFILE_DATA','CHIM_CORE_CURRENT_NPC_DATA'] as $key) {
+            'RACIAL_OGHMA','LOCATION_OGHMA','CHIM_CORE_CURRENT_PROFILE_DATA','CHIM_CORE_CURRENT_NPC_DATA',
+            'OGHMA_PARITY_RESULT','OGHMA_HINT','OGHMA_INJECTED_TOPICS','OGHMA_INJECTED_PAYLOADS'] as $key) {
             $this->savedGlobals[$key] = ['exists' => array_key_exists($key, $GLOBALS), 'value' => $GLOBALS[$key] ?? null];
         }
     }
@@ -149,6 +151,44 @@ final class OghmaParityTest extends TestCase
         $this->assertSame('core_profile', $settings['sources']['racial_context_enabled']);
         $this->assertSame('global', $settings['sources']['location_context_enabled']);
         $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $settings['sha256']);
+    }
+
+    public function testUnsetResultLimitUsesTheSharedThreeArticleDefault(): void
+    {
+        unset($GLOBALS['OGHMA_RESULT_LIMIT']);
+        $GLOBALS['OGHMA_AMOUNT'] = 1;
+
+        $this->assertSame(3, chimOghmaEffectiveSettings()['values']['result_limit']);
+    }
+
+    public function testConversationArticlesKeepPriorityWithinTheSharedResultLimit(): void
+    {
+        $settings = chimOghmaEffectiveSettings();
+        $settings['values']['result_limit'] = 3;
+        $GLOBALS['OGHMA_PARITY_RESULT'] = chimOghmaNewResult('grounded', $settings, true, 'Tell me about dragons.');
+        $GLOBALS['OGHMA_HINT'] = '';
+        $GLOBALS['OGHMA_INJECTED_TOPICS'] = [];
+        $GLOBALS['OGHMA_INJECTED_PAYLOADS'] = [];
+
+        $this->assertTrue(chimOghmaAddPromptArticle([
+            'topic' => 'dragons',
+            'topic_desc' => 'Conversation lore.',
+            'knowledge_class' => '',
+        ], [], 'conversation', true));
+        $this->assertSame(2, chimOghmaAppendForcedRows([
+            ['topic' => 'riverwood', 'topic_desc' => 'Location lore.', 'knowledge_class' => ''],
+            ['topic' => 'whiterun', 'topic_desc' => 'Hold lore.', 'knowledge_class' => ''],
+            ['topic' => 'nord', 'topic_desc' => 'Race lore.', 'knowledge_class' => ''],
+        ], [], 'forced', 3));
+
+        $this->assertSame(
+            ['dragons', 'riverwood', 'whiterun'],
+            array_column($GLOBALS['OGHMA_PARITY_RESULT']['articles'], 'topic')
+        );
+        $this->assertSame(
+            ['conversation', 'forced', 'forced'],
+            array_column($GLOBALS['OGHMA_PARITY_RESULT']['articles'], 'source')
+        );
     }
 
     public function testLegacyCustomFlagOnlyActsAsFallbackCompatibility(): void

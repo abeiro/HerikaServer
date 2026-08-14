@@ -70,11 +70,6 @@ $knowledgeTags = chimOghmaKnowledgeValues($GLOBALS['OGHMA_KNOWLEDGE'] ?? 'common
     $characterName = strtolower(trim((string) ($GLOBALS['HERIKA_NAME'] ?? '')));
     if ($characterName !== '' && !in_array($characterName, $knowledgeTags, true)) $knowledgeTags[] = $characterName;
 
-    $forcedNpcMaster = isset($npcMaster) && $npcMaster instanceof NpcMaster
-        ? $npcMaster
-        : (class_exists('NpcMaster') ? new NpcMaster() : null);
-    chimOghmaInjectForcedContext($db, $forcedNpcMaster);
-
     $retrievalStarted = hrtime(true);
     $extraction = chimOghmaExtractEntities($db, $inputText, $settings['values']['topic_count']);
     $result['timing']['retrieval_ms'] = (hrtime(true) - $retrievalStarted) / 1_000_000;
@@ -130,6 +125,13 @@ $knowledgeTags = chimOghmaKnowledgeValues($GLOBALS['OGHMA_KNOWLEDGE'] ?? 'common
             continue;
         }
         chimOghmaAddPromptArticle($row, $knowledgeTags, 'conversation', true);
+    }
+
+    if (count($result['articles']) < $settings['values']['result_limit']) {
+        $forcedNpcMaster = isset($npcMaster) && $npcMaster instanceof NpcMaster
+            ? $npcMaster
+            : (class_exists('NpcMaster') ? new NpcMaster() : null);
+        chimOghmaInjectForcedContext($db, $forcedNpcMaster);
     }
 
     if ($result['topics'] !== []) {
