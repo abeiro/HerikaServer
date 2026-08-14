@@ -109,7 +109,9 @@
     {"id":"basic_positive","advanced":"mage","basic":"common","tags":["common"],"level":"basic","reason":"positive_class"},
     {"id":"denied_negative","advanced":"mage,!vampire","basic":"common,!vampire","tags":["mage","common","vampire"],"level":"denied","reason":"negative_class"},
     {"id":"denied_missing","advanced":"mage","basic":"scholar","tags":["warrior"],"level":"denied","reason":"knowledge_classes_not_authorized"},
-    {"id":"knowall_override","advanced":"!vampire","basic":"!vampire","tags":["knowall","vampire"],"level":"advanced","reason":"knowall"}
+    {"id":"knowall_override","advanced":"!vampire","basic":"!vampire","tags":["knowall","vampire"],"level":"advanced","reason":"knowall"},
+    {"id":"legacy_alias","advanced":"dunmer","basic":"common","tags":["darkelf"],"level":"advanced","reason":"positive_class"},
+    {"id":"distinct_mage_organizations","advanced":"college_of_winterhold","basic":"common","tags":["mages_guild","common"],"level":"basic","reason":"positive_class"}
   ],
   "catalog_access_matrix": [
     {"id":"common","topics":{"almsivi":"morrowind","chim":"skyrim"},"tags":{"almsivi":["common"],"chim":["common"]},"level":"basic"},
@@ -119,8 +121,8 @@
     {"id":"alchemist","topics":{"almsivi":"saltrice","chim":"blue_mountain_flower"},"tags":{"almsivi":["common","alchemist"],"chim":["common","alchemist"]},"level":"advanced"},
     {"id":"warrior","topics":{"almsivi":"chitin_equipment","chim":"steel_equipment"},"tags":{"almsivi":["common","warrior"],"chim":["common","warrior"]},"level":"advanced"},
     {"id":"merchant","topics":{"almsivi":"chitin_equipment","chim":"steel_equipment"},"tags":{"almsivi":["common","merchant"],"chim":["common","merchant"]},"level":"advanced"},
-    {"id":"racial","topics":{"almsivi":"dunmer","chim":"dunmer"},"tags":{"almsivi":["common","dunmer"],"chim":["common","darkelf"]},"level":"advanced"},
-    {"id":"faction","topics":{"almsivi":"thieves_guild","chim":"thieves_guild"},"tags":{"almsivi":["common","thieves_guild"],"chim":["common","thievesguild"]},"level":"advanced"},
+    {"id":"racial","topics":{"almsivi":"dunmer","chim":"dunmer"},"tags":{"almsivi":["common","dunmer"],"chim":["common","dunmer"]},"level":"advanced"},
+    {"id":"faction","topics":{"almsivi":"thieves_guild","chim":"thieves_guild"},"tags":{"almsivi":["common","thieves_guild"],"chim":["common","thieves_guild"]},"level":"advanced"},
     {"id":"regional","topics":{"almsivi":"ashlands","chim":"whiterun"},"tags":{"almsivi":["common","ashlands"],"chim":["common","whiterun"]},"level":"advanced"}
   ],
   "suggestion_cases": [

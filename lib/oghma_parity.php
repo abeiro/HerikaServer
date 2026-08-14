@@ -104,7 +104,34 @@ if (!function_exists('chimOghmaKnowledgeValues')) {
         $result = [];
         foreach ($values ?: [] as $item) {
             $item = strtolower(trim((string) $item));
-            if ($item !== '' && !in_array($item, $result, true)) $result[] = $item;
+            if ($item === '') continue;
+            $negative = str_starts_with($item, '!');
+            $raw = $negative ? substr($item, 1) : $item;
+            $aliases = [
+                'smith'=>['blacksmith'], 'darkelf'=>['dunmer'], 'dark_elf'=>['dunmer'],
+                'highelf'=>['altmer'], 'high_elf'=>['altmer'], 'woodelf'=>['bosmer'],
+                'wood_elf'=>['bosmer'], 'thievesguild'=>['thieves_guild'],
+                'legion'=>['imperial_legion'], 'darkbrotherhood'=>['dark_brotherhood'],
+                'eastempirecompany'=>['east_empire_company'], 'moragtong'=>['morag_tong'],
+                'househlaalu'=>['house_hlaalu'], 'houseredoran'=>['house_redoran'],
+                'housetelvanni'=>['house_telvanni'], 'collegeofwinterhold'=>['college_of_winterhold'],
+                'collegeofwinterold'=>['college_of_winterhold'], 'magesguild'=>['mages_guild'],
+                'fightersguild'=>['fighters_guild'], 'temple'=>['tribunal_temple'],
+                'telvanni'=>['house_telvanni'], 'redoran'=>['house_redoran'],
+                'hlaalu'=>['house_hlaalu'], 'sixth_house'=>['house_dagoth'],
+                'hands_of_almalexia'=>['tribunal_temple'], 'miraakcult'=>['miraak_cult'],
+                'psijic'=>['psijic_order'], 'stormcloak'=>['stormcloaks'],
+                'snowelf'=>['snow_elf'], 'skall'=>['skaal'], 'daedric'=>['daedra'],
+                'skyrimall'=>['common'], 'legion. skyrimall'=>['imperial_legion', 'common'],
+                'stands-in-shallows'=>['stands_in_shallows'], 'talen-jei'=>['talen_jei'],
+            ];
+            $key = array_key_exists($raw, $aliases)
+                ? $raw
+                : trim((string) preg_replace('/[^a-z0-9]+/u', '_', $raw), '_');
+            foreach ($aliases[$key] ?? [$key] as $canonical) {
+                $canonical = $negative ? '!' . $canonical : $canonical;
+                if ($canonical !== '' && !in_array($canonical, $result, true)) $result[] = $canonical;
+            }
         }
         return $result;
     }

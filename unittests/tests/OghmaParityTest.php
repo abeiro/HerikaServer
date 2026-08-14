@@ -98,7 +98,7 @@ final class OghmaParityTest extends TestCase
     {
         $root = dirname(__DIR__, 2);
         $articles = json_decode(
-            (string) file_get_contents($root . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.4/articles.json'),
+            (string) file_get_contents($root . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.7/articles.json'),
             true,
             64,
             JSON_THROW_ON_ERROR
@@ -182,17 +182,17 @@ final class OghmaParityTest extends TestCase
         $root = dirname(__DIR__, 2);
         $manager = new ChimOghmaCatalogManager($fakeDb, $root);
         $package = $manager->plan($manager->activePackagePath());
-        $this->assertSame('skyrim-official-20260813-v1.4', $package['catalog_version']);
+        $this->assertSame('skyrim-official-20260813-v1.7', $package['catalog_version']);
         $this->assertCount(1562, $package['articles']);
-        $this->assertSame('d2456c0f9c4df12a76874d275407ef13dfe86c75c806a71a0cfe1747ba470b05', $package['articles_sha256']);
-        $this->assertSame('59bca5bdd8ad38a85ce8935f5c56e23fe0c867c9d2e708c9ef8d718fd91967fb', $package['manifest_sha256']);
+        $this->assertSame('6682ab45fb0c41b6eab9790d341f20af4ed06459390b1e9a0847f7f618ed73a0', $package['articles_sha256']);
+        $this->assertSame('2cc5c0b3569fc0c23c0551e8d86f16c9ae2c73ca3945b21e7223246b15478836', $package['manifest_sha256']);
     }
 
     public function testPackagedBasicClassesFollowTheReviewedOntology(): void
     {
         $root = dirname(__DIR__, 2);
         $articles = json_decode(
-            (string) file_get_contents($root . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.4/articles.json'),
+            (string) file_get_contents($root . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.7/articles.json'),
             true,
             64,
             JSON_THROW_ON_ERROR
@@ -257,10 +257,57 @@ final class OghmaParityTest extends TestCase
         }
         $this->assertSame(hash_file('sha256', $root . '/conf/conf_schema.json'), $manifest['settings']['schema_sha256']);
         $this->assertSame('common', $manifest['settings']['defaults']['knowledge_tags']);
+        $this->assertSame(
+            hash_file('sha256', $root . '/resources/oghma/canonical-knowledge-vocabulary-v1.json'),
+            $manifest['catalog']['canonical_vocabulary_sha256']
+        );
         $catalogManifest = $root . '/resources/oghma/skyrim-official/catalogs/'
             . $manifest['catalog']['version'] . '/manifest.json';
         $this->assertSame(hash_file('sha256', $catalogManifest), $manifest['catalog']['manifest_sha256']);
         $this->assertSame(25, $manifest['performance']['deterministic_p95_budget_ms']);
+    }
+
+    public function testEveryFrozenLegacyAliasNormalizesToItsCanonicalTags(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $vocabulary = json_decode(
+            (string) file_get_contents($root . '/resources/oghma/canonical-knowledge-vocabulary-v1.json'),
+            true,
+            32,
+            JSON_THROW_ON_ERROR
+        );
+        foreach ($vocabulary['legacy_aliases'] as $alias => $canonicalTags) {
+            $this->assertSame($canonicalTags, chimOghmaKnowledgeValues($alias), $alias);
+        }
+    }
+
+    public function testCanonicalAccessAuditCoversEveryPackagedClass(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $articles = json_decode(
+            (string) file_get_contents(
+                $root . '/resources/oghma/skyrim-official/catalogs/skyrim-official-20260813-v1.7/articles.json'
+            ),
+            true,
+            64,
+            JSON_THROW_ON_ERROR
+        );
+        $articles = array_column($articles, null, 'topic');
+        $matrix = json_decode(
+            (string) file_get_contents($root . '/docs/evidence/oghma-canonical-vocabulary/access-matrix.json'),
+            true,
+            32,
+            JSON_THROW_ON_ERROR
+        );
+        $this->assertCount(88, $matrix['rows']);
+        foreach ($matrix['rows'] as $case) {
+            $this->assertArrayHasKey($case['topic'], $articles, $case['canonical_tag']);
+            $decision = chimOghmaAccessDecision(
+                $articles[$case['topic']],
+                ['common', $case['canonical_tag']]
+            );
+            $this->assertSame($case['expected_level'], $decision['level'], $case['canonical_tag']);
+        }
     }
 
     private function catalogDatabase(): object

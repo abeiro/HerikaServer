@@ -12,6 +12,13 @@ $activeVersion = trim((string) file_get_contents($catalogRoot . '/active-catalog
 $articlesPath = $catalogRoot . '/catalogs/' . $activeVersion . '/articles.json';
 $fixture = json_decode((string) file_get_contents($fixturePath), true, 128, JSON_THROW_ON_ERROR);
 $catalog = json_decode((string) file_get_contents($articlesPath), true, 128, JSON_THROW_ON_ERROR);
+$catalogByTopic = array_column($catalog, null, 'topic');
+$canonicalMatrix = json_decode(
+    (string) file_get_contents(dirname(__DIR__) . '/docs/evidence/oghma-canonical-vocabulary/access-matrix.json'),
+    true,
+    32,
+    JSON_THROW_ON_ERROR
+);
 $iterations = 500;
 foreach ($argv as $argument) {
     if (preg_match('/^--iterations=(\d+)$/D', $argument, $matches)) {
@@ -63,6 +70,20 @@ foreach ($fixture['access_cases'] as $case) {
             'actual'=>[$actual['level'],$actual['reason']]];
     }
 }
+foreach ($canonicalMatrix['rows'] as $case) {
+    $article = $catalogByTopic[$case['topic']] ?? null;
+    $actual = is_array($article)
+        ? chimOghmaAccessDecision($article, ['common', $case['canonical_tag']])
+        : ['level'=>'missing', 'reason'=>'topic_not_found'];
+    if ($actual['level'] !== $case['expected_level']) {
+        $correctnessFailures[] = [
+            'id'=>'canonical_access_'.$case['canonical_tag'],
+            'topic'=>$case['topic'],
+            'expected'=>$case['expected_level'],
+            'actual'=>$actual['level'],
+        ];
+    }
+}
 foreach ($fixture['suggestion_cases'] as $case) {
     $actual = [];
     foreach ($case['suggestions'] as $suggestion) {
@@ -102,7 +123,8 @@ $result = [
     'catalog_rows' => count($catalog),
     'fixture_cases' => count($fixture['retrieval_cases']),
     'contract_cases' => count($fixture['retrieval_cases']) + count($fixture['eligibility_cases'])
-        + count($fixture['access_cases']) + count($fixture['suggestion_cases']) + 2,
+        + count($fixture['access_cases']) + count($fixture['suggestion_cases'])
+        + count($canonicalMatrix['rows']) + 2,
     'fixture_sha256' => hash_file('sha256', $fixturePath),
     'prompt_fragment_sha256' => hash('sha256', $promptFragment),
     'iterations' => $iterations,

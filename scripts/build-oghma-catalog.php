@@ -135,7 +135,7 @@ function oghmaCatalogRowsFromSql(string $sql, array $aliases): array
 }
 
 $root = dirname(__DIR__);
-$version = trim((string) ($argv[1] ?? 'skyrim-official-20260813-v1.4'));
+$version = trim((string) ($argv[1] ?? 'skyrim-official-20260813-v1.7'));
 if (preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/D', $version) !== 1) {
     throw new InvalidArgumentException('Invalid catalog version.');
 }
@@ -156,6 +156,24 @@ $allowedClasses = array_fill_keys(array_map(
     $ontology['knowledge_classes'] ?? []
 ), true);
 $classCorrections = is_array($ontology['class_corrections'] ?? null) ? $ontology['class_corrections'] : [];
+$vocabularyPath = $root . '/resources/oghma/canonical-knowledge-vocabulary-v1.json';
+$vocabulary = json_decode((string) file_get_contents($vocabularyPath), true, 64, JSON_THROW_ON_ERROR);
+$legacyClassAliases = is_array($vocabulary['legacy_aliases'] ?? null) ? $vocabulary['legacy_aliases'] : [];
+$canonicalizeClasses = static function ($value) use ($legacyClassAliases): array {
+    $result = [];
+    foreach (oghmaCatalogValues($value) as $class) {
+        $key = mb_strtolower(trim($class), 'UTF-8');
+        foreach ($legacyClassAliases[$key] ?? [$key] as $target) {
+            if (!in_array($target, $result, true)) $result[] = (string) $target;
+        }
+    }
+    return $result;
+};
+$organizationClasses = array_values(array_unique(array_merge(
+    $vocabulary['shared']['organizations'] ?? [],
+    $vocabulary['product_specific']['chim']['organizations'] ?? []
+)));
+$guardTopics = ['dawnstar', 'falkreath', 'markarth', 'morthal', 'riften', 'solitude', 'whiterun', 'windhelm', 'winterhold'];
 $advancedClassRules = is_array($ontology['advanced_class_rules'] ?? null) ? $ontology['advanced_class_rules'] : [];
 $esotericTopics = is_array($ontology['esoteric_basic_topics'] ?? null) ? $ontology['esoteric_basic_topics'] : [];
 $safeRetrievalPhrases = is_array($ontology['safe_retrieval_phrases'] ?? null) ? $ontology['safe_retrieval_phrases'] : [];
@@ -207,9 +225,9 @@ foreach ($matches[1] as $match) {
         'category' => (string) $source['category'],
     ];
     if ($article['topic'] === '' || $article['topic_desc'] === '') throw new RuntimeException('Oghma topic or description is empty.');
-    $advancedClasses = oghmaCatalogValues($article['knowledge_class']);
+    $advancedClasses = $canonicalizeClasses($article['knowledge_class']);
     $basicClasses = [];
-    foreach (oghmaCatalogValues($article['knowledge_class_basic']) as $class) {
+    foreach ($canonicalizeClasses($article['knowledge_class_basic']) as $class) {
         $key = mb_strtolower($class, 'UTF-8');
         if (isset($classCorrections[$key])) {
             foreach ($classCorrections[$key] as $corrected) {
@@ -220,6 +238,18 @@ foreach ($matches[1] as $match) {
         if (!in_array($class, $basicClasses, true)) $basicClasses[] = $class;
     }
     $tagKeys = array_fill_keys(array_map('oghmaCatalogPhraseKey', oghmaCatalogValues($article['tags'])), true);
+    $organizationSignal = mb_strtolower(str_replace('_', ' ', implode(' ', [
+        $article['topic'], $article['aliases'], $article['tags'],
+    ])), 'UTF-8');
+    foreach ($organizationClasses as $organization) {
+        if (str_contains($organizationSignal, str_replace('_', ' ', (string) $organization))
+            && !in_array($organization, $advancedClasses, true)) {
+            $advancedClasses[] = (string) $organization;
+        }
+    }
+    if (in_array($article['topic'], $guardTopics, true) && !in_array('guard', $advancedClasses, true)) {
+        $advancedClasses[] = 'guard';
+    }
     foreach ($advancedClassRules as $class => $rule) {
         if (!is_array($rule) || !isset($allowedClasses[mb_strtolower((string) $class, 'UTF-8')])) {
             throw new RuntimeException('Advanced knowledge-class rule is invalid: ' . $class);

@@ -1,0 +1,621 @@
+{
+  "format": "chim.oghma-canonical-access-matrix.v1",
+  "rows": [
+    {
+      "canonical_tag": "alchemist",
+      "expected_level": "advanced",
+      "topic": "absorb_health",
+      "advanced_article_count": 258,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "altmer",
+      "expected_level": "advanced",
+      "topic": "aldmeri",
+      "advanced_article_count": 15,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "argonian",
+      "expected_level": "advanced",
+      "topic": "argonian",
+      "advanced_article_count": 6,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "bard",
+      "expected_level": "advanced",
+      "topic": "bard's_leap_summit",
+      "advanced_article_count": 7,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "blacksmith",
+      "expected_level": "advanced",
+      "topic": "ancient_nord_equipment",
+      "advanced_article_count": 37,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "blades",
+      "expected_level": "advanced",
+      "topic": "a_game_at_dinner",
+      "advanced_article_count": 13,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "blocked",
+      "expected_level": "advanced",
+      "topic": "disguised_invisibility_potion",
+      "advanced_article_count": 2,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "bosmer",
+      "expected_level": "advanced",
+      "topic": "baan_dar",
+      "advanced_article_count": 8,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "bothela",
+      "expected_level": "advanced",
+      "topic": "stallions_potion",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "brenuin",
+      "expected_level": "advanced",
+      "topic": "argonian_ale",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "breton",
+      "expected_level": "advanced",
+      "topic": "adamantine_tower",
+      "advanced_article_count": 12,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "brynjolf",
+      "expected_level": "advanced",
+      "topic": "falmer_blood_elixir",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "college_of_winterhold",
+      "expected_level": "advanced",
+      "topic": "amongst_the_draugr",
+      "advanced_article_count": 19,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "common",
+      "expected_level": "basic",
+      "topic": "16_accords_of_madness",
+      "advanced_article_count": 0,
+      "basic_article_count": 1476
+    },
+    {
+      "canonical_tag": "companions",
+      "expected_level": "advanced",
+      "topic": "ahzidal's_descent",
+      "advanced_article_count": 17,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "daedra",
+      "expected_level": "advanced",
+      "topic": "adamantine_tower",
+      "advanced_article_count": 88,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "dark_brotherhood",
+      "expected_level": "advanced",
+      "topic": "2nd_era",
+      "advanced_article_count": 25,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "dawnguard",
+      "expected_level": "advanced",
+      "topic": "ancestor_glade",
+      "advanced_article_count": 11,
+      "basic_article_count": 1
+    },
+    {
+      "canonical_tag": "dealer",
+      "expected_level": "advanced",
+      "topic": "redwater_skooma",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "delphine",
+      "expected_level": "advanced",
+      "topic": "blades",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "dragon",
+      "expected_level": "advanced",
+      "topic": "ahzidal",
+      "advanced_article_count": 64,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "dunmer",
+      "expected_level": "advanced",
+      "topic": "almalexia",
+      "advanced_article_count": 28,
+      "basic_article_count": 1
+    },
+    {
+      "canonical_tag": "dwemer",
+      "expected_level": "advanced",
+      "topic": "arkngthamz",
+      "advanced_article_count": 26,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "east_empire_company",
+      "expected_level": "advanced",
+      "topic": "clan_shatter-shield_office",
+      "advanced_article_count": 10,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "eastmarch",
+      "expected_level": "advanced",
+      "topic": "abandoned_prison",
+      "advanced_article_count": 61,
+      "basic_article_count": 211
+    },
+    {
+      "canonical_tag": "elynea_mothren",
+      "expected_level": "advanced",
+      "topic": "potion_of_well_being",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "erandur",
+      "expected_level": "advanced",
+      "topic": "nightcaller_temple",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "erikur",
+      "expected_level": "advanced",
+      "topic": "balmora_blue",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "esbern",
+      "expected_level": "advanced",
+      "topic": "blades",
+      "advanced_article_count": 2,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "esoteric",
+      "expected_level": "basic",
+      "topic": "aedra_and_daedra",
+      "advanced_article_count": 0,
+      "basic_article_count": 86
+    },
+    {
+      "canonical_tag": "falk_firebeard",
+      "expected_level": "advanced",
+      "topic": "stros_m-kai_rum",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "falkreath",
+      "expected_level": "advanced",
+      "topic": "ancient's_ascent",
+      "advanced_article_count": 48,
+      "basic_article_count": 201
+    },
+    {
+      "canonical_tag": "fisher",
+      "expected_level": "advanced",
+      "topic": "abacean_longfish",
+      "advanced_article_count": 29,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "forsworn",
+      "expected_level": "advanced",
+      "topic": "bard's_leap_summit",
+      "advanced_article_count": 37,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "guard",
+      "expected_level": "advanced",
+      "topic": "dawnstar",
+      "advanced_article_count": 9,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "haafingar",
+      "expected_level": "advanced",
+      "topic": "addvar's_house",
+      "advanced_article_count": 52,
+      "basic_article_count": 95
+    },
+    {
+      "canonical_tag": "healer",
+      "expected_level": "advanced",
+      "topic": "alocasia_fruit",
+      "advanced_article_count": 146,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "hjaalmarch",
+      "expected_level": "advanced",
+      "topic": "alva's_house",
+      "advanced_article_count": 36,
+      "basic_article_count": 220
+    },
+    {
+      "canonical_tag": "house_hlaalu",
+      "expected_level": "advanced",
+      "topic": "a_game_at_dinner",
+      "advanced_article_count": 7,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "house_redoran",
+      "expected_level": "advanced",
+      "topic": "ash_blight",
+      "advanced_article_count": 12,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "house_telvanni",
+      "expected_level": "advanced",
+      "topic": "fourth_era",
+      "advanced_article_count": 3,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "hunter",
+      "expected_level": "advanced",
+      "topic": "bear",
+      "advanced_article_count": 25,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "imperial",
+      "expected_level": "advanced",
+      "topic": "alessia",
+      "advanced_article_count": 43,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "imperial_legion",
+      "expected_level": "advanced",
+      "topic": "abandoned_prison",
+      "advanced_article_count": 58,
+      "basic_article_count": 2
+    },
+    {
+      "canonical_tag": "innkeeper",
+      "expected_level": "advanced",
+      "topic": "black_briar",
+      "advanced_article_count": 13,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "karliah",
+      "expected_level": "advanced",
+      "topic": "nightingale_hall",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "katriah",
+      "expected_level": "advanced",
+      "topic": "aetherium_forge",
+      "advanced_article_count": 2,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "khajiit",
+      "expected_level": "advanced",
+      "topic": "azura",
+      "advanced_article_count": 12,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "mage",
+      "expected_level": "advanced",
+      "topic": "absorb_health",
+      "advanced_article_count": 227,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "merchant",
+      "expected_level": "advanced",
+      "topic": "ancient_nord_equipment",
+      "advanced_article_count": 32,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "milore_ienth",
+      "expected_level": "advanced",
+      "topic": "potion_of_well_being",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "miraak_cult",
+      "expected_level": "advanced",
+      "topic": "ahzidal",
+      "advanced_article_count": 10,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "morag_tong",
+      "expected_level": "advanced",
+      "topic": "a_game_at_dinner",
+      "advanced_article_count": 9,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "noble",
+      "expected_level": "advanced",
+      "topic": "balgruuf",
+      "advanced_article_count": 62,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "nord",
+      "expected_level": "advanced",
+      "topic": "atmora",
+      "advanced_article_count": 16,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "orc",
+      "expected_level": "advanced",
+      "topic": "dushnikh_yal",
+      "advanced_article_count": 9,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "pale",
+      "expected_level": "advanced",
+      "topic": "anga's_mill",
+      "advanced_article_count": 45,
+      "basic_article_count": 186
+    },
+    {
+      "canonical_tag": "plautis_carvain",
+      "expected_level": "advanced",
+      "topic": "cyrodilic_brandy",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "priest",
+      "expected_level": "advanced",
+      "topic": "aedra",
+      "advanced_article_count": 48,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "psijic_order",
+      "expected_level": "advanced",
+      "topic": "aurbis",
+      "advanced_article_count": 6,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "puzzle",
+      "expected_level": "advanced",
+      "topic": "dragon_claws",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "reach",
+      "expected_level": "advanced",
+      "topic": "arkngthamz",
+      "advanced_article_count": 64,
+      "basic_article_count": 159
+    },
+    {
+      "canonical_tag": "redguard",
+      "expected_level": "advanced",
+      "topic": "hoonding",
+      "advanced_article_count": 11,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "rift",
+      "expected_level": "advanced",
+      "topic": "aerin's_house",
+      "advanced_article_count": 78,
+      "basic_article_count": 105
+    },
+    {
+      "canonical_tag": "sailor",
+      "expected_level": "advanced",
+      "topic": "anvil",
+      "advanced_article_count": 15,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "sanguine",
+      "expected_level": "advanced",
+      "topic": "holy_water",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "scholar",
+      "expected_level": "advanced",
+      "topic": "16_accords_of_madness",
+      "advanced_article_count": 471,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "skaal",
+      "expected_level": "advanced",
+      "topic": "all-maker",
+      "advanced_article_count": 10,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "snow_elf",
+      "expected_level": "advanced",
+      "topic": "1st_era",
+      "advanced_article_count": 11,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "solstheim",
+      "expected_level": "advanced",
+      "topic": "abandoned_lodge",
+      "advanced_article_count": 63,
+      "basic_article_count": 1
+    },
+    {
+      "canonical_tag": "sorex_vinius",
+      "expected_level": "advanced",
+      "topic": "stros_m-kai_rum",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "stands_in_shallows",
+      "expected_level": "advanced",
+      "topic": "double_distilled_skooma",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "stormcloaks",
+      "expected_level": "advanced",
+      "topic": "broken_tower_redoubt",
+      "advanced_article_count": 44,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "talen_jei",
+      "expected_level": "advanced",
+      "topic": "cliff_racer",
+      "advanced_article_count": 3,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "thalmor",
+      "expected_level": "advanced",
+      "topic": "alinor",
+      "advanced_article_count": 24,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "thief",
+      "expected_level": "advanced",
+      "topic": "balmora_blue",
+      "advanced_article_count": 3,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "thieves_guild",
+      "expected_level": "advanced",
+      "topic": "baan_dar",
+      "advanced_article_count": 27,
+      "basic_article_count": 1
+    },
+    {
+      "canonical_tag": "traveler",
+      "expected_level": "advanced",
+      "topic": "abandoned_lodge",
+      "advanced_article_count": 620,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "valerica",
+      "expected_level": "advanced",
+      "topic": "soul_husk_extract",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "vampire",
+      "expected_level": "advanced",
+      "topic": "ancestor_glade",
+      "advanced_article_count": 13,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "vittoria_vici",
+      "expected_level": "advanced",
+      "topic": "cyrodilic_brandy",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "volkihar",
+      "expected_level": "advanced",
+      "topic": "ancestor_glade",
+      "advanced_article_count": 9,
+      "basic_article_count": 1
+    },
+    {
+      "canonical_tag": "warrior",
+      "expected_level": "advanced",
+      "topic": "ancient_nord_equipment",
+      "advanced_article_count": 31,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "werewolf",
+      "expected_level": "advanced",
+      "topic": "lycanthropy",
+      "advanced_article_count": 5,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "whiterun",
+      "expected_level": "advanced",
+      "topic": "amren's_house",
+      "advanced_article_count": 69,
+      "basic_article_count": 239
+    },
+    {
+      "canonical_tag": "winterhold",
+      "expected_level": "advanced",
+      "topic": "alftand",
+      "advanced_article_count": 31,
+      "basic_article_count": 105
+    },
+    {
+      "canonical_tag": "witch",
+      "expected_level": "advanced",
+      "topic": "dead_crone_rock",
+      "advanced_article_count": 9,
+      "basic_article_count": 0
+    },
+    {
+      "canonical_tag": "ysolda",
+      "expected_level": "advanced",
+      "topic": "sleeping_tree_sap",
+      "advanced_article_count": 1,
+      "basic_article_count": 0
+    }
+  ]
+}

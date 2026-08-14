@@ -5,14 +5,15 @@
     "repository": "Dwemer-Dynamics/ALMSIVIserver",
     "base_commit": "383ddfbfa839f182bd8811151b03913b6d4564b1",
     "oracle": "unittests/fixtures/oghma-parity-v1.json",
-    "oracle_sha256": "e3a75b69e14ed12e2ff94d1706d1e53a5dec7b7e486e4eba4ac8a3aaf5930a9f"
+    "oracle_sha256": "7a40e30013028198bb873d2de7b71ef764ed3f9f17a9f8db5d5bdbd4e62a9f90"
   },
   "algorithm": {
     "name": "grounded-v3.1-herika",
     "files": {
-      "lib/oghma_retrieval.php": "fb7736739b1c94e1aab2519d3dc1c85b606a8a5d920e179e956f0176aeb30038",
-      "lib/oghma_parity.php": "fd8f6ee03f9315f93bd454f7dfeebad2a0535e4ed9540434b7d855c5426a4285",
-      "processor/oghma.php": "188f8ddfb0b4ca2ee973fdf133821184171c038c4e69e40d679206359c28851f"
+      "lib/oghma_retrieval.php": "514baf350c02765240b472e145ae5dc03dea2a44eb853d129cd877151a504c1f",
+      "lib/oghma_parity.php": "7aea387f66bd8a47bca47a17a512582908490da75c8a11dd0867655b68d10715",
+      "lib/oghma_forced_context.php": "e7fbf1c183febe8c5cf898d9d8ffbf228d0bb8bb1c6d31243a20ff49c84d8a80",
+      "processor/oghma.php": "d6bddc00accbf42ea409268ce2f5ac0dc31d2b929b4ea79e2e7441e6d3a69734"
     }
   },
   "runtime": {
@@ -43,13 +44,14 @@
       "extractor_timeout_ms": 1500,
       "knowledge_tags": "common"
     },
-    "schema_sha256": "c5a2acb3fb173e3ccd7b73c5e90d6b2d3779c8c9743871488caf190285d14616"
+    "schema_sha256": "1070f6049de980639f967862468745c54d444bcfc806bce7e6ebe8a7c232ce15"
   },
   "catalog": {
-    "version": "skyrim-official-20260813-v1.4",
+    "version": "skyrim-official-20260813-v1.7",
     "rows": 1562,
-    "articles_sha256": "d2456c0f9c4df12a76874d275407ef13dfe86c75c806a71a0cfe1747ba470b05",
-    "manifest_sha256": "59bca5bdd8ad38a85ce8935f5c56e23fe0c867c9d2e708c9ef8d718fd91967fb"
+    "articles_sha256": "6682ab45fb0c41b6eab9790d341f20af4ed06459390b1e9a0847f7f618ed73a0",
+    "manifest_sha256": "2cc5c0b3569fc0c23c0551e8d86f16c9ae2c73ca3945b21e7223246b15478836",
+    "canonical_vocabulary_sha256": "50d7078267e30a7dfb0912338e72e1189cacd43c7606dea9a54ea9d4e7fd5caf"
   },
   "prompt_output": {
     "format": "canonical XML fragment",

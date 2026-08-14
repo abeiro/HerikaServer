@@ -36,10 +36,10 @@ descriptions. Legacy or custom rows with an empty class remain unrestricted. `kn
 explicit advanced override. Denied selections are represented as structured denials rather than
 fabricated lore.
 
-The ontology keeps product-native class names and documents their cross-product equivalents:
-`smith` -> `blacksmith`, `dunmer` -> `darkelf`, `altmer` -> `highelf`, `bosmer` -> `woodelf`,
-`thieves_guild` -> `thievesguild`, `imperial_legion` -> `legion`, and `mages_guild` ->
-`collegeofwinterhold`. These are documentation mappings, not runtime aliases. CHIM assigns advanced
+Both products use the frozen lowercase snake-case vocabulary for shared roles, races, cultures, and
+organizations. Legacy class IDs normalize at runtime and during catalog revision. `mages_guild` and
+`college_of_winterhold` are explicitly different organizations and never normalize to one another;
+`fighters_guild` and `companions` are likewise analogous but distinct. CHIM assigns advanced
 `traveler` to geographic categories, `warrior` and `merchant` to equipment families, and `healer`
 to disease, restoration, and health-effect subjects. Deep cosmology, forbidden scholarship, and
 reviewed rare mythic artifacts use `esoteric` rather than `common` for basic access.

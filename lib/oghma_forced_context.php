@@ -352,35 +352,14 @@ if (!function_exists('chimOghmaFindRowsForSignals')) {
 if (!function_exists('chimOghmaKnowledgeClassAllows')) {
     function chimOghmaKnowledgeClassAllows($classes, array $knowledgeTags): bool
     {
-        $classes = array_values(array_filter(array_map(
-            static fn($value) => strtolower(trim((string) $value)),
-            explode(',', (string) $classes)
-        )));
-        if (empty($classes)) {
-            return true;
-        }
-
-        $knowledgeTags = array_values(array_filter(array_map(
-            static fn($value) => strtolower(trim((string) $value)),
-            $knowledgeTags
-        )));
-        $denied = array_map(
-            static fn($value) => substr($value, 1),
-            array_filter($classes, static fn($value) => str_starts_with($value, '!'))
-        );
-        if (!empty(array_intersect($denied, $knowledgeTags))) {
-            return false;
-        }
-
-        $allowed = array_filter($classes, static fn($value) => !str_starts_with($value, '!'));
-        return !empty(array_intersect($allowed, $knowledgeTags));
+        return chimOghmaKnowledgeClassDecision($classes, $knowledgeTags)['allowed'];
     }
 }
 
 if (!function_exists('chimOghmaResolveKnowledgePayload')) {
     function chimOghmaResolveKnowledgePayload(array $row, array $knowledgeTags): ?array
     {
-        $normalizedTags = array_map(static fn($value) => strtolower(trim((string) $value)), $knowledgeTags);
+        $normalizedTags = chimOghmaKnowledgeValues($knowledgeTags);
         $advancedAllowed = in_array('knowall', $normalizedTags, true)
             || chimOghmaKnowledgeClassAllows($row['knowledge_class'] ?? '', $knowledgeTags);
         if ($advancedAllowed && trim((string) ($row['topic_desc'] ?? '')) !== '') {

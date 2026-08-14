@@ -7865,6 +7865,21 @@ if ($checkVersion("default_npc_tags") < 20260805003) {
     }
 }
 
+if ($checkVersion("default_npc_tags") < 20260813001) {
+    Logger::debug("Applying default_npc_tags 20260813001 - canonical Oghma knowledge vocabulary");
+
+    $migrationPath = __DIR__ . "/../data/canonical_npc_knowledge_tags_20260813.sql";
+    $migrationOk = is_readable($migrationPath)
+        && $db->execQuery(file_get_contents($migrationPath)) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("default_npc_tags", 20260813001);
+        Logger::info("Applied patch default_npc_tags 20260813001");
+    } else {
+        Logger::error("Failed to apply patch default_npc_tags 20260813001");
+    }
+}
+
 if ($checkVersion("eventlog_session_payload") < 20260807001) {
     Logger::debug("Applying eventlog_session_payload 20260807001 - allow complete routing snapshots");
 
