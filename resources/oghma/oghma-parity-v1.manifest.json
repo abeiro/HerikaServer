@@ -44,7 +44,7 @@
       "extractor_timeout_ms": 1500,
       "knowledge_tags": ""
     },
-    "schema_sha256": "7fe4a393fbeb855f8eafa14c838c88b7de98f085bff2bfbf7b6bb6d8db19b25f"
+    "schema_sha256": "b9657390e2fef53d3ae02852cb2bab6fa005e157231e881c948b922c3dfb6265"
   },
   "catalog": {
     "version": "skyrim-official-20260814-v2.0",
