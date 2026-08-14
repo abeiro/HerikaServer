@@ -194,7 +194,7 @@ def main() -> int:
     if tier_errors:
         raise RuntimeError("Active catalog violates tier-exclusive knowledge classes:\n" + "\n".join(tier_errors))
     audit_rows = []
-    for raw in sorted(set(npc_counts) | set(article_counts), key=str.casefold):
+    for raw in sorted(set(npc_counts) | set(article_counts), key=lambda value: (value.casefold(), value)):
         item = classify(raw, vocabulary, declared, shared, almsivi, chim)
         item["npc_count"] = npc_counts[raw]
         item["article_count"] = article_counts[raw]
