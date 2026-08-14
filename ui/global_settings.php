@@ -48,7 +48,7 @@ $tabControlPanels = [
 ];
 
 // Paired connector toggles remain beside their connector instead of appearing twice.
-$pairedConnectorToggles = ['RELATIONSHIP_SYSTEM_ENABLED', 'SCENE_CLASSIFIER_ENABLED', 'OGHMA_CUSTOM'];
+$pairedConnectorToggles = ['RELATIONSHIP_SYSTEM_ENABLED', 'SCENE_CLASSIFIER_ENABLED', 'OGHMA_EXTRACTOR_FALLBACK'];
 foreach ($gsSections as $sectionName => $fields) {
     $gsSections[$sectionName] = array_values(array_filter($fields, static function (array $field) use ($pairedConnectorToggles): bool {
         return !in_array($field['name'] ?? '', $pairedConnectorToggles, true);
@@ -95,12 +95,14 @@ function pretty_label(string $flatName): string
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'CORE_CONNECTOR_BGL' => 'Background Life',
-        'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
+        'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Oghma Extractor Fallback',
         'RELLLM_CONNECTOR' => 'Relationship Management',
         'PLAYER_WORST_MEMORY_GAME_DAYS' => 'Worst Memory Lifespan',
         'EMOTEMOODS' => 'Emote Moods',
-        'OGHMA_INFINIUM' => 'Oghma Infinium',
-        'OGHMA_AMOUNT' => 'Oghma Articles Amount',
+        'OGHMA_INFINIUM' => 'Enable Oghma',
+        'OGHMA_AMOUNT' => 'Oghma Topic Count',
+        'OGHMA_RESULT_LIMIT' => 'Oghma Result Limit',
+        'OGHMA_EXTRACTOR_TIMEOUT_MS' => 'Extractor Timeout (ms)',
         'RACIAL_OGHMA' => 'Force Racial Oghma',
         'LOCATION_OGHMA' => 'Force Location Oghma',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
@@ -365,7 +367,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
     $specialBooleans = [
         'RELATIONSHIP_SYSTEM_ENABLED',
         'SCENE_CLASSIFIER_ENABLED',
-        'OGHMA_CUSTOM',
     ];
     foreach ($specialBooleans as $name) {
         $value = normalize_posted_value('boolean', $_POST[$name] ?? 'false');
@@ -1486,8 +1487,8 @@ body .settings-tabs .settings-tab.is-active {
                                         <?php endif; ?>
                                         <?php if ($fieldName === 'CORE_CONNECTOR_OGHMA_CUSTOM'): ?>
                                             <div class="provider-toggle">
-                                                <input type="hidden" name="OGHMA_CUSTOM" value="false">
-                                                <input type="checkbox" name="OGHMA_CUSTOM" value="true" <?php echo (current_value('OGHMA_CUSTOM') ? 'checked' : ''); ?> title="Enable/Disable Custom Oghma LLM">
+                                                <input type="hidden" name="OGHMA_EXTRACTOR_FALLBACK" value="false">
+                                                <input type="checkbox" name="OGHMA_EXTRACTOR_FALLBACK" value="true" <?php echo (current_value('OGHMA_EXTRACTOR_FALLBACK') ? 'checked' : ''); ?> title="Allow one bounded connector fallback after deterministic Oghma abstains">
                                             </div>
                                         <?php endif; ?>
                                     </div>

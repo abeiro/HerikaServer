@@ -1,1 +1,10 @@
 service/start.sh text eol=lf
+
+# These files are byte-checksummed by the Oghma package and parity contract.
+resources/oghma/** -text
+unittests/fixtures/oghma-parity-v1.json -text
+conf/conf_schema.json -text
+lib/oghma_retrieval.php -text
+lib/oghma_parity.php -text
+lib/oghma_forced_context.php -text
+processor/oghma.php -text

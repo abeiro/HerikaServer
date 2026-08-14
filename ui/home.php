@@ -80,7 +80,6 @@ try {
 
 /* Check for database updates only in index.php with no parms*/
 if (sizeof($_GET)==0) {
-    require_once(__DIR__."/../debug/db_updates.php");
     require_once(__DIR__."/../debug/npc_removal.php");
     require_once(__DIR__."/../lib/log_trim.php");
     

@@ -6,6 +6,8 @@
  * Auto-detects delimiters: comma, semicolon, tab
  */
 
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'oghma_parity.php';
+
 Logger::info("Processing biography CSV data upload");
 
 // Parse the message format: biography|timestamp|gametime|filename|csv_data
@@ -197,7 +199,9 @@ try {
         }
         
         // Extract optional fields (support both new and legacy headers)
-        $oghma_knowledge_tags = $getValue('oghma_knowledge_tags') ?? $getValue('npc_misc') ?? '';
+        $oghma_knowledge_tags = chimOghmaNpcKnowledgeTags(
+            $getValue('oghma_knowledge_tags') ?? $getValue('npc_misc') ?? ''
+        );
         $voiceid = $getValue('voiceid');
         $gender = $getValue('gender');
         $race = $getValue('race');

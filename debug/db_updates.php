@@ -1,5 +1,8 @@
 <?php 
 
+// Frozen legacy compatibility bridge. New schema changes belong in database/migrations.
+// This file may only be invoked by explicit install, test, or operator migration flows.
+
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/logger.php");
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/settings.php");
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/oghma_aliases.php");
@@ -7862,27 +7865,37 @@ if ($checkVersion("default_npc_tags") < 20260805003) {
     }
 }
 
+if ($checkVersion("default_npc_tags") < 20260814001) {
+    Logger::debug("Applying default_npc_tags 20260814001 - canonical NPC Oghma knowledge tags");
+
+    $migrationPath = __DIR__ . "/../data/canonical_npc_knowledge_tags_20260814.sql";
+    $migrationOk = is_readable($migrationPath)
+        && $db->execQuery(file_get_contents($migrationPath)) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("default_npc_tags", 20260814001);
+        Logger::info("Applied patch default_npc_tags 20260814001");
+    } else {
+        Logger::error("Failed to apply patch default_npc_tags 20260814001");
+    }
+}
+
 if ($checkVersion("eventlog_session_payload") < 20260807001) {
     Logger::debug("Applying eventlog_session_payload 20260807001 - allow complete routing snapshots");
 
-    $migrationOk = $db->execQuery(
-        "ALTER TABLE public.eventlog ALTER COLUMN sess TYPE text"
-    ) !== false;
+    $sessionColumn = $db->fetchOne(
+        "SELECT udt_name FROM information_schema.columns
+         WHERE table_schema='public' AND table_name='eventlog' AND column_name='sess'"
+    );
+    $migrationOk = strval($sessionColumn['udt_name'] ?? '') === 'text';
 
     if ($migrationOk) {
         $updateVersion("eventlog_session_payload", 20260807001);
         Logger::info("Applied patch eventlog_session_payload 20260807001");
     } else {
-        Logger::error("Failed to apply patch eventlog_session_payload 20260807001");
+        Logger::warn("Deferred eventlog_session_payload 20260807001 to the transactional legacy baseline repair");
     }
 }
-
-//----------------------------------------------------
-// AUDIT REQUEST RESPONSE - Store the response text for audit requests
-// Version 20260806001
-//----------------------------------------------------
-$db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"response\"  text");
-
 
 Logger::info(__FILE__." update file processed");
 

@@ -234,7 +234,7 @@ function herikaQuickstartGetGeneralLlmConnectorSummary($db): array {
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'RELLLM_CONNECTOR' => 'Relationship Management',
-        'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
+        'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Oghma Extractor Fallback',
     ];
 
     $summary = [];
@@ -297,8 +297,6 @@ if (isset($_GET['minime_probe']) && strval($_GET['minime_probe']) === '1') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
     try { require_once($rootPath . "lib" .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php"); } catch (Throwable $_e) {}
     try { if (!isset($GLOBALS['db']) || !$GLOBALS['db']) { $GLOBALS['db'] = new sql(); } } catch (Throwable $_e) {}
-    // Ensure database schema/tables exist before handling any quicksave actions
-    try { require_once($rootPath . "debug" . DIRECTORY_SEPARATOR . "db_updates.php"); } catch (Throwable $_e) {}
     try { require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "llm_randomizer.php"); } catch (Throwable $_e) {}
     header('Content-Type: application/json');
 

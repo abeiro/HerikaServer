@@ -13,6 +13,19 @@ final class OghmaForcedContextTest extends TestCase
         $this->assertSame([], chimOghmaRaceSignals('WolfRace'));
     }
 
+    public function testVanillaRaceFormIdsResolveThroughStablePluginKeys(): void
+    {
+        $this->assertSame('skyrim.esm|00013746', chimOghmaStableFormKey('0x00013746'));
+        $this->assertSame(['nord'], chimOghmaRaceIdentitySignals([
+            'race' => 'UnknownRace',
+            'race_formid' => '00013746',
+            'race_plugin' => 'Skyrim.esm',
+        ]));
+        $this->assertSame(['high elf', 'altmer'], chimOghmaRaceIdentitySignals([
+            'race_stable_key' => 'Skyrim.esm|00013743',
+        ]));
+    }
+
     public function testAdvancedAndBasicKnowledgePermissionsArePreserved(): void
     {
         $row = [
@@ -88,6 +101,24 @@ final class OghmaForcedContextTest extends TestCase
                 'Whiterun'
             )
         );
+    }
+
+    public function testLocationResolverPrefersNormalizedFormIdBeforeTextFallback(): void
+    {
+        $db = new class {
+            public array $queries = [];
+            public function fetchAll(string $query): array
+            {
+                $this->queries[] = $query;
+                return str_contains($query, '119247')
+                    ? [['formid' => '119247', 'name' => 'Sleeping Giant Inn', 'region' => 'Riverwood', 'hold' => 'Whiterun']]
+                    : [];
+            }
+            public function escape(string $value): string { return addslashes($value); }
+        };
+        $rows = chimOghmaResolveLocationRows($db, ['location_formid' => '119247'], 'Wrong Transcription');
+        $this->assertSame('Sleeping Giant Inn', $rows[0]['name']);
+        $this->assertCount(1, $db->queries);
     }
 
     public function testKnownLocationRowsKeepRegionSeparateFromHold(): void

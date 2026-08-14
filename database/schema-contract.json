@@ -1,0 +1,4445 @@
+{
+    "schema_version": 202608130002,
+    "extensions": [
+        "pg_trgm",
+        "vector"
+    ],
+    "tables": {
+        "public.actions_issued": {
+            "columns": {
+                "action": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "fullcall": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "actorname": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "ts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "original": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                }
+            }
+        },
+        "public.animations": {
+            "columns": {
+                "mood": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "animations": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "npc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                }
+            }
+        },
+        "public.animations_custom": {
+            "columns": {
+                "mood": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "animations": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "npc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                }
+            }
+        },
+        "public.audit_memory": {
+            "columns": {
+                "input": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "keywords": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "rank_any": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "rank_all": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "memory": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "time": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                }
+            }
+        },
+        "public.audit_request": {
+            "columns": {
+                "request": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "result": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "url": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "connector": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "usage": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "response": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.bgl_history": {
+            "columns": {
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "npc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "ts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "data": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "category": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.bio_templates": {
+            "columns": {
+                "npc_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "oghma_knowledge_tags": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "core": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_static_bio": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "appearance": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "personality": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "relationships": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "occupation": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "skills": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "speechstyle": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "goals": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "gender": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "race": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "refid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.bio_templates_custom": {
+            "columns": {
+                "npc_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "oghma_knowledge_tags": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "core": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_static_bio": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "appearance": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "personality": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "relationships": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "occupation": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "skills": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "speechstyle": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "goals": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "gender": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "race": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "refid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.books": {
+            "columns": {
+                "sess": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "title": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "content": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "ts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                }
+            }
+        },
+        "public.conf_opts": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "value": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.core_action": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "code_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "action_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "description": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "return_message": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "available_to_npc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "available_to_followers": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "available_to_narrator": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "is_activated": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "parameters_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "metadata": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "game_function": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "import_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "script_proxy_program": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                }
+            }
+        },
+        "public.core_action_custom": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "code_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "action_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "description": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "return_message": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "available_to_npc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "available_to_followers": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "available_to_narrator": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "is_activated": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "parameters_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "metadata": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "game_function": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "import_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "script_proxy_program": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                }
+            }
+        },
+        "public.core_api_badge": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "label": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "api_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                }
+            }
+        },
+        "public.core_itt_connector": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "driver": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "label": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "metadata": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "api_badge_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "url": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.core_llm_connector": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "label": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "metadata": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "url": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "model": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "provider": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "driver": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "reasoning_model": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "max_tokens": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "enforce_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "prefill_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "api_badge_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "json_schema": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "temperature": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "presence_penalty": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "frequency_penalty": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "repetition_penalty": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "top_p": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "top_k": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "min_p": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "top_a": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "service": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.core_narrator": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "value": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.core_npc_master": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "npc_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "npc_favorite": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "lock_profile": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "prompt_head": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_static_bio": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "oghma_knowledge_tags": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "emote_moods": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "personality": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "relationships": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "occupation": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "appearance": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "skills": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "speechstyle": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "goals": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "metadata": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "gender": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "race": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "refid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "profile_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "dynamic_profile": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "extended_data": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "md5": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "gamets_last_updated": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "core": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "base": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "tags": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.core_npc_master_history": {
+            "columns": {
+                "history_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "npc_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "npc_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_favorite": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "lock_profile": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "prompt_head": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_static_bio": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "oghma_knowledge_tags": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "emote_moods": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "personality": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "relationships": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "occupation": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "appearance": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "skills": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "speechstyle": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "goals": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "metadata": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "gender": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "race": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "refid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "profile_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "dynamic_profile": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "extended_data": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "md5": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "gamets_last_updated": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "created": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                },
+                "core": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "base": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "tags": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.core_player": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "value": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.core_profiles": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "label": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "default_npc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "default_narrator": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "tts_connector_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "itt_connector_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "llm_primary_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "llm_secondary_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "llm_tertiary_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "llm_quaternary_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "llm_formatter_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "llm_fallback_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "metadata": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "diary_connector_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "slot": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "prompt": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.core_stt_connector": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "driver": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "label": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "metadata": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "api_badge_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "url": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.core_tts_connector": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "driver": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "label": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "metadata": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "api_badge_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "url": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "voice_field": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.core_tts_fallback": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "race": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "gender": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": false
+                }
+            }
+        },
+        "public.currentmission": {
+            "columns": {
+                "sess": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "description": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "ts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                }
+            }
+        },
+        "public.database_versioning": {
+            "columns": {
+                "tablename": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                }
+            }
+        },
+        "public.descriptions": {
+            "columns": {
+                "plugin": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "baseid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "description": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.descriptions_custom": {
+            "columns": {
+                "plugin": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "baseid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "description": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.diarylog": {
+            "columns": {
+                "ts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "sess": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "topic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "content": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "tags": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "people": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "location": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                }
+            }
+        },
+        "public.dynamic_bio": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "prompt": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                }
+            }
+        },
+        "public.eventlog": {
+            "columns": {
+                "type": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "data": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "sess": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "ts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "people": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "location": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "party": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "utterance_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "delivery_state": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.faction_vanilla": {
+            "columns": {
+                "name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "formid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.factions": {
+            "columns": {
+                "name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "formid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "vendor_cont": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "stock": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "gold": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "player_rank": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                }
+            }
+        },
+        "public.game_plugins": {
+            "columns": {
+                "plugin_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "is_light": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "compile_index": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "small_file_compile_index": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "partial_index": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "formid_prefix": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": false
+                }
+            }
+        },
+        "public.general_settings": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "value": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "description": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                }
+            }
+        },
+        "public.import_rules": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "description": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "match_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "match_race": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "match_gender": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "match_base": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "match_faction": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "match_mods": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "_text",
+                    "nullable": true
+                },
+                "action": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "profile": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "priority": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "enabled": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": true
+                }
+            }
+        },
+        "public.json_personalities": {
+            "columns": {
+                "npc_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "personality": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                }
+            }
+        },
+        "public.locations": {
+            "columns": {
+                "name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "formid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "region": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "hold": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "tags": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "factions": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "is_interior": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "vanilla_location": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": true
+                },
+                "coords": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "point",
+                    "nullable": true
+                },
+                "refs": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "cleared": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": true
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                },
+                "world": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "chim_added": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                }
+            }
+        },
+        "public.log": {
+            "columns": {
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "prompt": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "response": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "url": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                }
+            }
+        },
+        "public.market_cache": {
+            "columns": {
+                "baseid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "description": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "plugin": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "enchantment": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "price": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                }
+            }
+        },
+        "public.master_packages": {
+            "columns": {
+                "mod": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "formid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "start": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "change": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "end": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.memory": {
+            "columns": {
+                "speaker": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "message": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "session": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "uid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "listener": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "momentum": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "event": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "ts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                }
+            }
+        },
+        "public.memory_summary": {
+            "columns": {
+                "gamets_truncated": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "n": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "packed_message": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "summary": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "classifier": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "uid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "embedding": {
+                    "udt_schema": "public",
+                    "udt_name": "vector",
+                    "nullable": true
+                },
+                "companions": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "embedding768": {
+                    "udt_schema": "public",
+                    "udt_name": "vector",
+                    "nullable": true
+                },
+                "tags": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "scope": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "native_vec": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "tsvector",
+                    "nullable": true
+                }
+            }
+        },
+        "public.moods_issued": {
+            "columns": {
+                "sess": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "speaker": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "mood": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "listener": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "ts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "emotion": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "emotion_intensity": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.named_cell": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "cell_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "location_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "interior": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "dest_door_cell_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "dest_door_exterior": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "door_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "vanilla_cell": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": true
+                },
+                "statics_list": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "worldspace": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "closed": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "door_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "door_x": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "door_y": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "numeric",
+                    "nullable": true
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                }
+            }
+        },
+        "public.npc_profile_backup": {
+            "columns": {
+                "name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "data": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                }
+            }
+        },
+        "public.npc_templates": {
+            "columns": {
+                "npc_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "npc_pers": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "npc_misc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "melotts_voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "xtts_voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "xvasynth_voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_dynamic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_background": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_personality": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_appearance": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_relationships": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_occupation": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_skills": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_speechstyle": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_goals": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.npc_templates_custom": {
+            "columns": {
+                "npc_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "npc_pers": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "npc_misc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "melotts_voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "xtts_voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "xvasynth_voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_dynamic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_background": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_personality": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_appearance": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_relationships": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_occupation": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_skills": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_speechstyle": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_goals": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.npc_templates_trl": {
+            "columns": {
+                "npc_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "npc_pers": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "npc_misc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "lang": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "orig_desc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "name_trl": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                }
+            }
+        },
+        "public.npc_templates_v2": {
+            "columns": {
+                "npc_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "npc_pers": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "npc_misc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "melotts_voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "xtts_voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "xvasynth_voiceid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                }
+            }
+        },
+        "public.oghma": {
+            "columns": {
+                "topic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "topic_desc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "native_vector": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "tsvector",
+                    "nullable": true
+                },
+                "knowledge_class": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "topic_desc_basic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "knowledge_class_basic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "tags": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "category": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "aliases": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "vector384": {
+                    "udt_schema": "public",
+                    "udt_name": "vector",
+                    "nullable": true
+                },
+                "source_type": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "source_catalog_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "source_checksum": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bpchar",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                },
+                "retrieval_phrases": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                }
+            }
+        },
+        "public.oghma_audit": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                },
+                "contract_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "request_type": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "input": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "status": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "grounded": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "access": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "fallback": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "settings": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "catalog_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "catalog_manifest_sha256": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bpchar",
+                    "nullable": true
+                },
+                "latency_ms": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "float8",
+                    "nullable": false
+                },
+                "prompt_sha256": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bpchar",
+                    "nullable": true
+                }
+            }
+        },
+        "public.oghma_catalog_entries": {
+            "columns": {
+                "catalog_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "topic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "aliases": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "topic_desc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "knowledge_class": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "topic_desc_basic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "knowledge_class_basic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "tags": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "category": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "row_sha256": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bpchar",
+                    "nullable": false
+                },
+                "retrieval_phrases": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                }
+            }
+        },
+        "public.oghma_catalog_events": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                },
+                "event_type": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "catalog_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "previous_catalog_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "details": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                }
+            }
+        },
+        "public.oghma_catalogs": {
+            "columns": {
+                "catalog_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "contract_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "manifest_sha256": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bpchar",
+                    "nullable": false
+                },
+                "articles_sha256": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bpchar",
+                    "nullable": false
+                },
+                "row_count": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "state": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "previous_catalog_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "imported_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                },
+                "activated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "superseded_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "metadata": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                }
+            }
+        },
+        "public.oghma_dynamic": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "id_quest": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "stage": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "topic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "topic_desc": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "knowledge_class": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "topic_desc_basic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "knowledge_class_basic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "tags": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "category": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.oghma_factory_overrides": {
+            "columns": {
+                "topic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "action": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                }
+            }
+        },
+        "public.physical_npc_diaries": {
+            "columns": {
+                "npc_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "title": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "last_diary_localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                }
+            }
+        },
+        "public.prompts": {
+            "columns": {
+                "prompt_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "default_prompt": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "custom_prompt": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "description": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                }
+            }
+        },
+        "public.quest_asset_group_members": {
+            "columns": {
+                "dataset_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "group_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "stable_ref": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "weight": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "constraints_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "note": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "source_pack": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "active": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": false
+                }
+            }
+        },
+        "public.quest_asset_groups": {
+            "columns": {
+                "dataset_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "group_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "label": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "description": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "selection_policy_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "source_pack": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "active": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": false
+                }
+            }
+        },
+        "public.quest_asset_imports": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "pack_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "manifest_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "manifest_hash": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "source_file": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "asset_count": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "group_count": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "member_count": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "imported_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": false
+                }
+            }
+        },
+        "public.quest_asset_packs": {
+            "columns": {
+                "pack_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "label": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "game": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "manifest_version": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "required_plugins_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "source": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "manifest_hash": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "active": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "note": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "imported_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": false
+                }
+            }
+        },
+        "public.quest_assets": {
+            "columns": {
+                "source_pack": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "stable_ref": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "signature": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "editor_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "display_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "source_plugin": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "winning_plugin": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "metadata_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "safety_status": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "active": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": false
+                }
+            }
+        },
+        "public.quest_item_types": {
+            "columns": {
+                "type_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "active": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "note": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "formids_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                }
+            }
+        },
+        "public.quest_npc_own_templates": {
+            "columns": {
+                "template_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "active": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "note": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "formids_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                }
+            }
+        },
+        "public.quest_npc_templates": {
+            "columns": {
+                "template_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "active": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "note": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "formids_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                }
+            }
+        },
+        "public.quest_outfits": {
+            "columns": {
+                "class_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "active": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "note": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "formids_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                }
+            }
+        },
+        "public.questlog": {
+            "columns": {
+                "ts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "sess": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "id_quest": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "editor_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "giver_actor_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "reward": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "target_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "is_unique": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": true
+                },
+                "mod": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "stage": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "briefing": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "briefing2": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "data": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "status": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                }
+            }
+        },
+        "public.quests": {
+            "columns": {
+                "ts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "sess": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "id_quest": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": false
+                },
+                "name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "editor_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "giver_actor_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "reward": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "target_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "is_unique": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": true
+                },
+                "mod": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "stage": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "briefing": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "briefing2": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "data": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "status": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                }
+            }
+        },
+        "public.relationship_eval_queue": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "npc_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "eval_data": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                },
+                "retry_count": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                }
+            }
+        },
+        "public.relationship_init_queue": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "npc_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "init_data": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamp",
+                    "nullable": true
+                },
+                "retry_count": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "last_error": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.responselog": {
+            "columns": {
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "sent": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "actor": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "text": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "action": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "tag": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                }
+            }
+        },
+        "public.rolemaster": {
+            "columns": {
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "ttl": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "type": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "data": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                }
+            }
+        },
+        "public.rumors": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "ts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "hold": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "content": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "type": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "rumor_length_days": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                }
+            }
+        },
+        "public.skyrim_quest_action_outbox": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "quest_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "beat_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "action_type": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "action_gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "payload_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "status": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "result_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                },
+                "applied_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                }
+            }
+        },
+        "public.skyrim_quest_beat_state": {
+            "columns": {
+                "quest_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "beat_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "fired": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "fired_order": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "fired_gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "evidence_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                }
+            }
+        },
+        "public.skyrim_quest_definitions": {
+            "columns": {
+                "quest_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "quest_editor_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "title": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "source_plugin": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "source_form_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "source_path": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "skeleton": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "active": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                }
+            }
+        },
+        "public.skyrim_quest_events": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "quest_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "event_type": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "event_source": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "npc_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "location_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "payload_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                }
+            }
+        },
+        "public.skyrim_quest_instances": {
+            "columns": {
+                "quest_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "quest_editor_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "run_state": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "current_stage": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": true
+                },
+                "last_gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "state_json": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                }
+            }
+        },
+        "public.sneq_quests": {
+            "columns": {
+                "quest_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "code": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "quest_run_state": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "quest_data": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "title": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "stage": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.sneq_quests_saved": {
+            "columns": {
+                "quest_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "code": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "quest_run_state": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "quest_data": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": true
+                },
+                "created_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": true
+                },
+                "title": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "stage": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "state": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "history_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                }
+            }
+        },
+        "public.speech": {
+            "columns": {
+                "sess": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "varchar",
+                    "nullable": true
+                },
+                "speaker": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "speech": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "location": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "listener": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "topic": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "localts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "gamets": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "ts": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": true
+                },
+                "rowid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "companions": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "audios": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "utterance_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "mood": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "emotion": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "emotion_intensity": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                }
+            }
+        },
+        "public.translations": {
+            "columns": {
+                "source_word": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "translated_word": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "expansion": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": true
+                },
+                "sense": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int4",
+                    "nullable": false
+                }
+            }
+        },
+        "public.visual_context": {
+            "columns": {
+                "id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "int8",
+                    "nullable": false
+                },
+                "subject_type": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "subject_key": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "subject_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "plugin": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "baseid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "refid": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "cell_id": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "location_name": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "image_path": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "image_sha256": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "description": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "perspective": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "provider": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "model": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "text",
+                    "nullable": false
+                },
+                "metadata": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "jsonb",
+                    "nullable": false
+                },
+                "locked": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "active": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "user_edited": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "bool",
+                    "nullable": false
+                },
+                "captured_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                },
+                "updated_at": {
+                    "udt_schema": "pg_catalog",
+                    "udt_name": "timestamptz",
+                    "nullable": false
+                }
+            }
+        }
+    },
+    "views": {
+        "public.combined_animations": "SELECT c.mood,\n    c.animations,\n    c.npc\n   FROM animations_custom c\nUNION ALL\n SELECT t.mood,\n    t.animations,\n    t.npc\n   FROM (animations t\n     LEFT JOIN animations_custom c ON (((t.mood)::text = (c.mood)::text)))\n  WHERE (c.mood IS NULL);",
+        "public.combined_bio_templates": "SELECT c.npc_name,\n    c.oghma_knowledge_tags,\n    c.core,\n    c.npc_static_bio,\n    c.appearance,\n    c.personality,\n    c.relationships,\n    c.occupation,\n    c.skills,\n    c.speechstyle,\n    c.goals,\n    c.voiceid,\n    c.gender,\n    c.race,\n    c.refid\n   FROM bio_templates_custom c\nUNION ALL\n SELECT b.npc_name,\n    b.oghma_knowledge_tags,\n    b.core,\n    b.npc_static_bio,\n    b.appearance,\n    b.personality,\n    b.relationships,\n    b.occupation,\n    b.skills,\n    b.speechstyle,\n    b.goals,\n    b.voiceid,\n    b.gender,\n    b.race,\n    b.refid\n   FROM (bio_templates b\n     LEFT JOIN bio_templates_custom c ON (((b.npc_name)::text = (c.npc_name)::text)))\n  WHERE (c.npc_name IS NULL);",
+        "public.combined_core_action": "SELECT c.id,\n    c.code_name,\n    c.action_name,\n    c.description,\n    c.return_message,\n    c.available_to_npc,\n    c.available_to_followers,\n    c.available_to_narrator,\n    c.is_activated,\n    c.parameters_json,\n    c.metadata,\n    c.game_function,\n    c.import_version,\n    c.script_proxy_program,\n    c.created_at,\n    c.updated_at\n   FROM core_action_custom c\nUNION ALL\n SELECT b.id,\n    b.code_name,\n    b.action_name,\n    b.description,\n    b.return_message,\n    b.available_to_npc,\n    b.available_to_followers,\n    b.available_to_narrator,\n    b.is_activated,\n    b.parameters_json,\n    b.metadata,\n    b.game_function,\n    b.import_version,\n    b.script_proxy_program,\n    b.created_at,\n    b.updated_at\n   FROM (core_action b\n     LEFT JOIN core_action_custom c ON ((lower((b.code_name)::text) = lower((c.code_name)::text))))\n  WHERE (c.code_name IS NULL);",
+        "public.combined_descriptions": "SELECT c.plugin,\n    c.baseid,\n    c.name,\n    c.description\n   FROM descriptions_custom c\nUNION ALL\n SELECT i.plugin,\n    i.baseid,\n    i.name,\n    i.description\n   FROM (descriptions i\n     LEFT JOIN descriptions_custom c ON (((i.plugin = c.plugin) AND ((i.baseid)::text = (c.baseid)::text))))\n  WHERE (c.baseid IS NULL);",
+        "public.combined_npc_templates": "SELECT c.npc_name,\n    c.npc_pers,\n    c.npc_dynamic,\n    c.npc_misc,\n    c.melotts_voiceid,\n    c.xtts_voiceid,\n    c.xvasynth_voiceid,\n    c.npc_background,\n    c.npc_personality,\n    c.npc_appearance,\n    c.npc_relationships,\n    c.npc_occupation,\n    c.npc_skills,\n    c.npc_speechstyle,\n    c.npc_goals\n   FROM npc_templates_custom c\nUNION ALL\n SELECT t.npc_name,\n    t.npc_pers,\n    t.npc_dynamic,\n    t.npc_misc,\n    t.melotts_voiceid,\n    t.xtts_voiceid,\n    t.xvasynth_voiceid,\n    t.npc_background,\n    t.npc_personality,\n    t.npc_appearance,\n    t.npc_relationships,\n    t.npc_occupation,\n    t.npc_skills,\n    t.npc_speechstyle,\n    t.npc_goals\n   FROM (npc_templates t\n     LEFT JOIN npc_templates_custom c ON (((t.npc_name)::text = (c.npc_name)::text)))\n  WHERE (c.npc_name IS NULL);",
+        "public.eventlog_view": "SELECT e.type,\n    e.data,\n    e.sess,\n    e.gamets,\n    e.localts,\n    e.ts,\n    e.rowid,\n    e.people,\n    e.location,\n    e.party,\n    convert_gamets2skyrim_date(e.gamets) AS sk_date,\n    convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,\n    convert_gamets2days(e.gamets) AS sk_days,\n    convert_gamets2gregorian_date(e.gamets) AS gregorian_date\n   FROM eventlog e;",
+        "public.locations_v": "SELECT locations.name,\n    locations.formid,\n    locations.region,\n    locations.hold,\n    locations.tags,\n    locations.factions,\n    locations.is_interior,\n    locations.vanilla_location,\n    locations.coords,\n    locations.refs,\n    locations.cleared,\n    locations.updated_at,\n    locations.world,\n    locations.chim_added\n   FROM locations\n  WHERE\n        CASE\n            WHEN ((locations.formid = 102771) AND (locations.cleared = false)) THEN false\n            ELSE true\n        END;",
+        "public.memory_v": "SELECT subquery.message,\n    subquery.uid,\n    subquery.gamets,\n    subquery.speaker,\n    subquery.listener,\n    subquery.ts\n   FROM ( SELECT memory.message,\n            memory.uid,\n            memory.gamets,\n            '-'::text AS speaker,\n            '-'::text AS listener,\n            memory.ts\n           FROM memory\n          WHERE ((memory.message !~~ 'Dear Diary%'::text) AND (memory.message <> ''::text) AND ((memory.event)::text <> 'backgroundlife_diary'::text))\n        UNION\n         SELECT ((((('(Context Location:'::text || speech.location) || ') '::text) || speech.speaker) || ': '::text) || speech.speech),\n            (speech.rowid)::integer AS rowid,\n            speech.gamets,\n            speech.speaker,\n            speech.listener,\n            speech.ts\n           FROM speech\n          WHERE (speech.speech <> ''::text)\n        UNION\n         SELECT eventlog.data,\n            (eventlog.rowid)::integer AS rowid,\n            eventlog.gamets,\n            '-'::text AS text,\n            '-'::text AS listener,\n            eventlog.ts\n           FROM eventlog\n          WHERE ((eventlog.type)::text = ANY (ARRAY[('death'::character varying)::text, ('location'::character varying)::text]))) subquery\n  ORDER BY subquery.gamets, subquery.ts;",
+        "public.speech_view": "SELECT s.sess,\n    s.speaker,\n    s.speech,\n    s.location,\n    s.listener,\n    s.topic,\n    s.localts,\n    s.gamets,\n    s.ts,\n    s.rowid,\n    s.companions,\n    s.audios,\n    convert_gamets2skyrim_date(s.gamets) AS sk_date,\n    convert_gamets2skyrim_long_date(s.gamets) AS sk_long_date,\n    convert_gamets2days(s.gamets) AS sk_days,\n    convert_gamets2gregorian_date(s.gamets) AS gregorian_date\n   FROM speech s;"
+    },
+    "constraints": [
+        "public.actions_issued.actions_issued_pkey",
+        "public.audit_request.audit_request_primary",
+        "public.bgl_history.bgl_history_pkey",
+        "public.bio_templates.bio_templates_pkey",
+        "public.bio_templates_custom.bio_templates_custom_pkey",
+        "public.books.books_pidx",
+        "public.conf_opts.pid",
+        "public.core_action.core_action_code_name_key",
+        "public.core_action.core_action_pkey",
+        "public.core_action_custom.core_action_custom_code_name_key",
+        "public.core_action_custom.core_action_custom_pkey",
+        "public.core_api_badge.core_api_badge_label_unique",
+        "public.core_api_badge.my_table_pkey",
+        "public.core_itt_connector.itt_connector_api_badge_id_fkey",
+        "public.core_itt_connector.itt_connector_pkey",
+        "public.core_llm_connector.llm_connector_api_badge_id_fkey",
+        "public.core_llm_connector.llm_connector_pkey",
+        "public.core_narrator.core_narrator_pkey",
+        "public.core_npc_master.fk_profile_id",
+        "public.core_npc_master.npc_master_npc_name_key",
+        "public.core_npc_master.npc_master_pkey",
+        "public.core_npc_master_history.core_npc_master_history_pkey",
+        "public.core_player.core_player_pkey",
+        "public.core_profiles.fk_diary_connector",
+        "public.core_profiles.profiles_itt_connector_id_fkey",
+        "public.core_profiles.profiles_llm_fallback_id_fkey",
+        "public.core_profiles.profiles_llm_formatter_id_fkey",
+        "public.core_profiles.profiles_llm_primary_id_fkey",
+        "public.core_profiles.profiles_llm_quaternary_id_fkey",
+        "public.core_profiles.profiles_llm_secondary_id_fkey",
+        "public.core_profiles.profiles_llm_tertiary_id_fkey",
+        "public.core_profiles.profiles_pkey",
+        "public.core_profiles.profiles_tts_connector_id_fkey",
+        "public.core_stt_connector.stt_connector_api_badge_id_fkey",
+        "public.core_stt_connector.stt_connector_pkey",
+        "public.core_tts_connector.tts_connector_api_badge_id_fkey",
+        "public.core_tts_connector.tts_connector_pkey",
+        "public.core_tts_fallback.core_tts_fallback_gender_check",
+        "public.core_tts_fallback.core_tts_fallback_pkey",
+        "public.core_tts_fallback.core_tts_fallback_race_gender_key",
+        "public.currentmission.currentmission_pidx",
+        "public.database_versioning.database_versioning_pkey",
+        "public.descriptions.descriptions_pkey",
+        "public.descriptions_custom.descriptions_custom_pkey",
+        "public.diarylog.diarylog_pidx",
+        "public.dynamic_bio.dynamic_bio_pkey",
+        "public.eventlog.eventlog_primary",
+        "public.factions.factions_pkey",
+        "public.game_plugins.game_plugins_pkey",
+        "public.general_settings.general_settings_pkey",
+        "public.import_rules.import_rules_pkey",
+        "public.import_rules.import_rules_profile_fkey",
+        "public.json_personalities.json_personalities_pkey",
+        "public.market_cache.market_cache_pk",
+        "public.master_packages.master_packages_pk",
+        "public.memory.memory_pidx",
+        "public.memory_summary.memory_summary_pidx",
+        "public.moods_issued.moods_issued_pkey",
+        "public.named_cell.cell_id_door_id",
+        "public.npc_templates.npc_custom_name_key",
+        "public.npc_templates_custom.npc_name_key",
+        "public.npc_templates_trl.npc_templates_trl_pk",
+        "public.npc_templates_v2.npc_templates_v2_pkey",
+        "public.oghma.oghma_pkey",
+        "public.oghma.oghma_source_catalog_fk",
+        "public.oghma.oghma_source_type_check",
+        "public.oghma_audit.oghma_audit_pkey",
+        "public.oghma_catalog_entries.oghma_catalog_entries_catalog_version_fkey",
+        "public.oghma_catalog_entries.oghma_catalog_entries_pkey",
+        "public.oghma_catalog_events.oghma_catalog_events_catalog_version_fkey",
+        "public.oghma_catalog_events.oghma_catalog_events_event_type_check",
+        "public.oghma_catalog_events.oghma_catalog_events_pkey",
+        "public.oghma_catalogs.oghma_catalogs_pkey",
+        "public.oghma_catalogs.oghma_catalogs_previous_catalog_version_fkey",
+        "public.oghma_catalogs.oghma_catalogs_row_count_check",
+        "public.oghma_catalogs.oghma_catalogs_state_check",
+        "public.oghma_dynamic.oghma_dynamic_pkey",
+        "public.oghma_factory_overrides.oghma_factory_overrides_action_check",
+        "public.oghma_factory_overrides.oghma_factory_overrides_pkey",
+        "public.physical_npc_diaries.physical_npc_diaries_pkey",
+        "public.prompts.prompts_pkey",
+        "public.quest_asset_group_members.quest_asset_group_members_constraints_is_object",
+        "public.quest_asset_group_members.quest_asset_group_members_pkey",
+        "public.quest_asset_group_members.quest_asset_group_members_source_pack_dataset_name_group_k_fkey",
+        "public.quest_asset_group_members.quest_asset_group_members_source_pack_fkey",
+        "public.quest_asset_group_members.quest_asset_group_members_source_pack_stable_ref_fkey",
+        "public.quest_asset_group_members.quest_asset_group_members_weight",
+        "public.quest_asset_groups.quest_asset_groups_dataset",
+        "public.quest_asset_groups.quest_asset_groups_key_format",
+        "public.quest_asset_groups.quest_asset_groups_pkey",
+        "public.quest_asset_groups.quest_asset_groups_policy_is_object",
+        "public.quest_asset_groups.quest_asset_groups_source_pack_fkey",
+        "public.quest_asset_imports.quest_asset_imports_pkey",
+        "public.quest_asset_packs.quest_asset_packs_pkey",
+        "public.quest_asset_packs.quest_asset_packs_plugins_is_array",
+        "public.quest_assets.quest_assets_metadata_is_object",
+        "public.quest_assets.quest_assets_pkey",
+        "public.quest_assets.quest_assets_safety_status",
+        "public.quest_assets.quest_assets_source_pack_fkey",
+        "public.quest_assets.quest_assets_stable_ref_format",
+        "public.quest_item_types.quest_item_types_formids_json_is_array",
+        "public.quest_item_types.quest_item_types_pk",
+        "public.quest_npc_own_templates.quest_npc_own_templates_formids_json_is_array",
+        "public.quest_npc_own_templates.quest_npc_own_templates_pk",
+        "public.quest_npc_templates.quest_npc_templates_formids_json_is_array",
+        "public.quest_npc_templates.quest_npc_templates_pk",
+        "public.quest_outfits.quest_outfits_formids_json_is_array",
+        "public.quest_outfits.quest_outfits_pk",
+        "public.questlog.questlog_pkey",
+        "public.relationship_eval_queue.relationship_eval_queue_npc_id_key",
+        "public.relationship_eval_queue.relationship_eval_queue_pkey",
+        "public.relationship_init_queue.relationship_init_queue_npc_id_key",
+        "public.relationship_init_queue.relationship_init_queue_pkey",
+        "public.rolemaster.rolemaster_pk",
+        "public.skyrim_quest_action_outbox.skyrim_quest_action_outbox_pkey",
+        "public.skyrim_quest_action_outbox.skyrim_quest_action_outbox_quest_key_fkey",
+        "public.skyrim_quest_beat_state.skyrim_quest_beat_state_pkey",
+        "public.skyrim_quest_beat_state.skyrim_quest_beat_state_quest_key_fkey",
+        "public.skyrim_quest_definitions.skyrim_quest_definitions_pkey",
+        "public.skyrim_quest_events.skyrim_quest_events_pkey",
+        "public.skyrim_quest_events.skyrim_quest_events_quest_key_fkey",
+        "public.skyrim_quest_instances.skyrim_quest_instances_pkey",
+        "public.skyrim_quest_instances.skyrim_quest_instances_quest_key_fkey",
+        "public.sneq_quests.sneq_quests_pkey",
+        "public.sneq_quests_saved.sneq_quests_saved_id",
+        "public.translations.translation_pk",
+        "public.visual_context.visual_context_pkey"
+    ],
+    "indexes": [
+        "public.actions_issued.actions_issued_pkey",
+        "public.audit_request.audit_request_primary",
+        "public.bgl_history.bgl_history_pkey",
+        "public.bio_templates.bio_templates_pkey",
+        "public.bio_templates_custom.bio_templates_custom_pkey",
+        "public.books.books_pidx",
+        "public.conf_opts.pid",
+        "public.core_action.core_action_code_name_key",
+        "public.core_action.core_action_pkey",
+        "public.core_action.idx_core_action_action_name_lower",
+        "public.core_action.idx_core_action_available_to_followers",
+        "public.core_action.idx_core_action_available_to_narrator",
+        "public.core_action.idx_core_action_available_to_npc",
+        "public.core_action.idx_core_action_code_name_lower",
+        "public.core_action.idx_core_action_game_function",
+        "public.core_action.idx_core_action_is_activated",
+        "public.core_action_custom.core_action_custom_code_name_key",
+        "public.core_action_custom.core_action_custom_pkey",
+        "public.core_action_custom.idx_core_action_custom_action_name_lower",
+        "public.core_action_custom.idx_core_action_custom_available_to_followers",
+        "public.core_action_custom.idx_core_action_custom_available_to_narrator",
+        "public.core_action_custom.idx_core_action_custom_available_to_npc",
+        "public.core_action_custom.idx_core_action_custom_code_name_lower",
+        "public.core_action_custom.idx_core_action_custom_game_function",
+        "public.core_action_custom.idx_core_action_custom_is_activated",
+        "public.core_api_badge.core_api_badge_label_unique",
+        "public.core_api_badge.idx_core_api_badge_label_lower",
+        "public.core_api_badge.my_table_pkey",
+        "public.core_itt_connector.itt_connector_pkey",
+        "public.core_llm_connector.llm_connector_pkey",
+        "public.core_narrator.core_narrator_pkey",
+        "public.core_npc_master.npc_master_npc_name_key",
+        "public.core_npc_master.npc_master_pkey",
+        "public.core_npc_master_history.core_npc_master_history_pkey",
+        "public.core_player.core_player_pkey",
+        "public.core_profiles.core_profiles_slot_unique_idx",
+        "public.core_profiles.profiles_pkey",
+        "public.core_stt_connector.stt_connector_pkey",
+        "public.core_tts_connector.tts_connector_pkey",
+        "public.core_tts_fallback.core_tts_fallback_pkey",
+        "public.core_tts_fallback.core_tts_fallback_race_gender_key",
+        "public.currentmission.currentmission_pidx",
+        "public.database_versioning.database_versioning_pkey",
+        "public.descriptions.descriptions_pkey",
+        "public.descriptions_custom.descriptions_custom_pkey",
+        "public.diarylog.diarylog_pidx",
+        "public.diarylog.idx_diarylog_people_gamets",
+        "public.dynamic_bio.dynamic_bio_pkey",
+        "public.eventlog.event_log_type",
+        "public.eventlog.eventlog_primary",
+        "public.eventlog.idx_eventlog_delivery_state",
+        "public.eventlog.idx_eventlog_gamets_pos",
+        "public.eventlog.idx_eventlog_gamets_ts_pos",
+        "public.eventlog.idx_eventlog_people_trgm",
+        "public.eventlog.idx_eventlog_people_trgm2",
+        "public.eventlog.idx_eventlog_utterance_id",
+        "public.factions.factions_pkey",
+        "public.game_plugins.game_plugins_pkey",
+        "public.general_settings.general_settings_pkey",
+        "public.import_rules.import_rules_pkey",
+        "public.json_personalities.json_personalities_pkey",
+        "public.market_cache.market_cache_pk",
+        "public.master_packages.master_packages_mod_formid_idx",
+        "public.master_packages.master_packages_pk",
+        "public.memory.memory_pidx",
+        "public.memory_summary.memory_summary_pidx",
+        "public.moods_issued.moods_issued_pkey",
+        "public.named_cell.cell_id_door_id",
+        "public.npc_templates.npc_custom_name_key",
+        "public.npc_templates_custom.npc_name_key",
+        "public.npc_templates_trl.npc_templates_trl_pk",
+        "public.npc_templates_v2.npc_templates_v2_pkey",
+        "public.oghma.oghma_native_vector_idx",
+        "public.oghma.oghma_pkey",
+        "public.oghma.oghma_source_catalog_version_idx",
+        "public.oghma.oghma_source_type_idx",
+        "public.oghma_audit.oghma_audit_created_at_idx",
+        "public.oghma_audit.oghma_audit_pkey",
+        "public.oghma_audit.oghma_audit_status_idx",
+        "public.oghma_catalog_entries.oghma_catalog_entries_pkey",
+        "public.oghma_catalog_events.oghma_catalog_events_pkey",
+        "public.oghma_catalogs.oghma_catalogs_one_active",
+        "public.oghma_catalogs.oghma_catalogs_pkey",
+        "public.oghma_dynamic.oghma_dynamic_pkey",
+        "public.oghma_factory_overrides.oghma_factory_overrides_pkey",
+        "public.physical_npc_diaries.physical_npc_diaries_pkey",
+        "public.physical_npc_diaries.physical_npc_diaries_updated_idx",
+        "public.prompts.idx_prompts_prompt_key_unique",
+        "public.prompts.prompts_pkey",
+        "public.quest_asset_group_members.quest_asset_group_members_pkey",
+        "public.quest_asset_group_members.quest_asset_members_group_idx",
+        "public.quest_asset_group_members.quest_asset_members_pack_idx",
+        "public.quest_asset_groups.quest_asset_groups_pack_idx",
+        "public.quest_asset_groups.quest_asset_groups_pkey",
+        "public.quest_asset_imports.quest_asset_imports_pkey",
+        "public.quest_asset_packs.quest_asset_packs_pkey",
+        "public.quest_assets.quest_assets_pkey",
+        "public.quest_assets.quest_assets_safety_idx",
+        "public.quest_assets.quest_assets_signature_idx",
+        "public.quest_assets.quest_assets_source_pack_idx",
+        "public.quest_item_types.idx_quest_item_types_active",
+        "public.quest_item_types.quest_item_types_pk",
+        "public.quest_npc_own_templates.idx_quest_npc_own_templates_active",
+        "public.quest_npc_own_templates.quest_npc_own_templates_pk",
+        "public.quest_npc_templates.idx_quest_npc_templates_active",
+        "public.quest_npc_templates.quest_npc_templates_pk",
+        "public.quest_outfits.idx_quest_outfits_active",
+        "public.quest_outfits.quest_outfits_pk",
+        "public.questlog.questlog_pkey",
+        "public.relationship_eval_queue.relationship_eval_queue_npc_id_key",
+        "public.relationship_eval_queue.relationship_eval_queue_pkey",
+        "public.relationship_init_queue.relationship_init_queue_npc_id_key",
+        "public.relationship_init_queue.relationship_init_queue_pkey",
+        "public.rolemaster.rolemaster_pk",
+        "public.skyrim_quest_action_outbox.idx_skyrim_quest_action_outbox_gamets",
+        "public.skyrim_quest_action_outbox.idx_skyrim_quest_action_outbox_status_created",
+        "public.skyrim_quest_action_outbox.skyrim_quest_action_outbox_pkey",
+        "public.skyrim_quest_beat_state.skyrim_quest_beat_state_pkey",
+        "public.skyrim_quest_definitions.idx_skyrim_quest_definitions_editor_id",
+        "public.skyrim_quest_definitions.skyrim_quest_definitions_pkey",
+        "public.skyrim_quest_events.idx_skyrim_quest_events_gamets",
+        "public.skyrim_quest_events.idx_skyrim_quest_events_quest_created",
+        "public.skyrim_quest_events.idx_skyrim_quest_events_type_created",
+        "public.skyrim_quest_events.skyrim_quest_events_pkey",
+        "public.skyrim_quest_instances.idx_skyrim_quest_instances_run_state",
+        "public.skyrim_quest_instances.skyrim_quest_instances_pkey",
+        "public.sneq_quests.sneq_quests_pkey",
+        "public.sneq_quests_saved.sneq_quests_saved_id",
+        "public.speech.idx_speech_gamets_pos",
+        "public.speech.idx_speech_listener_trgm",
+        "public.speech.idx_speech_speaker_trgm",
+        "public.speech.idx_speech_utterance_id",
+        "public.translations.search_idx",
+        "public.translations.translation_pk",
+        "public.visual_context.visual_context_image_idx",
+        "public.visual_context.visual_context_location_idx",
+        "public.visual_context.visual_context_pkey",
+        "public.visual_context.visual_context_subject_idx"
+    ]
+}

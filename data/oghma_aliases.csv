@@ -19,34 +19,38 @@ abandoned_shack,
 absorb_health,
 absorb_magicka,
 absorb_stamina,
-adamantine_tower,Direnni Tower
+adamantine_tower,"Direnni Tower, Balfiera Tower, Ada-mantia"
 addvar's_house,
 advances_in_lockpicking,The Locked Room
+aedra,"Dead Gods, Mortal Gods, Outer Gods, Ancestor Spirits"
 aedra_and_daedra,
 aerin's_house,
 aetherium_forge,
+aetherius,"the immortal plane, the aether, spirit worlds of eternity, heaven"
 aevar_stone-singer,The Story of Aevar Stone-Singer
 ahzidal,
 ahzidal's_descent,
 ahzirr_traajijazeri,
-akatosh,
-akavir,
+akatosh,"Alkosh, Auri-El, Bormahu, Dragon God of Time"
+akavir,Dragon Land
 alchemist's_shack,
-aldmeri,
+aldmeri,Aldmer
+aldmeri_pantheon,"Altmeri pantheon, Altmer pantheon, Aldmeri gods, Altmeri gods"
 alduin,
 alduin_is_real,Alduin is Real and He Ent Akatosh
-alessia,"Queen Alessia, Saint Alessia"
-alessian_empire,
+alessia,"Queen Alessia, Saint Alessia, Lady of Heaven, Mother of the Empire"
+alessian_empire,"Empire of Cyrodiil, First Empire of Cyrodiil, Empire of Men, First Empire"
 alessian_slave_rebellion,
 alftand,
 alinor,
 all-maker,All-Father
-almalexia,"Almalexia the Lover, Ayem"
+almalexia,"Almalexia the Lover, Ayem, Lady Almalexia, Mother Morrowind"
 alocasia_fruit,
 aloe_vera_leaves,
 alor_house,
 altar_of_thrond,
-altmer,High Elves
+alteration,
+altmer,"High Elves, high elf"
 alva's_house,
 ambrosia,
 amongst_the_draugr,
@@ -56,12 +60,9 @@ an_accounting_of_the_scrolls,
 ancestor_glade,
 ancestor_moth_wing,
 ancestors_and_the_dunmer,
+ancestral_worship,"Ancestor worship, Ghosts and ancestors"
 ancient's_ascent,
-ancient_nord_armor,
-ancient_nord_arrow,
-ancient_nord_boots,
-ancient_nord_gauntlets,
-ancient_nord_helmet,
+ancient_nord_equipment,"nord hero arrow, ancient nord arrow, ancient nord armor, ancient nord boots, ancient nord gauntlets, ancient nord helmet"
 anga's_mill,
 angarvunde,
 angelfish,
@@ -69,10 +70,11 @@ angeline's_aromatics,
 angi's_camp,
 angler,
 angler_larvae,
-animal_allegiance,
+animal_allegiance,raan mir tah
 anise's_cabin,
 annals_of_the_dragonguard,
 ansilvund,
+anu,"Anu the Everything, Anui-El, Ahnurr, Satak"
 anvil,
 apocrypha,
 arcadia's_cauldron,
@@ -85,19 +87,17 @@ argonian,Saxhleel
 argonian_account,
 argonian_ale,
 argonian_assemblage,
-arkay,
+arkay,"Lord of the Wheel of Life, God of the Cycle of Birth and Death, Light of Lights, Bringer of Light, Lord of the Seasons, Mortals' God"
 arkngthamz,
-arkngthamz_puzzle,
 armor,
 arniel's_convection,
 arnleif_and_sons_trading_company,
 ash_blight,
-ash_creatures,
 ash_creep_cluster,
 ash_hopper_jelly,
 ash_rune,
 ash_shell,
-ash_spawn,
+ash_spawn,ash creatures
 ashen_grass_pod,
 ashfall's_tear,
 ashfallow_citadel,
@@ -105,28 +105,26 @@ aster_bloom_core,
 ataxia,
 atheron_residence,
 atlas_of_Dragons,
-atmora,Altmora
-aura_whisper,
+atmora,"Altmora, Elder Wood"
+aura_whisper,laas yah nir
+aurbis,"Gray Maybe, Unnatural Realm"
 auriels_bow,
 autumnshade_clearing,
 autumnwatch_tower,
 avanchnzel,
-aversion_to_fire,
-aversion_to_frost,
-aversion_to_magic,
-aversion_to_shock,
+aversion_poisons,"aversion to fire, aversion to frost, aversion to magic, aversion to shock"
 ayleid_crown_of_nenalata,
-ayleids,Heartland High Elves
-azura,
+ayleids,"Heartland High Elves, Saliache"
+azura,Queen of Dawn and Dusk
 azura_and_the_box,
 azura_star,Azura's Star
+azurah,"Khajiiti Azura, Goddess of Dusk and Dawn"
 baan_dar,
 baldor_iron-shaper's_house,
 balgruuf,Balgruuf the Greater
 balmora,
 balmora_blue,
-banded_iron_armor,
-banded_iron_shield,
+banded_iron_equipment,"banded iron armor, banded iron shield"
 bane_of_the_undead,
 banish,
 banish_daedra,
@@ -134,11 +132,12 @@ bannermist_tower,
 bard's_leap_summit,
 bards_college,
 battle-born_farm,
-battle_furry,
+battle_fury,mid vur shaan
+battle_of_moesring,Battle of the Moesring
 bear,
 bear_claws,
 beast_stone,
-become_ethereal,
+become_ethereal,feim zii gron
 bee,
 beehive_husk,
 before_the_ages_of_Man,
@@ -147,7 +146,7 @@ beggar_prince,
 beitild's_house,
 belethor's_general_goods,
 belyn_hlaalu's_house,
-bend_will,
+bend_will,gol hah dov
 benkongerike,
 bilegulch_mine,
 biography_of_barenziah,
@@ -162,15 +161,13 @@ black_briar,
 black_briar_lodge,
 black_heart_blight,
 black_marsh,Argonia
-black_reach,
 blacklight,
-blacksmiths_potion,
+blackreach,
 blackwood_company,
 blade_of_woe,Night Mother's Kiss
-blades,
+blades,Imperial Intelligence
 bleak_falls_barrow,
 bleakcoast_cave,
-bleakfalls_barrow,
 bleakfalls_tower,
 bleakwind_basin,
 bleakwind_bluff,
@@ -201,16 +198,10 @@ bolli's_house,
 bone_break_fever,
 bone_meal,
 bonechill_passage,
-bonemold_armor,
-bonemold_boots,
-bonemold_gauntlets,bonemold bracers
-bonemold_guard_armor,
-bonemold_helmet,
-bonemold_pauldron_armor,
-bonemold_shield,
+bonemold_equipment,"bonemold armor, bonemold guard armor, bonemold pauldron armor, bonemold boots, bonemold gauntlets, bonemold bracers, bonemold helmet, bonemold shield"
 bonestrewn_crest,
-boots_of_the_crusader,
-bosmer,Wood Elves
+boots_of_the_crusader,Boots of Kynareth
+bosmer,"Wood Elves, wood elf, Boiche, Tree-Sap People"
 boulderfall_cave,
 bound_battleaxe,
 bound_bow,
@@ -223,7 +214,7 @@ brandy-mug_farm,
 bravil,
 breathing_water,
 breezehome,
-breton,
+breton,"Half-Elf, Half-Elves, Manmer"
 briar_heart,
 briarheart_geis,
 brief_history_of_the_empire,
@@ -254,8 +245,8 @@ burnt_spriggan_wood,
 butterfly_wing,
 caerellius_house,
 calixto's_house_of_curiosities,
-call_dragon,
-call_of_valour,
+call_dragon,od ah viing
+call_of_valour,"hun kaal zoor, Call of Valor"
 call_to_arms,
 calm,
 calvicus_vile,Clavicus Vile
@@ -291,43 +282,38 @@ chillfurrow_farm,
 chillrend,
 chillwind_depths,
 chim,
-chimarvamidium,
-chimer,
-chitin_armor,
-chitin_boots,
-chitin_bracers,
-chitin_helmet,
-chitin_shield,
+chimarvamidium,"Ancient Tales of the Dwemer Part VI, Hope of the Chimer, Nchmarthurnidamz"
+chimer,"Changed Ones, Velothi"
+chitin_equipment,"chitin armor, chitin boots, chitin bracers, chitin helmet, chitin shield"
 chokeberry,
 chokeweed,
 chorrol,
 chronicles_of_nchuleft,
-chrysamere,Sword of Heroes
+chrysamere,"Sword of Heroes, Chrysamere Blade, Paladin's Blade"
 cidhna_mine,
 circle_of_protection,
 clairvoyance,
 clan_shatter-shield_office,
-clear_skies,
+clear_skies,lok vah koor
 clearpine_pond,
 clearspring_tarn,
 cliff_racer,
 cliffside_retreat,
-clockwork_city,
+clockwork_city,Clockwork Realm
 close_wounds,
 cloud_ruler_temple,
-coal_dragon_claw,
 cod,
 coda_flower,
-cold_rock_pass,
+cold_rock_pass,south cold rock pass
 coldcinder_cave,
 coldharbour,
 college_of_winterhold,
-colovia,Old Colovia
-colovian,
+colovia,"Old Colovia, colovian, Colovian West"
 command,
 command_daedra,
 companions,
 congealed_putrescence,
+conjuration,
 conjure,
 conjure_ash_guardian,
 conjure_ash_spawn,
@@ -339,7 +325,7 @@ conjure_frost_atronach,
 conjure_mistman,
 conjure_seeker,
 conjure_storm_atronach,
-conjurers_potion,
+control_poisons,"fear poison, frenzy poison, paralysis poison"
 corkbulb_root,
 cornberry,Comberry
 corpselight_farm,
@@ -356,33 +342,22 @@ creep_cluster,
 crimson_nirnroot,
 cronvangr_cave,
 crown_of_barenziah,
-crystal_tower,
+crystal_tower,"Crystal-Like-Law, Lawful Crystal"
 crystaldrift_cave,
 cuirass_of_the_crusader,
+curative_potions,"cure poison, potion of cure disease"
 cure_disease,
-cure_poison,
-cyclone,
-cyrodiil,
+cyclone,ven gaar nos
+cyrodiil,"Cyrod, Imperial Province"
 cyrodilic_brandy,
 cyrodilic_spadetail,
+daedra,"dark kin, not our ancestors"
 daedra_heart,
 daedra_silk,
 daedra_venin,
-daedric_armor,
-daedric_arrow,
-daedric_battleaxe,
-daedric_boots,
-daedric_bow,
-daedric_crescent,Daedric Crescent Blade
-daedric_dagger,
-daedric_gauntlets,
-daedric_greatsword,
-daedric_helmet,
-daedric_mace,
-daedric_shield,
-daedric_sword,
-daedric_war_axe,
-daedric_warhammer,
+daedra_worship,"Daedric worship, cult of the Daedra"
+daedric_crescent,"Daedric Crescent Blade, Crescent Blade"
+daedric_equipment,"daedric armor, daedric boots, daedric gauntlets, daedric helmet, daedric shield, daedric sword, daedric war axe, daedric dagger, daedric mace, daedric greatsword, daedric battleaxe, daedric warhammer, daedric bow, daedric arrow"
 daedroth_teeth,
 daggerfall,
 dagoth_ur,"Voryn Dagoth, Sharmat, Father of the Mountain, Awakened Lord of the Sixth House"
@@ -393,10 +368,10 @@ damage_magicka,
 damage_magicka_regeneration,
 damage_stamina,
 damage_stamina_regeneration,
+damaging_poisons,"poison, lingering poison"
 damphall_mine,
 dark_brotherhood,
 dark_brotherhood_sanctuary,
-dark_elf,
 dark_seducer,Mazken
 darkest_darkness,
 darkfall_cave,
@@ -405,19 +380,11 @@ darkshade,
 darkwater_crossing,
 darkwater_pass,
 daughter_of_the_niben,Bravil: Daughter of the Niben
-dawn_era,Dawn Age
+dawn_era,"Dawn Age, Beginning Times, Chaos Times"
 dawnbreaker,
-dawnfang,
-dawnguard_armor,
-dawnguard_boots,
-dawnguard_full_helmet,
-dawnguard_gauntlets,
-dawnguard_heavy_armor,
-dawnguard_heavy_boots,
-dawnguard_heavy_gauntlets,
-dawnguard_helmet,
-dawnguard_shield,
-dawnstar,
+dawnfang,duskfang
+dawnguard_equipment,"dawnguard armor, dawnguard boots, dawnguard gauntlets, dawnguard helmet, dawnguard heavy armor, dawnguard heavy boots, dawnguard heavy gauntlets, dawnguard full helmet, dawnguard shield"
+dawnstar,Danstrar
 dawnstar_sanctuary,
 de_rerum_dirennis,
 dead_crone_rock,
@@ -432,159 +399,93 @@ deepwood_redoubt,
 deer,
 dengeir's_house,
 deor_woodcutter's_house,
+destruction,
 detect_dead,
 detect_life,
 detect_undead,
-diamond_claw,
-dibella,"Lady of Love, Goddess of Beauty"
-dimhollow_cavern_puzzle,
+dibella,"Lady of Love, Goddess of Beauty, Our Blessed Lady, Passion Dancer, Queen of Heaven"
 dimhollow_crypt,
 direfish,
-disarm,
+disappearance_of_the_dwemer,Vanishing of the Dwarves
+disarm,zun haal viik
 disguised_invisibility_potion,
-dismay,
+dismay,faas ru maar
 double_distilled_skooma,
-dovahkiin,
 dragon,dovah
-dragon_aspect,
-dragon_break,
+dragon_aspect,mul qah diiv
+dragon_break,Middle Dawn
 dragon_bridge,
 dragon_bridge_overlook,
-dragon_cult,Atmoran Dragon Cult
-dragon_language,Dovahzul
+dragon_claws,"coal dragon claw, diamond claw, ebony claw, emerald dragon claw, glass claw, golden claw, iron claw, ivory claw, ivory dragon claw, ruby dragon claw, sapphire dragon claw"
+dragon_cult,"Atmoran Dragon Cult, Cult of the Dragon Priests"
+dragon_language,"Dovahzul, dragon tongue"
 dragon_mound_lone_mountain,
 dragon_priest,
-dragon_rend,
-dragon_tongue,
+dragon_rend,joor zah frul
 dragon_wars,Dragon War
 dragonbone,
-dragonbone_arrow,
-dragonbone_battleaxe,
-dragonbone_bow,
-dragonbone_dagger,
-dragonbone_greatsword,
-dragonbone_mace,
-dragonbone_sword,
-dragonbone_war_axe,
-dragonbone_warhammer,
-dragonborn,
+dragonbone_equipment,"dragonbone warhammer, dragonbone sword, dragonbone war axe, dragonbone dagger, dragonbone mace, dragonbone greatsword, dragonbone battleaxe, dragonbone bow, dragonbone arrow"
+dragonborn,dovahkiin
 dragonborn_song,Song of the Dragonborn
 dragonhide,
-dragonplate_armor,
-dragonplate_boots,
-dragonplate_gauntlets,
-dragonplate_helmet,
-dragonplate_shield,
+dragonplate_equipment,"dragonplate armor, dragonplate boots, dragonplate gauntlets, dragonplate helmet, dragonplate shield"
 dragons_tongue,
-dragonscale_armor,
-dragonscale_boots,
-dragonscale_gauntlets,
-dragonscale_helmet,
-dragonscale_shield,
+dragonscale_equipment,"dragonscale armor, dragonscale boots, dragonscale gauntlets, dragonscale helmet, dragonscale shield"
 dragonsreach,
 dragonsreach_dungeon,
 dragonstone,
 dragontooth_crater,
-drain_vitality,
+drain_vitality,gaan lah haas
 draugr,
 dread_zombie,
 drelas_cottage,
-dremora,Kyn
+dremora,"Kyn, Dremora Clan, Kynaz"
 dreugh_wax,
 driftshade_refuge,
 droops,
 druadach_redoubt,
 dukaan,
-dunmer,Dark Elves
-dur_neh_viir,
+dunmer,"Dark Elves, dark elf"
 dushnikh_yal,
-duskfang,
 duskglow_crevice,
 dustmans_cairn,
-dwarven_armor,
-dwarven_arrow,
-dwarven_battleaxe,
-dwarven_bolt,
-dwarven_boots,
-dwarven_bow,
-dwarven_centurion,Steam Centurion
-dwarven_dagger,
-dwarven_gauntlets,
-dwarven_greatsword,
-dwarven_helmet,
-dwarven_mace,
+dwarven_equipment,"dwarven armor, dwarven boots, dwarven gauntlets, dwarven helmet, dwarven shield, dwarven sword, dwarven war axe, dwarven dagger, dwarven mace, dwarven greatsword, dwarven battleaxe, dwarven warhammer, dwarven bow, dwarven arrow, dwarven bolt"
 dwarven_oil,
-dwarven_shield,
-dwarven_sphere,
-dwarven_spider,
-dwarven_sword,
-dwarven_war_axe,
-dwarven_warhammer,
-dwarves,Deep Elves
-dwemer,
-dwemer_centurion,Steam Centurions
+dwemer,"dwarves, Deep Elves"
+dwemer_centurion,"Steam Centurions, dwarven centurion, Steam Centurion"
 dwemer_history_and_culture,Collected Essays on Dwemer History and Culture
 dwemer_inquiries,Dwemer Inquiries: Their Architecture and Civilization
 dwemer_museum,
-dwemer_sphere,
-dwemer_spider,
+dwemer_sphere,dwarven sphere
+dwemer_spider,"dwarven spider, Centurion Spiders, Dwemer Spiders"
 earth_stone,
+earthbones,
 east_empire_company_warehouse,
 eastmarch,
 eastmarch_imperial_camp,
 ebonheart,Castle Ebonheart
-ebony,
-ebony_armor,
-ebony_arrow,
-ebony_battleaxe,
-ebony_blade,
-ebony_boots,
-ebony_bow,
-ebony_claw,
-ebony_dagger,
-ebony_gauntlets,
-ebony_greatsword,
-ebony_helmet,
-ebony_mace,
-ebony_mail,
-ebony_shield,
-ebony_sword,
-ebony_war_axe,
-ebony_warhammer,
+ebony,"Godsblood, Volcanic Glass"
+ebony_blade,The Leech
+ebony_equipment,"ebony armor, ebony boots, ebony gauntlets, ebony helmet, ebony shield, ebony sword, ebony war axe, ebony dagger, ebony mace, ebony greatsword, ebony battleaxe, ebony warhammer, ebony bow, ebony arrow"
+ebony_mail,Mail of Boethiah
 ebonyflesh,
 ectoplasm,
 edla's_house,
 effects_of_the_elder_scrolls,
+ehlnofey,"Wandering Ehlnofey, Elhnofey"
 eldergleam_sanctuary,
 eldersblood_peak,
-elemental_fury,
+elemental_fury,su grah dun
 elgrim's_elixirs,
 elisif,Elisif the Fair
-elixir_of_resist_magic,
 elk,
-elsweyr,
-eltonbrand,
-elven_armor,
-elven_arrow,
-elven_battleaxe,
-elven_boots,
-elven_bow,
-elven_dagger,
-elven_gauntlets,
-elven_gilded_armor,
-elven_greatsword,
-elven_helmet,
-elven_mace,
-elven_shield,
-elven_sword,
-elven_war_axe,
-elven_warhammer,
+elsweyr,"Anequina, Pellitine, Elsweyr Confederacy, Khajiit Homeland"
+elven_equipment,"elven gauntlets, elven gilded armor, elven armor, elven boots, elven helmet, elven shield, elven sword, elven war axe, elven dagger, elven mace, elven greatsword, elven battleaxe, elven warhammer, elven bow, elven arrow"
 elves_ear,
 elytra_ichor,
 embershard_mine,
-emerald_dragon_claw,
 emperor_parasol_moss,
-enchanters_potion,
+enchanting,Enchantment
 endon's_house,
 equilibrium,
 erikur's_house,
@@ -594,9 +495,7 @@ evergreen_grove,
 evette_san's_house,
 expel_daedra,
 eye_of_sabre_cat,
-faas_ru_maar,
 fahlbtharz,
-fahlbtharz_puzzle,
 faldar's_tooth,
 falion's_house,
 falkreath,
@@ -605,25 +504,23 @@ falkreath_hold,
 falkreath_imperial_camp,
 falkreath_stormcloak_camp,
 falkreath_watchtower,
-fall_of_the_snow_prince,
+fall_of_the_snow_prince,"Chronicle of the Snow Prince, Moesring Chronicle"
 fallowstone_cave,
 falmer,"Snow Ghosts, the Betrayed"
-falmer_arrow,
 falmer_blood_elixir,
 falmer_ear,
+falmer_equipment,falmer arrow
 fast,
 fast_healing,
 father_of_the_niben,
 fear,
-fear_poison,
-feim_zii_gron,
 fellglow_keep,
 felsaad_tern_feathers,
 fenn's_gulch_mine,
 feyfolken,
 fiery_soul_trap,
 fire_and_darkness,Fire and Darkness: The Brotherhoods of Death
-fire_breath,
+fire_breath,yol toor shul
 fire_damage,
 fire_petal,
 fire_rune,
@@ -632,8 +529,8 @@ fire_storm,
 fireball,
 firebolt,
 first_era,
-five_songs_of_king_wulfharth,
-flame_atronach,
+five_songs_of_king_wulfharth,Five Songs of Wulfharth
+flame_atronach,Fire Atronach
 flame_cloak,
 flame_stalk,
 flame_thrall,
@@ -642,19 +539,14 @@ flaming_familiar,
 fletcher,Castle Fletcher
 flight_from_the_thalmor,
 fly_amanita,
-fo_krah_diin,
 folgunthur,
 forebears'_holdout,
 forelhost,
 forgotten_vale,
-fork_of_horripilation,
+fork_of_horripilation,Forky
 forsaken_cave,
 forsworn,Madmen of the Reach
-forsworn_armor,
-forsworn_arrow,
-forsworn_boots,
-forsworn_gauntlets,
-forsworn_headdress,Forsworn Helmet
+forsworn_equipment,"forsworn arrow, forsworn armor, forsworn boots, forsworn gauntlets, forsworn headdress, Forsworn Helmet"
 fort_amol,
 fort_dawnguard,
 fort_dunstad,
@@ -699,12 +591,11 @@ fourth_era,
 fox,
 freeze,
 frenzy,
-frenzy_poison,
 frenzy_rune,
 froki's_shack,
 frossel,
-frost_atronach,Ice Atronach
-frost_breath,
+frost_atronach,"Ice Atronach, Ice Atronachs, Water Atronach, Water Atronachs"
+frost_breath,fo krah diin
 frost_cloak,
 frost_damage,
 frost_mirriam,
@@ -721,14 +612,8 @@ frostmoon_crag,
 fruki's_house,
 frykte_peak,
 fungus_stalk,
-fur_armor,
-fur_bracers,
-fur_gauntlets,
-fur_helmet,
-fur_shoes,
+fur_equipment,"fur shoes, fur gauntlets, fur helmet, fur bracers, fur armor"
 fury,
-fus_ro_dah,
-gaan_lah_haas,
 gallows_rock,
 garlic,
 gauntlets_of_the_crusader,
@@ -741,22 +626,8 @@ giants,
 gildergreen,
 gjukar_monument,Gjukar's Monument
 glacial_cave,
-glass_armor,
-glass_arrow,
-glass_battleaxe,
-glass_boots,
-glass_bow,
 glass_catfish,
-glass_claw,
-glass_dagger,
-glass_gauntlets,
-glass_greatsword,
-glass_helmet,
-glass_mace,
-glass_shield,
-glass_sword,
-glass_war_axe,
-glass_warhammer,
+glass_equipment,"glass arrow, glass armor, glass boots, glass gauntlets, glass helmet, glass shield, glass sword, glass war axe, glass dagger, glass mace, glass greatsword, glass battleaxe, glass warhammer, glass bow"
 glassfish,
 gleamblossom,
 glenmoril_coven,
@@ -770,28 +641,24 @@ gnarl_bark,
 goat,
 goblin,
 gods_and_worship,An Overview of Gods and Worship in Tamriel
-gol_hah_dov,
 gold_kanet,
-gold_saint,Aureal
-goldbrand,
-golden_claw,
-golden_saint,
+goldbrand,eltonbrand
+golden_saint,"gold saint, Aureal"
 goldenglow_estate,
 goldfish,
 grand_healing,
 grass_pod,
 grave_concoctions,
-gray_cowl,Gray Cowl of Nocturnal
+gray_cowl,"Gray Cowl of Nocturnal, Shadow Queen's Cowl"
 gray_pine_goods,
-gray_quarter,Snow Quarter
+gray_quarter,"Snow Quarter, grey quarter"
 graywinter_watch,
 great_war,
 greater_ward,
 green_butterfly_wing,
-greenpact,
+greenpact,Treaty of Frond and Leaf
 greenspore,
 greenspring_hollow,
-grey_quarter,
 greybeards,
 greywater_grotto,
 guardian_circle,
@@ -818,7 +685,7 @@ hall_of_the_elements,
 hall_of_the_vigilant,
 halldir's_cairn,
 halted_stream_camp,
-hammerfell,
+hammerfell,"Deathland, Deathlands, Volenfell"
 hamvirs_rest,
 hanging_moss,
 harmony,
@@ -832,23 +699,18 @@ heal_other,
 heal_undead,
 healing,
 healing_hands,
+healing_potions,"potion of minor healing, potion of healing, potion of plentiful healing, potion of vigorous healing, potion of extreme healing, potion of ultimate healing"
 heart_of_order,
 heartwood_mill,
 heimskr's_house,
 hela's_folly,
 helgen,
-hell,
 helm_of_the_crusader,
-hermaeus_mora,"Demon of Knowledge, Gardener of Men"
+hermaeus_mora,"Demon of Knowledge, Gardener of Men, Prince of Forbidden Knowledge"
 hero_of_daggerfall,The Agent
 hero_of_kvatch,Champion of Cyrodiil
 hevnoraak,
-hide_armor,
-hide_boots,
-hide_bracers,
-hide_helmet,
-hide_shield,
-high_elf,
+hide_equipment,"hide shield, studded armor, hide armor, hide boots, hide bracers, hide helmet"
 high_gate_ruins,
 high_hrothgar,
 high_king_torygg,"King Torygg, Torygg"
@@ -857,7 +719,7 @@ highmoon_hall,
 highpoint_tower,
 hillgrunds_tomb,
 hircine,"Huntsman, Lord of the Hunt, Father of Manbeasts"
-hist,
+hist,Hist Trees
 histcarp,
 history_of_raven_rock,
 hjaalmarch,
@@ -884,14 +746,13 @@ house_of_clan_shatter-shield,
 hrodulf's_house,
 human_flesh,
 human_heart,
-hun_kaal_zoor,
 hunger_tounge,Hunger Tongue
 hunter's_rest,
 huntsmans_prowess,
 hydnum_azure_giant_spore,
 hypha_facia,
 hysteria,
-ice_form,
+ice_form,iiz slen nus
 ice_spike,
 ice_storm,
 ice_wraith,
@@ -903,17 +764,13 @@ idgrod,Idgrod Ravencrone
 ienth_farm,
 igmund,Jarl Igmund
 ignite,
-iiz_slen_nus,
 ilinalta's_deep,
+illusion,
 imp_gall,
 imp_stool,
-imperial_city,
+imperial_city,Cyrodiil City
 imperial_legion,
-improved_bonemold_armor,
-improved_bonemold_boots,
-improved_bonemold_gauntlets,
-improved_bonemold_helmet,
-improved_bonemold_shield,
+improved_bonemold_equipment,"improved bonemold armor, improved bonemold boots, improved bonemold gauntlets, improved bonemold helmet, improved bonemold shield"
 incident_at_necrom,Incident in Necrom
 incinerate,
 invisibility,
@@ -921,52 +778,37 @@ invocation_of_azura,
 irgnir's_house,
 irkngthand,
 iron-breaker_mine,
-iron_armor,
-iron_arrow,
-iron_battleaxe,
-iron_boots,
-iron_claw,
-iron_dagger,
-iron_gauntlets,
-iron_greatsword,
-iron_helmet,
-iron_mace,
-iron_shield,
-iron_sword,
-iron_war_axe,
-iron_warhammer,
+iron_equipment,"iron arrow, iron armor, iron boots, iron gauntlets, iron helmet, iron shield, iron sword, iron war axe, iron dagger, iron mace, iron greatsword, iron battleaxe, iron warhammer"
 ironback_hideout,
 ironbind_barrow,
 ironflesh,
 ironwood_fruit,
 ivarstead,
-ivory_claw,
-ivory_dragon_claw,
 jagar_tharn,
 jala's_house,
 jarl's_longhouse,
 jazbay_grapes,
-joor_zah_frul,
 jorgen_and_lami's_house,
 jorrvaskr,
 journeyman's_nook,
-julianos,Jhunal
+julianos,"Jhunal, Aedra Julianos, God of Wisdom and Logic"
 juniper_berries,
 juvenile_mudcrab,
 jyggalag,
-kaan_drem_ov,
+ka_po_tun,"Po Tun, Tiger-Dragon Empire, Tiger-folk, Tiger-dragons"
 kagouti_hide,
 kagrenzel,
 kagrumez,
+kamal,"Snow Demons of Kamal, Kamali, Dir-Kamal"
 karthspire_camp,
 karthwasten,
 katla's_farm,
-keening,
+keening,Kagrenac's Dagger
 khajiit,
+khajiiti_pantheon,"Elsweyr pantheon, Khajiiti gods"
 kilkreath_ruins,
 kjenstag_ruins,
-knifepoint_mine,
-knifepoint_ridge,
+knifepoint_ridge,knifepoint mine
 knights_of_the_nine,
 kolbjorn_barrow,
 kolskeggr_mine,
@@ -974,13 +816,11 @@ korir,
 korvanjund,
 kraldar's_house,
 kresh_fiber,
-krii_lun_aus,
 krosis,
 kvatch,
-kynareth,Kyne
-kyne's_peace,
+kynareth,"Kyne, Goddess of Air, Khenarthi, Tava, Goddess of the Heavens"
+kyne's_peace,kaan drem ov
 kynesgrove,
-laas_yah_nir,
 labyrinthian,
 laila,Laila Law-Giver
 lake_geir,
@@ -990,10 +830,7 @@ largashbur,
 large_antlers,
 last_vigil,
 lavender,
-leather_armor,
-leather_boots,
-leather_bracers,
-leather_helmet,
+leather_equipment,"leather boots, leather bracers, leather helmet, leather armor"
 left_hand_mine,
 leigelf's_house,
 leki,Saint of the Spirit Sword
@@ -1008,13 +845,10 @@ lightning_bolt,
 lightning_cloak,
 lightning_rune,
 lightning_storm,
-lingering_magicka_poison,
-lingering_poison,
-lingering_stamina_poison,
 lod's_house,
-lok_vah_koor,
-lords_mail,
+lords_mail,"Armor of Morihaus, Gift of Kynareth"
 loreius_farm,
+lorkhaj,"Moon Beast, Moon Prince, Dark Moon, Ghost Moon, Lost Runt, White Lion, First Trickster"
 lorkhan,"Shor, the Missing God"
 lost_echo_cave,
 lost_knife_hideout,
@@ -1025,40 +859,42 @@ lost_valley_redoubt,
 lotus_extract,
 luminous_russula,
 luna_moth_wing,
+lunar_lattice,"ja-Kha'jay, Two-Moons Dance"
 lunds_hut,
 lycanthropy,werethropy
 lyretail_anthias,
-mace_of_molag_bal,
+mace_of_molag_bal,"Vampire's Mace, Master's Mace"
 mace_of_the_crusader,Mace of Zenithar
 magelight,
-magicka_poison,
+magicka,Magic
+magicka_poisons,"magicka poison, recovery poison, lingering magicka poison"
+magicka_potions,"potion of minor magicka, potion of magicka, potion of plentiful magicka, potion of vigorous magicka, potion of extreme magicka, potion of ultimate magicka"
 magnus,
 malacath,"Mauloch, Orkey"
 malachite,
 mammoth,
 mannimarco,"God of Worms, King of Worms"
-maormer,
-mara,Mother-Goddess
+maormer,"sea elves, Pyandoneans, Tropical Elves"
+mara,"Mother-Goddess, Divine Mother, Goddess of Love, Mother Mara, MHARA, Mother Mild"
 mara's_eye_pond,
 marbruk,
 marise_aravel's_house,
 markarth,
 markarth_stables,
-marked_for_death,
+marked_for_death,krii lun aus
 marshmerrow,
 martin_septim,
-masque_of_clavicus_vile,
+masque_of_clavicus_vile,"Mask of Clavicus Vile, Masque of Clavicus"
 mass_paralysis,
 mayhem,
 mede_dynasty,
 meeko's_shack,
 mehrune_dagon,"Lord of Change, Prince of Disaster, Mehrunes Dagon"
+mehrunes_razor,"merhrunes razor, Dagger of the Final Wounds, Bane of the Righteous, Kingslayer"
 mephala,"Webspinner, Spinner, Spider"
-merethic_era,Mythic Age
-merhrunes_razor,"Dagger of the Final Wounds, Bane of the Righteous, Kingslayer, Mehrunes' Razor"
+merethic_era,"Mythic Age, Merethic Age, Mythic Era, Mythic Times, Era of Myths"
 meridia,"Lady of Infinite Energies, Lady of Greed"
 merryfair_farm,
-mid_vur_shaan,
 minotaur_horn,
 miraak,
 mistveil_keep,
@@ -1071,10 +907,10 @@ moon_sugar,
 moonstone,
 moorside_inn,
 mora_tapinella,
-morag_tong,
+morag_tong,Foresters Guild
 morihaus,"Morihaus-Breath-of-Kyne, Winged Bull"
-morokei,
-morrowind,
+morokei,The Deathless
+morrowind,Province of Morrowind
 mort_flesh,
 morthal,
 morvayn_ancestral_tomb,
@@ -1088,7 +924,7 @@ movarth's_lair,
 mudcrab,
 mudcrab_chitin,
 muffle,
-mul_qah_diiv,
+mundus,"the mortal plane, Mundex Terrene"
 mystery_of_talara,
 mystic_venom,
 mythic_dawn,
@@ -1104,8 +940,9 @@ nchardak,
 nchuand-zel,
 necrom,City of the Dead
 necromancer_amulet,
+necromancy,"dark arts, dark practice, necromantic arts"
 necromantic_healing,
-nedes,Nedic peoples
+nedes,"Nedic peoples, Nedic"
 nerevar_at_red_mountain,
 nerevar_moon_and_star,
 nerevarine,"Nerevar Reborn, Redeemer of the False Gods"
@@ -1122,34 +959,20 @@ niranye's_house,
 nirnroot,
 nocturnal,"Mistress of Shadows, Lady of Twilight"
 nord,
-nord_hero_arrow,
-nordic_armor,Nordic Carved Armor
-nordic_arrow,
 nordic_barnacle,
-nordic_battleaxe,
-nordic_boots,Nordic Carved Boots
-nordic_bow,
-nordic_dagger,
-nordic_gauntlets,Nordic Carved Gauntlets
-nordic_greatsword,
-nordic_helmet,Nordic Carved Helmet
-nordic_mace,
-nordic_shield,
-nordic_sword,
-nordic_war_axe,
-nordic_warhammer,
+nordic_equipment,"nordic arrow, nordic armor, Nordic Carved Armor, nordic boots, Nordic Carved Boots, nordic gauntlets, Nordic Carved Gauntlets, nordic helmet, Nordic Carved Helmet, nordic shield, nordic sword, nordic war axe, nordic dagger, nordic mace, nordic greatsword, nordic battleaxe, nordic warhammer, nordic bow"
+nordic_pantheon,"Nord pantheon, Skyrim pantheon, Atmoran pantheon"
 nords_arise,
 north_cold_rock_pass,
 north_skybound_watch,Skybound Watch Pass
 northwatch_keep,
 northwind_mine,
 northwind_summit,
-numidium,Brass God
+numidium,"Brass God, Anumidium, Walking Star"
 oakflesh,
-oblivion,
+oblivion,"Planes of Oblivion, Daedric realms, Principalities of Oblivion"
 oblivion_crisis,Great Anguish
-od_ah_viing,
-oghma_infinium,Tome of Power
+oghma_infinium,"Tome of Power, Book That Knows"
 ogmund's_house,
 olaf_and_the_dragon,
 olava_the_feeble's_house,
@@ -1159,35 +982,22 @@ on_oblivion,
 orange_dartwing,
 orc,"Orsimer, Pariah Folk"
 orc_stronghold,
-orchish_armor,orcish armor
-orchish_battleaxe,orcish battleaxe
-orchish_boots,orcish boots
-orchish_bow,orcish bow
-orchish_dagger,orcish dagger
-orchish_gauntlets,Orcish gauntlets
-orchish_greatsword,Orcish greatsword
-orchish_helmet,Orcish helmet
-orchish_mace,Orcish mace
-orchish_shield,Orcish shield
-orchish_sword,Orcish sword
-orchish_war_axe,Orcish war axe
-orchish_warhammer,Orcish warhammer
-orcish_arrow,
+orcish_equipment,"orchish armor, orcish armor, orchish boots, orcish boots, orchish gauntlets, Orcish gauntlets, orchish helmet, Orcish helmet, orchish shield, Orcish shield, orchish sword, Orcish sword, orchish war axe, Orcish war axe, orchish dagger, orcish dagger, orchish mace, Orcish mace, orchish greatsword, Orcish greatsword, orchish battleaxe, orcish battleaxe, orchish warhammer, Orcish warhammer, orchish bow, orcish bow, orcish arrow"
 orges_teeth,Ogre's Teeth
 orichalcum,orichalc
 orotheim,
 orphan's_tear,
 orphan_rock,
-orsinium,
+orsinium,"City of Orcs, Nova Orsinium"
 orsinium_and_the_orcs,How Orsinium Passed to the Orcs
 oslaf's_house,
 otar_the_mad,
 pacify,
+padomay,"Padomay the Nothing, PSJJJJ, Padhome, Is-Not, The Dark, Akel, Fadomai"
 palace_of_the_kings,
 pale_imperial_camp,
 pale_stormcloak_camp,
 palla,
-paralysis_poison,
 paralyze,
 peak's_shade_tower,
 pearl,
@@ -1206,75 +1016,28 @@ pinepeak_cavern,
 pinewatch,
 planemeld,
 pogfish,
-poison,
 poison_bloom,
 poison_damage,
 poison_rune,
+potema,"the Wolf Queen, Potema Septim, Wolf Queen of Solitude"
 potema's_catacombs,
-potion_of_alteration,
 potion_of_blood,
-potion_of_brief_invisibility,
 potion_of_conflict,
-potion_of_cure_disease,
-potion_of_destruction,
-potion_of_enhanced_stamina,
 potion_of_escape,
-potion_of_extra_magicka,
-potion_of_extreme_healing,
-potion_of_extreme_magicka,
-potion_of_extreme_stamina,
-potion_of_glibness,
-potion_of_haggling,
-potion_of_healing,
-potion_of_health,
-potion_of_illusion,
 potion_of_keenshot,
 potion_of_larceny,
-potion_of_lasting_potency,
-potion_of_light_feet,
-potion_of_lockpicking,
-potion_of_magicka,
-potion_of_minor_healing,
-potion_of_minor_magicka,
-potion_of_minor_stamina,
-potion_of_pickpocketing,
-potion_of_plentiful_healing,
-potion_of_plentiful_magicka,
-potion_of_plentiful_stamina,
 potion_of_plunder,
-potion_of_regeneration,
-potion_of_resist_cold,
-potion_of_resist_fire,
-potion_of_resist_magic,
-potion_of_resist_shock,
-potion_of_stamina,
-potion_of_strength,
-potion_of_the_berserker,
-potion_of_the_defender,
-potion_of_the_healer,
-potion_of_the_knight,
-potion_of_the_warrior,
-potion_of_true_shot,
-potion_of_ultimate_healing,
-potion_of_ultimate_magicka,
-potion_of_ultimate_stamina,
-potion_of_vigor,
-potion_of_vigorous_healing,
-potion_of_vigorous_magicka,
-potion_of_vigorous_stamina,
-potion_of_waterbreathing,
 potion_of_waterwalking,
 potion_of_well_being,
 powdered_mammoth_tusk,
 proudspire_manor,
-psijic_order,
+psijic_order,"Order of PSJJJJ, Psijiic Order, The Psijics"
 purewater_run,
 purple_butterfly_wing,
 purple_mountain_flower,
 puzzling_pillar_ruins,
 pygmy_sunfish,
 quicksilver_mine,
-raan_mir_tah,
 rabbit,
 racial_phylogeny,"Racial Phylogeny and Biology, Racial Phylogeny and Biology Seventh Edition"
 radiant_raiment,
@@ -1302,14 +1065,14 @@ reachwind_eyrie,
 reanimate,
 reanimate_corpse,
 rebel's_cairn,
-recovery_poison,
 red_eagle_redoubt,
 red_kelp_gas_bladder,
-red_mountain,
+red_mountain,Vvardenfell Volcano
 red_mountain_flower,
 red_road_pass,
 redbelly_mine,
 redguard,
+redguard_pantheon,Yokudan pantheon
 redorans_retreat,
 redwater_den,
 redwater_skooma,
@@ -1318,6 +1081,7 @@ refugees'_rest,
 regenerate_health,
 regenerate_magicka,
 regenerate_stamina,
+regeneration_potions,"potion of regeneration, potion of lasting potency, potion of vigor"
 repel_lesser_undead,
 repel_undead,
 resist_disease,
@@ -1326,6 +1090,8 @@ resist_frost,
 resist_magic,
 resist_poison,
 resist_shock,
+resistance_potions,"potion of resist fire, potion of resist cold, potion of resist magic, potion of resist shock, elixir of resist magic"
+restoration,"College of Restoration, Restoration magic, healing magic"
 restore_health,
 restore_health_to_undead,
 restore_magicka,
@@ -1339,7 +1105,6 @@ riften,
 riften_fishery,
 riften_jail,
 riften_stables,
-rii_vaaz_zol,
 rimerock_burrow,
 ring_of_hircine,
 ring_of_khajiit,Ring of Khajiiti
@@ -1358,7 +1123,6 @@ roobrush,
 rorikstead,
 rot_scale,
 rout,
-ruby_dragon_claw,
 rueful_axe,
 ruins_edge,
 ruins_of_bthalft,Bthalft
@@ -1386,14 +1150,10 @@ sanguinare_vampiris,
 sanguine,Lord of Revelry
 sanguine_rose,
 sanuarach_mine,
-sapphire_dragon_claw,
 sarethi_farm,
 satakal,"Worldskin, First Serpent"
-saviors_hide,Saviour's Hide
-scaled_armor,
-scaled_boots,
-scaled_bracers,
-scaled_helmet,
+saviors_hide,"Saviour's Hide, Hircine's Hide, Scourge of the Oathbreaker"
+scaled_equipment,"scaled armor, scaled boots, scaled bracers, scaled helmet"
 scalon_fin,
 scaly_pholiota,
 scathecraw,
@@ -1401,11 +1161,11 @@ scorpion_fish,
 screaming_maw,
 scrib_jelly,
 scrib_jerky,
-sea_elves,Pyandoneans
 second_era,
 second_treaty_of_stros_mkai,
 secunda's_kiss,
 sentinel,
+septim_dynasty,"the Septim line, Septim bloodline, Imperial Dynasty, Third Empire ruling dynasty"
 septimus_signus's_outpost,
 serpents_bluff_redoubt,
 severin_manor,
@@ -1415,7 +1175,7 @@ shadowgreen_cavern,
 shadowrend,
 shaman's_hut,
 shearpoint,
-sheogorath,
+sheogorath,"Mad Lord, Mad Star, Skooma Cat, Fourth Corner of the House of Troubles"
 shezarr_and_the_divines,
 shield_of_the_crusader,
 shield_of_ysgramor,
@@ -1438,32 +1198,32 @@ silver-blood_inn,
 silver_hand,
 silverdrift_lair,
 silverside_perch,
-sithis,
-skaal,
+sithis,Dread Father
+skaal,Skaal Tribe
 skaal_village,
 skald,Skald the Elder
 skeever,
 skeever_tail,
 skeleton_key,
+skill_potions,"potion of alteration, potion of haggling, potion of the defender, potion of strength, conjurers potion, potion of destruction, enchanters potion, potion of the knight, potion of illusion, skirmishers potion, potion of lockpicking, potion of true shot, potion of the warrior, potion of glibness, potion of pickpocketing, potion of the healer, blacksmiths potion, potion of light feet, potion of the berserker"
 skingrad,
-skirmishers_potion,
 skooma,
 skuldafn,
 skull_of_corruption,
 sky_haven_temple,
 skyborn_altar,
 skyforge,
-skyrim,
+skyrim,"Keizaal, Mereth"
 skytemple_ruins,
 slaughterfish,
 slaughterfish_egg,
 slaughterfish_scales,
 sleeping_tree_camp,
 sleeping_tree_sap,
-sload,Slugmen
+sload,"Slugmen, Slug-Folk, Slug-Folk of Thras, Slug People, Grubs"
 sload_soap,
 slow,
-slow_time,
+slow_time,tiid klo ul
 small_antlers,
 small_pearl,
 smelter_overseer's_house,
@@ -1471,7 +1231,7 @@ smithing_expertise,
 snapleg_cave,
 snow-shod_farm,
 snow-shod_manor,
-snow_elf,Ancient Falmer
+snow_elf,"Ancient Falmer, Snow Elves, Ice Elves"
 snow_veil_sanctum,
 snowberries,
 snowclad_ruins,
@@ -1482,17 +1242,17 @@ solitude_lighthouse,
 solitude_sawmill,
 soljund's_sinkhole,
 solstheim,
-sotha_sil,Seht
+sotha_sil,"Seht, Clockwork God, Lord Sotha Sil"
+soul_gems,Soul gem
 soul_husk_extract,
-soul_tear,
+soul_tear,rii vaaz zol
 soul_trap,
-south_cold_rock_pass,
 south_skybound_watch,
 southfringe_sanctum,
 spadefish,
 sparks,
 spawn_ash,
-spear_of_bitter_mercy,
+spear_of_bitter_mercy,Bitter Mercy
 spectral_arrow,
 spell_absorption,
 spellbreaker,
@@ -1502,53 +1262,21 @@ spriggan,
 spriggan_sap,
 staff_of_hasedoki,
 staff_of_magnus,
-stalhrim,
-stalhrim_armor,
-stalhrim_arrow,
-stalhrim_battleaxe,
-stalhrim_boots,
-stalhrim_bow,
-stalhrim_dagger,
-stalhrim_gauntlets,
-stalhrim_greatsword,
-stalhrim_helmet,
-stalhrim_light_armor,
-stalhrim_light_boots,
-stalhrim_light_gauntlets,stalhrim light bracers
-stalhrim_light_helmet,
-stalhrim_mace,
-stalhrim_shield,
+stalhrim,"Enchanted Ice, Nordic Burial Ice"
+stalhrim_equipment,"stalhrim gauntlets, stalhrim helmet, stalhrim shield, stalhrim armor, stalhrim boots, stalhrim sword, stalhrim war axe, stalhrim dagger, stalhrim mace, stalhrim greatsword, stalhrim battleaxe, stalhrim warhammer, stalhrim bow, stalhrim arrow"
+stalhrim_light_equipment,"stalhrim light armor, stalhrim light boots, stalhrim light gauntlets, stalhrim light bracers, stalhrim light helmet"
 stalhrim_source,
-stalhrim_sword,
-stalhrim_war_axe,
-stalhrim_warhammer,
 stallions_potion,
-stamina_poison,
+stamina_poisons,"stamina poison, vigor poison, lingering stamina poison"
+stamina_potions,"potion of minor stamina, potion of stamina, potion of plentiful stamina, potion of vigorous stamina, potion of extreme stamina, potion of ultimate stamina"
 statue_to_meridia,Statue of Meridia
 steadfast_ward,
 steamcrag_camp,
-steel_armor,
-steel_arrow,
-steel_battleaxe,
 steel_blue_entoloma,
-steel_bolt,
-steel_boots,
-steel_dagger,
-steel_gauntlets,
-steel_greatsword,
-steel_helmet,
-steel_mace,
-steel_plate_armor,
-steel_plate_boots,
-steel_plate_gauntlets,
-steel_plate_helmet,
-steel_plate_shield,
-steel_shield,
-steel_sword,
-steel_war_axe,
-steel_warhammer,
+steel_equipment,"steel armor, steel boots, steel gauntlets, steel helmet, steel shield, steel sword, steel war axe, steel dagger, steel mace, steel greatsword, steel battleaxe, steel warhammer, steel arrow, steel bolt"
+steel_plate_equipment,"steel plate armor, steel plate boots, steel plate gauntlets, steel plate helmet, steel plate shield"
 steepfall_burrow,
-stendarr,
+stendarr,"Stendarr the Steadfast, THENDR"
 stendarr's_aura,
 stendarr's_beacon,
 stendarrs_hammer,
@@ -1558,24 +1286,21 @@ stoneflower_petals,
 stonehill_bluff,
 stonehills,
 stony_creek_cave,
-storm_atronach,
-storm_call,
+storm_atronach,"Storm Daedra, Thundernach"
+storm_call,strun bah qo
 storm_thrall,
 stormcloaks,
 stormhold,
 stros_m'kai,
 stros_m-kai_rum,
-strun_bah_qo,
-studded_armor,
-su_grah_dun,
 summerset_isles,
 summon_arniel's_shade,
-summon_durnehviir,
+summon_durnehviir,dur neh viir
 summon_unbound_dremora,
 sun_damage,
 sun_fire,
 sun_stone,
-sunder,
+sunder,Kagrenac's Hammer
 sundered_towers,
 sunderstone_gorge,
 swamp_fungal_pod,
@@ -1585,6 +1310,7 @@ synod,
 talking_stone_camp,
 talos,
 tamriel,the Arena
+tang_mo,"Thousand Monkey Isles, monkey-folk"
 taproot,
 tel_mithryn,
 telekinesis,
@@ -1599,11 +1325,9 @@ temple_of_miraak,
 temple_of_talos,
 temple_of_the_divines,
 thalmor,
-thalmor_boots,
 thalmor_embassy,
-thalmor_gloves,
+thalmor_equipment,"thalmor robes, thalmor boots, thalmor gloves"
 thalmor_headquarters,
-thalmor_robes,
 thaumaturgist's_hut,
 the_adabal-a,
 the_aetherium_wars,
@@ -1653,11 +1377,9 @@ the_pawned_prawn,
 the_poison_song,
 the_ragged_flagon,
 the_ratway,
-the_reach,
 the_real_barenziah,
 the_red_year,
 the_retching_netch,
-the_rift,
 the_rise_and_fall_of_the_blades,
 the_scorched_hammer,
 the_sea_squall,
@@ -1669,10 +1391,8 @@ the_third_era_timeline,Third Era: An Abbreviated Timeline
 the_tower_stone,
 the_warrens,
 the_white_hall,
-the_white_phial,
 the_wild_elves,
 the_winking_skeever,
-the_wolf_queen,
 thieves_guild,
 third_era,
 thistle_branch,
@@ -1681,12 +1401,12 @@ thorn_hook,
 thrassian_plague,
 three_banners_war,Alliance War
 three_thieves,
-throat_of_the_world,"Monahven, Mother Wind"
-throw_voice,
+throat_of_the_world,"Monahven, Mother Wind, Snow Throat, Throat Mountain"
+throw_voice,zul mey gut
 thunderbolt,
 tiber_septim,"Talos Stormcrown, Hjalti Early-Beard, Tiberius Imperator, General Talos"
-tiid_klo_ul,
 tolvald's_cave,
+tonal_architecture,Dwemer tonal architecture
 torchbug_thorax,
 torval,
 tower_of_mzark,
@@ -1696,11 +1416,12 @@ transmute,
 transmute_mineral_ore,
 treasury_house,
 treva's_watch,
-tribunal_temple,
+tribunal_temple,Almsivi Temple
 trinimac,
 tripod_spiderfish,
 troll_fat,
 trolls,
+tsaesci,"vampiric serpent-folk, serpent-folk, snake men, Snake Palace"
 tumble_arch_pass,
 tundra_cotton,
 turn_greater_undead,
@@ -1709,65 +1430,59 @@ turn_undead,
 twilight_sepulcher,
 ulen_ancestral_tomb,
 ulfric_stormcloak,
-umbra,
+umbra,Umbra Sword
+underking,"Ash-King, Grey Wind"
 understone_keep,
 unknown_potion,
-unrelenting_force,
-uriel_septim_7th,
-uriel_septim_seventh,
-uriel_septim_vii,
+unrelenting_force,fus ro dah
+uriel_septim_vii,"uriel septim 7th, uriel septim seventh"
 ustengrav,
-ustengrav_puzzle,
 uthgerd's_house,
+utility_potions,"potion of brief invisibility, potion of waterbreathing"
 uttering_hills_cave,
 vaermina,Vaernima
 vaerminas_torpor,
 vahlok's_tomb,
 vahlok_the_jailor,Vahlok
-valenwood,
+valenwood,"Bosmeri Homeland, Vallinwood"
 valindor's_house,
 valtheim_towers,
 valthume,
 vampire,
 vampire's_bane,
-vampire_armor,
-vampire_boots,
 vampire_dust,
+vampire_equipment,"vampire armor, vampire gauntlets, vampire boots, vampire gloves, vampire hood, vampire robes"
 vampire_fish,
-vampire_gauntlets,
-vampire_gloves,
-vampire_hood,
-vampire_robes,
 vampiric_drain,
-vampirism,
+vampirism,"Porphyric Hemophilia, Vampire Disease"
 varieties_of_daedra,
 varieties_of_faith_in_the_empire,
 velvet_lechance,
-ven_gaar_nos,
 vigil_of_stendarr,
-vigor_poison,
 viola_giordano's_house,
 vision_of_the_tenth_eye,
+vitality_potions,"potion of health, potion of extra magicka, potion of enhanced stamina"
 vittoria_vici,
 vittoria_vici's_house,
-vivec,"Vehk, Saint Vivec"
+vivec,"Vehk, Saint Vivec, Lord Vivec, Warrior-Poet"
 vlindrel_hall,
 void_essence,
 void_salts,
 vokun,
-voldenrung,"Volendrung, Hammer of Might"
+volendrung,"voldenrung, Hammer of Might"
 volkihar,Volkihar Vampire Clan
 volskygge,
 volsung,
 volunruud,
-vvardenfell,Black Isle
+vvardenfell,"Black Isle, Vvardenfell District"
 wabbajack,
 wall_of_flames,
 wall_of_frost,
 wall_of_storms,
+war_of_the_red_diamond,Red Diamond War
 ward,
 warmaiden's,
-warp_in_the_west,Miracle of Peace
+warp_in_the_west,"Miracle of Peace, Second Numidian Effect"
 watchers_eye,
 water_stone,
 waterbreathing,
@@ -1785,12 +1500,13 @@ weynon_stones,
 wheat,
 where_were_you_when_the_dragon_broke,
 whirlwind_cloak,
-whirlwind_sprint,
+whirlwind_sprint,wuld nah kest
 whistling_mine,
 white_cap,
 white_gold_tower,
 white_gold_tower_wine,
 white_phial,
+white_phial_shop,
 white_ridge_barrow,
 white_river_watch,
 whiterun,
@@ -1800,6 +1516,7 @@ whiterun_stormcloak_camp,
 whitewatch_tower,
 widow's_watch_ruins,
 wild_grass_Pod,
+wild_hunt,Great Hunt
 wind_and_sand,
 wind_stone,
 windhelm,
@@ -1817,19 +1534,17 @@ witbane,
 witches,
 witchmist_grove,
 withering_moon,
-wolf,
+wolf,wolves
 wolfskull_cave,
-wolves,
-wood_elf,
 worm_head_cap,Worm's Head Cap
-wraithguard,
+wraithguard,Kagrenac's Gauntlet
 wreck_of_the_brinehammer,
 wreck_of_the_icerunner,
 wreck_of_the_pride_of_tel_vos,
 wreck_of_the_strident_squall,
 wreck_of_the_winter_war,
-wuld_nah_kest,
 wulf_wild-blood's_house,
+wulfharth,"Shor's Tongue, Ysmir Kingmaker"
 wuuthrad,
 yellow_book_of_riddles,
 yellow_mountain_flower,
@@ -1838,13 +1553,11 @@ yngol_and_the_sea-ghosts,
 yngol_barrow,
 yngvild,
 yokuda,
-yol_toor_shul,
 yorgrim_overlook,
 ysgramor,Ysgramor the Invader
 ysgramor's_tomb,
 ysolda's_house,
 zahkriisos,
-zen,
-zenithar,
-zul_mey_gut,
-zun_haal_viik,
+zen,Xen
+zenithar,"God of Work and Commerce, Trader God"
+zurin_arctus,the Imperial Battlemage

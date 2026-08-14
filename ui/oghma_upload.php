@@ -37,6 +37,9 @@ $password = 'dwemer';
 
 // Initialize message variable
 $message = '';
+if (isset($_GET['message']) && is_string($_GET['message']) && trim($_GET['message']) !== '') {
+    $message .= '<p>' . htmlspecialchars($_GET['message'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>';
+}
 
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
@@ -66,6 +69,15 @@ function oghma_filter_alias_input($conn, string $topic, string $aliases): array
         $aliasOwners[chimOghmaComparableAliasKey($alias)][$topic] = true;
     }
     return $filtered;
+}
+
+function oghma_row_checksum(array $row): string
+{
+    $ordered = [];
+    foreach (['topic', 'aliases', 'topic_desc', 'knowledge_class', 'topic_desc_basic', 'knowledge_class_basic', 'tags', 'category'] as $field) {
+        $ordered[$field] = (string) ($row[$field] ?? '');
+    }
+    return hash('sha256', json_encode($ordered, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
 /********************************************************************
@@ -98,9 +110,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 topic_desc_basic, 
                 knowledge_class_basic, 
                 tags, 
-                category
+                category,
+                source_type,
+                source_catalog_version,
+                source_checksum,
+                updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'custom', NULL, $9, CURRENT_TIMESTAMP)
             ON CONFLICT (topic)
             DO UPDATE SET
                 aliases              = EXCLUDED.aliases,
@@ -109,8 +125,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 topic_desc_basic     = EXCLUDED.topic_desc_basic,
                 knowledge_class_basic= EXCLUDED.knowledge_class_basic,
                 tags                 = EXCLUDED.tags,
-                category             = EXCLUDED.category
+                category             = EXCLUDED.category,
+                source_type          = 'custom',
+                source_catalog_version = NULL,
+                source_checksum      = EXCLUDED.source_checksum,
+                updated_at           = CURRENT_TIMESTAMP
         ";
+        $checksum = oghma_row_checksum(compact(
+            'topic', 'aliases', 'topic_desc', 'knowledge_class', 'topic_desc_basic',
+            'knowledge_class_basic', 'tags', 'category'
+        ));
         $result = pg_query_params($conn, $query, [
             $topic,
             $aliases,
@@ -119,7 +143,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
             $topic_desc_basic,
             $knowledge_class_basic,
             $tags,
-            $category
+            $category,
+            $checksum
         ]);
 
         if ($result) {
@@ -236,9 +261,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 topic_desc_basic,
                                 knowledge_class_basic,
                                 tags,
-                                category
+                                category,
+                                source_type,
+                                source_catalog_version,
+                                source_checksum,
+                                updated_at
                             )
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'custom', NULL, $10, CURRENT_TIMESTAMP)
                             ON CONFLICT (topic)
                             DO UPDATE SET
                                 aliases              = CASE
@@ -250,8 +279,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 topic_desc_basic     = EXCLUDED.topic_desc_basic,
                                 knowledge_class_basic= EXCLUDED.knowledge_class_basic,
                                 tags                 = EXCLUDED.tags,
-                                category             = EXCLUDED.category
+                                category             = EXCLUDED.category,
+                                source_type          = 'custom',
+                                source_catalog_version = NULL,
+                                source_checksum      = EXCLUDED.source_checksum,
+                                updated_at           = CURRENT_TIMESTAMP
                         ";
+                        $checksum = oghma_row_checksum(compact(
+                            'topic', 'aliases', 'topic_desc', 'knowledge_class', 'topic_desc_basic',
+                            'knowledge_class_basic', 'tags', 'category'
+                        ));
                         $result = pg_query_params($conn, $query, [
                             $topic,
                             $aliases,
@@ -261,7 +298,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $knowledge_class_basic,
                             $tags,
                             $category,
-                            $hasAliasesColumn ? 'true' : 'false'
+                            $hasAliasesColumn ? 'true' : 'false',
+                            $checksum
                         ]);
 
                         if ($result) {
@@ -453,11 +491,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_dynamic_example') {
  *  4) DELETE ALL
  ********************************************************************/
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_all') {
-    $truncateQuery = "TRUNCATE TABLE {$schema}.oghma RESTART IDENTITY";
+    $truncateQuery = "DELETE FROM {$schema}.oghma WHERE source_type = 'custom'";
     $truncateResult = pg_query($conn, $truncateQuery);
 
     if ($truncateResult) {
-        $message .= "<p style='color: #ff6464; font-weight: bold;'>All Oghma entries have been deleted successfully.</p>";
+        $message .= "<p style='color: #ff6464; font-weight: bold;'>All custom Oghma entries have been deleted. Factory entries were preserved.</p>";
     } else {
         $message .= "<p>Error deleting entries: " . pg_last_error($conn) . "</p>";
     }
@@ -470,10 +508,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $topic = $_POST['topic'] ?? '';
     
     if (!empty($topic)) {
+        pg_query($conn, 'BEGIN');
+        $hideQuery = "
+            INSERT INTO {$schema}.oghma_factory_overrides (topic, action, updated_at)
+            SELECT topic, 'hide', CURRENT_TIMESTAMP FROM {$schema}.oghma
+            WHERE topic = $1 AND source_type = 'factory'
+            ON CONFLICT (topic) DO UPDATE SET action = 'hide', updated_at = CURRENT_TIMESTAMP
+        ";
+        $hideResult = pg_query_params($conn, $hideQuery, [$topic]);
         $query = "DELETE FROM {$schema}.oghma WHERE topic = $1";
-        $result = pg_query_params($conn, $query, [$topic]);
+        $result = $hideResult ? pg_query_params($conn, $query, [$topic]) : false;
 
         if ($result) {
+            pg_query($conn, 'COMMIT');
             $message .= "<p>Entry '$topic' has been deleted successfully.</p>";
             
             // Redirect to maintain filters
@@ -485,6 +532,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             header('Location: ' . $redirectUrl);
             exit;
         } else {
+            pg_query($conn, 'ROLLBACK');
             $message .= "<p>Error deleting entry: " . pg_last_error($conn) . "</p>";
         }
     } else {
@@ -525,9 +573,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 topic_desc_basic = $5,
                 knowledge_class_basic = $6,
                 tags = $7,
-                category = $8
+                category = $8,
+                source_type = 'custom',
+                source_catalog_version = NULL,
+                source_checksum = $10,
+                updated_at = CURRENT_TIMESTAMP
             WHERE topic = $9
         ";
+
+        $checksum = oghma_row_checksum([
+            'topic' => $topic_new,
+            'aliases' => $aliases_new,
+            'topic_desc' => $topic_desc_new,
+            'knowledge_class' => $knowledge_class_new,
+            'topic_desc_basic' => $topic_desc_basic_new,
+            'knowledge_class_basic' => $knowledge_class_basic_new,
+            'tags' => $tags_new,
+            'category' => $category_new,
+        ]);
 
         $update_result = pg_query_params($conn, $update_sql, [
             $topic_new,
@@ -538,7 +601,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $knowledge_class_basic_new,
             $tags_new,
             $category_new,
-            $topic_original
+            $topic_original,
+            $checksum
         ]);
 
         if ($update_result) {
@@ -998,97 +1062,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         opacity: 0;
     }
 
-    /* Logic Section Styling */
-    .logic-section {
-        margin: 25px 0;
-        padding: 22px;
-        background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
-        border-radius: 10px;
-        border: 1px solid rgba(242, 124, 17, 0.3);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3),
-                    inset 0 1px rgba(242, 124, 17, 0.05);
-    }
-
-    .logic-title {
-        text-align: center;
-        color: rgb(242, 124, 17);
-        margin-bottom: 20px;
-        font-size: 1.25em;
-        font-weight: bold;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-        font-family: 'MagicCards', serif;
-        word-spacing: 6px;
-    }
-
-    .logic-steps {
-        display: grid;
-        gap: 12px;
-    }
-
-    .logic-step {
-        display: flex;
-        align-items: flex-start;
-        gap: 15px;
-        padding: 16px;
-        background: rgba(42, 42, 42, 0.8);
-        border-radius: 8px;
-        border-left: 4px solid rgb(242, 124, 17);
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .logic-step:hover {
-        transform: translateX(4px);
-        box-shadow: 0 4px 12px rgba(242, 124, 17, 0.25),
-                    0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    .step-number {
-        flex-shrink: 0;
-        width: 32px;
-        height: 32px;
-        background: linear-gradient(135deg, rgb(242, 124, 17), rgb(212, 94, 0));
-        color: #000;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 15px;
-        box-shadow: 0 2px 6px rgba(242, 124, 17, 0.4),
-                    inset 0 1px rgba(255, 255, 255, 0.3);
-    }
-
-    .step-content {
-        flex: 1;
-    }
-
-    .step-content strong {
-        color: rgb(242, 124, 17);
-        display: block;
-        margin-bottom: 6px;
-        font-size: 1.05em;
-    }
-
-    .step-content p {
-        margin: 0;
-        line-height: 1.5;
-        color: #d0d0d0;
-    }
-
-    .step-content code {
-        background: rgba(74, 74, 74, 0.8);
-        padding: 3px 7px;
-        border-radius: 4px;
+    .page-header code {
+        background: rgba(26, 26, 26, 0.8);
+        padding: 2px 6px;
+        border-radius: 3px;
         color: #ffeb3b;
         font-family: 'Courier New', monospace;
         font-size: 0.9em;
-        border: 1px solid rgba(255, 235, 59, 0.2);
+        overflow-wrap: break-word;
     }
 
-    .step-content em {
-        color: #81c784;
-        font-style: italic;
+    /* Compact header intro */
+    #oghma-header-content > p {
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .header-note {
+        max-width: 720px;
+        margin: 12px auto 0;
+        padding: 8px 12px;
+        text-align: left;
+        background: rgba(26, 26, 26, 0.6);
+        border: 1px solid #3a3a3a;
+        border-left: 3px solid rgb(242, 124, 17);
+        border-radius: 4px;
+    }
+
+    .header-note > summary {
+        cursor: pointer;
+        color: rgb(242, 124, 17);
+        font-size: 0.95em;
+    }
+
+    .header-note > summary:focus-visible {
+        outline: 2px solid rgb(242, 124, 17);
+        outline-offset: 2px;
+    }
+
+    .header-note p {
+        margin: 8px 0 0;
     }
 
     /* Modal specific overrides */
@@ -1418,20 +1432,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             padding: 15px;
         }
         
-        .logic-section {
-            padding: 15px;
-            margin: 15px 0;
-        }
-        
-        .logic-step {
-            padding: 12px;
-            gap: 12px;
-        }
-        
-        .step-number {
-            width: 25px;
-            height: 25px;
-            font-size: 12px;
+        .header-note {
+            padding: 8px 10px;
         }
     }
 
@@ -1451,20 +1453,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             color: rgb(242, 124, 17);
         }
         
-        .logic-section {
-            padding: 10px;
-            margin: 10px 0;
-        }
-        
-        .logic-step {
-            padding: 10px;
-            gap: 10px;
-            flex-direction: column;
-            text-align: center;
-        }
-        
-        .step-number {
-            align-self: center;
+        .header-note {
+            padding: 8px;
+            margin-top: 10px;
         }
     }
 
@@ -1491,46 +1482,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <div id="header-content">
             <!-- Regular Oghma Content -->
             <div id="oghma-header-content">
-                <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
-                <p>This is done by detecting topics during conversations, and injecting the appropriate information into the AI's prompt.</p>
-                
-                <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
-                <h4>Example: "Fishy Stick" becomes "fishy_stick"</h4>
-                <p>For Knowledge Class, we recommend you read this: <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Project Oghma</a></p>
-                
-                <div class="logic-section">
-                    <h3 class="logic-title">&#x1F50D; Article Search Logic</h3>
-                    <div class="logic-steps">
-                        <div class="logic-step">
-                            <div class="step-number">1</div>
-                            <div class="step-content">
-                                <strong>Keyword Search</strong>
-                                <p>NPC searches for oghma article based on most relevant keyword during conversations.</p>
-                            </div>
-                        </div>
-                        <div class="logic-step">
-                            <div class="step-number">2</div>
-                            <div class="step-content">
-                                <strong>Advanced Access Check</strong>
-                                <p>Check <code>knowledge_class</code> to see if they have access to the advanced article (<code>topic_desc</code>)</p>
-                            </div>
-                        </div>
-                        <div class="logic-step">
-                            <div class="step-number">3</div>
-                            <div class="step-content">
-                                <strong>Basic Access Check</strong>
-                                <p>Check <code>knowledge_class_basic</code> to see if they have access to the basic article (<code>topic_desc_basic</code>)</p>
-                            </div>
-                        </div>
-                        <div class="logic-step">
-                            <div class="step-number">4</div>
-                            <div class="step-content">
-                                <strong>Fallback Response</strong>
-                                <p>If all above fails, send <em>"You do not know about X"</em> to the prompt</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <p>Oghma matches conversation topics to articles. NPCs receive the most detailed version they are allowed to know; if no version matches their knowledge, they know nothing about the topic.</p>
             </div>
             
             <!-- Dynamic Oghma Content -->
@@ -1573,28 +1525,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     </div>
                 </form>
                 
-                <p style="margin-top: 15px;">All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
+                <p style="margin-top: 15px;">Uploads are stored as <strong>custom</strong> entries. Updating a factory topic creates a protected custom override that future catalog activations will not overwrite.</p>
+
+                <details class="header-note">
+                    <summary>Article editing tips</summary>
+                    <p>Use lowercase topic titles with underscores instead of spaces &mdash; "Fishy Stick" becomes <code>fishy_stick</code>.</p>
+                    <p><code>common</code> marks an article as public basic knowledge. Use it only on articles, not NPC tags. An empty basic class is also unrestricted.</p>
+                    <p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&amp;gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Read the Project Oghma guide</a></p>
+                </details>
             </div>
 
             <div class="content-section">
                 <h2>Database Management</h2>
                 <p>Verify uploads: <br><b>Server Actions &rarr; Database Manager &rarr; dwemer &rarr; public &rarr; oghma</b></p>
-                <p>View conversation usage: <br><b>Server Actions &rarr; Database Manager &rarr; dwemer &rarr; public &rarr; audit_memory</b></p>
-                
+                <p>View grounded, rejected, access, and fallback decisions in <a href="oghma_audit.php">Oghma Audit</a>.</p>
+
                 <div class="button-group" style="margin-top: 20px;">
                     <form action="" method="post" style="display: inline;">
                         <input type="hidden" name="action" value="delete_all">
-                        <input type="submit" class="btn-danger" value="Delete All Entries" 
-                               onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
+                        <input type="submit" class="btn-danger" value="Delete All Custom Entries"
+                               onclick="return confirm('Delete every custom Oghma entry? Factory entries will be preserved.');">
                     </form>
                     
-                    <form action="<?php echo $webRoot; ?>/ui/oghma_reset.php" method="post" style="display: inline;">
-                        <input type="submit" class="btn-danger" value="Factory Reset Database" 
-                               onclick="return confirm('Are you sure you want to reset the Oghma database to factory settings? This will delete all current entries and restore the default ones.');">
-                    </form>
+                    <a class="btn-danger" href="<?php echo $webRoot; ?>/ui/oghma_reset.php">Validate / Plan Catalog Change</a>
                 </div>
-                
-                <p style="margin-top: 15px;">Download backup: <a href="https://discord.gg/NDn9qud2ug" target="_blank" rel="noopener" style="color: yellow;">Discord CSV files channel</a></p>
             </div>
         </div>
         <div class="full-width-section">
@@ -1631,7 +1585,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <div class="action-container">
                 <button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>
                 <div class="search-container">
-                    <input type="text" id="searchBox" placeholder="Search topics..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">
+                    <input type="text" id="searchBox" placeholder="Search topics, aliases, or tags..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">
                     <button onclick="applySearch()" class="action-button edit">Search</button>
                 </div>
             </div>
@@ -1666,7 +1620,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
 
             <?php
-            // Build query. Letter filters remain canonical-topic based; free text searches aliases too.
+            // Build query. Letter filters remain canonical-topic based; free text searches identity and related metadata.
             $searchTerm = isset($_GET['search']) ? trim((string) $_GET['search']) : '';
             $conditions = [];
             $params = [];
@@ -1681,12 +1635,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             if ($searchTerm !== '') {
                 $params[] = '%' . $searchTerm . '%';
                 $placeholder = '$' . count($params);
-                $conditions[] = "(topic ILIKE {$placeholder} OR coalesce(aliases, '') ILIKE {$placeholder})";
+                $conditions[] = "(topic ILIKE {$placeholder} OR coalesce(aliases, '') ILIKE {$placeholder} OR coalesce(tags, '') ILIKE {$placeholder})";
             }
             $whereSql = empty($conditions) ? '' : 'WHERE ' . implode(' AND ', $conditions);
             $query = "
                 SELECT topic, aliases, topic_desc, knowledge_class, topic_desc_basic,
-                       knowledge_class_basic, tags, category
+                       knowledge_class_basic, tags, category, source_type, source_catalog_version
                 FROM $schema.oghma
                 $whereSql
                 ORDER BY topic $order
@@ -1706,6 +1660,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <th>Knowledge Class (Basic)</th>
                     <th>Tags</th>
                     <th>Category</th>
+                    <th>Source</th>
                     <th>Action</th> 
                   </tr>';
 
@@ -1720,6 +1675,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $knowledge_class_basic= htmlspecialchars($row['knowledge_class_basic']?? '');
                     $tags                 = htmlspecialchars($row['tags']                 ?? '');
                     $category             = htmlspecialchars($row['category']             ?? '');
+                    $sourceType            = htmlspecialchars($row['source_type']          ?? 'legacy');
+                    $sourceVersion         = htmlspecialchars($row['source_catalog_version'] ?? '');
 
                     // Normal row display
                     echo '<tr>';
@@ -1759,6 +1716,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     
                     echo '<td>' . nl2br($tags) . '</td>';
                     echo '<td>' . nl2br($category) . '</td>';
+                    echo '<td><strong>' . $sourceType . '</strong>'
+                        . ($sourceVersion !== '' ? '<br><small>' . $sourceVersion . '</small>' : '') . '</td>';
 
                     // Action column
                     echo '<td style="white-space: nowrap;">';
@@ -1977,7 +1936,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 
 
                 <label for="edit_knowledge_class">Knowledge Class:</label>
-                <small>Who should have access to this advanced knowledge. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this advanced knowledge. Separate tags by commas. Do not use <code>common</code> here &mdash; it only marks public access on the basic article. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_new" id="edit_knowledge_class">
 
                 <label for="edit_topic_desc_basic">Topic Description (Basic):</label>
@@ -1986,11 +1945,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 
 
                 <label for="edit_knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this basic knowledge. Separate tags by commas. Use <code>common</code> to make this basic article public to every NPC &mdash; it is an article marker only, never an NPC tag. Leaving this empty is also unrestricted. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_basic_new" id="edit_knowledge_class_basic">
 
                 <label for="edit_tags">Tags:</label>
-                <small>Not currently in use.</small>
+                <small>Related concepts for catalog search and contextual retrieval. Separate tags by commas.</small>
                 <input type="text" name="tags_new" id="edit_tags">
 
                 <label for="edit_category">Category:</label>
@@ -2029,7 +1988,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="topic_desc" id="topic_desc" rows="5" required></textarea>
 
                 <label for="knowledge_class">Knowledge Class:</label>
-                <small>Who should have access to this advanced knowledge. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this advanced knowledge. Separate tags by commas. Do not use <code>common</code> here &mdash; it only marks public access on the basic article. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class" id="knowledge_class">
 
                 <label for="topic_desc_basic">Topic Description (Basic):</label>
@@ -2037,11 +1996,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="topic_desc_basic" id="topic_desc_basic" rows="5"></textarea>
 
                 <label for="knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this. It is recommended for most basic articles to leave it blank. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this basic knowledge. Separate tags by commas. Use <code>common</code> to make this basic article public to every NPC &mdash; it is an article marker only, never an NPC tag, and most basic articles should use it. Leaving this empty is also unrestricted. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_basic" id="knowledge_class_basic">
 
                 <label for="tags">Tags:</label>
-                <small>Not currently in use.</small>
+                <small>Related concepts for catalog search and contextual retrieval. Separate tags by commas.</small>
                 <input type="text" name="tags" id="tags">
 
                 <label for="category">Category:</label>
@@ -2084,7 +2043,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="dynamic_topic_desc" id="dynamic_topic_desc" rows="5"></textarea>
 
                 <label for="dynamic_knowledge_class">Knowledge Class:</label>
-                <small>Who should have access to this advanced knowledge. Must be comma seperated.</small>
+                <small>Who should have access to this advanced knowledge. Must be comma seperated. Do not use <code>common</code> here &mdash; it only marks public access on the basic article.</small>
                 <input type="text" name="dynamic_knowledge_class" id="dynamic_knowledge_class">
 
                 <label for="dynamic_topic_desc_basic">Topic Description (Basic):</label>
@@ -2092,7 +2051,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="dynamic_topic_desc_basic" id="dynamic_topic_desc_basic" rows="5"></textarea>
 
                 <label for="dynamic_knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave blank to allow all NPCs to know this. Must be comma seperated.</small>
+                <small>Who should have access to this basic knowledge. Must be comma seperated. Use <code>common</code> to make this basic article public to every NPC &mdash; it is an article marker only, never an NPC tag. Leaving this blank is also unrestricted.</small>
                 <input type="text" name="dynamic_knowledge_class_basic" id="dynamic_knowledge_class_basic">
 
                 <label for="dynamic_tags">Tags:</label>
@@ -2140,7 +2099,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="dynamic_topic_desc_new" id="edit_dynamic_topic_desc" rows="5"></textarea>
 
                 <label for="edit_dynamic_knowledge_class">Knowledge Class:</label>
-                <small>Who should have access to this advanced knowledge. Must be comma separated.</small>
+                <small>Who should have access to this advanced knowledge. Must be comma separated. Do not use <code>common</code> here &mdash; it only marks public access on the basic article.</small>
                 <input type="text" name="dynamic_knowledge_class_new" id="edit_dynamic_knowledge_class">
 
                 <label for="edit_dynamic_topic_desc_basic">Topic Description (Basic):</label>
@@ -2148,7 +2107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="dynamic_topic_desc_basic_new" id="edit_dynamic_topic_desc_basic" rows="5"></textarea>
 
                 <label for="edit_dynamic_knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave blank to allow all NPCs to know this. Must be comma separated.</small>
+                <small>Who should have access to this basic knowledge. Must be comma separated. Use <code>common</code> to make this basic article public to every NPC &mdash; it is an article marker only, never an NPC tag. Leaving this blank is also unrestricted.</small>
                 <input type="text" name="dynamic_knowledge_class_basic_new" id="edit_dynamic_knowledge_class_basic">
 
                 <label for="edit_dynamic_tags">Tags:</label>

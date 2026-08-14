@@ -23,11 +23,6 @@ if ($webRoot === '/') {
 $webRoot = rtrim($webRoot, '/');
 $isEmbed = isset($_GET['embed']) && strval($_GET['embed']) === '1';
 
-try {
-    require_once($enginePath . "debug" . DIRECTORY_SEPARATOR . "db_updates.php");
-} catch (Throwable $_e) {
-}
-
 $ttsConnector = new TTSConnector();
 
 function h($value): string

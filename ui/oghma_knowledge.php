@@ -1,4 +1,5 @@
 <?php
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'oghma_parity.php';
 // Database connection details
 $host = 'localhost';
 $port = '5432';
@@ -84,7 +85,9 @@ try {
             knowledge_class_basic,
             topic_desc_basic,
             tags,
-            category
+            category,
+            source_type,
+            source_catalog_version
         FROM {$schema}.oghma
         {$whereClause}
         ORDER BY topic ASC
@@ -112,55 +115,9 @@ try {
         $tags = $row['tags'] ?? '';
         $category = $row['category'] ?? '';
 
-        $hasAdvancedAccess = false;
-        $hasBasicAccess = false;
-
-        // Check for 'knowall' override - grants access to everything
-        $hasKnowAll = false;
-        foreach ($oghmaKnowledgeArray as $userClass) {
-            if (strtolower(trim($userClass)) === 'knowall') {
-                $hasKnowAll = true;
-                break;
-            }
-        }
-
-        if ($hasKnowAll) {
-            $hasAdvancedAccess = true;
-        } else {
-            // Check advanced access
-            if ($knowledgeClass === '') {
-                // Empty knowledge class means no restriction
-                $hasAdvancedAccess = true;
-            } else {
-                // Convert advanced classes to array
-                $advClassesArr = array_map('trim', explode(',', $knowledgeClass));
-                $advClassesArr = array_filter($advClassesArr);
-                
-                // Check if user has any of the required advanced classes
-                $hasAdvancedKnowledge = array_intersect($advClassesArr, $oghmaKnowledgeArray);
-                if (!empty($hasAdvancedKnowledge)) {
-                    $hasAdvancedAccess = true;
-                }
-            }
-
-            // If no advanced access, check basic access
-            if (!$hasAdvancedAccess) {
-                if ($knowledgeClassBasic === '') {
-                    // Empty basic knowledge class means no restriction
-                    $hasBasicAccess = true;
-                } else {
-                    // Convert basic classes to array
-                    $basicClassesArr = array_map('trim', explode(',', $knowledgeClassBasic));
-                    $basicClassesArr = array_filter($basicClassesArr);
-                    
-                    // Check if user has any of the required basic classes
-                    $hasBasicKnowledge = array_intersect($basicClassesArr, $oghmaKnowledgeArray);
-                    if (!empty($hasBasicKnowledge)) {
-                        $hasBasicAccess = true;
-                    }
-                }
-            }
-        }
+        $access = chimOghmaAccessDecision($row, $oghmaKnowledgeArray);
+        $hasAdvancedAccess = $access['level'] === 'advanced';
+        $hasBasicAccess = $access['level'] === 'basic';
 
         // Add to accessible knowledge if has any access
         if ($hasAdvancedAccess || $hasBasicAccess) {
@@ -177,6 +134,9 @@ try {
                 'description' => htmlspecialchars($description, ENT_QUOTES, 'UTF-8'),
                 'tags' => htmlspecialchars($tags, ENT_QUOTES, 'UTF-8'),
                 'category' => htmlspecialchars($category, ENT_QUOTES, 'UTF-8'),
+                'source_type' => htmlspecialchars($row['source_type'] ?? 'legacy', ENT_QUOTES, 'UTF-8'),
+                'source_catalog_version' => htmlspecialchars($row['source_catalog_version'] ?? '', ENT_QUOTES, 'UTF-8'),
+                'access_reason' => htmlspecialchars($access['reason'], ENT_QUOTES, 'UTF-8'),
                 'knowledge_class' => $hasAdvancedAccess ? htmlspecialchars($knowledgeClass, ENT_QUOTES, 'UTF-8') : '',
                 'knowledge_class_basic' => (!$hasAdvancedAccess && $hasBasicAccess) ? htmlspecialchars($knowledgeClassBasic, ENT_QUOTES, 'UTF-8') : ''
             ];
@@ -189,7 +149,11 @@ try {
     });
 
     // Return the result
+    $catalogResult = pg_query($conn, "SELECT catalog_version, manifest_sha256 FROM public.oghma_catalogs WHERE state = 'active'");
+    $catalog = $catalogResult ? (pg_fetch_assoc($catalogResult) ?: null) : null;
     echo json_encode([
+        'contract' => CHIM_OGHMA_PARITY_VERSION,
+        'catalog' => $catalog,
         'knowledge' => $accessibleKnowledge,
         'categories' => $categories
     ]);
@@ -203,4 +167,4 @@ try {
         pg_close($conn);
     }
 }
-?> 
+?>
