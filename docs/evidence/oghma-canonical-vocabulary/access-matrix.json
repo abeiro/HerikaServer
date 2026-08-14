@@ -44,13 +44,6 @@
       "basic_article_count": 0
     },
     {
-      "canonical_tag": "blocked",
-      "expected_level": "advanced",
-      "topic": "disguised_invisibility_potion",
-      "advanced_article_count": 2,
-      "basic_article_count": 0
-    },
-    {
       "canonical_tag": "bosmer",
       "expected_level": "advanced",
       "topic": "baan_dar",
@@ -251,7 +244,7 @@
       "expected_level": "advanced",
       "topic": "alva's_house",
       "advanced_article_count": 36,
-      "basic_article_count": 220
+      "basic_article_count": 219
     },
     {
       "canonical_tag": "house_hlaalu",
@@ -405,13 +398,6 @@
       "expected_level": "advanced",
       "topic": "aurbis",
       "advanced_article_count": 6,
-      "basic_article_count": 0
-    },
-    {
-      "canonical_tag": "puzzle",
-      "expected_level": "advanced",
-      "topic": "dragon_claws",
-      "advanced_article_count": 1,
       "basic_article_count": 0
     },
     {

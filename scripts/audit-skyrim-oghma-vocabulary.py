@@ -174,14 +174,25 @@ def main() -> int:
     article_counts: Counter[str] = Counter()
     advanced: dict[str, list[str]] = {}
     basic: dict[str, list[str]] = {}
+    tier_errors: list[str] = []
     for article in articles:
         topic = str(article["topic"])
-        for value in split_tags(article["knowledge_class"]):
+        advanced_values = split_tags(article["knowledge_class"])
+        basic_values = split_tags(article["knowledge_class_basic"])
+        advanced_markers = sorted(set(advanced_values) & {"common", "esoteric"})
+        overlap = sorted(set(advanced_values) & set(basic_values))
+        if advanced_markers:
+            tier_errors.append(f"{topic}: article marker in advanced tier: {', '.join(advanced_markers)}")
+        if overlap:
+            tier_errors.append(f"{topic}: knowledge class exists in both tiers: {', '.join(overlap)}")
+        for value in advanced_values:
             article_counts[value] += 1
             advanced.setdefault(value, []).append(topic)
-        for value in split_tags(article["knowledge_class_basic"]):
+        for value in basic_values:
             article_counts[value] += 1
             basic.setdefault(value, []).append(topic)
+    if tier_errors:
+        raise RuntimeError("Active catalog violates tier-exclusive knowledge classes:\n" + "\n".join(tier_errors))
     audit_rows = []
     for raw in sorted(set(npc_counts) | set(article_counts), key=str.casefold):
         item = classify(raw, vocabulary, declared, shared, almsivi, chim)
@@ -191,7 +202,7 @@ def main() -> int:
     if any(row["action"] in {"translate", "remove"} and row["article_count"] for row in audit_rows):
         raise RuntimeError("Active catalog still contains noncanonical article classes")
 
-    article_markers = set(vocabulary["article_access_markers"])
+    article_markers = set(vocabulary["article_access_markers"]) | set(vocabulary["internal_classes"])
     matrix = [
         {
             "canonical_tag": knowledge_class,

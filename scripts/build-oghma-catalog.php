@@ -174,6 +174,43 @@ $canonicalizeClasses = static function ($value) use ($legacyClassAliases): array
     }
     return $result;
 };
+/** Keep article markers and positive permissions in exactly one access tier. */
+$normalizeClassTiers = static function (array $advanced, array $basic, string $topic): array {
+    $markers = [];
+    foreach (array_merge($advanced, $basic) as $class) {
+        if (in_array($class, ['common', 'esoteric'], true)) $markers[$class] = true;
+    }
+    $advanced = array_values(array_filter(
+        $advanced,
+        static fn(string $class): bool => !in_array($class, ['common', 'esoteric'], true)
+    ));
+    if ($advanced === []) $advanced[] = 'blocked';
+    $negativeOverlap = array_values(array_intersect(
+        array_filter($advanced, static fn(string $class): bool => str_starts_with($class, '!')),
+        array_filter($basic, static fn(string $class): bool => str_starts_with($class, '!'))
+    ));
+    if ($negativeOverlap !== []) {
+        throw new RuntimeException($topic . ': negative knowledge class exists in both tiers: ' . implode(', ', $negativeOverlap));
+    }
+    $advancedPositive = array_fill_keys(array_filter(
+        $advanced,
+        static fn(string $class): bool => !str_starts_with($class, '!')
+    ), true);
+    $basicWasRestricted = $basic !== [];
+    $basic = array_values(array_filter(
+        $basic,
+        static fn(string $class): bool => !in_array($class, ['common', 'esoteric'], true)
+            && (str_starts_with($class, '!') || !isset($advancedPositive[$class]))
+    ));
+    if (isset($markers['esoteric'])) {
+        array_unshift($basic, 'esoteric');
+    } elseif (isset($markers['common'])) {
+        array_unshift($basic, 'common');
+    } elseif ($basicWasRestricted && $basic === []) {
+        $basic[] = 'esoteric';
+    }
+    return [$advanced, $basic];
+};
 $organizationClasses = array_values(array_unique(array_merge(
     $vocabulary['shared']['organizations'] ?? [],
     $vocabulary['product_specific']['chim']['organizations'] ?? []
@@ -285,6 +322,11 @@ foreach ($matches[1] as $match) {
     } elseif (!in_array('common', array_map('strtolower', $basicClasses), true)) {
         array_unshift($basicClasses, 'common');
     }
+    [$advancedClasses, $basicClasses] = $normalizeClassTiers(
+        $advancedClasses,
+        $basicClasses,
+        $article['topic']
+    );
     $retrievalPhrases = array_values(array_unique(array_map(
         static fn($value): string => trim((string) $value),
         $safeRetrievalPhrases[$article['topic']] ?? []

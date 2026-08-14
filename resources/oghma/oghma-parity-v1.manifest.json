@@ -47,10 +47,10 @@
     "schema_sha256": "1070f6049de980639f967862468745c54d444bcfc806bce7e6ebe8a7c232ce15"
   },
   "catalog": {
-    "version": "skyrim-official-20260814-v1.9",
+    "version": "skyrim-official-20260814-v2.0",
     "rows": 1562,
-    "articles_sha256": "6682ab45fb0c41b6eab9790d341f20af4ed06459390b1e9a0847f7f618ed73a0",
-    "manifest_sha256": "2211b46a4b14d663930e937279365ddfb40248ea0b9b96647a253117216576bd",
+    "articles_sha256": "d7f2c580e8d2b6eef522f6f80865da2e0ae1d4463f848dc12f7a27bc0c0154fa",
+    "manifest_sha256": "6f9e1aa7cb94bbb580707329746fb3b005d66a0b0d41e152043b135b8bb8651e",
     "canonical_vocabulary_sha256": "cf474d88cdaaf40d67946915c1c9790a1665657a7ee4762d280a5e4eb93c35ac"
   },
   "prompt_output": {

@@ -3,9 +3,9 @@
 - Current vocabulary rows: 88
 - Factory NPC rows: 1293
 - NPC source assignments: 3216
-- Article class assignments: 6425
+- Article class assignments: 6424
 - Keep / translate / move / remove: {'keep': 88}
-- Canonical access matrix: 86 rows
+- Canonical access matrix: 84 rows
 
 | Current tag | Canonical tag | Action | NPC count | Article count | Product availability |
 |---|---|---:|---:|---:|---|
@@ -46,7 +46,7 @@
 | guard | guard | keep | 32 | 9 | both |
 | haafingar | haafingar | keep | 149 | 147 | chim |
 | healer | healer | keep | 5 | 146 | both |
-| hjaalmarch | hjaalmarch | keep | 38 | 256 | chim |
+| hjaalmarch | hjaalmarch | keep | 38 | 255 | chim |
 | house_hlaalu | house_hlaalu | keep | 3 | 7 | both |
 | house_redoran | house_redoran | keep | 4 | 12 | both |
 | house_telvanni | house_telvanni | keep | 5 | 3 | both |

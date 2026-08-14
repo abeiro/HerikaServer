@@ -1,15 +1,15 @@
 {
   "format": "chim.oghma-canonical-tag-audit.v1",
   "summary": {
-    "catalog_version": "skyrim-official-20260814-v1.9",
+    "catalog_version": "skyrim-official-20260814-v2.0",
     "current_tag_rows": 88,
     "npc_rows": 1293,
     "npc_assignments": 3216,
-    "article_assignments": 6425,
+    "article_assignments": 6424,
     "actions": {
       "keep": 88
     },
-    "matrix_rows": 86
+    "matrix_rows": 84
   },
   "rows": [
     {
@@ -314,7 +314,7 @@
       "action": "keep",
       "product_availability": "chim",
       "npc_count": 38,
-      "article_count": 256
+      "article_count": 255
     },
     {
       "current_tag": "house_hlaalu",
