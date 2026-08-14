@@ -11,6 +11,12 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         $GLOBALS["db"] = new sql();
     }
 
+    require_once($enginePath . "lib/player2_health.php");
+    if (!chimPlayer2HealthHasRecentGameActivity()) {
+        Logger::debug("[MIDDLETERM] Skipping scheduled LLM work because no recent game activity was detected");
+        return;
+    }
+
     require_once($enginePath . "prompts/command_prompt.php");
     require_once($enginePath . "lib/chat_helper_functions.php");
     require_once($enginePath . "lib/data_functions.php");

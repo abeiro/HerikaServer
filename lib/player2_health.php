@@ -73,6 +73,18 @@ function chimPlayer2HealthMarkGameActivity(?int $now = null): bool
     return $newSession;
 }
 
+/**
+ * Report whether HerikaServer has received normal game traffic recently.
+ */
+function chimPlayer2HealthHasRecentGameActivity(?int $now = null, int $ttl = CHIM_PLAYER2_HEALTH_ACTIVITY_TTL): bool
+{
+    $now = $now ?? time();
+    $ttl = max(1, $ttl);
+    $lastActivity = intval(chimPlayer2HealthGetOption('PLAYER2_GAME_LAST_ACTIVITY_TS', '0'));
+
+    return $lastActivity > 0 && ($now - $lastActivity) <= $ttl;
+}
+
 function chimPlayer2HealthMarkUsed(string $connectorUrl, ?int $now = null): bool
 {
     if (empty($GLOBALS['PLAYER2_GAME_REQUEST_ACTIVE'])) {
