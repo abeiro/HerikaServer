@@ -2837,11 +2837,54 @@ function chimNormalizePresentActors($actors)
     return $normalized;
 }
 
+// Parse a one-shot chat shortcut while leaving the saved CHIM mode unchanged.
+function chimParseChatModeShortcut($message)
+{
+    $message = (string)$message;
+    $rules = [
+        ["prefix" => "((", "mode" => "INJECTION_LOG", "suffix" => "))"],
+        ["prefix" => "~~", "mode" => "CLOSE", "suffix" => ""],
+        ["prefix" => "!!", "mode" => "SHOUT", "suffix" => ""],
+        ["prefix" => "**", "mode" => "AUTOCHAT", "suffix" => ""],
+        ["prefix" => "~", "mode" => "WHISPER", "suffix" => ""],
+        ["prefix" => "@", "mode" => "NARRATOR", "suffix" => ""],
+        ["prefix" => ">", "mode" => "DIRECTOR", "suffix" => ""],
+        ["prefix" => "#", "mode" => "CHEATMODE", "suffix" => ""],
+        ["prefix" => "(", "mode" => "INJECTION_CHAT", "suffix" => ")"],
+    ];
+
+    foreach ($rules as $rule) {
+        if (!str_starts_with($message, $rule["prefix"])) {
+            continue;
+        }
+
+        $content = trim(substr($message, strlen($rule["prefix"])));
+        if ($rule["suffix"] !== "" && str_ends_with($content, $rule["suffix"])) {
+            $content = trim(substr($content, 0, -strlen($rule["suffix"])));
+        }
+
+        return [
+            "matched" => true,
+            "mode" => $rule["mode"],
+            "symbol" => $rule["prefix"],
+            "content" => $content,
+        ];
+    }
+
+    return [
+        "matched" => false,
+        "mode" => "",
+        "symbol" => "",
+        "content" => $message,
+    ];
+}
+
 function chimDecodePlayerRoutingSnapshotField($rawField)
 {
     $result = [
         "audience" => "",
         "present_actors" => [],
+        "chat_shortcut_routed" => false,
         "execution_mode" => "",
     ];
     $rawField = trim((string)$rawField);
@@ -2866,6 +2909,9 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
     }
 
     $result["present_actors"] = chimNormalizePresentActors($payload["present_actors"] ?? []);
+    $result["chat_shortcut_routed"] =
+        ($payload["source"] ?? "") === "plugin_player_routing_v2" &&
+        ($payload["chat_shortcut_routed"] ?? false) === true;
     $executionMode = strtoupper(trim((string)($payload["execution_mode"] ?? "")));
     if (in_array($executionMode, [
         "STANDARD",

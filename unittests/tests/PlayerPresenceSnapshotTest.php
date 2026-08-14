@@ -88,16 +88,18 @@ final class PlayerPresenceSnapshotTest extends TestCase
         $this->assertSame([], $snapshot['present_actors']);
     }
 
-    public function testRequestExecutionModeIsDecodedFromRoutingSnapshot(): void
+    public function testRequestMetadataIsDecodedFromRoutingSnapshot(): void
     {
         $encoded = base64_encode((string)json_encode([
             'source' => 'plugin_player_routing_v2',
+            'chat_shortcut_routed' => true,
             'execution_mode' => 'whisper',
         ]));
 
         $snapshot = chimDecodePlayerRoutingSnapshotField($encoded);
 
         $this->assertSame('WHISPER', $snapshot['execution_mode']);
+        $this->assertTrue($snapshot['chat_shortcut_routed']);
         $this->assertSame('', $snapshot['audience']);
     }
 
