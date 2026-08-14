@@ -1062,97 +1062,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         opacity: 0;
     }
 
-    /* Logic Section Styling */
-    .logic-section {
-        margin: 25px 0;
-        padding: 22px;
-        background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
-        border-radius: 10px;
-        border: 1px solid rgba(242, 124, 17, 0.3);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3),
-                    inset 0 1px rgba(242, 124, 17, 0.05);
-    }
-
-    .logic-title {
-        text-align: center;
-        color: rgb(242, 124, 17);
-        margin-bottom: 20px;
-        font-size: 1.25em;
-        font-weight: bold;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-        font-family: 'MagicCards', serif;
-        word-spacing: 6px;
-    }
-
-    .logic-steps {
-        display: grid;
-        gap: 12px;
-    }
-
-    .logic-step {
-        display: flex;
-        align-items: flex-start;
-        gap: 15px;
-        padding: 16px;
-        background: rgba(42, 42, 42, 0.8);
-        border-radius: 8px;
-        border-left: 4px solid rgb(242, 124, 17);
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .logic-step:hover {
-        transform: translateX(4px);
-        box-shadow: 0 4px 12px rgba(242, 124, 17, 0.25),
-                    0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    .step-number {
-        flex-shrink: 0;
-        width: 32px;
-        height: 32px;
-        background: linear-gradient(135deg, rgb(242, 124, 17), rgb(212, 94, 0));
-        color: #000;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 15px;
-        box-shadow: 0 2px 6px rgba(242, 124, 17, 0.4),
-                    inset 0 1px rgba(255, 255, 255, 0.3);
-    }
-
-    .step-content {
-        flex: 1;
-    }
-
-    .step-content strong {
-        color: rgb(242, 124, 17);
-        display: block;
-        margin-bottom: 6px;
-        font-size: 1.05em;
-    }
-
-    .step-content p {
-        margin: 0;
-        line-height: 1.5;
-        color: #d0d0d0;
-    }
-
-    .step-content code {
-        background: rgba(74, 74, 74, 0.8);
-        padding: 3px 7px;
-        border-radius: 4px;
+    .page-header code {
+        background: rgba(26, 26, 26, 0.8);
+        padding: 2px 6px;
+        border-radius: 3px;
         color: #ffeb3b;
         font-family: 'Courier New', monospace;
         font-size: 0.9em;
-        border: 1px solid rgba(255, 235, 59, 0.2);
+        overflow-wrap: break-word;
     }
 
-    .step-content em {
-        color: #81c784;
-        font-style: italic;
+    /* Compact header intro */
+    #oghma-header-content > p {
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .header-note {
+        max-width: 720px;
+        margin: 12px auto 0;
+        padding: 8px 12px;
+        text-align: left;
+        background: rgba(26, 26, 26, 0.6);
+        border: 1px solid #3a3a3a;
+        border-left: 3px solid rgb(242, 124, 17);
+        border-radius: 4px;
+    }
+
+    .header-note > summary {
+        cursor: pointer;
+        color: rgb(242, 124, 17);
+        font-size: 0.95em;
+    }
+
+    .header-note > summary:focus-visible {
+        outline: 2px solid rgb(242, 124, 17);
+        outline-offset: 2px;
+    }
+
+    .header-note p {
+        margin: 8px 0 0;
     }
 
     /* Modal specific overrides */
@@ -1482,20 +1432,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             padding: 15px;
         }
         
-        .logic-section {
-            padding: 15px;
-            margin: 15px 0;
-        }
-        
-        .logic-step {
-            padding: 12px;
-            gap: 12px;
-        }
-        
-        .step-number {
-            width: 25px;
-            height: 25px;
-            font-size: 12px;
+        .header-note {
+            padding: 8px 10px;
         }
     }
 
@@ -1515,20 +1453,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             color: rgb(242, 124, 17);
         }
         
-        .logic-section {
-            padding: 10px;
-            margin: 10px 0;
-        }
-        
-        .logic-step {
-            padding: 10px;
-            gap: 10px;
-            flex-direction: column;
-            text-align: center;
-        }
-        
-        .step-number {
-            align-self: center;
+        .header-note {
+            padding: 8px;
+            margin-top: 10px;
         }
     }
 
@@ -1555,47 +1482,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <div id="header-content">
             <!-- Regular Oghma Content -->
             <div id="oghma-header-content">
-                <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
-                <p>This is done by detecting topics during conversations, and injecting the appropriate information into the AI's prompt.</p>
-                
-                <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
-                <h4>Example: "Fishy Stick" becomes "fishy_stick"</h4>
-                <p>For Knowledge Class, we recommend you read this: <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Project Oghma</a></p>
-                <p><code>common</code> in <code>knowledge_class_basic</code> marks an article as public basic knowledge that every NPC can access. It is an article marker only &mdash; do not add it to an NPC's Oghma tags, and do not use it in <code>knowledge_class</code>. Leaving <code>knowledge_class_basic</code> empty is still unrestricted as well.</p>
+                <p>Oghma matches conversation topics to articles. NPCs receive the most detailed version they are allowed to know; if no version matches their knowledge, they know nothing about the topic.</p>
 
-                <div class="logic-section">
-                    <h3 class="logic-title">&#x1F50D; Article Search Logic</h3>
-                    <div class="logic-steps">
-                        <div class="logic-step">
-                            <div class="step-number">1</div>
-                            <div class="step-content">
-                                <strong>Keyword Search</strong>
-                                <p>NPC searches for oghma article based on most relevant keyword during conversations.</p>
-                            </div>
-                        </div>
-                        <div class="logic-step">
-                            <div class="step-number">2</div>
-                            <div class="step-content">
-                                <strong>Advanced Access Check</strong>
-                                <p>Check <code>knowledge_class</code> to see if they have access to the advanced article (<code>topic_desc</code>)</p>
-                            </div>
-                        </div>
-                        <div class="logic-step">
-                            <div class="step-number">3</div>
-                            <div class="step-content">
-                                <strong>Basic Access Check</strong>
-                                <p>Check <code>knowledge_class_basic</code> to see if they have access to the basic article (<code>topic_desc_basic</code>). A basic class of <code>common</code>, or an empty basic class, is public to every NPC.</p>
-                            </div>
-                        </div>
-                        <div class="logic-step">
-                            <div class="step-number">4</div>
-                            <div class="step-content">
-                                <strong>Fallback Response</strong>
-                                <p>If all above fails, send <em>"You do not know about X"</em> to the prompt</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <details class="header-note">
+                    <summary>Article editing tips</summary>
+                    <p>Use lowercase topic titles with underscores instead of spaces &mdash; "Fishy Stick" becomes <code>fishy_stick</code>.</p>
+                    <p><code>common</code> marks an article as public basic knowledge. Use it only on articles, not NPC tags. An empty basic class is also unrestricted.</p>
+                    <p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&amp;gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Read the Project Oghma guide</a></p>
+                </details>
             </div>
             
             <!-- Dynamic Oghma Content -->
