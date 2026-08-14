@@ -6,6 +6,7 @@ if ($webRoot == '/') $webRoot = '';
 $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."oghma_parity.php");
 
 $TITLE = "ðŸ“CHIM - NPC Biography";
 
@@ -81,7 +82,7 @@ if (!function_exists('chimNormalizeBiographyRelationshipSeed')) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual'])) {
     $npc_name   = strtolower(trim($_POST['npc_name'] ?? ''));
     $core       = $_POST['npc_pers'] ?? '';
-    $oghma_knowledge_tags = (isset($_POST['npc_misc']) && trim($_POST['npc_misc']) !== '') ? trim($_POST['npc_misc']) : '';
+    $oghma_knowledge_tags = chimOghmaNpcKnowledgeTags($_POST['npc_misc'] ?? '');
     $voiceid    = (!empty($_POST['voiceid'])) ? trim($_POST['voiceid']) : null;
     $gender     = (!empty($_POST['gender'])) ? trim($_POST['gender']) : null;
     $race       = (!empty($_POST['race'])) ? trim($_POST['race']) : null;
@@ -285,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 return null;
                             };
                             
-                            $oghma_knowledge_tags = $getValue(2) ?? '';
+                            $oghma_knowledge_tags = chimOghmaNpcKnowledgeTags($getValue(2) ?? '');
                             $npc_static_bio = $getValue(3);
                             $personality = $getValue(4);
                             $appearance = $getValue(5);

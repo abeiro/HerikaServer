@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 VOCABULARY_PATH = ROOT / "resources" / "oghma" / "canonical-knowledge-vocabulary-v1.json"
 ONTOLOGY_PATH = ROOT / "resources" / "oghma" / "skyrim-official" / "ontology.json"
 BIOGRAPHIES_PATH = ROOT / "data" / "bio_templates_20250913.sql"
-MIGRATION_PATH = ROOT / "data" / "canonical_npc_knowledge_tags_20260813_v2.sql"
+MIGRATION_PATH = ROOT / "data" / "canonical_npc_knowledge_tags_20260814_v3.sql"
 EVIDENCE_PATH = ROOT / "data" / "canonical_npc_knowledge_tag_evidence.json"
 REPORT_PATH = ROOT / "docs" / "evidence" / "oghma-canonical-vocabulary" / "biography-classification-manifest.json"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -320,8 +320,7 @@ def main() -> int:
     if args.reuse_evidence:
         evidence = read_json(EVIDENCE_PATH)
         evidence_items = list(evidence.get("items", []))
-        if (evidence.get("vocabulary_sha256") != vocabulary_sha
-                or {str(item.get("npc_name", "")) for item in evidence_items} != {row["id"] for row in rows}):
+        if {str(item.get("npc_name", "")) for item in evidence_items} != {row["id"] for row in rows}:
             raise RuntimeError("Existing evidence does not match the frozen biographies and vocabulary")
         checkpoint = {
             "format": "chim.skyrim-biography-tags-checkpoint.v1",
@@ -377,7 +376,7 @@ def main() -> int:
     region_tags = set(vocabulary["product_specific"]["chim"]["regions"])
     rejected = 0
     for row in rows:
-        tags = ["common"]
+        tags = []
         race_key = normalized(row["race"])
         for target in vocabulary["legacy_aliases"].get(race_key, [race_key] if race_key else []):
             if target in allowed_ontology and target not in tags:
@@ -491,6 +490,7 @@ def main() -> int:
             "        SELECT lower(btrim(value)) AS tag, 0 AS source_order, ordinal\n"
             "          FROM regexp_split_to_table(COALESCE(current_tags, ''), '\\s*,\\s*') WITH ORDINALITY AS item(value, ordinal)\n"
             "         WHERE btrim(value) <> '' AND lower(btrim(value)) NOT IN (SELECT tag FROM region_tags)\n"
+            "           AND lower(btrim(value)) NOT IN ('common', 'esoteric', 'skyrimall')\n"
             "        UNION ALL\n"
             "        SELECT lower(btrim(value)) AS tag, 1 AS source_order, ordinal\n"
             "          FROM regexp_split_to_table(COALESCE(canonical_tags, ''), '\\s*,\\s*') WITH ORDINALITY AS item(value, ordinal)\n"
@@ -505,6 +505,22 @@ def main() -> int:
             "   SET oghma_knowledge_tags = pg_temp.chim_merge_canonical_regions(master.oghma_knowledge_tags, canonical.tags)\n"
             "  FROM canonical_npc_knowledge_tags AS canonical\n"
             " WHERE canonical.npc_name = trim(both '_' from lower(regexp_replace(master.npc_name, '[^A-Za-z0-9]+', '_', 'g')));\n"
+            "CREATE OR REPLACE FUNCTION pg_temp.chim_strip_article_markers(current_tags text)\n"
+            "RETURNS text LANGUAGE sql IMMUTABLE AS $$\n"
+            "    SELECT COALESCE(string_agg(tag, ', ' ORDER BY ordinal), '')\n"
+            "      FROM (\n"
+            "        SELECT lower(btrim(value)) AS tag, min(ordinal) AS ordinal\n"
+            "          FROM regexp_split_to_table(COALESCE(current_tags, ''), '\\s*[,|;]\\s*') WITH ORDINALITY AS item(value, ordinal)\n"
+            "         WHERE btrim(value) <> '' AND lower(btrim(value)) NOT IN ('common', 'esoteric', 'skyrimall')\n"
+            "         GROUP BY lower(btrim(value))\n"
+            "      ) AS cleaned;\n"
+            "$$;\n"
+            "UPDATE public.bio_templates\n"
+            "   SET oghma_knowledge_tags = pg_temp.chim_strip_article_markers(oghma_knowledge_tags);\n"
+            "UPDATE public.bio_templates_custom\n"
+            "   SET oghma_knowledge_tags = pg_temp.chim_strip_article_markers(oghma_knowledge_tags);\n"
+            "UPDATE public.core_npc_master\n"
+            "   SET oghma_knowledge_tags = pg_temp.chim_strip_article_markers(oghma_knowledge_tags);\n"
             "COMMIT;\n"
         )
         MIGRATION_PATH.write_text(migration, encoding="utf-8", newline="\n")

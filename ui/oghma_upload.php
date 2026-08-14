@@ -1561,7 +1561,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
                 <h4>Example: "Fishy Stick" becomes "fishy_stick"</h4>
                 <p>For Knowledge Class, we recommend you read this: <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Project Oghma</a></p>
-                
+                <p><code>common</code> in <code>knowledge_class_basic</code> marks an article as public basic knowledge that every NPC can access. It is an article marker only &mdash; do not add it to an NPC's Oghma tags, and do not use it in <code>knowledge_class</code>. Leaving <code>knowledge_class_basic</code> empty is still unrestricted as well.</p>
+
                 <div class="logic-section">
                     <h3 class="logic-title">&#x1F50D; Article Search Logic</h3>
                     <div class="logic-steps">
@@ -1583,7 +1584,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             <div class="step-number">3</div>
                             <div class="step-content">
                                 <strong>Basic Access Check</strong>
-                                <p>Check <code>knowledge_class_basic</code> to see if they have access to the basic article (<code>topic_desc_basic</code>)</p>
+                                <p>Check <code>knowledge_class_basic</code> to see if they have access to the basic article (<code>topic_desc_basic</code>). A basic class of <code>common</code>, or an empty basic class, is public to every NPC.</p>
                             </div>
                         </div>
                         <div class="logic-step">
@@ -2063,7 +2064,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 
 
                 <label for="edit_knowledge_class">Knowledge Class:</label>
-                <small>Who should have access to this advanced knowledge. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this advanced knowledge. Separate tags by commas. Do not use <code>common</code> here &mdash; it only marks public access on the basic article. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_new" id="edit_knowledge_class">
 
                 <label for="edit_topic_desc_basic">Topic Description (Basic):</label>
@@ -2072,7 +2073,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 
 
                 <label for="edit_knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this basic knowledge. Separate tags by commas. Use <code>common</code> to make this basic article public to every NPC &mdash; it is an article marker only, never an NPC tag. Leaving this empty is also unrestricted. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_basic_new" id="edit_knowledge_class_basic">
 
                 <label for="edit_tags">Tags:</label>
@@ -2115,7 +2116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="topic_desc" id="topic_desc" rows="5" required></textarea>
 
                 <label for="knowledge_class">Knowledge Class:</label>
-                <small>Who should have access to this advanced knowledge. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this advanced knowledge. Separate tags by commas. Do not use <code>common</code> here &mdash; it only marks public access on the basic article. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class" id="knowledge_class">
 
                 <label for="topic_desc_basic">Topic Description (Basic):</label>
@@ -2123,7 +2124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="topic_desc_basic" id="topic_desc_basic" rows="5"></textarea>
 
                 <label for="knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this. It is recommended for most basic articles to leave it blank. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this basic knowledge. Separate tags by commas. Use <code>common</code> to make this basic article public to every NPC &mdash; it is an article marker only, never an NPC tag, and most basic articles should use it. Leaving this empty is also unrestricted. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_basic" id="knowledge_class_basic">
 
                 <label for="tags">Tags:</label>
@@ -2170,7 +2171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="dynamic_topic_desc" id="dynamic_topic_desc" rows="5"></textarea>
 
                 <label for="dynamic_knowledge_class">Knowledge Class:</label>
-                <small>Who should have access to this advanced knowledge. Must be comma seperated.</small>
+                <small>Who should have access to this advanced knowledge. Must be comma seperated. Do not use <code>common</code> here &mdash; it only marks public access on the basic article.</small>
                 <input type="text" name="dynamic_knowledge_class" id="dynamic_knowledge_class">
 
                 <label for="dynamic_topic_desc_basic">Topic Description (Basic):</label>
@@ -2178,7 +2179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="dynamic_topic_desc_basic" id="dynamic_topic_desc_basic" rows="5"></textarea>
 
                 <label for="dynamic_knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave blank to allow all NPCs to know this. Must be comma seperated.</small>
+                <small>Who should have access to this basic knowledge. Must be comma seperated. Use <code>common</code> to make this basic article public to every NPC &mdash; it is an article marker only, never an NPC tag. Leaving this blank is also unrestricted.</small>
                 <input type="text" name="dynamic_knowledge_class_basic" id="dynamic_knowledge_class_basic">
 
                 <label for="dynamic_tags">Tags:</label>
@@ -2226,7 +2227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="dynamic_topic_desc_new" id="edit_dynamic_topic_desc" rows="5"></textarea>
 
                 <label for="edit_dynamic_knowledge_class">Knowledge Class:</label>
-                <small>Who should have access to this advanced knowledge. Must be comma separated.</small>
+                <small>Who should have access to this advanced knowledge. Must be comma separated. Do not use <code>common</code> here &mdash; it only marks public access on the basic article.</small>
                 <input type="text" name="dynamic_knowledge_class_new" id="edit_dynamic_knowledge_class">
 
                 <label for="edit_dynamic_topic_desc_basic">Topic Description (Basic):</label>
@@ -2234,7 +2235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="dynamic_topic_desc_basic_new" id="edit_dynamic_topic_desc_basic" rows="5"></textarea>
 
                 <label for="edit_dynamic_knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave blank to allow all NPCs to know this. Must be comma separated.</small>
+                <small>Who should have access to this basic knowledge. Must be comma separated. Use <code>common</code> to make this basic article public to every NPC &mdash; it is an article marker only, never an NPC tag. Leaving this blank is also unrestricted.</small>
                 <input type="text" name="dynamic_knowledge_class_basic_new" id="edit_dynamic_knowledge_class_basic">
 
                 <label for="edit_dynamic_tags">Tags:</label>

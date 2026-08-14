@@ -137,9 +137,21 @@ if (!function_exists('chimOghmaKnowledgeValues')) {
     }
 }
 
+if (!function_exists('chimOghmaNpcKnowledgeTags')) {
+    /** Normalize NPC permissions while removing article-only access markers. */
+    function chimOghmaNpcKnowledgeTags($value): string
+    {
+        $tags = array_values(array_filter(
+            chimOghmaKnowledgeValues($value),
+            static fn(string $tag): bool => !in_array(ltrim($tag, '!'), ['common', 'esoteric'], true)
+        ));
+        return implode(', ', $tags);
+    }
+}
+
 if (!function_exists('chimOghmaKnowledgeClassDecision')) {
-    /** Negative classes deny before positive matching; knowall is an explicit advanced override. */
-    function chimOghmaKnowledgeClassDecision($classes, array $knowledgeTags): array
+    /** Negative classes deny before positive matching; common is public only for basic knowledge. */
+    function chimOghmaKnowledgeClassDecision($classes, array $knowledgeTags, bool $allowCommon = false): array
     {
         $classValues = chimOghmaKnowledgeValues($classes);
         $tags = chimOghmaKnowledgeValues($knowledgeTags);
@@ -151,6 +163,9 @@ if (!function_exists('chimOghmaKnowledgeClassDecision')) {
         $negativeMatches = array_values(array_intersect($denied, $tags));
         if ($negativeMatches !== []) return ['allowed' => false, 'reason' => 'negative_class', 'matched' => $negativeMatches];
         $allowed = array_values(array_filter($classValues, static fn(string $value): bool => !str_starts_with($value, '!')));
+        if ($allowCommon && in_array('common', $allowed, true)) {
+            return ['allowed' => true, 'reason' => 'common', 'matched' => ['common']];
+        }
         $positiveMatches = array_values(array_intersect($allowed, $tags));
         return [
             'allowed' => $positiveMatches !== [],
@@ -164,7 +179,7 @@ if (!function_exists('chimOghmaAccessDecision')) {
     /** Resolve advanced, basic, or denied access with a complete auditable decision. */
     function chimOghmaAccessDecision(array $row, array $knowledgeTags): array
     {
-        $tags = chimOghmaKnowledgeValues($knowledgeTags);
+        $tags = array_values(array_diff(chimOghmaKnowledgeValues($knowledgeTags), ['common', 'esoteric']));
         if (in_array('knowall', $tags, true) && trim((string) ($row['topic_desc'] ?? '')) !== '') {
             return ['level' => 'advanced', 'reason' => 'knowall', 'matched' => ['knowall']];
         }
@@ -172,7 +187,7 @@ if (!function_exists('chimOghmaAccessDecision')) {
         if ($advanced['allowed'] && trim((string) ($row['topic_desc'] ?? '')) !== '') {
             return ['level' => 'advanced', 'reason' => $advanced['reason'], 'matched' => $advanced['matched']];
         }
-        $basic = chimOghmaKnowledgeClassDecision($row['knowledge_class_basic'] ?? '', $tags);
+        $basic = chimOghmaKnowledgeClassDecision($row['knowledge_class_basic'] ?? '', $tags, true);
         if ($basic['allowed'] && trim((string) ($row['topic_desc_basic'] ?? '')) !== '') {
             return ['level' => 'basic', 'reason' => $basic['reason'], 'matched' => $basic['matched']];
         }

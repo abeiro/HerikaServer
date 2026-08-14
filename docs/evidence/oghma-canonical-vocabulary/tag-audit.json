@@ -1,18 +1,15 @@
 {
   "format": "chim.oghma-canonical-tag-audit.v1",
   "summary": {
-    "catalog_version": "skyrim-official-20260813-v1.7",
-    "current_tag_rows": 109,
+    "catalog_version": "skyrim-official-20260814-v1.9",
+    "current_tag_rows": 88,
     "npc_rows": 1293,
-    "npc_assignments": 4115,
+    "npc_assignments": 3216,
     "article_assignments": 6425,
     "actions": {
-      "keep": 88,
-      "move": 2,
-      "remove": 4,
-      "translate": 15
+      "keep": 88
     },
-    "matrix_rows": 88
+    "matrix_rows": 86
   },
   "rows": [
     {
@@ -20,7 +17,7 @@
       "canonical_tag": "alchemist",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 20,
+      "npc_count": 29,
       "article_count": 258
     },
     {
@@ -28,24 +25,8 @@
       "canonical_tag": "altmer",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 46,
       "article_count": 15
-    },
-    {
-      "current_tag": "animal",
-      "canonical_tag": "",
-      "action": "move",
-      "product_availability": "none",
-      "npc_count": 36,
-      "article_count": 0
-    },
-    {
-      "current_tag": "archer",
-      "canonical_tag": "warrior",
-      "action": "translate",
-      "product_availability": "both",
-      "npc_count": 24,
-      "article_count": 0
     },
     {
       "current_tag": "argonian",
@@ -60,7 +41,7 @@
       "canonical_tag": "bard",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 28,
+      "npc_count": 30,
       "article_count": 7
     },
     {
@@ -68,7 +49,7 @@
       "canonical_tag": "blacksmith",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 37,
+      "npc_count": 31,
       "article_count": 37
     },
     {
@@ -76,7 +57,7 @@
       "canonical_tag": "blades",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 4,
       "article_count": 13
     },
     {
@@ -92,7 +73,7 @@
       "canonical_tag": "bosmer",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 27,
       "article_count": 8
     },
     {
@@ -116,7 +97,7 @@
       "canonical_tag": "breton",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 117,
+      "npc_count": 120,
       "article_count": 12
     },
     {
@@ -132,16 +113,8 @@
       "canonical_tag": "college_of_winterhold",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 0,
+      "npc_count": 75,
       "article_count": 19
-    },
-    {
-      "current_tag": "collegeofwinterhold",
-      "canonical_tag": "college_of_winterhold",
-      "action": "translate",
-      "product_availability": "chim",
-      "npc_count": 30,
-      "article_count": 0
     },
     {
       "current_tag": "common",
@@ -156,7 +129,7 @@
       "canonical_tag": "companions",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 15,
+      "npc_count": 14,
       "article_count": 17
     },
     {
@@ -164,47 +137,23 @@
       "canonical_tag": "daedra",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 6,
+      "npc_count": 17,
       "article_count": 88
-    },
-    {
-      "current_tag": "daedric",
-      "canonical_tag": "daedra",
-      "action": "translate",
-      "product_availability": "both",
-      "npc_count": 21,
-      "article_count": 0
     },
     {
       "current_tag": "dark_brotherhood",
       "canonical_tag": "dark_brotherhood",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 17,
       "article_count": 25
-    },
-    {
-      "current_tag": "darkbrotherhood",
-      "canonical_tag": "dark_brotherhood",
-      "action": "translate",
-      "product_availability": "both",
-      "npc_count": 15,
-      "article_count": 0
-    },
-    {
-      "current_tag": "darkelf",
-      "canonical_tag": "dunmer",
-      "action": "translate",
-      "product_availability": "both",
-      "npc_count": 104,
-      "article_count": 0
     },
     {
       "current_tag": "dawnguard",
       "canonical_tag": "dawnguard",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 27,
+      "npc_count": 16,
       "article_count": 12
     },
     {
@@ -228,7 +177,7 @@
       "canonical_tag": "dragon",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 23,
+      "npc_count": 9,
       "article_count": 64
     },
     {
@@ -236,7 +185,7 @@
       "canonical_tag": "dunmer",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 110,
       "article_count": 29
     },
     {
@@ -244,7 +193,7 @@
       "canonical_tag": "dwemer",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 19,
+      "npc_count": 10,
       "article_count": 26
     },
     {
@@ -252,7 +201,7 @@
       "canonical_tag": "east_empire_company",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 13,
       "article_count": 10
     },
     {
@@ -260,7 +209,7 @@
       "canonical_tag": "eastmarch",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 120,
+      "npc_count": 125,
       "article_count": 272
     },
     {
@@ -316,7 +265,7 @@
       "canonical_tag": "falkreath",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 70,
+      "npc_count": 67,
       "article_count": 249
     },
     {
@@ -324,7 +273,7 @@
       "canonical_tag": "fisher",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 6,
+      "npc_count": 8,
       "article_count": 29
     },
     {
@@ -332,7 +281,7 @@
       "canonical_tag": "forsworn",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 17,
+      "npc_count": 18,
       "article_count": 37
     },
     {
@@ -340,7 +289,7 @@
       "canonical_tag": "guard",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 30,
+      "npc_count": 32,
       "article_count": 9
     },
     {
@@ -348,7 +297,7 @@
       "canonical_tag": "haafingar",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 148,
+      "npc_count": 149,
       "article_count": 147
     },
     {
@@ -356,16 +305,8 @@
       "canonical_tag": "healer",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 5,
       "article_count": 146
-    },
-    {
-      "current_tag": "highelf",
-      "canonical_tag": "altmer",
-      "action": "translate",
-      "product_availability": "both",
-      "npc_count": 44,
-      "article_count": 0
     },
     {
       "current_tag": "hjaalmarch",
@@ -380,7 +321,7 @@
       "canonical_tag": "house_hlaalu",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 3,
       "article_count": 7
     },
     {
@@ -388,7 +329,7 @@
       "canonical_tag": "house_redoran",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 4,
       "article_count": 12
     },
     {
@@ -396,7 +337,7 @@
       "canonical_tag": "house_telvanni",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 5,
       "article_count": 3
     },
     {
@@ -404,7 +345,7 @@
       "canonical_tag": "hunter",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 19,
+      "npc_count": 26,
       "article_count": 25
     },
     {
@@ -412,7 +353,7 @@
       "canonical_tag": "imperial",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 132,
+      "npc_count": 134,
       "article_count": 43
     },
     {
@@ -420,7 +361,7 @@
       "canonical_tag": "imperial_legion",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 37,
       "article_count": 60
     },
     {
@@ -428,7 +369,7 @@
       "canonical_tag": "innkeeper",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 35,
+      "npc_count": 16,
       "article_count": 13
     },
     {
@@ -456,27 +397,11 @@
       "article_count": 12
     },
     {
-      "current_tag": "legion",
-      "canonical_tag": "imperial_legion",
-      "action": "translate",
-      "product_availability": "both",
-      "npc_count": 65,
-      "article_count": 0
-    },
-    {
-      "current_tag": "legion. skyrimall",
-      "canonical_tag": "",
-      "action": "remove",
-      "product_availability": "none",
-      "npc_count": 1,
-      "article_count": 0
-    },
-    {
       "current_tag": "mage",
       "canonical_tag": "mage",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 185,
+      "npc_count": 73,
       "article_count": 227
     },
     {
@@ -484,7 +409,7 @@
       "canonical_tag": "merchant",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 55,
+      "npc_count": 61,
       "article_count": 32
     },
     {
@@ -504,19 +429,11 @@
       "article_count": 10
     },
     {
-      "current_tag": "miraakcult",
-      "canonical_tag": "miraak_cult",
-      "action": "translate",
-      "product_availability": "chim",
-      "npc_count": 6,
-      "article_count": 0
-    },
-    {
       "current_tag": "morag_tong",
       "canonical_tag": "morag_tong",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 1,
       "article_count": 9
     },
     {
@@ -524,7 +441,7 @@
       "canonical_tag": "noble",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 86,
+      "npc_count": 18,
       "article_count": 62
     },
     {
@@ -532,16 +449,8 @@
       "canonical_tag": "nord",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 561,
+      "npc_count": 568,
       "article_count": 16
-    },
-    {
-      "current_tag": "onmund",
-      "canonical_tag": "",
-      "action": "remove",
-      "product_availability": "none",
-      "npc_count": 1,
-      "article_count": 0
     },
     {
       "current_tag": "orc",
@@ -556,16 +465,8 @@
       "canonical_tag": "pale",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 64,
+      "npc_count": 66,
       "article_count": 231
-    },
-    {
-      "current_tag": "peasant",
-      "canonical_tag": "",
-      "action": "move",
-      "product_availability": "none",
-      "npc_count": 292,
-      "article_count": 0
     },
     {
       "current_tag": "plautis_carvain",
@@ -580,23 +481,15 @@
       "canonical_tag": "priest",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 36,
+      "npc_count": 34,
       "article_count": 48
-    },
-    {
-      "current_tag": "psijic",
-      "canonical_tag": "psijic_order",
-      "action": "translate",
-      "product_availability": "chim",
-      "npc_count": 4,
-      "article_count": 0
     },
     {
       "current_tag": "psijic_order",
       "canonical_tag": "psijic_order",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 0,
+      "npc_count": 4,
       "article_count": 6
     },
     {
@@ -604,7 +497,7 @@
       "canonical_tag": "puzzle",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 55,
+      "npc_count": 0,
       "article_count": 1
     },
     {
@@ -612,7 +505,7 @@
       "canonical_tag": "reach",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 145,
+      "npc_count": 148,
       "article_count": 223
     },
     {
@@ -628,7 +521,7 @@
       "canonical_tag": "rift",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 167,
+      "npc_count": 172,
       "article_count": 183
     },
     {
@@ -636,7 +529,7 @@
       "canonical_tag": "sailor",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 18,
+      "npc_count": 12,
       "article_count": 15
     },
     {
@@ -652,7 +545,7 @@
       "canonical_tag": "scholar",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 23,
+      "npc_count": 62,
       "article_count": 471
     },
     {
@@ -660,47 +553,23 @@
       "canonical_tag": "skaal",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
-      "article_count": 10
-    },
-    {
-      "current_tag": "skall",
-      "canonical_tag": "skaal",
-      "action": "translate",
-      "product_availability": "both",
       "npc_count": 11,
-      "article_count": 0
-    },
-    {
-      "current_tag": "skyrimall",
-      "canonical_tag": "common",
-      "action": "translate",
-      "product_availability": "both",
-      "npc_count": 144,
-      "article_count": 0
+      "article_count": 10
     },
     {
       "current_tag": "snow_elf",
       "canonical_tag": "snow_elf",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 0,
+      "npc_count": 3,
       "article_count": 11
-    },
-    {
-      "current_tag": "snowelf",
-      "canonical_tag": "snow_elf",
-      "action": "translate",
-      "product_availability": "chim",
-      "npc_count": 7,
-      "article_count": 0
     },
     {
       "current_tag": "solstheim",
       "canonical_tag": "solstheim",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 97,
+      "npc_count": 98,
       "article_count": 64
     },
     {
@@ -712,22 +581,6 @@
       "article_count": 1
     },
     {
-      "current_tag": "soulcairn",
-      "canonical_tag": "",
-      "action": "remove",
-      "product_availability": "none",
-      "npc_count": 3,
-      "article_count": 0
-    },
-    {
-      "current_tag": "sovngarde",
-      "canonical_tag": "",
-      "action": "remove",
-      "product_availability": "none",
-      "npc_count": 4,
-      "article_count": 0
-    },
-    {
       "current_tag": "stands_in_shallows",
       "canonical_tag": "stands_in_shallows",
       "action": "keep",
@@ -736,19 +589,11 @@
       "article_count": 1
     },
     {
-      "current_tag": "stormcloak",
-      "canonical_tag": "stormcloaks",
-      "action": "translate",
-      "product_availability": "chim",
-      "npc_count": 36,
-      "article_count": 0
-    },
-    {
       "current_tag": "stormcloaks",
       "canonical_tag": "stormcloaks",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 0,
+      "npc_count": 32,
       "article_count": 44
     },
     {
@@ -764,7 +609,7 @@
       "canonical_tag": "thalmor",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 15,
+      "npc_count": 14,
       "article_count": 24
     },
     {
@@ -772,7 +617,7 @@
       "canonical_tag": "thief",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 120,
+      "npc_count": 17,
       "article_count": 3
     },
     {
@@ -780,23 +625,15 @@
       "canonical_tag": "thieves_guild",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 0,
+      "npc_count": 33,
       "article_count": 28
-    },
-    {
-      "current_tag": "thievesguild",
-      "canonical_tag": "thieves_guild",
-      "action": "translate",
-      "product_availability": "both",
-      "npc_count": 25,
-      "article_count": 0
     },
     {
       "current_tag": "traveler",
       "canonical_tag": "traveler",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 13,
+      "npc_count": 0,
       "article_count": 620
     },
     {
@@ -812,7 +649,7 @@
       "canonical_tag": "vampire",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 43,
+      "npc_count": 34,
       "article_count": 13
     },
     {
@@ -828,7 +665,7 @@
       "canonical_tag": "volkihar",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 16,
+      "npc_count": 18,
       "article_count": 10
     },
     {
@@ -836,7 +673,7 @@
       "canonical_tag": "warrior",
       "action": "keep",
       "product_availability": "both",
-      "npc_count": 224,
+      "npc_count": 117,
       "article_count": 31
     },
     {
@@ -844,7 +681,7 @@
       "canonical_tag": "werewolf",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 8,
+      "npc_count": 7,
       "article_count": 5
     },
     {
@@ -852,7 +689,7 @@
       "canonical_tag": "whiterun",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 145,
+      "npc_count": 148,
       "article_count": 308
     },
     {
@@ -860,7 +697,7 @@
       "canonical_tag": "winterhold",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 53,
+      "npc_count": 56,
       "article_count": 136
     },
     {
@@ -868,16 +705,8 @@
       "canonical_tag": "witch",
       "action": "keep",
       "product_availability": "chim",
-      "npc_count": 10,
+      "npc_count": 5,
       "article_count": 9
-    },
-    {
-      "current_tag": "woodelf",
-      "canonical_tag": "bosmer",
-      "action": "translate",
-      "product_availability": "both",
-      "npc_count": 27,
-      "article_count": 0
     },
     {
       "current_tag": "ysolda",

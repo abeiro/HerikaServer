@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 VOCABULARY = ROOT / "resources" / "oghma" / "canonical-knowledge-vocabulary-v1.json"
 ONTOLOGY = ROOT / "resources" / "oghma" / "skyrim-official" / "ontology.json"
 BIOGRAPHIES = ROOT / "data" / "bio_templates_20250913.sql"
+BIOGRAPHY_EVIDENCE = ROOT / "data" / "canonical_npc_knowledge_tag_evidence.json"
 CATALOG_ROOT = ROOT / "resources" / "oghma" / "skyrim-official"
 
 
@@ -88,7 +89,8 @@ def parse_sql_rows(path: Path) -> list[list[str | None]]:
 
 
 def vocabulary_sets(vocabulary: dict[str, Any]) -> tuple[set[str], set[str], set[str]]:
-    shared = {value for values in vocabulary["shared"].values() for value in values}
+    shared = ({value for values in vocabulary["shared"].values() for value in values}
+              | set(vocabulary["article_access_markers"]))
     almsivi = {
         value for values in vocabulary["product_specific"]["almsivi"].values() for value in values
     }
@@ -162,11 +164,10 @@ def main() -> int:
     declared = set(ontology["knowledge_classes"])
     shared, almsivi, chim = vocabulary_sets(vocabulary)
     biography_rows = parse_sql_rows(BIOGRAPHIES)
+    biography_evidence = read_json(BIOGRAPHY_EVIDENCE)
     npc_counts: Counter[str] = Counter()
-    for row in biography_rows:
-        npc_counts.update(split_tags(row[1] or ""))
-        if row[13]:
-            npc_counts[str(row[13])] += 1
+    for item in biography_evidence["items"]:
+        npc_counts.update(split_tags(item.get("tags", [])))
 
     version = (CATALOG_ROOT / "active-catalog-version.txt").read_text(encoding="utf-8").strip()
     articles = read_json(CATALOG_ROOT / "catalogs" / version / "articles.json")
@@ -190,6 +191,7 @@ def main() -> int:
     if any(row["action"] in {"translate", "remove"} and row["article_count"] for row in audit_rows):
         raise RuntimeError("Active catalog still contains noncanonical article classes")
 
+    article_markers = set(vocabulary["article_access_markers"])
     matrix = [
         {
             "canonical_tag": knowledge_class,
@@ -198,13 +200,13 @@ def main() -> int:
             "advanced_article_count": len(advanced.get(knowledge_class, [])),
             "basic_article_count": len(basic.get(knowledge_class, [])),
         }
-        for knowledge_class in sorted(set(advanced) | set(basic))
+        for knowledge_class in sorted((set(advanced) | set(basic)) - article_markers)
     ]
     actions = Counter(row["action"] for row in audit_rows)
     summary = {
         "catalog_version": version,
         "current_tag_rows": len(audit_rows),
-        "npc_rows": len(biography_rows),
+        "npc_rows": len(biography_evidence["items"]),
         "npc_assignments": sum(npc_counts.values()),
         "article_assignments": sum(article_counts.values()),
         "actions": dict(sorted(actions.items())),

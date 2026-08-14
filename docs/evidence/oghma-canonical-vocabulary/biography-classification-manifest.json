@@ -1,7 +1,7 @@
 {
   "format": "chim.skyrim-biography-knowledge-classification.v2",
   "model": "z-ai/glm-5.1",
-  "vocabulary_sha256": "50d7078267e30a7dfb0912338e72e1189cacd43c7606dea9a54ea9d4e7fd5caf",
+  "vocabulary_sha256": "cf474d88cdaaf40d67946915c1c9790a1665657a7ee4762d280a5e4eb93c35ac",
   "biography_count": 1293,
   "glm_completed_count": 1293,
   "rejected_claim_count": 698,
@@ -15,7 +15,6 @@
     "bosmer": 27,
     "breton": 120,
     "college_of_winterhold": 75,
-    "common": 1293,
     "companions": 14,
     "daedra": 17,
     "dark_brotherhood": 17,
@@ -88,7 +87,7 @@
     "request_seconds_median": 8.349120234997827,
     "provider_failed_abstentions": 0
   },
-  "classification_reused_from_evidence_sha256": "f06978cd62df07b3008cec1de054cfe6151520b141b77c5c58b626d9be0dae08",
-  "migration_sha256": "b42187385e97181f5d467b7a97a24fa707112b2009f36e9c4e8fbaa86651eefb",
-  "evidence_sha256": "f06978cd62df07b3008cec1de054cfe6151520b141b77c5c58b626d9be0dae08"
+  "classification_reused_from_evidence_sha256": "d426210732ffa0217392bad081b3f89f4128b846447dfd059cb6b72d2d6e722b",
+  "migration_sha256": "a4219594da9b6b5d85e80e1a4b846a8fd77d0f4996f477bac0dd6e26bb250e6a",
+  "evidence_sha256": "d426210732ffa0217392bad081b3f89f4128b846447dfd059cb6b72d2d6e722b"
 }

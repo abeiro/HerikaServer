@@ -30,11 +30,12 @@ and the supplying layer for enablement, topic count, result limit, race/location
 fallback timeout, and connector selection.
 
 Knowledge-class negatives are evaluated before positive classes. Advanced access is preferred, then
-basic access, then denied. Ordinary packaged basic descriptions carry `common`, which new NPCs
-receive; reviewed deep-lore subjects carry `esoteric` instead. Specialist classes grant advanced
-descriptions. Legacy or custom rows with an empty class remain unrestricted. `knowall` remains an
-explicit advanced override. Denied selections are represented as structured denials rather than
-fabricated lore.
+basic access, then denied. Ordinary packaged basic descriptions carry the article-only `common`
+marker and are available to every NPC; `common` is never assigned to NPCs and is invalid for
+advanced access. Reviewed deep-lore subjects carry the article-only `esoteric` marker instead and
+remain restricted to specialist classes. Legacy or custom rows with an empty class remain
+unrestricted. `knowall` remains an explicit advanced override. Denied selections are represented as
+structured denials rather than fabricated lore.
 
 Both products use the frozen lowercase snake-case vocabulary for shared roles, races, cultures, and
 organizations. Legacy class IDs normalize at runtime and during catalog revision. `mages_guild` and

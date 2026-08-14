@@ -1,6 +1,6 @@
 # Shared Oghma canonical knowledge vocabulary v1
 
-Frozen: 2026-08-13
+Frozen: 2026-08-14
 
 This document defines one semantic vocabulary for ALMSIVI and CHIM while leaving their generators,
 runtime code, catalogs, migrations, and validation independent. The byte-identical machine-readable
@@ -13,15 +13,18 @@ general biography label. Race, durable organization membership, stable region fa
 practiced knowledge-bearing occupation may grant tags. Descriptors such as farmer, miner, peasant,
 child, servant, prisoner, and animal remain profile facts and do not grant Oghma access.
 
-Every factory biography receives `common`. An empty custom tag list remains supported and receives
-the runtime default. `knowall` is a deliberate override, never an inferred biography tag.
+`common` and `esoteric` are article-only access markers, never NPC tags. A basic article marked
+`common` is available to every NPC after negative exclusions are applied. An empty article class
+remains unrestricted for backward compatibility. `common` is not valid in an advanced class.
+`knowall` is a deliberate advanced override, never an inferred biography tag.
 
 ## Shared classes
 
 The products use identical IDs for the same concepts:
 
-- Roles: common, esoteric, scholar, traveler, mage, alchemist, healer, priest, blacksmith, hunter,
-  merchant, sailor, guard, warrior, thief.
+- Article markers: common, esoteric.
+- Roles: scholar, traveler, mage, alchemist, healer, priest, blacksmith, hunter, merchant, sailor,
+  guard, warrior, thief.
 - Races: argonian, breton, dunmer, altmer, bosmer, imperial, khajiit, nord, orc, redguard.
 - Cultures: daedra, dwemer, skaal.
 - Organizations: blades, dark_brotherhood, east_empire_company, imperial_legion, morag_tong,
@@ -51,8 +54,9 @@ does not justify scholar; scholarship must be explicit.
 ## Compatibility and frozen GLM boundary
 
 Legacy IDs normalize at access boundaries and during catalog/biography revision. This includes the
-old race IDs, compact faction IDs, `smith`, `daedric`, `skall`, and `skyrimall`. Compatibility is
-one-way: new data is always written with canonical IDs.
+old race IDs, compact faction IDs, `smith`, `daedric`, and `skall`. Old `skyrimall`/`common` NPC
+values are accepted but ignored during access checks and removed when profiles are revised.
+Compatibility is one-way: new data is always written with canonical IDs.
 
 GLM runs only after deterministic audits and article-access matrices pass against this frozen file.
 It extracts evidence-bearing occupation, organization, and stable-residence claims, or abstains.

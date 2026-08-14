@@ -1,18 +1,21 @@
 {
   "format": "dwemer.shared-oghma-knowledge-vocabulary.v1",
-  "version": "1.0.0",
-  "frozen_on": "2026-08-13",
+  "version": "1.1.0",
+  "frozen_on": "2026-08-14",
   "canonical_style": "lowercase_snake_case",
   "semantics": {
     "knowledge_tags": "Permissions representing knowledge an NPC can plausibly use.",
     "profile_descriptors": "Biography facts that do not grant Oghma article access.",
     "profile_subjects": "Exact NPC subjects used only for knowledge specifically about that NPC.",
+    "article_access_markers": "Catalog visibility markers that must never be assigned to NPCs.",
     "internal_classes": "Catalog policy markers that must never be inferred from biographies."
+  },
+  "article_access_markers": {
+    "common": "Public basic knowledge available to every NPC after exclusions are applied.",
+    "esoteric": "Hidden or specialist knowledge that is never public by default."
   },
   "shared": {
     "roles": [
-      "common",
-      "esoteric",
       "scholar",
       "traveler",
       "mage",
@@ -231,7 +234,8 @@
     "steward"
   ],
   "biography_rules": {
-    "always_add": ["common"],
+    "always_add": [],
+    "never_assign": ["common", "esoteric"],
     "race": "Use the authoritative race field.",
     "occupation": "Translate only a documented practiced role; profile-only work never grants access.",
     "organization": "Use authoritative membership or explicit durable biography evidence.",

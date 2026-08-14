@@ -73,7 +73,7 @@ foreach ($fixture['access_cases'] as $case) {
 foreach ($canonicalMatrix['rows'] as $case) {
     $article = $catalogByTopic[$case['topic']] ?? null;
     $actual = is_array($article)
-        ? chimOghmaAccessDecision($article, ['common', $case['canonical_tag']])
+        ? chimOghmaAccessDecision($article, [$case['canonical_tag']])
         : ['level'=>'missing', 'reason'=>'topic_not_found'];
     if ($actual['level'] !== $case['expected_level']) {
         $correctnessFailures[] = [

@@ -5,13 +5,13 @@
     "repository": "Dwemer-Dynamics/ALMSIVIserver",
     "base_commit": "383ddfbfa839f182bd8811151b03913b6d4564b1",
     "oracle": "unittests/fixtures/oghma-parity-v1.json",
-    "oracle_sha256": "7a40e30013028198bb873d2de7b71ef764ed3f9f17a9f8db5d5bdbd4e62a9f90"
+    "oracle_sha256": "8aef3befb744a831a5788707a83bbf9a0ab032c3e8d43af16aae7bf22cba8a3f"
   },
   "algorithm": {
     "name": "grounded-v3.1-herika",
     "files": {
       "lib/oghma_retrieval.php": "514baf350c02765240b472e145ae5dc03dea2a44eb853d129cd877151a504c1f",
-      "lib/oghma_parity.php": "7aea387f66bd8a47bca47a17a512582908490da75c8a11dd0867655b68d10715",
+      "lib/oghma_parity.php": "ad89c3cf92bc9add884d6c3ee41dc017c6391942c18b344c13f07f777ead4ffc",
       "lib/oghma_forced_context.php": "e7fbf1c183febe8c5cf898d9d8ffbf228d0bb8bb1c6d31243a20ff49c84d8a80",
       "processor/oghma.php": "d6bddc00accbf42ea409268ce2f5ac0dc31d2b929b4ea79e2e7441e6d3a69734"
     }
@@ -42,16 +42,16 @@
       "location_context_enabled": true,
       "extractor_fallback_enabled": false,
       "extractor_timeout_ms": 1500,
-      "knowledge_tags": "common"
+      "knowledge_tags": ""
     },
     "schema_sha256": "1070f6049de980639f967862468745c54d444bcfc806bce7e6ebe8a7c232ce15"
   },
   "catalog": {
-    "version": "skyrim-official-20260813-v1.7",
+    "version": "skyrim-official-20260814-v1.9",
     "rows": 1562,
     "articles_sha256": "6682ab45fb0c41b6eab9790d341f20af4ed06459390b1e9a0847f7f618ed73a0",
-    "manifest_sha256": "2cc5c0b3569fc0c23c0551e8d86f16c9ae2c73ca3945b21e7223246b15478836",
-    "canonical_vocabulary_sha256": "50d7078267e30a7dfb0912338e72e1189cacd43c7606dea9a54ea9d4e7fd5caf"
+    "manifest_sha256": "2211b46a4b14d663930e937279365ddfb40248ea0b9b96647a253117216576bd",
+    "canonical_vocabulary_sha256": "cf474d88cdaaf40d67946915c1c9790a1665657a7ee4762d280a5e4eb93c35ac"
   },
   "prompt_output": {
     "format": "canonical XML fragment",

@@ -93,13 +93,6 @@
       "basic_article_count": 0
     },
     {
-      "canonical_tag": "common",
-      "expected_level": "basic",
-      "topic": "16_accords_of_madness",
-      "advanced_article_count": 0,
-      "basic_article_count": 1476
-    },
-    {
       "canonical_tag": "companions",
       "expected_level": "advanced",
       "topic": "ahzidal's_descent",
@@ -203,13 +196,6 @@
       "topic": "blades",
       "advanced_article_count": 2,
       "basic_article_count": 0
-    },
-    {
-      "canonical_tag": "esoteric",
-      "expected_level": "basic",
-      "topic": "aedra_and_daedra",
-      "advanced_article_count": 0,
-      "basic_article_count": 86
     },
     {
       "canonical_tag": "falk_firebeard",

@@ -3,6 +3,7 @@
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."action_catalog.php");
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."chim_quest_engine.php");
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."oghma_aliases.php");
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."oghma_parity.php");
 
 /* CSV Import Processor - Called by csv_import.php endpoint
  * Handles CSV imports:
@@ -192,6 +193,7 @@ function handleBiographyImport($csvData, $timestamp, $game_timestamp) {
             } elseif (isset($headerMap['npc_misc']) && isset($data[$headerMap['npc_misc']])) {
                 $oghma_knowledge_tags = trim($data[$headerMap['npc_misc']]);
             }
+            $oghma_knowledge_tags = chimOghmaNpcKnowledgeTags($oghma_knowledge_tags);
             
             $melotts_voiceid = null;
             if (isset($headerMap['melotts_voiceid']) && isset($data[$headerMap['melotts_voiceid']])) {

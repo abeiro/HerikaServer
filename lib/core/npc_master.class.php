@@ -877,10 +877,10 @@ class NpcMaster
 
     private function composeKnowledgeString($misc, $codename)
     {
-        $miscParts = array_unique(array_filter(array_map('trim', explode(',', $misc))));
-        if (! in_array('common', array_map('strtolower', $miscParts), true)) {
-            array_unshift($miscParts, 'common');
-        }
+        $miscParts = array_unique(array_filter(
+            array_map('trim', preg_split('/\s*[,|;]\s*/', (string) $misc) ?: []),
+            static fn($tag): bool => $tag !== '' && ! in_array(strtolower($tag), ['common', 'esoteric'], true)
+        ));
         if (! in_array($codename, $miscParts)) {
             $miscParts[] = $codename;
         }
