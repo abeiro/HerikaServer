@@ -53,7 +53,6 @@ $PLAYER_INPUT_REQUEST = in_array(
     true
 );
 $SYMBOL_MODE_OVERRIDE = false;
-$REQUEST_EXECUTION_MODE = strtoupper(trim((string)($GLOBALS["CHIM_REQUEST_EXECUTION_MODE"] ?? "")));
 $CHAT_SHORTCUT_ROUTED = ($GLOBALS["CHIM_CHAT_SHORTCUT_ROUTED"] ?? false) === true;
 
 if ($PLAYER_INPUT_REQUEST && $CHAT_SHORTCUT_ROUTED && isset($gameRequest[3]) && is_string($gameRequest[3])) {
@@ -75,12 +74,7 @@ if ($PLAYER_INPUT_REQUEST && $CHAT_SHORTCUT_ROUTED && isset($gameRequest[3]) && 
         $gameRequest[3] = $speakerPrefix . $symbolMode["content"];
     }
 }
-
-// CHIM 3.2.4 stripped symbols client-side, so retain its validated request mode as a fallback.
-if (!$SYMBOL_MODE_OVERRIDE && $REQUEST_EXECUTION_MODE !== "") {
-    $EXECUTION_MODE = $REQUEST_EXECUTION_MODE;
-}
-$REQUEST_LOCAL_MODE_OVERRIDE = $SYMBOL_MODE_OVERRIDE || $REQUEST_EXECUTION_MODE !== "";
+$REQUEST_LOCAL_MODE_OVERRIDE = $SYMBOL_MODE_OVERRIDE;
 
 // Retire the old free-form Spawn mode without leaving upgraded installs stuck in it.
 if ($EXECUTION_MODE === "SPAWN") {

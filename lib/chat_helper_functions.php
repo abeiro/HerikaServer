@@ -2885,7 +2885,6 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
         "audience" => "",
         "present_actors" => [],
         "chat_shortcut_routed" => false,
-        "execution_mode" => "",
     ];
     $rawField = trim((string)$rawField);
     if ($rawField === "") {
@@ -2912,21 +2911,6 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
     $result["chat_shortcut_routed"] =
         ($payload["source"] ?? "") === "plugin_player_routing_v2" &&
         ($payload["chat_shortcut_routed"] ?? false) === true;
-    $executionMode = strtoupper(trim((string)($payload["execution_mode"] ?? "")));
-    if (in_array($executionMode, [
-        "STANDARD",
-        "WHISPER",
-        "CLOSE",
-        "SHOUT",
-        "NARRATOR",
-        "DIRECTOR",
-        "CHEATMODE",
-        "AUTOCHAT",
-        "INJECTION_LOG",
-        "INJECTION_CHAT",
-    ], true)) {
-        $result["execution_mode"] = $executionMode;
-    }
     return $result;
 }
 
