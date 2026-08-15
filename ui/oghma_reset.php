@@ -8,6 +8,7 @@ ini_set('display_errors', '1');
 // Paths
 $rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "oghma_aliases.php");
 
 // Database connection details
 $host = 'localhost';
@@ -80,6 +81,13 @@ try {
         throw new Exception("Could not read SQL file");
     }
 
+    // Legacy Oghma dumps contain three positional values from the original schema.
+    // Name those columns so resets remain compatible with newer optional columns.
+    $sqlContent = str_replace(
+        'INSERT INTO public.oghma VALUES (',
+        'INSERT INTO public.oghma (topic, topic_desc, native_vector) VALUES (',
+        $sqlContent
+    );
 
     // Debug: Output first part of SQL content
     $debugSqlPreview = substr($sqlContent, 0, 500);
@@ -91,11 +99,53 @@ try {
         throw new Exception("Error executing SQL: " . pg_last_error($conn) . "\nFirst 500 chars of SQL: " . $debugSqlPreview);
     }
 
+    $aliasSeed = $dataDir . DIRECTORY_SEPARATOR . 'oghma_aliases.csv';
+    if (is_file($aliasSeed)) {
+        $aliasDatabase = new class($conn) {
+            private $connection;
+
+            public function __construct($connection)
+            {
+                $this->connection = $connection;
+            }
+
+            public function fetchAll(string $query): array
+            {
+                $result = pg_query($this->connection, $query);
+                if (!$result) {
+                    throw new RuntimeException(pg_last_error($this->connection));
+                }
+                return pg_fetch_all($result) ?: [];
+            }
+
+            public function execQuery(string $query)
+            {
+                $result = pg_query($this->connection, $query);
+                if (!$result) {
+                    throw new RuntimeException(pg_last_error($this->connection));
+                }
+                return $result;
+            }
+
+            public function escape(string $value): string
+            {
+                return pg_escape_string($this->connection, $value);
+            }
+        };
+        $aliasStats = chimOghmaApplyAliasSeed($aliasDatabase, $aliasSeed, false);
+        Logger::info(
+            'Factory reset restored Oghma aliases: matched=' . $aliasStats['matched']
+            . ', updated=' . $aliasStats['updated']
+            . ', rejected=' . $aliasStats['rejected']
+        );
+    }
+
     // Update the native_vector for all entries
     $vectorUpdateQuery = "
         UPDATE $schema.oghma
         SET native_vector = 
-              setweight(to_tsvector(coalesce(topic, '')), 'A')
+              setweight(to_tsvector('simple', coalesce(topic, '')), 'A')
+            || setweight(to_tsvector('simple', coalesce(aliases, '')), 'A')
             || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
             || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
     ";
@@ -133,4 +183,4 @@ try {
     pg_close($conn);
     die("Reset failed: " . $e->getMessage());
 }
-?> 
+?>

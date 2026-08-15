@@ -25,6 +25,7 @@ require_once(__DIR__ . "/lib/core/transformation_state.php");
 require_once(__DIR__ . "/lib/core/game_plugins.php");
 require_once(__DIR__ . "/lib/logger.php");
 require_once(__DIR__ . "/lib/chim_quest_engine.php");
+require_once(__DIR__ . "/lib/quest_reference_data.php");
 
 // Only accept POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -119,7 +120,7 @@ try {
             handleLoadedPluginsUpdate($data);
             break;
         case 'low_process_actors':
-            handleLowProcessActorsUpdate($data,$npcMaster);
+            handleLowProcessActorsUpdate($data, $npcMaster);
             break;
         case 'quest_event':
             $responseBody = chimQuestEngineJsonEncode(chimQuestEngineHandleEvent(
@@ -186,17 +187,18 @@ try {
 /**
  * Handle equipment update
  */
-function handleEquipmentUpdate(array $data, NpcMaster $npcMaster): void {
+function handleEquipmentUpdate(array $data, NpcMaster $npcMaster): void
+{
     $actorName = $data['actor_name'];
     $actorType = $data['actor_type'];
-    
+
     if (!isset($data['equipment'])) {
         Logger::error("[gamedata.php] Equipment update missing equipment data");
         return;
     }
-    
+
     $equipment = $data['equipment'];
-    
+
     // If this is a player, save directly to core_player table (player doesn't need NPC record)
     if ($actorType === 'player') {
         try {
@@ -209,7 +211,7 @@ function handleEquipmentUpdate(array $data, NpcMaster $npcMaster): void {
         } catch (Exception $e) {
             Logger::warn("[gamedata.php] Could not save player equipment to core_player: " . $e->getMessage());
         }
-        
+
         // For backward compatibility, also try to update NPC record if it exists
         $currentData = $npcMaster->getByName($actorName);
         if ($currentData) {
@@ -217,22 +219,22 @@ function handleEquipmentUpdate(array $data, NpcMaster $npcMaster): void {
                 'equipment' => buildEquipmentMetadataValue($equipment),
             ]);
         }
-        
+
         return; // Done with player, exit early
     }
-    
+
     // Handle NPC equipment
     $currentData = $npcMaster->getByName($actorName);
-    
+
     if (!$currentData) {
         // NPC not in database yet - this is normal, they haven't been encountered
         return;
     }
-    
+
     $npcMaster->updateMetadataKeysByName($actorName, [
         'equipment' => buildEquipmentMetadataValue($equipment),
     ]);
-    
+
     Logger::debug("[gamedata.php] Updated equipment for {$actorType}: {$actorName}");
 }
 
@@ -245,9 +247,9 @@ function handleFurnitureUpdate(array $data, NpcMaster $npcMaster): void
 
     chimApplyNpcMetadataUpdatesByName($data['actor_name'], [
         'activity_status' => [
-        'furniture_name' => $data['furniture'] ?? '',
-        'timestamp' => $data['timestamp'] ?? chimActivityStatusNowMs(),
-        'gamets' => $data['gamets'] ?? 0,
+            'furniture_name' => $data['furniture'] ?? '',
+            'timestamp' => $data['timestamp'] ?? chimActivityStatusNowMs(),
+            'gamets' => $data['gamets'] ?? 0,
         ],
     ]);
 }
@@ -353,6 +355,20 @@ function handleLoadedPluginsUpdate(array $data): void
 
     $pluginCount = chimReplaceLoadedGamePlugins($data['plugins']);
     Logger::debug("[gamedata.php] Updated loaded plugin manifest ({$pluginCount} plugins)");
+
+    $repair = quest_reference_repair_runtime_formids_to_stable($data['plugins']);
+    if ($repair['error'] !== null) {
+        Logger::warn("[gamedata.php] AI Quest V1 FormID repair skipped: {$repair['error']}");
+        return;
+    }
+
+    Logger::debug(
+        "[gamedata.php] AI Quest V1 FormID repair: "
+        . "{$repair['rows_updated']}/{$repair['rows_scanned']} rows updated, "
+        . "{$repair['converted']} references converted, "
+        . "{$repair['unresolved']} unresolved, "
+        . "{$repair['dynamic']} dynamic"
+    );
 }
 
 function buildEquipmentMetadataValue(array $equipment): array
@@ -377,7 +393,7 @@ function sanitizeItemKeywordList($keywords): array
 
     $clean = [];
     foreach ($keywords as $keyword) {
-        $keyword = trim((string)$keyword);
+        $keyword = trim((string) $keyword);
         if ($keyword === '') {
             continue;
         }
@@ -399,7 +415,22 @@ function buildInventoryMetadataValue(array $items): array
                 'baseid' => $item['baseid'],
                 'count' => intval($item['count']),
                 'keywords' => isset($item['keywords']) ? sanitizeItemKeywordList($item['keywords']) : [],
+                'goldvalue' => isset($item['goldvalue']) ? intval($item['goldvalue']) : 0,
             ];
+            $pluginRow = chimGetLoadedGamePluginByRuntimeFormId($item['baseid']);
+            $pluginName = ($pluginRow !== null) ? $pluginRow['plugin_name'] : '';
+            if ($pluginName !== '') {
+                $GLOBALS["db"]->upsertRowTrx(
+                    "market_cache",
+                    [
+                        'baseid' => $item['baseid'],
+                        'plugin' => $pluginName,
+                        'name' => trim($item['name']),
+                        'price' => intval($item['goldvalue'] ),
+                    ],
+                    ["baseid" => $item['baseid'], "plugin" => $pluginName]
+                );
+            }
         }
     }
 
@@ -450,17 +481,18 @@ function buildSpellsMetadataValue(array $spells): array
 /**
  * Handle inventory update
  */
-function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
+function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void
+{
     $actorName = $data['actor_name'];
     $actorType = $data['actor_type'];
-    
+
     if (!isset($data['items'])) {
         Logger::error("[gamedata.php] Inventory update missing items data");
         return;
     }
-    
+
     $items = $data['items'];
-    
+
     // If this is a player, save directly to core_player table (player doesn't need NPC record)
     if ($actorType === 'player') {
         $inventoryData = buildInventoryMetadataValue($items);
@@ -473,7 +505,7 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
         } catch (Exception $e) {
             Logger::warn("[gamedata.php] Could not save player inventory to core_player: " . $e->getMessage());
         }
-        
+
         // For backward compatibility, also try to update NPC record if it exists
         $currentData = $npcMaster->getByName($actorName);
         if ($currentData) {
@@ -483,29 +515,29 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
         }
 
         chimQuestEngineSyncPlayerInventory($inventoryData, $data['gamets'] ?? null);
-        
+
         $itemCount = count($items);
         Logger::debug("[gamedata.php] Updated inventory for player: {$actorName} ({$itemCount} items)");
         return; // Done with player, exit early
     }
-    
+
     // Handle NPC inventory
     $currentData = $npcMaster->getByName($actorName);
-    
+
     if (!$currentData) {
         // NPC not in database yet - this is normal, they haven't been encountered
         return;
     }
-    
+
     $npcMaster->updateMetadataKeysByName($actorName, [
         'inventory' => buildInventoryMetadataValue($items),
     ]);
-    
+
     $npcMaster->updateMetadataKeysByName($actorName, [
         'last_inventory_update_gamets' => $data['gamets'] ?? null,
     ]);
-    
-    
+
+
 
     $itemCount = count($items);
     Logger::debug("[gamedata.php] Updated inventory for {$actorType}: {$actorName} ({$itemCount} items)");
@@ -514,7 +546,8 @@ function handleInventoryUpdate(array $data, NpcMaster $npcMaster): void {
 /**
  * Handle player item pickup telemetry.
  */
-function handlePlayerItemAcquired(array $data): void {
+function handlePlayerItemAcquired(array $data): void
+{
     $itemName = trim(strval($data['name'] ?? ''));
     if ($itemName === '') {
         Logger::warn("[gamedata.php] player_item_acquired missing item name");
@@ -565,7 +598,7 @@ function handlePlayerItemAcquired(array $data): void {
         $gamets = 5;
     }
 
-    $ts = (int)floor(microtime(true) * 1000000);
+    $ts = (int) floor(microtime(true) * 1000000);
     $people = getPlayerItemEventPeopleSnapshot($playerName);
     $GLOBALS["db"]->insert('eventlog', [
         'ts' => $ts,
@@ -580,7 +613,8 @@ function handlePlayerItemAcquired(array $data): void {
     ]);
 }
 
-function handlePlayerItemsAcquired(array $data): void {
+function handlePlayerItemsAcquired(array $data): void
+{
     $items = $data['items'] ?? [];
     if (!is_array($items)) {
         Logger::warn("[gamedata.php] player_items_acquired missing items payload");
@@ -603,7 +637,8 @@ function handlePlayerItemsAcquired(array $data): void {
     }
 }
 
-function getPlayerItemEventPeopleSnapshot(string $playerName): string {
+function getPlayerItemEventPeopleSnapshot(string $playerName): string
+{
     $people = '';
     try {
         $row = $GLOBALS["db"]->fetchOne("
@@ -638,17 +673,18 @@ function getPlayerItemEventPeopleSnapshot(string $playerName): string {
 /**
  * Handle skills update
  */
-function handleSkillsUpdate(array $data, NpcMaster $npcMaster): void {
+function handleSkillsUpdate(array $data, NpcMaster $npcMaster): void
+{
     $actorName = $data['actor_name'];
     $actorType = $data['actor_type'];
-    
+
     if (!isset($data['skills'])) {
         Logger::error("[gamedata.php] Skills update missing skills data");
         return;
     }
-    
+
     $skills = $data['skills'];
-    
+
     // If this is a player, save directly to core_player table (player doesn't need NPC record)
     if ($actorType === 'player') {
         try {
@@ -661,7 +697,7 @@ function handleSkillsUpdate(array $data, NpcMaster $npcMaster): void {
         } catch (Exception $e) {
             Logger::warn("[gamedata.php] Could not save player skills to core_player: " . $e->getMessage());
         }
-        
+
         // For backward compatibility, also try to update NPC record if it exists
         $currentData = $npcMaster->getByName($actorName);
         if ($currentData) {
@@ -669,40 +705,41 @@ function handleSkillsUpdate(array $data, NpcMaster $npcMaster): void {
                 'skills' => buildSkillsMetadataValue($skills),
             ]);
         }
-        
+
         Logger::debug("[gamedata.php] Updated skills for player: {$actorName}");
         return; // Done with player, exit early
     }
-    
+
     // Handle NPC skills
     $currentData = $npcMaster->getByName($actorName);
-    
+
     if (!$currentData) {
         // NPC not in database yet - this is normal, they haven't been encountered
         return;
     }
-    
+
     $npcMaster->updateMetadataKeysByName($actorName, [
         'skills' => buildSkillsMetadataValue($skills),
     ]);
-    
+
     Logger::debug("[gamedata.php] Updated skills for {$actorType}: {$actorName}");
 }
 
 /**
  * Handle stats update
  */
-function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
+function handleStatsUpdate(array $data, NpcMaster $npcMaster): void
+{
     $actorName = $data['actor_name'];
     $actorType = $data['actor_type'];
-    
+
     if (!isset($data['stats'])) {
         Logger::error("[gamedata.php] Stats update missing stats data");
         return;
     }
-    
+
     $stats = $data['stats'];
-    
+
     // If this is a player, save directly to core_player table (player doesn't need NPC record)
     if ($actorType === 'player') {
         try {
@@ -715,7 +752,7 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
         } catch (Exception $e) {
             Logger::warn("[gamedata.php] Could not save player stats to core_player: " . $e->getMessage());
         }
-        
+
         // For backward compatibility, also try to update NPC record if it exists
         $currentData = $npcMaster->getByName($actorName);
         if ($currentData) {
@@ -723,59 +760,60 @@ function handleStatsUpdate(array $data, NpcMaster $npcMaster): void {
                 'stats' => buildStatsMetadataValue($stats),
             ]);
         }
-        
+
         Logger::debug("[gamedata.php] Updated stats for player: {$actorName}");
         return; // Done with player, exit early
     }
-    
+
     // Handle NPC stats
     $currentData = $npcMaster->getByName($actorName);
-    
+
     if (!$currentData) {
         // NPC not in database yet - this is normal, they haven't been encountered
         return;
     }
-    
+
     $npcMaster->updateMetadataKeysByName($actorName, [
         'stats' => buildStatsMetadataValue($stats),
     ]);
-    
+
     Logger::debug("[gamedata.php] Updated stats for {$actorType}: {$actorName}");
 }
 
 /**
  * Handle spells update (NPCs only - player spells deprecated)
  */
-function handleSpellsUpdate(array $data, NpcMaster $npcMaster): void {
+function handleSpellsUpdate(array $data, NpcMaster $npcMaster): void
+{
     $actorName = $data['actor_name'];
     $actorType = $data['actor_type'];
-    
+
     // Player spells are deprecated - skip
     if ($actorType === 'player') {
         Logger::debug("[gamedata.php] Skipping player spells update (deprecated)");
         return;
     }
-    
+
     if (!isset($data['spells'])) {
         Logger::error("[gamedata.php] Spells update missing spells data for {$actorName}");
         return;
     }
-    
+
     $spells = $data['spells'];
-    
+
     // Handle NPC spells
     $currentData = $npcMaster->getByName($actorName);
-    
+
     if (!$currentData) {
         // NPC not in database yet - this is normal, they haven't been encountered
         return;
     }
-    
+
     $npcMaster->updateMetadataKeysByName($actorName, [
         'spells' => buildSpellsMetadataValue($spells),
         'spells_updated' => time(),
     ]);
-    
+
     Logger::debug("[gamedata.php] Updated spells for NPC: {$actorName}");
 }
 
@@ -783,37 +821,38 @@ function handleSpellsUpdate(array $data, NpcMaster $npcMaster): void {
  * Handle Skyrim statistics update (player only)
  * This handles the ~40 Skyrim stats like Quests Completed, Days Passed, etc.
  */
-function handleSkyrimStatsUpdate(array $data): void {
+function handleSkyrimStatsUpdate(array $data): void
+{
     if (!isset($data['stats']) || !is_array($data['stats'])) {
         Logger::error("[gamedata.php] Skyrim stats update missing stats data");
         return;
     }
-    
+
     try {
         require_once(__DIR__ . "/lib/core/player.class.php");
         $player = new Player();
-        
+
         $stats = $data['stats'];
-        
+
         // Save each stat to core_player table
         foreach ($stats as $statKey => $statValue) {
-            $player->set($statKey, (string)$statValue);
+            $player->set($statKey, (string) $statValue);
         }
-        
+
         // Also save to conf_opts for backward compatibility
         $db = $GLOBALS["db"];
         foreach ($stats as $statKey => $statValue) {
             $escapedKey = $db->escape($statKey);
-            $escapedValue = $db->escape((string)$statValue);
+            $escapedValue = $db->escape((string) $statValue);
             $db->execQuery("
                 INSERT INTO public.conf_opts (id, value) 
                 VALUES ('{$escapedKey}', '{$escapedValue}')
                 ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value
             ");
         }
-        
+
         Logger::debug("[gamedata.php] Updated " . count($stats) . " Skyrim stats to core_player and conf_opts");
-        
+
     } catch (Exception $e) {
         Logger::error("[gamedata.php] Failed to save Skyrim stats: " . $e->getMessage());
     }
@@ -825,7 +864,8 @@ function handleSkyrimStatsUpdate(array $data): void {
  * Expected payload:
  *   { "type": "market_stock", "faction": "0x01", "list": [ { "itemid": "0x02", "name": "item_name", "count": 2 } ] }
  */
-function handleMarketStockUpdate(array $data): void {
+function handleMarketStockUpdate(array $data): void
+{
     if (!isset($data['faction']) || !isset($data['list']) || !is_array($data['list'])) {
         Logger::error("[gamedata.php] market_stock update missing faction or list data");
         return;
@@ -836,76 +876,97 @@ function handleMarketStockUpdate(array $data): void {
 
     // Build normalised stock array from the incoming list
     $stock = [];
-    $gold=0;
-    $rank=isset($data['player_rank']) ? intval($data['player_rank']) : -1;
+    $gold = 0;
+    $rank = isset($data['player_rank']) ? intval($data['player_rank']) : -1;
     foreach ($data['list'] as $item) {
         if (isset($item['itemid'], $item['name'], $item['count'])) {
             $stock[] = [
                 'itemid' => $item['itemid'],
-                'name'   => trim($item['name']),
-                'count'  => intval($item['count']),
-                'gold'  => intval($item['gold']),
+                'name' => trim($item['name']),
+                'count' => intval($item['count']),
+                'price' => intval($item['gold']),
                 'enchantment' => isset($item['enchantment']) ? $item['enchantment'] : []
-                
+
             ];
             if (isset($item['gold']) && $item['itemid'] === '0000000F') { // Gold item  
-                $gold=intval($item['count']);
-            } 
+                $gold = intval($item['count']);
+            }
 
-            // Insert or update the item description in the descriptions_custom table, if a matching plugin can be found
-            $baseid="00".substr($item['itemid'],2);
-            $modIndex=substr($item['itemid'],0,4);
-            $candidateMod=$db->fetchOne("select * from game_plugins where formid_prefix='{$modIndex}'");
+            // Insert or update the item entry in the descriptions_custom table, if a matching plugin can be found
+            // and if it does not exists on descriptions table for that plugin. 
+            // This is to ensure that we have a record of the item name for future reference.
+
+            $baseid = "00" . substr($item['itemid'], 2);
+            $modIndex = substr($item['itemid'], 0, 4);
+            $candidateMod = $db->fetchOne("select * from game_plugins where formid_prefix='{$modIndex}'");
             if (!$candidateMod) {
-                $modIndex=substr($item['itemid'],0,2);
-                $candidateMod=$db->fetchOne("select * from game_plugins where formid_prefix='{$modIndex}'");
+                $modIndex = substr($item['itemid'], 0, 2);
+                $candidateMod = $db->fetchOne("select * from game_plugins where formid_prefix='{$modIndex}'");
             }
 
             if ($candidateMod) {
-                $pluginName=$candidateMod['plugin_name'];
-                // Insert. if exists, will throw error.
-                $candidateMod=$db->fetchOne("select * from combined_descriptions where baseid='{$baseid}' and plugin='{$pluginName}'");
-                $db->insert("descriptions_custom", [
-                    'baseid' => $baseid,
-                    'plugin' => $pluginName,
-                    'name' => trim($item['name'])
-                ] );
+                $pluginName = $candidateMod['plugin_name'];
+                $existing = $db->fetchOne("select * from descriptions where baseid='{$baseid}' and plugin='{$pluginName}'");
+                if (!$existing || sizeof($existing) === 0) {
+                    // Insert. if exists, will throw error.
+                    $db->upsertRowTrx(
+                        "descriptions_custom",
+                        [
+                            'baseid' => $baseid,
+                            'plugin' => $pluginName,
+                            'name' => trim($item['name'])
+                        ],
+                        ["baseid" => $baseid, "plugin" => $pluginName]
+                    );
+                }
+                $db->upsertRowTrx(
+                    "market_cache",
+                    [
+                        'baseid' => $item['itemid'],
+                        'plugin' => $pluginName,
+                        'name' => trim($item['name']),
+                        'enchantment' => isset($item['enchantment']) ? ($item['enchantment']) : 0,
+                        'price' => intval($item['gold'] + (isset($item['enchantment']) ? ($item['enchantment']) : 0)),
+                    ],
+                    ["baseid" => $item['itemid'], "plugin" => $pluginName]
+                );
 
             }
 
-            
+
         }
     }
 
     $stockJson = $db->escape(json_encode($stock));
 
     $sql = "UPDATE public.factions
-               SET stock = '{$stockJson}'::jsonb,gold=$gold,player_rank=$rank
+               SET stock = '{$stockJson}'::jsonb,gold=$gold,player_rank=$rank,localts=" . time() . "
              WHERE formid = '{$factionFormId}'";
 
     $result = $db->execQuery($sql);
 
     if ($result) {
-        
+
         Logger::debug("[gamedata.php] Updated market stock for faction '{$data['faction']}': "
             . count($stock) . " item(s)");
     }
 }
 
-function handleLowProcessActorsUpdate(array $data,NpcMaster $npcMaster): void {
+function handleLowProcessActorsUpdate(array $data, NpcMaster $npcMaster): void
+{
 
     $actorList = isset($data['actors_nearby']) && is_array($data['actors_nearby']) ? $data['actors_nearby'] : [];
 
     $currentData = $npcMaster->getByName($data['actor_name']);
     if ($currentData) {
-        $extendedData=$npcMaster->getMetadata(($currentData));
+        $extendedData = $npcMaster->getMetadata(($currentData));
         // Ensure the history bucket exists and is always an array.
         if (!isset($extendedData['low_process_actors']) || !is_array($extendedData['low_process_actors'])) {
             $extendedData['low_process_actors'] = [];
         }
 
         $actorSanitizedList = [];
-        foreach ($data['actors_nearby'] as $k=>$v) {
+        foreach ($data['actors_nearby'] as $k => $v) {
             $unsignedInt = (intval($v["formId"]) + 0) & 0xFFFFFFFF;
             $hexRefId = strtoupper(str_pad(dechex($unsignedInt), 8, '0', STR_PAD_LEFT));
             $actorSanitizedList[$hexRefId] = $v["name"];
@@ -918,7 +979,7 @@ function handleLowProcessActorsUpdate(array $data,NpcMaster $npcMaster): void {
         } else {
             Logger::debug("[gamedata.php] Received low_process_actors list for {$data['actor_name']}: " . count($actorSanitizedList) . " actor(s)");
         }
-        $gametsKey = isset($data['gamets']) ? (string)$data['gamets'] : (string)time();
+        $gametsKey = isset($data['gamets']) ? (string) $data['gamets'] : (string) time();
         $extendedData['low_process_actors'][$gametsKey] = $actorSanitizedList;
 
         // Keep entries ordered by timestamp and retain only the 5 most recent snapshots.
@@ -927,7 +988,7 @@ function handleLowProcessActorsUpdate(array $data,NpcMaster $npcMaster): void {
             $extendedData['low_process_actors'] = array_slice($extendedData['low_process_actors'], -5, null, true);
         }
 
-        $currentData=$npcMaster->setMetadata($currentData, $extendedData);
+        $currentData = $npcMaster->setMetadata($currentData, $extendedData);
         $npcMaster->updateByArray($currentData);
 
         Logger::debug("[gamedata.php] Updated low_process_actors list for {$data['actor_name']}: " . count($actorList) . " actor(s)");

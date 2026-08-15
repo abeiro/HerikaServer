@@ -86,6 +86,129 @@ $schema = is_array($settingsCatalog) ? $settingsCatalog : [];
     <?php if ($isNpcMode): ?>margin-bottom: 12px;<?php endif; ?>
 }
 
+<?php if ($isProfileMode): ?>
+.prof-ovr-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.prof-ovr-category {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #4a4a4a;
+    border-radius: 8px;
+    background: #202020;
+}
+
+.prof-ovr-category-title {
+    margin: 0 0 8px;
+    padding-bottom: 7px;
+    border-bottom: 1px solid rgba(242, 124, 17, 0.35);
+    color: rgb(242, 124, 17);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.prof-ovr-category-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.prof-ovr-inline-item {
+    display: grid;
+    grid-template-columns: minmax(190px, 1fr) minmax(180px, 0.9fr);
+    gap: 10px;
+    align-items: center;
+    padding: 9px;
+    border: 1px solid #3e3e3e;
+    border-radius: 6px;
+    background: #1a1a1a;
+}
+
+.prof-ovr-inline-info {
+    min-width: 0;
+}
+
+.prof-ovr-inline-name {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #e9efff;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.prof-ovr-inline-description,
+.prof-ovr-inherited-value {
+    margin-top: 3px;
+    color: #9fb1c9;
+    font-size: 11px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.prof-ovr-inline-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+}
+
+.prof-ovr-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #e9efff;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.prof-ovr-toggle input {
+    accent-color: #2f8f4e;
+}
+
+.prof-ovr-inline-input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 7px 8px;
+    border: 1px solid #4a4a4a;
+    border-radius: 5px;
+    background: #171717;
+    color: #e9efff;
+    font-size: 12px;
+}
+
+.prof-ovr-inline-input:focus {
+    outline: none;
+    border-color: rgb(242, 124, 17);
+}
+
+.prof-ovr-inline-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+}
+
+.prof-ovr-inline-item:not(.enabled) .prof-ovr-inline-info {
+    opacity: 0.7;
+}
+
+@media (max-width: 1180px) {
+    .prof-ovr-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .prof-ovr-inline-item {
+        grid-template-columns: 1fr;
+    }
+}
+<?php endif; ?>
+
 .<?= $prefix ?>ovr-item {
     background: <?= $isProfileMode ? '#1a1a1a' : '#2a2a2a' ?>;
     border: 1px solid #4a4a4a;
@@ -346,12 +469,12 @@ $schema = is_array($settingsCatalog) ? $settingsCatalog : [];
     <?php endif; ?>
     
     <div id="<?= $prefix ?>ovr-list" class="<?= $prefix ?>ovr-list"></div>
-    
-    <button type="button" id="btn-add-<?= $prefix ?>ovr" class="btn-add-<?= $prefix ?>ovr">
-        + Add <?= $isProfileMode ? 'Global Setting ' : '' ?>Override
-    </button>
-    
+
     <?php if ($isNpcMode): ?>
+    <button type="button" id="btn-add-<?= $prefix ?>ovr" class="btn-add-<?= $prefix ?>ovr">
+        + Add Override
+    </button>
+
     <div class="advanced-json-toggle" id="advanced-json-toggle">
         ▼ Advanced: Raw JSON Editor (click to expand)
     </div>
@@ -361,6 +484,7 @@ $schema = is_array($settingsCatalog) ? $settingsCatalog : [];
     <?php endif; ?>
 </div>
 
+<?php if ($isNpcMode): ?>
 <!-- Modal -->
 <div id="<?= $prefix ?>ovr-modal" class="<?= $prefix ?>ovr-modal-backdrop">
     <div class="<?= $prefix ?>ovr-modal">
@@ -389,6 +513,7 @@ $schema = is_array($settingsCatalog) ? $settingsCatalog : [];
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <script>
 (function(){
@@ -404,7 +529,7 @@ $schema = is_array($settingsCatalog) ? $settingsCatalog : [];
     const CURRENT_DATA = <?= json_encode($currentData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     const SCHEMA = <?= json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     
-    let overridesState = {...CURRENT_DATA};
+    let overridesState = Object.fromEntries(Object.entries(CURRENT_DATA).filter(([key]) => !RESERVED_KEYS.includes(key)));
     let selectedSetting = null;
     let editingKey = null;
     let rawJsonEditor = null;
@@ -458,6 +583,12 @@ $schema = is_array($settingsCatalog) ? $settingsCatalog : [];
     function renderOverridesList() {
         const list = el('ovr-list');
         if (!list) return;
+
+        if (IS_PROFILE_MODE) {
+            renderProfileOverrides(list);
+            syncOverrides();
+            return;
+        }
         
         const keys = Object.keys(overridesState);
         if (keys.length === 0) {
@@ -505,6 +636,108 @@ $schema = is_array($settingsCatalog) ? $settingsCatalog : [];
         
         syncOverrides();
     }
+
+    // Profile overrides stay visible so users can enable and edit them without a secondary modal.
+    function renderProfileOverrides(list) {
+        const categories = {};
+        for (const [key, definition] of Object.entries(SCHEMA)) {
+            if (RESERVED_KEYS.includes(key)) continue;
+            const category = definition.category || 'Other';
+            if (!categories[category]) categories[category] = [];
+            categories[category].push([key, definition]);
+        }
+
+        list.innerHTML = Object.entries(categories).map(([category, settings]) => `
+            <section class="prof-ovr-category">
+                <h3 class="prof-ovr-category-title">${escapeHtml(category)}</h3>
+                <div class="prof-ovr-category-settings">
+                    ${settings.map(([key, definition]) => renderProfileOverrideItem(key, definition)).join('')}
+                </div>
+            </section>
+        `).join('');
+
+        list.querySelectorAll('.prof-ovr-inline-item').forEach((item) => {
+            const key = item.dataset.key;
+            const definition = SCHEMA[key] || {};
+            const toggle = item.querySelector('.prof-ovr-enabled');
+            const input = item.querySelector('.prof-ovr-inline-input');
+            if (!toggle || !input) return;
+
+            toggle.addEventListener('change', () => {
+                item.classList.toggle('enabled', toggle.checked);
+                input.disabled = !toggle.checked;
+                if (toggle.checked) {
+                    overridesState[key] = readProfileOverrideValue(input, definition.type);
+                } else {
+                    delete overridesState[key];
+                }
+                syncOverrides();
+            });
+
+            input.addEventListener('change', () => {
+                if (!toggle.checked) return;
+                overridesState[key] = readProfileOverrideValue(input, definition.type);
+                syncOverrides();
+            });
+            input.addEventListener('input', () => {
+                if (!toggle.checked || input.tagName === 'SELECT' || input.type === 'checkbox') return;
+                overridesState[key] = readProfileOverrideValue(input, definition.type);
+                syncOverrides();
+            });
+        });
+    }
+
+    function renderProfileOverrideItem(key, definition) {
+        const enabled = Object.prototype.hasOwnProperty.call(overridesState, key);
+        const inheritedValue = definition.global_value ?? '';
+        const value = enabled ? overridesState[key] : inheritedValue;
+        const description = String(definition.description || '').replace(/<[^>]*>/g, '');
+        return `
+            <div class="prof-ovr-inline-item${enabled ? ' enabled' : ''}" data-key="${escapeHtml(key)}">
+                <div class="prof-ovr-inline-info">
+                    <div class="prof-ovr-inline-name"><span>${getIcon(key)}</span><span>${escapeHtml(getLabel(key))}</span></div>
+                    ${description ? `<div class="prof-ovr-inline-description">${escapeHtml(description)}</div>` : ''}
+                    <div class="prof-ovr-inherited-value">Global value: ${escapeHtml(formatProfileOverrideValue(inheritedValue))}</div>
+                </div>
+                <div class="prof-ovr-inline-controls">
+                    <label class="prof-ovr-toggle"><input type="checkbox" class="prof-ovr-enabled" ${enabled ? 'checked' : ''}> Override</label>
+                    ${profileOverrideInput(key, definition, value, enabled)}
+                </div>
+            </div>
+        `;
+    }
+
+    function profileOverrideInput(key, definition, value, enabled) {
+        const type = definition.type || 'string';
+        const disabled = enabled ? '' : ' disabled';
+        if (type === 'boolean') {
+            const checked = value === true || value === 1 || String(value).toLowerCase() === 'true' || String(value) === '1';
+            return `<input type="checkbox" class="prof-ovr-inline-input" ${checked ? 'checked' : ''}${disabled}>`;
+        }
+        if (type === 'select' && Array.isArray(definition.values)) {
+            const labels = definition.value_labels || {};
+            return `<select class="prof-ovr-inline-input"${disabled}><option value="">-- Select --</option>${definition.values.map((option) => `<option value="${escapeHtml(option)}" ${String(value) === String(option) ? 'selected' : ''}>${escapeHtml(labels[option] || displayNames[option] || option)}</option>`).join('')}</select>`;
+        }
+        if (type === 'longstring') {
+            return `<textarea class="prof-ovr-inline-input" rows="3"${disabled}>${escapeHtml(value ?? '')}</textarea>`;
+        }
+        const inputType = type === 'integer' || type === 'number' ? 'number' : 'text';
+        const step = type === 'integer' ? ' step="1"' : (type === 'number' ? ' step="any"' : '');
+        return `<input type="${inputType}" class="prof-ovr-inline-input" value="${escapeHtml(value ?? '')}"${step}${disabled}>`;
+    }
+
+    function readProfileOverrideValue(input, type) {
+        if (type === 'boolean') return input.checked;
+        if (type === 'integer') return input.value === '' ? '' : parseInt(input.value, 10);
+        if (type === 'number') return input.value === '' ? '' : parseFloat(input.value);
+        return input.value;
+    }
+
+    function formatProfileOverrideValue(value) {
+        if (value === '' || value === null || typeof value === 'undefined') return 'Not set';
+        const rendered = Array.isArray(value) || typeof value === 'object' ? JSON.stringify(value) : String(value);
+        return rendered.length > 180 ? `${rendered.slice(0, 177)}...` : rendered;
+    }
     
     // Sync overrides to form
     function syncOverrides() {
@@ -540,10 +773,10 @@ $schema = is_array($settingsCatalog) ? $settingsCatalog : [];
         container.querySelectorAll('input[name^="meta_vis["]').forEach(el => el.remove());
         
         const allKeys = Array.from(new Set([
-            ...Object.keys(SCHEMA),
+            ...Object.keys(SCHEMA).filter((key) => !RESERVED_KEYS.includes(key)),
             ...Object.keys(CURRENT_DATA || {}),
             ...Object.keys(overridesState || {})
-        ]));
+        ])).filter((key) => !RESERVED_KEYS.includes(key));
         for (const key of allKeys) {
             const input = document.createElement('input');
             input.type = 'hidden';

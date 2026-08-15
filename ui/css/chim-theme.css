@@ -1,0 +1,1102 @@
+/* ===========================================================================
+   CHIM shared UI theme
+   Compact, flat styling for first-party HerikaServer pages.
+   ========================================================================== */
+
+@font-face {
+    font-family: "MagicCards";
+    src: url("font/MagicCardsNormal.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+}
+
+:root {
+    --chim-bg: #171717;
+    --chim-surface-1: #232323;
+    --chim-surface-2: #2b2b2b;
+    --chim-surface-3: #1d1d1d;
+    --chim-border: #404040;
+    --chim-border-soft: #343434;
+    --chim-text: #f5f1e8;
+    --chim-text-muted: #aaa69e;
+    --chim-accent: #f27c11;
+    --chim-accent-bright: #ff9738;
+    --chim-accent-dark: #a95109;
+    --chim-accent-soft: rgba(242, 124, 17, 0.13);
+    --chim-gold: #ddb574;
+    --chim-success: #42a36d;
+    --chim-success-dark: #176529;
+    --chim-danger: #c65353;
+    --chim-danger-dark: #8f3939;
+    --chim-warning: #d5a849;
+    --chim-info: #5d91bd;
+    --chim-radius-sm: 6px;
+    --chim-radius-md: 10px;
+    --chim-radius-lg: 14px;
+    --chim-control-sm: 30px;
+    --chim-control: 36px;
+    --chim-control-lg: 44px;
+    --chim-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+}
+
+html {
+    color-scheme: dark;
+    min-height: 100%;
+    background: var(--chim-bg) !important;
+}
+
+body {
+    min-height: 100vh;
+    background: var(--chim-bg) !important;
+    color: var(--chim-text);
+    font-size: 15px !important;
+}
+
+body > main,
+body > .page-wrap,
+body > .container-fluid {
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+body,
+body * {
+    scrollbar-color: #555 var(--chim-surface-3);
+    scrollbar-width: thin;
+}
+
+body *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+body *::-webkit-scrollbar-track {
+    background: var(--chim-surface-3);
+}
+
+body *::-webkit-scrollbar-thumb {
+    border: 2px solid var(--chim-surface-3);
+    border-radius: 999px;
+    background: #555;
+}
+
+body h1,
+body h2,
+body h3,
+body h4,
+body h5,
+body h6,
+body .title,
+body .Title,
+body .page-title,
+body .section-title,
+body .card-title {
+    color: var(--chim-text) !important;
+}
+
+body h1,
+body .page-title,
+body .Title {
+    font-family: "MagicCards", serif;
+    font-weight: normal;
+    letter-spacing: 0.02em;
+    word-spacing: 0.16em;
+}
+
+body p,
+body .text-muted,
+body .help-text,
+body .description,
+body small {
+    color: var(--chim-text-muted);
+}
+
+body p {
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+body a:not(.btn):not(.button):not(.tab-button):not(.dropdown-item) {
+    color: var(--chim-gold);
+    text-decoration: none;
+}
+
+body a:not(.btn):not(.button):not(.tab-button):not(.dropdown-item):hover {
+    color: var(--chim-accent-bright);
+    text-decoration: none;
+}
+
+body :focus-visible {
+    outline: 2px solid var(--chim-accent-bright);
+    outline-offset: 2px;
+}
+
+/* Shared component primitives */
+.chim-panel {
+    padding: 20px;
+    border: 1px solid var(--chim-border);
+    border-radius: var(--chim-radius-lg);
+    background: var(--chim-surface-1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.chim-panel-header,
+.chim-panel-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.chim-panel-header {
+    margin-bottom: 10px;
+}
+
+.chim-panel-footer {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--chim-border-soft);
+}
+
+.chim-panel-intro {
+    max-width: 800px;
+    margin: 0 0 16px;
+    color: var(--chim-text-muted);
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.chim-card {
+    padding: 16px;
+    border: 1px solid var(--chim-border);
+    border-radius: var(--chim-radius-md);
+    background: var(--chim-surface-2);
+}
+
+.chim-card-selected {
+    border-color: rgba(242, 124, 17, 0.55);
+    background: #342b24;
+    box-shadow: inset 3px 0 var(--chim-accent);
+}
+
+.chim-inset {
+    padding: 16px;
+    border: 1px solid #303030;
+    border-radius: var(--chim-radius-md);
+    background: var(--chim-surface-3);
+}
+
+.chim-kicker {
+    display: block;
+    color: var(--chim-gold);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.chim-badge,
+.chim-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 2px 8px;
+    border: 1px solid var(--chim-border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.035);
+    color: #c4c0b8;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.chim-badge-accent {
+    border-color: rgba(242, 124, 17, 0.4);
+    background: var(--chim-accent-soft);
+    color: var(--chim-accent-bright);
+}
+
+.chim-badge-success {
+    border-color: rgba(66, 163, 109, 0.45);
+    background: rgba(66, 163, 109, 0.12);
+    color: #75cd97;
+}
+
+/* Buttons */
+.chim-btn,
+body button:not(:where(.chim-btn, .navbar-toggler, .navbar-brand, .btn-close, .accordion-button)),
+body input[type="button"],
+body input[type="submit"],
+body input[type="reset"],
+body .btn,
+body .button,
+body .action-button,
+body .refresh-button,
+body .alphabet-button,
+body .copy-btn,
+body .copy-to-all,
+body .copy-to-all-btn,
+body .btn-export,
+body .btn-import {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: var(--chim-control) !important;
+    margin: 2px !important;
+    padding: 7px 12px !important;
+    border: 1px solid #505050 !important;
+    border-radius: var(--chim-radius-sm) !important;
+    background: #383838 !important;
+    background-image: none !important;
+    color: var(--chim-text) !important;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.82rem !important;
+    font-weight: 700;
+    line-height: 1.1;
+    text-decoration: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transform: none !important;
+    transition: background-color 0.14s ease, border-color 0.14s ease, filter 0.14s ease;
+}
+
+.chim-btn:hover:not(:disabled),
+body button:not(:where(.chim-btn, .navbar-toggler, .navbar-brand, .btn-close, .accordion-button)):hover:not(:disabled),
+body input[type="button"]:hover:not(:disabled),
+body input[type="submit"]:hover:not(:disabled),
+body input[type="reset"]:hover:not(:disabled),
+body .btn:hover:not(:disabled),
+body .button:hover,
+body .action-button:hover,
+body .refresh-button:hover,
+body .alphabet-button:hover {
+    color: var(--chim-text) !important;
+    filter: brightness(1.12);
+    text-decoration: none !important;
+    transform: none !important;
+}
+
+.chim-btn:disabled,
+body button:disabled,
+body input:disabled,
+body .btn.disabled {
+    cursor: not-allowed !important;
+    filter: grayscale(0.35);
+    opacity: 0.46 !important;
+}
+
+.chim-btn-primary,
+body .btn-primary,
+body .btn-action,
+body .primary-button,
+body .btn-snqe-create,
+body .btn-snqe-generate {
+    border-color: #d67118 !important;
+    background: var(--chim-accent-dark) !important;
+    color: #fff7ec !important;
+}
+
+.chim-btn-success,
+body .btn-save,
+body .btn-save-green,
+body .save-button,
+body button[type="submit"]:not(.btn-danger):not(.delete-button),
+body input[type="submit"]:not(.btn-danger) {
+    border-color: #4c996b !important;
+    background: #2f714b !important;
+    color: #fff !important;
+}
+
+.chim-btn-danger,
+body .btn-danger,
+body .btn-delete,
+body .delete-button,
+body .remove-button,
+body .btn-trash,
+body .advanced-prompts-btn-clear {
+    border-color: #bd5858 !important;
+    background: var(--chim-danger-dark) !important;
+    color: #fff !important;
+}
+
+.chim-btn-secondary,
+body .btn-secondary,
+body .btn-cancel,
+body .btn-outline-secondary,
+body .secondary-button,
+body .btn-export,
+body .btn-import {
+    border-color: #565656 !important;
+    background: #3b3b3b !important;
+    color: var(--chim-text) !important;
+}
+
+.chim-btn-warning,
+body .btn-warning {
+    border-color: #b78b31 !important;
+    background: #806020 !important;
+    color: #fff8df !important;
+}
+
+.chim-btn-ghost,
+body .btn-link,
+body .btn-linklike {
+    border-color: #484848 !important;
+    background: transparent !important;
+    color: #c5c1b9 !important;
+}
+
+.chim-btn-sm,
+body .btn-sm,
+body .filter-btn-sm {
+    min-height: var(--chim-control-sm) !important;
+    padding: 4px 9px !important;
+    font-size: 0.74rem !important;
+}
+
+.chim-btn-lg,
+body .btn-lg {
+    min-height: var(--chim-control-lg) !important;
+    padding: 9px 16px !important;
+    font-size: 0.9rem !important;
+}
+
+.chim-btn-icon,
+body .btn-icon {
+    width: var(--chim-control);
+    padding: 0 !important;
+}
+
+/* Forms */
+.chim-input,
+body input[type="text"],
+body input[type="email"],
+body input[type="password"],
+body input[type="number"],
+body input[type="search"],
+body input[type="url"],
+body input[type="date"],
+body input[type="time"],
+body input[type="datetime-local"],
+body textarea,
+body select,
+body .form-control,
+body .form-select {
+    width: 100%;
+    min-height: var(--chim-control);
+    padding: 7px 10px;
+    border: 1px solid #494949 !important;
+    border-radius: var(--chim-radius-sm) !important;
+    background: #181818 !important;
+    background-image: none;
+    color: var(--chim-text) !important;
+    font: inherit;
+    font-size: 0.84rem;
+    box-shadow: none !important;
+}
+
+body textarea,
+body textarea.form-control {
+    min-height: 92px;
+    line-height: 1.45;
+    resize: vertical;
+}
+
+.chim-input:hover,
+body input:hover,
+body textarea:hover,
+body select:hover {
+    border-color: #5b5b5b !important;
+}
+
+body input:focus,
+body textarea:focus,
+body select:focus,
+body .form-control:focus,
+body .form-select:focus {
+    border-color: var(--chim-accent) !important;
+    box-shadow: 0 0 0 2px var(--chim-accent-soft) !important;
+    outline: none;
+}
+
+body input::placeholder,
+body textarea::placeholder {
+    color: #77736d;
+    opacity: 1;
+}
+
+body label,
+body .form-label,
+body legend {
+    color: var(--chim-text);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+body fieldset {
+    min-width: 0;
+    margin: 0 0 12px;
+    padding: 14px;
+    border: 1px solid var(--chim-border) !important;
+    border-radius: var(--chim-radius-md) !important;
+    background: var(--chim-surface-1) !important;
+    box-shadow: none !important;
+}
+
+body legend {
+    float: none;
+    width: auto;
+    margin: 0 0 8px;
+    padding: 0 6px;
+    background: transparent !important;
+    color: var(--chim-gold) !important;
+    text-shadow: none !important;
+}
+
+body input[type="checkbox"],
+body input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+    margin: 0 6px 0 0;
+    accent-color: var(--chim-success-dark) !important;
+    cursor: pointer;
+}
+
+.chim-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.chim-switch input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.chim-switch > span {
+    position: relative;
+    width: 42px;
+    height: 23px;
+    border: 1px solid #555;
+    border-radius: 999px;
+    background: #303030;
+    transition: 0.18s ease;
+}
+
+.chim-switch > span::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #a4a4a4;
+    transition: 0.18s ease;
+}
+
+.chim-switch input:checked + span {
+    border-color: #2f9e4f;
+    background: var(--chim-success-dark);
+}
+
+.chim-switch input:checked + span::after {
+    left: 22px;
+    background: #dcf5e2;
+}
+
+.chim-switch b {
+    min-width: 22px;
+    color: #69c77d;
+    font-size: 0.74rem;
+}
+
+/* Surfaces and page compatibility */
+body .card,
+body .panel,
+body .page-header,
+body .settings-section,
+body .config-section,
+body .content-section,
+body .section-container,
+body .table-container,
+body .form-container,
+body .filter-section,
+body .filter-toolbar,
+body .summary-card,
+body .stat-card,
+body .audit-card,
+body .info-box,
+body .import-export-section,
+body .prompts-search-section,
+body .readonly-content,
+body .connector-placeholder,
+body .prompt-context-group,
+body .filter-modal-panel,
+body .action-modal-panel,
+body .advanced-options-panel,
+body .llm-left,
+body .conn-li,
+body .response-container,
+body .chat-container,
+body .tab-navigation,
+body .voice-status-item,
+body .speaker-item,
+body .qs-section,
+body .qs-toggle-block,
+body .installer-container,
+body .provider-card,
+body .profile-card,
+body .connector-card,
+body .conn-card,
+body .left-col,
+body .right-col,
+body .npc-card,
+body .dynamic-profile-section,
+body .pagination.npc-toolbar,
+body .inventory-item,
+body .dynamic-profile-card,
+body .advanced-prompts-wrap,
+body .advanced-prompts-table-wrap,
+body .advanced-prompts-readonly,
+body .logic-section,
+body .action-container,
+body .grid-container > .card-tile,
+body .grid-container > .message,
+body .indent5 > .message,
+body .hub-title,
+body .log-section,
+body .equipment-slot,
+body .kagrenac-panel,
+body .kagrenac-chat-history {
+    border: 1px solid var(--chim-border) !important;
+    border-radius: var(--chim-radius-md) !important;
+    background: var(--chim-surface-1) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body .card-header,
+body .card-footer,
+body .panel-heading,
+body .section-header,
+body .table-container thead,
+body .prompts-table thead {
+    border-color: var(--chim-border-soft) !important;
+    background: var(--chim-surface-2) !important;
+    background-image: none !important;
+    color: var(--chim-text) !important;
+}
+
+body .conn-card:hover,
+body .conn-li:hover,
+body .stat-card:hover,
+body .voice-status-item:hover,
+body .speaker-item:hover {
+    border-color: #555 !important;
+    background: var(--chim-surface-2) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+body .conn-card.active,
+body .conn-li.active {
+    border-color: rgba(242, 124, 17, 0.65) !important;
+    background: #342b24 !important;
+    background-image: none !important;
+    box-shadow: inset 3px 0 var(--chim-accent) !important;
+}
+
+body tr.featured-plugin-row td {
+    background: #29262f !important;
+    background-image: none !important;
+}
+
+body .provider-icon {
+    border: 1px solid var(--chim-border) !important;
+    background: #303030 !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body .filter-chip-row label {
+    border: 1px solid #4a4a4a !important;
+    background: #303030 !important;
+    background-image: none !important;
+    color: #c9c5bd !important;
+    box-shadow: none !important;
+}
+
+body .filter-chip-row label:hover,
+body .filter-chip-row input[type="radio"]:checked + label,
+body .filter-chip-row input[type="checkbox"]:checked + label {
+    border-color: rgba(242, 124, 17, 0.65) !important;
+    background: #3a2d23 !important;
+    background-image: none !important;
+    color: var(--chim-accent-bright) !important;
+    box-shadow: none !important;
+}
+
+body #global-connector-test-progress-fill,
+body #profile-test-progress-fill,
+body [id$="progress-fill"] {
+    background: var(--chim-accent) !important;
+    background-image: none !important;
+}
+
+body .modal-content {
+    border: 1px solid var(--chim-border) !important;
+    border-radius: var(--chim-radius-lg) !important;
+    background: var(--chim-surface-1) !important;
+    background-image: none !important;
+    color: var(--chim-text);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42) !important;
+}
+
+body .modal-container,
+body .modal-panel,
+body .advanced-prompts-modal-content,
+body .tradquest-modal,
+body .settings-content,
+body .overlay-content,
+body .profile-test-shell,
+body .global-test-shell,
+body .loading-overlay > .loading-content,
+body #switch-overlay .loading-modal,
+body #diaryModal > div {
+    border: 1px solid var(--chim-border) !important;
+    border-radius: var(--chim-radius-lg) !important;
+    background: var(--chim-surface-1) !important;
+    background-image: none !important;
+    color: var(--chim-text) !important;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42) !important;
+}
+
+body .modal-header,
+body .modal-footer,
+body .modal-head,
+body .advanced-prompts-modal-header,
+body .advanced-prompts-modal-footer,
+body .tradquest-modal-header,
+body #diaryModal > div > div:first-child {
+    border-color: var(--chim-border-soft) !important;
+    background: var(--chim-surface-2) !important;
+    background-image: none !important;
+}
+
+body .modal-body,
+body .advanced-prompts-modal-body,
+body .tradquest-modal-body {
+    background: var(--chim-surface-1) !important;
+    background-image: none !important;
+    color: var(--chim-text) !important;
+}
+
+body .modal,
+body .modal-backdrop,
+body .modal-backdrop-lite,
+body .filter-modal-backdrop,
+body .action-modal,
+body .advanced-prompts-modal,
+body .tradquest-modal-backdrop,
+body .settings-modal,
+body .loading-overlay,
+body #switch-overlay,
+body #diaryModal,
+body .overlay {
+    background: rgba(0, 0, 0, 0.72) !important;
+    background-image: none !important;
+}
+
+body .modal-backdrop.show {
+    opacity: 0.68;
+}
+
+/* Flat compatibility for older first-party page components. */
+body .npc-card:hover,
+body .inventory-item:hover,
+body .equipment-slot:hover,
+body .dynamic-profile-card:hover,
+body .advanced-prompts-wrap:hover,
+body .action-container:hover,
+body .grid-container > .card-tile:hover,
+body .grid-container > .message:hover,
+body .log-section:hover {
+    background: var(--chim-surface-2) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body .npc-divider {
+    background: rgba(242, 124, 17, 0.28) !important;
+    background-image: none !important;
+}
+
+body .step-number {
+    background: var(--chim-accent) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body .loading-bar {
+    background: var(--chim-info) !important;
+    background-image: none !important;
+}
+
+body #rel_build_bar {
+    background: var(--chim-accent) !important;
+    background-image: none !important;
+}
+
+body .kag-msg.assistant {
+    background: #4a3323 !important;
+    background-image: none !important;
+}
+
+body .kag-msg.error {
+    background: #492426 !important;
+    background-image: none !important;
+}
+
+body .installer-container .status-success {
+    background: var(--chim-success-dark) !important;
+    background-image: none !important;
+}
+
+body .installer-container .status-error {
+    background: var(--chim-danger-dark) !important;
+    background-image: none !important;
+}
+
+body .marker-item::before {
+    background: rgba(26, 26, 26, 0.82) !important;
+    background-image: none !important;
+}
+
+body #diaryModalTitle {
+    color: var(--chim-accent-bright) !important;
+}
+
+body .pagination.npc-toolbar .npc-toolbar-actions {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+}
+
+body .pagination.npc-toolbar .npc-toolbar-btn-uniform {
+    flex: 1 1 180px !important;
+    width: auto !important;
+    min-width: 160px !important;
+    max-width: 228px !important;
+}
+
+body .accordion-item,
+body .accordion-button,
+body .accordion-body {
+    border-color: var(--chim-border) !important;
+    background: var(--chim-surface-1) !important;
+    background-image: none !important;
+    color: var(--chim-text) !important;
+    box-shadow: none !important;
+}
+
+body .accordion-button:not(.collapsed) {
+    border-left: 3px solid var(--chim-accent) !important;
+    background: #342b24 !important;
+}
+
+/* Tables */
+body table,
+body .table,
+body .datatable table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid var(--chim-border) !important;
+    border-radius: var(--chim-radius-md);
+    background: var(--chim-surface-1) !important;
+    color: var(--chim-text) !important;
+    overflow: hidden;
+    box-shadow: none !important;
+}
+
+body table thead,
+body .table thead,
+body table th {
+    background: var(--chim-surface-2) !important;
+    background-image: none !important;
+    color: var(--chim-gold) !important;
+}
+
+body table th,
+body table td,
+body .table th,
+body .table td {
+    padding: 9px 10px !important;
+    border-color: var(--chim-border-soft) !important;
+    vertical-align: middle;
+    font-size: 0.8rem;
+}
+
+body table tbody tr,
+body .table tbody tr {
+    background: var(--chim-surface-1) !important;
+    color: var(--chim-text) !important;
+}
+
+body table tbody tr:nth-child(even),
+body .table-striped > tbody > tr:nth-of-type(odd) > * {
+    background: #202020 !important;
+    color: var(--chim-text) !important;
+}
+
+body table tbody tr:hover,
+body .table-hover > tbody > tr:hover > * {
+    background: #302a25 !important;
+    color: var(--chim-text) !important;
+}
+
+/* Tabs, menus, and pagination */
+body .nav-tabs {
+    gap: 4px;
+    border-color: var(--chim-border) !important;
+}
+
+body .nav-tabs .nav-link,
+body .tab-button,
+body .tab-btn,
+body .filter-btn,
+body .filter-button {
+    min-height: var(--chim-control-sm);
+    border: 1px solid #4a4a4a !important;
+    border-radius: var(--chim-radius-sm) var(--chim-radius-sm) 0 0 !important;
+    background: #303030 !important;
+    background-image: none !important;
+    color: #c9c5bd !important;
+    box-shadow: none !important;
+}
+
+body .nav-tabs .nav-link.active,
+body .tab-button.active,
+body .tab-btn.active,
+body .filter-btn.active,
+body .filter-button.active {
+    border-color: rgba(242, 124, 17, 0.7) !important;
+    background: #3a2d23 !important;
+    color: var(--chim-accent-bright) !important;
+    box-shadow: inset 0 -2px var(--chim-accent) !important;
+}
+
+body .tab-button:hover:not(.active) {
+    border-color: rgba(242, 124, 17, 0.45) !important;
+    background: #38332f !important;
+    background-image: none !important;
+    color: var(--chim-accent-bright) !important;
+}
+
+body .config-navigation .tab-button {
+    border-radius: var(--chim-radius-sm) !important;
+}
+
+body .dropdown-menu {
+    padding: 6px;
+    border: 1px solid var(--chim-border) !important;
+    border-radius: var(--chim-radius-md) !important;
+    background: var(--chim-surface-1) !important;
+    background-image: none !important;
+    box-shadow: var(--chim-shadow) !important;
+}
+
+body .dropdown-item {
+    min-height: 32px;
+    padding: 6px 10px !important;
+    border-radius: var(--chim-radius-sm);
+    color: var(--chim-text) !important;
+}
+
+body .dropdown-item:hover,
+body .dropdown-item:focus {
+    background: #34302d !important;
+    color: var(--chim-accent-bright) !important;
+}
+
+body .chim-navbar-wrapper .brand-menu .dropdown-item.active,
+body .chim-navbar-wrapper .brand-menu .dropdown-item[aria-current="page"] {
+    border-color: rgba(242, 124, 17, 0.58) !important;
+    background: #3a2d23 !important;
+    background-image: none !important;
+    color: var(--chim-accent-bright) !important;
+    box-shadow: inset 3px 0 var(--chim-accent) !important;
+}
+
+body .chim-navbar .navbar-brand,
+body .chim-navbar .navbar-brand:hover,
+body .chim-navbar .navbar-brand:focus,
+body .chim-navbar .navbar-brand:active {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body .chim-navbar-wrapper .dropdown-item:hover,
+body .chim-navbar-wrapper .dropdown-option:hover,
+body .chim-navbar-wrapper .profile-select-btn:hover {
+    border-color: rgba(242, 124, 17, 0.45) !important;
+    background: #34302d !important;
+    background-image: none !important;
+    color: var(--chim-accent-bright) !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+body .tab-content,
+body.hub-page .tab-content,
+body.hub-page .embed-wrap,
+body .embed-frame {
+    border-color: var(--chim-border) !important;
+    background: var(--chim-bg) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+body .page-link,
+body .pagination a {
+    border-color: var(--chim-border) !important;
+    background: var(--chim-surface-2) !important;
+    color: var(--chim-text) !important;
+    box-shadow: none !important;
+}
+
+body .page-item.active .page-link,
+body .pagination .active {
+    border-color: var(--chim-accent) !important;
+    background: var(--chim-accent-dark) !important;
+    color: #fff !important;
+}
+
+/* Feedback */
+.chim-callout,
+body .alert {
+    --callout-color: var(--chim-info);
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--callout-color) 45%, transparent) !important;
+    border-left: 3px solid var(--callout-color) !important;
+    border-radius: var(--chim-radius-sm) !important;
+    background: color-mix(in srgb, var(--callout-color) 9%, #222) !important;
+    background-image: none !important;
+    color: var(--chim-text) !important;
+    box-shadow: none !important;
+}
+
+.chim-callout-success,
+body .alert-success { --callout-color: var(--chim-success); }
+.chim-callout-warning,
+body .alert-warning { --callout-color: var(--chim-warning); }
+.chim-callout-danger,
+body .alert-danger { --callout-color: var(--chim-danger); }
+
+body .badge,
+body .status-badge,
+body .pill {
+    border: 1px solid var(--chim-border) !important;
+    border-radius: 999px !important;
+    background: #333 !important;
+    background-image: none !important;
+    color: #d0ccc4 !important;
+    box-shadow: none !important;
+}
+
+body .toast,
+body .toast-notification {
+    border: 1px solid var(--chim-border) !important;
+    border-radius: var(--chim-radius-md) !important;
+    background: var(--chim-surface-1) !important;
+    color: var(--chim-text) !important;
+    box-shadow: var(--chim-shadow) !important;
+}
+
+body pre,
+body code,
+body .code-block {
+    border-color: var(--chim-border-soft) !important;
+    background: #151515 !important;
+    color: #d8d3ca !important;
+}
+
+/* Compact setting rows for newly migrated pages. */
+.chim-setting-list {
+    overflow: hidden;
+    border: 1px solid var(--chim-border-soft);
+    border-radius: var(--chim-radius-md);
+    background: rgba(24, 24, 24, 0.45);
+}
+
+.chim-setting-row {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) minmax(220px, 0.8fr);
+    gap: 22px;
+    align-items: center;
+    min-height: 64px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--chim-border-soft);
+}
+
+.chim-setting-row:last-child {
+    border-bottom: 0;
+}
+
+.chim-setting-copy {
+    display: grid;
+    gap: 3px;
+}
+
+.chim-setting-copy > span:not(.chim-setting-title) {
+    color: var(--chim-text-muted);
+    font-size: 0.76rem;
+    line-height: 1.4;
+}
+
+.chim-setting-title {
+    color: var(--chim-text);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+@media (max-width: 760px) {
+    body {
+        font-size: 14px;
+    }
+
+    .chim-panel {
+        padding: 14px;
+    }
+
+    .chim-panel-header,
+    .chim-panel-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .chim-setting-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    body table,
+    body .table-responsive {
+        overflow-x: auto;
+    }
+}

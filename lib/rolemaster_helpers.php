@@ -19,6 +19,12 @@ $GLOBALS["item_types"] = [
     "dagger" => [0x000aebf7], // Vanilla
 ];
 
+$GLOBALS["weapons"] = [
+    "default" => [0x00013989],
+    "warrior" => [0x00013989],
+    "soldier" => [0x00013989],
+];
+
 // Review this, this are used to copy appearance.
 
 $GLOBALS["npc_templates"] = [
@@ -29,6 +35,15 @@ $GLOBALS["npc_templates"] = [
 
     "male_argonian" => [0x00103512],
     "female_argonian" => [0x000457fb, 0x000b2e11, 0x000b2e12, 0x000b2e13, 0x000b2e14, 0x000b2e15, 0x000b2e16, 0x0010d3be, 0x0010d3bf, 0x0010d3c0, 0x0010d3c1, 0x00103511],
+
+    "male_altmer" => ["Skyrim.esm|000233D2", "Skyrim.esm|0002BA3C"],
+    "female_altmer" => ["Skyrim.esm|00013269", "Skyrim.esm|0001C197"],
+    "male_bosmer" => ["Skyrim.esm|0003983E", "Skyrim.esm|00013480"],
+    "female_bosmer" => ["Skyrim.esm|00013349", "Skyrim.esm|00019DEF"],
+    "male_dunmer" => ["Skyrim.esm|000BD759", "Skyrim.esm|0002427D"],
+    "female_dunmer" => ["Skyrim.esm|0001C196", "Skyrim.esm|000B9982"],
+    "male_khajiit" => ["Skyrim.esm|0001B1DB", "Skyrim.esm|0001B1D2"],
+    "female_khajiit" => ["Skyrim.esm|000353C7", "Skyrim.esm|0001B1D6"],
 
     "female_breton" => [0x00064a77, 0x00064a75, 0x00064a3f, 0x00064a3d, 0x00064a8c, 0x00064a8a, 0x00064ac3, 0x00064ab2, 0x00064a7b, 0x00064a79, 0x00064a46, 0x00064a44, 0x00064aa0, 0x00064a96, 0x00064ac6, 0x00064ab4, 0x00064a7f, 0x00064a7d, 0x00064a4b, 0x00064a49, 0x00064aa2, 0x00064a98, 0x00064ac7, 0x00064abb, 0x00064a83, 0x00064a81, 0x00064a4e, 0x00064aa4, 0x00064a9a, 0x00064acd, 0x00064abd, 0x00064a87, 0x00064a85, 0x00064a55, 0x00064a53, 0x00064aa6, 0x00064a9c, 0x00064ac9, 0x00064abf, 0x00064a5a, 0x00064a58, 0x00064aa8, 0x00064a9e, 0x00064acb, 0x00064ac1, 0x000e36da, 0x00064a50, 0x00039d32, 0x00039d44, 0x00039d4b, 0x00039d52, 0x00039d59, 0x00043beb, 0x00043bec, 0x00043bed, 0x00043be1, 0x00043be0, 0x00043be2, 0x00043be4, 0x00043be5, 0x00043be6, 0x00043bf1, 0x00043bf2, 0x00043bf3, 0x00044256, 0x00044257, 0x00044258, 0x0004425c, 0x0004425d, 0x0004425e, 0x00044265, 0x00044266, 0x00044267, 0x00044268, 0x00044269, 0x0004426a, 0x0004426e, 0x0004426f, 0x00044270, 0x00044277, 0x00044278, 0x00044279, 0x0004427a, 0x0004427b, 0x0004427c, 0x00044280, 0x00044281, 0x00044282, 0x00044289, 0x0004428a, 0x0004428b, 0x0004428c, 0x0004428d, 0x0004428e, 0x00044292, 0x00044293, 0x00044294, 0x0004429b, 0x0004429c, 0x0004429d, 0x0004429e, 0x0004429f, 0x000442a0, 0x000442a4, 0x000442a5, 0x000442a6, 0x00107a9b, 0x0003300e, 0x00033853, 0x00033870, 0x0003387e, 0x00033883, 0x00033888, 0x0006d234, 0x000e0fe4, 0x0006d23b, 0x000e0fe8, 0x0006d243, 0x000e0fec, 0x0006d24b, 0x000e0ff0, 0x0006d253, 0x000e0ff4, 0x0006d25b, 0x001091b7, 0x001091b8, 0x00044cdc, 0x00045c62, 0x00045c7d, 0x00045ca3, 0x00045cc1, 0x00045cc8, 0x001091b9, 0x00045c51, 0x00045c6a, 0x00045c85, 0x00045cab, 0x00045cd1, 0x00045cd9, 0x001091ba, 0x000551b0, 0x000e1035, 0x000551b8, 0x000e1039, 0x000551c0, 0x000e103d, 0x000551c8, 0x000e1041, 0x000551d0, 0x000e1045, 0x000551d8, 0x001091c3, 0x001091bb, 0x00045c57, 0x000e1051, 0x00045c70, 0x000e1055, 0x00045c8d, 0x000e1059, 0x00045cb3, 0x000e105d, 0x00045ce1, 0x000e1061, 0x00045ce9, 0x001091c5, 0x001091bc, 0x00074f77, 0x00074f86, 0x00074f7b, 0x00074f8a, 0x00074f7f, 0x00074f8e, 0x000328e0, 0x0001a76e, 0x000b125f, 0x0004428d, 0x0004428e, 0x00044292, 0x00044293, 0x00044294, 0x0004429b, 0x0004429c, 0x0004429d, 0x0004429e, 0x0004429f, 0x000442a0, 0x000442a4, 0x000442a5, 0x000442a6, 0x0006d234, 0x000e0fe4, 0x0006d23b, 0x000e0fe8, 0x0006d243, 0x000e0fec, 0x0006d24b, 0x000e0ff0, 0x0006d253, 0x000e0ff4, 0x0006d25b, 0x001091b7, 0x001091b8, 0x00044cdc, 0x00045c62, 0x00045c7d, 0x00045ca3, 0x00045cc1, 0x00045cc8, 0x001091b9, 0x00045c51, 0x00045c6a, 0x00045c85, 0x00045cab, 0x00045cd1, 0x00045cd9, 0x001091ba, 0x000551b0, 0x000e1035, 0x000551b8, 0x000e1039, 0x000551c0, 0x000e103d, 0x000551c8, 0x000e1041, 0x000551d0, 0x000e1045, 0x000551d8, 0x001091c3, 0x001091bb, 0x00045c57, 0x000e1051, 0x00045c70, 0x000e1055, 0x00045c8d, 0x000e1059, 0x00045cb3, 0x000e105d, 0x00045ce1, 0x000e1061, 0x00045ce9, 0x001091c5, 0x001091bc, 0x00074f77, 0x00074f86, 0x00074f7b, 0x00074f8a, 0x00074f7f, 0x00074f8e, 0x0009655b, 0x000328e0, 0x0001b152, 0x0001a763, 0x000b125f, 0x000a9154, 0x000d80b4],
     "male_breton" => [0x00064a42, 0x00043ab8, 0x000bede5, 0x0006d22f, 0x000548ff, 0x001091ad, 0x001091a8, 0x001091b0, 0x001091ab, 0x0006a152, 0x000e0fcd, 0x0006d232, 0x000e0fd0, 0x000551ae, 0x0002bce8, 0x0004d8d5, 0x000457f6, 0x001034f3, 0x001034fc, 0x0009f844, 0x000e0fc8, 0x0006d231, 0x0006d230, 0x00043bdc, 0x0004430a, 0x0004430b, 0x0004430c, 0x0004430d, 0x0004430e, 0x0004430f, 0x00044310, 0x00044311, 0x00044312, 0x00044313, 0x00043bf0, 0x00043bee, 0x00043bef, 0x00044262, 0x00044263, 0x00044264, 0x00044274, 0x00044275, 0x00044276, 0x00044287, 0x00044288, 0x00044298, 0x00044299, 0x0004429a, 0x000844d0, 0x00013368, 0x000e0fd3, 0x0006d233, 0x000e0fd5, 0x000551af, 0x000e0fcb, 0x000551ad, 0x000e0fc6, 0x000551ac, 0x0006d22e, 0x000548fe, 0x00079f6a, 0x00079f64, 0x00079f60, 0x00079f5f, 0x00099d22, 0x0010ab67, 0x0010ab68, 0x0010ab69, 0x0010ab6a, 0x0010ab6b, 0x00074bd8, 0x0009f847, 0x0006f214, 0x000c3b25, 0x00064a78, 0x00064a76, 0x00064a40, 0x00064a3e, 0x00064a8d, 0x00064a8b, 0x00064ac4, 0x00064ab3, 0x00064a69, 0x00064a41, 0x00064aab, 0x00064a7c, 0x00064a7a, 0x00064a47, 0x00064a45, 0x00064aa1, 0x00064a97, 0x00064ac5, 0x00064ab5, 0x00064a6e, 0x00064a43, 0x00064ab7, 0x00064a80, 0x00064a7e, 0x00064a4c, 0x00064a4a, 0x00064aa3, 0x00064a99, 0x00064ace, 0x00064abc, 0x00064a6d, 0x00064a48, 0x00064ab6, 0x00064a84, 0x00064a82, 0x00064a51, 0x00064aa5, 0x00064a9b, 0x00064ac8, 0x00064abe, 0x00064a6c, 0x00064a4d, 0x00064ab8, 0x00064a86, 0x00064a56, 0x00064a54, 0x00064aa7, 0x00064a9d, 0x00064aca, 0x00064ac0, 0x00064a6b, 0x00064a52, 0x00064ab9, 0x00064a5b, 0x00064a59, 0x00064aa9, 0x00064a9f, 0x00064acc, 0x00064ac2, 0x00064a57, 0x00064aba, 0x0008443d, 0x000e16d4, 0x00064a4f, 0x00039d33, 0x00039d3a, 0x00039d45, 0x00039d4c, 0x00039d53, 0x00039d5a, 0x000f9616, 0x00043bdd, 0x00043bde, 0x00043bdf, 0x000ad7b4, 0x00043be7, 0x00043be8, 0x00043be9, 0x000ad7b5, 0x00023aa9, 0x00043be3, 0x000442d4, 0x000442d5, 0x000ad7bb, 0x000442d7, 0x000442d8, 0x000442d9, 0x000f9617, 0x00044259, 0x0004425a, 0x0004425b, 0x000ad7b6, 0x0004425f, 0x00044260, 0x00044261, 0x000ad7b7, 0x000442da, 0x000442db, 0x000ad7ba, 0x000442dd, 0x000442de, 0x000442df, 0x000f9618, 0x0004426b, 0x0004426c, 0x0004426d, 0x000ad7b8, 0x00044271, 0x00044272, 0x00044273, 0x000ad7b9, 0x000442e0, 0x000442e1, 0x000ad7bc, 0x000442e3, 0x000442e4, 0x000442e5, 0x000f9619, 0x0004427d, 0x0004427e, 0x0004427f, 0x000ad7bd, 0x00044283, 0x00044284, 0x00044285, 0x000ad7be, 0x000442e6, 0x000442e7, 0x000442e9, 0x000442ea, 0x000442eb, 0x000f961a, 0x0004428f, 0x00044290, 0x00044291, 0x000ad7bf, 0x00044295, 0x00044296, 0x00044297, 0x000ad7c0, 0x000442ec, 0x000442ed, 0x000ad7c1, 0x000442ef, 0x000442f0, 0x000442f1, 0x000f961b, 0x000442a1, 0x000442a2, 0x000442a3, 0x000ad7c2, 0x000442a7, 0x000442a8, 0x000442a9, 0x000ad7c3, 0x00017145, 0x00017146, 0x0002e1dc, 0x0002e1f1, 0x0002e509, 0x0002ea9b, 0x0002eabe, 0x0006d235, 0x000e0fe5, 0x0006d23c, 0x000e0fe9, 0x0006d244, 0x000e0fed, 0x0006d24c, 0x000e0ff1, 0x0006d254, 0x000e0ff5, 0x0006d25c, 0x00044cda, 0x00045c63, 0x00045c7e, 0x00045ca4, 0x00045cc2, 0x00045cc9, 0x00045c52, 0x00045c6b, 0x00045c86, 0x00045cac, 0x00045cd2, 0x00045cda, 0x000551b1, 0x000e1036, 0x000551b9, 0x000e103a, 0x000551c1, 0x000e103e, 0x000551c9, 0x000e1042, 0x000551d1, 0x000e1046, 0x000551d9, 0x00045c58, 0x000e1052, 0x00045c71, 0x000e1056, 0x00045c8e, 0x000e105a, 0x00045cb4, 0x000e105e, 0x00045ce2, 0x000e1062, 0x00045cea, 0x000328df, 0x0001b153, 0x0001a777, 0x0010611f, 0x00106120, 0x00106121, 0x000684cd, 0x000b3b95],
@@ -188,6 +203,29 @@ $GLOBALS["npc_own_templates"] = [
 
 ];
 
+$questRaceSpawnBases = [
+    "male_altmer" => "AIAgent.esp|00045CE7",
+    "female_altmer" => "AIAgent.esp|00045CE8",
+    "male_bosmer" => "AIAgent.esp|00045CE9",
+    "female_bosmer" => "AIAgent.esp|00045CEA",
+    "male_dunmer" => "AIAgent.esp|00045CEB",
+    "female_dunmer" => "AIAgent.esp|00045CEC",
+    "male_khajiit" => "AIAgent.esp|00045CED",
+    "female_khajiit" => "AIAgent.esp|00045CEE",
+];
+$questSpawnAliases = [];
+foreach (array_keys($GLOBALS["npc_own_templates"]) as $templateKey) {
+    if (preg_match('/^male_argonian_(.+)$/', $templateKey, $matches)) {
+        $questSpawnAliases[] = $matches[1];
+    }
+}
+foreach ($questRaceSpawnBases as $templatePrefix => $formId) {
+    foreach ($questSpawnAliases as $classAlias) {
+        $GLOBALS["npc_own_templates"]["{$templatePrefix}_{$classAlias}"] = [$formId];
+    }
+}
+unset($questRaceSpawnBases, $questSpawnAliases, $templateKey, $templatePrefix, $classAlias, $formId, $matches);
+
 $GLOBALS["outfit"] = [
     "beggar" => [0x000a1983],
     "mage" => [0x0006e26f, 0x001034ef, 0x000a199c, 0x000d504c, 0x0007eab5, 0x0001703a, 0x000f3e7d, 0x00106114, 0x000fba59, 0x000e9ac4, 0x000b7a3e, 0x000b7a3f],
@@ -216,10 +254,11 @@ if (!function_exists("initializeQuestReferenceData")) {
             "npc_templates" => $GLOBALS["npc_templates"] ?? [],
             "npc_own_templates" => $GLOBALS["npc_own_templates"] ?? [],
             "outfit" => $GLOBALS["outfit"] ?? [],
+            "weapons" => $GLOBALS["weapons"] ?? [],
         ];
 
         foreach ($defaults as $datasetName => $valueMap) {
-            quest_reference_seed_dataset_if_empty($datasetName, $valueMap);
+            quest_reference_add_missing_dataset_entries($datasetName, $valueMap);
         }
 
         $activeData = quest_reference_load_all_active();
@@ -603,9 +642,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
     $masterData = $GLOBALS["npc_own_templates"];
 
 
-    $weapon = [
-        "sword" => [0x00013989],
-    ];
+    $weapons = $GLOBALS["weapons"] ?? [];
 
     $locations = [];
     $locationRows = $GLOBALS["db"]->fetchAll("SELECT lower(name) AS location_key, formid FROM locations WHERE formid IS NOT NULL");
@@ -654,10 +691,20 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
         Logger::warn("[npcProfileBase] No active quest_npc_templates entry for {$templateKey}");
     }
 
-    if (isset($masterData[$classTemplateKey])) {
-        $parm1 = quest_reference_pick_random($masterData, $classTemplateKey, $parm5);
-    } else {
+    $humanoidRaces = quest_reference_playable_races();
+    $parm1 = quest_reference_pick_safe_spawn_base($masterData, $gender, $race, $dclass);
+    $usesChimOwnedSpawnBase = $parm1 !== 0;
+    if ($parm1 === 0) {
+        if (in_array($race, $humanoidRaces, true)) {
+            Logger::warn("[npcProfileBase] Aborting humanoid spawn: no CHIM-owned base for {$classTemplateKey}");
+            return;
+        }
+        // Generic creature records are complete spawn bases rather than appearance donors.
         $parm1 = $parm5;
+    }
+    if ($parm1 === 0) {
+        Logger::warn("[npcProfileBase] Aborting spawn: no usable base for {$gender}_{$race}");
+        return;
     }
 
     // Just for outfit
@@ -677,10 +724,12 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
         $parm2 = 0;
     }
 
-    //$parm3=$weapon["{$weapon}"][0];
     $rumors = false;
-    // TO-DO to have a list of weapons
-    $parm3 = $weapon["sword"][0];
+    $parm3 = quest_reference_pick_random(
+        $weapons,
+        $dclass,
+        quest_reference_pick_random($weapons, "default", 0x00013989)
+    );
     $patchedTaskid = $taskId;
 
     if ($location == "nearby") {
@@ -741,6 +790,16 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
 
     }
 
+    // SpawnAgent resolves CHIM-owned humanoid bases with GetFormFromFile,
+    // which requires AIAgent.esp's local FormID rather than its runtime prefix.
+    $wireParm1 = $usesChimOwnedSpawnBase
+        ? quest_reference_formid_for_full_plugin_file($parm1)
+        : quest_reference_formid_for_papyrus($parm1);
+    $wireParm2 = quest_reference_formid_for_papyrus($parm2);
+    $wireParm3 = quest_reference_formid_for_papyrus($parm3);
+    $wireParm4 = quest_reference_formid_for_papyrus($parm4);
+    $wireParm5 = quest_reference_formid_for_papyrus($parm5);
+
     $GLOBALS["db"]->insert(
         'responselog',
         [
@@ -748,7 +807,7 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|spawnCharacter@{$name}@$parm1@$parm2@$parm3@$parm4@$patchedTaskid@$parm5",
+            'action' => "rolecommand|spawnCharacter@{$name}@$wireParm1@$wireParm2@$wireParm3@$wireParm4@$patchedTaskid@$wireParm5",
             'tag' => "",
         ]
     );
@@ -788,11 +847,7 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
 
     $localItemType = quest_reference_pick_random($masterData, $basetype, 0);
     if ($localItemType === 0) {
-        Logger::warn("[SkCreateItem] No active quest_item_types entry for '{$basetype}', trying any active type");
-        $localItemType = quest_reference_pick_any_random($masterData, 0);
-    }
-    if ($localItemType === 0) {
-        Logger::warn("[SkCreateItem] Aborting item spawn for '{$name}': no active quest_item_types values available");
+        Logger::warn("[SkCreateItem] Aborting item spawn for '{$name}': no active quest_item_types entry for '{$basetype}'");
         return;
     }
 
@@ -938,10 +993,7 @@ function CreateItemNpc($basetype, $name, $npc)
     $localItemNPC = $GLOBALS["db"]->escape($npc);
     $localItemType = quest_reference_pick_random($masterData, $basetype, 0);
     if ($localItemType === 0) {
-        $localItemType = quest_reference_pick_any_random($masterData, 0);
-    }
-    if ($localItemType === 0) {
-        Logger::warn("[CreateItemNpc] Aborting item spawn for '{$name}': no active quest_item_types values available");
+        Logger::warn("[CreateItemNpc] Aborting item spawn for '{$name}': no active quest_item_types entry for '{$basetype}'");
         return;
     }
 
@@ -1880,7 +1932,9 @@ function getLocationsNearNpcCoords($npcName) {
     $db = $GLOBALS['db'];
     $pointLiteral = '(' . $x . ',' . $y . ')';
     $pointEsc = $db->escape($pointLiteral);
+    $worldEsc = $db->escape($lastCoords["world"] ?? '');
 
+    // Abandoned Shack locations is bugged as is child of Batte-Born Farm.
     $closestLocations = $db->fetchAll(
         "SELECT
             name,
@@ -1893,14 +1947,26 @@ function getLocationsNearNpcCoords($npcName) {
             coords <-> '{$pointEsc}'::point AS distance
          FROM locations
          WHERE coords IS NOT NULL
-         ORDER BY distance ASC
-         LIMIT 25"
+         and name<>'Abandoned Shack'
+         and coords <-> '{$pointEsc}'::point < 6000
+         and world IN ('{$worldEsc}','')
+         ORDER BY case when world = '{$worldEsc}' then coords <-> '{$pointEsc}'::point else (coords <-> '{$pointEsc}'::point) + 100000 end ASC
+         LIMIT 35"
     );
 
     $closestLocationsNames=[];
 
     foreach ($closestLocations as &$location) {
-        $key=($location['name'] ?? '') . ($location['is_interior'] ? ' (Interior)' : '');
+        //$key=$location['name'].' '.$location['distance'];
+        $key=$location['name'];
+        if (checkInterior($location['is_interior'])) {// If any reference is interior, we append "(Interior)" to the name for clarity and duplicate the entry.
+            $key .= ' (Interior)';
+            if ($location['tags'])
+                $label=" \"$key\" ({$location['tags']})";
+            else
+                $label=" \"$key\"";
+            $closestLocationsNames[$key] = $label;
+        }
         if ($location['tags'])
             $label=" \"$key\" ({$location['tags']})";
         else

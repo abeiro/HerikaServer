@@ -37,6 +37,41 @@ final class AsteriskParsingTest extends TestCase
         );
     }
 
+    public function testChatModeShortcutsAreParsedServerSide(): void
+    {
+        $cases = [
+            '~ Keep this quiet' => ['WHISPER', 'Keep this quiet'],
+            '~~ Only you should hear this' => ['CLOSE', 'Only you should hear this'],
+            '!! Everyone, run!' => ['SHOUT', 'Everyone, run!'],
+            '@ Describe the room' => ['NARRATOR', 'Describe the room'],
+            '> Have Lydia inspect the doorway' => ['DIRECTOR', 'Have Lydia inspect the doorway'],
+            '# Give me 1000 gold' => ['CHEATMODE', 'Give me 1000 gold'],
+            '** Warn them about the dragon' => ['AUTOCHAT', 'Warn them about the dragon'],
+            '((A dragon lands nearby.))' => ['INJECTION_LOG', 'A dragon lands nearby.'],
+            '(A dragon lands nearby.)' => ['INJECTION_CHAT', 'A dragon lands nearby.'],
+        ];
+
+        foreach ($cases as $input => [$mode, $content]) {
+            $parsed = chimParseChatModeShortcut($input);
+
+            $this->assertTrue($parsed['matched'], $input);
+            $this->assertSame($mode, $parsed['mode'], $input);
+            $this->assertSame($content, $parsed['content'], $input);
+        }
+    }
+
+    public function testChatModeShortcutParserPreservesPlainAndSymbolOnlyInput(): void
+    {
+        $plain = chimParseChatModeShortcut('Hello there');
+        $symbolOnly = chimParseChatModeShortcut('~~   ');
+
+        $this->assertFalse($plain['matched']);
+        $this->assertSame('Hello there', $plain['content']);
+        $this->assertTrue($symbolOnly['matched']);
+        $this->assertSame('CLOSE', $symbolOnly['mode']);
+        $this->assertSame('', $symbolOnly['content']);
+    }
+
     public function testFullWrappedNarrationBlockDoesNotSplitMidReply(): void
     {
         $wrappedReply = "*A slight chuckle escapes me as I straighten a few more apples, my eyes crinkling at the corners. 'Wow,' you say? I hope that's a good 'wow,' Your Majesty. My produce is usually met with enthusiasm for its quality, not surprise. Though, I suppose a king might have seen grander displays of... apples.*";
@@ -242,6 +277,48 @@ final class AsteriskParsingTest extends TestCase
             '|Rangroo|Corpulus Vinius|',
             buildWhisperPrivatePeople('Corpulus Vinius')
         );
+    }
+
+    public function testPlayerSubtitleTextStripsPrivateTargetTag(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+
+        $this->assertSame(
+            "Keep this between us",
+            formatPlayerSubtitleText("Rangroo: Keep this between us (Speaking privately to Corpulus Vinius)")
+        );
+    }
+
+    public function testCloseModeUsesPrivateTargetAndPeopleScope(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'Rangroo';
+        $GLOBALS['CHIM_EXECUTION_MODE'] = 'CLOSE';
+
+        $this->assertTrue(isCloseExecutionMode());
+        $this->assertTrue(isPrivateConversationExecutionMode());
+        $this->assertSame(
+            '(speaking privately to Corpulus Vinius)',
+            buildDialogueTargetSuffix('Corpulus Vinius')
+        );
+        $this->assertSame(
+            '|Rangroo|Corpulus Vinius|',
+            buildPrivateConversationPeople('Corpulus Vinius')
+        );
+    }
+
+    public function testPrivateTagConversionAndTargetExtraction(): void
+    {
+        $converted = convertTalkingTagsToPrivately(
+            'Rangroo: Keep this quiet (Talking to Corpulus Vinius)'
+        );
+        $this->assertSame(
+            'Rangroo: Keep this quiet (Speaking privately to Corpulus Vinius)',
+            $converted
+        );
+
+        $metadata = extractTalkTargetMetadata($converted);
+        $this->assertTrue($metadata['hasExplicitTarget']);
+        $this->assertSame(['Corpulus Vinius'], $metadata['targets']);
     }
 
     public function testSanitizePlayerRespeechTextStripsLeadingNarrationAndPlayerPrefix(): void

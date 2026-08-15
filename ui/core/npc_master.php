@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . "../../";
 
@@ -42,6 +42,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/npc_event_history.css">
 <style>
 /* Core styling alignment */
 @font-face {
@@ -286,6 +287,7 @@ h1.api-title {
 .npc-metadata-collapse-body {
     padding: 12px;
 }
+
 </style>
 
 <main>
@@ -508,6 +510,29 @@ if (!function_exists('chimNpcRelationshipSaveNeedsLock')) {
     }
 }
 
+if (!function_exists('chimMergeBackgroundLifeGoalsIntoPostedExtendedData')) {
+    function chimMergeBackgroundLifeGoalsIntoPostedExtendedData(): void
+    {
+        if (!array_key_exists('background_life_goals', $_POST)) {
+            return;
+        }
+
+        $extendedData = json_decode((string)($_POST['extended_data'] ?? '{}'), true);
+        if (!is_array($extendedData)) {
+            $extendedData = [];
+        }
+
+        $backgroundLifeGoals = trim((string)$_POST['background_life_goals']);
+        if ($backgroundLifeGoals === '') {
+            unset($extendedData['background_life_goals']);
+        } else {
+            $extendedData['background_life_goals'] = $backgroundLifeGoals;
+        }
+
+        $_POST['extended_data'] = json_encode($extendedData, JSON_UNESCAPED_UNICODE);
+    }
+}
+
 if (!function_exists('chimAcquireNpcRelationshipLock')) {
     function chimAcquireNpcRelationshipLock($npcId): ?int
     {
@@ -554,6 +579,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     if (chimUiAutoLockProfileEnabled()) {
         $_POST['lock_profile'] = 1;
     }
+    chimMergeBackgroundLifeGoalsIntoPostedExtendedData();
     if (file_exists(__DIR__."/../../ext/relationship_system/npc_save_handler.php")) {
         include(__DIR__."/../../ext/relationship_system/npc_save_handler.php");
     }
@@ -579,6 +605,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         if (chimUiAutoLockProfileEnabled()) {
             $_POST['lock_profile'] = 1;
         }
+        chimMergeBackgroundLifeGoalsIntoPostedExtendedData();
         if (file_exists(__DIR__."/../../ext/relationship_system/npc_save_handler.php")) {
             include(__DIR__."/../../ext/relationship_system/npc_save_handler.php");
         }
@@ -587,10 +614,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
             return $npc->update($_POST["id"], $_POST);
         };
         if (chimNpcRelationshipSaveNeedsLock()) {
-            chimRunWithRelationshipExtendedDataWrite($saveNpc);
+            $saveResult = chimRunWithRelationshipExtendedDataWrite($saveNpc);
             // Anchor editor relationship saves to the last known game time (see Create branch) -
             // without this a NULL-stamped row loses its manual entries on the next reconnect.
-            if (function_exists('chimRelationshipTimelineStamp')) {
+            if ($saveResult !== false && function_exists('chimRelationshipTimelineStamp')) {
                 chimRelationshipTimelineStamp((int)($_POST["id"] ?? 0));
             }
         } else {
@@ -611,6 +638,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
     try {
         $id = intval($_POST['id'] ?? 0);
         $relationshipLockId = chimAcquireNpcRelationshipLock($id);
+        chimMergeBackgroundLifeGoalsIntoPostedExtendedData();
 
         // Server-side: extended_data already has feature toggles synced by JS, just ensure it's valid JSON
         // The client-side JS only includes values that differ from profile defaults
@@ -709,7 +737,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
             if (chimNpcRelationshipSaveNeedsLock()) {
                 $ok = chimRunWithRelationshipExtendedDataWrite($saveNpc);
                 // Stamp BEFORE the manual backup below so the snapshot captures the anchored row.
-                if (function_exists('chimRelationshipTimelineStamp')) {
+                if ($ok !== false && function_exists('chimRelationshipTimelineStamp')) {
                     chimRelationshipTimelineStamp((int)$id);
                 }
             } else {
@@ -973,6 +1001,68 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["set_portrait"])) {
     exit;
 }
 
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["dev_visit"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $id = intval($_POST['target_id'] ?? 0);
+        require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "scriptproxy_papyrus.php");
+        $npcData=$npc->getById($id);
+        if (isset($npcData['refid']) && $npcData['refid']!=='') {
+            $refid = $npcData['refid'];
+            $skyrimCmd = new SkyrimCommandBuilder();
+            $json = $skyrimCmd->ObjectReference->MoveTo("0x00000014","0x".$refid);
+            $skyrimCmd->send(cmd: $json);
+            echo json_encode(["ok"=>true]);
+        } else {
+            echo json_encode(["ok"=>false, "error"=>"NPC <{$id}> does not have a valid refid"]);
+        }
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bgl_inception"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $id = intval($_POST['target_id'] ?? 0);
+        
+        $npcData=$npc->getById($id);
+        $extendedData['bgl_inception'] = $_POST['idea'] ?? '';
+        $npc->updateExtendedKeysByName($npcData['npc_name'], $extendedData);
+        echo json_encode(["ok"=>true]);
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["dev_teleport"])) {
+    try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+    header('Content-Type: application/json');
+    try {
+        $id = intval($_POST['target_id'] ?? 0);
+        require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "scriptproxy_papyrus.php");
+        $npcData=$npc->getById($id);
+        if (isset($npcData['refid']) && $npcData['refid']!=='') {
+            $refid = $npcData['refid'];
+            $skyrimCmd = new SkyrimCommandBuilder();
+            $json = $skyrimCmd->ObjectReference->MoveTo("0x".$refid,"0x00000014");
+            $skyrimCmd->send(cmd: $json);
+            echo json_encode(["ok"=>true]);
+        } else {
+            echo json_encode(["ok"=>false, "error"=>"NPC <{$id}> does not have a valid refid"]);
+        }
+    } catch (Throwable $e) {
+        echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
+    }
+    exit;
+}
+
+
 // Handle Delete
 if (isset($_GET["delete"])) {
     $toDel = intval($_GET["delete"]);
@@ -1146,6 +1236,7 @@ $lockOnly = (isset($_GET['lock']) && $_GET['lock'] === '1');
 $salOnly = (isset($_GET['sal']) && $_GET['sal'] === '1');
 $blcOnly = (isset($_GET['blc']) && $_GET['blc'] === '1');
 $gpsOnly = (isset($_GET['gps']) && $_GET['gps'] === '1');
+$createdOnly = (isset($_GET['created']) && $_GET['created'] === '1');
 
 // Preload profiles for filter dropdown
 $profileRows = $GLOBALS["db"]->fetchAll("SELECT id, label, metadata FROM core_profiles ORDER BY label ASC");
@@ -1255,6 +1346,9 @@ if ($blcOnly) {
 if ($gpsOnly) {
     $where .= " and coalesce(metadata::text,'') ~ '\"gps_track\"\\s*:\\s*(true|1)'";
 }
+if ($createdOnly) {
+    $where .= " and coalesce(metadata::text,'') ~ '\"background_life_created\"\\s*:\\s*(true|1)'";
+}
 
 // Default: The Narrator first, then favorites, then alphabetical by name
 $order = "order by (case when npc_name = 'The Narrator' then 0 else 1 end), coalesce(npc_favorite,0) desc, coalesce(gamets_last_updated,0) desc, lower(npc_name) ".$alpha.", id asc";
@@ -1361,6 +1455,7 @@ if (!function_exists('renderNpcToolbar')) {
                   <label><input type="checkbox" id="npc_filter_sal<?= $suffix ?>" <?= $salOnly ? 'checked' : '' ?>> 👋 Auto Greeting</label>
                   <label><input type="checkbox" id="npc_filter_blc<?= $suffix ?>" <?= $blcOnly ? 'checked' : '' ?>> 🎮 BGL: Auto Actions</label>
                   <label><input type="checkbox" id="npc_filter_gps<?= $suffix ?>" <?= $gpsOnly ? 'checked' : '' ?>> 📍 BGL: GPS track</label>
+                  <label><input type="checkbox" id="npc_filter_created<?= $suffix ?>" <?= $createdOnly ? 'checked' : '' ?>> 🧬 Created NPCs</label>
                 </div>
               </div>
               <div class="npc-total-pill" title="Total NPC profiles">
@@ -1376,6 +1471,36 @@ if (!function_exists('renderNpcToolbar')) {
 
 if (isset($_GET["edit"])) {
     $editItem = $npc->getById($_GET["edit"]);
+
+    if (!$editItem && isset($_GET['partial']) && $_GET['partial'] === '1') {
+        try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
+        http_response_code(404);
+        header('Content-Type: text/html; charset=utf-8');
+        ?>
+        <!doctype html>
+        <html lang="en">
+        <head>
+            <meta charset="utf-8">
+            <title>NPC profile unavailable</title>
+            <style>
+                html, body { margin:0; min-height:100%; background:#222; color:#e9efff; font-family:Arial, sans-serif; }
+                main { min-height:65vh; display:flex; align-items:center; justify-content:center; padding:24px; text-align:center; }
+                h2 { margin:0 0 8px; color:#f27c11; }
+                p { margin:0; color:#cfd9ea; line-height:1.45; }
+            </style>
+        </head>
+        <body>
+            <main data-npc-load-error="1">
+                <div>
+                    <h2>NPC profile no longer exists</h2>
+                    <p>The NPC list changed after this page loaded. Refresh the list and try again.</p>
+                </div>
+            </main>
+        </body>
+        </html>
+        <?php
+        exit;
+    }
 }
 
 // Partial list renderer for AJAX refresh of grid and pagination
@@ -1794,16 +1919,19 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 
 <?php if (isset($_GET['partial']) && $_GET['partial']=='1') { ob_end_clean(); ?>
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/npc_event_history.css">
 <style>html,body{background:#2a2a2a;margin-bottom:50px;margin-right:5px;} main{background:#2a2a2a; padding:12px;} .form-container{background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px;}
 .modal-inline-actions{display:flex; gap:6px; align-items:center; justify-content:flex-end; margin-bottom:8px;}
 .modal-inline-actions .btn-toggle{background:transparent; border:none; padding:6px; color:#e9efff; font-size:22px; line-height:1; text-decoration:none; cursor:pointer;}
 .modal-inline-actions .btn-toggle:hover{color: rgb(242, 124, 17); text-decoration:none;}
 .modal-inline-actions .btn-toggle.active{color:#ffd700; font-weight:700;}
 </style>
+<div data-npc-profile-loaded="1" data-npc-id="<?= htmlspecialchars((string)($editItem['id'] ?? '')) ?>" hidden></div>
 <form method="post" onsubmit='return false' style='display:block'>
 <?php } else { ?>
 <form method="post" onsubmit='return consolidation()' style='<?= $editItem!=null?"":"display:none"?>'>
 <?php } ?>
+    <script src="<?php echo $webRoot; ?>/ui/js/npc_event_history.js"></script>
     <style>
     .form-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px 16px; }
     @media (max-width: 900px){ .form-grid { grid-template-columns: 1fr; } }
@@ -1986,7 +2114,582 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     </script>
     <?php endif; ?>
 
-    <div class="form-grid">
+    <div class="npc-editor-tabs" role="tablist" aria-label="NPC editor categories" data-npc-editor-tabs data-storage-key="herika-npc-editor-tab">
+    <button type="button" class="npc-editor-tab is-active" role="tab" aria-selected="true" data-npc-editor-tab="general">🧭 General</button>
+    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="bios">📖 Roleplay</button>
+    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="relationships">🤝 Relationships</button>
+    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="info">🛠️ Info</button>
+    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="actions">⚡ Actions</button>
+    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="background-life">🌍 Background Life</button>
+    <button type="button" class="npc-editor-tab" role="tab" aria-selected="false" data-npc-editor-tab="history">📜 History</button>
+</div>
+<style>
+.npc-editor-tabs {
+    display:grid;
+    grid-template-columns:repeat(7, minmax(0, 1fr));
+    gap:8px;
+    margin-bottom:14px;
+    padding:8px;
+    border:1px solid #3a3a3a;
+    border-radius:10px;
+    background:rgba(30, 30, 30, 0.92);
+}
+.npc-editor-tab {
+    position:relative;
+    min-height:40px;
+    padding:8px 12px;
+    border:1px solid #444;
+    border-radius:7px;
+    background:#303030;
+    color:#ddd;
+    font-weight:700;
+    cursor:pointer;
+    transition:border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.npc-editor-tab:hover { border-color:rgba(242,124,17,0.55); background:#383838; }
+.npc-editor-tabs .npc-editor-tab.is-active {
+    border-color:rgb(242,124,17) !important;
+    color:#fff !important;
+    background:rgba(92,53,25,0.95) !important;
+    box-shadow:inset 0 0 0 1px rgba(242,124,17,0.28), 0 0 12px rgba(242,124,17,0.24) !important;
+    transform:translateY(-1px) !important;
+}
+.npc-editor-tab:focus-visible { outline:2px solid rgb(242,124,17); outline-offset:2px; }
+.npc-editor-panels { display:block; }
+.npc-editor-panel[hidden] { display:none !important; }
+.npc-editor-panel[data-npc-editor-panel="bios"] { grid-template-columns:minmax(0, 1fr); }
+.npc-editor-panel[data-npc-editor-panel="background-life"] { grid-template-columns:minmax(0, 1fr); }
+.npc-editor-panel[data-npc-editor-panel="actions"] { grid-template-columns:minmax(0, 1fr); }
+.npc-editor-action-note { margin:0; color:#aaa; font-size:0.86rem; }
+.npc-editor-action-list { display:grid; gap:10px; }
+.npc-editor-action-card {
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    align-items:center;
+    gap:14px;
+    padding:12px;
+    border:1px solid #444;
+    border-radius:7px;
+    background:#282828;
+}
+.npc-editor-action-card h3 { margin:0 0 4px; color:#f2bd7f; font-size:1rem; }
+.npc-editor-action-card p { margin:0; color:#aaa; font-size:0.82rem; }
+.npc-editor-action-card textarea { min-height:84px; resize:vertical; }
+.npc-editor-action-status { min-height:1.2rem; margin:0; color:#aaa; font-size:0.82rem; }
+.npc-editor-action-status.is-error { color:#ef8f96; }
+.npc-bgl-dashboard { display:grid; gap:12px; }
+.npc-bgl-section {
+    padding:14px;
+    border:1px solid #444;
+    border-radius:8px;
+    background:#252525;
+}
+.npc-bgl-section-header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:10px;
+}
+.npc-bgl-section h3 { margin:0; color:#f2bd7f; font-size:1rem; }
+.npc-bgl-section p { margin:3px 0 0; color:#aaa; font-size:0.82rem; }
+.npc-bgl-summary {
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:8px;
+}
+.npc-bgl-summary-item {
+    min-width:0;
+    padding:10px;
+    border:1px solid #3d3d3d;
+    border-radius:6px;
+    background:#1d1d1d;
+}
+.npc-bgl-summary-item span { display:block; margin-bottom:4px; color:#888; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em; }
+.npc-bgl-summary-item strong { display:block; overflow-wrap:anywhere; color:#e7e7e7; font-size:0.9rem; }
+.npc-bgl-state-button,
+.npc-bgl-control,
+.npc-bgl-request {
+    border:1px solid #4a4a4a;
+    border-radius:6px;
+    background:#303030;
+    color:#eee;
+    cursor:pointer;
+}
+.npc-bgl-state-button { padding:8px 12px; font-weight:700; white-space:nowrap; }
+.npc-bgl-state-button.is-on { border-color:#4c9568; background:#294936; }
+.npc-bgl-control-grid,
+.npc-bgl-request-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
+.npc-bgl-control {
+    display:flex;
+    align-items:center;
+    gap:9px;
+    min-height:56px;
+    padding:10px;
+    text-align:left;
+}
+.npc-bgl-control-dot { width:9px; height:9px; flex:0 0 auto; border-radius:50%; background:#777; }
+.npc-bgl-control.is-on .npc-bgl-control-dot { background:#63c685; box-shadow:0 0 0 3px rgba(99,198,133,0.12); }
+.npc-bgl-control strong,
+.npc-bgl-control small { display:block; }
+.npc-bgl-control small { margin-top:2px; color:#999; font-size:0.72rem; }
+.npc-bgl-request { min-height:38px; padding:8px 10px; font-weight:700; }
+.npc-bgl-state-button:hover,
+.npc-bgl-control:hover,
+.npc-bgl-request:hover { border-color:rgba(242,124,17,0.75); background:#393939; }
+.npc-bgl-state-button:disabled,
+.npc-bgl-control:disabled,
+.npc-bgl-request:disabled { opacity:0.5; cursor:not-allowed; }
+.npc-bgl-inception { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:8px; margin-top:8px; }
+.npc-bgl-inception textarea { min-height:70px; resize:vertical; }
+.npc-bgl-events { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
+.npc-bgl-event { padding:9px 10px; border-left:3px solid #666; background:#1d1d1d; color:#ddd; font-size:0.84rem; }
+.npc-bgl-event-time { display:block; margin-top:4px; color:#888; font-size:0.72rem; }
+.npc-bgl-empty { margin:0; padding:10px; color:#888; text-align:center; }
+@media (max-width:700px) { .npc-editor-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@media (max-width:850px) {
+    .npc-editor-action-card { grid-template-columns:minmax(0, 1fr); }
+    .npc-bgl-summary,
+    .npc-bgl-control-grid,
+    .npc-bgl-request-grid { grid-template-columns:minmax(0, 1fr); }
+    .npc-bgl-inception { grid-template-columns:minmax(0, 1fr); }
+}
+</style>
+<script>
+(function(){
+    const fieldSections = {
+        general: new Set(['npc_name','profile_id','lock_profile','npc_favorite','gender','race','base','refid','oghma_knowledge_tags','worldknowledge_tags','world_knowledge_tags','voiceid','faction','dynamic_profile','middle_term_enabled','individual_memory_enabled','auto_diary_enabled','auto_diary_wait_enabled','salutation_after_a_while','prompt_head']),
+        bios: new Set(['core','npc_static_bio','appearance','personality','occupation','skills','speechstyle','goals']),
+        relationships: new Set(['relationships','relationships_jsonb','middle_term_latest']),
+        'background-life': new Set(['background_life_goals']),
+        history: new Set(),
+        info: new Set(['emote_moods','metadata','extended_data']),
+        actions: new Set()
+    };
+
+    function initNpcEditorTabs(){
+        document.querySelectorAll('[data-npc-editor-tabs]').forEach(function(tablist, index){
+            if (tablist.dataset.initialized === '1') return;
+            const form = tablist.closest('form');
+            const grid = form ? form.querySelector('.form-grid') : null;
+            if (!form || !grid) return;
+            tablist.dataset.initialized = '1';
+
+            const panels = {};
+            ['general','bios','relationships','info','actions','background-life','history'].forEach(function(section){
+                const panel = document.createElement('div');
+                panel.className = 'npc-editor-panel form-grid';
+                if (section === 'history') panel.classList.add('npc-editor-panel-history');
+                panel.dataset.npcEditorPanel = section;
+                panel.id = 'npc-editor-panel-' + section + '-' + index;
+                panel.setAttribute('role', 'tabpanel');
+                panels[section] = panel;
+                const button = tablist.querySelector('[data-npc-editor-tab="' + section + '"]');
+                if (button) button.setAttribute('aria-controls', panel.id);
+            });
+
+            function tokensFor(unit){
+                const nodes = [];
+                if (unit.matches('[id],[name]')) nodes.push(unit);
+                unit.querySelectorAll('[id],[name]').forEach(function(node){ nodes.push(node); });
+                const tokens = [];
+                nodes.forEach(function(node){
+                    if (node.id) tokens.push(node.id);
+                    if (node.getAttribute('name')) tokens.push(node.getAttribute('name'));
+                });
+                return tokens;
+            }
+
+            function sectionFor(unit){
+                if (unit.id === 'relationship-editor-section' || unit.querySelector('#relationship-editor-section')) return 'relationships';
+                const label = unit.querySelector('label:not([for])');
+                if (label && label.textContent.replace(/\s+/g, ' ').trim() === 'Relationships') return 'relationships';
+                const tokens = tokensFor(unit);
+                for (const section of ['relationships','general','bios','background-life','info']) {
+                    if (tokens.some(function(token){ return fieldSections[section].has(token); })) return section;
+                }
+                return 'info';
+            }
+
+            function isFieldUnit(unit){
+                if (!(unit instanceof Element)) return false;
+                if (unit.matches('.form-item,#relationship-editor-section,input,textarea,select,details')) return true;
+                return Boolean(unit.querySelector('input,textarea,select,details,#relationship-editor-section'));
+            }
+
+            function moveUnit(unit){
+                if (!isFieldUnit(unit)) return;
+                panels[sectionFor(unit)].appendChild(unit);
+            }
+
+            Array.from(grid.children).forEach(function(unit){
+                if (unit.classList.contains('dynamic-profile-section')) {
+                    Array.from(unit.children).forEach(moveUnit);
+                    unit.hidden = true;
+                    return;
+                }
+                moveUnit(unit);
+            });
+
+            grid.classList.remove('form-grid');
+            grid.classList.add('npc-editor-panels');
+            Object.values(panels).forEach(function(panel){ grid.appendChild(panel); });
+
+            <?php
+            $editorMetadata = json_decode((string)($editItem['metadata'] ?? '{}'), true);
+            $editorReturnLocation = is_array($editorMetadata) && is_array($editorMetadata['npc_manager_return_location'] ?? null)
+                ? $editorMetadata['npc_manager_return_location']
+                : null;
+            ?>
+            const targetId = <?= (int)($editItem['id'] ?? 0) ?>;
+            const targetName = <?= json_encode((string)($editItem['npc_name'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+            const targetRefId = <?= json_encode((string)($editItem['refid'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+            const savedReturnLocation = <?= json_encode($editorReturnLocation, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+            const initialTeleportAction = savedReturnLocation ? 'return' : 'teleport';
+            const initialReturnName = savedReturnLocation && savedReturnLocation.name ? String(savedReturnLocation.name) : '';
+            const historyController = window.chimNpcEventHistory
+                ? window.chimNpcEventHistory.mount(panels.history, {
+                    npcId: targetId,
+                    npcName: targetName,
+                    apiUrl: '../api/chim_npc_manager.php'
+                })
+                : null;
+            panels.actions.innerHTML = `
+                <p class="npc-editor-action-note">The game must be running and unpaused for Visit, Teleport, and Return NPC.</p>
+                <div class="npc-editor-action-list">
+                    <article class="npc-editor-action-card">
+                        <div><h3>Visit</h3><p>Move the player to this NPC's current position.</p></div>
+                        <button type="button" class="btn-cancel" data-npc-action="visit">Visit</button>
+                    </article>
+                    <article class="npc-editor-action-card">
+                        <div><h3 data-npc-teleport-title>${initialTeleportAction === 'return' ? 'Return NPC' : 'Teleport'}</h3><p data-npc-teleport-description>${initialTeleportAction === 'return' ? 'Send this NPC back to ' + (initialReturnName || 'their previous location') + '.' : "Move this NPC to the player's current position and save their previous location."}</p></div>
+                        <button type="button" class="btn-cancel" data-npc-action="${initialTeleportAction}" data-npc-teleport-button>${initialTeleportAction === 'return' ? 'Return NPC' : 'Teleport'}</button>
+                    </article>
+                </div>
+                <p class="npc-editor-action-status" data-npc-action-status role="status" aria-live="polite"></p>`;
+
+            const actionStatus = panels.actions.querySelector('[data-npc-action-status]');
+            const teleportButton = panels.actions.querySelector('[data-npc-teleport-button]');
+            const teleportTitle = panels.actions.querySelector('[data-npc-teleport-title]');
+            const teleportDescription = panels.actions.querySelector('[data-npc-teleport-description]');
+            panels.actions.querySelectorAll('[data-npc-action]').forEach(function(button){
+                button.disabled = targetId <= 0;
+                button.addEventListener('click', async function(){
+                    const action = button.dataset.npcAction;
+
+                    button.disabled = true;
+                    actionStatus.textContent = 'Sending action...';
+                    actionStatus.classList.remove('is-error');
+                    try {
+                        const response = await fetch('../api/chim_npc_manager.php', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({operation:'action', action:action, id:targetId})
+                        });
+                        const payload = await response.json();
+                        if (!response.ok || !payload || !payload.success) {
+                            throw new Error((payload && payload.error) || ('HTTP ' + response.status));
+                        }
+                        actionStatus.textContent = (payload.data && payload.data.message) || 'Action sent.';
+                        if (button === teleportButton && payload.data && payload.data.next_action) {
+                            const nextAction = payload.data.next_action;
+                            const returnName = payload.data.return_location ? String(payload.data.return_location) : '';
+                            button.dataset.npcAction = nextAction;
+                            button.textContent = nextAction === 'return' ? 'Return NPC' : 'Teleport';
+                            teleportTitle.textContent = nextAction === 'return' ? 'Return NPC' : 'Teleport';
+                            teleportDescription.textContent = nextAction === 'return'
+                                ? 'Send this NPC back to ' + (returnName || 'their previous location') + '.'
+                                : "Move this NPC to the player's current position and save their previous location.";
+                        }
+                    } catch (error) {
+                        actionStatus.textContent = 'Action failed: ' + (error.message || error);
+                        actionStatus.classList.add('is-error');
+                    } finally {
+                        button.disabled = targetId <= 0;
+                    }
+                });
+            });
+            if (targetId <= 0) actionStatus.textContent = 'Save this NPC before using actions.';
+
+            panels['background-life'].insertAdjacentHTML('beforeend', `
+                <div class="npc-bgl-dashboard span-2" data-npc-bgl-dashboard>
+                    <section class="npc-bgl-section">
+                        <div class="npc-bgl-section-header">
+                            <div><h3>Current Background Life</h3><p>Live status and most recently recorded activity for this NPC.</p></div>
+                            <button type="button" class="npc-bgl-state-button" data-bgl-enrollment disabled>Loading...</button>
+                        </div>
+                        <div class="npc-bgl-summary">
+                            <div class="npc-bgl-summary-item"><span>Status</span><strong data-bgl-summary="status">Loading...</strong></div>
+                            <div class="npc-bgl-summary-item"><span>Current Location</span><strong data-bgl-summary="location">Loading...</strong></div>
+                            <div class="npc-bgl-summary-item"><span>Latest Activity</span><strong data-bgl-summary="activity">Loading...</strong></div>
+                        </div>
+                    </section>
+                    <section class="npc-bgl-section">
+                        <div class="npc-bgl-section-header"><div><h3>Rules</h3><p>Per-NPC controls used by Background Life.</p></div></div>
+                        <div class="npc-bgl-control-grid">
+                            <button type="button" class="npc-bgl-control" data-bgl-setting="auto_actions" disabled><span class="npc-bgl-control-dot"></span><span><strong>Auto Actions</strong><small>Allow scheduled autonomous actions.</small></span></button>
+                            <button type="button" class="npc-bgl-control" data-bgl-setting="send_letters" disabled><span class="npc-bgl-control-dot"></span><span><strong>Send Letters</strong><small>Allow this NPC to send BgL letters.</small></span></button>
+                            <button type="button" class="npc-bgl-control" data-bgl-setting="hourly_tracking" disabled><span class="npc-bgl-control-dot"></span><span><strong>Hourly Tracking</strong><small>Keep the NPC's map location updated.</small></span></button>
+                        </div>
+                    </section>
+                    <section class="npc-bgl-section">
+                        <div class="npc-bgl-section-header"><div><h3>Immediate Actions</h3><p>The game should be running and unpaused when requesting live activity.</p></div></div>
+                        <div class="npc-bgl-request-grid">
+                            <button type="button" class="npc-bgl-request" data-bgl-request="action" disabled>Trigger Action</button>
+                            <button type="button" class="npc-bgl-request" data-bgl-request="letter" disabled>Send Letter</button>
+                            <button type="button" class="npc-bgl-request" data-bgl-request="track" disabled>Update Location</button>
+                        </div>
+                        <div class="npc-bgl-inception">
+                            <textarea data-bgl-inception-idea placeholder="Give this NPC a one-time thought for their next Background Life decision." disabled></textarea>
+                            <button type="button" class="npc-bgl-request" data-bgl-inception disabled>Set Thought</button>
+                        </div>
+                    </section>
+                    <section class="npc-bgl-section">
+                        <div class="npc-bgl-section-header"><div><h3>Recent Activity</h3><p>The five most recent Background Life events.</p></div></div>
+                        <ul class="npc-bgl-events" data-bgl-events><li class="npc-bgl-empty">Loading activity...</li></ul>
+                    </section>
+                    <p class="npc-editor-action-status" data-bgl-message role="status" aria-live="polite"></p>
+                </div>`);
+
+            const bglDashboard = panels['background-life'].querySelector('[data-npc-bgl-dashboard]');
+            const bglMessage = bglDashboard.querySelector('[data-bgl-message]');
+            const enrollmentButton = bglDashboard.querySelector('[data-bgl-enrollment]');
+            const settingButtons = Array.from(bglDashboard.querySelectorAll('[data-bgl-setting]'));
+            const requestButtons = Array.from(bglDashboard.querySelectorAll('[data-bgl-request]'));
+            const inceptionButton = bglDashboard.querySelector('[data-bgl-inception]');
+            const inceptionIdea = bglDashboard.querySelector('[data-bgl-inception-idea]');
+
+            async function npcBglRequest(url, options){
+                const response = await fetch(url, options);
+                let payload = null;
+                try { payload = await response.json(); } catch (_error) {}
+                if (!response.ok || !payload || !payload.success) {
+                    throw new Error((payload && payload.error) || ('HTTP ' + response.status));
+                }
+                return payload;
+            }
+
+            function npcBglPost(url, values){
+                const body = new FormData();
+                Object.entries(values).forEach(function(entry){ body.append(entry[0], entry[1]); });
+                return npcBglRequest(url, {method:'POST', body:body});
+            }
+
+            function setBglMessage(message, isError){
+                bglMessage.textContent = message || '';
+                bglMessage.classList.toggle('is-error', Boolean(isError));
+            }
+
+            function renderBglEvents(events){
+                const list = bglDashboard.querySelector('[data-bgl-events]');
+                list.replaceChildren();
+                if (!events.length) {
+                    const empty = document.createElement('li');
+                    empty.className = 'npc-bgl-empty';
+                    empty.textContent = 'No Background Life activity recorded yet.';
+                    list.appendChild(empty);
+                    return;
+                }
+                events.slice(0, 5).forEach(function(event){
+                    const item = document.createElement('li');
+                    item.className = 'npc-bgl-event';
+                    item.textContent = event.activity || 'Background Life activity';
+                    if (event.tamrielic_time) {
+                        const time = document.createElement('span');
+                        time.className = 'npc-bgl-event-time';
+                        time.textContent = event.tamrielic_time;
+                        item.appendChild(time);
+                    }
+                    list.appendChild(item);
+                });
+            }
+
+            function renderBglStatus(status, events){
+                const enabled = status.background_life_enabled === true;
+                const latest = events[0] || null;
+                bglDashboard.dataset.enabled = enabled ? '1' : '0';
+                enrollmentButton.dataset.enabled = enabled ? '1' : '0';
+                enrollmentButton.textContent = enabled ? 'Background Life On' : 'Background Life Off';
+                enrollmentButton.classList.toggle('is-on', enabled);
+                bglDashboard.querySelector('[data-bgl-summary="status"]').textContent = enabled ? 'Active' : 'Not active';
+                bglDashboard.querySelector('[data-bgl-summary="location"]').textContent = status.location || 'No tracked location';
+                bglDashboard.querySelector('[data-bgl-summary="activity"]').textContent = latest && latest.activity
+                    ? latest.activity
+                    : 'No activity recorded';
+
+                settingButtons.forEach(function(button){
+                    const active = status[button.dataset.bglSetting] === true;
+                    button.dataset.enabled = active ? '1' : '0';
+                    button.classList.toggle('is-on', active);
+                    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+                    button.disabled = !enabled;
+                });
+                requestButtons.forEach(function(button){ button.disabled = !enabled; });
+                inceptionButton.disabled = !enabled;
+                inceptionIdea.disabled = !enabled;
+                renderBglEvents(events);
+            }
+
+            async function loadBglData(){
+                if (targetId <= 0) {
+                    enrollmentButton.disabled = true;
+                    settingButtons.concat(requestButtons, [inceptionButton]).forEach(function(button){ button.disabled = true; });
+                    inceptionIdea.disabled = true;
+                    setBglMessage('Save this NPC before using Background Life controls.', false);
+                    renderBglStatus({background_life_enabled:false}, []);
+                    return;
+                }
+
+                const statusQuery = new URLSearchParams({refid:targetRefId, npc_name:targetName});
+                try {
+                    const statusPayload = await npcBglRequest('../api/background_life_npc.php?' + statusQuery.toString());
+                    let events = [];
+                    try {
+                        const detailQuery = new URLSearchParams({npc:targetName});
+                        const detailPayload = await npcBglRequest('../api/background_life_npc_detail.php?' + detailQuery.toString());
+                        events = Array.isArray(detailPayload.data && detailPayload.data.events) ? detailPayload.data.events : [];
+                    } catch (_error) {}
+                    enrollmentButton.disabled = false;
+                    renderBglStatus(statusPayload.data || {}, events);
+                } catch (error) {
+                    enrollmentButton.disabled = true;
+                    setBglMessage('Could not load Background Life: ' + (error.message || error), true);
+                }
+            }
+
+            enrollmentButton.addEventListener('click', async function(){
+                const enable = enrollmentButton.dataset.enabled !== '1';
+                enrollmentButton.disabled = true;
+                setBglMessage(enable ? 'Adding NPC to Background Life...' : 'Removing NPC from Background Life...', false);
+                try {
+                    const payload = await npcBglPost('../api/background_life_npc.php', {
+                        operation: enable ? 'enable' : 'disable',
+                        refid: targetRefId,
+                        npc_name: targetName
+                    });
+                    renderBglStatus(payload.data || {}, []);
+                    setBglMessage(payload.message || 'Background Life status saved.', false);
+                    await loadBglData();
+                } catch (error) {
+                    setBglMessage('Could not change Background Life: ' + (error.message || error), true);
+                } finally {
+                    enrollmentButton.disabled = false;
+                }
+            });
+
+            settingButtons.forEach(function(button){
+                button.addEventListener('click', async function(){
+                    const value = button.dataset.enabled !== '1';
+                    button.disabled = true;
+                    setBglMessage('Saving Background Life rule...', false);
+                    try {
+                        const payload = await npcBglPost('../api/background_life_npc.php', {
+                            operation:'toggle',
+                            refid:targetRefId,
+                            npc_name:targetName,
+                            setting:button.dataset.bglSetting,
+                            value:value ? '1' : '0'
+                        });
+                        renderBglStatus(payload.data || {}, []);
+                        setBglMessage(payload.message || 'Background Life rule saved.', false);
+                        await loadBglData();
+                    } catch (error) {
+                        setBglMessage('Could not save Background Life rule: ' + (error.message || error), true);
+                    } finally {
+                        button.disabled = bglDashboard.dataset.enabled !== '1';
+                    }
+                });
+            });
+
+            requestButtons.forEach(function(button){
+                button.addEventListener('click', async function(){
+                    button.disabled = true;
+                    setBglMessage('Processing Background Life request...', false);
+                    try {
+                        const payload = await npcBglPost('../api/background_life_request.php', {
+                            request_type:button.dataset.bglRequest,
+                            refid:targetRefId,
+                            npc_name:targetName
+                        });
+                        setBglMessage(payload.message || 'Background Life request processed.', false);
+                        await loadBglData();
+                    } catch (error) {
+                        setBglMessage('Background Life request failed: ' + (error.message || error), true);
+                    } finally {
+                        button.disabled = bglDashboard.dataset.enabled !== '1';
+                    }
+                });
+            });
+
+            inceptionButton.addEventListener('click', async function(){
+                const idea = inceptionIdea.value.trim();
+                if (!idea) {
+                    setBglMessage('Enter a thought before setting Background Life inception.', true);
+                    return;
+                }
+                inceptionButton.disabled = true;
+                setBglMessage('Setting Background Life thought...', false);
+                try {
+                    const payload = await npcBglRequest('../api/chim_npc_manager.php', {
+                        method:'POST',
+                        headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify({operation:'action', action:'bgl_inception', id:targetId, idea:idea})
+                    });
+                    inceptionIdea.value = '';
+                    setBglMessage((payload.data && payload.data.message) || 'Background Life thought saved.', false);
+                } catch (error) {
+                    setBglMessage('Could not set Background Life thought: ' + (error.message || error), true);
+                } finally {
+                    inceptionButton.disabled = bglDashboard.dataset.enabled !== '1';
+                }
+            });
+
+            loadBglData();
+
+            const storageKey = tablist.dataset.storageKey || 'npc-editor-tab';
+            function activate(section){
+                if (!panels[section]) section = 'general';
+                tablist.querySelectorAll('[data-npc-editor-tab]').forEach(function(button){
+                    const active = button.dataset.npcEditorTab === section;
+                    button.classList.toggle('is-active', active);
+                    button.setAttribute('aria-selected', active ? 'true' : 'false');
+                    button.tabIndex = active ? 0 : -1;
+                });
+                Object.entries(panels).forEach(function(entry){ entry[1].hidden = entry[0] !== section; });
+                if (section === 'history' && historyController) historyController.load();
+                try { window.localStorage.setItem(storageKey, section); } catch (_e) {}
+            }
+
+            tablist.addEventListener('click', function(event){
+                const button = event.target.closest('[data-npc-editor-tab]');
+                if (button) activate(button.dataset.npcEditorTab);
+            });
+            tablist.addEventListener('keydown', function(event){
+                if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+                const buttons = Array.from(tablist.querySelectorAll('[data-npc-editor-tab]'));
+                let next = buttons.indexOf(document.activeElement);
+                if (event.key === 'Home') next = 0;
+                else if (event.key === 'End') next = buttons.length - 1;
+                else next = (next + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+                event.preventDefault();
+                buttons[next].focus();
+                activate(buttons[next].dataset.npcEditorTab);
+            });
+
+            let initial = 'general';
+            const resetForModal = <?= isset($_GET['partial']) && $_GET['partial'] === '1' ? 'true' : 'false' ?>;
+            if (!resetForModal) {
+                try { initial = window.localStorage.getItem(storageKey) || initial; } catch (_e) {}
+            }
+            activate(initial);
+        });
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initNpcEditorTabs);
+    window.setTimeout(initNpcEditorTabs, 0);
+})();
+</script>
+<div class="form-grid">
         <div class="form-item span-2">
             <label for="npc_name">NPC Name</label>
             <input type="text" id="npc_name" name="npc_name" placeholder="e.g. Aela the Huntress" value="<?= htmlspecialchars($editItem["npc_name"] ?? "") ?>">
@@ -2326,14 +3029,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <?php if (file_exists(__DIR__."/../../ext/relationship_system/relationship_editor.php")) {
             include(__DIR__."/../../ext/relationship_system/relationship_editor.php");
         } ?>
-
-        <div class="form-item">
-            <label for="relationships">Relationships (Deprecated)</label>
-            <textarea id="relationships" name="relationships" placeholder="Legacy relationship text."><?= htmlspecialchars($editItem["relationships"] ?? "") ?></textarea>
-            <small class="hint">This legacy text field is still editable, but it is no longer used in prompting. Prompt relationship context comes from Relationships above.</small>
-        </div>
-
-        <div class="form-item">
+<div class="form-item">
             <label for="occupation">Occupation</label>
             <textarea id="occupation" name="occupation" placeholder="Role, job, affiliations."><?= htmlspecialchars($editItem["occupation"] ?? "") ?></textarea>
             <small class="hint">Primary role or job. Include relevant guilds or factions.</small>
@@ -2356,7 +3052,22 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <div class="form-item">
             <label for="goals">Goals</label>
             <textarea id="goals" name="goals" placeholder="Short and long-term objectives."><?= htmlspecialchars($editItem["goals"] ?? "") ?></textarea>
-            <small class="hint">Motivations and goals for the NPC.</small>
+            <small class="hint">General motivations and goals used during regular dialogue and Background Life.</small>
+        </div>
+
+        <?php
+        $backgroundLifeGoals = '';
+        if (!empty($editItem['extended_data'])) {
+            $backgroundLifeExtendedData = json_decode((string)$editItem['extended_data'], true);
+            if (is_array($backgroundLifeExtendedData)) {
+                $backgroundLifeGoals = trim((string)($backgroundLifeExtendedData['background_life_goals'] ?? ''));
+            }
+        }
+        ?>
+        <div class="form-item span-2">
+            <label for="background_life_goals">Background Life Goals</label>
+            <textarea id="background_life_goals" name="background_life_goals" placeholder="Goals, plans, or production rules for this NPC's Background Life."><?= htmlspecialchars($backgroundLifeGoals) ?></textarea>
+            <small class="hint">Used only for Background Life decisions. This content is not included in regular dialogue prompts.</small>
         </div>
 
 
@@ -2684,6 +3395,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 'individual_memory_enabled',
                 'auto_diary_enabled',
                 'auto_diary_wait_enabled',
+                'background_life_goals',
                 'chim_core_migrated',
                 'salutation_after_a_while',
                 'relationships',
@@ -2926,7 +3638,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 }
 .npc-title { font-weight:800; color:#e9efff; font-size:18px; text-align:center; letter-spacing:0.3px; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; min-width:0; }
 .npc-title-left { flex:1 1 auto; min-width:0; text-align:left; display:flex; align-items:center; flex-wrap:wrap; column-gap:4px; }
-.npc-title-actions { display:flex; align-items:center; justify-content:flex-end; gap:6px; flex:0 1 auto; max-width:48%; min-width:0; flex-wrap:wrap; }
+.npc-title-actions { display:flex; align-items:center; justify-content:flex-end; gap:6px; flex:0 0 auto; max-width:none; min-width:0; flex-wrap:nowrap; white-space:nowrap; }
+.npc-title-actions > * { flex:0 0 auto; }
 .npc-name { display:-webkit-box; max-width:min(100%, 22ch); overflow:hidden; overflow-wrap:anywhere; white-space:normal; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; line-height:1.25; }
 .npc-gender-icon { margin-left:6px; opacity:0.9; }
 .npc-gender-icon.gender-female { color:#ff72d2; }
@@ -3028,6 +3741,23 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     max-height:calc(85vh - 100px); 
     background: rgba(34, 34, 34, 0.95); 
 }
+.npc-modal-frame-wrap { position:relative; min-height:260px; }
+.npc-modal-load-status {
+    position:absolute;
+    inset:0;
+    z-index:3;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:#222;
+    color:#e9efff;
+    text-align:center;
+}
+.npc-modal-load-status.is-visible { display:flex; }
+.npc-modal-load-status strong { display:block; margin-bottom:8px; color:rgb(242,124,17); font-size:18px; }
+.npc-modal-load-status p { margin:0; color:#cfd9ea; line-height:1.45; }
+.npc-modal-load-status button { margin-top:14px; }
 .modal-close { 
     background:#3a3a3a; 
     color:#fff; 
@@ -3279,18 +4009,24 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     gap:8px;
     flex-wrap:wrap;
 }
-.pagination.npc-toolbar .npc-toolbar-actions {
-    flex:1 1 1192px;
-    min-width:1192px;
+.pagination.npc-toolbar .npc-toolbar-main {
+    align-items:flex-start;
     flex-wrap:nowrap;
 }
+.pagination.npc-toolbar .npc-toolbar-actions {
+    flex:1 1 0;
+    min-width:0;
+    flex-wrap:wrap;
+}
 .pagination.npc-toolbar .npc-toolbar-tools {
-    flex:0 0 320px;
-    width:320px;
-    min-width:320px;
-    flex-direction:column;
-    align-items:stretch;
-    justify-content:flex-start;
+    flex:0 0 auto;
+    width:auto;
+    min-width:0;
+    margin-left:auto;
+    flex-direction:row;
+    align-items:center;
+    justify-content:flex-end;
+    flex-wrap:nowrap;
 }
 .pagination.npc-toolbar .npc-auto-lock-profile {
     display:flex;
@@ -3402,16 +4138,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     font-size:13px;
 }
 .pagination.npc-toolbar .npc-toolbar-tools input[type="text"] {
-    flex:0 0 auto;
-    width:100%;
+    flex:0 0 220px;
+    width:220px;
     min-width:0;
-    max-width:none;
+    max-width:220px;
 }
 .pagination.npc-toolbar .npc-toolbar-tools select {
-    flex:0 0 auto;
-    width:100%;
+    flex:0 0 180px;
+    width:180px;
     min-width:0;
-    max-width:none;
+    max-width:180px;
 }
 .pagination.npc-toolbar .npc-page-link {
     display:inline-flex;
@@ -3472,6 +4208,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     }
 }
 @media (max-width: 780px) {
+    .pagination.npc-toolbar .npc-toolbar-main {
+        flex-wrap:wrap;
+    }
     .pagination.npc-toolbar .npc-toolbar-tools,
     .pagination.npc-toolbar .npc-toolbar-actions,
     .pagination.npc-toolbar .npc-toolbar-pager,
@@ -3491,6 +4230,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         flex:1 1 100%;
         width:100%;
         min-width:0;
+        margin-left:0;
+        flex-wrap:wrap;
+        justify-content:flex-start;
     }
     .pagination.npc-toolbar .npc-toolbar-letter-row {
         align-items:flex-start;
@@ -3527,7 +4269,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   Loading an older save will roll back unlocked profiles to that point in time. NPCs created <em>after</em> the save's timestamp may disappear entirely.
   <br>
   <span style="color:rgb(242,124,17);">Lock a profile (🔒) to protect it from pullback.</span>
-  You can view and restore previous versions of any NPC via the <strong>View History</strong> button in the edit modal.
+  You can view and restore previous profile versions via the <strong>Profile Versions</strong> button in the edit modal.
 </div>
 <div class="npc-grid">
     <?php foreach ($data as $row): ?>
@@ -3649,7 +4391,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <button id="npc_modal_import_to" class="btn-cancel" title="Import biography from another NPC's export file">Import Bio</button>
         <button id="npc_modal_reset" class="btn-cancel" title="Reimport bio template fields">Reset NPC</button>
         <button id="npc_modal_diary" class="btn-cancel">View Diary</button>
-        <button id="npc_modal_history" class="btn-cancel">View History</button>
+        <button id="npc_modal_history" class="btn-cancel">Profile Versions</button>
         <button id="npc_modal_regen" class="btn-cancel" title="Will use AI to regenerate this profile. Intended for custom NPCs without biography descriptions.">AI Generate Profile</button>
         <button id="npc_modal_close" class="btn-cancel">Close</button>
       </div>
@@ -3659,7 +4401,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <button type="button" class="pf-tab active" data-pane="pane_manual">✍️ Manual</button>
         <button type="button" class="pf-tab" data-pane="pane_bio">📚 NPC Biographies</button>
       </div>
-      <div id="pane_manual" class="pf-pane active" style="padding:0;">
+      <div id="pane_manual" class="pf-pane active npc-modal-frame-wrap" style="padding:0;">
+        <div id="npc_modal_load_status" class="npc-modal-load-status" role="status" aria-live="polite">
+          <div>
+            <strong id="npc_modal_load_title">Loading profile...</strong>
+            <p id="npc_modal_load_message">Retrieving the latest NPC data.</p>
+            <button id="npc_modal_retry" type="button" class="btn-cancel" style="display:none;">Retry</button>
+          </div>
+        </div>
         <iframe id="npc_modal_iframe" src="about:blank" style="width:100%; height:70vh; border:0; background:transparent;"></iframe>
       </div>
       <div id="pane_bio" class="pf-pane" style="display:none; padding:10px;">
@@ -3715,11 +4464,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   
 </div>
 
-<!-- NPC History viewer overlay -->
+<!-- NPC profile versions viewer overlay -->
 <div id="history_viewer" class="modal-backdrop" style="z-index:10002;">
   <div class="modal-container" style="max-width:1100px; width:95%;">
     <div class="modal-header">
-      <h2 class="modal-title">NPC History</h2>
+      <h2 class="modal-title">NPC Profile Versions</h2>
       <div class="modal-actions">
         <button id="history_close" class="btn-cancel">Close</button>
         <button id="history_generation" class="btn-cancel" title="Note: Will do a LLM request.">Evolution report (AI request)</button>
@@ -3827,8 +4576,39 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   const PROFILE_OPTIONS = <?= json_encode($profileOptions ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
   const modal = document.getElementById('npc_modal');
   const iframe = document.getElementById('npc_modal_iframe');
+  const loadStatus = document.getElementById('npc_modal_load_status');
+  const loadTitle = document.getElementById('npc_modal_load_title');
+  const loadMessage = document.getElementById('npc_modal_load_message');
+  const retryBtn = document.getElementById('npc_modal_retry');
+  let modalUrl = '';
+  let expectedNpcId = '';
+  let modalRequestId = 0;
+
+  function setModalLoadState(state, message){
+    const ready = state === 'ready';
+    if (iframe) iframe.style.visibility = ready ? 'visible' : 'hidden';
+    if (loadStatus) loadStatus.classList.toggle('is-visible', !ready);
+    if (loadTitle) loadTitle.textContent = state === 'error' ? 'Unable to load NPC profile' : 'Loading profile...';
+    if (loadMessage) loadMessage.textContent = message || (state === 'error' ? 'Refresh the NPC list and try again.' : 'Retrieving the latest NPC data.');
+    if (retryBtn) retryBtn.style.display = state === 'error' ? '' : 'none';
+    document.querySelectorAll('#npc_modal .modal-actions button').forEach(function(button){
+      if (button.id !== 'npc_modal_close') button.disabled = !ready;
+    });
+  }
+
+  function loadModalUrl(){
+    if (!modalUrl) return;
+    const requestId = ++modalRequestId;
+    setModalLoadState('loading');
+    const separator = modalUrl.includes('?') ? '&' : '?';
+    iframe.src = modalUrl + separator + '_modal_request=' + encodeURIComponent(String(requestId));
+  }
+
   function openModal(url){
-    iframe.src = url;
+    modalUrl = url;
+    const match = url.match(/[?&]edit=([^&]+)/);
+    expectedNpcId = match ? String(decodeURIComponent(match[1])) : '';
+    loadModalUrl();
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     try {
@@ -3859,7 +4639,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 
      
   }
-  function closeModal(){ modal.style.display = 'none'; document.body.style.overflow = 'auto'; try { iframe.src='about:blank'; } catch(_){} }
+  function closeModal(){
+    modalRequestId++;
+    modalUrl = '';
+    expectedNpcId = '';
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+    setModalLoadState('ready');
+    try { iframe.src='about:blank'; } catch(_){}
+  }
+  if (retryBtn) retryBtn.addEventListener('click', loadModalUrl);
   const headerSave = document.getElementById('npc_modal_save_header');
   if (headerSave){
     window.NPC_UPDATE_SAVE_STATE = function(){
@@ -3876,12 +4665,24 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     try {
       iframe.addEventListener('load', function(){
         try {
+          if (!modalUrl || iframe.src === 'about:blank') return;
           const doc = iframe && iframe.contentDocument;
           const nameEl = doc ? doc.getElementById('npc_name') : null;
+          const loadedMarker = doc ? doc.querySelector('[data-npc-profile-loaded="1"]') : null;
+          const loadError = doc ? doc.querySelector('[data-npc-load-error="1"]') : null;
+          const loadedNpcId = loadedMarker ? String(loadedMarker.getAttribute('data-npc-id') || '') : '';
+          if (loadError || !nameEl || (expectedNpcId && loadedNpcId !== expectedNpcId)) {
+            setModalLoadState('error', loadError ? 'This NPC profile no longer exists. Refresh the NPC list and try again.' : 'The server returned incomplete or stale NPC data.');
+            return;
+          }
           if (nameEl){
             ['input','change','keyup'].forEach(evt=> nameEl.addEventListener(evt, window.NPC_UPDATE_SAVE_STATE));
           }
-        } catch(_e){}
+          setModalLoadState('ready');
+        } catch(_e){
+          setModalLoadState('error', 'The NPC profile response could not be read.');
+          return;
+        }
         window.NPC_UPDATE_SAVE_STATE();
       });
     } catch(_e){}
@@ -4319,7 +5120,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   })();
 
   
-  // View History button wiring
+  // Profile Versions button wiring
   (function(){
     const btn = document.getElementById('npc_modal_history');
     const overlay = document.getElementById('history_viewer');
@@ -4899,6 +5700,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     bindBulkSwitch(document.getElementById('npc_bulk_switch_profile_btn'));
   })();
   let listAbort = null;
+  let listRequestId = 0;
   function bindNpcLetterButtons(root){
     const scope = root || document;
     scope.querySelectorAll('.npc-letter-btn[data-letter]').forEach(btn=>{
@@ -4972,6 +5774,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const sal = (document.getElementById('npc_filter_sal_top')||document.getElementById('npc_filter_sal'));
       const blc = (document.getElementById('npc_filter_blc_top')||document.getElementById('npc_filter_blc'));
       const gps = (document.getElementById('npc_filter_gps_top')||document.getElementById('npc_filter_gps'));
+      const created = (document.getElementById('npc_filter_created_top')||document.getElementById('npc_filter_created'));
       params.set('fav', fav && fav.checked ? '1' : '');
       params.set('dyn', dyn && dyn.checked ? '1' : '');
       params.set('mtm', mtm && mtm.checked ? '1' : '');
@@ -4979,18 +5782,23 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       params.set('sal', sal && sal.checked ? '1' : '');
       params.set('blc', blc && blc.checked ? '1' : '');
       params.set('gps', gps && gps.checked ? '1' : '');
+      params.set('created', created && created.checked ? '1' : '');
     } catch(_e){}
     params.set('alpha', 'asc');
     if (page) params.set('page', String(page));
     params.set('list','1');
     if (listAbort) { try { listAbort.abort(); } catch(_){} }
+    const requestId = ++listRequestId;
     listAbort = new AbortController();
-    const res = await fetch('npc_master.php?'+params.toString(), { signal: listAbort.signal });
-    const html = await res.text();
-    const temp = document.createElement('div'); temp.innerHTML = html;
-    const newPag = temp.querySelector('.pagination');
-    const newGrid = temp.querySelector('.npc-grid');
-    if (newPag && newGrid){
+    try {
+      const res = await fetch('npc_master.php?'+params.toString(), { signal: listAbort.signal });
+      if (!res.ok) throw new Error('HTTP ' + String(res.status));
+      const html = await res.text();
+      if (requestId !== listRequestId) return;
+      const temp = document.createElement('div'); temp.innerHTML = html;
+      const newPag = temp.querySelector('.pagination');
+      const newGrid = temp.querySelector('.npc-grid');
+      if (!newPag || !newGrid) throw new Error('Incomplete NPC list response');
       const oldPag = document.querySelector('.pagination');
       const oldGrid = document.querySelector('.npc-grid');
       if (oldPag && oldPag.parentElement) oldPag.parentElement.replaceChild(newPag, oldPag);
@@ -5066,6 +5874,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const newProfileSel = document.getElementById('npc_profile_filter');
       if (newProfileSel){ newProfileSel.addEventListener('change', function(){ refreshList(1); }); }
       bindAutoLockProfile(document.getElementById('npc_auto_lock_profile'));
+    } catch(error) {
+      if (error && error.name === 'AbortError') return;
+      console.error('NPC profile list refresh failed:', error);
+      try {
+        const toast = document.getElementById('toast');
+        if (toast) {
+          toast.querySelector('.message').textContent = 'Unable to refresh NPC profiles. The current list was kept.';
+          toast.classList.add('show');
+          setTimeout(()=>toast.classList.remove('show'), 3000);
+        }
+      } catch(_e){}
     }
   }
   // Simple debounce for input

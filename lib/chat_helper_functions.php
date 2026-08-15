@@ -10,6 +10,55 @@ require_once(__DIR__."/online_translation.php");
 require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/pipeline_status.php");
 require_once(__DIR__."/emote_moods.php");
+require_once(__DIR__."/core/event_type.php");
+
+function chimBuildLatestDiaryContextBlock(string $npcName, array $profileData): string
+{
+    $safeNpcName = trim($npcName);
+    if ($safeNpcName === '' || strcasecmp($safeNpcName, 'The Narrator') === 0) {
+        return '';
+    }
+
+    $metadata = json_decode(strval($profileData['metadata'] ?? '{}'), true);
+    if (!is_array($metadata)
+        || !filter_var($metadata['LATEST_DIARY_CONTEXT_ENABLED'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+        return '';
+    }
+
+    $db = $GLOBALS['db'] ?? null;
+    if (!is_object($db) || !method_exists($db, 'fetchOne') || !method_exists($db, 'escape')) {
+        return '';
+    }
+
+    try {
+        $escapedName = $db->escape($safeNpcName);
+        $entry = $db->fetchOne(
+            "SELECT topic, content
+             FROM diarylog
+             WHERE lower(trim(people)) = lower('{$escapedName}')
+             ORDER BY gamets DESC, localts DESC, rowid DESC
+             LIMIT 1"
+        );
+    } catch (Throwable $e) {
+        Logger::warn("[LATEST_DIARY_CONTEXT] Unable to load diary context for {$safeNpcName}: " . $e->getMessage());
+        return '';
+    }
+
+    $content = trim(strval($entry['content'] ?? ''));
+    if ($content === '') {
+        return '';
+    }
+
+    $topic = trim(strval($entry['topic'] ?? ''));
+    $diaryText = $topic !== '' ? "Date: {$topic}\n{$content}" : $content;
+    $escapedText = htmlspecialchars(
+        $diaryText,
+        ENT_QUOTES | ENT_XML1 | ENT_SUBSTITUTE,
+        'UTF-8'
+    );
+
+    return "\n<latest_diary_entry>\n{$escapedText}\n</latest_diary_entry>\n";
+}
 
 function callConfiguredTts($textString, $mood, $stringforhash)
 {
@@ -39,14 +88,45 @@ function callConfiguredTts($textString, $mood, $stringforhash)
     return $GLOBALS["TTS_IN_USE"]($textString, $mood, $stringforhash);
 }
 
+function getNpcTtsFallbackCandidates(): array
+{
+    $configured = $GLOBALS["TTS_NPC_FALLBACK_VOICES"] ?? [];
+    if (!is_array($configured)) {
+        $configured = [$configured];
+    }
+    if (empty($configured)) {
+        $configured = [$GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''];
+    }
+
+    $currentVoice = trim(strval(
+        $GLOBALS["PATCH_OVERRIDE_VOICE"]
+        ?? $GLOBALS["TTS_NPC_RESOLVED_VOICE"]
+        ?? ''
+    ));
+    $candidates = [];
+    foreach ($configured as $voice) {
+        $voice = trim(strval($voice));
+        if ($voice === '' || strcasecmp($voice, $currentVoice) === 0) {
+            continue;
+        }
+        $duplicate = array_filter(
+            $candidates,
+            fn($candidate) => strcasecmp($candidate, $voice) === 0
+        );
+        if (empty($duplicate)) {
+            $candidates[] = $voice;
+        }
+    }
+
+    return $candidates;
+}
+
 function canRetryNpcTtsWithFallback(): bool
 {
     $currentNpcData = $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] ?? null;
     $currentName = trim(strval($GLOBALS["HERIKA_NAME"] ?? ''));
-    $originalVoice = trim(strval($GLOBALS["TTS_NPC_ORIGINAL_VOICE"] ?? ''));
-    $fallbackVoice = trim(strval($GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''));
 
-    if (!is_array($currentNpcData) || $currentName === '' || $originalVoice === '' || $fallbackVoice === '') {
+    if (!is_array($currentNpcData) || $currentName === '') {
         return false;
     }
     if (strcasecmp($currentName, 'The Narrator') === 0) {
@@ -56,7 +136,7 @@ function canRetryNpcTtsWithFallback(): bool
         return false;
     }
 
-    return strcasecmp($originalVoice, $fallbackVoice) !== 0;
+    return !empty(getNpcTtsFallbackCandidates());
 }
 
 function callNpcTtsWithFallback($textString, $mood, $stringforhash)
@@ -70,20 +150,16 @@ function callNpcTtsWithFallback($textString, $mood, $stringforhash)
         return $ttsOutput;
     }
 
-    $fallbackVoice = trim(strval($GLOBALS["TTS_NPC_FALLBACK_VOICE"] ?? ''));
     $originalVoice = $GLOBALS["PATCH_OVERRIDE_VOICE"] ?? null;
-    if ($fallbackVoice === '') {
-        return $ttsOutput;
-    }
+    foreach (getNpcTtsFallbackCandidates() as $fallbackVoice) {
+        Logger::warn("[TTS FALLBACK] Retrying NPC TTS for {$GLOBALS["HERIKA_NAME"]} with fallback voice '{$fallbackVoice}' after synthesis failure.");
 
-    Logger::warn("[TTS FALLBACK] Retrying NPC TTS for {$GLOBALS["HERIKA_NAME"]} with fallback voice '{$fallbackVoice}' after initial synthesis failure.");
-
-    $GLOBALS["PATCH_OVERRIDE_VOICE"] = $fallbackVoice;
-    $retryOutput = callConfiguredTts($textString, $mood, $stringforhash);
-
-    if ($retryOutput) {
-        $GLOBALS["TTS_NPC_RESOLVED_VOICE"] = $fallbackVoice;
-        return $retryOutput;
+        $GLOBALS["PATCH_OVERRIDE_VOICE"] = $fallbackVoice;
+        $retryOutput = callConfiguredTts($textString, $mood, $stringforhash);
+        if ($retryOutput) {
+            $GLOBALS["TTS_NPC_RESOLVED_VOICE"] = $fallbackVoice;
+            return $retryOutput;
+        }
     }
 
     if ($originalVoice === null || trim(strval($originalVoice)) === '') {
@@ -887,7 +963,7 @@ function cleanupDisplayText($text, $speakerName = null) {
 function formatPlayerSubtitleText($text, $speakerName = null) {
     $speakerName = $speakerName ?? ($GLOBALS["PLAYER_NAME"] ?? null);
     $subtitleText = preg_replace(
-        '/\s*\((?:(?:Talking|Whispering|Shouting) to [^)]+|speaking loudly to [^)]+ from far away)\)\s*$/i',
+        '/\s*\((?:(?:Talking|Whispering|Shouting) to [^)]+|speaking (?:loudly|privately) to [^)]+(?: from far away)?)\)\s*$/i',
         '',
         $text
     );
@@ -1224,8 +1300,8 @@ function returnLines($lines,$writeOutput=true)
         // regardless of inline narration mode.
         $isPlayerSpeech = isset($GLOBALS["HERIKA_NAME"]) && strcasecmp((string)$GLOBALS["HERIKA_NAME"], "Player") === 0;
         if ($inlineNarrationEnabled || $isPlayerSpeech) {
-            $sentence = preg_replace('/\s*\((?:Talking|Whispering|Shouting)\s+to\s+[^)]+\)\s*$/i', '', $sentence);
-            $sentenceForSubtitles = preg_replace('/\s*\((?:Talking|Whispering|Shouting)\s+to\s+[^)]+\)\s*$/i', '', $sentenceForSubtitles);
+            $sentence = preg_replace('/\s*\((?:(?:Talking|Whispering|Shouting)|Speaking privately)\s+to\s+[^)]+\)\s*$/i', '', $sentence);
+            $sentenceForSubtitles = preg_replace('/\s*\((?:(?:Talking|Whispering|Shouting)|Speaking privately)\s+to\s+[^)]+\)\s*$/i', '', $sentenceForSubtitles);
         }
 
         // Check if we should split narration to The Narrator BEFORE unmoodSentence strips asterisks
@@ -1752,7 +1828,12 @@ function returnLines($lines,$writeOutput=true)
                 $addonlistener="";
             }
             $originalRequest[3]="{$outBuffer["actor"]}: $responseForContext $addonlistener";
-            logEvent($originalRequest);
+            $dialogueEventPeople = chimBuildDialogueEventPeoplePipe(
+                chimGetCurrentTurnPeopleSnapshot(),
+                $outBuffer["actor"] ?? "",
+                $GLOBALS["SCRIPTLINE_LISTENER_ATOMIC"] ?? ""
+            );
+            logEvent($originalRequest, $dialogueEventPeople);
             
             // Log chat here, because  function return comes back out of sync.
             $originalRequest[0]="chat";
@@ -1777,7 +1858,7 @@ function returnLines($lines,$writeOutput=true)
                 'utterance_id' => $GLOBALS["SCRIPTLINE_UTTERANCE_ID"] ?? chimGenerateUtteranceId(),
                 'delivery_state' => 'emitted'
             ];
-            logEvent($originalRequest);
+            logEvent($originalRequest, $dialogueEventPeople);
         }
         
     }
@@ -2430,6 +2511,17 @@ function getGametsLimitFor($actor) {
 
 
 
+function chimMemorySearchInputFromRequest(array $gameRequest): string
+{
+    $rawInput = trim((string)($gameRequest[3] ?? ''));
+    if (($gameRequest[0] ?? '') !== 'rechat') {
+        return $rawInput;
+    }
+
+    $payload = chimParseServerSideRechatPayload($rawInput);
+    return trim((string)($payload['origin_line'] ?? ''));
+}
+
 function offerMemory($gameRequest)
 {
     global $db;
@@ -2451,6 +2543,7 @@ function offerMemory($gameRequest)
     }
 
     $timeThreshold=round($gameRequest[2]-(getGametsLimitFor($npc)/0.0000024),0)-1;
+    $memorySearchInput = chimMemorySearchInputFromRequest($gameRequest);
 
     error_log("[DataSearchMemoryByVector] Using timeThreshold $timeThreshold");
     $contextKeywords  = implode(" ", lastKeyWordsContext(5,$npc));
@@ -2458,9 +2551,9 @@ function offerMemory($gameRequest)
     if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
         $localStartTime = microtime(true);
         error_log("[DataSearchMemoryByVector calling]  : " . (microtime(true) - $localStartTime) . " seconds");
-        $res = DataSearchMemoryByVector($gameRequest[3], $npc, true,$timeThreshold);
+        $res = DataSearchMemoryByVector($memorySearchInput, $npc, true,$timeThreshold);
         error_log("[DataSearchMemoryByVector called 1]  : " . (microtime(true) - $localStartTime) . " seconds");
-        $res2 = DataSearchMemoryByVector($gameRequest[3], $npc,false,$timeThreshold);
+        $res2 = DataSearchMemoryByVector($memorySearchInput, $npc,false,$timeThreshold);
         error_log("[DataSearchMemoryByVector called 2]  : " . (microtime(true) - $localStartTime) . " seconds");
 
         if (isset($res[0]) && isset($res2[0])) {
@@ -2471,7 +2564,7 @@ function offerMemory($gameRequest)
         $memories = $resFinal;
         
     } else {
-        $memories=DataSearchMemory($gameRequest[3],$npc);
+        $memories=DataSearchMemory($memorySearchInput,$npc);
     }
    
     
@@ -2701,32 +2794,242 @@ function parsePeoplePipeList($peoplePipe)
     return $cleanPeople;
 }
 
-function chimDecodeAudienceSnapshotField($rawField)
+function chimNormalizePresentActors($actors)
 {
+    if (!is_array($actors)) {
+        return [];
+    }
+
+    $normalized = [];
+    $seenNames = [];
+    foreach ($actors as $actor) {
+        if (is_string($actor)) {
+            $actor = ["name" => $actor];
+        }
+        if (!is_array($actor)) {
+            continue;
+        }
+
+        $name = trim((string)($actor["name"] ?? ""));
+        $name = trim($name, "|");
+        if ($name === "" || !shouldIncludeActorNameInPeopleList($name)) {
+            continue;
+        }
+
+        $nameKey = mb_strtolower($name, "UTF-8");
+        if (isset($seenNames[$nameKey])) {
+            continue;
+        }
+        $seenNames[$nameKey] = true;
+
+        $normalized[] = [
+            "name" => $name,
+            "form_id" => (int)($actor["form_id"] ?? 0),
+            "managed" => !empty($actor["managed"]),
+            "creature" => !empty($actor["creature"]),
+            "distance" => (float)($actor["distance"] ?? 0.0),
+        ];
+        if (count($normalized) >= 32) {
+            break;
+        }
+    }
+
+    return $normalized;
+}
+
+// Parse a one-shot chat shortcut while leaving the saved CHIM mode unchanged.
+function chimParseChatModeShortcut($message)
+{
+    $message = (string)$message;
+    $rules = [
+        ["prefix" => "((", "mode" => "INJECTION_LOG", "suffix" => "))"],
+        ["prefix" => "~~", "mode" => "CLOSE", "suffix" => ""],
+        ["prefix" => "!!", "mode" => "SHOUT", "suffix" => ""],
+        ["prefix" => "**", "mode" => "AUTOCHAT", "suffix" => ""],
+        ["prefix" => "~", "mode" => "WHISPER", "suffix" => ""],
+        ["prefix" => "@", "mode" => "NARRATOR", "suffix" => ""],
+        ["prefix" => ">", "mode" => "DIRECTOR", "suffix" => ""],
+        ["prefix" => "#", "mode" => "CHEATMODE", "suffix" => ""],
+        ["prefix" => "(", "mode" => "INJECTION_CHAT", "suffix" => ")"],
+    ];
+
+    foreach ($rules as $rule) {
+        if (!str_starts_with($message, $rule["prefix"])) {
+            continue;
+        }
+
+        $content = trim(substr($message, strlen($rule["prefix"])));
+        if ($rule["suffix"] !== "" && str_ends_with($content, $rule["suffix"])) {
+            $content = trim(substr($content, 0, -strlen($rule["suffix"])));
+        }
+
+        return [
+            "matched" => true,
+            "mode" => $rule["mode"],
+            "symbol" => $rule["prefix"],
+            "content" => $content,
+        ];
+    }
+
+    return [
+        "matched" => false,
+        "mode" => "",
+        "symbol" => "",
+        "content" => $message,
+    ];
+}
+
+function chimDecodePlayerRoutingSnapshotField($rawField)
+{
+    $result = [
+        "audience" => "",
+        "present_actors" => [],
+        "chat_shortcut_routed" => false,
+    ];
     $rawField = trim((string)$rawField);
     if ($rawField === "") {
-        return "";
+        return $result;
     }
 
     $decoded = base64_decode($rawField, true);
     if ($decoded === false || $decoded === "") {
-        return "";
+        return $result;
     }
 
     $payload = json_decode($decoded, true);
     if (!is_array($payload)) {
-        return "";
+        return $result;
     }
 
     if (!empty($payload["people"]) && is_string($payload["people"])) {
-        return normalizePeoplePipeList(parsePeoplePipeList($payload["people"]));
+        $result["audience"] = normalizePeoplePipeList(parsePeoplePipeList($payload["people"]));
+    } elseif (!empty($payload["companions"]) && is_array($payload["companions"])) {
+        $result["audience"] = normalizePeoplePipeList($payload["companions"]);
     }
 
-    if (!empty($payload["companions"]) && is_array($payload["companions"])) {
-        return normalizePeoplePipeList($payload["companions"]);
+    $result["present_actors"] = chimNormalizePresentActors($payload["present_actors"] ?? []);
+    $result["chat_shortcut_routed"] =
+        ($payload["source"] ?? "") === "plugin_player_routing_v2" &&
+        ($payload["chat_shortcut_routed"] ?? false) === true;
+    return $result;
+}
+
+function chimDecodeAudienceSnapshotField($rawField)
+{
+    $snapshot = chimDecodePlayerRoutingSnapshotField($rawField);
+    return (string)($snapshot["audience"] ?? "");
+}
+
+function chimDecodePresentActorsSnapshotField($rawField)
+{
+    $snapshot = chimDecodePlayerRoutingSnapshotField($rawField);
+    return chimNormalizePresentActors($snapshot["present_actors"] ?? []);
+}
+
+function chimPresentActorsPeoplePipe($actors)
+{
+    $names = [];
+    foreach (chimNormalizePresentActors($actors) as $actor) {
+        $names[] = $actor["name"];
+    }
+    return normalizePeoplePipeList($names);
+}
+
+function chimMergePeoplePipeLists()
+{
+    $names = [];
+    foreach (func_get_args() as $peoplePipe) {
+        foreach (parsePeoplePipeList($peoplePipe) as $name) {
+            $names[] = $name;
+        }
+    }
+    return normalizePeoplePipeList($names);
+}
+
+function chimBuildDirectivePeoplePipe($nearbyPeople, $speakerName, $instructionText)
+{
+    $speakerPeople = normalizePeoplePipeList([(string)$speakerName]);
+    $listenerPeople = "";
+    $listenerName = "";
+
+    if (preg_match(
+        '/\bThe dialogue listener must be\s+([^\r\n.]+)\.(?:\s|$)/iu',
+        (string)$instructionText,
+        $matches
+    )) {
+        $listenerName = html_entity_decode(
+            trim((string)($matches[1] ?? "")),
+            ENT_QUOTES | ENT_HTML5,
+            "UTF-8"
+        );
+    } elseif (preg_match(
+        '/\(must use ACTION\s+(?:JustTalk|Talk)\s+([^)]+)\)/iu',
+        (string)$instructionText,
+        $matches
+    )) {
+        $listenerName = html_entity_decode(
+            trim((string)($matches[1] ?? "")),
+            ENT_QUOTES | ENT_HTML5,
+            "UTF-8"
+        );
     }
 
-    return "";
+    if ($listenerName !== "" && strcasecmp($listenerName, "everyone") !== 0) {
+        $listenerPeople = normalizePeoplePipeList([$listenerName]);
+    }
+
+    return chimMergePeoplePipeLists($nearbyPeople, $speakerPeople, $listenerPeople);
+}
+
+function chimBuildDialogueEventPeoplePipe($turnPeople, $speakerName, $listenerName)
+{
+    return chimMergePeoplePipeLists(
+        $turnPeople,
+        normalizePeoplePipeList([(string)$speakerName, (string)$listenerName])
+    );
+}
+
+function chimSetCurrentTurnPresentActorsSnapshot($actors)
+{
+    $normalized = chimNormalizePresentActors($actors);
+    if (empty($normalized)) {
+        unset($GLOBALS["CHIM_TURN_PRESENT_ACTORS_SNAPSHOT"]);
+        return [];
+    }
+
+    $GLOBALS["CHIM_TURN_PRESENT_ACTORS_SNAPSHOT"] = $normalized;
+    return $normalized;
+}
+
+function chimGetCurrentTurnPresentActorsSnapshot()
+{
+    return chimNormalizePresentActors($GLOBALS["CHIM_TURN_PRESENT_ACTORS_SNAPSHOT"] ?? []);
+}
+
+function chimBuildCurrentTurnPresentPeoplePrompt()
+{
+    $actors = chimGetCurrentTurnPresentActorsSnapshot();
+    if (empty($actors)) {
+        return "";
+    }
+
+    $lines = [];
+    foreach ($actors as $actor) {
+        $name = htmlspecialchars($actor["name"], ENT_QUOTES | ENT_XML1, "UTF-8");
+        $formId = (int)($actor["form_id"] ?? 0);
+        if ($formId > 0) {
+            $name .= " [RefID: " . strtoupper(str_pad(dechex($formId), 8, "0", STR_PAD_LEFT)) . "]";
+        }
+        if (empty($actor["managed"])) {
+            $name .= " (present, not CHIM-active)";
+        }
+        $lines[] = "## " . $name;
+    }
+
+    return "<people_present>\n"
+        . "# Physically present actors. Entries marked not CHIM-active cannot respond, but may be targeted by gameplay actions. Prefer the displayed RefID when selecting an actor target.\n"
+        . implode("\n", $lines)
+        . "\n</people_present>";
 }
 
 function chimSetCurrentTurnPeopleSnapshot($peoplePipe)
@@ -2880,7 +3183,18 @@ function isWhisperExecutionMode()
     return ($mode === "WHISPER");
 }
 
-function buildWhisperPrivatePeople($listenerName = "")
+function isCloseExecutionMode()
+{
+    $mode = isset($GLOBALS["CHIM_EXECUTION_MODE"]) ? strtoupper(trim((string)$GLOBALS["CHIM_EXECUTION_MODE"])) : "";
+    return ($mode === "CLOSE");
+}
+
+function isPrivateConversationExecutionMode()
+{
+    return isWhisperExecutionMode() || isCloseExecutionMode();
+}
+
+function buildPrivateConversationPeople($listenerName = "")
 {
     $participants = [];
 
@@ -2894,6 +3208,11 @@ function buildWhisperPrivatePeople($listenerName = "")
     }
 
     return normalizePeoplePipeList($participants);
+}
+
+function buildWhisperPrivatePeople($listenerName = "")
+{
+    return buildPrivateConversationPeople($listenerName);
 }
 
 function buildDialogueTargetSuffix($listenerName, $isSpeakingLoudly = false)
@@ -2914,6 +3233,10 @@ function buildDialogueTargetSuffix($listenerName, $isSpeakingLoudly = false)
 
     if ($isSpeakingLoudly) {
         return "(speaking loudly to {$listenerName} from far away)";
+    }
+
+    if (isCloseExecutionMode()) {
+        return "(speaking privately to {$listenerName})";
     }
 
     if (isWhisperExecutionMode()) {
@@ -3412,7 +3735,7 @@ function convertDirectedDialogueTagsToVerb($eventData, $verb)
     }
 
     return preg_replace_callback(
-        '/\(\s*([Tt]alking|[Ww]hispering|[Ss]houting)\s+to\s+([^()]+?)\s*\)/u',
+        '/\(\s*([Tt]alking|[Ww]hispering|[Ss]houting|[Ss]peaking\s+privately)\s+to\s+([^()]+?)\s*\)/u',
         static function ($matches) use ($verb) {
             $prefix = ctype_upper(substr((string)$matches[1], 0, 1)) ? $verb : strtolower($verb);
             $target = trim((string)$matches[2]);
@@ -3425,6 +3748,11 @@ function convertDirectedDialogueTagsToVerb($eventData, $verb)
 function convertTalkingTagsToWhispering($eventData)
 {
     return convertDirectedDialogueTagsToVerb($eventData, 'Whispering');
+}
+
+function convertTalkingTagsToPrivately($eventData)
+{
+    return convertDirectedDialogueTagsToVerb($eventData, 'Speaking privately');
 }
 
 function convertTalkingTagsToShouting($eventData)
@@ -3445,7 +3773,7 @@ function extractTalkTargetMetadata($eventData)
         return $metadata;
     }
 
-    if (!preg_match('/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $eventData, $matches)) {
+    if (!preg_match('/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+(?:loudly|privately)\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $eventData, $matches)) {
         return $metadata;
     }
 
@@ -3576,7 +3904,7 @@ function extractCoreUtteranceFromChatEvent($eventData)
         $eventData = trim((string)$matches[1]);
     }
 
-    $eventData = preg_replace('/\s*\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+[^)]*\)\s*$/iu', '', $eventData);
+    $eventData = preg_replace('/\s*\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+(?:loudly|privately)\s+to)\s+[^)]*\)\s*$/iu', '', $eventData);
     return trim((string)$eventData);
 }
 
@@ -4083,7 +4411,8 @@ function buildNarratorSharedPeopleForEvent($eventType, $eventData, $listenerName
         return "";
     }
 
-    if (stripos((string)$eventData, '(whispering to ') !== false) {
+    if (stripos((string)$eventData, '(whispering to ') !== false ||
+        stripos((string)$eventData, '(speaking privately to ') !== false) {
         return "";
     }
 
@@ -4653,7 +4982,7 @@ function buildScopedPeopleForEvent($eventType, $eventData, $listenerName, $fallb
         return buildScopedPeopleForPlayerInput($eventType, $eventData, $listenerName, $effectiveFallback);
     }
 
-    if ($eventType === "chat") {
+    if (in_array($eventType, ["chat", "chat_background"], true)) {
         return buildScopedPeopleForChatEvent($eventData, $effectiveFallback);
     }
 
@@ -4692,7 +5021,7 @@ function filterHistoricContextForNarratorVisibility(array $contextDataHistoric, 
         }
 
         $content = isset($entry["content"]) ? (string)$entry["content"] : "";
-        if (preg_match('/\(\s*(?:Talking|Whispering|Shouting|Speaking loudly)\s+to\s+The Narrator(?:\s+from\s+far\s+away)?\s*\)/i', $content) === 1) {
+        if (preg_match('/\(\s*(?:Talking|Whispering|Shouting|Speaking loudly|Speaking privately)\s+to\s+The Narrator(?:\s+from\s+far\s+away)?\s*\)/i', $content) === 1) {
             return false;
         }
 
@@ -4742,7 +5071,11 @@ function logEvent($dataArray,$forcePeople='')
             $dataArray[2] = $new_gts;
         }
 
-        $eventType = strtolower((string)($dataArray[0] ?? ""));
+        $dataArray[0] = chimNormalizeLoggedEventType(
+            $dataArray[0] ?? "",
+            $dataArray[3] ?? ""
+        );
+        $eventType = strtolower((string)$dataArray[0]);
         $defaultPeopleFallback = $GLOBALS["CACHE_PEOPLE_LIMITED"];
         
         if (in_array($eventType, ["infoaction", "funcret"], true)) {

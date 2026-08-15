@@ -23,10 +23,12 @@ if ($method === 'POST') {
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
     require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
+    require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "visual_context.php";
 
     $GLOBALS["ENGINE_PATH"] = $enginePath;
 
-    $source = $jsonDataInput["source"];
+    $source = $jsonDataInput["source"] ?? '';
+    $filename = '';
     $parsedUrl = parse_url($source);
     $path = $parsedUrl['path'];
     $pathParts = explode('/', trim($path, '/'));
@@ -38,11 +40,18 @@ if ($method === 'POST') {
         $filename  = "$enginePath/data/pictures/gallery/uploads/" .basename($source);
 
     error_log("Will delete $filename");
-    if ($filename)
+    if ($filename) {
         unlink($filename);
+        $relativeImagePath = 'data/pictures/gallery/' . (($lastFolder === 'uploads') ? 'uploads/' : '') . basename($source);
+        $db = $GLOBALS['db'] ?? null;
+        if ($db && chimEnsureVisualContextTable()) {
+            $db->delete('public.visual_context', 'image_path=' . $db->escapeLiteral($relativeImagePath));
+        }
+    }
     
 
-    $source = $jsonDataInput["sourceVid"];
+    $source = $jsonDataInput["sourceVid"] ?? '';
+    $filename = '';
     $parsedUrl = parse_url($source);
     $path = $parsedUrl['path'];
     $pathParts = explode('/', trim($path, '/'));

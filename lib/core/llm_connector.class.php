@@ -135,7 +135,7 @@ class LLMConnector
         }
 
         $filtered = array_intersect_key($data, array_flip($fields));
-        return $GLOBALS["db"]->insert($this->table, $filtered);
+        return $GLOBALS["db"]->insertReturningId($this->table, $filtered);
     }
 
     public function readAll()
@@ -298,7 +298,7 @@ class LLMConnector
             $apiKey = $this->getApiKeyForBadge($currentConnectorData["api_badge_id"] ?? null);
             // error_log("[CORE SYSTEM] Using new profile system CONNECTOR openaijson {$currentConnectorData["id"]} {$currentConnectorData["driver"]}/{$currentConnectorData["model"]}");
             $GLOBALS["CONNECTOR"]["openrouterjson"]["url"] = $currentConnectorData["url"] ?? 'https://openrouter.ai/api/v1/chat/completions';
-            $GLOBALS["CONNECTOR"]["openrouterjson"]["model"] = $currentConnectorData["model"] ?? 'z-ai/glm-4.7';
+            $GLOBALS["CONNECTOR"]["openrouterjson"]["model"] = $currentConnectorData["model"] ?? 'deepseek/deepseek-v4-flash';
             $GLOBALS["CONNECTOR"]["openrouterjson"]["PROVIDER"] = $currentConnectorData["provider"] ?? '';
             $GLOBALS["CONNECTOR"]["openrouterjson"]["reasoning_model"] = $currentConnectorData["reasoning_model"] ?? false;
             $GLOBALS["CONNECTOR"]["openrouterjson"]["max_tokens"] = $currentConnectorData["max_tokens"] ?? '1024';

@@ -175,7 +175,6 @@ eventType|timestamp|gamets|eventData
 User can switch interaction modes:
 - `STANDARD` - Normal conversation mode
 - `DIRECTOR` - Game director instructions
-- `SPAWN` - Character spawning
 - `CHEATMODE` - All input processed as cheat commands
 - `AUTOCHAT` - Auto-generates Skyrim lore-appropriate text
 - `INJECTION_LOG` - Injects events without response

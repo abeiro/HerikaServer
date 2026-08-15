@@ -11,6 +11,12 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         $GLOBALS["db"] = new sql();
     }
 
+    require_once($enginePath . "lib/game_activity.php");
+    if (!chimHasRecentGameActivity()) {
+        Logger::debug("[MIDDLETERM] Skipping scheduled LLM work because no recent game activity was detected");
+        return;
+    }
+
     require_once($enginePath . "prompts/command_prompt.php");
     require_once($enginePath . "lib/chat_helper_functions.php");
     require_once($enginePath . "lib/data_functions.php");
@@ -181,25 +187,32 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         // Trigger if never updated, or if last update is older than configured threshold
         $mustInstructBypassBgl=false;
         if (!isset($mwdata["background_life_last_updated"]) || $mwdata["background_life_last_updated"] < ($bglTriggerDaysAgoGamets)) {
-            logger::info("[BGL] Passive event for {$npc["npc_name"]}");
+            error_log("[BGL]  Passive event for {$npc["npc_name"]}");
 
 
+            if (isset($mwdata["background_life_last_updated"]))  {
+                if ($mwdata["background_life_last_updated"] > ($oneDayAgoGamets)) {
+                    
+                    $delta = ($mwdata["background_life_last_updated"] - $oneDayAgoGamets) * 0.0000024;
+                    error_log("[BGL]  {$npc["npc_name"]} Avoiding by 1-day HARDCODED RULE. Last updated: {$mwdata["background_life_last_updated"]}, threshold: {$oneDayAgoGamets }, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}");
+                    continue;
+                
+                }
+            }
 
             $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" ");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }
 
-            $npcManager = new NpcMaster();
-            $npcData = $npcManager->getByName($npc["npc_name"]);
-            $extended = json_decode($npcData["extended_data"], true);
-            $extended["background_life_last_updated"] = $maxRow;
-            $npcData = $npcManager->setExtendedData($npcData, $extended);
-            $npcManager->updateByArray($npcData);
+            
+            $extdata["background_life_last_updated"] = $maxRow;
+            $npcMaster->updateExtendedKeysByName($npc["npc_name"], $extdata);
 
             break;  // One per iteration - break after processing
         } else {
-            logger::debug("[BGL] (Passive) Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours}");
+            $delta = ($mwdata["background_life_last_updated"] - $bglTriggerHoursAgoGamets) * 0.0000024;
+            error_log("[BGL] (Passive) Skipping {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerHoursAgoGamets}, BGL_TRIGGER_HOURS: {$bglTriggerHours},delta: {$delta}");
         }
     }
 
@@ -209,7 +222,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     error_log("[BGL] Checking active events NPCs");
     
     // BgL commands
-    $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' ");
+    $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' order by random() ");
     foreach ($allEnabledBgLNpc as $npc) {
         $mwdata = json_decode($npc["extended_data"], true);
         $mustInstructBypassBgl=false;
@@ -267,12 +280,10 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
                 // Update timestamp to avoid repeated instructions.
                 // In BgL case, simple_lllm_request_with_context_life.php will update the timestamp after processing the instruction.
                 $npcManager = new NpcMaster();
-                $npcData = $npcManager->getByName($npc["npc_name"]);
-                $extended = json_decode($npcData["extended_data"], true);
+                
                 $extended["background_life_last_updated"] = $maxRow;
                 $extended["background_life_last_updated_presence_delta"] = 0;
-                $npcData = $npcManager->setExtendedData($npcData, $extended);
-                $npcManager->updateByArray($npcData);
+                $npcManager->updateExtendedKeysByName($npc["npc_name"], $extended);
                 
             } else {
                 $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_v2.php \"{$npc["npc_name"]}\" full forceaction");

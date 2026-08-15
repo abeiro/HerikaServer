@@ -1,0 +1,2 @@
+-- Oghma Context Rules were removed. This file remains as a compatibility
+-- placeholder so older references fail safely without altering user data.

@@ -8,6 +8,7 @@ $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "prisma_settings_catalog.php");
 
 chimRuntimeBootstrap($enginePath, [
     'load_general_settings' => true,
@@ -35,82 +36,33 @@ include(__DIR__ . DIRECTORY_SEPARATOR . "tmpl" . DIRECTORY_SEPARATOR . "head.htm
 $saveSuccess = isset($_GET['_saved']) && $_GET['_saved'] === '1';
 $clearReanimationResult = null;
 $promptContextSectionTitle = 'Context Selections';
-$promptContextOptionFields = [
-    [ 'name' => 'MAGIC_EVENT_BLACKLIST', 'type' => 'longstring' ],
-    [ 'name' => 'LOCATION_BLACKLIST', 'type' => 'longstring' ],
-    [ 'name' => 'ITEM_BLACKLIST', 'type' => 'longstring' ],
-    [ 'name' => 'EVENT_TYPE_FILTER', 'type' => 'longstring' ],
+$gsSections = chimPrismaGlobalSettingsSections();
+$settingsTabs = chimPrismaGlobalSettingsTabs();
+$sectionTabs = chimPrismaGlobalSettingsSectionTabs();
+
+$tabControlPanels = [
+    'prompt-rechat' => 'settings-panel-prompt-rechat-prompt-rechat',
+    'ai-memory' => 'settings-panel-ai-memory-memory',
+    'context-knowledge' => 'settings-panel-context-knowledge-oghma',
+    'global-connectors' => 'settings-panel-global-connectors-global-connectors',
 ];
 
-$gsSections = [
-    'Prompt' => [
-        [ 'name' => 'PROMPT_HEAD', 'type' => 'longstring' ],
-        [ 'name' => 'EMOTEMOODS', 'type' => 'longstring' ],
-        [ 'name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean' ],
-    ],
-    'Rechat' => [
-        [ 'name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random'] ],
-        [ 'name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean' ],
-    ],
-    'Misc' => [
-        [ 'name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean' ],
-        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES', 'type' => 'boolean' ],
-        [ 'name' => 'AUTOFILL_CUSTOM_PROFILES_TRIGGER', 'type' => 'integer', 'min' => 10, 'max' => 100 ],
-        [ 'name' => 'BGL_TRIGGER_HOURS', 'type' => 'number', 'min' => 1, 'max' => 720, 'step' => 0.1, 'default' => 24 ],
-        [ 'name' => 'END_CONVERSATION_COOLDOWN', 'type' => 'integer', 'min' => 0, 'max' => 300 ],
-        [ 'name' => 'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY', 'type' => 'integer' ],
-    ],
-    'Quests' => [
-        [ 'name' => 'CHIM_AI_QUEST_PROGRESSION', 'type' => 'boolean' ],
-        [ 'name' => 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT', 'type' => 'boolean' ],
-    ],
-    'Memory' => [
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC', 'type' => 'boolean' ],
-        [ 'name' => 'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL', 'type' => 'integer' ],
-    ],
-    'Global Connectors' => [
-        [ 'name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'CORE_CONNECTOR_SCENECLASSIFIER', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label' ],
-        [ 'name' => 'PLAYER_WORST_MEMORY_GAME_DAYS', 'type' => 'integer', 'min' => 0, 'max' => 365, 'default' => 7, 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.' ],
-        [ 'name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label' ],
-    ],
-    'Context' => [
-        [ 'name' => 'GROUND_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
-        [ 'name' => 'INVENTORY_ITEMS_DESCRIPTIONS_ONLY', 'type' => 'boolean' ],
-        [ 'name' => 'HIDE_AMBIENT_COMBAT', 'type' => 'boolean' ],
-        [ 'name' => 'DISABLE_REANIMATION_TRACKING', 'type' => 'boolean', 'action' => 'clear_reanimation' ],
-        [ 'name' => 'TRANSFORMATION_DETECTION', 'type' => 'boolean' ],
-        [ 'name' => 'POWER_AWARENESS_ENABLED', 'type' => 'boolean' ],
-        [ 'name' => 'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE', 'type' => 'integer', 'min' => 0 ],
-        [ 'name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean' ],
-    ],
-    $promptContextSectionTitle => $promptContextOptionFields,
-    'Translation' => [
-        [ 'name' => 'TRANSLATION_FUNCTION', 'type' => 'select', 'values' => ['none', 'DeepL'] ],
-        [ 'name' => 'TRANSLATION@settings@translate_audio', 'type' => 'boolean' ],
-        [ 'name' => 'TRANSLATION@settings@translate_text', 'type' => 'boolean' ],
-        [ 'name' => 'TRANSLATION@settings@save_translated_text', 'type' => 'boolean' ],
-        [ 'name' => 'TRANSLATION@settings@translate_player_audio', 'type' => 'boolean' ],
-        [ 'name' => 'TRANSLATION@settings@save_translated_player_text', 'type' => 'boolean' ],
-        [ 'name' => 'TRANSLATION@DeepL@source_language', 'type' => 'string' ],
-        [ 'name' => 'TRANSLATION@DeepL@target_language', 'type' => 'string' ],
-        [ 'name' => 'TRANSLATION@DeepL@url', 'type' => 'url' ],
-        [ 'name' => 'TRANSLATION@DeepL@player_source_language', 'type' => 'string' ],
-        [ 'name' => 'TRANSLATION@DeepL@player_target_language', 'type' => 'string' ],
-    ],
-];
+// Paired connector toggles remain beside their connector instead of appearing twice.
+$pairedConnectorToggles = ['RELATIONSHIP_SYSTEM_ENABLED', 'SCENE_CLASSIFIER_ENABLED', 'OGHMA_CUSTOM'];
+foreach ($gsSections as $sectionName => $fields) {
+    $gsSections[$sectionName] = array_values(array_filter($fields, static function (array $field) use ($pairedConnectorToggles): bool {
+        return !in_array($field['name'] ?? '', $pairedConnectorToggles, true);
+    }));
+}
 
 function pretty_label(string $flatName): string
 {
     if (strpos($flatName, 'FEATURES@MEMORY_EMBEDDING@') === 0) {
         $parts = explode('@', $flatName);
         $last = end($parts) ?: $flatName;
+        if (strtoupper(trim($last)) === 'TXTAI_URL') {
+            return 'MiniMe / TXT2VEC URL';
+        }
         return ucwords(str_replace('_', ' ', strtolower(trim($last))));
     }
     if (strpos($flatName, 'TRANSLATION@settings@') === 0) {
@@ -137,18 +89,22 @@ function pretty_label(string $flatName): string
     $customLabels = [
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
         'CORE_CONNECTOR_SUMMARY' => 'Summaries',
-        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory/Background Life',
+        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory',
         'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
         'SCENE_CLASSIFIER_ENABLED' => 'Scene Classifier',
         'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
+        'CORE_CONNECTOR_BGL' => 'Background Life',
         'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
         'RELLLM_CONNECTOR' => 'Relationship Management',
         'PLAYER_WORST_MEMORY_GAME_DAYS' => 'Worst Memory Lifespan',
         'EMOTEMOODS' => 'Emote Moods',
+        'OGHMA_INFINIUM' => 'Oghma Infinium',
+        'OGHMA_AMOUNT' => 'Oghma Articles Amount',
+        'RACIAL_OGHMA' => 'Force Racial Oghma',
+        'LOCATION_OGHMA' => 'Force Location Oghma',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
         'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time',
-        'CLEAN_CONTEXT_FOCUS_CHAT_HISTORY' => 'Focus Chat Context',
         'CHIM_AI_QUEST_PROGRESSION' => 'CHIM AI Quest Progression (Beta)',
         'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => 'Player Only Quest Advancement',
         'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 'Item Pickup Detection Value',
@@ -168,12 +124,57 @@ function pretty_label(string $flatName): string
 function icon_for_field(string $flatName): string
 {
     $u = strtoupper($flatName);
-    if ($u === 'PLAYER_WORST_MEMORY_GAME_DAYS') return '💔';
-    if (strpos($u, 'FEATURES@MEMORY_EMBEDDING@') === 0 || strpos($u, 'MEMORY_') !== false) return '💭';
-    if ($u === 'PLAYER_NAME') return '🏷️';
-    if ($u === 'PROMPT_HEAD') return '🔝';
-    if ($u === 'EMOTEMOODS') return '🎭';
-    if ($u === 'PROMPT_TIMESTAMP') return '🕐';
+    $icons = [
+        'PLAYER_NAME' => '🏷️',
+        'PROMPT_HEAD' => '🔝',
+        'EMOTEMOODS' => '🎭',
+        'RECHAT_MODE' => '🔁',
+        'ENFORCE_STRICT_RECHAT_RESPONSE' => '🎯',
+        'OGHMA_INFINIUM' => '📚',
+        'OGHMA_AMOUNT' => '🔢',
+        'RACIAL_OGHMA' => '🧬',
+        'LOCATION_OGHMA' => '📍',
+        'FEATURES@MEMORY_EMBEDDING@ENABLED' => '🧠',
+        'FEATURES@MEMORY_EMBEDDING@TXTAI_URL' => '🔗',
+        'FEATURES@MEMORY_EMBEDDING@USE_TEXT2VEC' => '🔤',
+        'FEATURES@MEMORY_EMBEDDING@AUTO_CREATE_SUMMARY_INTERVAL' => '⏱️',
+        'PLAYER_WORST_MEMORY_GAME_DAYS' => '💔',
+        'AUTO_LOCK_PROFILE' => '🔒',
+        'AUTOFILL_CUSTOM_PROFILES' => '✨',
+        'AUTOFILL_CUSTOM_PROFILES_TRIGGER' => '🎯',
+        'BGL_TRIGGER_HOURS' => '🌍',
+        'END_CONVERSATION_COOLDOWN' => '⏳',
+        'CHIM_AI_QUEST_PROGRESSION' => '🗺️',
+        'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT' => '🧍',
+        'SCENE_CLASSIFIER_ENABLED' => '🎭',
+        'RELATIONSHIP_SYSTEM_ENABLED' => '💞',
+        'RELLLM_CONNECTOR' => '🔗',
+        'DETECT_MAGIC_EVENT' => '✨',
+        'GROUND_ITEMS_DESCRIPTIONS_ONLY' => '🪨',
+        'INVENTORY_ITEMS_DESCRIPTIONS_ONLY' => '🎒',
+        'HIDE_AMBIENT_COMBAT' => '🕊️',
+        'DISABLE_REANIMATION_TRACKING' => '🧟',
+        'TRANSFORMATION_DETECTION' => '🐺',
+        'POWER_AWARENESS_ENABLED' => '⚔️',
+        'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => '💰',
+        'PROMPT_TIMESTAMP' => '🕐',
+        'MAGIC_EVENT_BLACKLIST' => '🪄',
+        'LOCATION_BLACKLIST' => '📍',
+        'ITEM_BLACKLIST' => '📦',
+        'EVENT_TYPE_FILTER' => '🔍',
+        'TRANSLATION_FUNCTION' => '🌐',
+        'TRANSLATION@SETTINGS@TRANSLATE_AUDIO' => '🎧',
+        'TRANSLATION@SETTINGS@TRANSLATE_TEXT' => '📝',
+        'TRANSLATION@SETTINGS@SAVE_TRANSLATED_TEXT' => '💾',
+        'TRANSLATION@SETTINGS@TRANSLATE_PLAYER_AUDIO' => '🎙️',
+        'TRANSLATION@SETTINGS@SAVE_TRANSLATED_PLAYER_TEXT' => '💾',
+        'TRANSLATION@DEEPL@SOURCE_LANGUAGE' => '🗣️',
+        'TRANSLATION@DEEPL@TARGET_LANGUAGE' => '🌍',
+        'TRANSLATION@DEEPL@URL' => '🔗',
+        'TRANSLATION@DEEPL@PLAYER_SOURCE_LANGUAGE' => '🎤',
+        'TRANSLATION@DEEPL@PLAYER_TARGET_LANGUAGE' => '🌎',
+    ];
+    if (isset($icons[$u])) return $icons[$u];
     if (strpos($u, 'CORE_CONNECTOR_') === 0) {
         if ($u === 'CORE_CONNECTOR_PLAYER') return '🎮';
         if ($u === 'CORE_CONNECTOR_SUMMARY') return '📝';
@@ -181,20 +182,19 @@ function icon_for_field(string $flatName): string
         if ($u === 'CORE_CONNECTOR_SCENECLASSIFIER') return '🎭';
         if ($u === 'CORE_CONNECTOR_PROFILES') return '👥';
         if ($u === 'CORE_CONNECTOR_DIRECTOR') return '🎬';
-        if ($u === 'CORE_CONNECTOR_OGHMA_CUSTOM') return '🐙';
+        if ($u === 'CORE_CONNECTOR_BGL') return '⏱️';
+        if ($u === 'CORE_CONNECTOR_OGHMA_CUSTOM') return '📖';
         return '🔌';
     }
-    if ($u === 'SCENE_CLASSIFIER_ENABLED') return '🎭';
-    if ($u === 'RELATIONSHIP_SYSTEM_ENABLED') return '💞';
-    if ($u === 'RELLLM_CONNECTOR') return '🔗';
-    if ($u === 'POWER_AWARENESS_ENABLED') return '⚔️';
     if (strpos($u, 'RESPEECH') !== false) return '🦜';
     if (strpos($u, 'SPEECH_STYLE') !== false) return '🦜';
-    if (strpos($u, 'SUMMARY_PROMPT') === 0) return '🎭';
-    if (strpos($u, 'DYNAMIC_PROMPT_') === 0) return '🎭';
+    if (strpos($u, 'SUMMARY_PROMPT') === 0) return '📝';
+    if (strpos($u, 'DYNAMIC_PROMPT_') === 0) return '👥';
     if (strpos($u, 'DIARY') !== false) return '📙';
     if (strpos($u, 'NARRATOR') !== false) return '🗣️';
-    return '⚙️';
+    if (strpos($u, 'MEMORY') !== false) return '🧠';
+    if (strpos($u, 'COOLDOWN') !== false || strpos($u, 'INTERVAL') !== false) return '⏱️';
+    return '🧩';
 }
 
 function select_option_label(string $fieldName, string $optionValue): string
@@ -274,9 +274,9 @@ function render_provider_help(string $flatName, string $help, string $webRoot): 
 {
     if ($flatName === 'CHIM_AI_QUEST_PROGRESSION') {
         $prefix = 'Enable CHIM AI quest progression. Allows you to progress regular Skyrim quests with AI dialogue. Most vanilla non radiant quests are supported.';
-        $url = rtrim($webRoot, '/') . '/ui/immersion.php?tab=questgen';
+        $url = rtrim($webRoot, '/') . '/ui/events-memories.php?tab=questgen';
         return htmlspecialchars($prefix, ENT_QUOTES, 'UTF-8')
-            . ' <a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Open AI Quest Manager in Immersion</a> for more info.';
+            . ' <a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">Open AI Quest Manager</a> for more info.';
     }
 
     return htmlspecialchars($help, ENT_QUOTES, 'UTF-8');
@@ -472,6 +472,48 @@ h1.gs-title {
     font-size: 13px;
 }
 
+.settings-tabs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 8px;
+    border: 1px solid #3a3a3a;
+    border-radius: 10px;
+    background: rgba(30, 30, 30, 0.92);
+}
+
+.settings-tab {
+    position: relative;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #444;
+    border-radius: 7px;
+    background: #303030;
+    color: #ddd;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.settings-tab:hover {
+    border-color: rgba(242, 124, 17, 0.55);
+    background: #383838;
+}
+
+body .settings-tabs .settings-tab.is-active {
+    border-color: rgb(242,124,17) !important;
+    color: #fff !important;
+    background: rgba(92, 53, 25, 0.95) !important;
+    box-shadow: inset 0 0 0 1px rgba(242, 124, 17, 0.28), 0 0 12px rgba(242, 124, 17, 0.24) !important;
+    transform: translateY(-1px) !important;
+}
+
+.settings-tab:focus-visible {
+    outline: 2px solid rgb(242,124,17);
+    outline-offset: 2px;
+}
+
 .content-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -527,6 +569,24 @@ h1.gs-title {
     align-items: center;
 }
 
+.connector-section .provider-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.connector-section .provider-card {
+    grid-template-columns: 1fr;
+    align-content: start;
+    align-items: start;
+}
+
+.connector-section .provider-body {
+    width: 100%;
+}
+
+.connector-section .provider-help {
+    margin-top: 0;
+}
+
 .provider-head {
     display: flex;
     align-items: center;
@@ -541,7 +601,8 @@ h1.gs-title {
     gap: 10px;
     color: #e0e0e0;
     min-width: 0;
-    flex-wrap: wrap;
+    width: 100%;
+    flex-wrap: nowrap;
 }
 
 .provider-icon {
@@ -568,6 +629,14 @@ h1.gs-title {
     gap: 10px;
     width: 100%;
     min-width: 0;
+}
+
+.filter-setting-card {
+    grid-template-columns: minmax(180px, 0.65fr) minmax(420px, 1.7fr) minmax(180px, 0.65fr);
+}
+
+.filter-setting-card .provider-body {
+    width: 100%;
 }
 
 .btn-filter-browse {
@@ -625,9 +694,10 @@ h1.gs-title {
 }
 
 .provider-toggle {
-    margin-left: 10px;
+    margin-left: auto;
     display: flex;
     align-items: center;
+    flex: 0 0 auto;
 }
 
 .provider-toggle input[type="checkbox"] {
@@ -740,6 +810,35 @@ h1.gs-title {
 .btn-action-blue:hover {
     background: linear-gradient(135deg, rgba(46, 101, 198, 0.98), rgba(34, 84, 173, 0.98));
     border-color: rgba(106, 169, 255, 0.62);
+}
+
+.btn-settings-transfer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 36px;
+    background: #333;
+    color: #fff;
+    border: 1px solid #4a4a4a;
+    border-radius: 8px;
+    padding: 7px 12px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.btn-settings-transfer:hover:not(:disabled) {
+    background: #414141;
+    border-color: rgba(242, 124, 17, 0.65);
+    color: #fff;
+    text-decoration: none;
+}
+
+.btn-settings-transfer:disabled {
+    opacity: 0.6;
+    cursor: wait;
 }
 
 .btn-action {
@@ -1144,6 +1243,11 @@ h1.gs-title {
 }
 
 @media (max-width: 900px) {
+    .settings-tabs,
+    .connector-section .provider-grid {
+        grid-template-columns: 1fr;
+    }
+
     main {
         padding-left: 5%;
         padding-right: 5%;
@@ -1200,6 +1304,9 @@ h1.gs-title {
         <div class="page-header-row">
             <h1 class="gs-title">Global Settings</h1>
             <div class="page-header-actions">
+                <a class="btn-settings-transfer" href="<?php echo $webRoot; ?>/ui/cmd/settings_portability.php?scope=global&amp;action=export">&#128228; Export Settings</a>
+                <button type="button" id="import_global_settings_btn" class="btn-settings-transfer">&#128229; Import Settings</button>
+                <input type="file" id="import_global_settings_file" accept="application/json,.json" hidden>
                 <button type="button" id="global_connector_test_btn" class="btn-action-blue">Test Global Connectors</button>
                 <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
             </div>
@@ -1210,10 +1317,36 @@ h1.gs-title {
         <div class="result-ok" style="margin-bottom: 16px;">Global settings saved to the database.</div>
     <?php endif; ?>
 
+    <div class="settings-tabs" role="tablist" aria-label="Global settings categories">
+        <?php foreach ($settingsTabs as $tabId => $tabLabel): ?>
+            <button
+                type="button"
+                class="settings-tab<?php echo $tabId === 'prompt-rechat' ? ' is-active' : ''; ?>"
+                id="settings-tab-<?php echo htmlspecialchars($tabId); ?>"
+                role="tab"
+                aria-selected="<?php echo $tabId === 'prompt-rechat' ? 'true' : 'false'; ?>"
+                aria-controls="<?php echo htmlspecialchars($tabControlPanels[$tabId]); ?>"
+                data-settings-tab="<?php echo htmlspecialchars($tabId); ?>"
+            ><?php echo htmlspecialchars($tabLabel); ?></button>
+        <?php endforeach; ?>
+    </div>
+
     <form method="post" action="" id="gs_form">
         <div class="content-grid">
             <?php foreach ($gsSections as $sectionTitle => $fields): ?>
-                <div class="content-section">
+                <?php
+                $sectionTab = $sectionTabs[$sectionTitle] ?? 'general';
+                $isInitialTab = $sectionTab === 'prompt-rechat';
+                $sectionClasses = 'content-section' . ($sectionTitle === 'Global Connectors' ? ' connector-section' : '');
+                ?>
+                <div
+                    class="<?php echo htmlspecialchars($sectionClasses); ?>"
+                    id="settings-panel-<?php echo htmlspecialchars($sectionTab); ?>-<?php echo htmlspecialchars(preg_replace('/[^a-z0-9]+/i', '-', strtolower($sectionTitle))); ?>"
+                    role="tabpanel"
+                    aria-labelledby="settings-tab-<?php echo htmlspecialchars($sectionTab); ?>"
+                    data-settings-panel="<?php echo htmlspecialchars($sectionTab); ?>"
+                    <?php echo $isInitialTab ? '' : 'hidden'; ?>
+                >
                     <h2><?php echo htmlspecialchars($sectionTitle); ?></h2>
                     <div class="provider-grid">
                         <?php if ($sectionTitle === $promptContextSectionTitle): ?>
@@ -1252,7 +1385,7 @@ h1.gs-title {
                                             $isReadonly = isset($schemaDefinition['readonly']) && $schemaDefinition['readonly'] === true;
                                             $readonlyAttr = $isReadonly ? 'readonly' : '';
                                             ?>
-                                            <div class="provider-card">
+                                            <div class="provider-card<?php echo isset($filterBrowseFieldConfigs[$fieldName]) ? ' filter-setting-card' : ''; ?>">
                                                 <div class="provider-head">
                                                     <div class="provider-title">
                                                         <div class="provider-icon"><?php echo icon_for_field($fieldName); ?></div>
@@ -1285,14 +1418,16 @@ h1.gs-title {
                                                             <textarea name="<?php echo htmlspecialchars($fieldName); ?>" rows="4" <?php echo $readonlyAttr; ?>><?php echo htmlspecialchars(strval($current)); ?></textarea>
                                                         <?php endif; ?>
                                                     <?php endif; ?>
-                                                    <?php if (!empty($help)): ?>
-                                                        <p class="provider-help"><?php echo render_provider_help($fieldName, $help, $webRoot); ?></p>
-                                                    <?php endif; ?>
                                                 </div>
+                                                <?php if (!empty($help)): ?>
+                                                    <p class="provider-help"><?php echo render_provider_help($fieldName, $help, $webRoot); ?></p>
+                                                <?php endif; ?>
                                             </div>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
+                            </div>
+                            </div>
                             </div>
                             <?php continue; ?>
                         <?php endif; ?>
@@ -1326,7 +1461,7 @@ h1.gs-title {
                             $isReadonly = isset($schemaDefinition['readonly']) && $schemaDefinition['readonly'] === true;
                             $readonlyAttr = $isReadonly ? 'readonly' : '';
                             ?>
-                            <div class="provider-card">
+                            <div class="provider-card<?php echo isset($filterBrowseFieldConfigs[$fieldName]) ? ' filter-setting-card' : ''; ?>">
                                 <div class="provider-head">
                                     <div class="provider-title">
                                         <div class="provider-icon"><?php echo icon_for_field($fieldName); ?></div>
@@ -1433,6 +1568,78 @@ h1.gs-title {
         </div>
     </form>
 
+    <script>
+    (() => {
+        const storageKey = 'herika-global-settings-tab';
+        const tabs = Array.from(document.querySelectorAll('[data-settings-tab]'));
+        const panels = Array.from(document.querySelectorAll('[data-settings-panel]'));
+        const form = document.getElementById('gs_form');
+        const validTabs = new Set(tabs.map((tab) => tab.dataset.settingsTab));
+
+        function activateTab(tabId, focusTab = false) {
+            if (!validTabs.has(tabId)) {
+                tabId = 'prompt-rechat';
+            }
+
+            tabs.forEach((tab) => {
+                const active = tab.dataset.settingsTab === tabId;
+                tab.classList.toggle('is-active', active);
+                tab.setAttribute('aria-selected', active ? 'true' : 'false');
+                tab.tabIndex = active ? 0 : -1;
+                if (active && focusTab) {
+                    tab.focus();
+                }
+            });
+
+            panels.forEach((panel) => {
+                panel.hidden = panel.dataset.settingsPanel !== tabId;
+            });
+
+            try {
+                sessionStorage.setItem(storageKey, tabId);
+            } catch (error) {
+                // Storage can be unavailable in privacy-restricted browsers.
+            }
+        }
+
+        tabs.forEach((tab, index) => {
+            tab.addEventListener('click', () => activateTab(tab.dataset.settingsTab));
+            tab.addEventListener('keydown', (event) => {
+                let nextIndex = null;
+                if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                    nextIndex = (index + 1) % tabs.length;
+                } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                    nextIndex = (index - 1 + tabs.length) % tabs.length;
+                } else if (event.key === 'Home') {
+                    nextIndex = 0;
+                } else if (event.key === 'End') {
+                    nextIndex = tabs.length - 1;
+                }
+
+                if (nextIndex !== null) {
+                    event.preventDefault();
+                    activateTab(tabs[nextIndex].dataset.settingsTab, true);
+                }
+            });
+        });
+
+        form?.addEventListener('invalid', (event) => {
+            const panel = event.target.closest('[data-settings-panel]');
+            if (panel) {
+                activateTab(panel.dataset.settingsPanel);
+            }
+        }, true);
+
+        let initialTab = 'prompt-rechat';
+        try {
+            initialTab = sessionStorage.getItem(storageKey) || initialTab;
+        } catch (error) {
+            // Keep the default tab when storage is unavailable.
+        }
+        activateTab(initialTab);
+    })();
+    </script>
+
     <div id="global-connector-test-modal" class="global-test-modal" aria-hidden="true">
         <div class="global-test-shell" role="dialog" aria-modal="true" aria-labelledby="global-connector-test-title">
             <div class="global-test-head">
@@ -1474,6 +1681,20 @@ h1.gs-title {
         </div>
     </div>
 </main>
+
+<script src="<?php echo $webRoot; ?>/ui/js/settings-portability.js?v=<?php echo (int) @filemtime(__DIR__ . DIRECTORY_SEPARATOR . 'js' . DIRECTORY_SEPARATOR . 'settings-portability.js'); ?>"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof window.chimInitSettingsImport === 'function') {
+        window.chimInitSettingsImport({
+            scope: 'global',
+            endpoint: <?php echo json_encode($webRoot . '/ui/cmd/settings_portability.php'); ?>,
+            importButtonId: 'import_global_settings_btn',
+            fileInputId: 'import_global_settings_file'
+        });
+    }
+});
+</script>
 
 <script>
 (() => {

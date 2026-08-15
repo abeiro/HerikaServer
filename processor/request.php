@@ -78,9 +78,6 @@ if ($gameRequest[0] == "funcret") { // Take out the functions part
 	if (isset($GLOBALS["HERIKA_NAME"]) && $GLOBALS["HERIKA_NAME"] === "The Narrator") {
 		if (!isset($GLOBALS["NARRATOR_DIARY_ENABLED"]) || !$GLOBALS["NARRATOR_DIARY_ENABLED"]) {
 			Logger::info("[DIARY] Narrator diary is disabled, skipping");
-			echo "The Narrator|rolecommand|DebugNotification@The Narrator's diary is disabled".PHP_EOL;
-			@ob_flush();
-			@flush();
 			die();
 		}
 	}

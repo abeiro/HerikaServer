@@ -27,10 +27,10 @@ require_once($enginePath . "lib" .DIRECTORY_SEPARATOR."rolemaster_helpers.php");
 
 $db = $GLOBALS["db"];
 
-if ($argv[1]) {
-    $speech=$db->escape($argv[1]);
-} else if ($_GET["speech"]) {
+if (isset($_GET["speech"]) && is_string($_GET["speech"]) && trim($_GET["speech"]) !== "") {
     $speech=$db->escape($_GET["speech"]);
+} else if (isset($argv) && is_array($argv) && isset($argv[1])) {
+    $speech=$db->escape($argv[1]);
 } else
     die("No speech".PHP_EOL);
 
