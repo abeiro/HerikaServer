@@ -133,10 +133,10 @@ MAIN FLOW
 $gameRequest = explode("|", $receivedData);
 $GLOBALS["gameRequest"] = &$gameRequest;
 unset($GLOBALS["CHIM_TURN_PEOPLE_SNAPSHOT"]);
-unset($GLOBALS["CHIM_REQUEST_EXECUTION_MODE"]);
+unset($GLOBALS["CHIM_CHAT_SHORTCUT_ROUTED"]);
 $requestRoutingSnapshot = chimDecodePlayerRoutingSnapshotField($gameRequest[4] ?? "");
-if (($requestRoutingSnapshot["execution_mode"] ?? "") !== "") {
-    $GLOBALS["CHIM_REQUEST_EXECUTION_MODE"] = $requestRoutingSnapshot["execution_mode"];
+if (($requestRoutingSnapshot["chat_shortcut_routed"] ?? false) === true) {
+    $GLOBALS["CHIM_CHAT_SHORTCUT_ROUTED"] = true;
 }
 
 

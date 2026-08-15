@@ -88,28 +88,28 @@ final class PlayerPresenceSnapshotTest extends TestCase
         $this->assertSame([], $snapshot['present_actors']);
     }
 
-    public function testRequestExecutionModeIsDecodedFromRoutingSnapshot(): void
+    public function testChatShortcutRoutingMarkerIsDecodedFromRoutingSnapshot(): void
     {
         $encoded = base64_encode((string)json_encode([
             'source' => 'plugin_player_routing_v2',
+            'chat_shortcut_routed' => true,
+        ]));
+
+        $snapshot = chimDecodePlayerRoutingSnapshotField($encoded);
+
+        $this->assertTrue($snapshot['chat_shortcut_routed']);
+        $this->assertSame('', $snapshot['audience']);
+    }
+
+    public function testRequestExecutionModeIsIgnored(): void
+    {
+        $encoded = base64_encode((string)json_encode([
             'execution_mode' => 'whisper',
         ]));
 
         $snapshot = chimDecodePlayerRoutingSnapshotField($encoded);
 
-        $this->assertSame('WHISPER', $snapshot['execution_mode']);
-        $this->assertSame('', $snapshot['audience']);
-    }
-
-    public function testUnknownRequestExecutionModeIsIgnored(): void
-    {
-        $encoded = base64_encode((string)json_encode([
-            'execution_mode' => 'unsupported-mode',
-        ]));
-
-        $snapshot = chimDecodePlayerRoutingSnapshotField($encoded);
-
-        $this->assertSame('', $snapshot['execution_mode']);
+        $this->assertArrayNotHasKey('execution_mode', $snapshot);
     }
 
     public function testDirectivePeopleIncludeSelectedSpeakerAndExplicitListener(): void
