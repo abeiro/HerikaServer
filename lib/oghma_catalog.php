@@ -196,6 +196,44 @@ final class ChimOghmaCatalogManager
         return is_array($row) && $row !== [] ? $row : null;
     }
 
+    /** Delete one custom article and immediately restore its active factory source, when present. */
+    public function deleteCustomOverride(string $topic): array
+    {
+        $topic = trim($topic);
+        if ($topic === '') throw new InvalidArgumentException('invalid_oghma_topic');
+
+        $result = [];
+        $this->transaction(function () use ($topic, &$result): void {
+            $this->lockLifecycleTables();
+            $row = $this->db->fetchOne(
+                "SELECT source_type FROM public.oghma WHERE topic = " . $this->literal($topic) . ' FOR UPDATE'
+            );
+            if (($row['source_type'] ?? null) !== 'custom') {
+                throw new InvalidArgumentException('oghma_custom_override_not_found');
+            }
+
+            $deleted = $this->executeAffected(
+                "DELETE FROM public.oghma WHERE topic = " . $this->literal($topic) . " AND source_type = 'custom'"
+            );
+            $restored = $this->restoreFactoryProjection($topic);
+            $result = ['deleted' => $deleted, 'factory_restored' => $restored];
+        });
+        return $result;
+    }
+
+    /** Delete all custom articles and restore every active factory article they overrode. */
+    public function deleteAllCustomOverrides(): array
+    {
+        $result = [];
+        $this->transaction(function () use (&$result): void {
+            $this->lockLifecycleTables();
+            $deleted = $this->executeAffected("DELETE FROM public.oghma WHERE source_type = 'custom'");
+            $restored = $this->restoreFactoryProjection();
+            $result = ['deleted' => $deleted, 'factory_restored' => $restored];
+        });
+        return $result;
+    }
+
     private function loadPackage(string $packagePath): array
     {
         $manifestRaw = $this->readUtf8File(rtrim($packagePath, '/\\') . DIRECTORY_SEPARATOR . 'manifest.json', 1024 * 1024, 'manifest');
@@ -286,6 +324,43 @@ final class ChimOghmaCatalogManager
         ]));
     }
 
+    /** Serialize factory/custom lifecycle changes in the same order as catalog synchronization. */
+    private function lockLifecycleTables(): void
+    {
+        $this->execute('LOCK TABLE public.oghma_catalogs, public.oghma_catalog_entries, public.oghma_factory_overrides, public.oghma IN SHARE ROW EXCLUSIVE MODE');
+    }
+
+    /** Rebuild missing effective rows from the active factory source without disturbing custom rows. */
+    private function restoreFactoryProjection(?string $topic = null): int
+    {
+        $topicFilter = $topic === null ? '' : ' AND entry.topic = ' . $this->literal($topic);
+        $restored = $this->executeAffected(
+            'INSERT INTO public.oghma '
+            . '(topic, aliases, retrieval_phrases, topic_desc, knowledge_class, topic_desc_basic, knowledge_class_basic, tags, category, '
+            . 'source_type, source_catalog_version, source_checksum, updated_at) '
+            . 'SELECT entry.topic, entry.aliases, entry.retrieval_phrases, entry.topic_desc, entry.knowledge_class, '
+            . 'entry.topic_desc_basic, entry.knowledge_class_basic, entry.tags, entry.category, '
+            . "'factory', entry.catalog_version, entry.row_sha256, CURRENT_TIMESTAMP "
+            . 'FROM public.oghma_catalog_entries entry '
+            . "JOIN public.oghma_catalogs catalog ON catalog.catalog_version = entry.catalog_version AND catalog.state = 'active' "
+            . 'WHERE NOT EXISTS (SELECT 1 FROM public.oghma current_row WHERE current_row.topic = entry.topic) '
+            . "AND NOT EXISTS (SELECT 1 FROM public.oghma_factory_overrides hidden WHERE hidden.topic = entry.topic AND hidden.action = 'hide')"
+            . $topicFilter
+        );
+        if ($restored > 0) {
+            $topicVectorFilter = $topic === null ? '' : ' AND topic = ' . $this->literal($topic);
+            $this->execute(
+                "UPDATE public.oghma SET native_vector = "
+                . "setweight(to_tsvector('simple', coalesce(topic, '')), 'A') "
+                . "|| setweight(to_tsvector('simple', coalesce(aliases, '')), 'A') "
+                . "|| setweight(to_tsvector(coalesce(topic_desc, '')), 'B') "
+                . "|| setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C') "
+                . "WHERE source_type = 'factory'" . $topicVectorFilter
+            );
+        }
+        return $restored;
+    }
+
     private function transaction(callable $callback): void
     {
         $this->execute('BEGIN');
@@ -303,6 +378,13 @@ final class ChimOghmaCatalogManager
         if ($this->db->execQuery($query) === false) {
             throw new RuntimeException('oghma_catalog_database_write_failed');
         }
+    }
+
+    private function executeAffected(string $query): int
+    {
+        $result = $this->db->execQuery($query);
+        if ($result === false) throw new RuntimeException('oghma_catalog_database_write_failed');
+        return pg_affected_rows($result);
     }
 
     private function literal(string $value): string

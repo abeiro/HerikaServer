@@ -81,6 +81,55 @@ final class OghmaCatalogTest extends DatabaseTestCase
         $db->close();
     }
 
+    public function testDeletingCustomOverridesImmediatelyRestoresFactoryArticles(): void
+    {
+        $fixture = $this->fixture()['catalog_lifecycle'];
+        $this->temporaryRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'chim-oghma-parity-' . bin2hex(random_bytes(6));
+        mkdir($this->temporaryRoot, 0700, true);
+        $v2 = $this->writePackage($fixture['v2'], $fixture['v2_articles'], false, [], 2);
+
+        require_once dirname(__DIR__, 2) . '/lib/phpunit.class.php';
+        $db = new sql();
+        $db->execQuery('DELETE FROM public.oghma');
+        $manager = new ChimOghmaCatalogManager($db, dirname(__DIR__, 2));
+        $manager->synchronize($v2);
+
+        $db->execQuery(
+            "UPDATE public.oghma SET topic_desc = " . $db->escapeLiteral($fixture['custom_content'])
+            . ", source_type = 'custom', source_catalog_version = NULL WHERE topic = 'whiterun'"
+        );
+        $sourceBeforeDelete = $db->fetchOne(
+            "SELECT topic_desc FROM public.oghma_catalog_entries WHERE catalog_version = "
+            . $db->escapeLiteral($fixture['v2']) . " AND topic = 'whiterun'"
+        );
+        $this->assertSame('Factory Whiterun v2', $sourceBeforeDelete['topic_desc'] ?? null);
+
+        $single = $manager->deleteCustomOverride('whiterun');
+        $this->assertSame(['deleted' => 1, 'factory_restored' => 1], $single);
+        $restored = $db->fetchOne(
+            "SELECT topic_desc, retrieval_phrases, source_type, source_catalog_version, native_vector IS NOT NULL AS has_vector "
+            . "FROM public.oghma WHERE topic = 'whiterun'"
+        );
+        $this->assertSame('Factory Whiterun v2', $restored['topic_desc'] ?? null);
+        $this->assertSame('Cloud District', $restored['retrieval_phrases'] ?? null);
+        $this->assertSame('factory', $restored['source_type'] ?? null);
+        $this->assertSame($fixture['v2'], $restored['source_catalog_version'] ?? null);
+        $this->assertSame('t', $restored['has_vector'] ?? null);
+
+        $db->execQuery("UPDATE public.oghma SET source_type = 'custom', source_catalog_version = NULL WHERE topic = 'whiterun'");
+        $db->execQuery(
+            "INSERT INTO public.oghma (topic, topic_desc, source_type) VALUES ('standalone_custom', 'Custom only', 'custom')"
+        );
+        $all = $manager->deleteAllCustomOverrides();
+        $this->assertSame(['deleted' => 2, 'factory_restored' => 1], $all);
+        $projection = $db->fetchAll('SELECT topic, source_type FROM public.oghma ORDER BY topic');
+        $this->assertSame([
+            ['topic' => 'meridia', 'source_type' => 'factory'],
+            ['topic' => 'whiterun', 'source_type' => 'factory'],
+        ], $projection);
+        $db->close();
+    }
+
     public function testCorruptPackageCannotChangeActiveCatalog(): void
     {
         $fixture = $this->fixture()['catalog_lifecycle'];
