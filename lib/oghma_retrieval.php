@@ -62,6 +62,38 @@ function chimOghmaSplitAliasValues(string $value): array
     ));
 }
 
+// Limit history carry-over to short, explicitly referential follow-up lines.
+function chimOghmaShouldUsePreviousExchange(string $text): bool
+{
+    $normalized = chimOghmaStrictEntityPhrase($text);
+    if ($normalized === '' || mb_strlen($normalized, 'UTF-8') > 240) {
+        return false;
+    }
+    if (preg_match(
+        '/^(?:ok(?:ay)?|thanks?|thank you|sure|right|fine|good|got it|i see|never mind|nevermind|forget it|lets go|let us go)$/u',
+        $normalized
+    ) === 1) {
+        return false;
+    }
+    if (preg_match(
+        '/\b(?:tell me more|go on|what else|anything else|what happened next|why is that|how so)\b/u',
+        $normalized
+    ) === 1) {
+        return true;
+    }
+
+    $hasReference = preg_match(
+        '/\b(?:it|its|they|them|their|theirs|he|him|his|she|her|hers|this|that|these|those|there|former|latter)\b/u',
+        $normalized
+    ) === 1;
+    $hasKnowledgeCue = preg_match(
+        '/\b(?:who|what|where|when|why|how|which|leader|leaders|founder|founders|origin|origins|history|story|purpose|'
+        . 'member|members|enemy|enemies|ally|allies|located|happened|mean|means|more|else|dangerous|safe|powerful|important)\b/u',
+        $normalized
+    ) === 1;
+    return $hasReference && $hasKnowledgeCue;
+}
+
 function chimOghmaReviewedPhraseCanonicalization(): array
 {
     static $canonicalization = null;

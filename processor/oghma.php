@@ -9,6 +9,7 @@ $GLOBALS['OGHMA_INJECTED_PAYLOADS'] = [];
 require_once __DIR__ . '/../lib/oghma_parity.php';
 require_once __DIR__ . '/../lib/oghma_retrieval.php';
 require_once __DIR__ . '/../lib/oghma_forced_context.php';
+require_once __DIR__ . '/../lib/eventlog_helper.php';
 
 if (!function_exists('isOghmaEnabled')) {
     function isOghmaEnabled($value): bool
@@ -18,6 +19,16 @@ if (!function_exists('isOghmaEnabled')) {
 }
 
 if (!function_exists('chimOghmaInputText')) {
+    /** Remove transport-only labels while preserving the player's bounded dialogue text. */
+    function chimOghmaSanitizeInputText(string $input): string
+    {
+        $input = preg_replace('/\([^)]*Context location[^)]*\)/iu', '', $input) ?? $input;
+        $input = preg_replace('/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/iu', '', $input) ?? $input;
+        $player = trim((string) ($GLOBALS['PLAYER_NAME'] ?? ''));
+        if ($player !== '') $input = preg_replace('/^' . preg_quote($player, '/') . ':\s*/iu', '', $input) ?? $input;
+        return trim(mb_strcut($input, 0, 16384, 'UTF-8'));
+    }
+
     /** Extract only bounded player/conversation text from an eligible CHIM request. */
     function chimOghmaInputText(array $gameRequest, $db): string
     {
@@ -29,11 +40,36 @@ if (!function_exists('chimOghmaInputText')) {
         } else {
             $input = (string) ($gameRequest[3] ?? '');
         }
-        $input = preg_replace('/\([^)]*Context location[^)]*\)/iu', '', $input) ?? $input;
-        $input = preg_replace('/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/iu', '', $input) ?? $input;
-        $player = trim((string) ($GLOBALS['PLAYER_NAME'] ?? ''));
-        if ($player !== '') $input = preg_replace('/^' . preg_quote($player, '/') . ':\s*/iu', '', $input) ?? $input;
-        return trim(mb_strcut($input, 0, 16384, 'UTF-8'));
+        return chimOghmaSanitizeInputText($input);
+    }
+
+    /** Return at most the immediately preceding two distinct dialogue lines. */
+    function chimOghmaPreviousExchangeText($db, string $currentInput): string
+    {
+        $npcName = trim((string) ($GLOBALS['HERIKA_NAME'] ?? ''));
+        if (!$db || $npcName === '' || !method_exists($db, 'fetchAll') || !method_exists($db, 'escape')
+            || !function_exists('chimBuildNpcEventLogPeopleWhereClause')) return '';
+        try {
+            $peopleWhere = chimBuildNpcEventLogPeopleWhereClause($db, $npcName);
+            $rows = $db->fetchAll(
+                "SELECT type, data FROM eventlog WHERE type IN ('inputtext','chat','rechat')"
+                . " AND {$peopleWhere} ORDER BY rowid DESC LIMIT 6"
+            );
+        } catch (Throwable) {
+            return '';
+        }
+        $currentKey = chimOghmaStrictEntityPhrase($currentInput);
+        $seen = [];
+        $parts = [];
+        foreach ($rows as $row) {
+            $text = chimOghmaSanitizeInputText((string) ($row['data'] ?? ''));
+            $key = chimOghmaStrictEntityPhrase($text);
+            if ($key === '' || $key === $currentKey || isset($seen[$key])) continue;
+            $seen[$key] = true;
+            $parts[] = $text;
+            if (count($parts) >= 2) break;
+        }
+        return mb_strcut(implode("\n", array_reverse($parts)), 0, 4096, 'UTF-8');
     }
 }
 
@@ -72,7 +108,27 @@ $knowledgeTags = chimOghmaKnowledgeValues($GLOBALS['OGHMA_KNOWLEDGE'] ?? 'common
 
     $retrievalStarted = hrtime(true);
     $extraction = chimOghmaExtractEntities($db, $inputText, $settings['values']['topic_count']);
+    $previousExchange = '';
+    $contextFallback = [
+        'eligible' => $extraction['entities'] === [] && chimOghmaShouldUsePreviousExchange($inputText),
+        'attempted' => false,
+        'used' => false,
+    ];
+    if ($contextFallback['eligible']) {
+        $previousExchange = chimOghmaPreviousExchangeText($db, $inputText);
+        if ($previousExchange !== '') {
+            $contextFallback['attempted'] = true;
+            $previousExtraction = chimOghmaExtractEntities($db, $previousExchange, 1);
+            if ($previousExtraction['entities'] !== []) {
+                foreach ($previousExtraction['entities'] as &$entity) $entity['context_source'] = 'previous_exchange';
+                unset($entity);
+                $extraction = $previousExtraction;
+                $contextFallback['used'] = true;
+            }
+        }
+    }
     $result['timing']['retrieval_ms'] = (hrtime(true) - $retrievalStarted) / 1_000_000;
+    $result['context_fallback'] = $contextFallback;
     $result['matches'] = array_values($extraction['entities'] ?? []);
     $result['topics'] = array_values(array_unique(array_filter(array_map(
         static fn(array $entity): string => trim((string) ($entity['topic'] ?? '')),
@@ -93,7 +149,10 @@ $knowledgeTags = chimOghmaKnowledgeValues($GLOBALS['OGHMA_KNOWLEDGE'] ?? 'common
         try {
             require_once __DIR__ . '/../lib/oghma_llm_service.php';
             $language = trim((string) ($GLOBALS['CORE_LANG'] ?? 'en')) ?: 'en';
-            $response = LLMTopic($inputText, $language);
+            $fallbackText = $contextFallback['attempted'] && $previousExchange !== ''
+                ? "Previous exchange:\n{$previousExchange}\nCurrent follow-up:\n{$inputText}"
+                : $inputText;
+            $response = LLMTopic($fallbackText, $language);
             $decoded = is_string($response) ? json_decode($response, true) : null;
             $suggestion = is_array($decoded) ? trim((string) ($decoded['generated_tags'] ?? '')) : '';
             if ($suggestion !== '') $result['fallback']['suggestions'][] = $suggestion;

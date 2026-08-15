@@ -8,12 +8,12 @@
     "oracle_sha256": "a25e7b628fa65aa54b750df3f93ec1b9727f90bd8695c4fa7583847baafd197f"
   },
   "algorithm": {
-    "name": "grounded-v3.1-herika",
+    "name": "grounded-v3.2-context-herika",
     "files": {
-      "lib/oghma_retrieval.php": "b772972bb46556c2b475fe3eb66a3d2f0b115d4fd98ba8fd364a159b3cdee699",
+      "lib/oghma_retrieval.php": "8c11a395cfd5bede54847ee7d1b7085c4b9da29162e0dd07ceb1e5690845eb73",
       "lib/oghma_parity.php": "3ebb221bc0555695770ad98832f202ec8f512c5e8ad8a987f07004d19955ae3b",
       "lib/oghma_forced_context.php": "98f8fed46afe2acf82fb0d0eafdc81ba290139466b2e0c66adf93ac485ff284f",
-      "processor/oghma.php": "04b81803ccd59efe7fc4ad9da6d495dd0fc783237f2e3faf8d6b301b54ea5563"
+      "processor/oghma.php": "3d6f2618e21919a3ae94e57a78c5a184b25ee8c202b2c4595ab728c3ace9b5d1"
     }
   },
   "runtime": {

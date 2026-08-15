@@ -69,6 +69,22 @@ final class OghmaParityTest extends TestCase
         }
     }
 
+    public function testPreviousExchangeFallbackIsLimitedToReferentialFollowUps(): void
+    {
+        foreach (['What about their leader?', 'Tell me more about it.', 'What happened there?'] as $input) {
+            $this->assertTrue(chimOghmaShouldUsePreviousExchange($input), $input);
+        }
+        foreach (['Thanks.', 'What are we doing now?', 'It started raining.', 'Never mind.'] as $input) {
+            $this->assertFalse(chimOghmaShouldUsePreviousExchange($input), $input);
+        }
+
+        $db = $this->catalogDatabase();
+        $current = chimOghmaExtractEntities($db, 'What about their leader?', 3);
+        $previous = chimOghmaExtractEntities($db, 'Tell me about Whiterun.', 1);
+        $this->assertSame([], array_column($current['entities'], 'topic'));
+        $this->assertSame(['whiterun'], array_column($previous['entities'], 'topic'));
+    }
+
     public function testFallbackSuggestionsUseTheSharedCatalogIdentityRules(): void
     {
         $db = $this->catalogDatabase();
