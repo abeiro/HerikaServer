@@ -26,12 +26,7 @@ The bridge runs the frozen legacy updater and the narrowly audited `legacy-basel
 1. Add `database/migrations/YYYYMMDDNNNN_short_name.sql`. Versions are globally ordered and filenames are lowercase.
 2. Use raw SQL by default. Do not add `BEGIN`, `COMMIT`, or `ROLLBACK`; the runner owns the transaction.
 3. Use a PHP migration only when a data transformation genuinely needs application logic. The file must return a callable that accepts the PostgreSQL connection.
-4. Apply the migration to a disposable database, then regenerate `database/schema-contract.json`:
-
-```bash
-HERIKA_DATABASE_DSN='host=localhost dbname=testdb user=dwemer password=dwemer' \
-  php scripts/generate-schema-contract.php current database/schema-contract.json
-```
+4. Apply the migration to a disposable database, then regenerate `database/schema-contract.json` with the locally maintained schema-contract tool outside this repository.
 
 5. Test both a fresh database and a copy of an existing database. Run `migrate` twice, then run `verify`.
 
