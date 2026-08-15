@@ -1398,6 +1398,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
     }
 
+    /* Catalog pagination */
+    .catalog-pagination-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 15px;
+        font-size: 0.9em;
+        color: #b8b8b8;
+    }
+
+    .catalog-pagination-bar strong {
+        color: rgb(242, 124, 17);
+        font-weight: 600;
+    }
+
+    .catalog-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 15px;
+    }
+
+    .catalog-pagination a,
+    .catalog-pagination span {
+        display: inline-block;
+        min-width: 36px;
+        padding: 6px 10px;
+        text-align: center;
+        border-radius: 6px;
+        border: 1px solid #3a3a3a;
+        background: rgba(26, 26, 26, 0.8);
+        color: #e9efff;
+        text-decoration: none;
+        font-size: 0.9em;
+    }
+
+    .catalog-pagination a:hover {
+        border-color: rgba(242, 124, 17, 0.5);
+        color: rgb(242, 124, 17);
+        text-decoration: none;
+    }
+
+    .catalog-pagination a:focus-visible {
+        outline: 2px solid rgb(242, 124, 17);
+        outline-offset: 2px;
+    }
+
+    .catalog-pagination [aria-current="page"] {
+        background: rgba(242, 124, 17, 0.2);
+        border-color: rgba(242, 124, 17, 0.6);
+        color: rgb(242, 124, 17);
+        font-weight: 600;
+    }
+
+    .catalog-pagination [aria-disabled="true"] {
+        opacity: 0.45;
+        cursor: default;
+    }
+
+    .catalog-pagination .catalog-pagination-gap {
+        border-color: transparent;
+        background: none;
+        min-width: 0;
+        padding: 6px 2px;
+        color: #888;
+    }
+
     /* Responsive Design */
     @media (max-width: 768px) {
         main {
@@ -1638,17 +1709,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $conditions[] = "(topic ILIKE {$placeholder} OR coalesce(aliases, '') ILIKE {$placeholder} OR coalesce(tags, '') ILIKE {$placeholder})";
             }
             $whereSql = empty($conditions) ? '' : 'WHERE ' . implode(' AND ', $conditions);
+
+            // Fixed page size: the catalog is far too large to render in one page.
+            $perPage = 500;
+
+            // Count with the exact same filters as the row query so the page math matches the results.
+            $totalEntries = 0;
+            $countResult = pg_query_params($conn, "SELECT COUNT(*) FROM $schema.oghma $whereSql", $params);
+            if ($countResult) {
+                $totalEntries = (int) pg_fetch_result($countResult, 0, 0);
+            }
+
+            $totalPages = max(1, (int) ceil($totalEntries / $perPage));
+            $currentPage = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+            $currentPage = max(1, min($currentPage, $totalPages));
+            $offset = ($currentPage - 1) * $perPage;
+
             $query = "
                 SELECT topic, aliases, topic_desc, knowledge_class, topic_desc_basic,
                        knowledge_class_basic, tags, category, source_type, source_catalog_version
                 FROM $schema.oghma
                 $whereSql
                 ORDER BY topic $order
+                LIMIT $perPage OFFSET $offset
             ";
 
             $result = pg_query_params($conn, $query, $params);
 
+            // Pagination links keep every active filter so paging never silently widens the result set.
+            $pageLinkParams = [];
+            if ($selectedCategory !== '') $pageLinkParams['cat'] = $selectedCategory;
+            if ($letter !== '')           $pageLinkParams['letter'] = $letter;
+            if ($searchTerm !== '')       $pageLinkParams['search'] = $searchTerm;
+            $pageLinkParams['order'] = strtolower($order);
+
+            $oghmaPageUrl = static function ($page) use ($pageLinkParams) {
+                return '?' . http_build_query($pageLinkParams + ['page' => (int) $page]) . '#entries';
+            };
+
             echo '<a id="entries"></a>';
+
+            if ($totalEntries > 0) {
+                $firstShown = $offset + 1;
+                $lastShown  = min($offset + $perPage, $totalEntries);
+                echo '<div class="catalog-pagination-bar">';
+                echo '<span>Showing <strong>' . number_format($firstShown) . '&ndash;' . number_format($lastShown)
+                    . '</strong> of <strong>' . number_format($totalEntries) . '</strong> articles</span>';
+                echo '<span>Page <strong>' . number_format($currentPage) . '</strong> of <strong>'
+                    . number_format($totalPages) . '</strong></span>';
+                echo '</div>';
+            }
             echo '<div class="table-container">';
             echo '<table>';
             echo '<tr>
@@ -1749,6 +1859,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
                 if ($rowCount === 0) {
                     echo '<p>No entries found.</p>';
+                }
+
+                if ($totalPages > 1) {
+                    // Compact window: first/last always reachable, neighbours around the current page.
+                    $windowStart = max(1, $currentPage - 2);
+                    $windowEnd   = min($totalPages, $currentPage + 2);
+                    $pageItems = range($windowStart, $windowEnd);
+                    if ($windowStart > 1) {
+                        if ($windowStart > 2) array_unshift($pageItems, 'gap');
+                        array_unshift($pageItems, 1);
+                    }
+                    if ($windowEnd < $totalPages) {
+                        if ($windowEnd < $totalPages - 1) $pageItems[] = 'gap';
+                        $pageItems[] = $totalPages;
+                    }
+
+                    echo '<nav class="catalog-pagination" aria-label="Oghma Infinium entries pagination">';
+
+                    if ($currentPage > 1) {
+                        echo '<a href="' . htmlspecialchars($oghmaPageUrl($currentPage - 1), ENT_QUOTES, 'UTF-8')
+                            . '" rel="prev">&laquo; Previous</a>';
+                    } else {
+                        echo '<span aria-disabled="true">&laquo; Previous</span>';
+                    }
+
+                    foreach ($pageItems as $item) {
+                        if ($item === 'gap') {
+                            echo '<span class="catalog-pagination-gap" aria-hidden="true">&hellip;</span>';
+                        } elseif ($item === $currentPage) {
+                            echo '<span aria-current="page">' . $item . '</span>';
+                        } else {
+                            echo '<a href="' . htmlspecialchars($oghmaPageUrl($item), ENT_QUOTES, 'UTF-8')
+                                . '" aria-label="Go to page ' . $item . '">' . $item . '</a>';
+                        }
+                    }
+
+                    if ($currentPage < $totalPages) {
+                        echo '<a href="' . htmlspecialchars($oghmaPageUrl($currentPage + 1), ENT_QUOTES, 'UTF-8')
+                            . '" rel="next">Next &raquo;</a>';
+                    } else {
+                        echo '<span aria-disabled="true">Next &raquo;</span>';
+                    }
+
+                    echo '</nav>';
                 }
             } else {
                 echo '<p>Error fetching Oghma entries: ' . pg_last_error($conn) . '</p>';
@@ -2312,6 +2466,9 @@ function applySearch() {
         urlParams.delete("search");
     }
     
+    // A new search changes the result set, so start again at the first page
+    urlParams.delete("page");
+
     // Preserve existing parameters if they exist
     const currentCategory = urlParams.get("cat");
     const currentLetter = urlParams.get("letter");
