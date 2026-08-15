@@ -1,7 +1,10 @@
 <?php
 
-const CHIM_PLAYER2_HEALTH_ACTIVITY_TTL = 180;
-const CHIM_PLAYER2_HEALTH_ACTIVITY_WRITE_INTERVAL = 15;
+require_once __DIR__ . '/game_activity.php';
+
+// Compatibility aliases for integrations that still reference the original Player2-owned activity constants.
+const CHIM_PLAYER2_HEALTH_ACTIVITY_TTL = CHIM_GAME_ACTIVITY_TTL;
+const CHIM_PLAYER2_HEALTH_ACTIVITY_WRITE_INTERVAL = CHIM_GAME_ACTIVITY_WRITE_INTERVAL;
 const CHIM_PLAYER2_HEALTH_USE_TTL = 300;
 const CHIM_PLAYER2_HEALTH_INTERVAL = 60;
 const CHIM_PLAYER2_HEALTH_LOCK_ID = 873421;
@@ -56,45 +59,22 @@ function chimPlayer2HealthSetOption(string $id, string $value): bool
     ], 'id');
 }
 
+/** @deprecated Use chimMarkGameActivity() for shared game activity. */
 function chimPlayer2HealthMarkGameActivity(?int $now = null): bool
 {
-    $now = $now ?? time();
-    $lastActivity = intval(chimPlayer2HealthGetOption('PLAYER2_GAME_LAST_ACTIVITY_TS', '0'));
-    $newSession = $lastActivity <= 0 || ($now - $lastActivity) > CHIM_PLAYER2_HEALTH_ACTIVITY_TTL;
-
-    if ($newSession) {
-        chimPlayer2HealthSetOption('PLAYER2_GAME_SESSION_STARTED_TS', strval($now));
-    }
-    if ($newSession || ($now - $lastActivity) >= CHIM_PLAYER2_HEALTH_ACTIVITY_WRITE_INTERVAL) {
-        chimPlayer2HealthSetOption('PLAYER2_GAME_LAST_ACTIVITY_TS', strval($now));
-    }
-    $GLOBALS['PLAYER2_GAME_REQUEST_ACTIVE'] = true;
-
-    return $newSession;
-}
-
-/**
- * Report whether HerikaServer has received normal game traffic recently.
- */
-function chimPlayer2HealthHasRecentGameActivity(?int $now = null, int $ttl = CHIM_PLAYER2_HEALTH_ACTIVITY_TTL): bool
-{
-    $now = $now ?? time();
-    $ttl = max(1, $ttl);
-    $lastActivity = intval(chimPlayer2HealthGetOption('PLAYER2_GAME_LAST_ACTIVITY_TS', '0'));
-
-    return $lastActivity > 0 && ($now - $lastActivity) <= $ttl;
+    return chimMarkGameActivity($now);
 }
 
 function chimPlayer2HealthMarkUsed(string $connectorUrl, ?int $now = null): bool
 {
-    if (empty($GLOBALS['PLAYER2_GAME_REQUEST_ACTIVE'])) {
+    if (!chimIsGameRequestActive()) {
         return false;
     }
 
     $now = $now ?? time();
-    $sessionStarted = intval(chimPlayer2HealthGetOption('PLAYER2_GAME_SESSION_STARTED_TS', '0'));
-    $lastActivity = intval(chimPlayer2HealthGetOption('PLAYER2_GAME_LAST_ACTIVITY_TS', '0'));
-    if ($sessionStarted <= 0 || $lastActivity <= 0 || ($now - $lastActivity) > CHIM_PLAYER2_HEALTH_ACTIVITY_TTL) {
+    $sessionStarted = chimGetGameActivitySessionStartedTimestamp();
+    $lastActivity = chimGetLastGameActivityTimestamp();
+    if ($sessionStarted <= 0 || $lastActivity <= 0 || ($now - $lastActivity) > CHIM_GAME_ACTIVITY_TTL) {
         return false;
     }
 
@@ -115,7 +95,7 @@ function chimPlayer2HealthShouldPing(array $state, int $now): bool
 
     return $healthUrl !== ''
         && $lastActivity > 0
-        && ($now - $lastActivity) <= CHIM_PLAYER2_HEALTH_ACTIVITY_TTL
+        && ($now - $lastActivity) <= CHIM_GAME_ACTIVITY_TTL
         && $sessionStarted > 0
         && $activeSession === $sessionStarted
         && $lastUsed > 0
@@ -178,8 +158,8 @@ function chimPlayer2HealthTick(?int $now = null, ?callable $transport = null): b
 
     $now = $now ?? time();
     $state = [
-        'last_activity' => chimPlayer2HealthGetOption('PLAYER2_GAME_LAST_ACTIVITY_TS', '0'),
-        'session_started' => chimPlayer2HealthGetOption('PLAYER2_GAME_SESSION_STARTED_TS', '0'),
+        'last_activity' => chimGetLastGameActivityTimestamp(),
+        'session_started' => chimGetGameActivitySessionStartedTimestamp(),
         'active_session' => chimPlayer2HealthGetOption('PLAYER2_HEALTH_ACTIVE_SESSION_TS', '0'),
         'last_used' => chimPlayer2HealthGetOption('PLAYER2_HEALTH_LAST_USED_TS', '0'),
         'last_attempt' => chimPlayer2HealthGetOption('PLAYER2_HEALTH_LAST_ATTEMPT_TS', '0'),

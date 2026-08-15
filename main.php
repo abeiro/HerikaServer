@@ -33,7 +33,7 @@ chimRuntimeBootstrap($path, [
     'load_player_name' => true,
     'load_narrator' => true,
 ]);
-require_once($path . "lib/player2_health.php");
+require_once($path . "lib/game_activity.php");
 require_once($path . "lib/background_processor.php");
 if (!headers_sent() && function_exists('chimGetNarratorDisplayNameHeaderValue')) {
     header('X-Narrator-Display-Name: ' . chimGetNarratorDisplayNameHeaderValue());
@@ -165,8 +165,8 @@ $db = $GLOBALS["db"] ?? new sql();
 $GLOBALS["db"] = $db;
 
 if (PHP_SAPI !== 'cli' && !getenv('PHPUNIT_TEST') && $gameRequest[0] !== 'request') {
-    $player2NewGameSession = chimPlayer2HealthMarkGameActivity();
-    if ($player2NewGameSession && function_exists('herikaEnsureBackgroundProcessorRunning')) {
+    $newGameActivitySession = chimMarkGameActivity();
+    if ($newGameActivitySession && function_exists('herikaEnsureBackgroundProcessorRunning')) {
         herikaEnsureBackgroundProcessorRunning(false);
     }
 }

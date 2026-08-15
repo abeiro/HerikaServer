@@ -11,8 +11,8 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         $GLOBALS["db"] = new sql();
     }
 
-    require_once($enginePath . "lib/player2_health.php");
-    if (!chimPlayer2HealthHasRecentGameActivity()) {
+    require_once($enginePath . "lib/game_activity.php");
+    if (!chimHasRecentGameActivity()) {
         Logger::debug("[MIDDLETERM] Skipping scheduled LLM work because no recent game activity was detected");
         return;
     }
