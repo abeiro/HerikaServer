@@ -234,6 +234,63 @@ function deleteCachedCartesiaVoiceId($voiceName, ?array $config = null, bool $in
     }
 }
 
+function getCartesiaVoiceMetadataKey($voiceName, ?array $config = null): string {
+    return 'cartesia_voice_meta_' . substr(md5(getCartesiaVoiceCachePrefix($config)), 0, 12) . '__' . $voiceName;
+}
+
+function getCartesiaVoiceMetadata($voiceName, ?array $config = null): array {
+    $db = ensureCartesiaDb();
+    if (!$db) {
+        return [];
+    }
+    $key = $db->escape(getCartesiaVoiceMetadataKey($voiceName, $config));
+    $row = $db->fetchOne("SELECT value FROM conf_opts WHERE id = '{$key}' LIMIT 1");
+    $decoded = json_decode(strval($row['value'] ?? ''), true);
+    return is_array($decoded) ? $decoded : [];
+}
+
+function storeCartesiaVoiceMetadata($voiceName, $voiceId, $samplePath, bool $managed, ?array $config = null): void {
+    $db = ensureCartesiaDb();
+    if (!$db) {
+        return;
+    }
+    $metadata = [
+        'voice_id' => trim(strval($voiceId)),
+        'managed' => $managed,
+        'sample_sha256' => is_file($samplePath) ? hash_file('sha256', $samplePath) : '',
+        'created_at' => gmdate('c'),
+    ];
+    $key = $db->escape(getCartesiaVoiceMetadataKey($voiceName, $config));
+    $value = $db->escape(json_encode($metadata, JSON_UNESCAPED_SLASHES));
+    $db->execQuery(
+        "INSERT INTO conf_opts (id, value) VALUES ('{$key}', '{$value}')
+         ON CONFLICT(id) DO UPDATE SET value = '{$value}'"
+    );
+}
+
+function deleteCartesiaVoiceMetadata($voiceName, ?array $config = null): void {
+    $db = ensureCartesiaDb();
+    if (!$db) {
+        return;
+    }
+    $key = $db->escape(getCartesiaVoiceMetadataKey($voiceName, $config));
+    $db->execQuery("DELETE FROM conf_opts WHERE id = '{$key}'");
+}
+
+function findCartesiaVoiceSamplePath($voiceName): string {
+    $possiblePaths = [
+        __DIR__ . "/../data/voices/{$voiceName}.wav",
+        "/var/www/html/HerikaServer/data/voices/{$voiceName}.wav",
+    ];
+    foreach ($possiblePaths as $testPath) {
+        $normalized = realpath($testPath);
+        if ($normalized !== false && is_file($normalized)) {
+            return $normalized;
+        }
+    }
+    return '';
+}
+
 function getCartesiaCachedVoicesMap(bool $includeLegacy = true, ?array $config = null): array {
     $db = ensureCartesiaDb();
     if (!$db) {
@@ -398,6 +455,7 @@ function getOrCreateCartesiaVoice($voiceName) {
     if ($existingVoiceId !== '') {
         Logger::info("Found existing Cartesia voice for {$voiceName}: {$existingVoiceId}");
         storeCachedCartesiaVoiceId($voiceName, $existingVoiceId, $config);
+        storeCartesiaVoiceMetadata($voiceName, $existingVoiceId, '', false, $config);
         return $existingVoiceId;
     }
     
@@ -446,6 +504,7 @@ function getOrCreateCartesiaVoice($voiceName) {
     }
     
     storeCachedCartesiaVoiceId($voiceName, $cartesiaVoiceId, $config);
+    storeCartesiaVoiceMetadata($voiceName, $cartesiaVoiceId, $voiceSamplePath, true, $config);
     clearCartesiaLastError();
     
     Logger::info("Successfully cloned voice {$voiceName} to Cartesia with ID: {$cartesiaVoiceId}");
@@ -594,6 +653,97 @@ function cloneVoiceToCartesia($voiceName, $voiceSamplePath, ?array $config = nul
     
     clearCartesiaLastError();
     return $result['id'];
+}
+
+function deleteCartesiaRemoteVoice($voiceId, ?array $config = null): bool {
+    $config = is_array($config) ? $config : getCartesiaActiveConfig();
+    $apiKey = trim(strval($config['api_key'] ?? ''));
+    $voiceId = trim(strval($voiceId));
+    if ($apiKey === '' || $voiceId === '') {
+        return false;
+    }
+    $options = [
+        'http' => [
+            'method' => 'DELETE',
+            'header' => "X-API-Key: {$apiKey}\r\nCartesia-Version: 2026-03-01\r\nAccept: application/json\r\n",
+            'ignore_errors' => true,
+            'timeout' => 30,
+        ],
+    ];
+    $response = @file_get_contents(
+        'https://api.cartesia.ai/voices/' . rawurlencode($voiceId),
+        false,
+        stream_context_create($options)
+    );
+    $statusLine = $http_response_header[0] ?? '';
+    $httpCode = preg_match('/\s(\d{3})\s/', $statusLine, $matches) ? intval($matches[1]) : 0;
+    if ($httpCode >= 200 && $httpCode < 300) {
+        unset($GLOBALS['CARTESIA_REMOTE_VOICES_CACHE']);
+        return true;
+    }
+    setCartesiaLastError("Cartesia delete API returned HTTP {$httpCode}.");
+    Logger::warn("Failed to delete Cartesia voice {$voiceId}: HTTP {$httpCode}; " . substr(strval($response), 0, 500));
+    return false;
+}
+
+function rebuildCartesiaVoice($voiceName) {
+    clearCartesiaLastError();
+    $config = getCartesiaActiveConfig();
+    $samplePath = findCartesiaVoiceSamplePath($voiceName);
+    if ($samplePath === '') {
+        setCartesiaLastError("Voice sample not found for {$voiceName}.");
+        return false;
+    }
+
+    $oldVoiceId = getCachedCartesiaVoiceId($voiceName, $config);
+    $oldMetadata = getCartesiaVoiceMetadata($voiceName, $config);
+    $newVoiceId = cloneVoiceToCartesia($voiceName, $samplePath, $config);
+    if ($newVoiceId === false || $newVoiceId === '') {
+        return false;
+    }
+
+    $validationAudio = generateCartesiaTTS('Voice synchronization test.', $newVoiceId);
+    if (!is_string($validationAudio) || $validationAudio === '') {
+        $validationError = getCartesiaLastError();
+        deleteCartesiaRemoteVoice($newVoiceId, $config);
+        setCartesiaLastError($validationError !== '' ? $validationError : 'The new Cartesia clone failed validation.');
+        return false;
+    }
+
+    storeCachedCartesiaVoiceId($voiceName, $newVoiceId, $config);
+    storeCartesiaVoiceMetadata($voiceName, $newVoiceId, $samplePath, true, $config);
+    if (
+        $oldVoiceId !== '' &&
+        $oldVoiceId !== $newVoiceId &&
+        !empty($oldMetadata['managed']) &&
+        trim(strval($oldMetadata['voice_id'] ?? '')) === $oldVoiceId
+    ) {
+        deleteCartesiaRemoteVoice($oldVoiceId, $config);
+    }
+    clearCartesiaLastError();
+    return $newVoiceId;
+}
+
+function deleteManagedCartesiaVoice($voiceName): bool {
+    clearCartesiaLastError();
+    $config = getCartesiaActiveConfig();
+    $voiceId = getCachedCartesiaVoiceId($voiceName, $config);
+    $metadata = getCartesiaVoiceMetadata($voiceName, $config);
+    if (
+        $voiceId === '' ||
+        empty($metadata['managed']) ||
+        trim(strval($metadata['voice_id'] ?? '')) !== $voiceId
+    ) {
+        setCartesiaLastError('This Cartesia voice is not marked as managed by this installation; only its cached ID can be forgotten.');
+        return false;
+    }
+    if (!deleteCartesiaRemoteVoice($voiceId, $config)) {
+        return false;
+    }
+    deleteCachedCartesiaVoiceId($voiceName, $config, true);
+    deleteCartesiaVoiceMetadata($voiceName, $config);
+    clearCartesiaLastError();
+    return true;
 }
 
 /**

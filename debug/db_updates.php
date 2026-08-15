@@ -2,6 +2,7 @@
 
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/logger.php");
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/settings.php");
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/oghma_aliases.php");
 
 $checkVersion = function($tablename) {
     global $db;
@@ -103,6 +104,10 @@ try {
     }
     if ($checkTableExists("core_tts_connector") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_connector.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
+    if ($checkTableExists("core_tts_fallback") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_fallback.sql"));
         $db->execQuery("SET search_path TO public");
     }
     if ($checkTableExists("core_llm_connector") == -1) {
@@ -3741,6 +3746,7 @@ try {
         ["name"=>"core_api_badge",   "file"=>__DIR__."/../lib/core/database_schema/core_api_badge.sql"],
         ["name"=>"core_llm_connector","file"=>__DIR__."/../lib/core/database_schema/core_llm_connector.sql"],
         ["name"=>"core_tts_connector","file"=>__DIR__."/../lib/core/database_schema/core_tts_connector.sql"],
+        ["name"=>"core_tts_fallback","file"=>__DIR__."/../lib/core/database_schema/core_tts_fallback.sql"],
         ["name"=>"core_stt_connector","file"=>__DIR__."/../lib/core/database_schema/core_stt_connector.sql"],
         ["name"=>"core_profiles",     "file"=>__DIR__."/../lib/core/database_schema/core_profiles.sql"],
         ["name"=>"core_npc_master",   "file"=>__DIR__."/../lib/core/database_schema/core_npc_master.sql"]
@@ -4256,6 +4262,16 @@ if ($checkTableExists("import_rules") == -1) {
 } else
     Logger::info(__FILE__." import_rules exists");
 
+if ($checkVersion("import_rules") < 20260725001) {
+    try {
+        $db->execQuery("ALTER TABLE public.import_rules ADD COLUMN IF NOT EXISTS match_faction text");
+        $updateVersion("import_rules", 20260725001);
+        Logger::info("Applied patch import_rules 20260725001 - add faction matching");
+    } catch (Exception $e) {
+        Logger::error("Failed to apply patch import_rules 20260725001: " . $e->getMessage());
+    }
+}
+
 // Usage column
 $db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS usage jsonb");
 
@@ -4348,6 +4364,8 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS coords POI
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS refs text");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS cleared boolean");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS world text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS chim_added int");
 $db->execQuery("
 CREATE OR REPLACE VIEW public.locations_v
 as
@@ -4362,6 +4380,7 @@ $db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS vendor_cont
 $db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS stock JSONB");
 $db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS gold numeric");
 $db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS player_rank numeric");
+$db->execQuery("ALTER TABLE public.factions ADD COLUMN IF NOT EXISTS localts bigint");
 
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS title text");
 $db->execQuery("ALTER TABLE public.sneq_quests ADD COLUMN IF NOT EXISTS stage text");
@@ -6879,6 +6898,49 @@ if ($checkVersion("core_action") < 20260610003) {
     Logger::info("Applied patch core_action 20260610003");
 }
 
+if ($checkVersion("core_action") < 20260803001) {
+    Logger::debug("Applying core_action 20260803001 - add held item handoff action");
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name, action_name, description, return_message,
+            available_to_npc, available_to_followers, available_to_narrator,
+            is_activated, parameters_json, metadata, game_function,
+            import_version, script_proxy_program
+        ) VALUES (
+            'TakeHeldItem',
+            'Take_Held_Item',
+            '#HERIKA_NAME# accepts one exact physical item currently held by #PLAYER_NAME#. Use only the exact RefID:ItemName shown in <held_items>. Do not use this for equipped or inventory-only items.',
+            '#HERIKA_NAME# accepts #ITEM# from #PLAYER_NAME#.',
+            TRUE, TRUE, FALSE, TRUE,
+            '{\"type\":\"object\",\"required\":[\"item\"],\"properties\":{\"item\":{\"type\":\"string\",\"description\":\"REQUIRED: Exact RefID:ItemName from <held_items>.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"plugin_command\",\"confirmation\":{\"default_policy\":\"ask\"},\"followup\":{\"enabled\":false}}'::jsonb,
+            TRUE, 0, NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("core_action", 20260803001);
+        Logger::info("Applied patch core_action 20260803001");
+    } else {
+        Logger::error("Failed to apply patch core_action 20260803001");
+    }
+}
+
 //----------------------------------------------------
 
 // Relationship Evaluation and Initialization Queues
@@ -7028,6 +7090,18 @@ if ($checkVersion("bgl_history") < 20260623001) {
 
 }
 
+if ($checkVersion("bgl_history") < 20260729001) {
+    Logger::debug("Applying bgl_history 20260729001 - create BgL history table");
+
+    $db->execQuery("
+        ALTER TABLE public.bgl_history ADD COLUMN category TEXT DEFAULT NULL
+    ");
+
+    $updateVersion("bgl_history", 20260729001);
+    Logger::info("Applied patch bgl_history 20260729001");
+
+}
+
 if ($checkVersion("oghma") < 20260625001) {
     Logger::debug("Applying oghma 20260625001 - ensure topic has a unique constraint for upserts");
 
@@ -7091,6 +7165,28 @@ if ($checkVersion("oghma") < 20260625001) {
 
     $updateVersion("oghma", 20260625001);
     Logger::info("Applied patch oghma 20260625001");
+}
+
+if ($checkVersion("oghma_aliases") < 20260725001) {
+    Logger::debug("Applying oghma_aliases 20260725001 - add static Oghma aliases and rebuild search vectors");
+
+    $db->execQuery("ALTER TABLE public.oghma ADD COLUMN IF NOT EXISTS aliases text DEFAULT '' NOT NULL");
+    $db->execQuery('UPDATE public.oghma SET native_vector = ' . chimOghmaNativeVectorSql());
+    $db->execQuery('CREATE INDEX IF NOT EXISTS oghma_native_vector_idx ON public.oghma USING gin (native_vector)');
+
+    $aliasSeed = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'oghma_aliases.csv';
+    if (is_file($aliasSeed)) {
+        $stats = chimOghmaApplyAliasSeed($db, $aliasSeed);
+        Logger::info(
+            'Oghma alias seed applied: matched=' . $stats['matched']
+            . ', updated=' . $stats['updated']
+            . ', reindexed=' . $stats['reindexed']
+            . ', rejected=' . $stats['rejected']
+        );
+    }
+
+    $updateVersion("oghma_aliases", 20260725001);
+    Logger::info("Applied patch oghma_aliases 20260725001");
 }
 
 if ($checkVersion("core_tts_connector_pockettts_audiocpp") < 20260628001) {
@@ -7212,6 +7308,581 @@ if ($checkVersion("general_settings") < 20260711001) {
         Logger::info("Applied patch general_settings 20260711001");
     }
 }
+
+if ($checkVersion("general_settings") < 20260720001) {
+    Logger::debug("Applying general_settings 20260720001 - add forced Oghma scene context settings");
+
+    $b_ok = true;
+    try {
+        foreach ([
+            'RACIAL_OGHMA' => true,
+            'LOCATION_OGHMA' => true,
+        ] as $settingId => $fallbackDefault) {
+            $existingRow = chimGetGeneralSettingRow($settingId);
+            $definition = chimGetSchemaDefinition($settingId);
+            $description = chimGetManagedGeneralSettingDescriptions()[$settingId]
+                ?? chimGetSchemaDescription($settingId);
+
+            if ($existingRow) {
+                $currentValue = $existingRow['value'] ?? ($definition['default'] ?? $fallbackDefault);
+            } else {
+                $legacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+                $currentValue = ($legacyValue === "__CHIM_SETTING_MISSING__")
+                    ? ($definition['default'] ?? $fallbackDefault)
+                    : $legacyValue;
+            }
+
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing {$settingId}");
+            }
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error adding forced Oghma scene context settings: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260720001);
+        Logger::info("Applied patch general_settings 20260720001");
+    }
+}
+
+if ($checkVersion("general_settings") < 20260720002) {
+    Logger::debug("Applying general_settings 20260720002 - move Oghma controls to global settings");
+
+    $b_ok = true;
+    try {
+        $defaultProfileMetadata = [];
+        $defaultProfile = $db->fetchOne(
+            "SELECT metadata FROM public.core_profiles "
+            . "WHERE lower(COALESCE(default_npc, '')) IN ('1', 'true', 'yes', 'on') "
+            . "ORDER BY id ASC LIMIT 1"
+        );
+        if (is_array($defaultProfile)) {
+            $rawMetadata = $defaultProfile['metadata'] ?? [];
+            $defaultProfileMetadata = is_array($rawMetadata)
+                ? $rawMetadata
+                : (json_decode(strval($rawMetadata), true) ?: []);
+        }
+
+        $resolvedValues = [];
+        foreach ([
+            'OGHMA_INFINIUM' => true,
+            'OGHMA_AMOUNT' => '1',
+        ] as $settingId => $fallbackDefault) {
+            $existingRow = chimGetGeneralSettingRow($settingId);
+            $definition = chimGetSchemaDefinition($settingId);
+            $description = chimGetManagedGeneralSettingDescriptions()[$settingId]
+                ?? chimGetSchemaDescription($settingId);
+
+            if ($existingRow) {
+                $currentValue = $existingRow['value'] ?? ($definition['default'] ?? $fallbackDefault);
+            } elseif (array_key_exists($settingId, $defaultProfileMetadata)) {
+                $currentValue = $defaultProfileMetadata[$settingId];
+            } else {
+                $legacyValue = chimReadLegacyGlobalValue($settingId, "__CHIM_SETTING_MISSING__");
+                $currentValue = ($legacyValue === "__CHIM_SETTING_MISSING__")
+                    ? ($definition['default'] ?? $fallbackDefault)
+                    : $legacyValue;
+            }
+
+            if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+                throw new Exception("Failed writing {$settingId}");
+            }
+            $resolvedValues[$settingId] = chimSettingsStringifyValue($currentValue);
+        }
+
+        // Keep only meaningful per-profile differences as overrides.
+        foreach ($resolvedValues as $settingId => $globalValue) {
+            $safeSettingId = $db->escapeLiteral($settingId);
+            $safeGlobalValue = $db->escapeLiteral(strtolower(trim($globalValue)));
+            if ($db->execQuery(
+                "UPDATE public.core_profiles "
+                . "SET metadata = COALESCE(metadata, '{}'::jsonb) - {$safeSettingId} "
+                . "WHERE COALESCE(metadata, '{}'::jsonb) ? {$safeSettingId} "
+                . "AND lower(trim(COALESCE(metadata ->> {$safeSettingId}, ''))) = {$safeGlobalValue}"
+            ) === false) {
+                throw new Exception("Failed normalizing profile override {$settingId}");
+            }
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error moving Oghma controls to global settings: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260720002);
+        Logger::info("Applied patch general_settings 20260720002");
+    }
+}
+
+if ($checkVersion("quest_asset_library") < 20260718003) {
+    Logger::debug("Applying quest_asset_library 20260718003 - add curated quest spawn templates");
+
+    $schemaFile = __DIR__ . "/../data/quest_asset_library.sql";
+    $manifestDirectory = __DIR__ . "/../data/quest_assets";
+    $migrationOk = is_readable($schemaFile)
+        && $db->execQuery(file_get_contents($schemaFile)) !== false;
+
+    if ($migrationOk) {
+        require_once __DIR__ . "/../lib/quest_asset_library.php";
+        foreach (["skyrim_official.json", "chim_spawn_templates.json"] as $manifestName) {
+            $manifestPath = $manifestDirectory . "/" . $manifestName;
+            $result = quest_asset_import_manifest_file($manifestPath);
+            if (empty($result["success"])) {
+                $migrationOk = false;
+                Logger::error(
+                    "Failed importing quest asset manifest {$manifestName}: "
+                    . implode("; ", $result["errors"] ?? ["unknown error"])
+                );
+                break;
+            }
+        }
+    }
+
+    if ($migrationOk) {
+        require_once __DIR__ . "/../lib/quest_reference_data.php";
+        $canonicalDefaults = [
+            "npc_templates" => [],
+            "npc_own_templates" => [],
+        ];
+        foreach (["skyrim_official.json", "chim_spawn_templates.json"] as $manifestName) {
+            $manifestPath = $manifestDirectory . "/" . $manifestName;
+            $manifest = json_decode((string) file_get_contents($manifestPath), true);
+            foreach (($manifest["groups"] ?? []) as $group) {
+                $datasetName = strtolower(trim((string) ($group["dataset"] ?? "")));
+                $groupKey = strtolower(trim((string) ($group["key"] ?? "")));
+                if (!isset($canonicalDefaults[$datasetName]) || $groupKey === "") {
+                    continue;
+                }
+                foreach (($group["members"] ?? []) as $member) {
+                    $stableRef = trim((string) ($member["stable_ref"] ?? ""));
+                    if ($stableRef !== "") {
+                        $canonicalDefaults[$datasetName][$groupKey][] = $stableRef;
+                    }
+                }
+            }
+        }
+
+        foreach ($canonicalDefaults as $datasetName => $valueMap) {
+            if (quest_reference_add_missing_dataset_entries($datasetName, $valueMap) === false) {
+                $migrationOk = false;
+                Logger::error("Failed synchronizing bundled {$datasetName} groups into the canonical quest table");
+                break;
+            }
+        }
+    }
+
+    if ($migrationOk) {
+        $updateVersion("quest_asset_library", 20260718003);
+        Logger::info("Applied patch quest_asset_library 20260718003");
+    } else {
+        Logger::error("Failed to apply quest_asset_library 20260718003");
+    }
+}
+
+if ($checkVersion("quest_asset_library") < 20260719001) {
+    Logger::debug("Applying quest_asset_library 20260719001 - remove unshipped quest NPC templates");
+
+    require_once __DIR__ . "/../lib/quest_asset_library.php";
+    require_once __DIR__ . "/../lib/quest_reference_data.php";
+
+    $migrationOk = true;
+    $manifestPath = __DIR__ . "/../data/quest_assets/chim_spawn_templates.json";
+    $result = quest_asset_import_manifest_file($manifestPath);
+    if (empty($result["success"])) {
+        $migrationOk = false;
+        Logger::error(
+            "Failed importing cleaned quest asset manifest chim_spawn_templates.json: "
+            . implode("; ", $result["errors"] ?? ["unknown error"])
+        );
+    }
+
+    if ($migrationOk && quest_reference_table_exists("quest_npc_own_templates")) {
+        $templateKeyFilter = "template_key ~* '^(male|female)_(altmer|bosmer|dunmer|khajiit)(_|$)'";
+        $invalidStableRefs = "'aiagent.esp|00045ce7', 'aiagent.esp|00045ce8', "
+            . "'aiagent.esp|00045ce9', 'aiagent.esp|00045cea', "
+            . "'aiagent.esp|00045ceb', 'aiagent.esp|00045cec', "
+            . "'aiagent.esp|00045ced', 'aiagent.esp|00045cee'";
+        $invalidHexPattern = "^0x[0-9a-f]{2}045ce[7-9a-e]$";
+
+        if (quest_reference_column_exists("quest_npc_own_templates", "formids_json")) {
+            $migrationOk = $db->execQuery("
+                UPDATE public.quest_npc_own_templates AS templates
+                SET formids_json = (
+                    SELECT COALESCE(jsonb_agg(entry.value ORDER BY entry.ordinality), '[]'::jsonb) AS formids_json
+                    FROM jsonb_array_elements(COALESCE(templates.formids_json, '[]'::jsonb))
+                        WITH ORDINALITY AS entry(value, ordinality)
+                    WHERE NOT (
+                        lower(entry.value #>> '{}') IN ({$invalidStableRefs})
+                        OR lower(entry.value #>> '{}') ~ '{$invalidHexPattern}'
+                        OR (
+                            (entry.value #>> '{}') ~ '^[0-9]+$'
+                            AND (((entry.value #>> '{}')::bigint & 16777215) BETWEEN 285927 AND 285934)
+                        )
+                    )
+                )
+                WHERE {$templateKeyFilter}
+            ") !== false;
+
+            if ($migrationOk) {
+                $migrationOk = $db->execQuery("
+                    DELETE FROM public.quest_npc_own_templates
+                    WHERE {$templateKeyFilter}
+                      AND jsonb_array_length(COALESCE(formids_json, '[]'::jsonb)) = 0
+                ") !== false;
+            }
+        }
+
+        if ($migrationOk && quest_reference_column_exists("quest_npc_own_templates", "formid")) {
+            if (quest_reference_formid_column_is_text("quest_npc_own_templates")) {
+                $formIdFilter = "lower(trim(formid::text)) IN ({$invalidStableRefs}) "
+                    . "OR lower(trim(formid::text)) ~ '{$invalidHexPattern}' "
+                    . "OR (trim(formid::text) ~ '^[0-9]+$' "
+                    . "AND ((trim(formid::text)::bigint & 16777215) BETWEEN 285927 AND 285934))";
+            } else {
+                $formIdFilter = "(formid::bigint & 16777215) BETWEEN 285927 AND 285934";
+            }
+
+            $migrationOk = $db->execQuery("
+                DELETE FROM public.quest_npc_own_templates
+                WHERE {$templateKeyFilter}
+                  AND ({$formIdFilter})
+            ") !== false;
+        }
+    }
+
+    if ($migrationOk) {
+        $updateVersion("quest_asset_library", 20260719001);
+        Logger::info("Applied patch quest_asset_library 20260719001");
+    } else {
+        Logger::error("Failed to apply quest_asset_library 20260719001");
+    }
+}
+
+if ($checkVersion("quest_asset_library") < 20260729001) {
+    Logger::debug("Applying quest_asset_library 20260729001 - restore shipped playable race NPC templates");
+
+    require_once __DIR__ . "/../lib/quest_asset_library.php";
+    require_once __DIR__ . "/../lib/quest_reference_data.php";
+
+    $migrationOk = true;
+    $manifestPath = __DIR__ . "/../data/quest_assets/chim_spawn_templates.json";
+    $result = quest_asset_import_manifest_file($manifestPath);
+    if (empty($result["success"])) {
+        $migrationOk = false;
+        Logger::error(
+            "Failed importing playable race NPC templates: "
+            . implode("; ", $result["errors"] ?? ["unknown error"])
+        );
+    }
+
+    if ($migrationOk) {
+        $manifest = json_decode((string) file_get_contents($manifestPath), true);
+        $spawnTemplates = [];
+        foreach (($manifest["groups"] ?? []) as $group) {
+            if (strtolower(trim((string) ($group["dataset"] ?? ""))) !== "npc_own_templates") {
+                continue;
+            }
+
+            $groupKey = strtolower(trim((string) ($group["key"] ?? "")));
+            if ($groupKey === "") {
+                continue;
+            }
+
+            foreach (($group["members"] ?? []) as $member) {
+                $stableRef = trim((string) ($member["stable_ref"] ?? ""));
+                if ($stableRef !== "") {
+                    $spawnTemplates[$groupKey][] = $stableRef;
+                }
+            }
+        }
+
+        $migrationOk = quest_reference_add_missing_dataset_entries(
+            "npc_own_templates",
+            $spawnTemplates
+        ) !== false;
+    }
+
+    if ($migrationOk) {
+        $updateVersion("quest_asset_library", 20260729001);
+        Logger::info("Applied patch quest_asset_library 20260729001");
+    } else {
+        Logger::error("Failed to apply quest_asset_library 20260729001");
+    }
+}
+
+if ($checkVersion("prompts") < 20260719001) {
+    Logger::debug("Applying prompts 20260719001 - improve book reading prompt");
+
+    $bookSummaryPrompt = $db->escape(
+        "Read the provided book as {HERIKA_NAME}. Give a concise, accurate summary based only on the book text included in the current context, then add a brief in-character reaction. Do not invent missing passages, quotations, author details, or lore. If the book text is unavailable, say that you do not see any legible words on the pages. {TEMPLATE_DIALOG}"
+    );
+    $description = $db->escape(
+        "Controls how NPCs summarize and react to books. Editable in Prompts Manager; custom prompts are preserved during updates."
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('book_summary_prompt', '{$bookSummaryPrompt}', '{$description}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260719001);
+    Logger::info("Applied patch prompts 20260719001 - improved book reading prompt");
+}
+
+if ($checkVersion("prompts") < 20260727001) {
+    Logger::debug("Applying prompts 20260727001 - add bored event director rules");
+
+    require_once(__DIR__ . "/../lib/rolemaster_bored.php");
+    $boredEventRules = $db->escape(chimRolemasterDefaultBoredEventRules());
+    $description = $db->escape(
+        "Additional Rolemaster rules used only for autonomous bored events. "
+        . "Supports {SEED_ACTOR_RULE}, {SEED_ACTOR}, {NEARBY_ACTORS}, and {PLAYER_NAME} placeholders. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_rules', '{$boredEventRules}', '{$description}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260727001);
+        Logger::info("Applied patch prompts 20260727001 - added bored event director rules");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260727001");
+    }
+}
+
+if ($checkVersion("prompts") < 20260805001) {
+    Logger::debug("Applying prompts 20260805001 - keep bored Director dialogue chronological");
+
+    require_once(__DIR__ . "/../lib/rolemaster_bored.php");
+    $boredEventRules = $db->escape(chimRolemasterDefaultBoredEventRules());
+    $description = $db->escape(
+        "Additional Rolemaster rules used only for autonomous bored events. "
+        . "Supports {SEED_ACTOR_RULE}, {SEED_ACTOR}, {NEARBY_ACTORS}, and {PLAYER_NAME} placeholders. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_rules', '{$boredEventRules}', '{$description}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260805001);
+        Logger::info("Applied patch prompts 20260805001 - kept bored Director dialogue chronological");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260805001");
+    }
+}
+
+if ($checkVersion("memory_summary") < 20260721001) {
+    Logger::debug("Applying memory_summary 20260721001 - normalize diary memory owners");
+
+    $migrationOk = $db->execQuery("
+        UPDATE public.memory_summary
+        SET companions = '|' || trim(both '|' from trim(companions)) || '|'
+        WHERE classifier = 'diary'
+          AND nullif(trim(companions), '') IS NOT NULL
+          AND companions NOT LIKE '|%|'
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("memory_summary", 20260721001);
+        Logger::info("Applied patch memory_summary 20260721001");
+    } else {
+        Logger::error("Failed to apply patch memory_summary 20260721001");
+    }
+}
+
+
+if ($checkVersion("physical_npc_diaries") < 20260719001) {
+    Logger::debug("Applying physical_npc_diaries 20260719001 - add physical NPC diary tracking");
+
+    $schemaPath = __DIR__ . "/../lib/core/database_schema/physical_npc_diaries.sql";
+    if ($db->execQuery(file_get_contents($schemaPath))) {
+        $updateVersion("physical_npc_diaries", 20260719001);
+        Logger::info("Applied patch physical_npc_diaries 20260719001");
+    } else {
+        Logger::error("Failed to apply patch physical_npc_diaries 20260719001");
+    }
+}
+
+if ($checkVersion("physical_npc_diaries") < 20260719002) {
+    Logger::debug("Applying physical_npc_diaries 20260719002 - remove draft action registration");
+
+    $db->execQuery("DELETE FROM public.core_action WHERE code_name = 'MaterializeDiary'");
+    $updateVersion("physical_npc_diaries", 20260719002);
+    Logger::info("Applied patch physical_npc_diaries 20260719002");
+}
+
+if ($checkVersion("playthrough_schema") < 20260723001) {
+    Logger::debug("Applying playthrough_schema 20260723001 - repair stale database sequences");
+
+    $schemaFunctionsPath = __DIR__ . "/../lib/schema_clone_function.sql";
+    $migrationOk = is_readable($schemaFunctionsPath)
+        && $db->execQuery(file_get_contents($schemaFunctionsPath)) !== false;
+
+    if ($migrationOk) {
+        $migrationOk = $db->execQuery(
+            "SELECT chim_meta.sync_schema_sequences('public')"
+        ) !== false;
+    }
+
+    if ($migrationOk) {
+        $updateVersion("playthrough_schema", 20260723001);
+        Logger::info("Applied patch playthrough_schema 20260723001");
+    } else {
+        Logger::error("Failed to apply patch playthrough_schema 20260723001");
+    }
+}
+
+// master Packages update 
+if ($checkVersion("master_packages")<20260716002) {
+    if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607.sql"))) {
+       $updateVersion("master_packages", 20260716002);
+       Logger::info("Applied patch master_packages 20260716002");
+    } else {
+        Logger::error("Failed to apply patch master_packages 20260716002");
+    }
+
+}
+if ($checkVersion("master_packages")<20260724002) {
+    if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607-2.sql"))) {
+       $updateVersion("master_packages", 20260724002);
+       Logger::info("Applied patch master_packages 20260724002");
+    } else {
+        Logger::error("Failed to apply patch master_packages 20260724002");
+    }
+
+}
+
+
+//----------------------------------------------------
+// VISUAL CONTEXT - Persistent image descriptions
+// Version 20260718001
+//----------------------------------------------------
+
+if ($checkVersion("visual_context") < 20260718001) {
+    Logger::debug("Applying visual_context 20260718001 - add persistent visual descriptions");
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'visual_context.php');
+
+    $b_ok = chimEnsureVisualContextTable();
+    if ($b_ok) {
+        chimSetGeneralSetting('VISUAL_CONTEXT_SCENE_TTL_MINUTES', 10, chimGetSchemaDescription('VISUAL_CONTEXT_SCENE_TTL_MINUTES'));
+        chimSetGeneralSetting('VISUAL_CONTEXT_PROMPT_MAX_CHARS', 1800, chimGetSchemaDescription('VISUAL_CONTEXT_PROMPT_MAX_CHARS'));
+        $updateVersion("visual_context", 20260718001);
+        Logger::info("Applied patch visual_context 20260718001");
+    } else {
+        Logger::error("Failed to apply patch visual_context 20260718001");
+    }
+}
+
+if ($checkVersion("core_tts_fallback") < 20260727001) {
+    Logger::debug("Applying core_tts_fallback 20260727001 - add global race and gender voice fallbacks");
+
+    $schemaPath = __DIR__ . "/../lib/core/database_schema/core_tts_fallback.sql";
+    if ($db->execQuery(file_get_contents($schemaPath)) !== false) {
+        $updateVersion("core_tts_fallback", 20260727001);
+        Logger::info("Applied patch core_tts_fallback 20260727001");
+    } else {
+        Logger::error("Failed to apply patch core_tts_fallback 20260727001");
+    }
+}
+
+if ($checkVersion("latest_diary_context") < 20260727001) {
+    Logger::debug("Applying latest_diary_context 20260727001 - index latest NPC diary lookups");
+
+    $migrationOk = $db->execQuery(
+        "CREATE INDEX IF NOT EXISTS idx_diarylog_people_gamets
+         ON public.diarylog (lower(trim(people)), gamets DESC, localts DESC, rowid DESC)"
+    ) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("latest_diary_context", 20260727001);
+        Logger::info("Applied patch latest_diary_context 20260727001");
+    } else {
+        Logger::error("Failed to apply patch latest_diary_context 20260727001");
+    }
+}
+
+if ($checkVersion("faction_vanilla") < 20260803001) {
+    Logger::debug("Applying faction_vanilla 20260803001 - some description fixes for vanilla factions");
+
+    $migrationOk = $db->execQuery(file_get_contents(__DIR__."/../data/factions_vanilla.sql")) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("faction_vanilla", 20260803001);
+        Logger::info("Applied patch faction_vanilla 20260803001 - some description fixes for vanilla factions");
+    } else {
+        Logger::error("Failed to apply patch faction_vanilla 20260803001 - some description fixes for vanilla factions");
+    }
+}
+
+if ($checkVersion("market_cache") < 20260805001) {
+    Logger::debug("Applying market_cache 20260805001 - initial market cache setup");
+
+    $migrationOk = $db->execQuery(file_get_contents(__DIR__."/../data/market_cache.sql")) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("market_cache", 20260805001);
+        Logger::info("Applied patch market_cache 20260805001 - initial market cache setup");
+    } else {
+        Logger::error("Failed to apply patch market_cache 20260805001 - initial market cache setup");
+    }
+}
+
+if ($checkVersion("default_npc_tags") < 20260805003) {
+    Logger::debug("Applying default_npc_tags 20260805003 - apply complete default NPC tag audit");
+
+    $migrationPath = __DIR__ . "/../data/default_npc_tag_audit_20260805.sql";
+    $migrationOk = is_readable($migrationPath)
+        && $db->execQuery(file_get_contents($migrationPath)) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("default_npc_tags", 20260805003);
+        Logger::info("Applied patch default_npc_tags 20260805003");
+    } else {
+        Logger::error("Failed to apply patch default_npc_tags 20260805003");
+    }
+}
+
+if ($checkVersion("eventlog_session_payload") < 20260807001) {
+    Logger::debug("Applying eventlog_session_payload 20260807001 - allow complete routing snapshots");
+
+    $migrationOk = $db->execQuery(
+        "ALTER TABLE public.eventlog ALTER COLUMN sess TYPE text"
+    ) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("eventlog_session_payload", 20260807001);
+        Logger::info("Applied patch eventlog_session_payload 20260807001");
+    } else {
+        Logger::error("Failed to apply patch eventlog_session_payload 20260807001");
+    }
+}
+
+//----------------------------------------------------
+// AUDIT REQUEST RESPONSE - Store the response text for audit requests
+// Version 20260806001
+//----------------------------------------------------
+$db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"response\"  text");
+
 
 Logger::info(__FILE__." update file processed");
 

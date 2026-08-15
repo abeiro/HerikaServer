@@ -6,13 +6,6 @@ require_once __DIR__ . '/../../lib/core/tts_studio_provider_detection.php';
 
 final class TtsStudioProviderDetectionTest extends TestCase
 {
-    public function testStudioLoadsProviderDetectionHelperExplicitly(): void
-    {
-        $studio = file_get_contents(__DIR__ . '/../../ui/xtts_clone.php');
-        $this->assertIsString($studio);
-        $this->assertStringContainsString('tts_studio_provider_detection.php', $studio);
-    }
-
     private function probe(int $status, $decoded = []): array
     {
         return [

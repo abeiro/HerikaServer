@@ -26,7 +26,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
 }
 
 $deleteCount = intval($_POST['count'] ?? 0);
-if (!in_array($deleteCount, [20, 50, 100], true)) {
+if (!in_array($deleteCount, [5, 10, 20, 50, 100], true)) {
     http_response_code(400);
     echo json_encode([
         'ok' => false,

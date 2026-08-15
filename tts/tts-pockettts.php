@@ -324,11 +324,13 @@ function num2kan_decimal($instr) {
 	return $outstr;
 }
 
+require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . "audiofilterd_client.php";
 
 $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
 		//pockettts_settings([]); //Check this
 		
+
 		if (isset($GLOBALS["AVOID_TTS_CACHE"]) && $GLOBALS["AVOID_TTS_CACHE"]===false )
 			if (file_exists(dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav"))
 				return dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache/" . md5(trim($stringforhash)) . ".wav";
@@ -441,8 +443,16 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			
 		} else {
 			$FFMPEG_FILTER='-filter:a "adelay=150|150"';
+		
 		}
 		
+		// audio.cpp seems to ad a big silence at the beginnig
+		$isAudioCpp = pockettts_is_audio_cpp($endpoint);
+		if ($isAudioCpp) {
+			$FFMPEG_FILTER='-filter:a "atrim=start=0.3,asetpts=PTS-STARTPTS"';
+		}
+
+
 		if (isset($GLOBALS["TTS"]["POCKETTTS"]["RESET"]) && $GLOBALS["TTS"]["POCKETTTS"]["RESET"]) {
 			pockettts_settings([]);
 		}
@@ -457,7 +467,26 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 			file_put_contents($oname, $response); // Save the audio response to a file
 			$startTimeTrans = microtime(true);
 			//shell_exec("ffmpeg -y -i $oname  -af \"adelay=150|150,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-25dB,areverse,silenceremove=start_periods=1:start_silence=0.1:start_threshold=-40dB,areverse,speechnorm=e=3:r=0.0001:l=1:p=0.75\" $fname 2>/dev/null >/dev/null");
-			shell_exec("ffmpeg -y -i ".escapeshellarg($oname)."  $FFMPEG_FILTER ".escapeshellarg($fname)." 2>/dev/null >/dev/null");
+			//shell_exec("ffmpeg -y -i ".escapeshellarg($oname)."  $FFMPEG_FILTER ".escapeshellarg($fname)." 2>/dev/null >/dev/null");
+			try {
+				if (!processAudio(
+					$sourceBinaryData = $response,
+					$filters = [
+						[
+							'type' => 'trim_start',
+							'milliseconds' => 250.0,
+						]
+					],
+					$outputFilenameWithPath = $fname,
+					'/var/www/html/HerikaServer/tts/audiofilterd.sock'
+				)) {
+					throw new RuntimeException('Audio processing failed for PocketTTS response');
+				}
+			} catch (RuntimeException $e) {
+				Logger::error("Audio processing failed for PocketTTS response. ".__FILE__." ".__LINE__." ".__FUNCTION__);
+				shell_exec("ffmpeg -y -i ".escapeshellarg($oname)."  $FFMPEG_FILTER ".escapeshellarg($fname)." 2>/dev/null >/dev/null");
+			}
+			
 			//error_log("ffmpeg -y -i $oname  $FFMPEG_FILTER $fname ".__FILE__." ".__LINE__." ".__FUNCTION__);
 			$endTimeTrans = microtime(true)-$startTimeTrans;
 			

@@ -3,6 +3,7 @@
 if (!function_exists('chimParseStableFormReference')) {
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "game_plugins.php");
 }
+require_once(__DIR__ . DIRECTORY_SEPARATOR . 'quest_asset_library.php');
 
 if (!function_exists('quest_reference_dataset_config')) {
     function quest_reference_dataset_config()
@@ -201,19 +202,164 @@ if (!function_exists('quest_reference_normalize_formid')) {
         return null;
     }
 
-    function quest_reference_canonicalize_formid_for_text_storage($value)
+    function quest_reference_classify_formid_for_text_storage($value, ?array $pluginsByPrefix = null)
     {
         $stableReference = chimParseStableFormReference($value);
         if ($stableReference) {
-            return $stableReference['stable_key'];
+            return [
+                'value' => $stableReference['stable_key'],
+                'status' => 'stable',
+                'runtime_formid' => null,
+            ];
         }
 
         $runtimeFormId = quest_reference_resolve_runtime_formid_string($value);
         if ($runtimeFormId === null) {
-            return null;
+            return [
+                'value' => null,
+                'status' => 'invalid',
+                'runtime_formid' => null,
+            ];
         }
 
-        return strtolower('0x' . $runtimeFormId);
+        if (strpos($runtimeFormId, 'FF') === 0) {
+            return [
+                'value' => null,
+                'status' => 'dynamic',
+                'runtime_formid' => $runtimeFormId,
+            ];
+        }
+
+        $stableReference = chimConvertRuntimeFormIdToStableReference($runtimeFormId, $pluginsByPrefix);
+        if ($stableReference !== null) {
+            return [
+                'value' => $stableReference,
+                'status' => 'converted',
+                'runtime_formid' => $runtimeFormId,
+            ];
+        }
+
+        return [
+            'value' => strtolower('0x' . $runtimeFormId),
+            'status' => 'unresolved',
+            'runtime_formid' => $runtimeFormId,
+        ];
+    }
+
+    function quest_reference_canonicalize_formid_for_text_storage($value, ?array $pluginsByPrefix = null)
+    {
+        $classified = quest_reference_classify_formid_for_text_storage($value, $pluginsByPrefix);
+        return $classified['value'];
+    }
+
+    function quest_reference_legacy_local_plugin_name($datasetName, $keyName, $runtimeFormId)
+    {
+        $datasetName = strtolower(trim((string) $datasetName));
+        $keyName = strtolower(trim((string) $keyName));
+        $runtimeFormId = chimNormalizeRuntimeFormId($runtimeFormId);
+        $runtimeValue = $runtimeFormId !== '' ? hexdec($runtimeFormId) : -1;
+
+        $isLegacyNpcTemplateKey = preg_match(
+            '/^(female|male)_(breton|nord|imperial|redguard|orc|argonian|altmer|bosmer|dunmer|khajiit)_(noble|merchant|warrior|assassin|mage|beggar|farmer|bard|soldier)$/',
+            $keyName
+        ) === 1 || in_array($keyName, ['female_breton_forsworn', 'male_breton_forsworn'], true);
+        if (
+            $datasetName === 'npc_own_templates'
+            && $isLegacyNpcTemplateKey
+            && (
+                ($runtimeValue >= 0x00025844 && $runtimeValue <= 0x0002584D)
+                || ($runtimeValue >= 0x00025DAF && $runtimeValue <= 0x00025DED)
+                || ($runtimeValue >= 0x00045CE7 && $runtimeValue <= 0x00045CEE)
+            )
+        ) {
+            return 'AIAgent.esp';
+        }
+
+        $legacyItemFormIds = [
+            'potion' => 0x0002481F,
+            'necklace' => 0x0002481D,
+            'amulet' => 0x0002481E,
+            'ring' => 0x000242B9,
+        ];
+        if ($datasetName === 'item_types' && ($legacyItemFormIds[$keyName] ?? -1) === $runtimeValue) {
+            return 'AIAgent.esp';
+        }
+
+        return null;
+    }
+
+    function quest_reference_classify_dataset_formid_for_text_storage(
+        $datasetName,
+        $keyName,
+        $value,
+        ?array $pluginsByPrefix = null,
+        ?array $pluginsByName = null
+    ) {
+        $stableReference = chimParseStableFormReference($value);
+        if ($stableReference) {
+            return [
+                'value' => $stableReference['stable_key'],
+                'status' => 'stable',
+                'runtime_formid' => null,
+            ];
+        }
+
+        $runtimeFormId = quest_reference_resolve_runtime_formid_string($value);
+        $legacyPluginName = quest_reference_legacy_local_plugin_name($datasetName, $keyName, $runtimeFormId);
+        if (
+            $runtimeFormId !== null
+            && $runtimeFormId !== '00000000'
+            && substr($runtimeFormId, 0, 2) === '00'
+            && $legacyPluginName !== null
+        ) {
+            $pluginRow = $pluginsByName === null
+                ? chimGetLoadedGamePluginByName($legacyPluginName)
+                : ($pluginsByName[strtolower($legacyPluginName)] ?? null);
+
+            if (is_array($pluginRow) && !empty($pluginRow['plugin_name'])) {
+                return [
+                    'value' => chimBuildStableFormReference(
+                        $pluginRow['plugin_name'],
+                        chimExtractLocalFormIdFromRuntimeFormId($runtimeFormId)
+                    ),
+                    'status' => 'converted',
+                    'runtime_formid' => $runtimeFormId,
+                ];
+            }
+
+            return [
+                'value' => strtolower('0x' . $runtimeFormId),
+                'status' => 'unresolved',
+                'runtime_formid' => $runtimeFormId,
+            ];
+        }
+
+        if ($runtimeFormId === '00000000') {
+            return [
+                'value' => '0x00000000',
+                'status' => 'unresolved',
+                'runtime_formid' => $runtimeFormId,
+            ];
+        }
+
+        return quest_reference_classify_formid_for_text_storage($value, $pluginsByPrefix);
+    }
+
+    function quest_reference_canonicalize_dataset_formid_for_text_storage(
+        $datasetName,
+        $keyName,
+        $value,
+        ?array $pluginsByPrefix = null,
+        ?array $pluginsByName = null
+    ) {
+        $classified = quest_reference_classify_dataset_formid_for_text_storage(
+            $datasetName,
+            $keyName,
+            $value,
+            $pluginsByPrefix,
+            $pluginsByName
+        );
+        return $classified['value'];
     }
 
     function quest_reference_normalize_formid($value)
@@ -263,6 +409,206 @@ if (!function_exists('quest_reference_normalize_formid')) {
         }
 
         return null;
+    }
+}
+
+if (!function_exists('quest_reference_formid_for_papyrus')) {
+    function quest_reference_formid_for_papyrus($value): int
+    {
+        $formId = quest_reference_normalize_formid($value);
+        if ($formId === null) {
+            return 0;
+        }
+
+        $unsigned = $formId & 0xFFFFFFFF;
+        return $unsigned > 0x7FFFFFFF ? $unsigned - 0x100000000 : $unsigned;
+    }
+}
+
+if (!function_exists('quest_reference_formid_for_full_plugin_file')) {
+    function quest_reference_formid_for_full_plugin_file($value): int
+    {
+        $formId = quest_reference_normalize_formid($value);
+        return $formId === null ? 0 : $formId & 0x00FFFFFF;
+    }
+}
+
+if (!function_exists('quest_reference_repair_formid_values')) {
+    function quest_reference_repair_formid_values(
+        $datasetName,
+        $keyName,
+        $values,
+        array $pluginsByPrefix,
+        array $pluginsByName
+    )
+    {
+        if (!is_array($values)) {
+            return [
+                'values' => [],
+                'changed' => false,
+                'converted' => 0,
+                'unresolved' => 0,
+                'dynamic' => 0,
+                'invalid' => 1,
+            ];
+        }
+
+        $repaired = [];
+        $seen = [];
+        $summary = [
+            'values' => [],
+            'changed' => false,
+            'converted' => 0,
+            'unresolved' => 0,
+            'dynamic' => 0,
+            'invalid' => 0,
+        ];
+
+        foreach ($values as $value) {
+            $original = trim((string) $value);
+            if ($original === '') {
+                $summary['invalid']++;
+                continue;
+            }
+
+            $classified = quest_reference_classify_dataset_formid_for_text_storage(
+                $datasetName,
+                $keyName,
+                $original,
+                $pluginsByPrefix,
+                $pluginsByName
+            );
+            $status = $classified['status'];
+            $canonical = $classified['value'];
+
+            if ($status === 'dynamic' || $status === 'invalid') {
+                $canonical = $original;
+                $summary[$status]++;
+            } elseif ($status === 'converted') {
+                $summary['converted']++;
+            } elseif ($status === 'unresolved') {
+                $summary['unresolved']++;
+            }
+
+            $dedupeKey = strtolower($canonical);
+            if (isset($seen[$dedupeKey])) {
+                continue;
+            }
+
+            $seen[$dedupeKey] = true;
+            $repaired[] = $canonical;
+        }
+
+        $summary['values'] = $repaired;
+        $summary['changed'] = array_values($values) !== $repaired;
+        return $summary;
+    }
+}
+
+if (!function_exists('quest_reference_repair_runtime_formids_to_stable')) {
+    function quest_reference_repair_runtime_formids_to_stable(array $plugins)
+    {
+        $summary = [
+            'rows_scanned' => 0,
+            'rows_updated' => 0,
+            'converted' => 0,
+            'unresolved' => 0,
+            'dynamic' => 0,
+            'invalid' => 0,
+            'error' => null,
+        ];
+
+        if (!quest_reference_has_db()) {
+            $summary['error'] = 'database_unavailable';
+            return $summary;
+        }
+
+        $pluginsByPrefix = chimIndexLoadedGamePluginsByPrefix($plugins);
+        $pluginsByName = chimIndexLoadedGamePluginsByName($plugins);
+        if (empty($pluginsByPrefix)) {
+            $summary['error'] = 'plugin_manifest_empty';
+            return $summary;
+        }
+
+        $transactionStarted = false;
+        try {
+            $beginResult = $GLOBALS["db"]->execQuery("BEGIN");
+            if ($beginResult === false) {
+                throw new RuntimeException("Could not start quest reference repair transaction.");
+            }
+            $transactionStarted = true;
+
+            foreach (quest_reference_dataset_config() as $datasetName => $cfg) {
+                $table = $cfg['table'];
+                $keyColumn = $cfg['key_column'];
+                if (!quest_reference_table_exists($table) || !quest_reference_column_exists($table, 'formids_json')) {
+                    continue;
+                }
+
+                $rows = $GLOBALS["db"]->fetchAll("
+                    SELECT {$keyColumn} AS key_name, formids_json
+                    FROM public.{$table}
+                ");
+
+                foreach ((array) $rows as $row) {
+                    $summary['rows_scanned']++;
+                    $encodedValues = $row['formids_json'] ?? '[]';
+                    $values = is_array($encodedValues) ? $encodedValues : json_decode((string) $encodedValues, true);
+                    if (!is_array($values)) {
+                        $summary['invalid']++;
+                        continue;
+                    }
+
+                    $keyName = trim((string) ($row['key_name'] ?? ''));
+                    if ($keyName === '') {
+                        $summary['invalid']++;
+                        continue;
+                    }
+
+                    $repair = quest_reference_repair_formid_values(
+                        $datasetName,
+                        $keyName,
+                        $values,
+                        $pluginsByPrefix,
+                        $pluginsByName
+                    );
+                    foreach (['converted', 'unresolved', 'dynamic', 'invalid'] as $counter) {
+                        $summary[$counter] += $repair[$counter];
+                    }
+
+                    if (!$repair['changed']) {
+                        continue;
+                    }
+
+                    $keyCn = $GLOBALS["db"]->escape($keyName);
+                    $jsonCn = $GLOBALS["db"]->escape(json_encode($repair['values']));
+                    $updateResult = $GLOBALS["db"]->execQuery("
+                        UPDATE public.{$table}
+                        SET formids_json = '{$jsonCn}'::jsonb,
+                            updated_at = now()
+                        WHERE {$keyColumn} = '{$keyCn}'
+                    ");
+                    if ($updateResult === false) {
+                        throw new RuntimeException("Could not update quest reference row '{$keyName}'.");
+                    }
+
+                    $summary['rows_updated']++;
+                }
+            }
+
+            $commitResult = $GLOBALS["db"]->execQuery("COMMIT");
+            if ($commitResult === false) {
+                throw new RuntimeException("Could not commit quest reference repair transaction.");
+            }
+            $transactionStarted = false;
+        } catch (Throwable $e) {
+            if ($transactionStarted) {
+                $GLOBALS["db"]->execQuery("ROLLBACK");
+            }
+            $summary['error'] = $e->getMessage();
+        }
+
+        return $summary;
     }
 }
 
@@ -347,27 +693,39 @@ if (!function_exists('quest_reference_normalize_dataset_values')) {
                 continue;
             }
 
-            $list = quest_reference_extract_formids($formIds);
+            $list = is_array($formIds) ? $formIds : [$formIds];
             if (empty($list)) {
                 continue;
             }
 
+            $final = [];
             $dedupe = [];
             foreach ($list as $formId) {
+                $stableReference = chimParseStableFormReference($formId);
+                if ($stableReference) {
+                    $dedupeKey = strtolower($stableReference['stable_key']);
+                    if (!isset($dedupe[$dedupeKey])) {
+                        $dedupe[$dedupeKey] = true;
+                        $final[] = $stableReference['stable_key'];
+                    }
+                    continue;
+                }
+
                 $value = quest_reference_normalize_formid($formId);
                 if ($value === null || $value < 0) {
                     continue;
                 }
-                $dedupe[$value] = true;
+
+                $dedupeKey = 'runtime:' . $value;
+                if (!isset($dedupe[$dedupeKey])) {
+                    $dedupe[$dedupeKey] = true;
+                    $final[] = intval($value);
+                }
             }
 
-            if (empty($dedupe)) {
-                continue;
+            if (!empty($final)) {
+                $normalized[$keyCn] = $final;
             }
-
-            $final = array_map('intval', array_keys($dedupe));
-            sort($final, SORT_NUMERIC);
-            $normalized[$keyCn] = $final;
         }
 
         return $normalized;
@@ -375,12 +733,16 @@ if (!function_exists('quest_reference_normalize_dataset_values')) {
 }
 
 if (!function_exists('quest_reference_prepare_formids_for_storage')) {
-    function quest_reference_prepare_formids_for_storage($formIds, $storeAsText)
+    function quest_reference_prepare_formids_for_storage($datasetName, $keyName, $formIds, $storeAsText)
     {
         $prepared = [];
         foreach ($formIds as $formId) {
             if ($storeAsText) {
-                $canonical = quest_reference_canonicalize_formid_for_text_storage($formId);
+                $canonical = quest_reference_canonicalize_dataset_formid_for_text_storage(
+                    $datasetName,
+                    $keyName,
+                    $formId
+                );
                 if ($canonical === null || $canonical === '') {
                     continue;
                 }
@@ -401,10 +763,14 @@ if (!function_exists('quest_reference_prepare_formids_for_storage')) {
 }
 
 if (!function_exists('quest_reference_sql_formid_literal')) {
-    function quest_reference_sql_formid_literal($formId, $storeAsText)
+    function quest_reference_sql_formid_literal($datasetName, $keyName, $formId, $storeAsText)
     {
         if ($storeAsText) {
-            $canonical = quest_reference_canonicalize_formid_for_text_storage($formId);
+            $canonical = quest_reference_canonicalize_dataset_formid_for_text_storage(
+                $datasetName,
+                $keyName,
+                $formId
+            );
             if ($canonical === null || $canonical === '') {
                 return null;
             }
@@ -500,7 +866,12 @@ if (!function_exists('quest_reference_seed_dataset_if_empty')) {
             $keyCn = $GLOBALS["db"]->escape($key);
 
             if ($hasArrayColumn) {
-                $preparedFormIds = quest_reference_prepare_formids_for_storage($formIds, $storeAsText);
+                $preparedFormIds = quest_reference_prepare_formids_for_storage(
+                    $datasetName,
+                    $key,
+                    $formIds,
+                    $storeAsText
+                );
                 $jsonPayload = $GLOBALS["db"]->escape(json_encode($preparedFormIds));
                 if ($hasFormIdColumn) {
                     $arraySentinelSql = quest_reference_sql_array_sentinel_literal($storeAsText);
@@ -532,7 +903,12 @@ if (!function_exists('quest_reference_seed_dataset_if_empty')) {
             }
 
             foreach ($formIds as $formId) {
-                $formIdSql = quest_reference_sql_formid_literal($formId, $storeAsText);
+                $formIdSql = quest_reference_sql_formid_literal(
+                    $datasetName,
+                    $key,
+                    $formId,
+                    $storeAsText
+                );
                 if ($formIdSql === null) {
                     continue;
                 }
@@ -543,6 +919,145 @@ if (!function_exists('quest_reference_seed_dataset_if_empty')) {
                     ON CONFLICT ({$keyColumn}, formid) DO NOTHING
                 ");
             }
+        }
+    }
+}
+
+if (!function_exists('quest_reference_missing_dataset_values')) {
+    function quest_reference_missing_dataset_values($values, $existingKeys)
+    {
+        $normalized = quest_reference_normalize_dataset_values($values);
+        $existing = [];
+        foreach (is_array($existingKeys) ? $existingKeys : [] as $key) {
+            $keyCn = strtolower(trim((string) $key));
+            if ($keyCn !== '') {
+                $existing[$keyCn] = true;
+            }
+        }
+
+        return array_diff_key($normalized, $existing);
+    }
+}
+
+if (!function_exists('quest_reference_add_missing_dataset_entries')) {
+    function quest_reference_add_missing_dataset_entries(
+        $datasetName,
+        $values,
+        $defaultActive = true,
+        $note = 'added from built-in quest reference defaults'
+    ) {
+        if (!quest_reference_has_db() || !is_array($values)) {
+            return false;
+        }
+
+        $datasetName = strtolower(trim((string) $datasetName));
+        $cfg = quest_reference_dataset_config();
+        if (!isset($cfg[$datasetName])) {
+            return false;
+        }
+
+        $table = $cfg[$datasetName]['table'];
+        $keyColumn = $cfg[$datasetName]['key_column'];
+        if (!quest_reference_table_exists($table)) {
+            return false;
+        }
+
+        try {
+            $rows = $GLOBALS['db']->fetchAll(
+                "SELECT DISTINCT {$keyColumn} AS key_name FROM public.{$table}"
+            );
+        } catch (Throwable $e) {
+            return false;
+        }
+
+        $existingKeys = [];
+        foreach ($rows as $row) {
+            $existingKeys[] = $row['key_name'] ?? '';
+        }
+        $missing = quest_reference_missing_dataset_values($values, $existingKeys);
+        if (empty($missing)) {
+            return 0;
+        }
+
+        $hasArrayColumn = quest_reference_column_exists($table, 'formids_json');
+        $hasFormIdColumn = quest_reference_column_exists($table, 'formid');
+        if (!$hasArrayColumn && !$hasFormIdColumn) {
+            return false;
+        }
+
+        $storeAsText = (!$hasFormIdColumn) || quest_reference_formid_column_is_text($table);
+        $activeSql = $defaultActive ? 'true' : 'false';
+        $noteCn = $GLOBALS['db']->escape($note);
+        $insertedKeys = 0;
+
+        try {
+            if ($GLOBALS['db']->execQuery('BEGIN') === false) {
+                throw new RuntimeException('Unable to start quest reference synchronization transaction.');
+            }
+
+            foreach ($missing as $key => $formIds) {
+                $keyCn = $GLOBALS['db']->escape($key);
+                if ($hasArrayColumn) {
+                    $preparedFormIds = quest_reference_prepare_formids_for_storage(
+                        $datasetName,
+                        $key,
+                        $formIds,
+                        $storeAsText
+                    );
+                    $jsonPayload = $GLOBALS['db']->escape(json_encode($preparedFormIds));
+                    if ($hasFormIdColumn) {
+                        $arraySentinelSql = quest_reference_sql_array_sentinel_literal($storeAsText);
+                        $sql = "
+                            INSERT INTO public.{$table} ({$keyColumn}, formid, formids_json, active, note)
+                            VALUES ('{$keyCn}', {$arraySentinelSql}, '{$jsonPayload}'::jsonb, {$activeSql}, '{$noteCn}')
+                            ON CONFLICT ({$keyColumn}, formid) DO NOTHING
+                        ";
+                    } else {
+                        $sql = "
+                            INSERT INTO public.{$table} ({$keyColumn}, formids_json, active, note)
+                            VALUES ('{$keyCn}', '{$jsonPayload}'::jsonb, {$activeSql}, '{$noteCn}')
+                            ON CONFLICT ({$keyColumn}) DO NOTHING
+                        ";
+                    }
+                    if ($GLOBALS['db']->execQuery($sql) === false) {
+                        throw new RuntimeException("Unable to add missing quest reference key {$key}.");
+                    }
+                    $insertedKeys++;
+                    continue;
+                }
+
+                foreach ($formIds as $formId) {
+                    $formIdSql = quest_reference_sql_formid_literal(
+                        $datasetName,
+                        $key,
+                        $formId,
+                        $storeAsText
+                    );
+                    if ($formIdSql === null) {
+                        continue;
+                    }
+                    $sql = "
+                        INSERT INTO public.{$table} ({$keyColumn}, formid, active, note)
+                        VALUES ('{$keyCn}', {$formIdSql}, {$activeSql}, '{$noteCn}')
+                        ON CONFLICT ({$keyColumn}, formid) DO NOTHING
+                    ";
+                    if ($GLOBALS['db']->execQuery($sql) === false) {
+                        throw new RuntimeException("Unable to add missing quest reference key {$key}.");
+                    }
+                }
+                $insertedKeys++;
+            }
+
+            if ($GLOBALS['db']->execQuery('COMMIT') === false) {
+                throw new RuntimeException('Unable to commit quest reference synchronization.');
+            }
+            return $insertedKeys;
+        } catch (Throwable $e) {
+            try {
+                $GLOBALS['db']->execQuery('ROLLBACK');
+            } catch (Throwable $_rollbackError) {
+            }
+            return false;
         }
     }
 }
@@ -583,7 +1098,12 @@ if (!function_exists('quest_reference_replace_dataset_with_arrays')) {
 
             foreach ($normalized as $key => $formIds) {
                 $keyCn = $GLOBALS["db"]->escape($key);
-                $preparedFormIds = quest_reference_prepare_formids_for_storage($formIds, $storeAsText);
+                $preparedFormIds = quest_reference_prepare_formids_for_storage(
+                    $datasetName,
+                    $key,
+                    $formIds,
+                    $storeAsText
+                );
                 $jsonPayload = $GLOBALS["db"]->escape(json_encode($preparedFormIds));
                 if ($hasFormIdColumn) {
                     $arraySentinelSql = quest_reference_sql_array_sentinel_literal($storeAsText);
@@ -615,52 +1135,59 @@ if (!function_exists('quest_reference_replace_dataset_with_arrays')) {
 if (!function_exists('quest_reference_load_dataset')) {
     function quest_reference_load_dataset($datasetName, $activeOnly = true)
     {
+        $datasetName = strtolower(trim((string) $datasetName));
         $cfg = quest_reference_dataset_config();
-        if (!isset($cfg[$datasetName])) {
-            return [];
-        }
-
-        $table = $cfg[$datasetName]["table"];
-        $keyColumn = $cfg[$datasetName]["key_column"];
-
-        if (!quest_reference_table_exists($table)) {
-            return [];
-        }
-
-        $where = $activeOnly ? "WHERE active = true" : "";
-
-        $hasArrayColumn = quest_reference_column_exists($table, "formids_json");
-        $hasFormIdColumn = quest_reference_column_exists($table, "formid");
-
-        $selectColumns = ["{$keyColumn} as key_name"];
-        if ($hasFormIdColumn) {
-            $selectColumns[] = "formid";
-        }
-        if ($hasArrayColumn) {
-            $selectColumns[] = "formids_json";
-        }
-
-        $orderColumns = [$keyColumn];
-        if ($hasFormIdColumn) {
-            $orderColumns[] = "formid";
-        }
-
-        $selectSql = implode(", ", $selectColumns);
-        $orderSql = implode(", ", $orderColumns);
-
-        try {
-            $rows = $GLOBALS["db"]->fetchAll("
-                SELECT {$selectSql}
-                FROM public.{$table}
-                {$where}
-                ORDER BY {$orderSql}
-            ");
-        } catch (Exception $e) {
+        $libraryDatasets = function_exists('quest_asset_dataset_signatures')
+            ? quest_asset_dataset_signatures()
+            : [];
+        if (!isset($cfg[$datasetName]) && !isset($libraryDatasets[$datasetName])) {
             return [];
         }
 
         $result = [];
         $seen = [];
+        $rows = [];
+        $hasArrayColumn = false;
+        $hasFormIdColumn = false;
+        $table = null;
+        $keyColumn = null;
+        if (isset($cfg[$datasetName])) {
+            $table = $cfg[$datasetName]["table"];
+            $keyColumn = $cfg[$datasetName]["key_column"];
+        }
+        if ($table !== null && $keyColumn !== null && quest_reference_table_exists($table)) {
+            $where = $activeOnly ? "WHERE active = true" : "";
+            $hasArrayColumn = quest_reference_column_exists($table, "formids_json");
+            $hasFormIdColumn = quest_reference_column_exists($table, "formid");
+
+            $selectColumns = ["{$keyColumn} as key_name"];
+            if ($hasFormIdColumn) {
+                $selectColumns[] = "formid";
+            }
+            if ($hasArrayColumn) {
+                $selectColumns[] = "formids_json";
+            }
+
+            $orderColumns = [$keyColumn];
+            if ($hasFormIdColumn) {
+                $orderColumns[] = "formid";
+            }
+
+            $selectSql = implode(", ", $selectColumns);
+            $orderSql = implode(", ", $orderColumns);
+
+            try {
+                $rows = $GLOBALS["db"]->fetchAll("
+                    SELECT {$selectSql}
+                    FROM public.{$table}
+                    {$where}
+                    ORDER BY {$orderSql}
+                ");
+            } catch (Throwable $e) {
+                $rows = [];
+            }
+        }
+
         foreach ($rows as $row) {
             $key = strtolower(trim((string) ($row["key_name"] ?? "")));
             if ($key === "") {
@@ -697,16 +1224,31 @@ if (!function_exists('quest_reference_load_dataset')) {
             }
         }
 
-        return $result;
+        $libraryValues = function_exists('quest_asset_load_dataset')
+            ? quest_asset_load_dataset($datasetName)
+            : [];
+        $result = function_exists('quest_asset_merge_dataset')
+            ? quest_asset_merge_dataset($result, $libraryValues)
+            : $result;
+        return function_exists('quest_asset_apply_group_fallbacks')
+            ? quest_asset_apply_group_fallbacks($datasetName, $result)
+            : $result;
     }
 }
 
 if (!function_exists('quest_reference_load_all_active')) {
     function quest_reference_load_all_active()
     {
-        $cfg = quest_reference_dataset_config();
+        $datasetNames = array_keys(quest_reference_dataset_config());
+        if (function_exists('quest_asset_dataset_signatures')) {
+            $datasetNames = array_unique(array_merge(
+                $datasetNames,
+                array_keys(quest_asset_dataset_signatures())
+            ));
+        }
+
         $result = [];
-        foreach ($cfg as $datasetName => $_cfg) {
+        foreach ($datasetNames as $datasetName) {
             $result[$datasetName] = quest_reference_load_dataset($datasetName, true);
         }
 
@@ -719,6 +1261,154 @@ if (!function_exists('quest_reference_active_keys')) {
     {
         $dataset = quest_reference_load_dataset($datasetName, true);
         return array_keys($dataset);
+    }
+}
+
+if (!function_exists('quest_reference_pick_safe_spawn_base')) {
+    function quest_reference_pick_safe_spawn_base($dataset, $gender, $race, $class, $defaultClasses = null)
+    {
+        if (!is_array($dataset)) {
+            return 0;
+        }
+
+        $gender = strtolower(trim((string) $gender));
+        $race = strtolower(trim((string) $race));
+        $class = strtolower(trim((string) $class));
+        $classes = [$class];
+        foreach (is_array($defaultClasses) ? $defaultClasses : ['warrior', 'soldier', 'farmer'] as $fallbackClass) {
+            $fallbackClass = strtolower(trim((string) $fallbackClass));
+            if ($fallbackClass !== '' && !in_array($fallbackClass, $classes, true)) {
+                $classes[] = $fallbackClass;
+            }
+        }
+
+        foreach ($classes as $candidateClass) {
+            $value = quest_reference_pick_random($dataset, "{$gender}_{$race}_{$candidateClass}", 0);
+            if ($value !== 0) {
+                return $value;
+            }
+        }
+        return 0;
+    }
+}
+
+if (!function_exists('quest_reference_normalize_allowed_values')) {
+    function quest_reference_normalize_allowed_values($values)
+    {
+        $normalized = [];
+        foreach (is_array($values) ? $values : [] as $value) {
+            $key = strtolower(trim((string) $value));
+            if ($key !== '' && preg_match('/^[a-z0-9_]+$/', $key)) {
+                $normalized[$key] = true;
+            }
+        }
+        $result = array_keys($normalized);
+        sort($result, SORT_NATURAL | SORT_FLAG_CASE);
+        return $result;
+    }
+}
+
+if (!function_exists('quest_reference_playable_races')) {
+    function quest_reference_playable_races()
+    {
+        return [
+            'nord',
+            'imperial',
+            'redguard',
+            'breton',
+            'altmer',
+            'bosmer',
+            'dunmer',
+            'orc',
+            'argonian',
+            'khajiit',
+        ];
+    }
+}
+
+if (!function_exists('quest_reference_spawnable_playable_races')) {
+    function quest_reference_spawnable_playable_races($donorKeys = null, $spawnKeys = null, $classes = null)
+    {
+        $donorKeys = is_array($donorKeys) ? $donorKeys : quest_reference_active_keys('npc_templates');
+        $spawnKeys = is_array($spawnKeys) ? $spawnKeys : quest_reference_active_keys('npc_own_templates');
+
+        $donorSet = array_fill_keys(quest_reference_normalize_allowed_values($donorKeys), true);
+        $spawnSet = array_fill_keys(quest_reference_normalize_allowed_values($spawnKeys), true);
+        $spawnable = [];
+
+        foreach (quest_reference_playable_races() as $race) {
+            $supported = true;
+            foreach (['male', 'female'] as $gender) {
+                if (!isset($donorSet["{$gender}_{$race}"])) {
+                    $supported = false;
+                    break;
+                }
+
+                // Outfit groups are global and may include classes unavailable to some races.
+                // The spawn resolver safely falls back within the same race and gender.
+                $prefix = "{$gender}_{$race}_";
+                $hasSpawnBase = false;
+                foreach ($spawnSet as $spawnKey => $_enabled) {
+                    if (str_starts_with($spawnKey, $prefix)) {
+                        $hasSpawnBase = true;
+                        break;
+                    }
+                }
+                if (!$hasSpawnBase) {
+                    $supported = false;
+                    break;
+                }
+            }
+
+            if ($supported) {
+                $spawnable[] = $race;
+            }
+        }
+
+        return $spawnable;
+    }
+}
+
+if (!function_exists('quest_reference_prompt_constraints')) {
+    function quest_reference_prompt_constraints($fallbackRaces, $fallbackClasses, $fallbackItemTypes)
+    {
+        $templateRaces = quest_reference_derive_races_from_template_keys(
+            quest_reference_active_keys('npc_templates')
+        );
+        $creatureRaces = array_values(array_diff($templateRaces, quest_reference_playable_races()));
+        $races = array_merge(quest_reference_spawnable_playable_races(), $creatureRaces);
+        if (empty($races)) {
+            $races = $fallbackRaces;
+        }
+
+        $classes = quest_reference_active_keys('outfit');
+        if (empty($classes)) {
+            $classes = $fallbackClasses;
+        }
+        $classes[] = 'creature';
+
+        $itemTypes = quest_reference_active_keys('item_types');
+        if (empty($itemTypes)) {
+            $itemTypes = $fallbackItemTypes;
+        }
+
+        return [
+            'races' => quest_reference_normalize_allowed_values($races),
+            'classes' => quest_reference_normalize_allowed_values($classes),
+            'item_types' => quest_reference_normalize_allowed_values($itemTypes),
+        ];
+    }
+}
+
+if (!function_exists('quest_reference_apply_prompt_constraints')) {
+    function quest_reference_apply_prompt_constraints($template, $constraints)
+    {
+        $constraints = is_array($constraints) ? $constraints : [];
+        return strtr((string) $template, [
+            '{{ALLOWED_RACES}}' => implode(', ', $constraints['races'] ?? []),
+            '{{ALLOWED_CLASSES}}' => implode(', ', $constraints['classes'] ?? []),
+            '{{ALLOWED_ITEM_TYPES}}' => implode(', ', $constraints['item_types'] ?? []),
+        ]);
     }
 }
 

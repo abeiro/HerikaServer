@@ -53,6 +53,18 @@ class RelationshipManager {
         'awed', 'contempt', 'pitying', 'grateful', 'curious', 'dismissive'
     ];
 
+    // Common model wording mapped onto canonical relationship types. These aliases
+    // are inputs only; the canonical value is what is persisted.
+    const TYPE_ALIASES = [
+        'romance' => 'romantic',
+        'marriage' => 'romantic',
+        'married' => 'romantic',
+        'lover' => 'romantic',
+        'lovers' => 'romantic',
+        'betrayal' => 'betrayed',
+        'enemies' => 'enemy'
+    ];
+
     // Tier boundaries - 11 tiers with BELL CURVE distribution
     // Extremes are HARD to reach (10 pts), center tiers are WIDE (25 pts)
     // Score => Label (checked from high to low)
@@ -183,6 +195,68 @@ class RelationshipManager {
         return $target;
     }
 
+    /**
+     * Canonicalize a model-supplied relationship type against a closed allow-list.
+     *
+     * Built-in types are always valid. Custom types are valid only when the caller
+     * explicitly supplies types already created by the player. Returning null means
+     * the model invented a type and the requested type change must be ignored.
+     */
+    public static function canonicalizeRelationshipType($type, $allowedCustomTypes = []) {
+        if (!is_string($type)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($type));
+        if ($normalized === '') {
+            return null;
+        }
+
+        $normalized = self::TYPE_ALIASES[$normalized] ?? $normalized;
+        if (in_array($normalized, self::TYPES, true)) {
+            return $normalized;
+        }
+
+        foreach ((array)$allowedCustomTypes as $customType) {
+            $customType = strtolower(trim((string)$customType));
+            if ($customType === '' || !preg_match('/^[a-z][a-z0-9_-]{0,49}$/', $customType)) {
+                continue;
+            }
+            $customType = self::TYPE_ALIASES[$customType] ?? $customType;
+            if ($normalized === $customType) {
+                return $normalized;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Return only player-created custom types already present in relationship data.
+     * The model may select one of these, but cannot turn a new word into a type.
+     */
+    public static function getCustomRelationshipTypes($relationships) {
+        if (!is_array($relationships)) {
+            return [];
+        }
+
+        $customTypes = [];
+        foreach ($relationships as $relationship) {
+            if (!is_array($relationship)) {
+                continue;
+            }
+            $type = strtolower(trim((string)($relationship['type'] ?? '')));
+            if ($type === '' || isset(self::TYPE_ALIASES[$type]) || in_array($type, self::TYPES, true)) {
+                continue;
+            }
+            if (preg_match('/^[a-z][a-z0-9_-]{0,49}$/', $type)) {
+                $customTypes[$type] = true;
+            }
+        }
+
+        return array_keys($customTypes);
+    }
+
     public static function normalizeRelationshipMap($relationships) {
         if (!is_array($relationships)) {
             return [];
@@ -198,6 +272,15 @@ class RelationshipManager {
             if ($canonicalTarget === '') {
                 continue;
             }
+
+            // Repair casing and historical model aliases on every read. Unknown
+            // single-word values remain untouched because they may be legitimate
+            // player-created custom types.
+            $storedType = strtolower(trim((string)($rel['type'] ?? 'neutral')));
+            if ($storedType === '') {
+                $storedType = 'neutral';
+            }
+            $rel['type'] = self::TYPE_ALIASES[$storedType] ?? $storedType;
 
             if (!isset($normalized[$canonicalTarget])) {
                 $normalized[$canonicalTarget] = $rel;
@@ -666,37 +749,44 @@ class RelationshipManager {
         }
 
         // Parse type changes: #TYPE:Target=Romantic#
-        // Accepts both default types AND custom types (any single word)
-        if (preg_match_all('/#TYPE:([^=]+)=([a-zA-Z]+)#/', $aiResponse, $matches)) {
+        // The model may select a built-in type or an existing player-created custom
+        // type. It may never create a new type merely by emitting a new word.
+        $allowedCustomTypes = self::getCustomRelationshipTypes($rels);
+        if (preg_match_all('/#TYPE:([^=]+)=([a-zA-Z][a-zA-Z0-9_-]{0,49})#/', $aiResponse, $matches)) {
             foreach ($matches[1] as $i => $target) {
                 $target = self::normalizeTargetName($target);
                 if (in_array(strtolower($target), ['the narrator', 'narrator'], true)) continue; // never track the narrator as a relationship
-                $newType = strtolower(trim($matches[2][$i]));
+                $rawType = trim($matches[2][$i]);
+                $newType = self::canonicalizeRelationshipType($rawType, $allowedCustomTypes);
 
-                // Accept any single-word type (allows custom types like "client", "mentor", etc.)
-                if (preg_match('/^[a-z]+$/', $newType)) {
-                    if (!isset($rels[$target])) {
-                        $rels[$target] = ['aff' => 0, 'type' => 'neutral'];
-                    }
-                    $oldType = $rels[$target]['type'];
-                    $rels[$target]['type'] = $newType;
-
-                    error_log("[REL] $npcName -> $target: type $oldType -> $newType");
-                    $changed = true;
+                if ($newType === null) {
+                    error_log("[REL] Rejected invented relationship type '$rawType' for $npcName -> $target");
+                    continue;
                 }
+
+                if (!isset($rels[$target])) {
+                    $rels[$target] = ['aff' => 0, 'type' => 'neutral'];
+                }
+                $oldType = $rels[$target]['type'];
+                $rels[$target]['type'] = $newType;
+
+                error_log("[REL] $npcName -> $target: type $oldType -> $newType");
+                $changed = true;
             }
         }
 
         // Save if changed
         if ($changed) {
             $extended['relationships'] = $rels;
-            chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
+            $result = chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
                 return $npcMaster->updateByArray([
                     'id' => $npcData['id'],
                     'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
                 ]);
             });
-            if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcData['id']); }
+            if ($result !== false && function_exists('chimRelationshipTimelineStamp')) {
+                chimRelationshipTimelineStamp($npcData['id']);
+            }
         }
 
         // Strip commands before TTS
@@ -727,20 +817,23 @@ class RelationshipManager {
 
         $rels[$targetName]['aff'] = max(-100, min(100, (int)$affinity));
 
-        // Accept any type - predefined or custom
-        // Custom types are allowed to support user creativity
+        // Direct/admin writes may create custom types, but known model aliases are
+        // still stored canonically ("romance" becomes "romantic").
         if ($type !== null && is_string($type) && strlen($type) > 0 && strlen($type) <= 50) {
-            $rels[$targetName]['type'] = strtolower(trim($type));
+            $normalizedType = strtolower(trim($type));
+            $rels[$targetName]['type'] = self::TYPE_ALIASES[$normalizedType] ?? $normalizedType;
         }
 
         $extended['relationships'] = $rels;
-        chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
+        $result = chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
             return $npcMaster->updateByArray([
                 'id' => $npcData['id'],
                 'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             ]);
         });
-        if (function_exists('chimRelationshipTimelineStamp')) { chimRelationshipTimelineStamp($npcData['id']); }
+        if ($result !== false && function_exists('chimRelationshipTimelineStamp')) {
+            chimRelationshipTimelineStamp($npcData['id']);
+        }
 
         error_log("[REL] Set $npcName -> $targetName: " . $rels[$targetName]['aff'] .
                   " (" . $rels[$targetName]['type'] . ")");
@@ -761,16 +854,16 @@ class RelationshipManager {
      * Get the system prompt addition for relationship tracking
      */
     public static function getSystemPromptAddition() {
-        return <<<'PROMPT'
+        $prompt = <<<'PROMPT'
 [SYSTEM: RELATIONSHIPS]
 You have relationships with others defined by a Score (-100 to +100) and a Type.
 Levels: Hostile(-100) < Resentful < Cold < Wary < Neutral(0) < Warm < Fond < Attached < Devoted(+100).
 
 COMMANDS (use when feelings change - scale to the significance of the action):
 - To adjust affinity: #REL:Name=+/-Amount#
-- To change relationship type: #TYPE:Name=NewType#
+- To change relationship type: #TYPE:Name=NewType# where NewType is EXACTLY one of the types below. Never invent a type.
 
-Types: Romantic, Platonic, Familial, Professional, Rival, Enemy, Neutral
+Types: {RELATIONSHIP_TYPES}
 
 SCALE YOUR RESPONSE TO THE ACTION:
 - Minor: +/-5 to 10 (small kindness, rude comment)
@@ -784,6 +877,8 @@ Saved your life: "You... you saved me! I won't forget this." #REL:Player=+40#
 Attacked you: "You dare strike me?!" #REL:Player=-35# #TYPE:Player=Rival#
 Killed your friend: "MURDERER! I will NEVER forgive you!" #REL:Player=-70#
 PROMPT;
+
+        return str_replace('{RELATIONSHIP_TYPES}', implode(', ', self::TYPES), $prompt);
     }
 
     /**

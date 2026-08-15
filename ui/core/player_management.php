@@ -626,6 +626,48 @@ if (!$isEmbed) {
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     }
 
+    .player-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+    }
+
+    .player-actions .btn-save {
+        margin-bottom: 0;
+    }
+
+    .btn-portable {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        height: 36px;
+        padding: 6px 12px;
+        border: 1px solid #4a4a4a;
+        border-radius: 6px;
+        background: #333;
+        color: #fff;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .btn-portable:hover:not(:disabled) {
+        background: #414141;
+        border-color: rgba(242, 124, 17, 0.65);
+        color: #fff;
+        text-decoration: none;
+    }
+
+    .btn-portable:disabled {
+        opacity: 0.6;
+        cursor: wait;
+    }
+
     .btn-ai-generate {
         background-color: #1b4f8c;
         color: #fff;
@@ -1043,6 +1085,7 @@ if (!$isEmbed) {
 </style>
 
 <?php if ($isEmbed): ?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/chim-theme.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'chim-theme.css'); ?>">
 <style>
     /* Embedded in hub: remove extra top padding since navbar is hidden */
     main { padding-top: 20px; }
@@ -1152,7 +1195,12 @@ if (!$isEmbed) {
     </div>
 
     <form id="player-form" method="post" action="">
-        <button type="submit" class="btn-save" name="save_player" value="1">Save Player Settings</button>
+        <div class="player-actions">
+            <button type="submit" class="btn-save" name="save_player" value="1">Save Player Settings</button>
+            <a class="btn-portable" href="<?php echo $webRoot; ?>/ui/cmd/settings_portability.php?scope=player&amp;action=export">&#128228; Export Player</a>
+            <button type="button" class="btn-portable" id="import_player_settings_btn">&#128229; Import Player</button>
+            <input type="file" id="import_player_settings_file" accept="application/json,.json" hidden>
+        </div>
 
         <div class="content-grid player-overview-grid">
             <!-- Player Info Section -->
@@ -1522,12 +1570,21 @@ if (!$isEmbed) {
     </div>
 </main>
 
+<script src="<?php echo $webRoot; ?>/ui/js/settings-portability.js?v=<?php echo (int) @filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'js' . DIRECTORY_SEPARATOR . 'settings-portability.js'); ?>"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     syncPlayerProviderPanels();
     const connectorSelect = document.getElementById('tts_connector_id');
     if (connectorSelect) {
         connectorSelect.addEventListener('change', syncPlayerProviderPanels);
+    }
+    if (typeof window.chimInitSettingsImport === 'function') {
+        window.chimInitSettingsImport({
+            scope: 'player',
+            endpoint: <?php echo json_encode($webRoot . '/ui/cmd/settings_portability.php'); ?>,
+            importButtonId: 'import_player_settings_btn',
+            fileInputId: 'import_player_settings_file'
+        });
     }
 });
 </script>

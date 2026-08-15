@@ -44,7 +44,6 @@ $BORED_EVENT=30; //Bored Event Probability. Chance of an NPC starting a random c
 $CONTEXT_HISTORY="50"; //Amount of context history (dialogue and events) that will be sent to LLM.
 $CONTEXT_HISTORY_DIARY="100"; //Amount of context history specifically for diary entries. Set to 0 to use regular CONTEXT_HISTORY value.
 $CONTEXT_HISTORY_DYNAMIC_PROFILE="50"; //Amount of context history specifically for dynamic profile updates. Set to 0 to use regular CONTEXT_HISTORY value.
-$CLEAN_CONTEXT_FOCUS_CHAT_HISTORY=25; //Amount of context history specifically for clean context focus chat. Set to 0 to use regular CONTEXT_HISTORY value.
 $HTTP_TIMEOUT=15; //Timeout for AI requests.
 $CORE_LANG=""; //Custom languages. - language folder
 $ALIVE_MESSAGE=false; //Leave as is - read only
@@ -172,7 +171,7 @@ $RELLLM_CONNECTOR=5; // Relationship Management default (Mistral Small 3.2 24B)
 //[AI/LLM Connectors]
 //OpenRouter JSON
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$CONNECTOR["openrouterjson"]["model"]="z-ai/glm-4.7"; //LLM model.
+$CONNECTOR["openrouterjson"]["model"]="deepseek/deepseek-v4-flash"; //LLM model.
 $CONNECTOR["openrouterjson"]["reasoning_model"]=true; //This is a reasoning model, could output CoT.
 $CONNECTOR["openrouterjson"]["fallback_models"]=""; //comma separated models.
 $CONNECTOR["openrouterjson"]["PROVIDER"]=""; //use only this list of providers from OpenRouter
@@ -601,5 +600,7 @@ $RANDOM_NARATION_CHANCE=15;
 $RANDOM_NARRATION_COOLDOWN=2;
 
 $OGHMA_CUSTOM=false;
+$RACIAL_OGHMA=true;
+$LOCATION_OGHMA=true;
 ?>
 

@@ -365,6 +365,7 @@ class Narrator
             ],
             'diary_enabled' => ['NARRATOR_DIARY_ENABLED', 'bool', false],
             'auto_diary_enabled' => ['NARRATOR_AUTO_DIARY_ENABLED', 'bool', false],
+            'only_diary_access' => ['NARRATOR_ONLY_DIARY_ACCESS', 'bool', false],
             'connector_id' => ['NARRATOR_CONNECTOR_ID', 'int', null],
             'diary_connector_id' => ['NARRATOR_DIARY_CONNECTOR_ID', 'int', null],
         ];

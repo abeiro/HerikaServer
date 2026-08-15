@@ -211,7 +211,7 @@ ob_start();
 include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 ?>
 
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css?v=<?php echo (int) @filemtime(dirname(__DIR__) . '/css/main.css'); ?>">
 <style>
 /* Match Oghma page spacing and title styling */
 @font-face {
@@ -1490,12 +1490,12 @@ if (isset($_GET["edit"])) {
 
 <div class="llm-layout">
     <div class="llm-left position-sticky">
-        <div style="margin: 6px 0 10px 4px; display:flex; gap:8px; flex-wrap:wrap;">
-            <form method="get" style="display:inline" action="llm_connectors.php">
+        <div class="sidebar-action-grid">
+            <form method="get" action="llm_connectors.php">
                 <input type="hidden" name="create_blank" value="1">
-                <button type="submit" class="btn-save">New Connector</button>
+                <button type="submit" class="btn-save">New</button>
             </form>
-            <form method="post" style="display:inline" action="llm_connectors.php" enctype="multipart/form-data" id="llm_import_form">
+            <form method="post" action="llm_connectors.php" enctype="multipart/form-data" id="llm_import_form">
                 <input type="hidden" name="import" value="1">
                 <input type="file" name="import_file[]" id="llm_import_file" accept=".csv" multiple style="display:none">
                 <button type="button" class="btn-primary" id="llm_import_btn">Import</button>

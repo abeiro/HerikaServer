@@ -665,6 +665,34 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
             background: #1a1a1a;
             color: #f8f9fa;
         }
+
+        .latest-diary-audio-controls {
+            align-items: center;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            padding-top: 14px;
+        }
+
+        body .latest-diary-audio-button {
+            background: #f27c11 !important;
+            border-color: #ca5c0a !important;
+            color: #fff !important;
+        }
+
+        body .latest-diary-audio-button:hover:not(:disabled) {
+            background: #ca5c0a !important;
+        }
+
+        body .latest-diary-audio-button:disabled {
+            cursor: wait;
+            opacity: 0.7;
+        }
+
+        .latest-diary-audio-status {
+            color: #ddd;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -770,7 +798,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 ");
                 $chimMode = (!isset($chimModeRow['error']) && !empty($chimModeRow) && isset($chimModeRow[0]['value'])) ? $chimModeRow[0]['value'] : 'STANDARD';
 
-                // Fetch Focus on Chat mode
+                // Fetch Compact Chat mode
                 $chimContextModeRow = fetch_widget_stats($conn, "
                     SELECT value 
                     FROM {$schema}.conf_opts 
@@ -794,6 +822,16 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                     '4' => '🧪 Experimental'
                 ];
                 $chimModelLabel = isset($chimModelLabelMap[(string)$chimModel]) ? $chimModelLabelMap[(string)$chimModel] : (string)$chimModel;
+
+                $backgroundLifeNpcCountRow = fetch_widget_stats($conn, "
+                    SELECT COUNT(*) AS total
+                    FROM {$schema}.core_npc_master
+                    WHERE COALESCE(extended_data->>'background_life_enabled', 'false') = 'true'
+                ");
+                $backgroundLifeNpcCount = (!isset($backgroundLifeNpcCountRow['error'])
+                    && isset($backgroundLifeNpcCountRow[0]['total']))
+                    ? (int)$backgroundLifeNpcCountRow[0]['total']
+                    : 0;
 
 
                 $helperServiceRunning = false;
@@ -906,8 +944,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                 <td>" . htmlspecialchars($chimModelLabel) . "</td>
                             </tr>
                             <tr>
-                                <td>Focus Chat</td>
+                                <td>Compact Chat</td>
                                 <td>" . htmlspecialchars($chimContextMode) . "</td>
+                            </tr>
+                            <tr>
+                                <td>Background Life NPCs</td>
+                                <td>{$backgroundLifeNpcCount}</td>
                             </tr>
                             <tr>
                                 <td>Background Processor</td>
@@ -1257,7 +1299,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
                         // Latest Diary Entry Widget
                         $latestDiary = fetch_widget_stats($conn, "
-                        SELECT topic, content, people as author, localts, gamets
+                        SELECT rowid, topic, content, people as author, localts, gamets
                         FROM {$schema}.diarylog
                         ORDER BY localts DESC
                         LIMIT 1
@@ -1279,6 +1321,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                             <div style='font-size: 1.1em; margin-bottom: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . htmlspecialchars($latestDiary[0]['author']) . "</div>
                                             <div style='font-size: 1.2em; padding-top: 15px; font-family: SkyrimBooks_Handwritten_Bold, Arial, sans-serif !important;'>" . nl2br($latestDiary[0]['content']) . "</div>
                                         </div>
+                                    </div>
+                                    <div class='latest-diary-audio-controls'>
+                                        <button type='button' id='latestDiaryAudioButton' class='latest-diary-audio-button' onclick='toggleLatestDiaryAudio(this, " . intval($latestDiary[0]['rowid']) . ")'>&#9654; Play Audio</button>
+                                        <span id='latestDiaryAudioStatus' class='latest-diary-audio-status' aria-live='polite'></span>
                                     </div>
                                 </div>";
                         } else {
@@ -1736,6 +1782,82 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         ?>
     </main>
     <script>
+        const latestDiaryAudioEndpoint = <?php echo json_encode($webRoot . '/ui/api/chim_diary_audio.php'); ?>;
+        const latestDiaryAudio = new Audio();
+        let latestDiaryAudioEntryId = null;
+        let latestDiaryAudioRequest = null;
+
+        // Generate and control playback for the latest diary entry without leaving the dashboard.
+        async function toggleLatestDiaryAudio(button, entryId) {
+            if (!entryId) {
+                return;
+            }
+
+            const status = document.getElementById('latestDiaryAudioStatus');
+            if (latestDiaryAudioEntryId === entryId && latestDiaryAudio.src) {
+                if (latestDiaryAudio.paused) {
+                    await latestDiaryAudio.play();
+                    button.innerHTML = '&#10074;&#10074; Pause';
+                    if (status) status.textContent = 'Playing';
+                } else {
+                    latestDiaryAudio.pause();
+                    button.innerHTML = '&#9654; Play Audio';
+                    if (status) status.textContent = 'Paused';
+                }
+                return;
+            }
+
+            if (latestDiaryAudioRequest) {
+                latestDiaryAudioRequest.abort();
+            }
+            latestDiaryAudio.pause();
+            latestDiaryAudio.removeAttribute('src');
+            latestDiaryAudio.load();
+            latestDiaryAudioEntryId = entryId;
+            latestDiaryAudioRequest = new AbortController();
+            button.disabled = true;
+            button.textContent = 'Generating...';
+            if (status) status.textContent = 'Generating audio with the NPC voice...';
+
+            try {
+                const response = await fetch(`${latestDiaryAudioEndpoint}?entry=${encodeURIComponent(entryId)}`, {
+                    cache: 'no-store',
+                    signal: latestDiaryAudioRequest.signal
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success || !result.audio_url) {
+                    throw new Error(result.error || 'Diary audio could not be generated.');
+                }
+
+                latestDiaryAudioRequest = null;
+                latestDiaryAudio.src = result.audio_url;
+                await latestDiaryAudio.play();
+                button.disabled = false;
+                button.innerHTML = '&#10074;&#10074; Pause';
+                if (status) {
+                    status.textContent = `Playing ${result.author || 'NPC'} with ${result.connector || 'configured TTS'}`;
+                }
+            } catch (error) {
+                latestDiaryAudioRequest = null;
+                if (error.name === 'AbortError') {
+                    return;
+                }
+                console.error('Latest diary audio failed:', error);
+                button.disabled = false;
+                button.innerHTML = '&#9654; Play Audio';
+                if (status) status.textContent = error.message || 'Diary audio failed.';
+                latestDiaryAudioEntryId = null;
+            }
+        }
+
+        latestDiaryAudio.addEventListener('ended', () => {
+            const button = document.getElementById('latestDiaryAudioButton');
+            const status = document.getElementById('latestDiaryAudioStatus');
+            if (button) button.innerHTML = '&#9654; Play Audio';
+            if (status) status.textContent = '';
+            latestDiaryAudioEntryId = null;
+        });
+
         // Script for LLM Stats Card
         const llmStatsCard = document.getElementById('llm-stats-card');
         if (llmStatsCard) {

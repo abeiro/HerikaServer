@@ -1,6 +1,8 @@
 <?php
 
 $GLOBALS["OGHMA_HINT"] = "";
+$GLOBALS["OGHMA_INJECTED_TOPICS"] = [];
+$GLOBALS["OGHMA_INJECTED_PAYLOADS"] = [];
 
 // Helper function to properly check boolean values (handles string "false" from form submissions)
 // Guard against redeclaration when oghma.php is included multiple times (e.g., during rechat)
@@ -16,6 +18,19 @@ if (!function_exists('isOghmaEnabled')) {
 $minimeEnabled = isMinimeT5Enabled();
 $oghmaCustomEnabled = isOghmaEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
 $oghmaInfiniumEnabled = isOghmaEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
+$oghmaRequestEligible = in_array(
+    $gameRequest[0] ?? '',
+    ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "rechat", "continue", "instruction", "suggestion"],
+    true
+);
+
+if ($oghmaInfiniumEnabled && $oghmaRequestEligible) {
+    require_once(__DIR__ . "/../lib/oghma_forced_context.php");
+    $forcedNpcMaster = isset($npcMaster) && $npcMaster instanceof NpcMaster
+        ? $npcMaster
+        : (class_exists('NpcMaster') ? new NpcMaster() : null);
+    chimOghmaInjectForcedContext($GLOBALS['db'] ?? null, $forcedNpcMaster);
+}
 
 // Debug: Log the actual values being checked
 error_log("[OGHMA DEBUG] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
@@ -26,7 +41,7 @@ error_log("[OGHMA DEBUG] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
 
 if ($minimeEnabled || $oghmaCustomEnabled) {
     if ($oghmaInfiniumEnabled) {
-        if (in_array($gameRequest[0], ["inputtext","inputtext_s","ginputtext","ginputtext_s","rechat", "continue", "instruction", "suggestion"])) {
+        if ($oghmaRequestEligible) {
             
             if ($gameRequest[0] === "rechat") {
                 $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
@@ -37,14 +52,14 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                 // Remove NPC name prefix pattern (e.g., "Irileth: ")
                 $INPUT_TEXT = preg_replace('/^[^:]+:\s*/', '', $INPUT_TEXT);
                 // Remove talking to pattern
-                $pattern = '/\(talking to [^()]+\)/i';
+                $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
                 $INPUT_TEXT = preg_replace($pattern, '', $INPUT_TEXT);
                 
             } else {
                 $pattern = "/\([^)]*Context location[^)]*\)/"; // Remove (Context location..)
                 $replacement = "";
                 $INPUT_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]);
-                $pattern = '/\(talking to [^()]+\)/i';
+                $pattern = '/\((?:(?:talking|whispering|shouting)|speaking privately)\s+to\s+[^()]+\)/i';
                 $INPUT_TEXT = preg_replace($pattern, '', $INPUT_TEXT);
                 $INPUT_TEXT = strtr($INPUT_TEXT, ["."=>" ", "{$GLOBALS["PLAYER_NAME"]}:"=>""]);
             }
@@ -163,11 +178,11 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                                     CASE WHEN native_vector @@ to_tsquery('$locationCtxQuery') THEN 2.0 ELSE 1.0 END +
                                 ts_rank(native_vector, to_tsquery('$contextKeywordsQuery')) *
                                     CASE WHEN native_vector @@ to_tsquery('$contextKeywordsQuery') THEN 1.0 ELSE 0.0 END +
-                                -- Strong boost for alias match in the topic column (commas/underscores normalized)
+                                -- Strong boost for canonical topic or alias matches.
                                 ts_rank(
                                     to_tsvector('simple',
                                         regexp_replace(
-                                            replace(lower(topic), '_',' '),
+                                            replace(lower(concat_ws(' ', topic, coalesce(aliases, ''))), '_',' '),
                                             ',', ' ', 'g'
                                         )
                                     ),
@@ -176,7 +191,7 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                                 CASE WHEN
                                     to_tsvector('simple',
                                         regexp_replace(
-                                            replace(lower(topic), '_',' '),
+                                            replace(lower(concat_ws(' ', topic, coalesce(aliases, ''))), '_',' '),
                                             ',', ' ', 'g'
                                         )
                                     ) @@ to_tsquery('$currentInputTopicQuery')
@@ -190,7 +205,7 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                                 native_vector @@ to_tsquery('$contextKeywordsQuery') OR
                                 to_tsvector('simple',
                                     regexp_replace(
-                                        replace(lower(topic), '_',' '),
+                                        replace(lower(concat_ws(' ', topic, coalesce(aliases, ''))), '_',' '),
                                         ',', ' ', 'g'
                                     )
                                 ) @@ to_tsquery('$currentInputTopicQuery')
@@ -209,7 +224,8 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                             $msg = 'oghma keyword offered';
 
                             // If rank is good enough, we try to see if user can access advanced or basic lore
-                            if ($topTopic["combined_rank"] > 3.3) {
+                            $hintLengthBeforeTopic = strlen($GLOBALS["OGHMA_HINT"]);
+                            if ($topTopic["combined_rank"] > 3.3 && !chimOghmaTopicWasInjected($topTopic["topic"] ?? '')) {
                                 // -----------------------------
                                 // 1) Check advanced article
                                 // -----------------------------
@@ -253,7 +269,14 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
 
                                 if ($advancedAllowed) {
                                     // The user can access advanced lore
-                                    $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information (You have advanced knowledge on this subject, you can use it in your dialogue):{$topTopic["topic"]}\n\"".trim($topTopic["topic_desc"])."\"";
+                                    $description = trim((string) ($topTopic["topic_desc"] ?? ''));
+                                    if (!chimOghmaPayloadWasInjected($description)) {
+                                        $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information (You have advanced knowledge on this subject, you can use it in your dialogue):{$topTopic["topic"]}\n\"{$description}\"";
+                                        chimOghmaMarkPayloadInjected($description);
+                                    } else {
+                                        $msg = "oghma keyword duplicate content already injected";
+                                        chimOghmaMarkTopicInjected($topTopic["topic"] ?? '');
+                                    }
                                 } else {
                                     // -----------------------------
                                     // 2) Check basic article
@@ -288,11 +311,23 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
                                     }
 
                                     if ($basicAllowed) {
-                                        $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information (You only have basic knowledge on this subject, you can use it in your dialogue): {$topTopic["topic"]}\n\"".trim($topTopic["topic_desc_basic"])."\"";
+                                        $description = trim((string) ($topTopic["topic_desc_basic"] ?? ''));
+                                        if (!chimOghmaPayloadWasInjected($description)) {
+                                            $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information (You only have basic knowledge on this subject, you can use it in your dialogue): {$topTopic["topic"]}\n\"{$description}\"";
+                                            chimOghmaMarkPayloadInjected($description);
+                                        } else {
+                                            $msg = "oghma keyword duplicate content already injected";
+                                            chimOghmaMarkTopicInjected($topTopic["topic"] ?? '');
+                                        }
                                     } else {
                                         $GLOBALS["OGHMA_HINT"] .= " \n#Lore Information\nYou do not know ANYTHING about {$topTopic["topic"]}";
                                     }
                                 }
+                                if (strlen($GLOBALS["OGHMA_HINT"]) > $hintLengthBeforeTopic) {
+                                    chimOghmaMarkTopicInjected($topTopic["topic"] ?? '');
+                                }
+                            } elseif (chimOghmaTopicWasInjected($topTopic["topic"] ?? '')) {
+                                $msg = "oghma keyword already injected from scene context";
                             } else {
                                 $msg = "oghma keyword NOT offered (no good results in search)";
                             }
@@ -371,6 +406,6 @@ if ($minimeEnabled || $oghmaCustomEnabled) {
         error_log("[OGHMA] OGHMA_INFINIUM disabled: {$GLOBALS["OGHMA_INFINIUM"]}");
     }
 }  else {
-        error_log("[OGHMA] MiniMe service unavailable and OGHMA_CUSTOM is disabled");
+        error_log("[OGHMA] Dynamic topic extraction unavailable; forced scene context was processed when enabled");
 }
 ?>

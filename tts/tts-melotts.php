@@ -26,7 +26,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
     $starTime = microtime(true);
 
     
-    $lang=isset($GLOBALS["TTS"]["FORCED_LANG_DEV"])?$GLOBALS["TTS"]["FORCED_LANG_DEV"]:$GLOBALS["TTS"]["MELOTTS"]["language"];
+    $lang=isset($GLOBALS["TTS"]["FORCED_LANG_DEV"])?$GLOBALS["TTS"]["FORCED_LANG_DEV"]:($GLOBALS["TTS"]["MELOTTS"]["language"] ?? 'EN');
     
     
     if ((isset($GLOBALS["LLM_LANG"]))&&(isset($GLOBALS["LANG_LLM_XTTS"]))&&$GLOBALS["LANG_LLM_XTTS"]) {
@@ -38,15 +38,14 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
         $lang=$GLOBALS["PATCH_OVERRIDE_TTS_LANGUAGE"];
 
     if (empty($lang))
-        $lang=$GLOBALS["TTS"]["MELOTTS"]["language"];
+        $lang=$GLOBALS["TTS"]["MELOTTS"]["language"] ?? 'EN';
 
 
     
 
-    $voice=$GLOBALS["TTS"]["MELOTTS"]["voiceid"];
-    
-    if (empty($voice))
-        $voice=$GLOBALS["TTS"]["MELOTTS"]["voiceid"];
+    $voice = $GLOBALS["PATCH_OVERRIDE_VOICE"]
+        ?? $GLOBALS["TTS"]["FORCED_VOICE_DEV"]
+        ?? ($GLOBALS["TTS"]["MELOTTS"]["voiceid"] ?? '');
 
 
     if (empty($voice)) {
@@ -56,21 +55,18 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 
         $cn=$GLOBALS["db"]->escape("Voicetype/$codename");
         $vtype=$GLOBALS["db"]->fetchAll("select value from conf_opts where id='$cn'");
-        $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:null;
+        $voicetypeString=(isOk($vtype))?$vtype[0]["value"]:'';
         $voicetype=explode("\\",$voicetypeString);
-        $voice=strtolower($voicetype[3]);
+        $voice=isset($voicetype[3]) ? strtolower($voicetype[3]) : '';
     }
     
-
-    if (isset($GLOBALS["PATCH_OVERRIDE_VOICE"]))
-        $voice=$GLOBALS["PATCH_OVERRIDE_VOICE"];
 
     // Normalize special narrator voice id
     if (is_string($voice) && strtolower($voice) === 'thenarrator')
         $voice = 'malenord';
  
 
-    $speed=$GLOBALS["TTS"]["MELOTTS"]["speed"]+0.01;
+    $speed=floatval($GLOBALS["TTS"]["MELOTTS"]["speed"] ?? 1.0)+0.01;
 
 
     if (empty($voice))

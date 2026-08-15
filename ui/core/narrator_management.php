@@ -219,6 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_narrator'])) {
         $narrator->set('remove_player_autochat_asterisks', isset($_POST['remove_player_autochat_asterisks']) && $_POST['remove_player_autochat_asterisks'] === '1' ? '1' : '0');
         $narrator->set('diary_enabled', isset($_POST['diary_enabled']) && $_POST['diary_enabled'] === '1' ? '1' : '0');
         $narrator->set('auto_diary_enabled', isset($_POST['auto_diary_enabled']) && $_POST['auto_diary_enabled'] === '1' ? '1' : '0');
+        $narrator->set('only_diary_access', isset($_POST['only_diary_access']) && $_POST['only_diary_access'] === '1' ? '1' : '0');
         
         // Save integer settings
         if (isset($_POST['random_chance'])) {
@@ -350,6 +351,7 @@ $removeAsterisksFromNpcOutput = $narrator->getBool(
 );
 $diaryEnabled = $narrator->getBool('diary_enabled', false);
 $autoDiaryEnabled = $narrator->getBool('auto_diary_enabled', false);
+$onlyDiaryAccess = $narrator->getBool('only_diary_access', false);
 $dynamicProfileEnabled = $narrator->getBool('dynamic_profile', false);
 $dynamicProfileFields = $narrator->getDynamicProfileFields();
 
@@ -827,6 +829,48 @@ if (!$isEmbed) {
     .btn-save:active {
         transform: translateY(0);
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .narrator-settings-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+    }
+
+    .narrator-settings-actions .btn-save {
+        margin-bottom: 0;
+    }
+
+    .btn-narrator-transfer {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+        height: 36px;
+        padding: 6px 12px;
+        border: 1px solid #4a4a4a;
+        border-radius: 6px;
+        background: #333;
+        color: #fff;
+        cursor: pointer;
+        font-size: 0.85em;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .btn-narrator-transfer:hover:not(:disabled) {
+        background: #414141;
+        border-color: rgba(242, 124, 17, 0.65);
+        color: #fff;
+        text-decoration: none;
+    }
+
+    .btn-narrator-transfer:disabled {
+        opacity: 0.6;
+        cursor: wait;
     }
 
     /* Toast Notification */
@@ -1308,6 +1352,7 @@ if (!$isEmbed) {
 </style>
 
 <?php if ($isEmbed): ?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/chim-theme.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'chim-theme.css'); ?>">
 <style>
     /* Embedded in hub: remove extra top padding since navbar is hidden */
     main { padding-top: 20px; }
@@ -1342,7 +1387,12 @@ if (!$isEmbed) {
         </div>
 
         <form method="post" action="">
-            <button type="submit" class="btn-save" name="save_narrator" value="1">Save Narration Settings</button>
+            <div class="narrator-settings-actions">
+                <button type="submit" class="btn-save" name="save_narrator" value="1">Save Narration Settings</button>
+                <a class="btn-narrator-transfer" href="<?php echo $webRoot; ?>/ui/cmd/settings_portability.php?scope=narration&amp;action=export">&#128228; Export Narration</a>
+                <button type="button" class="btn-narrator-transfer" id="import_narration_settings_btn">&#128229; Import Narration</button>
+                <input type="file" id="import_narration_settings_file" accept="application/json,.json" hidden>
+            </div>
 
             <div class="content-grid">
                 <!-- Core Settings Section -->
@@ -1397,6 +1447,15 @@ if (!$isEmbed) {
                         <span class="toggle-label">Narrator Auto Diary</span>
                     </label>
                     <span class="hint">Allow The Narrator to join sleep and wait auto-diary generation. This does not affect manual narrator diary actions.</span>
+
+                    <label class="toggle-row">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="only_diary_access" name="only_diary_access" value="1" <?php echo $onlyDiaryAccess ? 'checked' : ''; ?>>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span class="toggle-label">Narrator only diary access</span>
+                    </label>
+                    <span class="hint">Restrict the Narrator to diary entries written by The Narrator. When disabled, the Narrator may recall relevant diary entries from all NPCs.</span>
                 </div>
 
                 <!-- Narration Section -->
@@ -1866,6 +1925,20 @@ if (!$isEmbed) {
         </div>
     </div>
 </main>
+
+<script src="<?php echo $webRoot; ?>/ui/js/settings-portability.js?v=<?php echo (int) @filemtime(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'js' . DIRECTORY_SEPARATOR . 'settings-portability.js'); ?>"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof window.chimInitSettingsImport === 'function') {
+        window.chimInitSettingsImport({
+            scope: 'narration',
+            endpoint: <?php echo json_encode($webRoot . '/ui/cmd/settings_portability.php'); ?>,
+            importButtonId: 'import_narration_settings_btn',
+            fileInputId: 'import_narration_settings_file'
+        });
+    }
+});
+</script>
 
 <script>
 const narratorAdvancedPrompts = <?php

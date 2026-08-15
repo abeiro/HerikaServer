@@ -1685,3 +1685,34 @@ body .installer-container .status-error {
     }
 }
 
+.sidebar-action-grid,
+.btn-row.sidebar-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 6px 0 10px 4px;
+}
+
+.sidebar-action-grid > form {
+    display: block;
+    margin: 0;
+    min-width: 0;
+}
+
+.sidebar-action-grid > button,
+.sidebar-action-grid > a,
+.sidebar-action-grid > form > button {
+    width: 100%;
+    min-height: 36px;
+    margin: 0;
+    justify-content: center;
+    background-image: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.sidebar-action-grid.single-action > form,
+.sidebar-action-grid.single-action > button,
+.sidebar-action-grid.single-action > a {
+    grid-column: 1 / -1;
+}

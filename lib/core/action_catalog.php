@@ -371,6 +371,7 @@ function herikaActionCatalogGetDefaultConfirmationPolicy($codeName)
         'makelove',
         'removeclothes',
         'sexaction',
+        'takehelditem',
         'takegoldfromplayer',
     ];
 

@@ -47,7 +47,7 @@ try {
             $modeResult = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
             $status['mode'] = isset($modeResult['value']) ? strtoupper(trim($modeResult['value'])) : 'STANDARD';
             
-            // Get focus chat setting
+            // Get Compact Chat setting
             $focusChatResult = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_context_mode'");
             $status['focus_chat'] = isset($focusChatResult['value']) && $focusChatResult['value'] == '1';
             

@@ -1,0 +1,173 @@
+:root {
+    --hub-navbar-offset: 80px;
+    --hub-navigation-gap: 20px;
+}
+
+body.hub-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding-top: var(--hub-navbar-offset);
+}
+
+body.hub-page > main {
+    box-sizing: border-box;
+    width: 100%;
+    height: auto;
+    min-height: calc(100vh - var(--hub-navbar-offset));
+    padding-top: 0 !important;
+}
+
+body.hub-page > main .tab-container {
+    margin-top: 0 !important;
+}
+
+body.hub-page .config-navigation {
+    margin-top: var(--hub-navigation-gap);
+}
+
+.config-navigation {
+    margin: 20px 0 8px;
+    padding: 8px;
+    border: 1px solid var(--chim-border, #404040);
+    border-radius: 10px;
+    background: var(--chim-surface-3, #1d1d1d);
+    box-shadow: none;
+}
+
+.tab-groups {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    align-items: stretch;
+}
+
+.tab-groups.two-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tab-group {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--chim-border, #404040);
+    border-radius: 8px;
+    background: var(--chim-surface-1, #232323);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tab-group.active {
+    border-color: rgba(242, 124, 17, 0.62);
+    box-shadow: inset 0 0 0 1px rgba(242, 124, 17, 0.08);
+}
+
+.tab-group-label {
+    padding: 6px 10px 5px;
+    border-bottom: 1px solid rgba(242, 124, 17, 0.2);
+    color: #d5a56f;
+    font-family: 'MagicCards', sans-serif;
+    font-size: 0.86em;
+    letter-spacing: 1.5px;
+    word-spacing: 5px;
+    text-transform: uppercase;
+}
+
+.tab-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: flex-start;
+    gap: 5px;
+    margin: 0;
+    padding: 7px;
+    border: 0;
+    word-spacing: 5px;
+}
+
+.tab-button {
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 7px;
+    margin: 0;
+    padding: 7px 9px;
+    overflow: hidden;
+    border: 1px solid #4a4a4a;
+    border-radius: 6px;
+    background: #303030;
+    color: #f0f0f0;
+    cursor: pointer;
+    font-family: 'MagicCards', sans-serif;
+    font-size: 0.91em;
+    letter-spacing: 1.2px;
+    text-decoration: none;
+    word-spacing: 5px;
+    white-space: nowrap;
+    box-shadow: none;
+    transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.tab-button span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tab-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+    font-size: 1.05em;
+    line-height: 1;
+}
+
+.tab-button:hover {
+    border-color: rgba(242, 124, 17, 0.45);
+    background: #38332f;
+    color: rgb(242, 124, 17);
+    text-decoration: none;
+    box-shadow: none;
+}
+
+.tab-button.active {
+    border-color: rgba(242, 124, 17, 0.75);
+    background: #3a2d23;
+    color: rgb(242, 124, 17);
+    text-decoration: none;
+    box-shadow: inset 0 -2px rgba(242, 124, 17, 0.65);
+}
+
+.tab-button:focus,
+.tab-button:visited {
+    text-decoration: none;
+}
+
+@media (max-width: 1500px) {
+    .tab-buttons {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1000px) {
+    .tab-groups,
+    .tab-groups.two-groups {
+        grid-template-columns: 1fr;
+    }
+
+    .tab-buttons {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    .tab-buttons {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tab-button {
+        font-size: 0.88em;
+    }
+}

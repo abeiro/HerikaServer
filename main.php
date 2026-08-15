@@ -33,6 +33,8 @@ chimRuntimeBootstrap($path, [
     'load_player_name' => true,
     'load_narrator' => true,
 ]);
+require_once($path . "lib/game_activity.php");
+require_once($path . "lib/background_processor.php");
 if (!headers_sent() && function_exists('chimGetNarratorDisplayNameHeaderValue')) {
     header('X-Narrator-Display-Name: ' . chimGetNarratorDisplayNameHeaderValue());
 }
@@ -41,6 +43,7 @@ require_once($path . "lib/model_dynmodel.php");
 require_once($path . "lib/minimet5_service.php");
 require_once($path . "lib/data_functions.php");
 require_once($path . "lib/chat_helper_functions.php");
+require_once($path . "lib/compact_context_history.php");
 require_once($path . "lib/lazy_xml.php");
 require_once($path . "lib/memory_helper_vectordb.php");
 require_once($path . "lib/llm_randomizer.php");
@@ -130,6 +133,11 @@ MAIN FLOW
 $gameRequest = explode("|", $receivedData);
 $GLOBALS["gameRequest"] = &$gameRequest;
 unset($GLOBALS["CHIM_TURN_PEOPLE_SNAPSHOT"]);
+unset($GLOBALS["CHIM_CHAT_SHORTCUT_ROUTED"]);
+$requestRoutingSnapshot = chimDecodePlayerRoutingSnapshotField($gameRequest[4] ?? "");
+if (($requestRoutingSnapshot["chat_shortcut_routed"] ?? false) === true) {
+    $GLOBALS["CHIM_CHAT_SHORTCUT_ROUTED"] = true;
+}
 
 
 $startTime = microtime(true);
@@ -137,6 +145,8 @@ $startTime = microtime(true);
 $GLOBALS["AUDIT_RUNID_REQUEST"]=$gameRequest[0];
 
 $gameRequest[0] = strtolower($gameRequest[0]); // Who put 'diary' uppercase?
+chimRequestPerformanceSetRequestType($gameRequest[0]);
+chimRequestPerformanceMark('request_parsed');
 
 // Handle deprecated events now processed by gamedata.php
 if (in_array($gameRequest[0], ['updateequipment', 'updateinventory', 'updateskills', 'updatestats'])) {
@@ -154,6 +164,13 @@ if (in_array($gameRequest[0], ['updateequipment', 'updateinventory', 'updateskil
 $db = $GLOBALS["db"] ?? new sql();
 $GLOBALS["db"] = $db;
 
+if (PHP_SAPI !== 'cli' && !getenv('PHPUNIT_TEST') && $gameRequest[0] !== 'request') {
+    $newGameActivitySession = chimMarkGameActivity();
+    if ($newGameActivitySession && function_exists('herikaEnsureBackgroundProcessorRunning')) {
+        herikaEnsureBackgroundProcessorRunning(false);
+    }
+}
+
 require_once($path . "processor" .DIRECTORY_SEPARATOR."chim_modes.php");
 
 // In directed CHIM modes, normalize incoming dialogue tags so logs/prompts stay aligned
@@ -163,6 +180,8 @@ if (isset($gameRequest[3]) && is_string($gameRequest[3]) &&
     in_array($gameRequest[0], ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext", "chat", "prechat", "rechat", "continue", "continue_group"], true)) {
     if ($chimExecutionMode === "WHISPER") {
         $gameRequest[3] = convertTalkingTagsToWhispering($gameRequest[3]);
+    } elseif ($chimExecutionMode === "CLOSE") {
+        $gameRequest[3] = convertTalkingTagsToPrivately($gameRequest[3]);
     } elseif ($chimExecutionMode === "SHOUT") {
         $gameRequest[3] = convertTalkingTagsToShouting($gameRequest[3]);
     }
@@ -170,6 +189,12 @@ if (isset($gameRequest[3]) && is_string($gameRequest[3]) &&
 
 // Call extension's preprocessing files
 requireFilesRecursively(__DIR__.DIRECTORY_SEPARATOR."ext".DIRECTORY_SEPARATOR,"preprocessing.php");
+
+// Raw physics telemetry is opt-in. Extensions may rename it during preprocessing;
+// if none did, acknowledge it here without entering the dialogue/LLM pipeline.
+if ($gameRequest[0] === "physics_raw") {
+    terminate();
+}
 
 if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext","instruction","init"])) {
     // This is just a mark that user has made an input request. We will check later when waiting for LLm response 
@@ -216,6 +241,7 @@ if (!in_array($gameRequest[0],$fast_commands)) {
     }
     Logger::info("Audit:Lock acquired by {$gameRequest[0]}");
 } 
+chimRequestPerformanceMark('lock_ready');
 
 // adnpc has its custom semaphore, as it write files
 if (in_array($gameRequest[0],["addnpc"])) {
@@ -272,7 +298,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
         $player_rewrite_speech=cleanResponse($player_rewrite_speech);
         $player_rewrite_speech=sanitizePlayerRespeechText($player_rewrite_speech, $GLOBALS["PLAYER_NAME"] ?? null);
         $gameRequest[3]="{$GLOBALS["PLAYER_NAME"]}:$player_rewrite_speech";
-        $GLOBALS["CHIM_EXECUTION_MODE"] = "AUTOCHAT"; //required when using STANDARD/WHISPER and ** prefix triggers speech database fix
+        $GLOBALS["CHIM_EXECUTION_MODE"] = "AUTOCHAT"; // Required when a conversation mode uses the ** player rewrite prefix.
     }
 }
 
@@ -492,7 +518,7 @@ if (isset($_GET["profile"])) {
             $currentProfileData = null;
 
             // Highest-confidence target extraction from player text payload.
-            if ($requestText !== "" && preg_match('/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $requestText, $matches)) {
+            if ($requestText !== "" && preg_match('/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+(?:loudly|privately)\s+to)\s+([^()]+?)(?:\s+from\s+far\s+away)?\s*\)/i', $requestText, $matches)) {
                 $candidate = trim($matches[1]);
                 if ($candidate !== "") {
                     $fallbackNpcName = $candidate;
@@ -511,6 +537,7 @@ if (isset($_GET["profile"])) {
                 || stripos($requestText, '(Talking to The Narrator)') !== false
                 || stripos($requestText, '(Whispering to The Narrator)') !== false
                 || stripos($requestText, '(Shouting to The Narrator)') !== false
+                || stripos($requestText, '(Speaking privately to The Narrator)') !== false
                 || ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") === 0);
 
             if ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") !== 0) {
@@ -974,8 +1001,18 @@ if (in_array($gameRequest[0],["bored"])) {
     if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"])) {
         Logger::info("[NARRATOR_BORED] Using narrator bored flow");
     } elseif ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
-        Logger::info("Redirecting bored event to rolemaster");
-        `php service/manager.php rolemaster instruction ""`;
+        $boredSeedActor = trim((string)($gameRequest[4] ?? $GLOBALS["HERIKA_NAME"] ?? ""));
+        Logger::info("Redirecting bored event to rolemaster with seed actor '{$boredSeedActor}'");
+        $phpCli = PHP_BINDIR . DIRECTORY_SEPARATOR . "php";
+        $managerPath = __DIR__ . DIRECTORY_SEPARATOR . "service" . DIRECTORY_SEPARATOR . "manager.php";
+        $command = escapeshellarg($phpCli)
+            . " " . escapeshellarg($managerPath)
+            . " rolemaster instruction " . escapeshellarg("")
+            . " bored " . escapeshellarg($boredSeedActor);
+        exec($command, $output, $returnCode);
+        if ($returnCode !== 0) {
+            Logger::warn("Failed to start bored rolemaster request (exit code {$returnCode})");
+        }
         terminate();
 
     }
@@ -1075,8 +1112,8 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 if (in_array($gameRequest[0],["rechat","narration"]) ) {
     $configuredChimMode = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
     $configuredChimMode = strtoupper(trim((string)($configuredChimMode["value"] ?? "")));
-    if ($configuredChimMode === "WHISPER") {
-        Logger::info("[RECHAT_SELECT] WHISPER mode is active; terminating private rechat/narration request");
+    if (in_array($configuredChimMode, ["WHISPER", "CLOSE"], true)) {
+        Logger::info("[RECHAT_SELECT] {$configuredChimMode} mode is active; terminating private rechat/narration request");
         terminate();
     }
     
@@ -1332,12 +1369,8 @@ if ($gameRequest[0] == "narrator_welcome") {
         
         $connector = new LLMConnector();
         
-        // Get global connector slot (respects in-game mode)
-        $db = $GLOBALS['db'];
-        $result = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_profile_model'");
-        $connectorSlot = (isset($result['value']) && $result['value'] >= 1 && $result['value'] <= 4) 
-            ? (int)$result['value'] 
-            : 1;
+        $npcMaster = new NpcMaster();
+        $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
         
         $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
         
@@ -1418,12 +1451,8 @@ if ($gameRequest[0] == "narrator_quest_comment") {
         
         $connector = new LLMConnector();
         
-        // Get global connector slot (respects in-game mode)
-        $db = $GLOBALS['db'];
-        $result = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_profile_model'");
-        $connectorSlot = (isset($result['value']) && $result['value'] >= 1 && $result['value'] <= 4) 
-            ? (int)$result['value'] 
-            : 1;
+        $npcMaster = new NpcMaster();
+        $connectorSlot = LLMRandomizer::getConnectorSlot($currentProfileData, $narratorData, $npcMaster);
         
         $connectorId = LLMRandomizer::getConnectorIdForSlot($currentProfileData, $connectorSlot);
         
@@ -1680,7 +1709,13 @@ if (!isset($GLOBALS["CACHE_PARTY"])) {
     $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 } 
 
-if (in_array($gameRequest[0],["inputtext_s"]) && chimDecodeAudienceSnapshotField($gameRequest[4] ?? "") === "") {    // Stealth-targeted follower: scope to target NPC only
+$requestAudienceSnapshot = (string)($requestRoutingSnapshot["audience"] ?? "");
+$requestPresentActorsSnapshot = chimSetCurrentTurnPresentActorsSnapshot(
+    $requestRoutingSnapshot["present_actors"] ?? []
+);
+$requestPresentPeople = chimPresentActorsPeoplePipe($requestPresentActorsSnapshot);
+
+if (in_array($gameRequest[0],["inputtext_s"]) && $requestAudienceSnapshot === "") {    // Stealth-targeted follower: scope to target NPC only
     $GLOBALS["CACHE_PEOPLE"]=$GLOBALS["HERIKA_NAME"];
 }
 
@@ -1697,7 +1732,6 @@ error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime
 $playerInputEventTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
 $directiveDialogueEventTypes = ["instruction", "suggestion"];
 $turnPeopleSnapshotEventTypes = array_merge($playerInputEventTypes, $directiveDialogueEventTypes);
-$requestAudienceSnapshot = chimDecodeAudienceSnapshotField($gameRequest[4] ?? "");
 $hasAuthoritativeRequestAudience = (
     in_array($gameRequest[0] ?? "", $turnPeopleSnapshotEventTypes, true) &&
     $requestAudienceSnapshot !== ""
@@ -1709,7 +1743,18 @@ if (($gameRequest[0] ?? "") === "rechat" && isset($GLOBALS["RECHAT_RESOLVED_TARG
 $authoritativePeople = $hasAuthoritativeRequestAudience ? $requestAudienceSnapshot : $resolvedRechatPeople;
 $directiveFallbackPeople = "";
 if ($authoritativePeople === "" && in_array($gameRequest[0] ?? "", $directiveDialogueEventTypes, true)) {
-    $directiveFallbackPeople = DataBeingsInCloseRange(true);
+    // Busy actors remain physically present even though Rolemaster must not
+    // select them as new speakers.
+    $directiveSpeakerName = trim((string)(
+        $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"]["npc_name"]
+        ?? $GLOBALS["HERIKA_NAME"]
+        ?? ""
+    ));
+    $directiveFallbackPeople = chimBuildDirectivePeoplePipe(
+        DataBeingsInCloseRange(true, true),
+        $directiveSpeakerName,
+        $gameRequest[3] ?? ""
+    );
 }
 
 if (isWhisperExecutionMode() && in_array($gameRequest[0] ?? "", $playerInputEventTypes, true)) {
@@ -1719,6 +1764,20 @@ if (isWhisperExecutionMode() && in_array($gameRequest[0] ?? "", $playerInputEven
         $directiveFallbackPeople = "";
         Logger::info("Scoped CACHE_PEOPLE for WHISPER {$gameRequest[0]}: " . $whisperPrivatePeople);
     }
+} elseif (isCloseExecutionMode() &&
+          in_array($gameRequest[0] ?? "", $playerInputEventTypes, true) &&
+          $authoritativePeople === "") {
+    $closePrivatePeople = buildPrivateConversationPeople($GLOBALS["HERIKA_NAME"] ?? "");
+    if ($closePrivatePeople !== "") {
+        $authoritativePeople = $closePrivatePeople;
+        $directiveFallbackPeople = "";
+        Logger::info("Scoped CACHE_PEOPLE for CLOSE {$gameRequest[0]} from private fallback: " . $closePrivatePeople);
+    }
+}
+if (isPrivateConversationExecutionMode() &&
+    in_array($gameRequest[0] ?? "", $playerInputEventTypes, true)) {
+    $requestPresentActorsSnapshot = chimSetCurrentTurnPresentActorsSnapshot([]);
+    $requestPresentPeople = "";
 }
 
 if ($authoritativePeople !== "") {
@@ -1803,6 +1862,11 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
             if (!empty($eventPeople)) {
                 $GLOBALS["CACHE_PEOPLE"] = $eventPeople;
             }
+        }
+        if ($requestPresentPeople !== "" &&
+            in_array($gameRequest[0] ?? "", $playerInputEventTypes, true)) {
+            $eventPeople = chimMergePeoplePipeLists($eventPeople, $requestPresentPeople);
+            Logger::info("Added physical presence to event people for {$gameRequest[0]}: " . $requestPresentPeople);
         }
 
         if (in_array($gameRequest[0], $turnPeopleSnapshotEventTypes, true)) {
@@ -1920,14 +1984,11 @@ if (isset($GLOBALS["NARRATOR_TALKS"])&&($GLOBALS["NARRATOR_TALKS"]==false)) {
 }
 
 // Use diary-specific context history if this is a diary request and CONTEXT_HISTORY_DIARY is set
+chimRequestPerformanceMark('profile_ready');
 if (($gameRequest[0] == "diary" || $gameRequest[0] == "diary_followers") && isset($GLOBALS["CONTEXT_HISTORY_DIARY"]) && $GLOBALS["CONTEXT_HISTORY_DIARY"] > 0) {
     $lastNDataForContext = $GLOBALS["CONTEXT_HISTORY_DIARY"];
 } else {
     $lastNDataForContext = (isset($GLOBALS["CONTEXT_HISTORY"])) ? ($GLOBALS["CONTEXT_HISTORY"]) : "25";
-}
-
-if ($GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT"]==1) {
-    $lastNDataForContext=$GLOBALS["CLEAN_CONTEXT_FOCUS_CHAT_HISTORY"];
 }
 
 // Historic context (last dialogues, events,...)
@@ -1954,6 +2015,7 @@ $contextDataWorld = DataLastInfoFor("", -2,true);
 if (!is_array($contextDataWorld)) {
     $contextDataWorld = [];
 }
+chimRequestPerformanceMark('context_history_ready');
 
 // Add current motto to COMMAND_PROMPT
 if (isset($GLOBALS["CURRENT_TASK"]) && $GLOBALS["CURRENT_TASK"] && $gameRequest[0] != "diary") {
@@ -1991,6 +2053,7 @@ if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext
 } else
      $memoryInjectionCtx=[];
 
+chimRequestPerformanceMark('memory_ready');
 error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
 // Whisper-mode speaking behavior: make the NPC explicitly treat this exchange as whispered.
@@ -1999,6 +2062,11 @@ if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_
         $GLOBALS["COMMAND_PROMPT"] = "";
     }
     $GLOBALS["COMMAND_PROMPT"] .= "\n\n[Whisper mode is active. {$GLOBALS["PLAYER_NAME"]} is whispering to you. Reply by whispering back in a quiet, discreet, close-range tone and keep the delivery private.]";
+} elseif (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_EXECUTION_MODE"]) === "CLOSE") {
+    if (!isset($GLOBALS["COMMAND_PROMPT"]) || !is_string($GLOBALS["COMMAND_PROMPT"])) {
+        $GLOBALS["COMMAND_PROMPT"] = "";
+    }
+    $GLOBALS["COMMAND_PROMPT"] .= "\n\n[Close mode is active. {$GLOBALS["PLAYER_NAME"]} is speaking privately to you at close range. Respond only to {$GLOBALS["PLAYER_NAME"]}; do not assume any bystanders can hear or participate.]";
 }
 
 
@@ -2020,7 +2088,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         $GLOBALS["PATCH_PROMPT_ENFORCE_ACTIONS"]=false;
         $GLOBALS["COMMAND_PROMPT_ENFORCE_ACTIONS"]="";
         
-        // MinAI prompts are breaking rechat actor adressing "Respond to #target# as #herika_name#"
+        // Legacy plugin prompts can break rechat actor addressing: "Respond to #target# as #herika_name#".
         $GLOBALS['action_prompts']=[];
         $rechatEnabledFunctionSet=array_fill_keys($GLOBALS["ENABLED_FUNCTIONS"] ?? [], true);
         $rechatActionSourceCodes=[
@@ -2045,6 +2113,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
         // Change name of functions here
         // Function clone and renaming
         // ExchangeItems (trade with player) will be modified to TradeItems (roleplayed trade)
+        /*
         if ($rechatActionWasEnabled("TradeItems") && isset($GLOBALS["BASE_FUNCTIONS"]["OpenInventory"])) {
             $NEWFUNCTION=$GLOBALS["BASE_FUNCTIONS"]["OpenInventory"];
             $NEWFUNCTION["name"]="TradeItems";
@@ -2054,6 +2123,7 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
             $GLOBALS["ENABLED_FUNCTIONS"][]="TradeItems";
             $GLOBALS["F_NAMES"]["TradeItems"]="TradeItems";
         }
+        */
 
         if ($GLOBALS["IS_NPC"] && $rechatActionWasEnabled("TravelTo") && isset($GLOBALS["BASE_FUNCTIONS"]["TravelTo"])) {
             // TravelTo (lead the way to for player) will be modified to TravelTo (TravelTo) if no follower
@@ -2125,7 +2195,7 @@ if ($GLOBALS["FUNCTIONS_ARE_ENABLED"]) {
         $replacement = "";
         $TEST_TEXT = preg_replace($pattern, $replacement, $gameRequest[3]); // // assistant vs user war
         
-        $pattern = '/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+loudly\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)/i';
+        $pattern = '/\(\s*(?:(?:talking|whispering|shouting)\s+to|speaking\s+(?:loudly|privately)\s+to)\s+[^()]+(?:\s+from\s+far\s+away)?\s*\)/i';
         $TEST_TEXT = preg_replace($pattern, '', $TEST_TEXT);
         
         if (!in_array($gameRequest[0],["rechat","instruction"]) ) {// Dont use minime command force on rechat.
@@ -2181,6 +2251,8 @@ if (!function_exists('isOghmaSettingEnabled')) {
 $minimeEnabled = isMinimeT5Enabled();
 $oghmaCustomEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
 $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
+$racialOghmaEnabled = isOghmaSettingEnabled($GLOBALS['RACIAL_OGHMA'] ?? true);
+$locationOghmaEnabled = isOghmaSettingEnabled($GLOBALS['LOCATION_OGHMA'] ?? true);
 
 // Debug: Log the actual values being checked BEFORE the conditional
 error_log("[OGHMA CHECK] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
@@ -2189,12 +2261,13 @@ error_log("[OGHMA CHECK] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
     . " | OGHMA_INFINIUM=" . var_export($GLOBALS["OGHMA_INFINIUM"] ?? null, true)
     . " (enabled=" . ($oghmaInfiniumEnabled ? 'Y' : 'N') . ")");
 
-if (($minimeEnabled || $oghmaCustomEnabled) && $oghmaInfiniumEnabled) {
+if (($minimeEnabled || $oghmaCustomEnabled || $racialOghmaEnabled || $locationOghmaEnabled) && $oghmaInfiniumEnabled) {
     if (!isset($GLOBALS["OGHMA_CALLED"])) {// Avoid double call
         require(__DIR__."/processor/oghma.php");
         $GLOBALS["OGHMA_CALLED"] = true;
     }
 }
+chimRequestPerformanceMark('oghma_ready');
 
 error_log("TRACE:\t".__LINE__. "\t".__FILE__.":\t".(microtime(true) - $startTime));
 
@@ -2206,12 +2279,18 @@ if (sizeof($memoryInjectionCtx)>0) {
     logEvent($gameRequestCopy,$GLOBALS["HERIKA_NAME"]);// Memory log only avaibale to current NPC.
 }
 
-$contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
-
 $contextDataHistoric = filterHistoricContextForNarratorVisibility(
     $contextDataHistoric,
     $GLOBALS["HERIKA_NAME"] ?? ""
 );
+$compactHistoryBlock = '';
+if (chimShouldCompactNpcContextHistory($GLOBALS["HERIKA_NAME"] ?? "")) {
+    $compactHistoryBlock = chimFormatCompactNpcContextHistory(
+        $contextDataHistoric,
+        (string)($GLOBALS["HERIKA_NAME"] ?? "")
+    );
+    $contextDataHistoric = [];
+}
 $contextDataFull = array_merge($contextDataWorld, $contextDataHistoric);
 
 // audit_log(__FILE__." [OGHMA]  ".__LINE__);
@@ -2326,6 +2405,7 @@ if (function_exists('chimQuestEngineApplyActionSuppressionsForTurn')) {
 
 // Ensure actions and nearby sections are added to PROMPT_HEAD before building system prompt
 require_once(__DIR__.DIRECTORY_SEPARATOR."functions".DIRECTORY_SEPARATOR."json_response.php");
+require_once(__DIR__.DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."prompt_composition.php");
 
 if (
     $gameRequest[0] === "narrator_inputtext"
@@ -2406,6 +2486,14 @@ $promptInjectionContext = [
 $characterBottomInjections = function_exists('chimRenderPromptInjections')
     ? chimRenderPromptInjections("character_bottom", $promptInjectionContext)
     : "";
+$latestDiaryContext = function_exists('chimBuildLatestDiaryContextBlock')
+    ? chimBuildLatestDiaryContextBlock(
+        strval($GLOBALS["HERIKA_NAME"] ?? ''),
+        is_array($GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"] ?? null)
+            ? $GLOBALS["CHIM_CORE_CURRENT_PROFILE_DATA"]
+            : []
+    )
+    : "";
 $promptBottomInjections = function_exists('chimRenderPromptInjections')
     ? chimRenderPromptInjections("prompt_bottom", $promptInjectionContext)
     : "";
@@ -2425,11 +2513,24 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
 
 $systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
     "\n</roleplay_instructions>" . $worldPrompt .
-    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography . $characterBottomInjections .
+    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography . $latestDiaryContext . $characterBottomInjections .
     "\n</character>" . $knowledgeSection .
     "\n\n<general_instructions>\n" . $GLOBALS["COMMAND_PROMPT"] .
     "\n</general_instructions>" . $actionsList . $nearbySections . $promptBottomInjections . $paralinguisticTagsPrompt .
     "\n" . $rumorsText . "\n";
+
+$promptCompositionSections = [
+    'roleplay_instructions' => $GLOBALS["PROMPT_HEAD"] ?? '',
+    'world' => $worldPrompt ?? '',
+    'character' => ($GLOBALS["HERIKA_PERS"] ?? '') . ($dynamicBiography ?? '') . ($latestDiaryContext ?? '') . ($characterBottomInjections ?? ''),
+    'knowledge' => $knowledgeSection ?? '',
+    'general_instructions' => $GLOBALS["COMMAND_PROMPT"] ?? '',
+    'actions' => $actionsList ?? '',
+    'nearby_actors' => $nearbySections ?? '',
+    'plugin_injections' => $promptBottomInjections ?? '',
+    'paralinguistic_tags' => $paralinguisticTagsPrompt ?? '',
+    'rumors' => $rumorsText ?? '',
+];
 
 $systemPrompt = chimFormatPromptXmlSections(
     strtr(
@@ -2445,6 +2546,7 @@ $systemPrompt = chimFormatPromptXmlSections(
 $systemPrompt = chimApplyPromptContextOptionsToSystemPrompt($systemPrompt);
 
 $head[] = array('role' => 'system', 'content' => $systemPrompt);
+$head = chimAppendCompactHistoryToPrompt($head, $compactHistoryBlock);
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
     //avoid reinjecting command prompt that we have already appended
@@ -2568,11 +2670,26 @@ if ($gameRequest[0] == "funcret") {
     $contextData = array_merge($head, ($contextDataFull), $prompt);
     
 }
+chimRequestPerformanceMark('prompt_ready');
 
 
 if (microtime(true) - $startTime > 0.25) {
     error_log("*TRACE SQL: TOTAL DATABASE query execution time: {$GLOBALS["DB_EXECUTION_TIME"]} seconds");
     error_log("*TRACE: ".__LINE__. " at ".__FILE__.": ".(microtime(true) - $startTime)." secs building call");
+}
+
+if (($gameRequest[0] ?? '') !== 'diary') {
+    chimLogPromptComposition(
+        $gameRequest[0] ?? '',
+        array_merge(
+            $promptCompositionSections ?? [],
+            [
+            'history' => $contextDataFull ?? [],
+            'memory_injection' => $memoryInjectionCtx ?? [],
+            ]
+        ),
+        $contextData ?? []
+    );
 }
 
 //returnLines(["Mmm..let me think"]);
@@ -2607,6 +2724,7 @@ audit_log(__FILE__." [PRE LLM CALL]  ".__LINE__);
 pipeline_status_set('llm', true);
 
 $outputWasValid = call_llm();
+chimRequestPerformanceMark('llm_complete');
 
 // Clear LLM processing status
 pipeline_status_set('llm', false);

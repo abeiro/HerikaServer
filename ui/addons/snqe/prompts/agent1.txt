@@ -113,10 +113,10 @@ Available elements (you MUST use only the values listed below—no exceptions):
 * Spawn an NPC. (Dead NPC/corpses must also be spawned if instructed in steps)
 <spawn>
   <name>[NPC's full name] (fantasy-style compound name consisting of a first name and a descriptive surname, even for creatures or enemies)</name>
-  <race>Must be exactly one of: nord, imperial, redguard, breton, argonian, orc, draugr,elk,frost_troll,frostbite_spider,dwarven_sphere_guardian,falmer,giant</race>
+  <race>Must be exactly one of: {{ALLOWED_RACES}}</race>
   <location>Must be either: "nearby" OR one of the user-provided location names (e.g., Heljarchen Hall, Dawnstar, Nightcaller Temple, etc.),or a reference in the format <name@formid></location>
   <gender>Must be exactly: male or female</gender>
-  <class>Must be exactly one of: beggar, warrior, assassin, mage, farmer, soldier, merchant, noble, creature,forsworn</class>
+  <class>Must be exactly one of: {{ALLOWED_CLASSES}}</class>
   <background>Brief lore (~200 characters). Must fit Elder Scrolls tone.</background>
   <speechStyle>Description of speech (e.g., "gruff and terse", "whispers in riddles")</speechStyle>
   <disposition>Must be exactly one of: defiant, submissive, friendly, serious, sad, aggressive, cheerful, distrustful, furious, drunk, high,dead</disposition>
@@ -177,7 +177,7 @@ Available elements (you MUST use only the values listed below—no exceptions):
   If NPC has item in possesion, use pocket as location
 <item>
   <name>Unique item name (must be an unique name, e.g Amulet Fragment #1, Crown Piece #1, The Rotten Shield, Potion of divine Health.</name>
-  <type>Must be exactly one of:  'potion', 'necklace', 'amulet', 'ring', 'book', 'axe', 'note', 'dagger','armor'</type>
+  <type>Must be exactly one of: {{ALLOWED_ITEM_TYPES}}</type>
   <location>Must be one of this: "nearby" or a user-provided location name, or "pocket" (owner will have this item in its inventory/possession), or a reference in the format "name:formid"</location>
   <owner>Name of an NPC (can be newly spawned)</owner>
   <description>Atmospheric, concise description. If book, metion the book's author (can be anonymous)</description>
@@ -201,9 +201,9 @@ Available elements (you MUST use only the values listed below—no exceptions):
 * STRICT VALIDATION RULE:
 You MUST NOT invent races, classes, item types, or locations.
 
-Races: only nord, imperial, redguard, breton, argonian, orc, draugr,elk,frost_troll,frostbite_spider,dwarven_sphere_guardian,falmer,giant
-Classes: only beggar, warrior, assassin, mage, farmer, soldier, merchant, noble, creature,forsworn
-Item types: only potion, necklace, amulet, ring, book, note
+Races: only {{ALLOWED_RACES}}
+Classes: only {{ALLOWED_CLASSES}}
+Item types: only {{ALLOWED_ITEM_TYPES}}
 Locations: only "nearby" or names explicitly listed by the user
 Any deviation breaks the simulation. When in doubt, pick from the allowed list.
 
