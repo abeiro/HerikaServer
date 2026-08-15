@@ -47,11 +47,34 @@ $EXECUTION_MODE_=$db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'
 $EXECUTION_MODE=isset($EXECUTION_MODE_["value"])?$EXECUTION_MODE_["value"]:"STANDARD";
 
 $EXECUTION_MODE=strtoupper($EXECUTION_MODE);
-// A validated plugin routing snapshot can override the saved mode for this request only.
-$REQUEST_EXECUTION_MODE = strtoupper(trim((string)($GLOBALS["CHIM_REQUEST_EXECUTION_MODE"] ?? "")));
-if ($REQUEST_EXECUTION_MODE !== "") {
-    $EXECUTION_MODE = $REQUEST_EXECUTION_MODE;
+$PLAYER_INPUT_REQUEST = in_array(
+    $gameRequest[0],
+    ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"],
+    true
+);
+$SYMBOL_MODE_OVERRIDE = false;
+$CHAT_SHORTCUT_ROUTED = ($GLOBALS["CHIM_CHAT_SHORTCUT_ROUTED"] ?? false) === true;
+
+if ($PLAYER_INPUT_REQUEST && $CHAT_SHORTCUT_ROUTED && isset($gameRequest[3]) && is_string($gameRequest[3])) {
+    $speakerSeparator = strpos($gameRequest[3], ":");
+    $speakerPrefix = $speakerSeparator === false ? "" : substr($gameRequest[3], 0, $speakerSeparator + 1);
+    $playerDialogue = $speakerSeparator === false
+        ? $gameRequest[3]
+        : substr($gameRequest[3], $speakerSeparator + 1);
+    $symbolMode = chimParseChatModeShortcut($playerDialogue);
+
+    if ($symbolMode["matched"]) {
+        if ($symbolMode["content"] === "") {
+            Logger::warn("[chim_modes] Ignored symbol-only player submission");
+            terminate();
+        }
+
+        $SYMBOL_MODE_OVERRIDE = true;
+        $EXECUTION_MODE = $symbolMode["mode"];
+        $gameRequest[3] = $speakerPrefix . $symbolMode["content"];
+    }
 }
+$REQUEST_LOCAL_MODE_OVERRIDE = $SYMBOL_MODE_OVERRIDE;
 
 // Retire the old free-form Spawn mode without leaving upgraded installs stuck in it.
 if ($EXECUTION_MODE === "SPAWN") {
@@ -66,7 +89,7 @@ if ($EXECUTION_MODE === "SPAWN") {
     $EXECUTION_MODE = "STANDARD";
 }
 
-if (!in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"])) {
+if (!$PLAYER_INPUT_REQUEST) {
     $EXECUTION_MODE="STANDARD";
 }
 
@@ -91,27 +114,28 @@ if ($EXECUTION_MODE=="STANDARD") {
     
     ignore_user_abort(true);
 
-    // Expected format input|ts|gamets|PLAYER_NAME::
-    $gameRequest = explode("|", $receivedData);
-    
-    $userWish=explode(":",$gameRequest[3]);
+    $userWish = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
     $output='';
-    $instruction=escapeshellarg("{$userWish[1]}");
-    $db->upsertRow(
-        'conf_opts',
-        array(
-            'id' => 'chim_mode',
-            'value' => 'STANDARD'
-        ),
-        "id='chim_mode'"
-    );
+    $instruction=escapeshellarg($userWish);
+    if (!$REQUEST_LOCAL_MODE_OVERRIDE) {
+        $db->upsertRow(
+            'conf_opts',
+            array(
+                'id' => 'chim_mode',
+                'value' => 'STANDARD'
+            ),
+            "id='chim_mode'"
+        );
+    }
     exec("php /var/www/html/HerikaServer/service/manager.php rolemaster instruction \"$instruction\" notify", $output, $returnCode);
     terminate();
 
 } else if ($EXECUTION_MODE=="CHEATMODE") {
     // Process all input as cheat commands
     $cleaned_player_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
-    $newSpeech = strtr($cleaned_player_dialogue, ["#"=>""]);
+    $newSpeech = $REQUEST_LOCAL_MODE_OVERRIDE
+        ? $cleaned_player_dialogue
+        : strtr($cleaned_player_dialogue, ["#"=>""]);
     $gameRequest[0] = "cheatmode";
     $gameRequest[3] = "<$newSpeech>";
     $GLOBALS["FUNCTIONS_ARE_ENABLED"] = true;
