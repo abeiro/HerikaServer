@@ -132,6 +132,8 @@ function chimPrismaProfileMetadataCatalog(): array
             ['name' => 'DYNAMIC_PROFILE_ENABLED', 'type' => 'boolean'],
             ['name' => 'DYNAMIC_PROFILE_FIELDS', 'type' => 'multiselect', 'schema' => 'DYNAMIC_PROFILE_FIELDS'],
             ['name' => 'MIDDLE_TERM_MEMORY_ENABLED', 'type' => 'boolean'],
+            ['name' => 'SHORT_TERM_MEMORY_ENABLED', 'type' => 'boolean'],
+            ['name' => 'SHORT_TERM_MEMORY_MAX', 'type' => 'integer', 'min' => 1, 'max' => 50],
             ['name' => 'CONTEXT_HISTORY_DYNAMIC_PROFILE', 'type' => 'integer', 'min' => 0, 'max' => 400],
             ['name' => 'RPG_COMMENTS', 'type' => 'multiselect', 'schema' => 'RPG_COMMENTS'],
             ['name' => 'RPG_COMMENTS_CHANCE', 'type' => 'integer', 'min' => 0, 'max' => 100],
