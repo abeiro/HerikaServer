@@ -19,7 +19,7 @@ function chimBglEncounterJsonArray($value): array
 
 function chimBglEncounterGameHours(float $newer, float $older): float
 {
-    $factor = defined('GAMETS_TO_HOURS') ? (float)constant('GAMETS_TO_HOURS') : 1.0;
+    $factor = defined('GAMETS_TO_HOURS') ? (float)constant('GAMETS_TO_HOURS') : 0.0000024;
     return max(0.0, ($newer - $older) * $factor);
 }
 
