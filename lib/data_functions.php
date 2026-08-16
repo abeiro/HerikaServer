@@ -4907,6 +4907,127 @@ function dataGetMemoryCompanionConditionSql(
     return "($column LIKE '%|$npcEsc|%' OR $column='$npcEsc')";
 }
 
+/**
+ * Is short-term memory switched on for the NPC taking this turn?
+ *
+ * Set per profile (core_profiles.metadata.SHORT_TERM_MEMORY_ENABLED) and overridable per NPC
+ * (core_npc_master.metadata or extended_data, same key) - both are pushed to $GLOBALS at turn time
+ * by CoreProfile::setOldGlobals and NpcMaster::setOldGlobalsFromCurrentNpcData, in that order, so
+ * the NPC-level value wins. Off unless a profile turns it on.
+ *
+ * FILTER_VALIDATE_BOOLEAN because the value can arrive as the string "1" from the profile
+ * checkbox, as the string "true" from the settings editor, or as a real bool from the JSON editor.
+ */
+function chimShortTermMemoryEnabled(): bool
+{
+    return filter_var($GLOBALS["SHORT_TERM_MEMORY_ENABLED"] ?? false, FILTER_VALIDATE_BOOLEAN);
+}
+
+/**
+ * Short-Term Memory (STM): the scene summaries an NPC has lived through but cannot currently see -
+ * newer than its middle-term-memory digest, older than the verbatim rolling window.
+ *
+ * The middle-term digest only regenerates every ten summaries, so the rows past its hightide that
+ * have already scrolled out of the window are invisible to the NPC. This reads exactly those.
+ *
+ *  lower bound = array_key_last(extended_data.middle_term_memory), or 0 if the NPC has no digest
+ *  upper bound = the straddling summary (the oldest whose bucket reaches $GLOBALS["CONTEXT_WINDOW_FLOOR"])
+ *  cap         = $GLOBALS["SHORT_TERM_MEMORY_MAX"], default 10
+ *
+ * Selects from exactly the population the digest selects from - same scope partition, same
+ * companions clause as service/processors/middleterm/cmd/generate.php - so the two layers cannot
+ * disagree about what has already been digested.
+ *
+ * Also sets $GLOBALS["STM_CROP_GAMETS"], which main.php uses to crop the window to start after the
+ * straddler, so no event is present twice, once summarised and once verbatim.
+ *
+ * $sqlfilter is accepted for signature parity with DataLastDataExpandedFor() at the same call site;
+ * summaries are not event rows, so there is nothing for it to filter.
+ */
+function DataShortTermMemoryFor($actor, $sqlfilter = "")
+{
+    global $db;
+
+    if (!chimShortTermMemoryEnabled()) {
+        return [];
+    }
+
+    $cap = isset($GLOBALS["SHORT_TERM_MEMORY_MAX"]) ? intval($GLOBALS["SHORT_TERM_MEMORY_MAX"]) : 10;
+    if ($cap < 1) {
+        return [];
+    }
+
+    $GLOBALS["STM_CROP_GAMETS"] = 0;
+
+    try {
+        // Lower bound: where the middle-term digest ends.
+        $mtmHightide = 0;
+        $npcMaster = new NpcMaster();
+        $npcRow = $npcMaster->getByName($actor);
+        if ($npcRow) {
+            $ed = $npcMaster->getExtendedData($npcRow);
+            if (isset($ed["middle_term_memory"]) && is_array($ed["middle_term_memory"]) && count($ed["middle_term_memory"])) {
+                $mtmHightide = intval(array_key_last($ed["middle_term_memory"]));
+            }
+        }
+
+        $scopeConditionSql     = dataGetMemoryScopeConditionSql($actor);
+        $companionConditionSql = dataGetMemoryCompanionConditionSql($actor);
+
+        // Upper bound: the "straddling" summary - the oldest summary whose bucket reaches into the
+        // live window. STM shows summaries up to and including it and main.php crops the window to
+        // start after it. If no summary reaches the window there is no overlap, so show everything
+        // past the hightide, capped, and crop nothing.
+        $wOldest = intval($GLOBALS["CONTEXT_WINDOW_FLOOR"] ?? 0);
+        $bigInt  = "9223372036854775807";
+        $boundExpr = ($wOldest > 0)
+            ? "COALESCE((SELECT min(gamets_truncated) FROM memory_summary
+                          WHERE summary IS NOT NULL AND $scopeConditionSql AND $companionConditionSql
+                            AND gamets_truncated >= " . $wOldest . "), $bigInt)"
+            : $bigInt;
+
+        $query = "SELECT summary, gamets_truncated
+                  FROM memory_summary
+                  WHERE summary IS NOT NULL
+                    AND $scopeConditionSql
+                    AND $companionConditionSql
+                    AND gamets_truncated > " . intval($mtmHightide) . "
+                    AND gamets_truncated <= $boundExpr
+                  ORDER BY gamets_truncated DESC
+                  LIMIT " . intval($cap);
+
+        $rows = $db->fetchAll($query);
+        if (!$rows) {
+            return [];
+        }
+
+        // Crop the window only if the newest summary actually reaches into it.
+        $newest = intval($rows[0]["gamets_truncated"]);
+        $GLOBALS["STM_CROP_GAMETS"] = ($wOldest > 0 && $newest >= $wOldest) ? $newest : 0;
+
+        $out = [];
+        foreach (array_reverse($rows) as $r) {          // oldest -> newest
+            // Strip the storage metadata before injecting: the leading "#Summary:" label and the
+            // trailing "#Tags: #..." block, which is embedding/RAG metadata worth ~60-80 tokens.
+            $summary = trim($r["summary"]);
+            $summary = preg_replace('/^#Summary:\s*/i', '', $summary);
+            $summary = preg_replace('/\s*#Tags:.*$/is', '', $summary);
+            $summary = trim($summary);
+            if ($summary === "") {
+                continue;
+            }
+            $when = convert_gamets2skyrim_date($r["gamets_truncated"]);
+            $out[] = ['role' => 'user', 'content' => "(Earlier events - $when) $summary"];
+        }
+        return $out;
+
+    } catch (\Throwable $e) {
+        Logger::warn("[STM] DataShortTermMemoryFor failed for $actor: " . $e->getMessage());
+        return [];
+    }
+}
+
+
 function DataSearchMemory($rawstring,$npcfilter) {
     
     //$kw=explode(" ",($rawstring));
