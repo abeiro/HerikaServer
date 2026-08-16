@@ -2893,7 +2893,7 @@ New setting: $currentLocation
             $lastTimeCategory = $currentTimeCategory;
         }
         
-        $row= array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker),'type'=>$row["type"]);
+        $row= array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker),'type'=>$row["type"],'gamets'=>$row["gamets"]);
         $lastDialogFull[] = $row;
         $previousRow=$row;
 
@@ -3053,10 +3053,12 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
     $lastSpeaker = "";
     $buffer = [];
     $lastDialogFull=[];
+    $g = 0; // STM: last-seen gamets, stamped onto compacted entries ('_g') for the floor capture in replaceRoles
 
 
     foreach ($lastDialogFullCopy as $n => $line) {
         $speaker=$line["role"];
+        if (isset($line["gamets"])) $g = intval($line["gamets"]);
         
         if ($speaker=="npc") { // Tricky, npc could be any char
             preg_match('/^([^:]+):/', $line["content"], $matches);
@@ -3079,7 +3081,7 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
             } else {
 
                 if (!$compactContextInfo) {
-                    $lastDialogFull[]=array('role' => $lastSpeaker, 'content' => trim(isset($buffer[0])?$buffer[0]:$line["content"]));
+                    $lastDialogFull[]=array('role' => $lastSpeaker, 'content' => trim(isset($buffer[0])?$buffer[0]:$line["content"]), '_g' => $g);
                     if (isset($buffer[0])) {
                         $buffer = [];
                         $buffer[] = $line["content"];
@@ -3095,23 +3097,23 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
             if (sizeof($buffer) > 0) {
                 if ($lastSpeaker=="narratorci" || $lastSpeaker=="narratorloc") {
                     if (!$compactContextInfo) {
-                        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "".implode(" ", removeEmptyElements($buffer)));  // Should be only one line
+                        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "".implode(" ", removeEmptyElements($buffer)), '_g' => $g);  // Should be only one line
                     } else {
-                        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "* ".implode("\n* ", removeEmptyElements($buffer))); 
+                        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "* ".implode("\n* ", removeEmptyElements($buffer)), '_g' => $g); 
                     }
 
                 }
                 else if ($lastSpeaker=="backgroundchat")
-                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", removeEmptyElements($buffer)));
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", removeEmptyElements($buffer)), '_g' => $g);
                 else 
-                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => moveDialogueTargetSuffixToEnd(implode(" ", removeEmptyElements($buffer))));
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => moveDialogueTargetSuffixToEnd(implode(" ", removeEmptyElements($buffer))), '_g' => $g);
             }
             $buffer = [];
             $buffer[] = $line["content"];
             $lastSpeaker = $speaker;
 
             if ($speaker=="assistant") {    //Leave as is
-                $lastDialogFull[] = $line;
+                $line['_g'] = $g; $lastDialogFull[] = $line;
                 $lastSpeaker = "";
                 $buffer = [];
                 continue;
@@ -3131,11 +3133,11 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
     // Last buffer, probably user input.
     if (sizeof($bufferCopy)) {
         if ($lastSpeaker=="narratorci" || $lastSpeaker=="narratorloc") 
-            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n* ", $bufferCopy));
+            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n* ", $bufferCopy), '_g' => $g);
         else if ($lastSpeaker=="backgroundchat")
-            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $bufferCopy));
+            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $bufferCopy), '_g' => $g);
         else 
-            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => moveDialogueTargetSuffixToEnd(implode(" ", $bufferCopy)));
+            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => moveDialogueTargetSuffixToEnd(implode(" ", $bufferCopy)), '_g' => $g);
     }
 
     $contextDataHistory=[];
@@ -3196,6 +3198,15 @@ function replaceRoles($lastDialogFull,$actor,$lastNelements) {
 
     error_log("[CHIM] Using effective context limit of : $lastNelements");
     $orderedData = array_slice($lastDialogFull, $lastNelements);
+    // STM: capture the window's oldest surviving gamets (the true floor). '_g' is kept on the
+    // entries so main.php can crop the window by it; main.php strips '_g' before the LLM sees them.
+    $__floorG = 0;
+    foreach ($orderedData as $__e) {
+        if (is_array($__e) && !empty($__e['_g'])) {
+            $__floorG = ($__floorG == 0) ? intval($__e['_g']) : min($__floorG, intval($__e['_g']));
+        }
+    }
+    $GLOBALS["CONTEXT_WINDOW_FLOOR"] = $__floorG;
 
     file_put_contents(__DIR__."/../log/context_for_$actor.txt",print_r($orderedData,true));
     $GLOBALS["CONTEXT_BUILDING_DATA"]=$orderedData;
