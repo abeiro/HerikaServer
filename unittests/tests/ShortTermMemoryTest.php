@@ -80,7 +80,8 @@ final class ShortTermMemoryTest extends TestCase
             $GLOBALS['SHORT_TERM_MEMORY_ENABLED'],
             $GLOBALS['SHORT_TERM_MEMORY_MAX'],
             $GLOBALS['CONTEXT_WINDOW_FLOOR'],
-            $GLOBALS['STM_CROP_GAMETS']
+            $GLOBALS['STM_CROP_GAMETS'],
+            $GLOBALS['SHORT_TERM_MEMORY_IN_COMPACT_CHAT']
         );
     }
 
@@ -254,5 +255,25 @@ final class ShortTermMemoryTest extends TestCase
         $this->db->throwOnFetchAll = true;
 
         $this->assertSame([], DataShortTermMemoryFor('StmNpcThrows'));
+    }
+
+    public function testCompactChatOptionDefaultsToOn(): void
+    {
+        unset($GLOBALS['SHORT_TERM_MEMORY_IN_COMPACT_CHAT']);
+        $this->assertTrue(chimShortTermMemoryInCompactChatEnabled(), 'Compact Chat must not silently suppress STM');
+    }
+
+    public function testCompactChatOptionAcceptsTheStringsTheSettingsEditorWrites(): void
+    {
+        $GLOBALS['SHORT_TERM_MEMORY_IN_COMPACT_CHAT'] = 'false';
+        $this->assertFalse(chimShortTermMemoryInCompactChatEnabled());
+
+        $GLOBALS['SHORT_TERM_MEMORY_IN_COMPACT_CHAT'] = '0';
+        $this->assertFalse(chimShortTermMemoryInCompactChatEnabled());
+
+        $GLOBALS['SHORT_TERM_MEMORY_IN_COMPACT_CHAT'] = true;
+        $this->assertTrue(chimShortTermMemoryInCompactChatEnabled());
+
+        unset($GLOBALS['SHORT_TERM_MEMORY_IN_COMPACT_CHAT']);
     }
 }

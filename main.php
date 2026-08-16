@@ -2047,7 +2047,8 @@ if (!is_array($contextDataHistoric)) {
 // summaries up to the one straddling that floor; if one straddles, the window is cropped to start
 // just after it, so nothing is present twice. One continuous timeline:
 // world -> STM summaries (older, summarised) -> verbatim window (recent) -> cue.
-if (!empty($GLOBALS["IS_NPC"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator") {
+if (!empty($GLOBALS["IS_NPC"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator"
+    && (!chimCompactChatEnabled() || chimShortTermMemoryInCompactChatEnabled())) {
     $contextDataSTM = DataShortTermMemoryFor($GLOBALS["HERIKA_NAME"], $sqlfilter);
     if (!empty($contextDataSTM)) {
         if (!empty($GLOBALS["STM_CROP_GAMETS"])) {

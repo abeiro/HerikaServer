@@ -48,6 +48,12 @@ function chimPrismaGlobalSettingsSections(): array
                 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.',
             ],
             ['name' => 'SCENE_CLASSIFIER_ENABLED', 'type' => 'boolean'],
+            [
+                'name' => 'SHORT_TERM_MEMORY_IN_COMPACT_CHAT',
+                'type' => 'boolean',
+                'default' => true,
+                'help' => 'Keep injecting short-term memory summaries while Compact Chat is active. Turn this off if you use Compact Chat to keep the prompt small. Has no effect on profiles that do not have Short Term Memory enabled.',
+            ],
             ['name' => 'RELATIONSHIP_SYSTEM_ENABLED', 'type' => 'boolean'],
             ['name' => 'NEVER_CLEAR_RELATIONSHIP_DATA', 'type' => 'boolean', 'default' => false],
         ],

@@ -4924,6 +4924,21 @@ function chimShortTermMemoryEnabled(): bool
 }
 
 /**
+ * Should short-term memory still be injected while Compact Chat is on?
+ *
+ * Compact Chat flattens the whole history into a single compact block, and STM's entries are folded
+ * into it rather than dropped, so the default is yes. This global setting exists for users who run
+ * Compact Chat specifically to shrink the prompt and want the summaries left out of it.
+ */
+function chimShortTermMemoryInCompactChatEnabled(): bool
+{
+    if (!array_key_exists("SHORT_TERM_MEMORY_IN_COMPACT_CHAT", $GLOBALS)) {
+        return true;
+    }
+    return filter_var($GLOBALS["SHORT_TERM_MEMORY_IN_COMPACT_CHAT"], FILTER_VALIDATE_BOOLEAN);
+}
+
+/**
  * Short-Term Memory (STM): the scene summaries an NPC has lived through but cannot currently see -
  * newer than its middle-term-memory digest, older than the verbatim rolling window.
  *
