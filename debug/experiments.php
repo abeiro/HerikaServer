@@ -841,4 +841,41 @@ if ($argv[1] == '13') {
     );
 
 }
+
+if ($argv[1] == '14') {
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Orianne");
+    $skyrimCmd = new SkyrimCommandBuilder();
+    $json = $skyrimCmd->Actor->RemoveFromFaction("0x{$npc["refid"]}","0x08230C52");
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->RemoveFromFaction("0x{$npc["refid"]}","0x083476DB");
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->RemoveFromFaction("0x{$npc["refid"]}","0x00281D03");
+    $skyrimCmd->send(cmd: $json);
+
+}
+
+if ($argv[1] == '15') {
+    $chimBase=0x0820D4C5;
+    $chimBaseClothing=0x000a1983;//Outfit
+    $chimWeapon=0x00013989;
+    $chimLocation=0;// nearby
+    $taskIdhack=2;//submisseive, wont fight
+    $chimAppearanceNPC=0x0820D4C5;//NPC to copy appearance from (Base Actor)
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|spawnCharacter@Orianne2@$chimBase@$chimBaseClothing@$chimWeapon@$chimLocation@2@$chimAppearanceNPC",
+            'tag' => "",
+        ]
+    );
+
+}
+ 
 ?>
