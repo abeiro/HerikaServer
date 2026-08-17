@@ -33,7 +33,7 @@ chimRuntimeBootstrap($path, [
     'load_player_name' => true,
     'load_narrator' => true,
 ]);
-require_once($path . "lib/player2_health.php");
+require_once($path . "lib/game_activity.php");
 require_once($path . "lib/background_processor.php");
 if (!headers_sent() && function_exists('chimGetNarratorDisplayNameHeaderValue')) {
     header('X-Narrator-Display-Name: ' . chimGetNarratorDisplayNameHeaderValue());
@@ -133,6 +133,11 @@ MAIN FLOW
 $gameRequest = explode("|", $receivedData);
 $GLOBALS["gameRequest"] = &$gameRequest;
 unset($GLOBALS["CHIM_TURN_PEOPLE_SNAPSHOT"]);
+unset($GLOBALS["CHIM_CHAT_SHORTCUT_ROUTED"]);
+$requestRoutingSnapshot = chimDecodePlayerRoutingSnapshotField($gameRequest[4] ?? "");
+if (($requestRoutingSnapshot["chat_shortcut_routed"] ?? false) === true) {
+    $GLOBALS["CHIM_CHAT_SHORTCUT_ROUTED"] = true;
+}
 
 
 $startTime = microtime(true);
@@ -160,8 +165,8 @@ $db = $GLOBALS["db"] ?? new sql();
 $GLOBALS["db"] = $db;
 
 if (PHP_SAPI !== 'cli' && !getenv('PHPUNIT_TEST') && $gameRequest[0] !== 'request') {
-    $player2NewGameSession = chimPlayer2HealthMarkGameActivity();
-    if ($player2NewGameSession && function_exists('herikaEnsureBackgroundProcessorRunning')) {
+    $newGameActivitySession = chimMarkGameActivity();
+    if ($newGameActivitySession && function_exists('herikaEnsureBackgroundProcessorRunning')) {
         herikaEnsureBackgroundProcessorRunning(false);
     }
 }
@@ -1704,7 +1709,6 @@ if (!isset($GLOBALS["CACHE_PARTY"])) {
     $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 } 
 
-$requestRoutingSnapshot = chimDecodePlayerRoutingSnapshotField($gameRequest[4] ?? "");
 $requestAudienceSnapshot = (string)($requestRoutingSnapshot["audience"] ?? "");
 $requestPresentActorsSnapshot = chimSetCurrentTurnPresentActorsSnapshot(
     $requestRoutingSnapshot["present_actors"] ?? []

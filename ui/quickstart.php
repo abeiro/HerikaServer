@@ -208,20 +208,8 @@ function herikaQuickstartApplyTtsSelection(TTSConnector $connector, $selectedDri
     if ($previousPreferredId > 0 && $previousPreferredId !== $selectedId) {
         $GLOBALS['db']->query("UPDATE core_profiles SET tts_connector_id = {$selectedId} WHERE tts_connector_id = {$previousPreferredId}");
     }
+    // QuickStart configures NPC and narrator TTS; Player TTS remains opt-in in Player Management.
     $GLOBALS['db']->query("UPDATE core_profiles SET tts_connector_id = {$selectedId} WHERE tts_connector_id IS NULL OR default_narrator = '1' OR default_npc = '1'");
-
-    if (!class_exists('Player')) {
-        require_once(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "player.class.php");
-    }
-
-    try {
-        $player = new Player();
-        $currentPlayerConnectorId = intval($player->get('tts_connector_id') ?? 0);
-        if ($currentPlayerConnectorId <= 0 || $currentPlayerConnectorId === $previousPreferredId || $currentPlayerConnectorId === $selectedId) {
-            $player->set('tts_connector_id', strval($selectedId));
-        }
-    } catch (Throwable $_e) {
-    }
 
     return $selectedId;
 }
@@ -901,8 +889,8 @@ echo '<section class="qs-section">
                 <div id="qs_llm_connectors_cards_default" style="' . $llmCardsDefaultStyle . '">
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F579;&#xFE0F; <b>Standard</b></div>
-                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: GLM 4.7 (z-ai/glm-4.7)</div>
-                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.38/M input | $1.74/M output</div>
+                        <div style="margin-top:6px; color:#9fb1c9;">OpenRouter: DeepSeek V4 Flash (deepseek/deepseek-v4-flash)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;">$0.14/M input | $0.28/M output</div>
                     </div>
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F3C3;&#x200D;&#x2642;&#xFE0F; <b>Fast</b></div>
