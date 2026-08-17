@@ -248,8 +248,7 @@ $PROMPTS=array(
     // Database Prompt (Soulgaze)
     "vision"=>[ 
         "cue"=>["{$GLOBALS["ITT"][$GLOBALS["ITTFUNCTION"]]["AI_PROMPT"]}. "],
-        //"player_request"=>["{$GLOBALS["PLAYER_NAME"]} : Look at this, {$GLOBALS["HERIKA_NAME"]}.{$GLOBALS["HERIKA_NAME"]} looks at the CURRENT SCENARIO, and see this: '{$gameRequest[3]}'"],
-        "player_request"=>["The Narrator: {$GLOBALS["HERIKA_NAME"]} looks at the CURRENT SCENARIO, and see this: '{$gameRequest[3]}'"],
+        "player_request"=>["Soulgaze image description: '{$gameRequest[3]}'"],
         "extra"=>["force_tokens_max"=>512]
     ],
     "chatsimfollow"=>[ 
