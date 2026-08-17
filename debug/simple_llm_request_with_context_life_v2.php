@@ -225,7 +225,7 @@ $npcNameEsc = $db->escape($npcName);
 
 // Guard: Avoid running if game is paused.
 if (isset($extdata["background_life_last_run"]) && $extdata["background_life_last_run"] >= $GLOBALS["LAST_GAMETS_BGL"]) {
-    error_log("[BGL RUN] $npcName — background_life_last_run equals LAST_GAMETS_BGL, game is paused?.");
+    error_log("[BGL RUN] $npcName — background_life_last_run equals LAST_GAMETS_BGL <{$GLOBALS["LAST_GAMETS_BGL"]}>, game is paused?.");
     return;
 } else {
     error_log("[BGL RUN] $npcName — background_life_last_run: {$extdata["background_life_last_run"]}, LAST_GAMETS_BGL: {$GLOBALS["LAST_GAMETS_BGL"]}");
@@ -1119,6 +1119,9 @@ foreach ($inventory as $item) {
         }
     }
 }
+
+$lastMinuteNotesSpeakContext="";
+
 if (!isset($goldFound)) {
     $lastMinuteNotes .= "\nNote: {$GLOBALS['HERIKA_NAME']} has no gold coins. Should work to get some coins. Check background_life_goals->production to know how to earn gold.\n";
     $lastMinuteNotesSpeakContext .= "\nNote: {$GLOBALS['HERIKA_NAME']} has no gold coins, so cannot buy anything.\n";
