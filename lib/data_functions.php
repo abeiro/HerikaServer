@@ -2545,6 +2545,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     $query="select  
     case 
       when type='infoaction' and a.data like '#%MEMORY%' then 'MEMORY'
+      when type='infoaction' and a.data like '<memory>%' then 'MEMORY'
       when type like 'info%' or type like 'funcret%' or type like 'location%' then 'CONTEXTI'
       when a.type='chat_background' or a.data like '%background chat%' then 'BACKDIAG'
       when type='book' then 'BOOKEVT' 
