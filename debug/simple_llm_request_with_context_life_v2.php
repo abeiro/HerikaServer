@@ -1291,6 +1291,9 @@ if (!isset($extdata['background_life_player_unattached']) || $extdata['backgroun
 } else
     $returnHomeAction = "";
 
+// Needs to be worked. We need to define a "home". Moving to player (current ReturnHome implementation, is not a general case)
+$returnHomeAction = "";
+
 if (!$bypassTradingActions) {
     $step2Content .= <<<PROMPT
 
