@@ -329,6 +329,69 @@ $daysPassed = round(($last_gamets - $lastItGamets) * GAMETS_TO_HOURS / 24, 2);
 $hoursPassed = round(($last_gamets - $lastItGamets) * GAMETS_TO_HOURS, 2);
 $history = "";
 
+
+// TravelTo Guard. 
+// Sometimes NPCs get stuck inside a building (probably locked doors?)
+// We must detect if last 2 actions were TravelTo or MoveTo, and if so, we can assume NPC is stuck and we should solve it
+// Exammple
+//"action","fullcall","actorname","ts","localts","gamets","original","rowid"
+//"TravelTo","TravelTo:Elysium Estate:I have successfully completed my business in Whiterun, having finalized wholesale agreements with Ysolda and liquidated gemstones and a Grand Soul Gem with Belethor. Now that the treasury has been bolstered and the supply lines secured, it is time to return to the estate to record these profits in the master ledger and report my success to Varek.","Orianne Marius","273604281978300","1787053128","198555825","backgroundaction","497"
+//"TravelTo","TravelTo:Elysium Estate:I have successfully completed my business in Whiterun, having finalized wholesale agreements with Ysolda and liquidated gemstones and a Grand Soul Gem with Belethor. Now that the treasury has been bolstered and the supply lines secured, it is time to return to the estate to record these profits in the master ledger and report my success to Varek.","Orianne Marius","275230813533300","1787054759","203116385","backgroundaction","500"
+//"TravelTo","TravelTo:Elysium Estate:I have successfully completed my business in Whiterun, having finalized wholesale agreements with Ysolda and liquidated gemstones and a Grand Soul Gem with Belethor. Now that the treasury has been bolstered and the supply lines secured, it is time to return to the estate to record these profits in the master ledger and report my success to Varek.","Orianne Marius","282335400088300","1787061864","206665217","backgroundaction","510"
+
+$actionsRows = $db->fetchAll(
+    "SELECT action,actorname,gamets,fullcall FROM actions_issued
+     WHERE actorname='$npcNameEscDb' 
+       AND gamets > $lastItGamets
+     ORDER BY gamets DESC, ts DESC
+     LIMIT 2 OFFSET 0"
+);
+// Strip out the reasoning in fullcall to get just the destination
+foreach ($actionsRows as &$row) {
+    if (strpos($row['fullcall'], ':') !== false) {
+        $parts = explode(':', $row['fullcall'], 3);
+        $row['destination'] = $parts[1] ?? '';
+    } else {
+        $row['destination'] = '';
+    }
+    if ($row["action"] == "MoveTo") {
+        $row['action'] = "TravelTo"; // Normalize MoveTo to TravelTo for comparison
+    }
+}
+
+if ($actionsRows && sizeof($actionsRows) == 2) {
+    if ($actionsRows[0]['action'] === 'TravelTo' && $actionsRows[1]['action'] === 'TravelTo') {
+        // CHeck if it was the same destination, if so, we can assume NPC is stuck and we should solve it
+        if ($actionsRows[0]['destination'] === $actionsRows[1]['destination']) {
+            error_log("[BGL RUN] $npcNameEsc — last 2 actions were TravelTo to the same destination ({$actionsRows[0]['destination']}), assuming NPC is stuck. Teleport it near destination");
+            $destination = $actionsRows[0]['destination'];
+            $candidateLocation=resolveTravelLocation($destination, $currentNpcData,$GLOBALS['db']);
+            if ($candidateLocation["sim"]>0.8 && $candidateLocation["refs"]!="") {
+                //We must extract first ref if any, e.g.    [refs] => 0x0001bdf1:0x2101e6ec;0x0001bdf1:0x2101e6ec
+                $refs = explode(';', $candidateLocation['refs']);
+                $firstReferencePair = explode(":",$refs[0]);
+                $skyrimCmd = new SkyrimCommandBuilder();
+                $json = $skyrimCmd->ObjectReference->MoveTo("0x{$currentNpcData['refid']}", "{$firstReferencePair[1]}");
+                $skyrimCmd->send(cmd: $json);
+                error_log("[BGL RUN] $npcNameEsc — Teleported to {$candidateLocation['name']} (formid: {$candidateLocation['formid']})");
+                $db->insert('actions_issued', [
+                    'action' => 'TeleportTo',
+                    'fullcall' => "TeleportTo:{$candidateLocation['name']}:Teleporting to resolve stuck NPC",
+                    'actorname' => $npcName,
+                    'ts' => $last_ts,
+                    'gamets' => $last_gamets,
+                    'localts' => time(),
+                    'original' => 'backgroundaction',
+                ]);
+                die();
+                
+            } else {
+                error_log("[BGL RUN] $npcNameEsc — Could not resolve a valid location for destination: $destination");
+            }
+        }
+    }
+}
+
 // ─── Dynamic Biography ────────────────────────────────────────────────────────
 
 $dynamicBiography = buildDynamicBiography($GLOBALS, true, true, true);
@@ -359,7 +422,7 @@ $contextDataHistoric = DataLastDataExpandedFor($GLOBALS['HERIKA_NAME'], -100, $s
 );*/
 
 if ($extdata['background_life_player_unattached']) {
-    // NPC unattached, so maybe does not nothing about player
+    // NPC unattached, so maybe does not know anything about player
     foreach ($contextDataHistoric as $entry) {
         $line = trim($entry['content']);
         $history .= ($entry['role'] === 'assistant')
