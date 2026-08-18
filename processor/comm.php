@@ -1932,6 +1932,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 "rx" => $splitNameBase[9] ?? '',
                 "ry" => $splitNameBase[10] ?? '',
                 "rz" => $splitNameBase[11] ?? '',
+                "running_package_id" => $splitNameBase[12] ?? '',
             ];
 
             error_log(print_r($splitNameBase, true));
