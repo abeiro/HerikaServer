@@ -649,8 +649,9 @@ function handleMoveToAction($targetNpcName, $currentNpcData, $npcName, $last_ts,
 
     if ($targetNpc === null) {
         error_log("[handleMoveToAction] Target NPC not found: $targetNpcName");
+        $locationCandidate=resolveTravelLocation($targetNpcName, $currentNpcData, $db);
 
-        if (resolveTravelLocation($targetNpcName, $currentNpcData, $db) !== null) {
+        if ( $locationCandidate && isset($locationCandidate["sim"]) && $locationCandidate["sim"]>0.8) {
             $db->insert('eventlog', [
                 'ts' => $last_ts,
                 'gamets' => $last_gamets + 5,
