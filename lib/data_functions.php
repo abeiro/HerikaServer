@@ -8006,7 +8006,7 @@ function buildSituationalMapDescription() {
 
     // If worldspace is Skyrim, just return base description
     if ($current_worldspace === 'Skyrim') {
-       
+        error_log("buildSituationalMapDescription: Current worldspace is Skyrim, returning base description.");
         // Get all doors in the worldspace Skyrim, with valid coordinates and (distance< 1024 *10), door_x,door_y is relative to player position
         $doors_result = $GLOBALS["db"]->fetchAll(
             "SELECT id, cell_name, door_name, door_id,door_x, door_y, dest_door_exterior, interior,location_id, sqrt((door_x-({$player_x}))*(door_x-({$player_x})) + (door_y-({$player_y}))*(door_y-({$player_y}))) as distance
@@ -8018,7 +8018,7 @@ function buildSituationalMapDescription() {
         );
         
     } else {
-    
+        error_log("buildSituationalMapDescription: Current worldspace is '{$current_worldspace}', fetching doors in the same worldspace.");
         // Get all doors in the same worldspace 
         $doors_result = $GLOBALS["db"]->fetchAll(
             "SELECT id, cell_name, door_name, door_id,door_x, door_y, dest_door_exterior, interior,location_id, sqrt((door_x-({$player_x}))*(door_x-({$player_x})) + (door_y-({$player_y}))*(door_y-({$player_y}))) as distance
@@ -8031,6 +8031,7 @@ function buildSituationalMapDescription() {
     }
     
     if (empty($doors_result)) {
+        error_log("buildSituationalMapDescription: No doors found in worldspace '{$current_worldspace}' for cell ID {$current_cell_id}.");  
         if ($current_worldspace != $current_cell_name)
             return "You are in {$current_worldspace}, {$current_cell_name}. No other exits found.";
         else
@@ -8053,6 +8054,7 @@ function buildSituationalMapDescription() {
 
         
         if ($distance > 1000) {
+            error_log("buildSituationalMapDescription: Ignoring door '{$door_name}' at distance {$distance} meters (too far).");
             // Ignore doors farther than 1000 meters
             continue;
         }

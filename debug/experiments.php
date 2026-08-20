@@ -420,7 +420,7 @@ if ($argv[1] == '3') {
         'gender' => 'male',
         'class' => 'farmer',
         'race' => 'nord',
-        'location' => 'Whistling Mine',
+        'location' => 'Yngvild',
         'appearance' => 'a sturdy nord miner',
         'background' => "He was born in a small village and grew up working in the mine 'Whistling Mine'",
         'speechStyle' => 'rude, mining oriented',
@@ -471,7 +471,7 @@ When working at the mine, the character produces resources over time:
 ",
     ];
 
-    $startingPoint = 0x0002b0dd;
+    $startingPoint = 0x000d035b;
     $inventoryItems = [
         ['refid' => '0x0000000F', 'qty' => 100], // 100 gold coins
         ['refid' => '0x00071cf3', 'qty' => 10], // 10 ores
@@ -837,13 +837,13 @@ if ($argv[1] == '13') {
 
 if ($argv[1] == '14') {
     $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName("Orianne");
+    $npc = $npcMaster->getByName("Orianne Marius");
     $skyrimCmd = new SkyrimCommandBuilder();
     //$json = $skyrimCmd->Actor->RemoveFromAllFactions("0x{$npc["refid"]}", "0xFF00127C");
     //$skyrimCmd->send(cmd: $json);
-    $json = $skyrimCmd->ObjectReference->MoveTo("0x{$npc["refid"]}", "0x08365D75");
+    //$json = $skyrimCmd->ObjectReference->MoveTo("0x{$npc["refid"]}", "0x08365D75");
     //$skyrimCmd->send(cmd: $json);
-    print_r(resolveTravelLocation("Varek",$npc,$GLOBALS["db"]));
+    print_r(resolveTravelLocation("Elysium Estate (Interior)",$npc,$GLOBALS["db"]));
 
 }
 
@@ -878,8 +878,13 @@ if ($argv[1] == '15') {
 
 
 if ($argv[1] == '16') {
-    // Remove from BgL
-    // Should unset extradata too
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Orianne");
+    $npcMaster->renameNPC("Orianne", "Orianne Marius");
+}
+
+if ($argv[1] == '17') {
+    
     $GLOBALS["db"]->insert(
         'responselog',
         [
@@ -887,8 +892,53 @@ if ($argv[1] == '16') {
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|BackgroundCmd@0x0823FF66@RemoveFromBgL",
+            'action' => "rolecommand|BackgroundCmd@0xFF00127C@RemoveFromBgL",
             'tag' => __FILE__ . ":" . __LINE__,
         ]
     );
+    
+}
+
+if ($argv[1] == '18') {
+    // ComeCloser test
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Karrie");
+
+    $db->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'text' => "ComeCloser@",
+            'actor' => "Karrie",
+            'action' => 'command'
+        )
+    );
+}
+
+if ($argv[1] == '19') {
+    // Test for NPC with no refid
+    print_r(buildSituationalMapDescription());
+    echo PHP_EOL;
+}
+
+if ($argv[1] == '20') {
+    // Clone an NPC for BgL
+    // 
+    $name="Karrie";
+    $npcMaster = new NpcMaster();   
+    $npc = $npcMaster->getByName($name);
+    $bedref=0x1813A3AF;
+     $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x{$npc["refid"]}@SleepInBed/$bedref",
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+
 }
