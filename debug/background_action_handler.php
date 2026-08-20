@@ -986,7 +986,7 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             'ts' => time(),
             'gamets' => $last_gamets + 20,
             'type' => 'infoaction',
-            'data' => "The Narrator: Despite searching, $npcName could not find any trace of $resolvedName",
+            'data' => "The Narrator: Despite searching, $npcName could not find any trace of $resolvedName. $npcName desists from this action and continue with other tasks",
             'sess' => $momentum,
             'localts' => time(),
             'people' => $npcName,
@@ -1001,11 +1001,12 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                 'ts' => time(),
                 'gamets' => $last_gamets,
                 'localts' => time(),
-                'data' => "$npcName could not find any trace of $resolvedName",
+                'data' => "$npcName could not find any trace of $resolvedName. $npcName should desist from this action and continue with other tasks",
                 'category' => 'error',
             ]
         );
-        triggerNpcUpdate($npcName); // Force NPC to update its background life data on the next mid-term check, which should lead it to discover the new location and update accordingly.
+        $extdata=$npcMaster->getExtendedData($currentNpcData);
+        triggerNpcUpdate($npcName, ++$extdata["background_life_last_updated_ec"]); // Force NPC to update its background life data on the next mid-term check, which should lead it to discover the new location and update accordingly.
     }
 
 
