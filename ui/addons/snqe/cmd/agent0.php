@@ -47,7 +47,8 @@ order by A.gamets desc,A.localts desc
 limit 1
 ");
 
-if (sizeof($formInput["npclist"]) == 0) { // Initial case
+// Initial case. Quest creation
+if (sizeof($formInput["npclist"]) == 0) {
 
 
     $sqlfilter = " and data not like '%inner thoughts%' and type<>'innerchat' and type<>'backgroundaction'";
@@ -94,7 +95,6 @@ if (sizeof($formInput["npclist"]) == 0) { // Initial case
         } else {
             $wideLocList .= "* <$name>\n";
         }
-
     }
 
     $locListArray = array_keys($locListArrayRaw);
@@ -119,9 +119,9 @@ if (sizeof($formInput["npclist"]) == 0) { // Initial case
     foreach ($locListArrayRaw as $name => $tags) {
         if (strpos($lastLocation, $name) === false) {
             if ($tags) {
-            $filteredWideLocList .= "* <$name> ($tags)\n";
+                $filteredWideLocList .= "* <$name> ($tags)\n";
             } else {
-            $filteredWideLocList .= "* <$name>\n";
+                $filteredWideLocList .= "* <$name>\n";
             }
         }
     }
@@ -229,11 +229,10 @@ Short briefing:{$formInput["briefing"]}
 
 
         $result["response"] .= "\n$buffer";
-
     } else {
         // Initial quest title NOT provided, from blank state
         if ($formInput["suggested"]) {
-            $suggested = "**You MUST use this idea and starter NPC for the quest: {$formInput["suggested"]}**";
+            $suggested = "**You MUST follow user instructions to generate quest steps: {$formInput["suggested"]}**";
         } else {
             $suggested = "";
         }
@@ -245,7 +244,6 @@ Short briefing:{$formInput["briefing"]}
         $contextFromMemories = "";
 
         if (sizeof($contextDataFull) == 0 || sizeof($contextDataFull) < $limit) {
-
         } else {
 
             foreach (array_reverse($contextDataFull) as $entry) {
@@ -259,7 +257,83 @@ Short briefing:{$formInput["briefing"]}
 
 
 
-        $result["response"] = "
+
+        $result["locations"] = $locListArray;
+
+        $prompt[] = ['role' => 'system', 'content' => "You are an AI assistant, your job is to generate quest in the Skyrim universe."];
+
+        if ($formInput["suggested"]) {
+
+            //
+            // USER PROVIDED INSTRUCTIONS
+            // 
+
+            $result["response"] = "
+
+Player: {$GLOBALS["PLAYER_NAME"]}
+Location: $lastLocation
+
+* Nearby locations
+$locList
+
+* Nearby Actors. (you cannot instruct this actors) $closeNpcText
+
+* Context for quest generation:
+$contextFromMemories
+
+$nearByLoc
+
+Current Location: $lastLocation
+
+Latest events:
+$history
+
+";
+
+            // Contextual data
+            $prompt[] = ['role' => 'user', 'content' => $result["response"]];
+
+            $prompt[] = [
+                'role' => 'user',
+                'content' => "
+    Giving this context, create a new quest in Skyrim Universe.
+
+    You must follow this user instructions:
+{$formInput["suggested"]}
+
+* Some examples
+
+ * A trade caravan disappeared on the road between X and Y. Tracking clues reveals illusion magic masking an abandoned ruin
+ * A dying hunter asks you to finish his life’s mission—finding a mythical beast.
+ * Find a chest of unsent letters belonging to a deceased soldier. Delivering them reveals an interwoven story across Skyrim’s families.
+ * A bard lost his voice to a magical artifact. Recovering it requires playing through musical puzzles or reenacting old songs as small quests.
+ * A rumored “sweetroll cult” hoards pastries. Investigating reveals either a goofy club or—if you prefer—a surprisingly dark conspiracy.
+ * A dying trapper in X begs you to retrieve his family’s ancestral amulet from a frostbite spider nest
+ * A healer in X can remove a traumatic memory from a grieving widow. She asks the player to gather rare alchemical ingredients.
+ * Get a secret for an NPC, obtained just talking to him
+ * Travel through this region to gather information about a missing artifact.
+ * Defeat 3 champions over Skyrim
+ * Retrieve item from actor X to actor Y, without using combat/violence.
+ * Seduce an actor to gain other's actor favor
+
+
+Be creative but keep focus. Just write :
+* The quest title
+* A Short Brief — Keep it very general, avoid any spoilers or future revelations, and focus strictly on the moment the quest begins, and mention the starter character and the choosed location for adventuring. 
+
+Try to use locations from location list.
+
+Use this format:
+Quest Title:
+Quest Short brief (one paragraph):
+
+",
+            ];
+        } else {
+            //
+            // USER DID NOT PROVIDE INSTRUCTIONS
+            // 
+            $result["response"] = "
 
 Player: {$GLOBALS["PLAYER_NAME"]}
 Location: $lastLocation
@@ -281,14 +355,12 @@ $history
 
 Ideas for initial NPC name: a character, which name must start with $randomLettersA, and surname/nick by $randomLettersB. Never use \" or ' in the name.
 ";
-        $result["locations"] = $locListArray;
 
-        $prompt[] = ['role' => 'system', 'content' => "You are an AI assistant, your job is to generate quest in the Skyrim universe."];
-        $prompt[] = ['role' => 'user', 'content' => $result["response"]];
+            $prompt[] = ['role' => 'user', 'content' => $result["response"]];
 
-        $prompt[] = [
-            'role' => 'user',
-            'content' => "
+            $prompt[] = [
+                'role' => 'user',
+                'content' => "
     Giving this context, create a new quest in Skyrim Universe.
 
 * Some examples
@@ -321,7 +393,8 @@ Starter character. name (fantasy-style compound name consisting of a first name 
 Starter character should aproach Player to init the quest.
 
 $suggested",
-        ];
+            ];
+        }
 
         $contextData = $prompt;
 
@@ -344,9 +417,12 @@ $suggested",
         $result["response"] = $buffer;
         $result["response"] .= "\nPlayer Name: {$GLOBALS["PLAYER_NAME"]}";
         $result["response"] .= "\nCurrent location: $lastLocation";
+        if ($formInput["suggested"]) {
+            $result["response"] .= "\nUser instructions (must override all): {$formInput["suggested"]}";
+        }
     }
-
 } else {
+    // Quest continuation case
 
     $sqlfilter = " and data not like '%inner thoughts%' and type<>'innerchat' and type<>'backgroundaction' and type<>'quest'";
     $contextDataHistoric = DataLastDataExpandedFor("", 25 * -1, $sqlfilter);
@@ -376,7 +452,7 @@ $suggested",
     //$formInput["nextlist"][1]
     $journalsMixed = [];
     if ($formInput["journallist"]) {
-        $maxItems = max(count($formInput["journallist"]), count($formInput["nextlist"]));
+        $maxItems = count($formInput["journallist"]);
         for ($i = 0; $i < $maxItems; $i++) {
             if (isset($formInput["journallist"][$i])) {
                 $journalsMixed[] = $formInput["journallist"][$i];
@@ -390,6 +466,7 @@ $suggested",
         $journals = "";
     }
 
+    $continuationStep=end($formInput["nextlist"]);
 
     $npcList = [];
     foreach ($formInput["npclist"] as $npc) {
@@ -410,7 +487,6 @@ $suggested",
             } else {
                 $npcList[] = " * $npc  $outofscene";
             }
-
         }
     }
 
@@ -442,7 +518,6 @@ $suggested",
         } else {
             $wideLocList .= "* <$name>\n";
         }
-
     }
 
     //$wideLocList      = implode("\n", array_merge($locListArray, DataPosibleLocationsToGo()));
@@ -454,7 +529,6 @@ $suggested",
     if (!empty($activators)) {
         $activatorsText = "# Available activators in current location. (specify id to use them for triggering, e.g. wait for Pedestal:0x00112233 to be activated)" . PHP_EOL;
         $activatorsText .= $activators . PHP_EOL;
-
     }
 
     $spawnedItemArray = $formInput["spawneditemslist"];
@@ -471,6 +545,16 @@ $suggested",
 
     $spawnedItemList = arrayToBulletedList($spawnedItemArray);
 
+
+    // Last player diary
+
+    $playerNameCn=$GLOBALS["db"]->escape($GLOBALS["PLAYER_NAME"]);
+    $diaryRows = $GLOBALS["db"]->fetchOne("SELECT * FROM \"public\".\"diarylog\" where people='$playerNameCn' order by gamets desc limit 1");
+    if ($diaryRows) {
+        $lastDiaryEntry = "{$GLOBALS["PLAYER_NAME"]}'s last diary entry: " . $diaryRows["content"];
+    } else {
+        $lastDiaryEntry = "";
+    }   
     $situationalMapDescription = buildSituationalMapDescription();
     $result["questtitle"] = $formInput["questtitle"];
     $result["briefing"] = $formInput["briefing"];
@@ -485,7 +569,7 @@ Player: {$GLOBALS["PLAYER_NAME"]}
 # Dialogue and events history:
 
 $history
-
+$lastDiaryEntry
 == end of dialogue and events history
 
 # Other locations/entrances available for adventuring:
@@ -494,15 +578,19 @@ $wideLocList
 # Spawned items in previous session
 $spawnedItemList
 
-# Nearby NPC (not  relevant to the storyline, you cannot instruct this NPC).
+# 🚫 FORBIDDEN / BACKGROUND NPCs (STRICTLY DO NOT USE):
+# WARNING: These entities are purely decorative. You are ABSOLUTELY FORBIDDEN from mentioning them, giving them orders, or involving them in the plot.
 $closeNpcText
 
-# Already spawned NPCs (spawned in previous session, you can only instruct this NPCs, you cannot instruct other NPCs that are not in this list):
+# Already spawned NPCs (spawned in previous session, ONLY INSTRUCT this NPCs, you cannot instruct other NPCs that are not in this list):
 
 $npcListFinal
 
 # Previous quest steps:
 $journals
+
+# Suggested next quest intent (from previous session):
+$continuationStep
 
 # Current Location: $lastLocation
 
@@ -517,7 +605,6 @@ If no nearby entrances, this means current location has no passages/doors/chambe
 
     if (isset($formInput["needs_end"]) && $formInput["needs_end"]) {
         $finishInstruction = " Important: ** Storyline must end. Next steps should be oriented to finish storyline. Conclude all plots. ** ";
-
     }
 
     $considerFinish = "";
@@ -562,7 +649,8 @@ If no nearby entrances, this means current location has no passages/doors/chambe
 ---
 
 ## NPC & Entity Rules
-- Prefer using **already spawned NPCs**.
+* You MUST ONLY use NPCs from the 'Already spawned NPCs or new ones.
+- ZERO TOLERANCE RULE: You are STRICTLY FORBIDDEN from using, mentioning, talking to, or giving orders to ANY NPC listed under '🚫 FORBIDDEN / BACKGROUND NPCs'. 
 - Create **at most ONE new NPC**, and only if absolutely necessary.
 - You may:
   - Spawn enemies
@@ -577,7 +665,7 @@ If no nearby entrances, this means current location has no passages/doors/chambe
 Using the provided context, generate **next quest steps**.
 
 Each quest step must:
-1. Follow logically from **Previous Quest Steps**
+1. Follow logically from **Previous Quest Steps**, use **Suggested Next Quest Intent** for continuity
 2. Be consistent with **all dialogue and event history**
 3. Take place in the **Current Location** or valid connected locations
 4. Respect all world, location, and NPC constraints above
@@ -635,7 +723,6 @@ $considerFinish
     $result["last_step"] = $buffer;
     $result["locations"] = $wideLocListArray;
     $result["response"] .= "\nInstruction:\n$buffer";
-
 }
 
 echo json_encode($result);

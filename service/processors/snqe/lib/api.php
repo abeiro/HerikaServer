@@ -436,7 +436,23 @@ function CheckNPCSpawn(
                     );
                 }
             }
-        } else if (isset($npc["disposition"])) {
+        } else {
+            // Teleport to starting point.
+            $startingPointDec=getLocationReferences($npc["location"]);
+            $GLOBALS['db']->insert(
+                'responselog',
+                [
+                    'localts' => time(),
+                    'sent' => 0,
+                    'actor' => 'rolemaster',
+                    'text' => '',
+                    'action' => "rolecommand|BackgroundCmd@{$npcLocalData["refid"]}@Teleport/$startingPointDec",
+                    'tag' => __FILE__ . ':' . __LINE__,
+                ]
+            );
+        }
+        
+        if (isset($npc["disposition"])) {
             if (in_array($npc["disposition"], ["dead"])) {
 
                 $skyrimCmd = new SkyrimCommandBuilder();
