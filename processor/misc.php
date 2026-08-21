@@ -5,6 +5,7 @@ if (($gameRequest[0] == "delete_event")) {
     $datacn = $db->escape($gameRequest[3]);
     $db->delete("eventlog", "type in ('chat','prechat') and data like '%$datacn%' and localts>" . (time() - 120));
     // audit_log(__FILE__);
+    error_log("[DELETION] Deleted event with data: $datacn");
     terminate();
 }
 

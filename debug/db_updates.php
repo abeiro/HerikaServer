@@ -7877,12 +7877,38 @@ if ($checkVersion("eventlog_session_payload") < 20260807001) {
     }
 }
 
+
 //----------------------------------------------------
 // AUDIT REQUEST RESPONSE - Store the response text for audit requests
 // Version 20260806001
 //----------------------------------------------------
 $db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"response\"  text");
 
+$db->execQuery("
+DROP VIEW public.eventlog_view;
+ALTER TABLE eventlog ALTER COLUMN sess TYPE text;
+CREATE VIEW public.eventlog_view AS
+ SELECT e.type,
+    e.data,
+    e.sess,
+    e.gamets,
+    e.localts,
+    e.ts,
+    e.rowid,
+    e.people,
+    e.location,
+    e.party,
+    e.utterance_id,
+    e.delivery_state,
+    public.convert_gamets2skyrim_date(e.gamets) AS sk_date,
+    public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
+    public.convert_gamets2days(e.gamets) AS sk_days,
+    public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
+   FROM public.eventlog e;
+
+
+ALTER TABLE public.eventlog_view OWNER TO dwemer;
+");
 
 Logger::info(__FILE__." update file processed");
 

@@ -419,7 +419,7 @@ function buildInventoryMetadataValue(array $items): array
             ];
             $pluginRow = chimGetLoadedGamePluginByRuntimeFormId($item['baseid']);
             $pluginName = ($pluginRow !== null) ? $pluginRow['plugin_name'] : '';
-            if ($pluginName !== '') {
+            if (trim($pluginName) !== '') {
                 $GLOBALS["db"]->upsertRowTrx(
                     "market_cache",
                     [
