@@ -566,7 +566,8 @@ tr.featured-plugin-row td {
         echo '<br>';
         echo '<div class="table-container" style="margin-top: 30px;">';
         echo '<h1 style="margin: 0 0 15px 0; text-align: center; color: rgb(242, 124, 17); font-family: \'MagicCards\', serif; font-size: 1.8em;">CHIM Plugins Repository</h1>';
-        echo '<p style="text-align: center; color: #bbb; margin: 0 0 20px 0;">Download extensions that add extra AI features to CHIM</p>';
+        echo '<p style="text-align: center; color: #bbb; margin: 0 0 6px 0;">Download extensions that add extra AI features to CHIM</p>';
+        echo '<p style="text-align: center; color: #bbb; margin: 0 0 20px 0;">Built a plugin of your own? See <a href="https://dwemerdynamics.com/chim/modders-guide.html#SubmittingPluginToRepository" target="_blank" rel="noopener noreferrer">how to get your plugin listed here</a>.</p>';
 
         echo '<table border="1">';
         echo '<tr>
@@ -681,5 +682,4 @@ $title = $TITLE;
 $buffer = preg_replace('/(<title>)(.*?)(<\/title>)/i', '$1' . $title . '$3', $buffer);
 echo $buffer;
 ?>
-
 
