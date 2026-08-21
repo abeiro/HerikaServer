@@ -655,6 +655,12 @@ CreateItem(
     "xaren"
 );
 
+// Spawn item before combat/interactions, but after spawning NPC, because is in Xaren's inventory. 
+// This is important because if we spawn it before Xaren is spawned, the item will not be in his inventory and will be lost.
+// and if spawned after combat, NPC could be an ash pile.
+
+SpawnItem($quest_id, "roric_ring", "xaren");
+if (CheckItemSpawn($quest_id, "roric_ring") != "done") return;
 
 // 4. Travel to Darkshade Copse
 TravelTo($quest_id, "Darkshade Copse", "zara");

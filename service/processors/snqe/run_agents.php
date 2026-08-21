@@ -2,7 +2,7 @@
 
 
 $enginePath = __DIR__ . "/../../../";
-$GLOBALS["ENGINE_PATH"] = $enginePath;
+$GLOBALS["ENGINE_PATH"] = $ENGINE_PATH = $enginePath;
 
 echo "Using ENGINE_PATH: {$ENGINE_PATH}\n";
 // Define paths
@@ -202,6 +202,7 @@ if ($mode === 'start_from_context') {
             updateList($state['locationlist'], $data['locations']);
         }
 
+        print_r($data);
         echo "Agent 0 complete.\n";
         file_put_contents($stateFile, json_encode($state, JSON_PRETTY_PRINT));
         chmod($stateFile, 0777);
@@ -339,7 +340,7 @@ if ($mode === 'full' || $mode === '3') {
     $journalCount = count($journals);
 
     if ($journalCount >= 2) {
-        $lastJournalEntry = $journals[$journalCount - 2]; // penultimate
+        $lastJournalEntry = $journals[$journalCount - 1]; // penultimate
     } elseif ($journalCount === 1) {
         $lastJournalEntry = "A new quest starts";
     } else {
