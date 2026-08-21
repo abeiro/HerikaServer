@@ -39,6 +39,25 @@
                 }
             }
         },
+        "chim-ineed": {
+            "name": "CHIM-iNeed",
+            "description": "Lets CHIM followers comment when iNeed reports they are hungry or thirsty.",
+            "git_repo": "hey-danielx/CHIM-iNeed",
+            "github_url": "https://github.com/hey-danielx/CHIM-iNeed",
+            "mod_download_url": "https://github.com/hey-danielx/CHIM-iNeed/releases/latest/download/iNeed-CHIM-Patch.zip",
+            "default_channel": "main",
+            "channels": {
+                "main": {
+                    "label": "Live",
+                    "branch": "main",
+                    "package_source": "release",
+                    "package_urls": [
+                        "https://github.com/hey-danielx/CHIM-iNeed/releases/latest/download/CHIM-iNeed.tar.gz",
+                        "https://github.com/hey-danielx/CHIM-iNeed/releases/latest/download/CHIM-iNeed.tar"
+                    ]
+                }
+            }
+        },
         "sharmat": {
             "name": "aiagent_nsfw",
             "display_name": "SHARMAT",
