@@ -232,8 +232,8 @@ if (!$isEmbed) {
 
     /* Override main container styles */
     main {
-        padding-top: <?php echo $isEmbed ? '20px' : '80px'; ?>;
-        padding-bottom: 40px;
+        padding-top: <?php echo $isEmbed ? '10px' : '80px'; ?>;
+        padding-bottom: 24px;
         padding-left: 5%;
         padding-right: 5%;
         /*width: 100%;*/
@@ -257,31 +257,7 @@ if (!$isEmbed) {
         z-index: 100;
     }
 
-    /* Header Styling */
-    .page-header {
-        text-align: center;
-        margin-bottom: 28px;
-        padding: 24px 20px;
-        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(28, 28, 28, 0.98));
-        border-radius: 10px;
-        border: 1px solid #3a3a3a;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .page-header h1 {
-        margin-bottom: 10px;
-        font-family: 'MagicCards', serif;
-        word-spacing: 8px;
-        font-size: 2em;
-        color: rgb(242, 124, 17);
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    }
-
-    .page-header p {
-        color: #aaa;
-        font-size: 0.95em;
-        margin: 4px 0;
-    }
+    /* Header Styling - compact inline row, see .chim-page-head in chim-theme.css */
 
     /* Content Layout */
     .content-grid {
@@ -1031,10 +1007,6 @@ if (!$isEmbed) {
             grid-template-columns: 1fr;
         }
         
-        .page-header {
-            padding: 18px 15px;
-        }
-        
         .content-section {
             padding: 18px;
         }
@@ -1052,14 +1024,6 @@ if (!$isEmbed) {
             padding-right: 2%;
         }
         
-        .page-header h1 {
-            font-size: 1.5em;
-        }
-
-        .page-header p {
-            font-size: 0.85em;
-        }
-
         .toggle-row {
             padding: 10px 12px;
         }
@@ -1088,7 +1052,7 @@ if (!$isEmbed) {
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/chim-theme.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'chim-theme.css'); ?>">
 <style>
     /* Embedded in hub: remove extra top padding since navbar is hidden */
-    main { padding-top: 20px; }
+    main { padding-top: 10px; }
 </style>
 <?php endif; ?>
 
@@ -1186,13 +1150,13 @@ if (!$isEmbed) {
             </script>
         <?php endif; ?>
 
-        <div class="page-header">
-        <h1>
-             👤 Player Management
-        </h1>
-        <p>Manage your character's information and view in-game statistics</p>
-        <p>Changes made here will be used by AI NPCs to understand your character better</p>
-    </div>
+        <div class="page-header chim-page-head">
+            <h1 class="chim-page-head-title">👤 Player Management</h1>
+            <div class="chim-page-head-note">
+                <p>Manage your character's information and view in-game statistics</p>
+                <p>Changes made here will be used by AI NPCs to understand your character better</p>
+            </div>
+        </div>
 
     <form id="player-form" method="post" action="">
         <div class="player-actions">

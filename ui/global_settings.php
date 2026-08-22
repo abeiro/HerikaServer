@@ -409,10 +409,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css?v=gs2">
 <style>
 main {
-    padding-top: 40px;
-    padding-bottom: 40px;
-    padding-left: 10%;
-    padding-right: 10%;
+    padding: 10px clamp(10px, 2.5vw, 34px) 24px;
     width: 100%;
     margin: 0;
 }
@@ -434,8 +431,8 @@ footer {
 }
 
 .page-header {
-    margin: 0 0 16px 0;
-    padding: 14px 18px;
+    margin: 0 0 10px 0;
+    padding: 10px 14px;
     background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(28, 28, 28, 0.98));
     border-radius: 10px;
     border: 1px solid #3a3a3a;
@@ -476,7 +473,7 @@ h1.gs-title {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
     padding: 8px;
     border: 1px solid #3a3a3a;
     border-radius: 10px;

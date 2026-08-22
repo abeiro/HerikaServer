@@ -34,9 +34,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <style>
     /* Override main container styles */
     main {
-        padding-top: 80px; /* Space for navbar */
-        padding-bottom: 40px; /* Reduced space for footer */
+        padding-top: 0;
+        padding-bottom: 24px;
         padding-left: 10px;
+    }
+
+    .container-fluid {
+        padding: 0 10px 8px;
     }
     
     /* Override footer styles */
@@ -66,7 +70,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     .tab-content {
         display: none;
         background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
-        padding: 20px;
+        padding: 10px 12px 12px;
         border-radius: 8px;
         border-top-left-radius: 0;
         border: 1px solid #3a3a3a;
@@ -96,8 +100,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     /* Table Container Styles */
     .table-container {
-        max-height: calc(100vh - 450px) !important;
-        margin-top: 20px;
+        max-height: calc(100vh - 310px) !important;
+        margin-top: 8px;
         width: 100%;
         overflow-x: auto;
         background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
@@ -105,7 +109,35 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border: 1px solid #3a3a3a;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
                     inset 0 1px rgba(255, 255, 255, 0.03);
-        padding: 12px;
+        padding: 8px;
+    }
+
+    .event-log-intro,
+    .event-log-note {
+        padding: 9px 12px;
+        border-radius: 5px;
+        margin: 0 0 6px;
+        font-size: 0.88em;
+        line-height: 1.4;
+    }
+
+    .event-log-intro {
+        background: #2a2a2a;
+        border-left: 4px solid rgb(242, 124, 17);
+    }
+
+    .event-log-note {
+        background: #1a4d6d;
+        border-left: 4px solid #3b82f6;
+        color: #e0f2ff;
+    }
+
+    .event-log-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin: 8px 0 6px;
     }
 
     /* Table Styles */
@@ -573,9 +605,14 @@ function getTimeColor($time) {
         <div id="eventlog-tab" class="tab-content <?php echo $activeTab === 'eventlog' ? 'active' : ''; ?>">
             <?php
             // Add subtitle description
-            echo "<div style='background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px 15px; border-radius: 5px; margin: 15px 0; font-size: 0.9em;'>";
+            echo "<div class='event-log-intro'>";
             echo "<span style='color: rgb(242, 124, 17); font-weight: bold;'>📝 Events:</span> ";
             echo "<span style='color: #f8f9fa;'>Raw log of in-game events (combat, deaths, location changes, etc.) that provide context to the AI. These events are filtered and selectively added to AI prompts based on relevance.</span>";
+            echo "</div>";
+
+            // Keep context guidance directly below the description so both scan as one compact introduction.
+            echo "<div class='event-log-note'>";
+            echo "ℹ️ <strong>Note:</strong> Not all events will show up in AI context. Any blacklist settings will not be used for context. This is a raw log of some of the more relevant events.";
             echo "</div>";
             
             // Show success message if events were deleted
@@ -589,7 +626,7 @@ function getTimeColor($time) {
             $eventLogUrlBuilder = function(array $overrides = []) use ($eventLogBaseParams) {
                 return 'events-memories.php?' . http_build_query(array_merge($eventLogBaseParams, $overrides));
             };
-            echo "<div style='display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0;'>";
+            echo "<div class='event-log-toolbar'>";
             
             echo "<button id='live-toggle-btn-eventlog' onclick=\"toggleAutoRefreshEventLog()\" class='btn-base " . ($isAutoRefresh ? "btn-secondary" : "btn-primary") . "' style='padding: 8px 12px; font-size: 0.9em;' title='Toggle live monitoring'>";
             echo $isAutoRefresh ? "⏸️ Stop Live" : "Auto Refresh";
@@ -618,11 +655,6 @@ function getTimeColor($time) {
             echo "</div>";
             echo "</div>";
             
-            // Add informational note about blacklist settings
-            echo "<div style='background: #1a4d6d; color: #e0f2ff; padding: 12px 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #3b82f6; font-size: 0.9em;'>";
-            echo "ℹ️ <strong>Note:</strong> Not all events will show up in AI context. Any blacklist settings will not be used for context. This is a raw log of some of the more relevant events.";
-            echo "</div>";
-
             $limit = $eventLogLimit;
             $page = $eventLogPage;
             $offset = ($page - 1) * $limit;
@@ -714,7 +746,7 @@ function getTimeColor($time) {
             $totalRecords = $countResult[0]['total'];
             $totalPages = ceil($totalRecords / $limit);
             
-            echo "<div class='pagination-buttons' style='margin: 10px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;'>";
+            echo "<div class='pagination-buttons' style='margin: 6px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;'>";
             
             if ($page > 1) {
                 echo "<button onclick=\"window.location.href='" . htmlspecialchars($eventLogUrlBuilder(['page' => $prevPage]), ENT_QUOTES) . "'\" class='btn-base btn-primary'>Previous</button> ";
