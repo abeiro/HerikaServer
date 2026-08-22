@@ -860,6 +860,132 @@ final class CommTest extends DatabaseTestCase
         $this->assertSame("|Lisette|RANGROO|", $people);
     }
 
+    public function testRechatTargetSelection_ShouldSkipSleepingBystanderButAllowDirectTarget(): void
+    {
+        require("conf.php");
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."chat_helper_functions.php");
+        require_once(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."npc_master.class.php");
+
+        $testDb = new sql();
+        $GLOBALS["db"] = $testDb;
+        $previousPlayerName = $GLOBALS["PLAYER_NAME"] ?? null;
+        $previousRechatMode = $GLOBALS["RECHAT_MODE"] ?? null;
+        $GLOBALS["PLAYER_NAME"] = "Varek";
+        $GLOBALS["RECHAT_MODE"] = "group";
+
+        $npcMaster = new NpcMaster();
+        $npcMaster->create(['npc_name' => 'Jaryra']);
+        $npcMaster->create(['npc_name' => 'Karrie']);
+
+        $now = time();
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "100",
+                'gamets' => "100",
+                'type' => "chat",
+                'data' => "Jaryra: Though faces tend to blur together. (talking to Varek)",
+                'sess' => 'pending',
+                'localts' => $now - 2,
+                'people' => "|Jaryra|Varek|Karrie|",
+                'location' => "",
+                'party' => "[]",
+                'delivery_state' => 'spoken'
+            )
+        );
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "200",
+                'gamets' => "200",
+                'type' => "infonpc",
+                'data' => "(beings in range:Jaryra,Karrie (sleeping),Catarina (busy),Ralof (unconscious),)",
+                'sess' => 'pending',
+                'localts' => $now,
+                'people' => "|Jaryra|Karrie (sleeping)|",
+                'location' => "",
+                'party' => "[]"
+            )
+        );
+
+        $stateMap = chimLatestRechatActorStateMap();
+        $this->assertSame("sleeping", $stateMap["karrie"]);
+        $this->assertSame("busy", chimRechatActorStateBlockReason("Catarina", $stateMap, true));
+        $this->assertSame("unconscious", chimRechatActorStateBlockReason("Ralof", $stateMap, true));
+        $this->assertSame("", chimRechatActorStateBlockReason("Karrie", $stateMap, true));
+
+        $bystanderResult = chimResolveServerSideRechatTarget([
+            'speaker' => 'Jaryra',
+            'listener_hint' => 'Varek',
+            'rechat_target_hint' => 'Varek',
+            'origin_line' => 'Though faces tend to blur together.',
+            'chain_id' => 'dump-scenario',
+        ]);
+
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "300",
+                'gamets' => "300",
+                'type' => "chat",
+                'data' => "Jaryra: Karrie, are you awake? (talking to Karrie)",
+                'sess' => 'pending',
+                'localts' => $now,
+                'people' => "|Jaryra|Karrie|",
+                'location' => "",
+                'party' => "[]",
+                'delivery_state' => 'spoken'
+            )
+        );
+        $directResult = chimResolveServerSideRechatTarget([
+            'speaker' => 'Jaryra',
+            'listener_hint' => 'Karrie',
+            'rechat_target_hint' => 'Karrie',
+            'origin_line' => 'Karrie, are you awake?',
+            'chain_id' => 'direct-sleeping-target',
+        ]);
+
+        $testDb->insert(
+            'eventlog',
+            array(
+                'ts' => "400",
+                'gamets' => "400",
+                'type' => "infonpc",
+                'data' => "(beings in range:Jaryra (sleeping),Karrie,)",
+                'sess' => 'pending',
+                'localts' => $now,
+                'people' => "|Jaryra (sleeping)|Karrie|",
+                'location' => "",
+                'party' => "[]"
+            )
+        );
+        $sleepingSpeakerResult = chimResolveServerSideRechatTarget([
+            'speaker' => 'Jaryra',
+            'listener_hint' => 'Karrie',
+            'rechat_target_hint' => 'Karrie',
+            'origin_line' => 'Karrie, are you awake?',
+            'chain_id' => 'sleeping-speaker',
+        ]);
+
+        $testDb->close();
+        unset($GLOBALS["db"]);
+        if ($previousPlayerName === null) {
+            unset($GLOBALS["PLAYER_NAME"]);
+        } else {
+            $GLOBALS["PLAYER_NAME"] = $previousPlayerName;
+        }
+        if ($previousRechatMode === null) {
+            unset($GLOBALS["RECHAT_MODE"]);
+        } else {
+            $GLOBALS["RECHAT_MODE"] = $previousRechatMode;
+        }
+
+        $this->assertSame(["Jaryra", "Varek", "Karrie"], $bystanderResult["audience"]);
+        $this->assertSame("", $bystanderResult["selected"]);
+        $this->assertSame("Karrie", $directResult["selected"]);
+        $this->assertSame("", $sleepingSpeakerResult["selected"]);
+    }
+
     public function testComm_WhenLinesAreNotJapanese_PhoneticTextShouldBeNotSentToScriptQueue(): void
     {
         // default test config
