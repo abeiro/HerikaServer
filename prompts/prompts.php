@@ -95,8 +95,6 @@ $PROMPTS=array(
         "cue"=>[
             "({$GLOBALS["HERIKA_NAME"]} speaks spontaneously from something naturally on their mind in the present scene. Draw from recent events or conversations, the surroundings, mood, fatigue, curiosity, or an ordinary personal thought. Do not invent a dramatic moment, force a new topic, advance the plot, or use poetic, philosophical, or atmospheric language merely to make the line feel meaningful. In a calm moment, the line may be brief, personal, playful, tired, curious, or mundane. In danger or emotional tension, keep it brief, cautious, and appropriate to the situation. Sound like a person who is mentally present, not someone generating content.) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]
-        //,"extra"=>["dontuse"=>true]   //DEACTIVATED WHILE BETA STAGE
-        ,"extra" => ["dontuse" => (rand(0, 99) >= intval($GLOBALS["BORED_EVENT"]))]
     ],
     // Database Prompt (Combat Bark)
     "combatbark"=>[

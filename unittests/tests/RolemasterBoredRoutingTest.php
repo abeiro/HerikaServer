@@ -6,6 +6,17 @@ require_once __DIR__ . '/../../lib/rolemaster_bored.php';
 
 final class RolemasterBoredRoutingTest extends TestCase
 {
+    public function testBoredEventChanceUsesZeroBasedPercentageBoundary(): void
+    {
+        $this->assertFalse(chimBoredEventChancePasses(0, 0));
+        $this->assertTrue(chimBoredEventChancePasses(35, 34));
+        $this->assertFalse(chimBoredEventChancePasses(35, 35));
+        $this->assertTrue(chimBoredEventChancePasses(100, 99));
+        $this->assertFalse(chimBoredEventChancePasses(100, 100));
+        $this->assertFalse(chimBoredEventChancePasses(-1, 0));
+        $this->assertTrue(chimBoredEventChancePasses(101, 99));
+    }
+
     public function testActorMapExcludesPlayerAndKeepsSeed(): void
     {
         $actors = chimRolemasterBoredActorMap(
