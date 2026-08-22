@@ -57,6 +57,7 @@ function chimPrismaGlobalSettingsSections(): array
             ['name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label'],
             ['name' => 'CORE_CONNECTOR_BGL', 'type' => 'foreign:core_llm_connector:id:label'],
             ['name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label'],
+            ['name' => 'RELATIONSHIP_UPDATE_CHANCE', 'type' => 'integer', 'min' => 0, 'max' => 100, 'default' => 100],
         ],
         'Context' => [
             ['name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean'],

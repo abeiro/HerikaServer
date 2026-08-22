@@ -161,6 +161,23 @@ class RelationshipManager {
         '🔐', '🔑', '🗝️', '🔨', '🪓', '⛏️', '⚒️', '🛠️', '🗡️', '⚔️', '🔫', '🪃', '🏹'
     ];
 
+    public static function shouldRunAutomaticEvaluation($chance = null, $roll = null) {
+        if ($chance === null) {
+            $chance = $GLOBALS['RELATIONSHIP_UPDATE_CHANCE'] ?? 100;
+        }
+
+        $chance = is_numeric($chance) ? max(0, min(100, (int)$chance)) : 100;
+        if ($chance === 0) {
+            return false;
+        }
+        if ($chance === 100) {
+            return true;
+        }
+
+        $roll = $roll === null ? random_int(1, 100) : max(1, min(100, (int)$roll));
+        return $roll <= $chance;
+    }
+
     /**
      * Relationship storage uses the canonical key "Player" for the player route.
      * UI/prompts may surface the actual character name, but reads/writes must not

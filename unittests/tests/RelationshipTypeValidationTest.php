@@ -56,6 +56,47 @@ final class RelationshipTypeValidationTest extends TestCase
         $this->assertSame('trusted', $normalized['Lydia']['type']);
     }
 
+    public function testAutomaticEvaluationChanceHonorsBoundariesAndDeterministicRolls(): void
+    {
+        $this->assertFalse(RelationshipManager::shouldRunAutomaticEvaluation(0, 1));
+        $this->assertTrue(RelationshipManager::shouldRunAutomaticEvaluation(100, 100));
+        $this->assertTrue(RelationshipManager::shouldRunAutomaticEvaluation(25, 25));
+        $this->assertFalse(RelationshipManager::shouldRunAutomaticEvaluation(25, 26));
+        $this->assertTrue(RelationshipManager::shouldRunAutomaticEvaluation('invalid', 100));
+    }
+
+    public function testLegacyRelationshipTextIsNotSentForInitialization(): void
+    {
+        $hadDatabase = array_key_exists('db', $GLOBALS);
+        $previousDatabase = $hadDatabase ? $GLOBALS['db'] : null;
+        $GLOBALS['db'] = new class {
+            public function fetchOne(string $query): array
+            {
+                return [
+                    'id' => 7,
+                    'npc_name' => 'Lydia',
+                    'relationships' => str_repeat('legacy relationship text ', 200),
+                    'extended_data' => '{}',
+                ];
+            }
+        };
+
+        try {
+            $llm = (new ReflectionClass(RelationshipLLM::class))->newInstanceWithoutConstructor();
+            $result = $llm->analyzeNpc(7, true);
+        } finally {
+            if ($hadDatabase) {
+                $GLOBALS['db'] = $previousDatabase;
+            } else {
+                unset($GLOBALS['db']);
+            }
+        }
+
+        $this->assertTrue($result['ok']);
+        $this->assertTrue($result['skipped']);
+        $this->assertSame('No structured relationships yet', $result['reason']);
+    }
+
     public function testInitialLlmAnalysisCannotPersistAnInventedType(): void
     {
         $llm = (new ReflectionClass(RelationshipLLM::class))->newInstanceWithoutConstructor();
