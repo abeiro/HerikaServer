@@ -32,6 +32,7 @@ $limit = isset($_GET["limit"]) ? intval($_GET["limit"]) : 100;
 $page = isset($_GET["page"]) ? max(1, intval($_GET["page"])) : 1;
 $offset = ($page - 1) * $limit;
 $sinceRowId = isset($_GET["since_rowid"]) ? intval($_GET["since_rowid"]) : 0;
+$sinceRelationshipId = isset($_GET["since_relationship_id"]) ? intval($_GET["since_relationship_id"]) : 0;
 $sinceGamets = isset($_GET["since_gamets"]) ? intval($_GET["since_gamets"]) : 0;
 $selectedEventType = isset($_GET["event_type"]) ? trim((string)$_GET["event_type"]) : '';
 $applySavedFilters = isset($_GET["use_saved_filters"]) && $_GET["use_saved_filters"];
@@ -39,6 +40,8 @@ $savedHiddenTypes = $applySavedFilters ? chimGetPersistedEventLogHiddenTypes($db
 
 // Base event type filter for the HerikaServer Events page.
 $typeFilter = chimBuildVisibleEventLogWhereClause($db, $selectedEventType, $savedHiddenTypes);
+$includeRelationships = ($selectedEventType === '' || $selectedEventType === 'relationship')
+    && !in_array('relationship', $savedHiddenTypes, true);
 
 // If specific event types are requested (for MCM conversation history panel)
 if (isset($_GET["event_types"]) && !empty($_GET["event_types"])) {
@@ -53,6 +56,7 @@ if (isset($_GET["event_types"]) && !empty($_GET["event_types"])) {
         }, $allowedTypes);
         
         $typeFilter = "type IN (" . implode(',', $quotedTypes) . ")";
+        $includeRelationships = in_array('relationship', $allowedTypes, true);
         // Note: Background chat filtering is handled by JavaScript on the client side
     }
 }
@@ -60,7 +64,7 @@ if (isset($_GET["event_types"]) && !empty($_GET["event_types"])) {
 // Build query based on filtering options
 if ($sinceGamets > 0) {
     // Filter by game timestamp - get events since a specific in-game time
-    $results = $db->fetchAll(
+    $eventResults = $db->fetchAll(
         "SELECT type, data, people, gamets, localts, ts, rowid
          FROM eventlog a
          WHERE $typeFilter
@@ -68,9 +72,13 @@ if ($sinceGamets > 0) {
          ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
          LIMIT $limit"
     );
-} else if ($sinceRowId > 0) {
+    $relationshipResults = $includeRelationships
+        ? chimFetchRelationshipHistoryTimelineRows($db, $limit, 0, 0, $sinceGamets)
+        : [];
+    $results = chimMergeTimelineRows($eventResults, $relationshipResults, $limit);
+} else if ($sinceRowId > 0 || $sinceRelationshipId > 0) {
     // Read the next contiguous rowid window so advancing the cursor cannot skip older rows in a burst.
-    $results = $db->fetchAll(
+    $eventResults = $db->fetchAll(
         "SELECT type, data, people, gamets, localts, ts, rowid
          FROM (
              SELECT type, data, people, gamets, localts, ts, rowid
@@ -82,15 +90,25 @@ if ($sinceGamets > 0) {
          ) incremental_events
          ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC"
     );
+    $relationshipResults = $includeRelationships
+        ? chimFetchRelationshipHistoryTimelineRows($db, $limit, 0, $sinceRelationshipId)
+        : [];
+    // Keep both bounded source windows so advancing either cursor cannot skip a burst from the other table.
+    $results = chimMergeTimelineRows($eventResults, $relationshipResults);
 } else {
-    // Normal paginated query - get most recent events by game timestamp (gamets)
-    $results = $db->fetchAll(
+    // Fetch enough from each source to page the merged timeline without copying relationship rows into eventlog.
+    $sourceWindow = $limit + $offset;
+    $eventResults = $db->fetchAll(
         "SELECT type, data, people, gamets, localts, ts, rowid
          FROM eventlog a
          WHERE $typeFilter
          ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
-         LIMIT $limit OFFSET $offset"
+         LIMIT $sourceWindow"
     );
+    $relationshipResults = $includeRelationships
+        ? chimFetchRelationshipHistoryTimelineRows($db, $sourceWindow)
+        : [];
+    $results = chimMergeTimelineRows($eventResults, $relationshipResults, $limit, $offset);
 }
 
 // Check if raw format is requested (for in-game UI)
@@ -126,7 +144,8 @@ $mappedResults = array_map(function ($row) use ($columnHeaders, $rawFormat) {
         $peoplePresent = chimRenderNarratorRoleplayText($peoplePresent);
     }
     
-    foreach ($row as $key => $value) {
+    foreach (['type', 'data', 'gamets', 'localts', 'ts', 'rowid'] as $key) {
+        $value = $row[$key] ?? '';
         if ($key === 'data' && function_exists('chimRenderNarratorRoleplayText')) {
             $value = chimRenderNarratorRoleplayText($value);
         }
@@ -160,20 +179,41 @@ $mappedResults = array_map(function ($row) use ($columnHeaders, $rawFormat) {
     
     // Add People Present field
     $mappedRow['People Present'] = htmlspecialchars($peoplePresent);
+    if (($row['source'] ?? '') === 'relationship_history') {
+        $mappedRow['Source'] = 'Relationship History';
+    }
     
     return $mappedRow;
 }, $results);
 
-// Get total count for pagination info - also exclude location types
-$countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE $typeFilter";
-$countResult = $db->fetchAll($countQuery);
-$totalRecords = $countResult[0]['total'];
-$totalPages = ceil($totalRecords / $limit);
+$incrementalRequest = $sinceRowId > 0 || $sinceRelationshipId > 0;
+$totalRecords = 0;
+$totalPages = 0;
+if (!$incrementalRequest) {
+    $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE $typeFilter";
+    $countResult = $db->fetchAll($countQuery);
+    $totalRecords = intval($countResult[0]['total'] ?? 0);
+    if ($includeRelationships) {
+        $totalRecords += chimCountRelationshipHistoryTimelineRows($db);
+    }
+    $totalPages = ceil($totalRecords / $limit);
+}
 
 // Get the latest gamets from the results for reference
 $latestGamets = 0;
 if (!empty($results) && isset($results[0]['gamets'])) {
     $latestGamets = intval($results[0]['gamets']);
+}
+
+$latestRelationshipId = $sinceRelationshipId;
+foreach ($relationshipResults ?? [] as $relationshipResult) {
+    $latestRelationshipId = max(
+        $latestRelationshipId,
+        intval($relationshipResult['relationship_history_id'] ?? 0)
+    );
+}
+if ($sinceRowId === 0 || count($relationshipResults ?? []) < $limit) {
+    $latestRelationshipId = max($latestRelationshipId, chimGetLatestRelationshipHistoryId($db));
 }
 
 $response = [
@@ -184,11 +224,12 @@ $response = [
         : 'The Narrator',
     'timestamp' => time(),
     'new_count' => count($mappedResults),
-    'latest_gamets' => $latestGamets
+    'latest_gamets' => $latestGamets,
+    'latest_relationship_id' => $latestRelationshipId,
 ];
 
 // Only include pagination if not doing incremental update
-if ($sinceRowId === 0) {
+if (!$incrementalRequest) {
     $response['pagination'] = [
         'current_page' => $page,
         'total_pages' => $totalPages,

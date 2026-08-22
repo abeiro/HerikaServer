@@ -54,14 +54,6 @@ final class HistoricContextTest extends DatabaseTestCase
 {
     private string $connString = "host=localhost dbname=testdb user=dwemer password=dwemer";
 
-    public function testRelationshipVisibilityRowsAreExcludedFromPromptHistory(): void
-    {
-        $this->assertTrue(herikaShouldExcludeEventFromPromptContext([
-            'type' => 'relationship',
-            'data' => "Lydia's affinity toward Player increased by 5 (20 to 25).",
-        ]));
-    }
-
     public function setUp(): void
     {
         parent::setUp();

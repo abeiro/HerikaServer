@@ -79,13 +79,217 @@ if (!function_exists('chimGetVisibleEventLogTypes')) {
     {
         $visibleWhereClause = chimBuildVisibleEventLogWhereClause($db, '', $additionalExcludedTypes);
 
-        return $db->fetchAll("
+        $types = $db->fetchAll("
             SELECT type, COUNT(*) AS total
             FROM eventlog
             WHERE {$visibleWhereClause}
             GROUP BY type
             ORDER BY type ASC
         ");
+
+        if (!in_array('relationship', $additionalExcludedTypes, true)) {
+            $relationshipRow = $db->fetchOne(
+                "SELECT 1 AS available
+                 FROM core_npc_master_history
+                 WHERE extended_data ->> '_chim_history_source' = 'relationship'
+                 LIMIT 1"
+            );
+            if ($relationshipRow) {
+                $types[] = [
+                    'type' => 'relationship',
+                    'total' => 1,
+                ];
+                usort($types, static function (array $left, array $right): int {
+                    return strcmp((string)($left['type'] ?? ''), (string)($right['type'] ?? ''));
+                });
+            }
+        }
+
+        return $types;
+    }
+}
+
+if (!function_exists('chimRelationshipHistoryTimelineCte')) {
+    /**
+     * Pair each NPC history snapshot with its predecessor without copying relationship data into eventlog.
+     */
+    function chimRelationshipHistoryTimelineCte()
+    {
+        return "WITH ordered_relationship_history AS (
+            SELECT
+                history_id,
+                npc_id,
+                npc_name,
+                extended_data,
+                gamets_last_updated,
+                created,
+                LAG(extended_data) OVER (
+                    PARTITION BY npc_id
+                    ORDER BY gamets_last_updated ASC NULLS FIRST, created ASC, history_id ASC
+                ) AS previous_extended_data
+            FROM core_npc_master_history
+        ), visible_relationship_history AS (
+            SELECT *
+            FROM ordered_relationship_history
+            WHERE extended_data ->> '_chim_history_source' = 'relationship'
+              AND COALESCE(extended_data -> 'relationships', '{}'::jsonb)
+                  IS DISTINCT FROM COALESCE(previous_extended_data -> 'relationships', '{}'::jsonb)
+        )";
+    }
+}
+
+if (!function_exists('chimCountRelationshipHistoryTimelineRows')) {
+    function chimCountRelationshipHistoryTimelineRows($db)
+    {
+        $row = $db->fetchOne(
+            chimRelationshipHistoryTimelineCte()
+            . " SELECT COUNT(*) AS total FROM visible_relationship_history"
+        );
+        return intval($row['total'] ?? 0);
+    }
+}
+
+if (!function_exists('chimGetLatestRelationshipHistoryId')) {
+    function chimGetLatestRelationshipHistoryId($db)
+    {
+        $row = $db->fetchOne(
+            "SELECT COALESCE(MAX(history_id), 0) AS latest_id
+             FROM core_npc_master_history
+             WHERE extended_data ->> '_chim_history_source' = 'relationship'"
+        );
+        return intval($row['latest_id'] ?? 0);
+    }
+}
+
+if (!function_exists('chimBuildRelationshipHistoryTimelineRows')) {
+    /**
+     * Turn persisted relationship snapshots into virtual timeline rows for user-facing views.
+     */
+    function chimBuildRelationshipHistoryTimelineRows(array $snapshots)
+    {
+        if (!class_exists('RelationshipManager')) {
+            require_once __DIR__ . DIRECTORY_SEPARATOR . 'relationship_manager.php';
+        }
+
+        $rows = [];
+        foreach ($snapshots as $snapshot) {
+            $historyId = intval($snapshot['history_id'] ?? 0);
+            if ($historyId <= 0) {
+                continue;
+            }
+
+            $currentExtended = json_decode((string)($snapshot['extended_data'] ?? ''), true);
+            $previousExtended = json_decode((string)($snapshot['previous_extended_data'] ?? ''), true);
+            $currentExtended = is_array($currentExtended) ? $currentExtended : [];
+            $previousExtended = is_array($previousExtended) ? $previousExtended : [];
+            $changes = RelationshipManager::buildRelationshipChangeSummaries(
+                (string)($snapshot['npc_name'] ?? ''),
+                $previousExtended['relationships'] ?? [],
+                $currentExtended['relationships'] ?? []
+            );
+            if (empty($changes)) {
+                continue;
+            }
+
+            $people = [];
+            $descriptions = [];
+            foreach ($changes as $change) {
+                $description = trim((string)($change['data'] ?? ''));
+                if ($description !== '') {
+                    $descriptions[] = $description;
+                }
+                foreach (explode('|', trim((string)($change['people'] ?? ''), '|')) as $person) {
+                    $person = trim($person);
+                    if ($person !== '' && !in_array($person, $people, true)) {
+                        $people[] = $person;
+                    }
+                }
+            }
+            if (empty($descriptions)) {
+                continue;
+            }
+
+            $localTimestamp = intval($snapshot['localts'] ?? 0);
+            $rows[] = [
+                'type' => 'relationship',
+                'data' => implode(' ', $descriptions),
+                'people' => '|' . implode('|', $people) . '|',
+                'gamets' => (int)($snapshot['gamets_last_updated'] ?? 0),
+                'localts' => $localTimestamp,
+                'ts' => $localTimestamp,
+                'rowid' => 'relationship:' . $historyId,
+                'relationship_history_id' => $historyId,
+                'source' => 'relationship_history',
+            ];
+        }
+
+        return $rows;
+    }
+}
+
+if (!function_exists('chimFetchRelationshipHistoryTimelineRows')) {
+    function chimFetchRelationshipHistoryTimelineRows(
+        $db,
+        $limit,
+        $offset = 0,
+        $sinceHistoryId = 0,
+        $sinceGamets = 0
+    ) {
+        $limit = max(1, min(5000, intval($limit)));
+        $offset = max(0, intval($offset));
+        $sinceHistoryId = max(0, intval($sinceHistoryId));
+        $sinceGamets = max(0, intval($sinceGamets));
+
+        $where = [];
+        if ($sinceHistoryId > 0) {
+            $where[] = "history_id > {$sinceHistoryId}";
+        }
+        if ($sinceGamets > 0) {
+            $where[] = "gamets_last_updated >= {$sinceGamets}";
+        }
+        $whereSql = empty($where) ? '' : 'WHERE ' . implode(' AND ', $where);
+        $incremental = $sinceHistoryId > 0;
+        $orderSql = $incremental
+            ? 'history_id ASC'
+            : 'gamets_last_updated DESC NULLS LAST, created DESC, history_id DESC';
+
+        $snapshots = $db->fetchAll(
+            chimRelationshipHistoryTimelineCte()
+            . " SELECT
+                    history_id,
+                    npc_name,
+                    extended_data,
+                    previous_extended_data,
+                    gamets_last_updated,
+                    EXTRACT(EPOCH FROM created)::bigint AS localts
+                FROM visible_relationship_history
+                {$whereSql}
+                ORDER BY {$orderSql}
+                LIMIT {$limit} OFFSET {$offset}"
+        );
+
+        return chimBuildRelationshipHistoryTimelineRows($snapshots);
+    }
+}
+
+if (!function_exists('chimMergeTimelineRows')) {
+    function chimMergeTimelineRows(array $eventRows, array $relationshipRows, $limit = 0, $offset = 0)
+    {
+        $rows = array_merge($eventRows, $relationshipRows);
+        usort($rows, static function (array $left, array $right): int {
+            foreach (['gamets', 'ts', 'localts'] as $key) {
+                $comparison = ((float)($right[$key] ?? 0)) <=> ((float)($left[$key] ?? 0));
+                if ($comparison !== 0) {
+                    return $comparison;
+                }
+            }
+            return intval($right['relationship_history_id'] ?? $right['rowid'] ?? 0)
+                <=> intval($left['relationship_history_id'] ?? $left['rowid'] ?? 0);
+        });
+
+        $offset = max(0, intval($offset));
+        $limit = max(0, intval($limit));
+        return $limit > 0 ? array_slice($rows, $offset, $limit) : array_slice($rows, $offset);
     }
 }
 

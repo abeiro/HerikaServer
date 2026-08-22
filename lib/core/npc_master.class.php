@@ -270,7 +270,7 @@ if (!function_exists('chimRelationshipTimelineStamp')) {
     // state differs from the history row that restoreNPC would consider for this game timestamp.
     // Identical state is deduplicated without a real-time throttle, so a reconnect cannot restore
     // a recent-but-stale snapshot. Loading an older save still excludes future relationship state.
-    function chimRelationshipTimelineStamp($npcId, $eventSource = '')
+    function chimRelationshipTimelineStamp($npcId)
     {
         try {
             $npcId = (int) $npcId;
@@ -283,15 +283,6 @@ if (!function_exists('chimRelationshipTimelineStamp')) {
             } elseif (function_exists('DataLastKnownGameTS')) {
                 $g = (float) DataLastKnownGameTS();
             }
-            $lastEvent = [];
-            if ($g <= 0 || !isset($GLOBALS['CACHE_LOCATION']) || !isset($GLOBALS['CACHE_PARTY'])) {
-                $lastEvent = $GLOBALS['db']->fetchOne(
-                    'SELECT gamets, location, party FROM eventlog ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC LIMIT 1'
-                ) ?: [];
-                if ($g <= 0) {
-                    $g = (float)($lastEvent['gamets'] ?? 0);
-                }
-            }
             if ($g > 0) {
                 $stampResult = $GLOBALS['db']->execQuery(
                     "UPDATE core_npc_master SET gamets_last_updated = {$g} WHERE id = {$npcId}"
@@ -302,13 +293,10 @@ if (!function_exists('chimRelationshipTimelineStamp')) {
             }
 
             $current = $GLOBALS['db']->fetchOne(
-                "SELECT npc_name, extended_data, gamets_last_updated FROM core_npc_master WHERE id = {$npcId} LIMIT 1"
+                "SELECT extended_data, gamets_last_updated FROM core_npc_master WHERE id = {$npcId} LIMIT 1"
             );
             if (!$current) {
                 throw new RuntimeException('NPC row not found after relationship write');
-            }
-            if ($g <= 0) {
-                $g = (float)($current['gamets_last_updated'] ?? 0);
             }
             $currentState = chimRelationshipTimelineState($current['extended_data'] ?? null);
             if ($currentState === null) {
@@ -336,17 +324,6 @@ if (!function_exists('chimRelationshipTimelineStamp')) {
                 ? chimRelationshipTimelineState($history['extended_data'] ?? null)
                 : null;
 
-            $currentExtended = json_decode((string)($current['extended_data'] ?? ''), true);
-            $historyExtended = $history
-                ? json_decode((string)($history['extended_data'] ?? ''), true)
-                : [];
-            $currentExtended = is_array($currentExtended) ? $currentExtended : [];
-            $historyExtended = is_array($historyExtended) ? $historyExtended : [];
-            $currentLastEval = trim((string)($currentExtended['relationships_last_eval'] ?? ''));
-            $historyLastEval = trim((string)($historyExtended['relationships_last_eval'] ?? ''));
-            $emitRelationshipEvents = $eventSource === 'conversation'
-                || ($currentLastEval !== '' && $currentLastEval !== $historyLastEval);
-
             if ($history && $historyState !== null && $currentState == $historyState) {
                 error_log("[REL] Timeline snapshot skipped for npc_id {$npcId} (relationship state unchanged)");
                 return true;
@@ -361,28 +338,6 @@ if (!function_exists('chimRelationshipTimelineStamp')) {
                 : null;
             if ($verifiedState === null || $currentState != $verifiedState) {
                 throw new RuntimeException('relationship history snapshot verification failed');
-            }
-
-            if ($emitRelationshipEvents && class_exists('RelationshipManager')) {
-                $events = RelationshipManager::buildRelationshipChangeEvents(
-                    $current['npc_name'] ?? '',
-                    $historyExtended['relationships'] ?? [],
-                    $currentExtended['relationships'] ?? []
-                );
-                $eventTimestamp = time();
-                foreach ($events as $event) {
-                    $GLOBALS['db']->insert('eventlog', [
-                        'ts' => $eventTimestamp,
-                        'gamets' => (int)$g,
-                        'type' => 'relationship',
-                        'data' => (string)($event['data'] ?? ''),
-                        'sess' => 'relationship',
-                        'localts' => $eventTimestamp,
-                        'people' => (string)($event['people'] ?? ''),
-                        'location' => (string)($GLOBALS['CACHE_LOCATION'] ?? ($lastEvent['location'] ?? '')),
-                        'party' => (string)($GLOBALS['CACHE_PARTY'] ?? ($lastEvent['party'] ?? '[]')),
-                    ]);
-                }
             }
 
             error_log("[REL] Timeline snapshot for npc_id {$npcId} (relationship progress persisted to history)");

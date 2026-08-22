@@ -387,9 +387,9 @@ class RelationshipManager {
     }
 
     /**
-     * Build compact Event Log rows from the relationship state that actually persisted.
+     * Describe relationship changes between two persisted relationship snapshots.
      */
-    public static function buildRelationshipChangeEvents($npcName, $oldRelationships, $newRelationships) {
+    public static function buildRelationshipChangeSummaries($npcName, $oldRelationships, $newRelationships) {
         $npcName = trim((string)$npcName);
         if ($npcName === '') {
             return [];
@@ -403,8 +403,13 @@ class RelationshipManager {
         }
 
         $events = [];
-        foreach ($newRelationships as $target => $newRelationship) {
+        $targets = array_values(array_unique(array_merge(
+            array_keys($oldRelationships),
+            array_keys($newRelationships)
+        )));
+        foreach ($targets as $target) {
             $oldRelationship = $oldRelationships[$target] ?? ['aff' => 0, 'type' => 'neutral'];
+            $newRelationship = $newRelationships[$target] ?? ['aff' => 0, 'type' => 'neutral'];
             $oldAffinity = (int)($oldRelationship['aff'] ?? 0);
             $newAffinity = (int)($newRelationship['aff'] ?? 0);
             $oldType = strtolower(trim((string)($oldRelationship['type'] ?? 'neutral')));
@@ -913,7 +918,7 @@ class RelationshipManager {
                 ]);
             });
             if ($result !== false && function_exists('chimRelationshipTimelineStamp')) {
-                chimRelationshipTimelineStamp($npcData['id'], 'conversation');
+                chimRelationshipTimelineStamp($npcData['id']);
             }
         }
 
