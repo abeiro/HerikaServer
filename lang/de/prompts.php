@@ -77,6 +77,8 @@ $PROMPTS=array(
         "cue"=>[
             "({$GLOBALS["HERIKA_NAME"]} spricht spontan über etwas, das in der gegenwärtigen Situation ganz natürlich in den Sinn kommt. Der Gedanke kann aus kürzlichen Ereignissen oder Gesprächen, der Umgebung, der Stimmung, Müdigkeit, Neugier oder etwas ganz Alltäglichem entstehen. Erfinde keinen dramatischen Moment, erzwinge kein neues Thema, treibe die Handlung nicht voran und verwende keine poetische, philosophische oder atmosphärische Sprache nur, damit die Zeile bedeutungsvoll wirkt. In einer ruhigen Situation darf die Zeile kurz, persönlich, verspielt, müde, neugierig oder alltäglich sein. Bei Gefahr oder emotionaler Anspannung soll sie kurz, vorsichtig und der Situation angemessen bleiben. Es soll wie ein Mensch klingen, der geistig anwesend ist, nicht wie jemand, der Inhalte erzeugt.) {$GLOBALS["TEMPLATE_DIALOG"]}"
 		]
+        //,"extra"=>["dontuse"=>true]   //DEAKTIVIERT WÄHREND DER BETA-PHASE
+        ,"extra" => ["dontuse" => (rand(0, 99) >= intval($GLOBALS["BORED_EVENT"]))]
     ],
     // Datenbank-Prompt (Guten Morgen)
 	"goodmorning"=>[

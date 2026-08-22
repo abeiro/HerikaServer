@@ -1,16 +1,5 @@
 <?php
 
-// Keep bored-event probability consistent across direct, narrator, and Rolemaster routes.
-function chimBoredEventChancePasses(int $chance, int $roll): bool
-{
-    $chance = max(0, min(100, $chance));
-    if ($roll < 0 || $roll > 99) {
-        return false;
-    }
-
-    return $roll < $chance;
-}
-
 function chimRolemasterBoredActorKey(string $actorName): string
 {
     return function_exists('mb_strtolower')

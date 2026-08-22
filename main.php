@@ -997,15 +997,6 @@ if (in_array($gameRequest[0],["bored"])) {
             $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
         logEvent($localGameRequest);
     }
-
-    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "rolemaster_bored.php");
-    $boredChance = max(0, min(100, intval($GLOBALS["BORED_EVENT"] ?? 0)));
-    $boredRoll = random_int(0, 99);
-    if (!chimBoredEventChancePasses($boredChance, $boredRoll)) {
-        Logger::debug("[BORED_CHANCE] Skipped bored event (roll {$boredRoll}, chance {$boredChance}%)");
-        terminate();
-    }
-    Logger::debug("[BORED_CHANCE] Accepted bored event (roll {$boredRoll}, chance {$boredChance}%)");
     
     if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"])) {
         Logger::info("[NARRATOR_BORED] Using narrator bored flow");
