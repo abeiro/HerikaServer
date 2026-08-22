@@ -1123,9 +1123,9 @@ if (
 // Avoid too much transactions.
 
 $byspassTradingActions = false;
-if ($lastBackgroundAction['action'] === 'BuyItem' || $lastBackgroundAction['action'] === 'SellItem') {
-    // Last action was BuyItem or SellItem.
-    // Avoid repeated trading actions in the same turn, as it can lead to infinite loops of buying/selling items.
+if ($lastBackgroundAction['action'] === 'BuyItem' || $lastBackgroundAction['action'] === 'SellItem' || $lastBackgroundAction['action'] === 'SellService') {
+    // Last action was BuyItem, SellItem or SellService.
+    // Avoid repeated trading actions in the same turn, as it can lead to infinite loops of buying/selling items/services.
     // 
     error_log(date("YMd H:i:s") . " [BGL RUN] HINT bypass Trading actions: true");
     $bypassTradingActions = true;
@@ -1135,7 +1135,7 @@ if ($lastBackgroundAction['action'] === 'BuyItem' || $lastBackgroundAction['acti
 
 $localHoursPassed = round($last_gamets - (1 / GAMETS_TO_HOURS), 2);
 
-$tradingGuard = $db->fetchAll("select * from actions_issued where actorname='$npcNameEscDb' and action in ('BuyItem','SellItem') and gamets>$localHoursPassed order by gamets desc limit 5");
+$tradingGuard = $db->fetchAll("select * from actions_issued where actorname='$npcNameEscDb' and action in ('BuyItem','SellItem','SellService') and gamets>$localHoursPassed order by gamets desc limit 5");
 if (sizeof($tradingGuard) > 3) {
     error_log(date("YMd H:i:s") . " [BGL RUN] HINT bypass Trading actions: because transactions>=3 in the last hour");
     $bypassTradingActions = true;
@@ -1349,7 +1349,7 @@ StayAtPlace:<Place>:<intent>
 - At an inn: rest, relax, socialize with patrons. E.G StayAtPlace:Inn:Relax, StayAtPlace:Inn:Socialize (Socialize is preferred if there are other NPCs present)
 - At home: rest, relax, socialize with companions,sleep. e.g StayAtPlace:Breezehome:Sleep
 - If gathering information or spreading rumors, remain for at least 24 hours.
-- After arriving somewhere, prefer interacting (SpeakTo, BuyItem, SellItem) before choosing StayAtPlace again, unless there is no meaningful interaction available.
+- After arriving somewhere, prefer interacting (SpeakTo, BuyItem, SellItem, SellService) before choosing StayAtPlace again, unless there is no meaningful interaction available.
 
 FindNPC:<NPC name>
 - Search for an NPC whose current location is unknown.
@@ -1408,6 +1408,11 @@ GiveItemTo:<NPC name>:<itemid>:<count>,<NPC name>:<itemid>:<count>
 GiveGoldTo:<NPC name>:<gold_amount>,<NPC name>:<gold_amount>
 - Give gold directly to one or more NPCs.
 - Use this for gifts, donations, payments, or helping allies where only gold should be transferred.
+
+SellService:<NPC name>:<service_description>:<total_gold_amount>,<NPC name>:<service_description>:<total_gold_amount>
+- Sell a service to another NPC. No inventory item is moved; only gold changes hands.
+- The service_description is a short label (e.g. 'healing', 'repair', 'lockpicking', 'mercenary work') describing what was provided.
+- total_gold_amount is the full price paid by the buyer for the service.
 PROMPT;
 }
 $step2Content .= <<<PROMPT2
@@ -1457,7 +1462,7 @@ if (
     * TravelTo (keeps moving if current location is not the final destination)";
 } else {
     if ($isSpeakAction) {
-        $actionChoiceDesc = "Hint: The character has just completed a conversation. Analyze the dialogue outcome first. If there is an unresolved transaction, continue it by choosing the appropriate action: BuyItem, SellItem, or GiveItemTo.
+        $actionChoiceDesc = "Hint: The character has just completed a conversation. Analyze the dialogue outcome first. If there is an unresolved transaction, continue it by choosing the appropriate action: BuyItem, SellItem, SellService, or GiveItemTo.
 If no transaction is pending, review the character's active goals and select the action that provides the highest progress toward achieving them.";
     } else {
         $actionChoiceDesc = "";
@@ -1495,6 +1500,11 @@ if (!$bypassTradingActions) {
         . "<action>GiveGoldTo:Lucan Valerius:25</action>\n"
         . "<reason>I want to support Lucan Valerius with some gold.</reason>\n"
         . "```";
+
+    $step2Content .= "Examples ```\n\n"
+        . "<action>SellService:Lucan Valerius:repair:50</action>\n"
+        . "<reason>I repaired Lucan's lock for 50 gold.</reason>\n"
+        . "```";
 }
 $step2Content .= "
 Rules:
@@ -1506,6 +1516,7 @@ For example:
 * To Sell/Buy Item to a trader that maybe is not present: MoveTo:<NPC/Actor name> ->(next iteration) SpeakTo:<NPC/Actor name> ->(next iteration) SellItem:.. 
 * To gift items without taking money: SpeakTo:<NPC/Actor name> ->(next iteration) GiveItemTo:<NPC/Actor name>:<itemid>:<count>
 * To give money without trading items: SpeakTo:<NPC/Actor name> ->(next iteration) GiveGoldTo:<NPC/Actor name>:<amount>
+* To sell a service: SpeakTo:<NPC/Actor name> ->(next iteration) SellService:<NPC/Actor name>:<service_description>:<amount>
 * Buy food at an inn: SpeakTo:<NPC innkeeper> ... ->(next iteration),BuyItem:<NPC/Actor name>... ->(next iteration) StayAtPlace:Inn ...
 * Relax/Socialize at an inn: SpeakTo:<NPC/Actor name> ->(next iteration) ->(next iteration) StayAtPlace:Inn 
 * Relax at home: SpeakTo:<NPC/Actor name> ->(next iteration) StayAtPlace:Home:Sleep
@@ -1619,6 +1630,12 @@ if (!empty($parsed['action'])) {
             break;
         case 'GiveGoldTo':
             handleGiveGoldToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db);
+            unset($parsed['notification']);
+            unset($parsed['rumor']);
+
+            break;
+        case 'SellService':
+            handleSellServiceAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db);
             unset($parsed['notification']);
             unset($parsed['rumor']);
 
