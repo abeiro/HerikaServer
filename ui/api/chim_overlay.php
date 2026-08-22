@@ -21,6 +21,7 @@ require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."profile_loader.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."logger.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."{$GLOBALS["DBDRIVER"]}.class.php");
 require_once(LIB_PATH .DIRECTORY_SEPARATOR."core".DIRECTORY_SEPARATOR."player.class.php");
+require_once(LIB_PATH .DIRECTORY_SEPARATOR."visual_context.php");
 
 $db = new sql();
 
@@ -57,6 +58,38 @@ $allowedRechatModes = ['tight', 'conversational', 'group', 'random'];
 $rechatMode = strtolower(trim(chimGetGeneralSetting('RECHAT_MODE', 'random')));
 if (!in_array($rechatMode, $allowedRechatModes, true)) {
     $rechatMode = 'random';
+}
+
+// Report whether the current location has prompt-eligible visual context without
+// running table-creation DDL on the chatbox's five-second status polling path.
+$visualContextAvailable = false;
+$visualContextLocation = '';
+$lastLocation = $db->fetchOne("SELECT data, to_regclass('public.visual_context') AS visual_context_table
+    FROM eventlog
+    WHERE type IN ('infoloc', 'location') AND data LIKE '%(Context%'
+    ORDER BY gamets DESC, ts DESC, localts DESC
+    LIMIT 1");
+if ($lastLocation && !empty($lastLocation['visual_context_table'])) {
+    $visualContextLocation = chimVisualContextLocationBase($lastLocation['data'] ?? '');
+    if ($visualContextLocation !== '') {
+        $ttlMinutes = max(1, min(chimGetGeneralSettingInt('VISUAL_CONTEXT_SCENE_TTL_MINUTES', 10), 1440));
+        $locationLiteral = $db->escapeLiteral($visualContextLocation);
+        $visualContextRow = $db->fetchOne("SELECT EXISTS (
+            SELECT 1
+            FROM public.visual_context
+            WHERE active = TRUE
+              AND description <> ''
+              AND LOWER(BTRIM(REGEXP_REPLACE(
+                    SPLIT_PART(location_name, ',', 1),
+                    '^\\(?context[[:space:]]+(new[[:space:]]+)?location:[[:space:]]*',
+                    '',
+                    'i'
+                  ), ' ()')) = LOWER({$locationLiteral})
+              AND (locked = TRUE OR captured_at >= CURRENT_TIMESTAMP - INTERVAL '{$ttlMinutes} minutes')
+        ) AS available");
+        $availableValue = strtolower(trim((string)($visualContextRow['available'] ?? '')));
+        $visualContextAvailable = in_array($availableValue, ['1', 't', 'true'], true);
+    }
 }
 
 // Get active model slot
@@ -191,6 +224,8 @@ $response = [
         'player_name' => $playerName,
         'focus_chat' => $focusChat,
         'rechat_mode' => $rechatMode,
+        'visual_context_available' => $visualContextAvailable,
+        'visual_context_location' => $visualContextLocation,
         'active_model_slot' => $activeModelSlot,
         'active_model_label' => $activeSlotLabel,
         'active_model_name' => $activeModelName,
