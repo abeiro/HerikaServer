@@ -426,7 +426,7 @@ function buildInventoryMetadataValue(array $items): array
                         'baseid' => $item['baseid'],
                         'plugin' => $pluginName,
                         'name' => trim($item['name']),
-                        'price' => intval($item['goldvalue'] ),
+                        'price' => intval($item['goldvalue'] ?? 0),
                     ],
                     ["baseid" => $item['baseid'], "plugin" => $pluginName]
                 );
