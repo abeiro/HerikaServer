@@ -347,7 +347,7 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
 
         if (
             strpos($flatId, 'PROMPT_') === 0
-            || in_array($flatId, ['EMOTEMOODS', 'DETECT_MAGIC_EVENT', 'MAGIC_EVENT_BLACKLIST', 'LOCATION_BLACKLIST', 'ITEM_BLACKLIST', 'EVENT_TYPE_FILTER'], true)
+            || in_array($flatId, ['EMOTEMOODS', 'DETECT_MAGIC_EVENT', 'MAGIC_EVENT_BLACKLIST', 'LOCATION_BLACKLIST', 'ITEM_BLACKLIST', 'EVENT_TYPE_FILTER', 'RELATIONSHIP_UPDATE_CHANCE'], true)
         ) {
             return 'Prompt';
         }
@@ -370,7 +370,7 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
 
         if (
             strpos($flatId, 'CORE_CONNECTOR_') === 0
-            || in_array($flatId, ['RELLLM_CONNECTOR', 'RELATIONSHIP_UPDATE_CHANCE', 'GLOBAL_STT_CONNECTOR_ID', 'GLOBAL_ITT_CONNECTOR_ID'], true)
+            || in_array($flatId, ['RELLLM_CONNECTOR', 'GLOBAL_STT_CONNECTOR_ID', 'GLOBAL_ITT_CONNECTOR_ID'], true)
         ) {
             return 'Global Connectors';
         }
