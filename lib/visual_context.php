@@ -74,6 +74,100 @@ if (!function_exists('chimVisualContextText')) {
     }
 }
 
+if (!function_exists('chimVisualActorCandidates')) {
+    // Validate the bounded actor identity payload supplied with one screenshot.
+    function chimVisualActorCandidates($value): array
+    {
+        if (is_string($value)) {
+            if (strlen($value) > 12000) {
+                return [];
+            }
+            $value = json_decode($value, true);
+        }
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $candidates = [];
+        foreach (array_slice($value, 0, 12) as $candidate) {
+            if (!is_array($candidate)) {
+                continue;
+            }
+
+            $name = preg_replace('/\s+/u', ' ', chimVisualContextText($candidate['name'] ?? '', 120)) ?? '';
+            $screenX = $candidate['screen_x'] ?? null;
+            $screenY = $candidate['screen_y'] ?? null;
+            if ($name === '' || !is_numeric($screenX) || !is_numeric($screenY)) {
+                continue;
+            }
+            $screenX = floatval($screenX);
+            $screenY = floatval($screenY);
+            if ($screenX < 0.0 || $screenX > 1.0 || $screenY < 0.0 || $screenY > 1.0) {
+                continue;
+            }
+
+            $refId = strtoupper(chimVisualContextText($candidate['ref_id'] ?? '', 8));
+            $baseId = strtoupper(chimVisualContextText($candidate['base_id'] ?? '', 8));
+            $plugin = preg_replace('/\s+/u', ' ', chimVisualContextText($candidate['plugin'] ?? '', 255)) ?? '';
+            $distance = $candidate['distance_game_units'] ?? null;
+            $candidates[] = [
+                'name' => $name,
+                'ref_id' => preg_match('/^[0-9A-F]{8}$/', $refId) ? $refId : '',
+                'base_id' => preg_match('/^[0-9A-F]{8}$/', $baseId) ? $baseId : '',
+                'plugin' => $plugin,
+                'screen_x' => $screenX,
+                'screen_y' => $screenY,
+                'distance_game_units' => is_numeric($distance) ? max(0, min(5000, intval($distance))) : null,
+                'crosshair_target' => ($candidate['crosshair_target'] ?? false) === true,
+                'dead' => ($candidate['dead'] ?? false) === true,
+            ];
+        }
+
+        return $candidates;
+    }
+}
+
+if (!function_exists('chimBuildVisualActorCandidateHints')) {
+    function chimBuildVisualActorCandidateHints(array $candidates): string
+    {
+        if (!$candidates) {
+            return '';
+        }
+
+        $lines = [
+            'Actor identity candidates from the exact captured frame follow. Coordinates are normalized image positions: (0,0) is top-left and (1,1) is bottom-right.',
+            'Candidates are not proof of visibility or identity. Name someone only when the image appearance and approximate position support the match. If uncertain, describe the person without a name.',
+        ];
+        foreach ($candidates as $candidate) {
+            $details = sprintf(
+                '- %s at (%.3f, %.3f)',
+                $candidate['name'],
+                $candidate['screen_x'],
+                $candidate['screen_y']
+            );
+            if ($candidate['ref_id'] !== '') {
+                $details .= ', RefID ' . $candidate['ref_id'];
+            }
+            if (!empty($candidate['crosshair_target'])) {
+                $details .= ', crosshair target';
+            }
+            $lines[] = $details;
+        }
+
+        return implode("\n", $lines) . "\n";
+    }
+}
+
+if (!function_exists('chimBuildVisualOnlyVisionContext')) {
+    function chimBuildVisualOnlyVisionContext(array $head, string $imageDescription): array
+    {
+        return array_merge($head, [[
+            'role' => 'user',
+            'content' => $imageDescription,
+        ]]);
+    }
+}
+
 if (!function_exists('chimVisualContextLocationBase')) {
     function chimVisualContextLocationBase($value): string
     {

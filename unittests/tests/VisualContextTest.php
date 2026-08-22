@@ -35,6 +35,59 @@ final class VisualContextTest extends TestCase
         );
     }
 
+    public function testActorCandidatesAreValidatedAndBounded(): void
+    {
+        $candidates = chimVisualActorCandidates(json_encode([
+            [
+                'name' => " Brelyna\nMaryon ",
+                'ref_id' => '0001C196',
+                'base_id' => '0001C195',
+                'plugin' => 'Skyrim.esm',
+                'screen_x' => 0.25,
+                'screen_y' => 0.75,
+                'distance_game_units' => 420,
+                'crosshair_target' => true,
+                'dead' => false,
+            ],
+            ['name' => 'Off-screen actor', 'screen_x' => 1.2, 'screen_y' => 0.5],
+            ['name' => '', 'screen_x' => 0.5, 'screen_y' => 0.5],
+        ], JSON_THROW_ON_ERROR));
+
+        $this->assertCount(1, $candidates);
+        $this->assertSame('Brelyna Maryon', $candidates[0]['name']);
+        $this->assertSame('0001C196', $candidates[0]['ref_id']);
+        $this->assertSame(0.25, $candidates[0]['screen_x']);
+        $this->assertTrue($candidates[0]['crosshair_target']);
+    }
+
+    public function testActorCandidateHintsRequireVisualConfirmation(): void
+    {
+        $hints = chimBuildVisualActorCandidateHints(chimVisualActorCandidates([[
+            'name' => 'Enthir',
+            'ref_id' => '0001C1AA',
+            'screen_x' => 0.8,
+            'screen_y' => 0.4,
+            'crosshair_target' => false,
+        ]]));
+
+        $this->assertStringContainsString('Candidates are not proof of visibility or identity', $hints);
+        $this->assertStringContainsString('Enthir at (0.800, 0.400)', $hints);
+    }
+
+    public function testVisionContextContainsOnlySystemPromptAndImageDescription(): void
+    {
+        $context = chimBuildVisualOnlyVisionContext(
+            [['role' => 'system', 'content' => 'Visual-only instructions']],
+            "Soulgaze image description: 'One unnamed person stands beside a basin.'"
+        );
+
+        $this->assertSame([
+            ['role' => 'system', 'content' => 'Visual-only instructions'],
+            ['role' => 'user', 'content' => "Soulgaze image description: 'One unnamed person stands beside a basin.'"],
+        ], $context);
+        $this->assertStringNotContainsString('nearby_actors', json_encode($context, JSON_THROW_ON_ERROR));
+    }
+
     public function testGalleryFilenameUsesLocationAndSkyrimTime(): void
     {
         $this->assertSame(
