@@ -145,7 +145,6 @@ function chimPrismaProfileMetadataCatalog(): array
         ],
         'Bored Event' => [
             ['name' => 'BORED_EVENT', 'type' => 'integer', 'min' => 0, 'max' => 100, 'copyable' => true],
-            ['name' => 'BORED_EVENT_SERVERSIDE', 'type' => 'boolean', 'copyable' => true],
         ],
         'Context' => [
             ['name' => 'CONTEXT_HISTORY', 'type' => 'integer', 'min' => 0, 'max' => 200, 'copyable' => true],

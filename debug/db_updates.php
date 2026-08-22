@@ -7691,6 +7691,56 @@ if ($checkVersion("prompts") < 20260805001) {
     }
 }
 
+if ($checkVersion("prompts") < 20260821003) {
+    Logger::debug("Applying prompts 20260821003 - ground autonomous bored dialogue");
+
+    require_once(__DIR__ . "/../lib/rolemaster_bored.php");
+    $boredSystemPrompt = $db->escape(chimRolemasterDefaultBoredSystemPrompt());
+    $systemDescription = $db->escape(
+        "System prompt used only for autonomous Smart Bored planning. "
+        . "Replaces the general Director system prompt and examples for this route. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+    $boredEventRules = $db->escape(chimRolemasterDefaultBoredEventRules());
+    $rulesDescription = $db->escape(
+        "Complete Rolemaster rules used only for autonomous Smart Bored events. "
+        . "Supports {SEED_ACTOR_RULE}, {SEED_ACTOR}, {NEARBY_ACTORS}, {PLAYER_NAME}, and {FUNCTION_LIST} placeholders. "
+        . "Replaces the general Director instruction rules for this route. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+
+    $systemPromptOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_system_prompt', '{$boredSystemPrompt}', '{$systemDescription}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    $rulesPromptOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_rules', '{$boredEventRules}', '{$rulesDescription}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+    $profileMetadataOk = $db->execQuery("
+        UPDATE public.core_profiles
+        SET metadata = metadata - 'BORED_EVENT_SERVERSIDE'
+        WHERE metadata ? 'BORED_EVENT_SERVERSIDE'
+    ") !== false;
+    $migrationOk = $systemPromptOk && $rulesPromptOk && $profileMetadataOk;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260821003);
+        Logger::info("Applied patch prompts 20260821003 - grounded autonomous bored dialogue");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260821003");
+    }
+}
+
 if ($checkVersion("memory_summary") < 20260721001) {
     Logger::debug("Applying memory_summary 20260721001 - normalize diary memory owners");
 
