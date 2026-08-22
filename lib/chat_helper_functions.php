@@ -2843,10 +2843,10 @@ function chimParseChatModeShortcut($message)
     $message = (string)$message;
     $rules = [
         ["prefix" => "((", "mode" => "INJECTION_LOG", "suffix" => "))"],
-        ["prefix" => "~~", "mode" => "CLOSE", "suffix" => ""],
+        ["prefix" => "||", "mode" => "CLOSE", "suffix" => ""],
         ["prefix" => "!!", "mode" => "SHOUT", "suffix" => ""],
         ["prefix" => "**", "mode" => "AUTOCHAT", "suffix" => ""],
-        ["prefix" => "~", "mode" => "WHISPER", "suffix" => ""],
+        ["prefix" => "|", "mode" => "WHISPER", "suffix" => ""],
         ["prefix" => "@", "mode" => "NARRATOR", "suffix" => ""],
         ["prefix" => ">", "mode" => "DIRECTOR", "suffix" => ""],
         ["prefix" => "#", "mode" => "CHEATMODE", "suffix" => ""],
