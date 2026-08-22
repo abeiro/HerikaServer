@@ -1869,20 +1869,6 @@ if (!$isEmbed) {
         width: 17px;
         text-align: center;
     }
-    .behavior-dirty-flag {
-        display: inline-block;
-        margin: 6px 0 0 7px;
-        padding: 2px 8px;
-        border: 1px solid rgba(242, 124, 17, 0.5);
-        border-radius: 999px;
-        background: rgba(242, 124, 17, 0.12);
-        color: #f3d8a0;
-        font-size: 11px;
-        font-weight: 700;
-    }
-    .behavior-dirty-flag[hidden] {
-        display: none;
-    }
     .behavior-dirty-summary {
         color: #d2b078;
         font-size: 0.92em;
@@ -2547,7 +2533,6 @@ if (!$isEmbed) {
                                                 <?php endif; ?>
                                             <?php endforeach; ?>
                                         </fieldset>
-                                        <span class="behavior-dirty-flag" data-behavior-dirty-flag="<?php echo h($codeName); ?>" hidden>Unsaved</span>
                                     </td>
                                     <td data-label="Actions">
                                         <div class="action-row-buttons">
@@ -2921,7 +2906,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     const saveButtonLabel = saveButton.textContent.trim();
-    const dirtyFlags = Array.from(document.querySelectorAll("[data-behavior-dirty-flag]"));
 
     function isDirty(checkbox) {
         return checkbox.checked !== (checkbox.dataset.behaviorInitial === "1");
@@ -2957,10 +2941,6 @@ document.addEventListener("DOMContentLoaded", function() {
             if (toggle) {
                 toggle.classList.toggle("is-dirty", isDirty(checkbox));
             }
-        });
-
-        dirtyFlags.forEach((flag) => {
-            flag.hidden = !changes[flag.dataset.behaviorDirtyFlag || ""];
         });
 
         saveButton.disabled = changedFieldCount === 0;
