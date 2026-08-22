@@ -2430,6 +2430,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                             <button type="button" class="npc-bgl-control" data-bgl-setting="auto_actions" disabled><span class="npc-bgl-control-dot"></span><span><strong>Auto Actions</strong><small>Allow scheduled autonomous actions.</small></span></button>
                             <button type="button" class="npc-bgl-control" data-bgl-setting="send_letters" disabled><span class="npc-bgl-control-dot"></span><span><strong>Send Letters</strong><small>Allow this NPC to send BgL letters.</small></span></button>
                             <button type="button" class="npc-bgl-control" data-bgl-setting="hourly_tracking" disabled><span class="npc-bgl-control-dot"></span><span><strong>Hourly Tracking</strong><small>Keep the NPC's map location updated.</small></span></button>
+                            <button type="button" class="npc-bgl-control" data-bgl-setting="combat_participation" disabled><span class="npc-bgl-control-dot"></span><span><strong>Combat Participation</strong><small>Allow this NPC to be selected for Background Life combat.</small></span></button>
+                            <button type="button" class="npc-bgl-control" data-bgl-setting="combat_initiate" disabled><span class="npc-bgl-control-dot"></span><span><strong>Initiate Combat</strong><small>Allow this NPC to choose Attack NPC.</small></span></button>
+                            <button type="button" class="npc-bgl-control" data-bgl-setting="combat_lethal" disabled><span class="npc-bgl-control-dot"></span><span><strong>Lethal Outcomes</strong><small>Allow this NPC to die in a resolved encounter.</small></span></button>
+                            <button type="button" class="npc-bgl-control" data-bgl-setting="combat_loot" disabled><span class="npc-bgl-control-dot"></span><span><strong>Loot Encounters</strong><small>Allow this NPC to take eligible loot after winning.</small></span></button>
                         </div>
                     </section>
                     <section class="npc-bgl-section">

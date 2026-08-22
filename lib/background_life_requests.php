@@ -62,6 +62,10 @@ function chimBglNpcStatus(NpcMaster $npcMaster, ?array $npc, string $requestedRe
             'auto_actions' => false,
             'send_letters' => false,
             'hourly_tracking' => false,
+            'combat_participation' => false,
+            'combat_initiate' => false,
+            'combat_lethal' => false,
+            'combat_loot' => false,
             'location' => '',
         ];
     }
@@ -81,6 +85,10 @@ function chimBglNpcStatus(NpcMaster $npcMaster, ?array $npc, string $requestedRe
         'auto_actions' => chimBglBoolean($extendedData['background_life_commands'] ?? false),
         'send_letters' => chimBglBoolean($extendedData['background_life_letters'] ?? false),
         'hourly_tracking' => chimBglBoolean($metadata['gps_track'] ?? false),
+        'combat_participation' => chimBglBoolean($extendedData['background_life_combat_participation'] ?? false),
+        'combat_initiate' => chimBglBoolean($extendedData['background_life_combat_initiate'] ?? false),
+        'combat_lethal' => chimBglBoolean($extendedData['background_life_combat_lethal'] ?? false),
+        'combat_loot' => chimBglBoolean($extendedData['background_life_combat_loot'] ?? false),
         'location' => $location,
     ];
 }
@@ -92,6 +100,10 @@ function chimBglUpdateNpcSetting(NpcMaster $npcMaster, array $npc, string $setti
         'auto_actions' => ['container' => 'extended', 'key' => 'background_life_commands'],
         'send_letters' => ['container' => 'extended', 'key' => 'background_life_letters'],
         'hourly_tracking' => ['container' => 'metadata', 'key' => 'gps_track'],
+        'combat_participation' => ['container' => 'extended', 'key' => 'background_life_combat_participation'],
+        'combat_initiate' => ['container' => 'extended', 'key' => 'background_life_combat_initiate'],
+        'combat_lethal' => ['container' => 'extended', 'key' => 'background_life_combat_lethal'],
+        'combat_loot' => ['container' => 'extended', 'key' => 'background_life_combat_loot'],
     ];
     if (!isset($settingMap[$setting])) {
         throw new InvalidArgumentException('Unsupported Background Life setting');

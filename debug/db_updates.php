@@ -7112,6 +7112,82 @@ if ($checkVersion("bgl_history") < 20260729001) {
 
 }
 
+if ($checkVersion("bgl_encounters") < 20260810001) {
+    Logger::debug("Applying bgl_encounters 20260810001 - create Background Life combat encounter tables");
+
+    $db->execQuery("BEGIN");
+    try {
+        $db->execQuery("
+            CREATE TABLE IF NOT EXISTS public.bgl_encounters (
+                id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                encounter_key varchar(64) NOT NULL UNIQUE,
+                initiator_npc_id bigint NOT NULL,
+                initiator_refid varchar(16) NOT NULL,
+                target_npc_id bigint NOT NULL,
+                target_refid varchar(16) NOT NULL,
+                gamets bigint NOT NULL,
+                ts bigint,
+                localts bigint NOT NULL,
+                state varchar(32) NOT NULL DEFAULT 'pending',
+                result varchar(32),
+                winning_side varchar(16),
+                reason text,
+                narrative text,
+                location text,
+                scene jsonb NOT NULL DEFAULT '{}'::jsonb,
+                resolution jsonb NOT NULL DEFAULT '{}'::jsonb,
+                loot_status varchar(32) NOT NULL DEFAULT 'locked',
+                completed_localts bigint
+            )
+        ");
+        $db->execQuery("
+            CREATE TABLE IF NOT EXISTS public.bgl_encounter_participants (
+                id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                encounter_id bigint NOT NULL REFERENCES public.bgl_encounters(id) ON DELETE CASCADE,
+                npc_id bigint NOT NULL,
+                npc_name varchar NOT NULL,
+                refid varchar(16) NOT NULL,
+                side varchar(16) NOT NULL,
+                initial_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
+                intended_outcome varchar(32) NOT NULL,
+                applied_outcome varchar(32),
+                final_coords jsonb NOT NULL DEFAULT '{}'::jsonb,
+                application_status varchar(32) NOT NULL DEFAULT 'pending',
+                corpse_status varchar(32) NOT NULL DEFAULT 'not_applicable',
+                apply_attempts integer NOT NULL DEFAULT 0,
+                last_attempt_localts bigint,
+                UNIQUE (encounter_id, npc_id)
+            )
+        ");
+        $db->execQuery("
+            CREATE TABLE IF NOT EXISTS public.bgl_encounter_loot (
+                id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                encounter_id bigint NOT NULL REFERENCES public.bgl_encounters(id) ON DELETE CASCADE,
+                source_participant_id bigint NOT NULL REFERENCES public.bgl_encounter_participants(id) ON DELETE CASCADE,
+                recipient_participant_id bigint NOT NULL REFERENCES public.bgl_encounter_participants(id) ON DELETE CASCADE,
+                itemid varchar(16) NOT NULL,
+                item_name varchar,
+                requested_count integer NOT NULL,
+                applied_count integer NOT NULL DEFAULT 0,
+                status varchar(32) NOT NULL DEFAULT 'pending',
+                apply_attempts integer NOT NULL DEFAULT 0,
+                last_attempt_localts bigint,
+                UNIQUE (encounter_id, source_participant_id, recipient_participant_id, itemid)
+            )
+        ");
+        $db->execQuery("CREATE INDEX IF NOT EXISTS bgl_encounters_gamets_idx ON public.bgl_encounters(gamets)");
+        $db->execQuery("CREATE INDEX IF NOT EXISTS bgl_encounter_participants_npc_idx ON public.bgl_encounter_participants(npc_id, encounter_id)");
+        $db->execQuery("CREATE INDEX IF NOT EXISTS bgl_encounter_loot_encounter_idx ON public.bgl_encounter_loot(encounter_id, status)");
+        $db->execQuery("COMMIT");
+    } catch (Throwable $e) {
+        $db->execQuery("ROLLBACK");
+        throw $e;
+    }
+
+    $updateVersion("bgl_encounters", 20260810001);
+    Logger::info("Applied patch bgl_encounters 20260810001");
+}
+
 if ($checkVersion("oghma") < 20260625001) {
     Logger::debug("Applying oghma 20260625001 - ensure topic has a unique constraint for upserts");
 
