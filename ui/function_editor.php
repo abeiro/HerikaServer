@@ -341,6 +341,67 @@ function functionEditorShouldOnlyShowDefaultFallback($fieldKey)
     ], true);
 }
 
+/**
+ * Boolean settings that were promoted out of the Advanced Options modal and are
+ * now edited directly in the action table's Behavior column. Ordered for display.
+ */
+function functionEditorGetPromotedBehaviorFieldKeys()
+{
+    return [
+        'confirmation_required',
+        'followup_enabled',
+        'followup_use_functions_again',
+    ];
+}
+
+function functionEditorIsPromotedBehaviorFieldKey($fieldKey)
+{
+    return in_array(trim(strval($fieldKey)), functionEditorGetPromotedBehaviorFieldKeys(), true);
+}
+
+function functionEditorFilterPromotedBehaviorFields($fields, $keepPromoted)
+{
+    $filtered = [];
+    foreach ((array) $fields as $field) {
+        if (!is_array($field)) {
+            continue;
+        }
+
+        if (functionEditorIsPromotedBehaviorFieldKey($field['key'] ?? '') === (bool) $keepPromoted) {
+            $filtered[] = $field;
+        }
+    }
+
+    return $filtered;
+}
+
+/**
+ * Promoted behavior fields keyed by field key and ordered for display. Keys missing
+ * from the result are unsupported for that action (for example, confirmation on
+ * read-only or server-side actions).
+ */
+function functionEditorIndexPromotedBehaviorFields($fields)
+{
+    $available = [];
+    foreach (functionEditorFilterPromotedBehaviorFields($fields, true) as $field) {
+        $available[strval($field['key'])] = $field;
+    }
+
+    $ordered = [];
+    foreach (functionEditorGetPromotedBehaviorFieldKeys() as $fieldKey) {
+        if (isset($available[$fieldKey])) {
+            $ordered[$fieldKey] = $available[$fieldKey];
+        }
+    }
+
+    return $ordered;
+}
+
+function functionEditorGetPromotedBehaviorFieldsForRow($row)
+{
+    return functionEditorIndexPromotedBehaviorFields(functionEditorGetEditableConfigFieldsForRow($row));
+}
+
 function functionEditorNormalizeSubmittedConfigValue($field, $submittedConfig, &$errorMessage)
 {
     $field = function_exists('herikaActionCatalogNormalizeEditorField')
@@ -593,7 +654,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
         $codeName = functionEditorTrim($_POST["code_name"] ?? "");
         $advancedOpenCode = $codeName;
         $row = function_exists('herikaGetActionCatalogRow') ? herikaGetActionCatalogRow($codeName) : null;
-        $configFields = functionEditorGetEditableConfigFieldsForRow($row);
+        // Promoted behavior toggles live in the table's Behavior column, so the advanced
+        // form neither renders nor writes them and cannot clobber them with defaults.
+        $configFields = functionEditorFilterPromotedBehaviorFields(
+            functionEditorGetEditableConfigFieldsForRow($row),
+            false
+        );
         $submittedConfig = $_POST["config"] ?? [];
 
         if (!function_exists("herikaActionCatalogDbReady") || !herikaActionCatalogDbReady()) {
@@ -648,6 +714,105 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["action"])) {
                         $GLOBALS["db"]->execQuery("ROLLBACK");
                     }
                     $message = "Could not update advanced options.";
+                    $messageType = "err";
+                }
+            }
+        }
+    } elseif ($_POST["action"] === "save_behavior_bulk") {
+        // One JSON payload keeps the request under max_input_vars no matter how many rows changed.
+        $decodedPayload = json_decode(strval($_POST["behavior_payload"] ?? ""), true);
+        $submittedRows = is_array($decodedPayload) && is_array($decodedPayload["rows"] ?? null)
+            ? $decodedPayload["rows"]
+            : null;
+
+        if (!function_exists("herikaActionCatalogDbReady") || !herikaActionCatalogDbReady()) {
+            $message = "Action catalog tables are not available yet. Run database updates first.";
+            $messageType = "err";
+        } elseif (!function_exists("herikaActionCatalogUpsertCustomConfig")) {
+            $message = "Action catalog custom config support is not available in this build.";
+            $messageType = "err";
+        } elseif ($submittedRows === null) {
+            $message = "Could not read the submitted behavior changes.";
+            $messageType = "err";
+        } elseif (count($submittedRows) === 0) {
+            $message = "No behavior changes to save.";
+            $messageType = "err";
+        } elseif (count($submittedRows) > 2000) {
+            $message = "Too many behavior changes were submitted at once.";
+            $messageType = "err";
+        } else {
+            $errorMessage = "";
+            $pendingUpdates = [];
+
+            foreach ($submittedRows as $submittedCode => $submittedValues) {
+                $candidateCode = functionEditorTrim($submittedCode);
+                if ($candidateCode === "" || !is_array($submittedValues) || count($submittedValues) === 0) {
+                    $errorMessage = "Received an invalid behavior change entry.";
+                    break;
+                }
+
+                $candidateRow = function_exists('herikaGetActionCatalogRow') ? herikaGetActionCatalogRow($candidateCode) : null;
+                if (!is_array($candidateRow)) {
+                    $errorMessage = "Unknown action code name: " . $candidateCode . ".";
+                    break;
+                }
+
+                $promotedFields = functionEditorGetPromotedBehaviorFieldsForRow($candidateRow);
+                $rowValues = [];
+                foreach ($submittedValues as $submittedKey => $submittedValue) {
+                    $candidateKey = functionEditorTrim($submittedKey);
+                    if (!isset($promotedFields[$candidateKey])) {
+                        $errorMessage = $candidateCode . " does not support the requested behavior setting.";
+                        break 2;
+                    }
+
+                    $normalizedValue = functionEditorNormalizeSubmittedConfigValue(
+                        $promotedFields[$candidateKey],
+                        [$candidateKey => $submittedValue],
+                        $errorMessage
+                    );
+                    if ($errorMessage !== "") {
+                        break 2;
+                    }
+
+                    $rowValues[$candidateKey] = $normalizedValue;
+                }
+
+                // Use the catalog's canonical casing so the upsert targets the right row.
+                $pendingUpdates[strval($candidateRow['code_name'] ?? $candidateCode)] = $rowValues;
+            }
+
+            if ($errorMessage !== "") {
+                $message = $errorMessage;
+                $messageType = "err";
+            } elseif (count($pendingUpdates) === 0) {
+                $message = "No behavior changes to save.";
+                $messageType = "err";
+            } else {
+                $transactionStarted = $GLOBALS["db"]->execQuery("BEGIN") !== false;
+                $saved = $transactionStarted;
+                if ($transactionStarted) {
+                    foreach ($pendingUpdates as $updateCode => $updateValues) {
+                        // Upserts merge into metadata.custom_config, preserving unrelated keys.
+                        if (!herikaActionCatalogUpsertCustomConfig($updateCode, $updateValues)) {
+                            $saved = false;
+                            break;
+                        }
+                    }
+                }
+
+                if ($saved && $GLOBALS["db"]->execQuery("COMMIT") !== false) {
+                    $updatedCount = count($pendingUpdates);
+                    functionEditorRedirectWithNotice(
+                        sprintf("Behavior settings saved for %d action%s.", $updatedCount, $updatedCount === 1 ? "" : "s"),
+                        "ok",
+                        $isEmbed
+                    );
+                } else {
+                    if ($transactionStarted) {
+                        $GLOBALS["db"]->execQuery("ROLLBACK");
+                    }
+                    $message = "Could not save behavior changes.";
                     $messageType = "err";
                 }
             }
@@ -1218,8 +1383,10 @@ if (!$isEmbed) {
     .filter-actions {
         display: flex;
         align-items: center;
+        justify-content: flex-end;
         gap: 10px;
         flex-wrap: wrap;
+        margin-left: auto;
     }
     .action-button.secondary {
         background: linear-gradient(180deg, rgba(42, 42, 42, 0.86), rgba(34, 34, 34, 0.94));
@@ -1383,9 +1550,11 @@ if (!$isEmbed) {
     .table-container {
         width: 100%;
         margin-top: 20px;
-        max-height: 600px;
+        max-height: none;
+        /* Let the document own vertical scrolling while retaining a horizontal
+           fallback for intermediate viewport widths. */
         overflow-x: auto;
-        overflow-y: auto;
+        overflow-y: visible;
         border: 1px solid #3a3a3a;
         border-radius: 10px;
         background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
@@ -1627,13 +1796,102 @@ if (!$isEmbed) {
         border: 0;
     }
     .action-name-column {
-        width: 28%;
+        width: 25%;
     }
     .action-description-column {
-        width: 52%;
+        width: 41%;
+    }
+    .action-behavior-column {
+        width: 16%;
     }
     .action-controls-column {
-        width: 20%;
+        width: 18%;
+    }
+    .behavior-fieldset {
+        display: grid;
+        gap: 4px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        min-inline-size: 0;
+    }
+    .behavior-toggle {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 5px 7px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .behavior-toggle:hover {
+        background: rgba(242, 124, 17, 0.07);
+        border-color: rgba(242, 124, 17, 0.22);
+    }
+    .behavior-toggle input[type="checkbox"] {
+        flex: 0 0 auto;
+        width: 17px;
+        height: 17px;
+        margin: 1px 0 0 0;
+        accent-color: rgb(242, 124, 17);
+        cursor: pointer;
+    }
+    .behavior-toggle input[type="checkbox"]:focus-visible {
+        outline: 2px solid rgba(242, 124, 17, 0.7);
+        outline-offset: 2px;
+    }
+    .behavior-toggle-text {
+        color: #d0d6df;
+        font-size: 0.86em;
+        line-height: 1.32;
+        cursor: pointer;
+        overflow-wrap: anywhere;
+    }
+    .behavior-toggle.is-dirty {
+        background: rgba(242, 124, 17, 0.11);
+        border-color: rgba(242, 124, 17, 0.5);
+    }
+    .behavior-toggle.is-dirty .behavior-toggle-text {
+        color: #f3d8a0;
+        font-weight: 650;
+    }
+    .behavior-unavailable {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 5px 7px;
+        color: #8f99aa;
+        font-size: 0.84em;
+        line-height: 1.32;
+    }
+    .behavior-unavailable-mark {
+        flex: 0 0 auto;
+        width: 17px;
+        text-align: center;
+    }
+    .behavior-dirty-summary {
+        color: #d2b078;
+        font-size: 0.92em;
+        line-height: 1.35;
+    }
+    #bulkBehaviorForm {
+        display: inline-flex;
+        margin: 0;
+    }
+    #bulkBehaviorSave {
+        width: auto;
+        white-space: nowrap;
+    }
+    #bulkBehaviorSave:focus-visible {
+        outline: 2px solid rgba(242, 124, 17, 0.7);
+        outline-offset: 2px;
+    }
+    /* Neutral while there is nothing to save, so the green "go" state only means "changes pending". */
+    #bulkBehaviorSave:disabled,
+    #bulkBehaviorSave:disabled:hover {
+        background: linear-gradient(135deg, rgba(58, 58, 58, 0.92), rgba(46, 46, 46, 0.96));
+        border-color: #3a3a3a;
+        color: #b9c1cd;
     }
     .table-container td[data-label="Actions"] {
         text-align: center;
@@ -1841,6 +2099,10 @@ if (!$isEmbed) {
             width: 100%;
             min-width: 0;
         }
+        .filter-actions {
+            justify-content: flex-start;
+            margin-left: 0;
+        }
         .action-modal {
             padding: 14px;
         }
@@ -1859,6 +2121,18 @@ if (!$isEmbed) {
         }
         .advanced-field-grid {
             grid-template-columns: 1fr;
+        }
+        .action-name-column {
+            width: 26%;
+        }
+        .action-description-column {
+            width: 30%;
+        }
+        .action-behavior-column {
+            width: 22%;
+        }
+        .action-controls-column {
+            width: 22%;
         }
     }
     @media (max-width: 720px) {
@@ -1962,8 +2236,9 @@ if (!$isEmbed) {
                 <h2>How It Works</h2>
                 <p style="margin:0; color:#d0d6df; line-height:1.45;">
                     Edit the action name or description, then press <strong>Save</strong>. Use <strong>Enable</strong> or
-                    <strong>Disable</strong> to control whether the AI may use it. Confirmation rules, return messages,
-                    parameters, and technical settings are available under <strong>Advanced Options</strong>.
+                    <strong>Disable</strong> to control whether the AI may use it. Tick the <strong>Behavior</strong>
+                    checkboxes on as many rows as you like, then press <strong>Save all changes</strong> once. Return
+                    messages, parameters, and technical settings are available under <strong>Advanced Options</strong>.
                 </p>
             </div>
 
@@ -2031,6 +2306,13 @@ if (!$isEmbed) {
                                 <div class="filter-summary"><span id="actionVisibleCount"><?php echo h(count($rows)); ?></span> of <?php echo h(count($rows)); ?> shown</div>
                             </div>
                             <div class="filter-actions">
+                                <span class="behavior-dirty-summary" id="bulkBehaviorStatus" role="status" aria-live="polite">No unsaved behavior changes</span>
+                                <form id="bulkBehaviorForm" method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
+                                    <?php if ($isEmbed): ?><input type="hidden" name="embed" value="1"><?php endif; ?>
+                                    <input type="hidden" name="action" value="save_behavior_bulk">
+                                    <input type="hidden" name="behavior_payload" id="bulkBehaviorPayload" value="">
+                                    <button type="submit" class="btn-save" id="bulkBehaviorSave" aria-describedby="bulkBehaviorStatus" disabled>Save all changes</button>
+                                </form>
                                 <button type="button" class="action-button secondary" id="actionFilterReset">Reset Filters</button>
                             </div>
                         </div>
@@ -2094,18 +2376,20 @@ if (!$isEmbed) {
                         <colgroup>
                             <col class="action-name-column">
                             <col class="action-description-column">
+                            <col class="action-behavior-column">
                             <col class="action-controls-column">
                         </colgroup>
                         <thead>
                             <tr>
                                 <th>Name</th>
                                 <th>Description</th>
+                                <th>Behavior</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (count($rows) === 0): ?>
-                                <tr><td colspan="3">No actions found.</td></tr>
+                                <tr><td colspan="4">No actions found.</td></tr>
                             <?php endif; ?>
                             <?php foreach ($rows as $row): ?>
                                 <?php
@@ -2129,6 +2413,9 @@ if (!$isEmbed) {
                                 );
                                 $scriptProxyPreview = functionEditorPrettyJson($row["script_proxy_program"] ?? "");
                                 $configFields = functionEditorGetEditableConfigFieldsForRow($row);
+                                $promotedBehaviorFields = functionEditorIndexPromotedBehaviorFields($configFields);
+                                // Advanced Options only renders what the Behavior column does not own.
+                                $advancedConfigFields = functionEditorFilterPromotedBehaviorFields($configFields, false);
                                 $customConfig = is_array($metadata["custom_config"] ?? null) ? $metadata["custom_config"] : [];
                                 $resolvedConfig = function_exists('herikaActionCatalogGetResolvedCustomConfig')
                                     ? herikaActionCatalogGetResolvedCustomConfig($codeName, $row)
@@ -2201,6 +2488,52 @@ if (!$isEmbed) {
                                             rows="4"
                                         ><?php echo h($descriptionValue); ?></textarea>
                                     </td>
+                                    <td data-label="Behavior">
+                                        <fieldset class="behavior-fieldset">
+                                            <legend class="sr-only">Behavior settings for <?php echo h($codeName); ?></legend>
+                                            <?php foreach (functionEditorGetPromotedBehaviorFieldKeys() as $behaviorKey): ?>
+                                                <?php if (isset($promotedBehaviorFields[$behaviorKey])): ?>
+                                                    <?php
+                                                    $behaviorField = $promotedBehaviorFields[$behaviorKey];
+                                                    $behaviorFieldId = 'behavior-' . $rowDomId . '-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $behaviorKey);
+                                                    $behaviorHelpId = $behaviorFieldId . '-help';
+                                                    $behaviorHelp = trim(strval($behaviorField['help'] ?? ''));
+                                                    $behaviorLabel = trim(strval($behaviorField['label'] ?? '')) !== ''
+                                                        ? strval($behaviorField['label'])
+                                                        : $behaviorKey;
+                                                    $behaviorValue = functionEditorToBool(
+                                                        array_key_exists($behaviorKey, $resolvedConfig)
+                                                            ? $resolvedConfig[$behaviorKey]
+                                                            : (function_exists('herikaActionCatalogGetEditorFieldDefaultValue')
+                                                                ? herikaActionCatalogGetEditorFieldDefaultValue($behaviorField, $row)
+                                                                : false)
+                                                    );
+                                                    ?>
+                                                    <div class="behavior-toggle">
+                                                        <input
+                                                            type="checkbox"
+                                                            class="behavior-checkbox"
+                                                            id="<?php echo h($behaviorFieldId); ?>"
+                                                            data-behavior-code="<?php echo h($codeName); ?>"
+                                                            data-behavior-key="<?php echo h($behaviorKey); ?>"
+                                                            data-behavior-initial="<?php echo $behaviorValue ? '1' : '0'; ?>"
+                                                            <?php echo $behaviorValue ? 'checked' : ''; ?>
+                                                            <?php if ($behaviorHelp !== ''): ?>aria-describedby="<?php echo h($behaviorHelpId); ?>" title="<?php echo h($behaviorHelp); ?>"<?php endif; ?>
+                                                        >
+                                                        <label class="behavior-toggle-text" for="<?php echo h($behaviorFieldId); ?>"><?php echo h($behaviorLabel); ?></label>
+                                                        <?php if ($behaviorHelp !== ''): ?>
+                                                            <span class="sr-only" id="<?php echo h($behaviorHelpId); ?>"><?php echo h($behaviorHelp); ?></span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php elseif ($behaviorKey === 'confirmation_required'): ?>
+                                                    <div class="behavior-unavailable">
+                                                        <span class="behavior-unavailable-mark" aria-hidden="true">&ndash;</span>
+                                                        <span>Confirmation unavailable<span class="sr-only"> for <?php echo h($codeName); ?>: this action cannot prompt before it runs.</span></span>
+                                                    </div>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </fieldset>
+                                    </td>
                                     <td data-label="Actions">
                                         <div class="action-row-buttons">
                                             <form id="<?php echo h($basicFormId); ?>" method="post" action="<?php echo h(functionEditorBuildUrl($currentFilterParams, $isEmbed, "entries")); ?>">
@@ -2243,11 +2576,15 @@ if (!$isEmbed) {
                                                         </div>
                                                     </section>
 
-                                                    <?php if (count($configFields) > 0): ?>
+                                                    <?php if (count($advancedConfigFields) > 0): ?>
                                                         <section class="advanced-section">
                                                             <h4>Behavior</h4>
+                                                            <div class="helper-text" style="margin:-4px 0 12px;">
+                                                                Require Confirmation, Follow-up Enabled, and Allow Follow-up Actions are edited in the
+                                                                <strong>Behavior</strong> column of the action table.
+                                                            </div>
                                                             <div class="advanced-field-grid">
-                                                                <?php foreach ($configFields as $configField): ?>
+                                                                <?php foreach ($advancedConfigFields as $configField): ?>
                                                                     <?php
                                                                     $fieldKey = strval($configField['key'] ?? '');
                                                                     $fieldId = 'config-' . $rowDomId . '-' . preg_replace('/[^a-zA-Z0-9_-]/', '-', $fieldKey);
@@ -2390,7 +2727,68 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 <?php endif; ?>
 
+const ACTION_EDITOR_VIEW_STATE_KEY = "chimActionEditorViewState";
+const ACTION_EDITOR_FILTER_NAMES = ["live-state", "live-scope", "live-dispatch", "live-source"];
+
+// Filters and search are client-side only, so stash them (plus scroll offset) in
+// sessionStorage right before a POST and replay them on the redirected page load.
+function actionEditorSaveViewState() {
+    try {
+        const searchInput = document.getElementById("actionLiveSearch");
+        const filters = {};
+        const behavior = {};
+        ACTION_EDITOR_FILTER_NAMES.forEach((name) => {
+            const checked = document.querySelector(`input[name="${name}"]:checked`);
+            filters[name] = checked ? checked.value : "all";
+        });
+
+        document.querySelectorAll(".behavior-checkbox").forEach((checkbox) => {
+            const codeName = checkbox.dataset.behaviorCode || "";
+            const fieldKey = checkbox.dataset.behaviorKey || "";
+            const initialValue = checkbox.dataset.behaviorInitial === "1";
+            if (!codeName || !fieldKey || checkbox.checked === initialValue) {
+                return;
+            }
+            if (!behavior[codeName]) {
+                behavior[codeName] = {};
+            }
+            behavior[codeName][fieldKey] = checkbox.checked;
+        });
+
+        window.sessionStorage.setItem(ACTION_EDITOR_VIEW_STATE_KEY, JSON.stringify({
+            search: searchInput ? searchInput.value : "",
+            filters: filters,
+            behavior: behavior,
+            scrollY: Math.round(window.scrollY || window.pageYOffset || 0),
+        }));
+    } catch (error) {
+        /* sessionStorage unavailable: fall back to the URL filters and default scroll. */
+    }
+}
+
+// Read once and clear, so only a save round-trip restores state - not a manual reload.
+function actionEditorConsumeViewState() {
+    try {
+        const raw = window.sessionStorage.getItem(ACTION_EDITOR_VIEW_STATE_KEY);
+        window.sessionStorage.removeItem(ACTION_EDITOR_VIEW_STATE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        return parsed && typeof parsed === "object" ? parsed : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+const ACTION_EDITOR_RESTORED_VIEW_STATE = actionEditorConsumeViewState();
+
+document.addEventListener("submit", function(event) {
+    if (event.defaultPrevented || !(event.target instanceof HTMLFormElement)) {
+        return;
+    }
+    actionEditorSaveViewState();
+});
+
 document.addEventListener("DOMContentLoaded", function() {
+    const restoredView = ACTION_EDITOR_RESTORED_VIEW_STATE;
     const rows = Array.from(document.querySelectorAll(".action-row"));
     if (!rows.length) {
         return;
@@ -2441,8 +2839,10 @@ document.addEventListener("DOMContentLoaded", function() {
         searchInput.addEventListener("input", applyFilters);
     }
 
-    document.querySelectorAll('input[name="live-state"], input[name="live-scope"], input[name="live-dispatch"], input[name="live-source"]').forEach((input) => {
-        input.addEventListener("change", applyFilters);
+    ACTION_EDITOR_FILTER_NAMES.forEach((name) => {
+        document.querySelectorAll(`input[name="${name}"]`).forEach((input) => {
+            input.addEventListener("change", applyFilters);
+        });
     });
 
     if (resetButton) {
@@ -2462,7 +2862,138 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
+    if (restoredView) {
+        if (searchInput && typeof restoredView.search === "string") {
+            searchInput.value = restoredView.search;
+        }
+
+        const restoredFilters = restoredView.filters && typeof restoredView.filters === "object"
+            ? restoredView.filters
+            : {};
+        ACTION_EDITOR_FILTER_NAMES.forEach((name) => {
+            const value = restoredFilters[name];
+            if (typeof value !== "string") {
+                return;
+            }
+            const input = document.querySelector(`input[name="${name}"][value="${value}"]`);
+            if (input) {
+                input.checked = true;
+            }
+        });
+    }
+
     applyFilters();
+
+    if (restoredView && typeof restoredView.scrollY === "number" && restoredView.scrollY > 0) {
+        // Run after layout settles so the restored offset wins over the "#entries" anchor jump.
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                window.scrollTo(0, restoredView.scrollY);
+            });
+        });
+    }
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+    const bulkForm = document.getElementById("bulkBehaviorForm");
+    const payloadInput = document.getElementById("bulkBehaviorPayload");
+    const saveButton = document.getElementById("bulkBehaviorSave");
+    const statusLabel = document.getElementById("bulkBehaviorStatus");
+    const checkboxes = Array.from(document.querySelectorAll(".behavior-checkbox"));
+
+    if (!bulkForm || !payloadInput || !saveButton || !statusLabel || !checkboxes.length) {
+        return;
+    }
+
+    const saveButtonLabel = saveButton.textContent.trim();
+
+    function isDirty(checkbox) {
+        return checkbox.checked !== (checkbox.dataset.behaviorInitial === "1");
+    }
+
+    // Only changed checkboxes are collected, so unchanged rows are never written.
+    function collectChanges() {
+        const changes = {};
+        checkboxes.forEach((checkbox) => {
+            const codeName = checkbox.dataset.behaviorCode || "";
+            const fieldKey = checkbox.dataset.behaviorKey || "";
+            if (!codeName || !fieldKey || !isDirty(checkbox)) {
+                return;
+            }
+            if (!changes[codeName]) {
+                changes[codeName] = {};
+            }
+            changes[codeName][fieldKey] = checkbox.checked;
+        });
+        return changes;
+    }
+
+    function refreshDirtyState() {
+        const changes = collectChanges();
+        const changedCodes = Object.keys(changes);
+        const changedFieldCount = changedCodes.reduce(
+            (total, codeName) => total + Object.keys(changes[codeName]).length,
+            0
+        );
+
+        checkboxes.forEach((checkbox) => {
+            const toggle = checkbox.closest(".behavior-toggle");
+            if (toggle) {
+                toggle.classList.toggle("is-dirty", isDirty(checkbox));
+            }
+        });
+
+        saveButton.disabled = changedFieldCount === 0;
+        saveButton.textContent = changedFieldCount === 0
+            ? saveButtonLabel
+            : `${saveButtonLabel} (${changedFieldCount})`;
+        statusLabel.textContent = changedFieldCount === 0
+            ? "No unsaved behavior changes"
+            : `${changedFieldCount} unsaved change${changedFieldCount === 1 ? "" : "s"} across `
+                + `${changedCodes.length} action${changedCodes.length === 1 ? "" : "s"}`;
+    }
+
+    checkboxes.forEach((checkbox) => {
+        checkbox.addEventListener("change", refreshDirtyState);
+    });
+
+    const restoredBehavior = ACTION_EDITOR_RESTORED_VIEW_STATE?.behavior;
+    if (restoredBehavior && typeof restoredBehavior === "object") {
+        checkboxes.forEach((checkbox) => {
+            const codeName = checkbox.dataset.behaviorCode || "";
+            const fieldKey = checkbox.dataset.behaviorKey || "";
+            if (Object.prototype.hasOwnProperty.call(restoredBehavior[codeName] || {}, fieldKey)) {
+                checkbox.checked = Boolean(restoredBehavior[codeName][fieldKey]);
+            }
+        });
+    }
+
+    bulkForm.addEventListener("submit", function(event) {
+        const changes = collectChanges();
+        if (!Object.keys(changes).length) {
+            event.preventDefault();
+            refreshDirtyState();
+            return;
+        }
+
+        payloadInput.value = JSON.stringify({ rows: changes });
+        saveButton.disabled = true;
+    });
+
+    // Any other submit reloads the page, which would silently drop pending toggles.
+    document.addEventListener("submit", function(event) {
+        if (event.defaultPrevented || event.target === bulkForm) {
+            return;
+        }
+        if (!Object.keys(collectChanges()).length) {
+            return;
+        }
+        if (!window.confirm("You have unsaved Behavior changes. Continue and discard them?")) {
+            event.preventDefault();
+        }
+    }, true);
+
+    refreshDirtyState();
 });
 
 document.addEventListener("DOMContentLoaded", function() {
