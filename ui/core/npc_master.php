@@ -1405,7 +1405,7 @@ if (!function_exists('renderNpcToolbar')) {
         $pageEnd = min($totalPages, $pageStart + $pageWindow - 1);
 
         ?>
-        <div class="pagination npc-toolbar">
+        <div class="pagination npc-toolbar" data-current-page="<?= (int)$page ?>" data-total-pages="<?= (int)$totalPages ?>">
           <div class="npc-toolbar-main">
             <div class="npc-toolbar-actions">
               <button id="npc_create_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action">+ Create NPC</button>
@@ -5701,6 +5701,59 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   })();
   let listAbort = null;
   let listRequestId = 0;
+  // Explicit list state for the NPC Profiles page. The current page is seeded from the
+  // server-rendered pagination so a clamped page survives reloads and save-adjacent refreshes.
+  const LIST_STATE_KEYS = ['q','letter','profile_id','fav','dyn','mtm','lock','sal','blc','gps','created','alpha','embed'];
+  const LIST_CHECKBOX_FILTERS = [['fav','npc_filter_fav'],['dyn','npc_filter_dyn'],['mtm','npc_filter_mtm'],['lock','npc_filter_lock'],['sal','npc_filter_sal'],['blc','npc_filter_blc'],['gps','npc_filter_gps'],['created','npc_filter_created']];
+  function readServedPage(root){
+    const pag = (root && root.matches && root.matches('.pagination')) ? root : (root || document).querySelector('.pagination[data-current-page]');
+    const n = pag ? parseInt(pag.getAttribute('data-current-page') || '', 10) : NaN;
+    return (Number.isFinite(n) && n > 0) ? n : null;
+  }
+  let currentListPage = readServedPage(document) || 1;
+  function readListControl(id, key, current){
+    const el = document.getElementById(id);
+    if (el) return String(el.value || '');
+    return String(current.get(key) || '');
+  }
+  function readListCheckbox(baseId, key, current){
+    const el = document.getElementById(baseId + '_top') || document.getElementById(baseId);
+    if (el) return el.checked ? '1' : '';
+    return current.get(key) === '1' ? '1' : '';
+  }
+  // Effective list state: only the parameters that describe the list, never modal/transient ones.
+  function buildListState(page){
+    const current = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams();
+    params.set('q', readListControl('npc_search', 'q', current));
+    params.set('letter', readListControl('npc_letter_filter', 'letter', current).toUpperCase());
+    params.set('profile_id', readListControl('npc_profile_filter', 'profile_id', current));
+    LIST_CHECKBOX_FILTERS.forEach(function(pair){ params.set(pair[0], readListCheckbox(pair[1], pair[0], current)); });
+    params.set('alpha', 'asc');
+    if (current.get('embed') === '1') params.set('embed', '1');
+    const n = parseInt(page, 10);
+    params.set('page', String(Number.isFinite(n) && n > 0 ? n : 1));
+    return params;
+  }
+  // Persist the server-confirmed list state in the visible URL so any reload rebuilds the same page.
+  function persistListState(params, servedPage){
+    const visible = new URLSearchParams();
+    LIST_STATE_KEYS.forEach(function(key){
+      const val = params.get(key);
+      if (val !== null && val !== '') visible.set(key, val);
+    });
+    const n = parseInt(servedPage, 10);
+    visible.set('page', String(Number.isFinite(n) && n > 0 ? n : 1));
+    const url = window.location.pathname + '?' + visible.toString() + window.location.hash;
+    try { history.replaceState(history.state, document.title, url); } catch(_e){}
+  }
+  // A requested page can outlive the data (last page shrinks); trust the page the server rendered.
+  (function(){
+    const current = new URLSearchParams(window.location.search);
+    if (!current.has('page')) return;
+    if (parseInt(current.get('page') || '', 10) === currentListPage) return;
+    persistListState(buildListState(currentListPage), currentListPage);
+  })();
   function bindNpcLetterButtons(root){
     const scope = root || document;
     scope.querySelectorAll('.npc-letter-btn[data-letter]').forEach(btn=>{
@@ -5754,44 +5807,22 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   }
   bindAutoLockProfile(document.getElementById('npc_auto_lock_profile'));
 
+  // Omitting page keeps the current list page; filter changes pass 1 explicitly.
   async function refreshList(page){
-    const params = new URLSearchParams(window.location.search);
     const si = document.getElementById('npc_search');
     const wasFocused = document.activeElement && document.activeElement.id === 'npc_search';
     const caretStart = wasFocused && si && typeof si.selectionStart === 'number' ? si.selectionStart : null;
     const caretEnd = wasFocused && si && typeof si.selectionEnd === 'number' ? si.selectionEnd : null;
-    if (si) params.set('q', si.value || '');
-    const lf = document.getElementById('npc_letter_filter');
-    params.set('letter', lf ? (lf.value || '') : '');
-    const pf = document.getElementById('npc_profile_filter');
-    if (pf) params.set('profile_id', pf.value || '');
-    // Collect checkbox filters (prefer top bar if present else bottom)
-    try {
-      const fav = (document.getElementById('npc_filter_fav_top')||document.getElementById('npc_filter_fav'));
-      const dyn = (document.getElementById('npc_filter_dyn_top')||document.getElementById('npc_filter_dyn'));
-      const mtm = (document.getElementById('npc_filter_mtm_top')||document.getElementById('npc_filter_mtm'));
-      const locked = (document.getElementById('npc_filter_lock_top')||document.getElementById('npc_filter_lock'));
-      const sal = (document.getElementById('npc_filter_sal_top')||document.getElementById('npc_filter_sal'));
-      const blc = (document.getElementById('npc_filter_blc_top')||document.getElementById('npc_filter_blc'));
-      const gps = (document.getElementById('npc_filter_gps_top')||document.getElementById('npc_filter_gps'));
-      const created = (document.getElementById('npc_filter_created_top')||document.getElementById('npc_filter_created'));
-      params.set('fav', fav && fav.checked ? '1' : '');
-      params.set('dyn', dyn && dyn.checked ? '1' : '');
-      params.set('mtm', mtm && mtm.checked ? '1' : '');
-      params.set('lock', locked && locked.checked ? '1' : '');
-      params.set('sal', sal && sal.checked ? '1' : '');
-      params.set('blc', blc && blc.checked ? '1' : '');
-      params.set('gps', gps && gps.checked ? '1' : '');
-      params.set('created', created && created.checked ? '1' : '');
-    } catch(_e){}
-    params.set('alpha', 'asc');
-    if (page) params.set('page', String(page));
-    params.set('list','1');
+    const askedPage = parseInt(page, 10);
+    const requestedPage = (Number.isFinite(askedPage) && askedPage > 0) ? askedPage : currentListPage;
+    const params = buildListState(requestedPage);
+    const requestParams = new URLSearchParams(params.toString());
+    requestParams.set('list','1');
     if (listAbort) { try { listAbort.abort(); } catch(_){} }
     const requestId = ++listRequestId;
     listAbort = new AbortController();
     try {
-      const res = await fetch('npc_master.php?'+params.toString(), { signal: listAbort.signal });
+      const res = await fetch('npc_master.php?'+requestParams.toString(), { signal: listAbort.signal });
       if (!res.ok) throw new Error('HTTP ' + String(res.status));
       const html = await res.text();
       if (requestId !== listRequestId) return;
@@ -5803,6 +5834,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const oldGrid = document.querySelector('.npc-grid');
       if (oldPag && oldPag.parentElement) oldPag.parentElement.replaceChild(newPag, oldPag);
       if (oldGrid && oldGrid.parentElement) oldGrid.parentElement.replaceChild(newGrid, oldGrid);
+      // Trust the page the server actually rendered: it may be clamped when the last page shrinks.
+      currentListPage = readServedPage(newPag) || requestedPage;
+      persistListState(params, currentListPage);
       // rebind events on new elements
       document.querySelectorAll('.npc-card').forEach(card=>{
         card.addEventListener('click', function(ev){
