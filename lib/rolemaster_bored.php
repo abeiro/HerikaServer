@@ -1,5 +1,16 @@
 <?php
 
+// Keep bored-event probability consistent across direct, narrator, and Rolemaster routes.
+function chimBoredEventChancePasses(int $chance, int $roll): bool
+{
+    $chance = max(0, min(100, $chance));
+    if ($roll < 0 || $roll > 99) {
+        return false;
+    }
+
+    return $roll < $chance;
+}
+
 function chimRolemasterBoredActorKey(string $actorName): string
 {
     return function_exists('mb_strtolower')
@@ -74,8 +85,12 @@ function chimRolemasterDefaultBoredEventRules(): string
     return <<<'PROMPT'
 # Bored event rules
 {SEED_ACTOR_RULE}
+* These bored event rules override general Director suggestions to invent new content, plot twists, foreshadowing, drama, or tension.
 * Only use speakers from this nearby eligible actor list: {NEARBY_ACTORS}.
 * Do not invent distant or off-scene actors.
+* Let the instruction arise naturally from recent events or conversations, the present surroundings, mood, fatigue, curiosity, or an ordinary personal thought.
+* The instruction does not need to introduce a new topic or advance the plot. Brief, personal, playful, tired, curious, or mundane dialogue is valid.
+* Do not use poetic, philosophical, or atmospheric wording merely to make the moment feel meaningful. In danger or emotional tension, keep the dialogue brief, cautious, and appropriate to the situation.
 * Do not target or comment on {PLAYER_NAME} merely because time passed or the player is idle.
 * Prefer a natural NPC-to-NPC interaction or scene action. Involve the player only when recent player activity clearly requires a response.
 * When an instruction targets another nearby actor, direct the dialogue to that actor.

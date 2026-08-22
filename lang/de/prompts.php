@@ -75,39 +75,8 @@ $PROMPTS=array(
     // Datenbank-Prompt (Gelangweilt)
     "bored"=>[
         "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über den aktuellen Ort) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über das aktuelle Wetter) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über den heutigen Tag) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über das, was du gerade denkst) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über die Götter im Elder-Scrolls-Universum) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über die eigenen Gefühle) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über ein geschichtliches Ereignis aus dem Elder-Scrolls-Universum) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über Vorlieben oder Abneigungen) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über die letzte erledigte Aufgabe) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über ein kürzlich gehörtes Gerücht) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über etwas, das {$GLOBALS["PLAYER_NAME"]} betrifft und Neugier weckt) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über aktuelle Gedanken zu {$GLOBALS["PLAYER_NAME"]}) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über eine zufällige Kreatur/Person in der Nähe) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung darüber, was als Nächstes passieren könnte) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über die eigenen Gedanken zur bisherigen Reise) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über etwas, das schon länger geplant war) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über etwas völlig Unzusammenhängendes) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über etwas, das schwer zu erklären ist) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über das letzte Gefecht) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über die aktuelle Stimmung) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über den Geruch der Umgebung) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über eine nahe Kreatur oder Figur) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung darüber, wie dieser Ort im Vergleich zu einem anderen wirkt) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über eine Lektion aus einem ähnlichen Ort) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über die Atmosphäre dieses Ortes) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über etwas, worüber in letzter Zeit viel nachgedacht wurde) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über die Gefährlichkeit oder Sicherheit des Ortes) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über etwas, das zuvor aufgeschnappt wurde) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über persönliche Hoffnungen oder Wünsche) {$GLOBALS["TEMPLATE_DIALOG"]}",
-			"({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung darüber, dass der letzte Kampf fast verloren worden wäre) {$GLOBALS["TEMPLATE_DIALOG"]}"
+            "({$GLOBALS["HERIKA_NAME"]} spricht spontan über etwas, das in der gegenwärtigen Situation ganz natürlich in den Sinn kommt. Der Gedanke kann aus kürzlichen Ereignissen oder Gesprächen, der Umgebung, der Stimmung, Müdigkeit, Neugier oder etwas ganz Alltäglichem entstehen. Erfinde keinen dramatischen Moment, erzwinge kein neues Thema, treibe die Handlung nicht voran und verwende keine poetische, philosophische oder atmosphärische Sprache nur, damit die Zeile bedeutungsvoll wirkt. In einer ruhigen Situation darf die Zeile kurz, persönlich, verspielt, müde, neugierig oder alltäglich sein. Bei Gefahr oder emotionaler Anspannung soll sie kurz, vorsichtig und der Situation angemessen bleiben. Es soll wie ein Mensch klingen, der geistig anwesend ist, nicht wie jemand, der Inhalte erzeugt.) {$GLOBALS["TEMPLATE_DIALOG"]}"
 		]
-        //,"extra"=>["dontuse"=>true]   //DEAKTIVIERT WÄHREND DER BETA-PHASE
-        ,"extra" => ["dontuse" => (rand(0, 99) >= intval($GLOBALS["BORED_EVENT"]))]
     ],
     // Datenbank-Prompt (Guten Morgen)
 	"goodmorning"=>[

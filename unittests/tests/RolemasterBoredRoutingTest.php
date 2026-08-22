@@ -6,6 +6,17 @@ require_once __DIR__ . '/../../lib/rolemaster_bored.php';
 
 final class RolemasterBoredRoutingTest extends TestCase
 {
+    public function testBoredEventChanceUsesZeroBasedPercentageBoundary(): void
+    {
+        $this->assertFalse(chimBoredEventChancePasses(0, 0));
+        $this->assertTrue(chimBoredEventChancePasses(35, 34));
+        $this->assertFalse(chimBoredEventChancePasses(35, 35));
+        $this->assertTrue(chimBoredEventChancePasses(100, 99));
+        $this->assertFalse(chimBoredEventChancePasses(100, 100));
+        $this->assertFalse(chimBoredEventChancePasses(-1, 0));
+        $this->assertTrue(chimBoredEventChancePasses(101, 99));
+    }
+
     public function testActorMapExcludesPlayerAndKeepsSeed(): void
     {
         $actors = chimRolemasterBoredActorMap(
@@ -77,6 +88,14 @@ final class RolemasterBoredRoutingTest extends TestCase
         );
         $this->assertStringContainsString(
             "Do not generate the listener's reply.",
+            $rules
+        );
+        $this->assertStringContainsString(
+            'override general Director suggestions to invent new content, plot twists, foreshadowing, drama, or tension',
+            $rules
+        );
+        $this->assertStringContainsString(
+            'does not need to introduce a new topic or advance the plot',
             $rules
         );
         $this->assertStringContainsString(

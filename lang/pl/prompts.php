@@ -62,19 +62,7 @@ $PROMPTS = array(
 
     "bored" => [
         "cue" => [
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz lub żart na temat obecnej lokalizacji) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat aktualnej pogody) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat aktualnego czasu i daty) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat ostatniego wydarzenia) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat mema ze Skyrim) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat któregoś z Bogów w Skyrim) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat polityki Skyrim) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat historycznego wydarzenia ze świata Elder Scrolls) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat książki ze świata Elder Scrolls) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz zaczynający się od: Kiedyś musiałem... )$TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz zaczynający się od: Czy słyszałeś co się stało w... )$TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz zaczynający się od: Mądry człowiek z Akaviru kiedyś mi powiedział... )$TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat aktualnej relacji/przyjaźni z {$GLOBALS["PLAYER_NAME"]})$TEMPLATE_DIALOG"
+            "({$GLOBALS["HERIKA_NAME"]} odzywa się spontanicznie o czymś, co naturalnie przychodzi na myśl w obecnej scenie. Myśl może wynikać z niedawnych wydarzeń lub rozmów, otoczenia, nastroju, zmęczenia, ciekawości albo zwyczajnej osobistej refleksji. Nie wymyślaj dramatycznego momentu, nie wymuszaj nowego tematu, nie popychaj fabuły do przodu i nie używaj poetyckiego, filozoficznego ani nastrojowego języka tylko po to, by kwestia brzmiała głęboko. W spokojnej chwili wypowiedź może być krótka, osobista, żartobliwa, zmęczona, ciekawa lub zupełnie zwyczajna. W niebezpieczeństwie lub napięciu emocjonalnym zachowaj krótki, ostrożny i odpowiedni do sytuacji ton. Ma to brzmieć jak wypowiedź osoby obecnej myślami, a nie kogoś generującego treść.) $TEMPLATE_DIALOG"
         ]
     ],
 

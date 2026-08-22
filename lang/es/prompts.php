@@ -85,29 +85,8 @@ $PROMPTS=array(
 
     "bored"=>[
         "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre la ubicación actual) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre el clima actual) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre el día de hoy) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre lo que estás pensando actualmente) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre los Dioses del Universo Elder Scrolls) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre cómo se siente actualmente) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre un evento histórico del Universo Elder Scrolls) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre algo que le gusta o disgusta) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre la última tarea que hemos completado) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre un rumor reciente) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre algo que sucedió en tu pasado) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre algo que le causa curiosidad respecto a {$GLOBALS["PLAYER_NAME"]}) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre sus pensamientos actuales sobre {$GLOBALS["PLAYER_NAME"]}) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre una entidad aleatoria en el área) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre lo que podría suceder después) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre sus pensamientos del viaje hasta ahora) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre algo que le gusta o disgusta) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre algo que ha estado queriendo hacer) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario aleatorio sobre algo completamente no relacionado) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario vago sobre algo que no puede explicar bien) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario casual sobre el último encuentro de combate) {$GLOBALS["TEMPLATE_DIALOG"]}"
+            "({$GLOBALS["HERIKA_NAME"]} habla espontáneamente de algo que surge de forma natural en su mente dentro de la escena actual. Puede partir de hechos o conversaciones recientes, el entorno, el estado de ánimo, el cansancio, la curiosidad o un pensamiento personal cotidiano. No inventes un momento dramático, no fuerces un tema nuevo, no hagas avanzar la trama ni uses lenguaje poético, filosófico o atmosférico solo para que la frase parezca profunda. En un momento tranquilo, la frase puede ser breve, personal, juguetona, cansada, curiosa o completamente normal. Ante peligro o tensión emocional, mantenla breve, cautelosa y apropiada para la situación. Debe sonar como una persona mentalmente presente, no como alguien generando contenido.) {$GLOBALS["TEMPLATE_DIALOG"]}"
         ]
-        ,"extra" => ["dontuse" => (rand(0, 99) >= $GLOBALS["BORED_EVENT"])] 
     ],
 
     "goodmorning"=>[
