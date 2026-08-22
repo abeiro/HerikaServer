@@ -18,6 +18,7 @@ $password = 'dwemer';
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/utils_game_timestamp.php");
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/logger.php");
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/background_processor.php");
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/eventlog_helper.php");
 
 // Get the relative web path from document root to our application
 $scriptPath = $_SERVER['SCRIPT_NAME'];
@@ -44,6 +45,13 @@ if (!$conn) {
 // Use the bootstrapped runtime DB driver for dashboard helpers and DB migrations.
 $db = (isset($GLOBALS["db"]) && ($GLOBALS["db"] instanceof sql)) ? $GLOBALS["db"] : new sql();
 $GLOBALS["db"] = $db;
+
+$recentRelationshipChanges = [];
+try {
+    $recentRelationshipChanges = chimFetchRecentRelationshipHistoryChanges($db, 5);
+} catch (Throwable $e) {
+    error_log('Unable to load recent relationship changes: ' . $e->getMessage());
+}
 
 // Load PLAYER_NAME from core_player table 
 $PLAYER_NAME_DB = isset($GLOBALS['PLAYER_NAME']) ? (string)$GLOBALS['PLAYER_NAME'] : 'Player';
@@ -241,6 +249,59 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
             color: #d4d4d4;
         }
 
+        .relationship-change-list {
+            display: grid;
+            gap: 10px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .relationship-change-item {
+            display: grid;
+            grid-template-columns: minmax(120px, 0.25fr) minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: start;
+            padding: 10px 12px;
+            border-left: 3px solid rgb(242, 124, 17);
+            background: #222;
+        }
+
+        .relationship-change-npc {
+            color: #f2bd7f;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .relationship-change-text {
+            color: #e2e2e2;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+        }
+
+        .relationship-change-time {
+            color: #929292;
+            font-size: 0.78em;
+            white-space: nowrap;
+        }
+
+        .relationship-change-empty {
+            margin: 0;
+            color: #929292;
+            text-align: center;
+        }
+
+        .relationship-change-link {
+            color: #f2bd7f;
+            text-decoration: none;
+        }
+
+        .relationship-change-link:hover,
+        .relationship-change-link:focus-visible {
+            color: #fff;
+            text-decoration: underline;
+        }
+
         /* Widget type specific styles */
         .widget-chart {
             min-height: 300px;
@@ -312,6 +373,15 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
         @media (max-width: 768px) {
             .dashboard-container {
                 grid-template-columns: 1fr;
+            }
+
+            .relationship-change-item {
+                grid-template-columns: 1fr;
+                gap: 5px;
+            }
+
+            .relationship-change-time {
+                white-space: normal;
             }
         }
 
@@ -724,6 +794,39 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
             <button onclick="window.open('https://docs.google.com/spreadsheets/d/1UtAR_r18wskmTMMsg8IlhVvr1Fn9tHvRJT8drH6RuzY/edit?gid=1257158105#gid=1257158105', '_blank')" class="dashboard-btn">
                 <span class="btn-icon">🥇</span> AI/LLM Tier List
             </button>
+        </div>
+
+        <div class="dashboard-container">
+            <?php
+            $relationshipChangesContent = '';
+            if (empty($recentRelationshipChanges)) {
+                $relationshipChangesContent = "<p class='relationship-change-empty'>No relationship changes recorded yet.</p>";
+            } else {
+                $relationshipChangesContent = "<ul class='relationship-change-list'>";
+                foreach ($recentRelationshipChanges as $relationshipChange) {
+                    $npcName = trim((string)($relationshipChange['npc_name'] ?? ''));
+                    $npcName = $npcName !== '' ? $npcName : 'Unknown NPC';
+                    $localTimestamp = intval($relationshipChange['localts'] ?? 0);
+                    $timeLabel = 'Time unavailable';
+                    if ($localTimestamp > 0) {
+                        $time = new DateTime("@{$localTimestamp}");
+                        $time->setTimezone(new DateTimeZone('UTC'));
+                        $timeLabel = $time->format('jS F, Y, H:i') . ' UTC';
+                    }
+                    $relationshipChangesContent .= "<li class='relationship-change-item'>"
+                        . "<span class='relationship-change-npc'>" . htmlspecialchars($npcName, ENT_QUOTES, 'UTF-8') . "</span>"
+                        . "<span class='relationship-change-text'>" . htmlspecialchars((string)($relationshipChange['data'] ?? ''), ENT_QUOTES, 'UTF-8') . "</span>"
+                        . "<time class='relationship-change-time' datetime='" . ($localTimestamp > 0 ? gmdate('c', $localTimestamp) : '') . "'>" . htmlspecialchars($timeLabel, ENT_QUOTES, 'UTF-8') . "</time>"
+                        . "</li>";
+                }
+                $relationshipChangesContent .= '</ul>';
+            }
+            $relationshipTimelineLink = "<a class='relationship-change-link' href='" . htmlspecialchars($webRoot . '/ui/events-memories.php?tab=eventlog', ENT_QUOTES, 'UTF-8') . "'>View full timeline</a>";
+            echo render_widget('Recent Relationship Changes', $relationshipChangesContent, 'default', [
+                'class' => 'widget-skyrim-stats',
+                'actions' => $relationshipTimelineLink,
+            ]);
+            ?>
         </div>
 
         <?php if ($hasEventLogData): ?>

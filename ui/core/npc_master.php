@@ -14,6 +14,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "eventlog_helper.php");
 
 $GLOBALS["ENGINE_PATH"]=$enginePath;
 
@@ -1503,6 +1504,19 @@ if (isset($_GET["edit"])) {
     }
 }
 
+$npcRelationshipChanges = [];
+if (is_array($editItem) && intval($editItem['id'] ?? 0) > 0) {
+    try {
+        $npcRelationshipChanges = chimFetchRecentRelationshipHistoryChanges(
+            $GLOBALS['db'],
+            10,
+            intval($editItem['id'])
+        );
+    } catch (Throwable $e) {
+        error_log('Unable to load NPC relationship change history: ' . $e->getMessage());
+    }
+}
+
 // Partial list renderer for AJAX refresh of grid and pagination
 if (isset($_GET['list']) && $_GET['list'] === '1') {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
@@ -2246,6 +2260,25 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-bgl-event { padding:9px 10px; border-left:3px solid #666; background:#1d1d1d; color:#ddd; font-size:0.84rem; }
 .npc-bgl-event-time { display:block; margin-top:4px; color:#888; font-size:0.72rem; }
 .npc-bgl-empty { margin:0; padding:10px; color:#888; text-align:center; }
+.npc-relationship-history {
+    grid-column:1 / -1;
+    padding:14px;
+    border:1px solid #444;
+    border-radius:8px;
+    background:#252525;
+}
+.npc-relationship-history-header { margin-bottom:10px; }
+.npc-relationship-history h3 { margin:0; color:#f2bd7f; font-size:1rem; }
+.npc-relationship-history-header p { margin:3px 0 0; color:#aaa; font-size:0.82rem; }
+.npc-relationship-history-list { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.npc-relationship-history-item {
+    padding:10px 12px;
+    border-left:3px solid rgb(242,124,17);
+    background:#1d1d1d;
+}
+.npc-relationship-history-text { display:block; color:#e4e4e4; line-height:1.4; overflow-wrap:anywhere; }
+.npc-relationship-history-time { display:block; margin-top:5px; color:#888; font-size:0.74rem; }
+.npc-relationship-history-empty { margin:0; padding:10px; color:#888; text-align:center; }
 @media (max-width:700px) { .npc-editor-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 @media (max-width:850px) {
     .npc-editor-action-card { grid-template-columns:minmax(0, 1fr); }
@@ -2302,6 +2335,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 
             function sectionFor(unit){
                 if (unit.id === 'relationship-editor-section' || unit.querySelector('#relationship-editor-section')) return 'relationships';
+                if (unit.id === 'relationship-change-history') return 'relationships';
                 const label = unit.querySelector('label:not([for])');
                 if (label && label.textContent.replace(/\s+/g, ' ').trim() === 'Relationships') return 'relationships';
                 const tokens = tokensFor(unit);
@@ -3027,8 +3061,43 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
         <?php if (file_exists(__DIR__."/../../ext/relationship_system/relationship_editor.php")) {
+            // The embedded editor uses $data for each relationship; preserve the NPC list in this parent scope.
+            $npcListRows = $data;
             include(__DIR__."/../../ext/relationship_system/relationship_editor.php");
+            $data = $npcListRows;
+            unset($npcListRows);
         } ?>
+        <section id="relationship-change-history" class="form-item span-2 npc-relationship-history" aria-labelledby="relationship-change-history-title">
+            <div class="npc-relationship-history-header">
+                <h3 id="relationship-change-history-title">Recent Relationship Changes</h3>
+                <p>Read-only history for this NPC. The current relationships above remain editable.</p>
+            </div>
+            <?php if (empty($npcRelationshipChanges)): ?>
+                <p class="npc-relationship-history-empty">No relationship changes recorded for this NPC yet.</p>
+            <?php else: ?>
+                <ol class="npc-relationship-history-list">
+                    <?php foreach ($npcRelationshipChanges as $relationshipChange): ?>
+                        <?php
+                        $localTimestamp = intval($relationshipChange['localts'] ?? 0);
+                        $gameTimestamp = intval($relationshipChange['gamets'] ?? 0);
+                        $timeParts = [];
+                        if ($gameTimestamp > 0) {
+                            $timeParts[] = convert_gamets2skyrim_long_date2($gameTimestamp);
+                        }
+                        if ($localTimestamp > 0) {
+                            $timeParts[] = gmdate('j M Y, H:i', $localTimestamp) . ' UTC';
+                        }
+                        ?>
+                        <li class="npc-relationship-history-item">
+                            <span class="npc-relationship-history-text"><?= htmlspecialchars((string)($relationshipChange['data'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
+                            <?php if (!empty($timeParts)): ?>
+                                <time class="npc-relationship-history-time" datetime="<?= $localTimestamp > 0 ? htmlspecialchars(gmdate('c', $localTimestamp), ENT_QUOTES, 'UTF-8') : '' ?>"><?= htmlspecialchars(implode(' · ', $timeParts), ENT_QUOTES, 'UTF-8') ?></time>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ol>
+            <?php endif; ?>
+        </section>
 <div class="form-item">
             <label for="occupation">Occupation</label>
             <textarea id="occupation" name="occupation" placeholder="Role, job, affiliations."><?= htmlspecialchars($editItem["occupation"] ?? "") ?></textarea>

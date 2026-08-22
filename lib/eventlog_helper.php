@@ -272,6 +272,56 @@ if (!function_exists('chimFetchRelationshipHistoryTimelineRows')) {
     }
 }
 
+if (!function_exists('chimFetchRecentRelationshipHistoryChanges')) {
+    /**
+     * Read-only feed for compact relationship panels (dashboard widget, NPC editor).
+     *
+     * Reuses the derived timeline rows so relationship history stays in
+     * core_npc_master_history; nothing is copied into eventlog. Pass $npcId to
+     * scope the feed to a single NPC (the snapshot owner), 0 for every NPC.
+     */
+    function chimFetchRecentRelationshipHistoryChanges($db, $limit = 5, $npcId = 0)
+    {
+        $limit = max(1, min(50, intval($limit)));
+        $npcId = max(0, intval($npcId));
+        // Snapshots whose summaries resolve to nothing are dropped by the row builder,
+        // so read a slightly wider window than the caller asked for.
+        $sourceWindow = min(200, $limit * 4);
+        $whereSql = $npcId > 0 ? "WHERE npc_id = {$npcId}" : '';
+
+        $snapshots = $db->fetchAll(
+            chimRelationshipHistoryTimelineCte()
+            . " SELECT
+                    history_id,
+                    npc_id,
+                    npc_name,
+                    extended_data,
+                    previous_extended_data,
+                    gamets_last_updated,
+                    EXTRACT(EPOCH FROM created)::bigint AS localts
+                FROM visible_relationship_history
+                {$whereSql}
+                ORDER BY gamets_last_updated DESC NULLS LAST, created DESC, history_id DESC
+                LIMIT {$sourceWindow}"
+        );
+        if (!is_array($snapshots) || empty($snapshots)) {
+            return [];
+        }
+
+        $npcNames = [];
+        foreach ($snapshots as $snapshot) {
+            $npcNames[intval($snapshot['history_id'] ?? 0)] = trim((string)($snapshot['npc_name'] ?? ''));
+        }
+
+        $rows = chimBuildRelationshipHistoryTimelineRows($snapshots);
+        foreach ($rows as $index => $row) {
+            $rows[$index]['npc_name'] = $npcNames[intval($row['relationship_history_id'] ?? 0)] ?? '';
+        }
+
+        return array_slice($rows, 0, $limit);
+    }
+}
+
 if (!function_exists('chimMergeTimelineRows')) {
     function chimMergeTimelineRows(array $eventRows, array $relationshipRows, $limit = 0, $offset = 0)
     {
