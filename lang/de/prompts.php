@@ -72,12 +72,6 @@ $PROMPTS=array(
         "cue"=>["{$GLOBALS["HERIKA_NAME"]} beschwert sich darüber, im Kampf fast besiegt worden zu sein, {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("bleedout", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
-    // Datenbank-Prompt (Gelangweilt)
-    "bored"=>[
-        "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} spricht spontan über etwas, das in der gegenwärtigen Situation ganz natürlich in den Sinn kommt. Der Gedanke kann aus kürzlichen Ereignissen oder Gesprächen, der Umgebung, der Stimmung, Müdigkeit, Neugier oder etwas ganz Alltäglichem entstehen. Erfinde keinen dramatischen Moment, erzwinge kein neues Thema, treibe die Handlung nicht voran und verwende keine poetische, philosophische oder atmosphärische Sprache nur, damit die Zeile bedeutungsvoll wirkt. In einer ruhigen Situation darf die Zeile kurz, persönlich, verspielt, müde, neugierig oder alltäglich sein. Bei Gefahr oder emotionaler Anspannung soll sie kurz, vorsichtig und der Situation angemessen bleiben. Es soll wie ein Mensch klingen, der geistig anwesend ist, nicht wie jemand, der Inhalte erzeugt.) {$GLOBALS["TEMPLATE_DIALOG"]}"
-		]
-    ],
     // Datenbank-Prompt (Guten Morgen)
 	"goodmorning"=>[
 		"cue"=>["({$GLOBALS["HERIKA_NAME"]} macht eine Bemerkung über {$GLOBALS["PLAYER_NAME"]}s Schlafzeit) {$GLOBALS["TEMPLATE_DIALOG"]}"],

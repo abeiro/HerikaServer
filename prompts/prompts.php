@@ -90,12 +90,6 @@ $PROMPTS=array(
         "cue"=>["{$GLOBALS["HERIKA_NAME"]} complain about almost being defeated in battle, {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "extra" => shouldTriggerRPGComment("bleedout") ? [] : ["dontuse" => true]
     ],
-    // Database Prompt (Bored)
-    "bored"=>[
-        "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} speaks spontaneously from something naturally on their mind in the present scene. Draw from recent events or conversations, the surroundings, mood, fatigue, curiosity, or an ordinary personal thought. Do not invent a dramatic moment, force a new topic, advance the plot, or use poetic, philosophical, or atmospheric language merely to make the line feel meaningful. In a calm moment, the line may be brief, personal, playful, tired, curious, or mundane. In danger or emotional tension, keep it brief, cautious, and appropriate to the situation. Sound like a person who is mentally present, not someone generating content.) {$GLOBALS["TEMPLATE_DIALOG"]}"
-        ]
-    ],
     // Database Prompt (Combat Bark)
     "combatbark"=>[
         "cue"=>[

@@ -67,12 +67,6 @@ $PROMPTS=array(
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("bleedout", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
 
-    "bored"=>[
-        "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} parle spontanément de quelque chose qui lui vient naturellement à l'esprit dans la scène actuelle. La pensée peut venir d'événements ou de conversations récents, de l'environnement, de l'humeur, de la fatigue, de la curiosité ou d'une réflexion personnelle ordinaire. N'invente pas de moment dramatique, ne force pas un nouveau sujet, ne fais pas avancer l'intrigue et n'emploie pas un langage poétique, philosophique ou atmosphérique uniquement pour donner de la profondeur à la réplique. Dans un moment calme, elle peut être brève, personnelle, joueuse, fatiguée, curieuse ou tout à fait banale. En cas de danger ou de tension émotionnelle, garde-la brève, prudente et adaptée à la situation. Elle doit sonner comme une personne mentalement présente, pas comme quelqu'un qui génère du contenu.) {$GLOBALS["TEMPLATE_DIALOG"]}"
-        ]
-    ],
-
     "goodmorning"=>[
         "cue"=>["({$GLOBALS["HERIKA_NAME"]} commente la sieste de {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["(se réveillant après avoir dormi). ahhhh  "],

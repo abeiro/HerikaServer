@@ -83,12 +83,6 @@ $PROMPTS=array(
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("bleedout", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
 
-    "bored"=>[
-        "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} habla espontáneamente de algo que surge de forma natural en su mente dentro de la escena actual. Puede partir de hechos o conversaciones recientes, el entorno, el estado de ánimo, el cansancio, la curiosidad o un pensamiento personal cotidiano. No inventes un momento dramático, no fuerces un tema nuevo, no hagas avanzar la trama ni uses lenguaje poético, filosófico o atmosférico solo para que la frase parezca profunda. En un momento tranquilo, la frase puede ser breve, personal, juguetona, cansada, curiosa o completamente normal. Ante peligro o tensión emocional, mantenla breve, cautelosa y apropiada para la situación. Debe sonar como una persona mentalmente presente, no como alguien generando contenido.) {$GLOBALS["TEMPLATE_DIALOG"]}"
-        ]
-    ],
-
     "goodmorning"=>[
         "cue"=>["({$GLOBALS["HERIKA_NAME"]} comenta sobre la siesta de {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["(despertando después de dormir). ahhhh  "],

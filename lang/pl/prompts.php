@@ -60,12 +60,6 @@ $PROMPTS = array(
         "cue" => ["{$GLOBALS["HERIKA_NAME"]} skarży się na prawie przegraną, $TEMPLATE_DIALOG"]
     ],
 
-    "bored" => [
-        "cue" => [
-            "({$GLOBALS["HERIKA_NAME"]} odzywa się spontanicznie o czymś, co naturalnie przychodzi na myśl w obecnej scenie. Myśl może wynikać z niedawnych wydarzeń lub rozmów, otoczenia, nastroju, zmęczenia, ciekawości albo zwyczajnej osobistej refleksji. Nie wymyślaj dramatycznego momentu, nie wymuszaj nowego tematu, nie popychaj fabuły do przodu i nie używaj poetyckiego, filozoficznego ani nastrojowego języka tylko po to, by kwestia brzmiała głęboko. W spokojnej chwili wypowiedź może być krótka, osobista, żartobliwa, zmęczona, ciekawa lub zupełnie zwyczajna. W niebezpieczeństwie lub napięciu emocjonalnym zachowaj krótki, ostrożny i odpowiedni do sytuacji ton. Ma to brzmieć jak wypowiedź osoby obecnej myślami, a nie kogoś generującego treść.) $TEMPLATE_DIALOG"
-        ]
-    ],
-
     "goodmorning" => [
         "cue" => ["({$GLOBALS["HERIKA_NAME"]} komentuje drzemkę {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
         "player_request" => ["(budząc się po śnie). ahhhh  "]
