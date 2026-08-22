@@ -2039,6 +2039,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
 
 } elseif (strpos($gameRequest[0], "enable_bg") === 0 || strpos($gameRequest[0], "disable_bg") === 0) {
+    Logger::info("Background Life toggle requested: {$gameRequest[0]} for target: {$gameRequest[3]}");
     $npcMaster = new NpcMaster();
     $splitNameBase = explode("/", (string) ($gameRequest[3] ?? ''), 2);
     $npcName = trim((string) ($splitNameBase[0] ?? ''));

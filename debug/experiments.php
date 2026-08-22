@@ -1012,3 +1012,9 @@ if ($argv[1] == '22') {
     $skyrimCmd->send(cmd: $json);
 
 }
+
+if ($argv[1] == '23') {
+    $GLOBALS["db"]->execQuery("INSERT INTO public.responselog VALUES (0, 0, 'Karrie', 'Today, as we gather in this virtual hall, I can''t help but draw inspiration from the vast and enchanting universe of Skyrim/////1/Varek/utt_39b8b31c32bb0abb9a92', 'ScriptQueue', '', nextval('responselog_rowid_seq'::regclass))");
+    
+
+}
