@@ -12,6 +12,7 @@ function chimPrismaGlobalSettingsSections(): array
             ['name' => 'EMOTEMOODS', 'type' => 'longstring'],
             ['name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random']],
             ['name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean'],
+            ['name' => 'RELATIONSHIP_UPDATE_CHANCE', 'type' => 'integer', 'min' => 0, 'max' => 100, 'default' => 50],
         ],
         'Oghma' => [
             ['name' => 'OGHMA_INFINIUM', 'type' => 'boolean'],
