@@ -86,4 +86,42 @@ final class RelationshipTypeValidationTest extends TestCase
         $this->assertSame(25, $rebased['aff']);
         $this->assertSame('platonic', $rebased['type']);
     }
+
+    public function testRelationshipChangeEventsDescribeEffectiveSavedChanges(): void
+    {
+        $GLOBALS['PLAYER_NAME'] = 'RANGROO';
+        $events = RelationshipManager::buildRelationshipChangeEvents(
+            'Lydia',
+            ['Player' => ['aff' => 28, 'type' => 'neutral', 'note' => 'Older note']],
+            ['Player' => ['aff' => 33, 'type' => 'platonic', 'note' => 'Appreciated the help']]
+        );
+
+        $this->assertCount(1, $events);
+        $this->assertSame('up', $events[0]['direction']);
+        $this->assertSame('|Lydia|RANGROO|', $events[0]['people']);
+        $this->assertSame(
+            "Lydia's affinity toward RANGROO increased by 5 (28 to 33, now Friendly) and the relationship changed from neutral to platonic. Appreciated the help.",
+            $events[0]['data']
+        );
+        unset($GLOBALS['PLAYER_NAME']);
+    }
+
+    public function testRelationshipChangeEventsSkipNoOpsAndDoNotReuseOldReasons(): void
+    {
+        $this->assertSame([], RelationshipManager::buildRelationshipChangeEvents(
+            'Lydia',
+            ['Player' => ['aff' => 100, 'type' => 'platonic', 'note' => 'Saved my life']],
+            ['Player' => ['aff' => 100, 'type' => 'platonic', 'note' => 'Saved my life']]
+        ));
+
+        $events = RelationshipManager::buildRelationshipChangeEvents(
+            'Lydia',
+            ['Player' => ['aff' => 20, 'type' => 'neutral', 'note' => 'Old reason']],
+            ['Player' => ['aff' => 17, 'type' => 'neutral', 'note' => 'Old reason']]
+        );
+        $this->assertSame(
+            "Lydia's affinity toward Player decreased by 3 (20 to 17).",
+            $events[0]['data']
+        );
+    }
 }

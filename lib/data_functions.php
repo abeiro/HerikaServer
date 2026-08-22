@@ -2480,14 +2480,15 @@ function herikaShouldExcludeEventFromPromptContext(array $row): bool
     static $promptOnlyEventTypes = [
         'ext_held_item_pickup',
         'ext_held_item_drop',
+        'relationship',
     ];
 
     if (in_array($type, $csvImportEventTypes, true)) {
         return true;
     }
 
-    // Held item state is injected separately through <held_items>; avoid replaying
-    // every pickup/drop as historic NPC event context.
+    // Held item and relationship state are injected separately; avoid replaying
+    // their Event Log visibility rows as historic NPC event context.
     if (in_array($type, $promptOnlyEventTypes, true)) {
         return true;
     }

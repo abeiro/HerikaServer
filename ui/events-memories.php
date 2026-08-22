@@ -607,7 +607,7 @@ function getTimeColor($time) {
             // Add subtitle description
             echo "<div class='event-log-intro'>";
             echo "<span style='color: rgb(242, 124, 17); font-weight: bold;'>📝 Events:</span> ";
-            echo "<span style='color: #f8f9fa;'>Raw log of in-game events (combat, deaths, location changes, etc.) that provide context to the AI. These events are filtered and selectively added to AI prompts based on relevance.</span>";
+            echo "<span style='color: #f8f9fa;'>Raw log of in-game events (combat, deaths, location changes, relationship changes, etc.) for inspection and, where applicable, AI context. Events used in prompts are filtered by relevance.</span>";
             echo "</div>";
 
             // Keep context guidance directly below the description so both scan as one compact introduction.

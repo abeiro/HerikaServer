@@ -348,6 +348,117 @@ class RelationshipManager {
         return "Hostile";
     }
 
+    private static function truncateRelationshipEventReason($reason, $limit = 60) {
+        $reason = trim(preg_replace('/\s+/u', ' ', (string)$reason));
+        if ($reason === '') {
+            return '';
+        }
+
+        $length = function_exists('mb_strlen') ? mb_strlen($reason, 'UTF-8') : strlen($reason);
+        if ($length > $limit) {
+            $slice = function_exists('mb_substr')
+                ? mb_substr($reason, 0, $limit - 1, 'UTF-8')
+                : substr($reason, 0, $limit - 1);
+            $lastSpace = strrpos($slice, ' ');
+            if ($lastSpace !== false && $lastSpace >= (int)($limit * 0.6)) {
+                $slice = substr($slice, 0, $lastSpace);
+            }
+            return rtrim($slice, " \t\n\r\0\x0B.,;:!?") . '…';
+        }
+
+        return rtrim($reason, " \t\n\r\0\x0B.,;:!?") . '.';
+    }
+
+    /**
+     * Build compact Event Log rows from the relationship state that actually persisted.
+     */
+    public static function buildRelationshipChangeEvents($npcName, $oldRelationships, $newRelationships) {
+        $npcName = trim((string)$npcName);
+        if ($npcName === '') {
+            return [];
+        }
+
+        $oldRelationships = self::normalizeRelationshipMap(is_array($oldRelationships) ? $oldRelationships : []);
+        $newRelationships = self::normalizeRelationshipMap(is_array($newRelationships) ? $newRelationships : []);
+        $playerDisplayName = trim((string)($GLOBALS['PLAYER_NAME'] ?? 'Player'));
+        if ($playerDisplayName === '' || strcasecmp($playerDisplayName, 'the Player') === 0) {
+            $playerDisplayName = 'Player';
+        }
+
+        $events = [];
+        foreach ($newRelationships as $target => $newRelationship) {
+            $oldRelationship = $oldRelationships[$target] ?? ['aff' => 0, 'type' => 'neutral'];
+            $oldAffinity = (int)($oldRelationship['aff'] ?? 0);
+            $newAffinity = (int)($newRelationship['aff'] ?? 0);
+            $oldType = strtolower(trim((string)($oldRelationship['type'] ?? 'neutral')));
+            $newType = strtolower(trim((string)($newRelationship['type'] ?? 'neutral')));
+            $affinityChanged = $oldAffinity !== $newAffinity;
+            $typeChanged = $oldType !== $newType;
+            if (!$affinityChanged && !$typeChanged) {
+                continue;
+            }
+
+            $targetDisplayName = strcasecmp((string)$target, 'Player') === 0
+                ? $playerDisplayName
+                : trim((string)$target);
+            if ($targetDisplayName === '') {
+                continue;
+            }
+
+            $reason = '';
+            $oldNote = trim((string)($oldRelationship['note'] ?? ''));
+            $newNote = trim((string)($newRelationship['note'] ?? ''));
+            if ($newNote !== '' && $newNote !== $oldNote) {
+                $reason = self::truncateRelationshipEventReason($newNote);
+            }
+
+            $parts = [];
+            $direction = 'neutral';
+            if ($affinityChanged) {
+                $increased = $newAffinity > $oldAffinity;
+                $direction = $increased ? 'up' : 'down';
+                $verb = $increased ? 'increased' : 'decreased';
+                $oldTier = self::getTierLabel($oldAffinity);
+                $newTier = self::getTierLabel($newAffinity);
+                $scoreChange = "{$npcName}'s affinity toward {$targetDisplayName} {$verb} by "
+                    . abs($newAffinity - $oldAffinity)
+                    . " ({$oldAffinity} to {$newAffinity}";
+                if ($oldTier !== $newTier) {
+                    $scoreChange .= ", now {$newTier}";
+                }
+                $parts[] = $scoreChange . ')';
+            }
+            if ($typeChanged) {
+                $typeChange = "the relationship changed from {$oldType} to {$newType}";
+                $parts[] = $affinityChanged ? $typeChange : $npcName . "'s relationship toward {$targetDisplayName} changed from {$oldType} to {$newType}";
+            }
+
+            $text = count($parts) === 2
+                ? $parts[0] . ' and ' . $parts[1] . '.'
+                : $parts[0] . '.';
+            if ($reason !== '') {
+                $text .= ' ' . $reason;
+            }
+
+            $people = [];
+            foreach ([$npcName, $targetDisplayName] as $person) {
+                $person = trim(str_replace('|', '', $person));
+                if ($person !== '' && !in_array($person, $people, true)) {
+                    $people[] = $person;
+                }
+            }
+
+            $events[] = [
+                'target' => (string)$target,
+                'direction' => $direction,
+                'data' => $text,
+                'people' => '|' . implode('|', $people) . '|',
+            ];
+        }
+
+        return $events;
+    }
+
     /**
      * Get tier reference prompt from database (custom or default)
      * This is injected into NPC context to help the conversation model
@@ -785,7 +896,7 @@ class RelationshipManager {
                 ]);
             });
             if ($result !== false && function_exists('chimRelationshipTimelineStamp')) {
-                chimRelationshipTimelineStamp($npcData['id']);
+                chimRelationshipTimelineStamp($npcData['id'], 'conversation');
             }
         }
 
