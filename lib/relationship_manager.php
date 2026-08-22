@@ -163,10 +163,10 @@ class RelationshipManager {
 
     public static function shouldRunAutomaticEvaluation($chance = null, $roll = null) {
         if ($chance === null) {
-            $chance = $GLOBALS['RELATIONSHIP_UPDATE_CHANCE'] ?? 100;
+            $chance = $GLOBALS['RELATIONSHIP_UPDATE_CHANCE'] ?? 50;
         }
 
-        $chance = is_numeric($chance) ? max(0, min(100, (int)$chance)) : 100;
+        $chance = is_numeric($chance) ? max(0, min(100, (int)$chance)) : 50;
         if ($chance === 0) {
             return false;
         }

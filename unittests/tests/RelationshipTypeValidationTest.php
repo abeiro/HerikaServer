@@ -62,7 +62,8 @@ final class RelationshipTypeValidationTest extends TestCase
         $this->assertTrue(RelationshipManager::shouldRunAutomaticEvaluation(100, 100));
         $this->assertTrue(RelationshipManager::shouldRunAutomaticEvaluation(25, 25));
         $this->assertFalse(RelationshipManager::shouldRunAutomaticEvaluation(25, 26));
-        $this->assertTrue(RelationshipManager::shouldRunAutomaticEvaluation('invalid', 100));
+        $this->assertTrue(RelationshipManager::shouldRunAutomaticEvaluation('invalid', 50));
+        $this->assertFalse(RelationshipManager::shouldRunAutomaticEvaluation('invalid', 51));
     }
 
     public function testLegacyRelationshipTextIsNotSentForInitialization(): void
