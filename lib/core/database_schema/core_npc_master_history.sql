@@ -98,6 +98,19 @@ ALTER TABLE ONLY public.core_npc_master_history
 
 
 --
+-- Name: idx_core_npc_master_history_restore; Type: INDEX; Schema: public; Owner: dwemer
+--
+
+CREATE INDEX IF NOT EXISTS idx_core_npc_master_history_restore
+    ON public.core_npc_master_history (
+        npc_id,
+        gamets_last_updated DESC NULLS LAST,
+        (CASE WHEN extended_data ->> '_chim_history_source' = 'infosave' THEN 1 ELSE 0 END) DESC,
+        created DESC
+    );
+
+
+--
 -- PostgreSQL database dump complete
 --
 

@@ -34,9 +34,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 <style>
     /* Override main container styles */
     main {
-        padding-top: 80px; /* Space for navbar */
-        padding-bottom: 40px; /* Reduced space for footer */
+        padding-top: 0;
+        padding-bottom: 24px;
         padding-left: 10px;
+    }
+
+    .container-fluid {
+        padding: 0 10px 8px;
     }
     
     /* Override footer styles */
@@ -66,7 +70,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     .tab-content {
         display: none;
         background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
-        padding: 20px;
+        padding: 10px 12px 12px;
         border-radius: 8px;
         border-top-left-radius: 0;
         border: 1px solid #3a3a3a;
@@ -96,8 +100,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     /* Table Container Styles */
     .table-container {
-        max-height: calc(100vh - 450px) !important;
-        margin-top: 20px;
+        max-height: calc(100vh - 310px) !important;
+        margin-top: 8px;
         width: 100%;
         overflow-x: auto;
         background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
@@ -105,7 +109,35 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border: 1px solid #3a3a3a;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
                     inset 0 1px rgba(255, 255, 255, 0.03);
-        padding: 12px;
+        padding: 8px;
+    }
+
+    .event-log-intro,
+    .event-log-note {
+        padding: 9px 12px;
+        border-radius: 5px;
+        margin: 0 0 6px;
+        font-size: 0.88em;
+        line-height: 1.4;
+    }
+
+    .event-log-intro {
+        background: #2a2a2a;
+        border-left: 4px solid rgb(242, 124, 17);
+    }
+
+    .event-log-note {
+        background: #1a4d6d;
+        border-left: 4px solid #3b82f6;
+        color: #e0f2ff;
+    }
+
+    .event-log-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin: 8px 0 6px;
     }
 
     /* Table Styles */
@@ -184,6 +216,110 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
     #eventlog-tab table td:nth-child(4) {
         min-width: 300px;
         width: 20%;
+    }
+
+    /* Relationship history rows: compact per-change presentation.
+       Same palette and density as the CHIM home dashboard widget. */
+    .relationship-change-cell {
+        display: grid;
+        gap: 5px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .relationship-change-entry {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 8px;
+        align-items: baseline;
+        min-width: 0;
+    }
+
+    .relationship-change-delta {
+        min-width: 3.1em;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 0.92em;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    /* The sign carries the meaning, so colour is reinforcement only. */
+    .relationship-change-delta.is-up {
+        color: #7ee08a;
+        background: rgba(76, 175, 80, 0.14);
+        border: 1px solid rgba(126, 224, 138, 0.35);
+    }
+
+    .relationship-change-delta.is-down {
+        color: #ff8a80;
+        background: rgba(244, 67, 54, 0.14);
+        border: 1px solid rgba(255, 138, 128, 0.35);
+    }
+
+    .relationship-change-delta.is-type {
+        color: #f2bd7f;
+        background: rgba(242, 124, 17, 0.14);
+        border: 1px solid rgba(242, 189, 127, 0.35);
+        font-family: inherit;
+        font-size: 0.72em;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .relationship-change-entry-body {
+        display: block;
+        min-width: 0;
+    }
+
+    .relationship-change-reason {
+        display: block;
+        color: #e2e2e2;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+
+    .relationship-change-entry-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 3px 6px;
+        margin-top: 2px;
+        font-size: 0.85em;
+        color: #929292;
+    }
+
+    .relationship-change-target {
+        color: #bdbdbd;
+        overflow-wrap: anywhere;
+    }
+
+    .relationship-change-arrow {
+        color: #6f6f6f;
+    }
+
+    .relationship-change-tier {
+        padding: 0 4px;
+        border: 1px solid #4a4033;
+        border-radius: 3px;
+        color: #d9c39a;
+    }
+
+    .relationship-change-sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
     }
 
     /* Responsive Table */
@@ -573,9 +709,14 @@ function getTimeColor($time) {
         <div id="eventlog-tab" class="tab-content <?php echo $activeTab === 'eventlog' ? 'active' : ''; ?>">
             <?php
             // Add subtitle description
-            echo "<div style='background: #2a2a2a; border-left: 4px solid rgb(242, 124, 17); padding: 12px 15px; border-radius: 5px; margin: 15px 0; font-size: 0.9em;'>";
+            echo "<div class='event-log-intro'>";
             echo "<span style='color: rgb(242, 124, 17); font-weight: bold;'>📝 Events:</span> ";
-            echo "<span style='color: #f8f9fa;'>Raw log of in-game events (combat, deaths, location changes, etc.) that provide context to the AI. These events are filtered and selectively added to AI prompts based on relevance.</span>";
+            echo "<span style='color: #f8f9fa;'>Combined timeline of in-game events and relationship changes. Relationship history remains stored separately and is not copied into the Event Log or AI event context.</span>";
+            echo "</div>";
+
+            // Keep context guidance directly below the description so both scan as one compact introduction.
+            echo "<div class='event-log-note'>";
+            echo "ℹ️ <strong>Note:</strong> Not all events will show up in AI context. Any blacklist settings will not be used for context. This is a raw log of some of the more relevant events.";
             echo "</div>";
             
             // Show success message if events were deleted
@@ -589,7 +730,7 @@ function getTimeColor($time) {
             $eventLogUrlBuilder = function(array $overrides = []) use ($eventLogBaseParams) {
                 return 'events-memories.php?' . http_build_query(array_merge($eventLogBaseParams, $overrides));
             };
-            echo "<div style='display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0;'>";
+            echo "<div class='event-log-toolbar'>";
             
             echo "<button id='live-toggle-btn-eventlog' onclick=\"toggleAutoRefreshEventLog()\" class='btn-base " . ($isAutoRefresh ? "btn-secondary" : "btn-primary") . "' style='padding: 8px 12px; font-size: 0.9em;' title='Toggle live monitoring'>";
             echo $isAutoRefresh ? "⏸️ Stop Live" : "Auto Refresh";
@@ -618,21 +759,27 @@ function getTimeColor($time) {
             echo "</div>";
             echo "</div>";
             
-            // Add informational note about blacklist settings
-            echo "<div style='background: #1a4d6d; color: #e0f2ff; padding: 12px 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #3b82f6; font-size: 0.9em;'>";
-            echo "ℹ️ <strong>Note:</strong> Not all events will show up in AI context. Any blacklist settings will not be used for context. This is a raw log of some of the more relevant events.";
-            echo "</div>";
-
             $limit = $eventLogLimit;
             $page = $eventLogPage;
             $offset = ($page - 1) * $limit;
             
-            $results = $db->fetchAll(
+            $sourceWindow = $limit + $offset;
+            $eventResults = $db->fetchAll(
                 "SELECT type, data, people, gamets, localts, ts, rowid
                  FROM eventlog a
                  WHERE $eventLogVisibleWhereClause
                  ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC
-                 LIMIT $limit OFFSET $offset"
+                 LIMIT $sourceWindow"
+            );
+            $showRelationshipHistory = !in_array('relationship', $eventLogHiddenTypes, true);
+            $relationshipResults = $showRelationshipHistory
+                ? chimFetchRelationshipHistoryTimelineRows($db, $sourceWindow, 0, 0, 0, true)
+                : [];
+            $results = chimMergeTimelineRows(
+                $eventResults,
+                $relationshipResults,
+                $limit,
+                $offset
             );
             
             $columnHeaders = [
@@ -644,10 +791,18 @@ function getTimeColor($time) {
             
             $mappedResults = array_map(function ($row) use ($columnHeaders) {
                 $mappedRow = [];
+                $isRelationshipHistory = ($row['source'] ?? '') === 'relationship_history';
                 // Add checkbox column first (PostgreSQL returns rowid in lowercase)
-                $mappedRow['☑'] = '<input type="checkbox" class="event-checkbox" data-rowid="' . htmlspecialchars($row['rowid'] ?? '') . '" style="cursor: pointer; width: 18px; height: 18px;">';
+                $mappedRow['☑'] = $isRelationshipHistory
+                    ? ''
+                    : '<input type="checkbox" class="event-checkbox" data-rowid="' . htmlspecialchars($row['rowid'] ?? '') . '" style="cursor: pointer; width: 18px; height: 18px;">';
                 
                 foreach ($row as $key => $value) {
+                    if ($key === 'changes') {
+                        // Structured relationship details back the compact Events cell below;
+                        // they are not a column, and they are not a scalar to escape.
+                        continue;
+                    }
                     if ($key === 'data' && function_exists('chimRenderNarratorRoleplayText')) {
                         $value = chimRenderNarratorRoleplayText($value);
                     }
@@ -660,8 +815,13 @@ function getTimeColor($time) {
                         $value = $dt->format('d-m-Y H:i:s');
                     }
                     
+                    // Relationship history gets the compact per-change presentation in the
+                    // web view only; the stored prose still backs the API and AI consumers.
+                    if ($key === 'data' && $isRelationshipHistory) {
+                        $value = chimRenderRelationshipChangeCellHtml($row['changes'] ?? [], (string)$value);
+                    }
                     // Special handling for chat events
-                    if ($row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
+                    else if ($row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
                         $value = '<span style="color:rgb(255, 255, 255);">' . htmlspecialchars($value ?? '') . '</span>';
                     } else {
                         $value = htmlspecialchars($value ?? '');
@@ -691,7 +851,12 @@ function getTimeColor($time) {
                             $peoplePresent = chimRenderNarratorRoleplayText($peoplePresent);
                         }
                         $mappedRow['People Present'] = htmlspecialchars($peoplePresent);
-                    } else if ($key === 'people' || $key === 'ts') {
+                    } else if ($key === 'rowid') {
+                        $mappedRow['Record'] = $isRelationshipHistory
+                            ? 'Relationship #' . intval($row['relationship_history_id'] ?? 0)
+                            : '<a class="icon-link" href="#" style="color: red !important;" onclick="deleteRowAndRefresh(\'eventlog\', ' . intval($value) . '); return false;">'
+                                . intval($value) . ' <i class="bi-trash" style="color: red !important;"></i></a>';
+                    } else if (in_array($key, ['people', 'ts', 'source', 'relationship_history_id'], true)) {
                         // Skip rendering raw people column; we show only 'People Present'
                         continue;
                     } else {
@@ -711,10 +876,13 @@ function getTimeColor($time) {
             // Get total count for pagination
             $countQuery = "SELECT COUNT(*) as total FROM eventlog WHERE $eventLogVisibleWhereClause";
             $countResult = $db->fetchAll($countQuery);
-            $totalRecords = $countResult[0]['total'];
+            $totalRecords = intval($countResult[0]['total'] ?? 0);
+            if ($showRelationshipHistory) {
+                $totalRecords += chimCountRelationshipHistoryTimelineRows($db);
+            }
             $totalPages = ceil($totalRecords / $limit);
             
-            echo "<div class='pagination-buttons' style='margin: 10px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;'>";
+            echo "<div class='pagination-buttons' style='margin: 6px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;'>";
             
             if ($page > 1) {
                 echo "<button onclick=\"window.location.href='" . htmlspecialchars($eventLogUrlBuilder(['page' => $prevPage]), ENT_QUOTES) . "'\" class='btn-base btn-primary'>Previous</button> ";
@@ -812,6 +980,7 @@ function getTimeColor($time) {
             let autoRefreshIntervalEventLog = null;
             let isLiveModeEventLog = " . ($isAutoRefresh ? 'true' : 'false') . ";
             let lastRowIdEventLog = 0;
+            let lastRelationshipHistoryIdEventLog = " . chimGetLatestRelationshipHistoryId($db) . ";
             let totalNewEventsEventLog = 0;
             const currentPageEventLog = $page;
             const currentLimitEventLog = $limit;
@@ -890,6 +1059,7 @@ function getTimeColor($time) {
 
                 const apiParams = new URLSearchParams();
                 apiParams.set('since_rowid', String(sinceRowId));
+                apiParams.set('since_relationship_id', String(lastRelationshipHistoryIdEventLog));
                 apiParams.set('use_saved_filters', '1');
 
                 fetch(eventLogApiBaseUrl + '?' + apiParams.toString())
@@ -906,9 +1076,13 @@ function getTimeColor($time) {
                                 const newRow = document.createElement('tr');
                                 newRow.style.backgroundColor = '#2d5a2d';
                                 
-                                // Add checkbox cell
+                                const isRelationshipHistory = String(row['ROWID'] || '').startsWith('relationship:');
+
+                                // Relationship history is read-only here; deleting events must not alter relationship state.
                                 const checkboxTd = document.createElement('td');
-                                checkboxTd.innerHTML = '<input type=\"checkbox\" class=\"event-checkbox\" data-rowid=\"' + (row['ROWID'] || '') + '\" style=\"cursor: pointer; width: 18px; height: 18px;\" onclick=\"updateDeleteButton()\">';
+                                checkboxTd.innerHTML = isRelationshipHistory
+                                    ? ''
+                                    : '<input type=\"checkbox\" class=\"event-checkbox\" data-rowid=\"' + (row['ROWID'] || '') + '\" style=\"cursor: pointer; width: 18px; height: 18px;\" onclick=\"updateDeleteButton()\">';
                                 newRow.appendChild(checkboxTd);
                                 
                                 // Add data cells
@@ -935,7 +1109,9 @@ function getTimeColor($time) {
                                 
                                 const td6 = document.createElement('td');
                                 const rowId = row['ROWID'] || '';
-                                td6.innerHTML = '<a class=\"icon-link\" href=\"#\" style=\"color: red !important;\" onclick=\"deleteRowAndRefresh(\'eventlog\', ' + JSON.stringify(rowId) + '); return false;\">' + rowId + ' <i class=\"bi-trash\" style=\"color: red !important;\"></i></a>';
+                                td6.innerHTML = isRelationshipHistory
+                                    ? 'Relationship #' + String(rowId).split(':').pop()
+                                    : '<a class=\"icon-link\" href=\"#\" style=\"color: red !important;\" onclick=\"deleteRowAndRefresh(\'eventlog\', ' + JSON.stringify(rowId) + '); return false;\">' + rowId + ' <i class=\"bi-trash\" style=\"color: red !important;\"></i></a>';
                                 newRow.appendChild(td6);
                                 
                                 if (headerRow && headerRow.nextSibling) {
@@ -956,6 +1132,11 @@ function getTimeColor($time) {
                             });
                             
                             totalNewEventsEventLog += data.new_count;
+                        }
+
+                        const latestRelationshipId = Number(data.latest_relationship_id || 0);
+                        if (Number.isFinite(latestRelationshipId) && latestRelationshipId > lastRelationshipHistoryIdEventLog) {
+                            lastRelationshipHistoryIdEventLog = latestRelationshipId;
                         }
                         
                         if (liveIndicator) {

@@ -67,33 +67,6 @@ $PROMPTS=array(
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("bleedout", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
 
-    "bored"=>[
-        "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur l'emplacement actuel) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur la météo actuelle) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur la journée d'aujourd'hui) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur ce à quoi tu penses actuellement) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur les Dieux de l'Univers Elder Scrolls) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur comment il/elle se sent actuellement) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur un événement historique de l'Univers Elder Scrolls) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur quelque chose qu'il/elle aime ou n'aime pas) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur la dernière tâche que nous avons accomplie) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur une rumeur récente) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur quelque chose qui s'est passé dans ton passé) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur quelque chose qui l'intrigue à propos de {$GLOBALS["PLAYER_NAME"]}) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur ses pensées actuelles concernant {$GLOBALS["PLAYER_NAME"]}) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur une entité aléatoire dans la zone) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur ce qui pourrait arriver ensuite) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur ses réflexions sur le voyage jusqu'à présent) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur quelque chose qu'il/elle aime ou n'aime pas) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire sur quelque chose qu'il/elle a envie de faire depuis un moment) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire aléatoire sur quelque chose de complètement sans rapport) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire vague sur quelque chose qu'il/elle ne peut pas bien expliquer) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} fait un commentaire désinvolte sur la dernière rencontre de combat) {$GLOBALS["TEMPLATE_DIALOG"]}"
-        ]
-        ,"extra" => ["dontuse" => (rand(0, 99) >= $GLOBALS["BORED_EVENT"])] 
-    ],
-
     "goodmorning"=>[
         "cue"=>["({$GLOBALS["HERIKA_NAME"]} commente la sieste de {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["(se réveillant après avoir dormi). ahhhh  "],

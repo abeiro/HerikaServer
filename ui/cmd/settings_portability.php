@@ -77,6 +77,7 @@ function chimPortableGlobalFields(): array
         'ITEM_BLACKLIST' => 'string',
         'EVENT_TYPE_FILTER' => 'string',
         'PROMPT_CONTEXT_OPTIONS' => 'prompt_context',
+        'RELATIONSHIP_UPDATE_CHANCE' => 'integer',
         'TRANSLATION_FUNCTION' => 'string',
         'TRANSLATION@settings@translate_audio' => 'boolean',
         'TRANSLATION@settings@translate_text' => 'boolean',

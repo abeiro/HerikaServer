@@ -60,24 +60,6 @@ $PROMPTS = array(
         "cue" => ["{$GLOBALS["HERIKA_NAME"]} skarży się na prawie przegraną, $TEMPLATE_DIALOG"]
     ],
 
-    "bored" => [
-        "cue" => [
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz lub żart na temat obecnej lokalizacji) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat aktualnej pogody) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat aktualnego czasu i daty) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat ostatniego wydarzenia) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat mema ze Skyrim) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat któregoś z Bogów w Skyrim) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat polityki Skyrim) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat historycznego wydarzenia ze świata Elder Scrolls) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat książki ze świata Elder Scrolls) $TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz zaczynający się od: Kiedyś musiałem... )$TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz zaczynający się od: Czy słyszałeś co się stało w... )$TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz zaczynający się od: Mądry człowiek z Akaviru kiedyś mi powiedział... )$TEMPLATE_DIALOG",
-            "({$GLOBALS["HERIKA_NAME"]} robi przypadkowy komentarz na temat aktualnej relacji/przyjaźni z {$GLOBALS["PLAYER_NAME"]})$TEMPLATE_DIALOG"
-        ]
-    ],
-
     "goodmorning" => [
         "cue" => ["({$GLOBALS["HERIKA_NAME"]} komentuje drzemkę {$GLOBALS["PLAYER_NAME"]}. $TEMPLATE_DIALOG"],
         "player_request" => ["(budząc się po śnie). ahhhh  "]
