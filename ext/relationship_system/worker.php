@@ -143,32 +143,32 @@ require_once __DIR__ . '/async_queue.php';
  */
 function processOneBatch() {
     $evalResults = _relProcessQueue(10);  // Process up to 10 evals per batch
-    $initResults = _relProcessInitQueue(5); // Process up to 5 inits per batch
-
-    $total = ($evalResults['processed'] ?? 0) + ($initResults['processed'] ?? 0);
+    $total = $evalResults['processed'] ?? 0;
 
     if ($total > 0) {
-        Logger::info("[REL-WORKER] Processed {$evalResults['processed']} evals, {$initResults['processed']} inits");
+        Logger::info("[REL-WORKER] Processed {$total} relationship evaluations");
     }
 
     return $total;
 }
 
+// HerikaServer no longer converts the retired text relationship field. Drain
+// pre-upgrade initialization rows once, then leave the steady-state loop eval-only.
+do {
+    $legacyInitResults = _relProcessInitQueue(50);
+    $legacyInitProcessed = $legacyInitResults['processed'] ?? 0;
+    if ($legacyInitProcessed > 0) {
+        Logger::info("[REL-WORKER] Cleared {$legacyInitProcessed} retired initialization jobs");
+    }
+} while ($legacyInitProcessed === 50);
+
 if ($daemon) {
     // Daemon mode - run continuously
     Logger::info("[REL-WORKER] Running in daemon mode, interval: {$interval}s, PID: " . getmypid());
 
-    // Log that we're entering the main loop
-    @file_put_contents($logFile, date('[Y-m-d H:i:s]') . " DAEMON: Entering main loop\n", FILE_APPEND);
-
-    $iteration = 0;
     while (true) {
-        $iteration++;
-        @file_put_contents($logFile, date('[Y-m-d H:i:s]') . " DAEMON: Iteration {$iteration} starting\n", FILE_APPEND);
-
         try {
             $processed = processOneBatch();
-            @file_put_contents($logFile, date('[Y-m-d H:i:s]') . " DAEMON: Iteration {$iteration} processed {$processed}\n", FILE_APPEND);
 
             // If we processed something, check again immediately
             // Otherwise wait the interval
