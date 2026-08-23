@@ -2270,16 +2270,91 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-relationship-history-header { margin-bottom:10px; }
 .npc-relationship-history h3 { margin:0; color:#f2bd7f; font-size:1rem; }
 .npc-relationship-history-header p { margin:3px 0 0; color:#aaa; font-size:0.82rem; }
-.npc-relationship-history-list { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.npc-relationship-history-list { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
 .npc-relationship-history-item {
-    padding:10px 12px;
+    padding:7px 10px;
     border-left:3px solid rgb(242,124,17);
+    border-radius:0 4px 4px 0;
     background:#1d1d1d;
 }
-.npc-relationship-history-text { display:block; color:#e4e4e4; line-height:1.4; overflow-wrap:anywhere; }
-.npc-relationship-history-time { display:block; margin-top:5px; color:#888; font-size:0.74rem; }
+/* Compact change rows mirroring the dashboard widget in ui/home.php. */
+.npc-relationship-change-list { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
+.npc-relationship-change {
+    display:grid;
+    grid-template-columns:auto minmax(0, 1fr);
+    gap:10px;
+    align-items:baseline;
+}
+.npc-relationship-change-delta {
+    min-width:3.1em;
+    padding:1px 6px;
+    border-radius:4px;
+    font-family:ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size:0.84rem;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    text-align:center;
+    white-space:nowrap;
+}
+/* The sign carries the direction, so colour is reinforcement only. */
+.npc-relationship-change-delta.is-up {
+    color:#7ee08a;
+    background:rgba(76,175,80,0.14);
+    border:1px solid rgba(126,224,138,0.35);
+}
+.npc-relationship-change-delta.is-down {
+    color:#ff8a80;
+    background:rgba(244,67,54,0.14);
+    border:1px solid rgba(255,138,128,0.35);
+}
+.npc-relationship-change-delta.is-type {
+    color:#f2bd7f;
+    background:rgba(242,124,17,0.14);
+    border:1px solid rgba(242,189,127,0.35);
+    font-family:inherit;
+    font-size:0.66rem;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+}
+.npc-relationship-change-body { min-width:0; }
+.npc-relationship-change-reason { margin:0; color:#e4e4e4; font-size:0.86rem; line-height:1.35; overflow-wrap:anywhere; }
+.npc-relationship-change-meta {
+    margin:2px 0 0;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:baseline;
+    gap:3px 6px;
+    color:#929292;
+    font-size:0.72rem;
+}
+.npc-relationship-change-arrow { color:#6f6f6f; }
+.npc-relationship-change-target { color:#bdbdbd; overflow-wrap:anywhere; }
+.npc-relationship-change-tier { padding:0 4px; border:1px solid #4a4033; border-radius:3px; color:#d9c39a; }
+.npc-relationship-change-sr {
+    position:absolute;
+    width:1px;
+    height:1px;
+    margin:-1px;
+    padding:0;
+    overflow:hidden;
+    clip:rect(0 0 0 0);
+    clip-path:inset(50%);
+    white-space:nowrap;
+    border:0;
+}
+.npc-relationship-history-time { margin-left:auto; color:#888; font-size:0.72rem; white-space:nowrap; }
 .npc-relationship-history-empty { margin:0; padding:10px; color:#888; text-align:center; }
-@media (max-width:700px) { .npc-editor-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@media (max-width:700px) {
+    .npc-editor-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .npc-relationship-history {
+        width:calc(100vw - 16px);
+        max-width:100%;
+        box-sizing:border-box;
+        justify-self:start;
+    }
+    .npc-relationship-change { gap:8px; }
+    .npc-relationship-history-time { flex-basis:100%; margin-left:0; white-space:normal; }
+}
 @media (max-width:850px) {
     .npc-editor-action-card { grid-template-columns:minmax(0, 1fr); }
     .npc-bgl-summary,
@@ -3087,12 +3162,53 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                         if ($localTimestamp > 0) {
                             $timeParts[] = gmdate('j M Y, H:i', $localTimestamp) . ' UTC';
                         }
+                        $timeLabel = implode(' · ', $timeParts);
+
+                        // One snapshot can move several relationships at once, so render one row per
+                        // structured change. The prose summary is only a fallback for older rows that
+                        // carry no structured detail at all.
+                        $changeRows = (isset($relationshipChange['changes']) && is_array($relationshipChange['changes']))
+                            ? array_values(array_filter($relationshipChange['changes'], 'is_array'))
+                            : [];
+                        if (empty($changeRows)) {
+                            $changeRows = [['reason' => trim((string)($relationshipChange['data'] ?? ''))]];
+                        }
+                        $lastChangeIndex = count($changeRows) - 1;
                         ?>
                         <li class="npc-relationship-history-item">
-                            <span class="npc-relationship-history-text"><?= htmlspecialchars((string)($relationshipChange['data'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
-                            <?php if (!empty($timeParts)): ?>
-                                <time class="npc-relationship-history-time" datetime="<?= $localTimestamp > 0 ? htmlspecialchars(gmdate('c', $localTimestamp), ENT_QUOTES, 'UTF-8') : '' ?>"><?= htmlspecialchars(implode(' · ', $timeParts), ENT_QUOTES, 'UTF-8') ?></time>
-                            <?php endif; ?>
+                            <ul class="npc-relationship-change-list" role="list">
+                                <?php foreach ($changeRows as $changeIndex => $changeRow): ?>
+                                    <?php
+                                    // Badge, reason and tier chip come from the shared presentation helper,
+                                    // so this tab reads exactly like the dashboard widget and the event log.
+                                    $presentation = chimBuildRelationshipChangePresentation($changeRow);
+                                    $changeTarget = trim((string)($changeRow['target'] ?? ''));
+                                    // The snapshot timestamp covers every row, so print it once, on the last.
+                                    $showChangeTime = ($timeLabel !== '' && $changeIndex === $lastChangeIndex);
+                                    ?>
+                                    <li class="npc-relationship-change">
+                                        <span class="npc-relationship-change-delta <?= htmlspecialchars($presentation['badge_class'], ENT_QUOTES, 'UTF-8') ?>"><span class="npc-relationship-change-sr"><?= htmlspecialchars($presentation['badge_spoken'], ENT_QUOTES, 'UTF-8') ?> </span><span aria-hidden="true"><?= htmlspecialchars($presentation['badge_label'], ENT_QUOTES, 'UTF-8') ?></span></span>
+                                        <div class="npc-relationship-change-body">
+                                            <p class="npc-relationship-change-reason"><?= htmlspecialchars($presentation['reason'], ENT_QUOTES, 'UTF-8') ?></p>
+                                            <?php if ($changeTarget !== '' || $presentation['tier'] !== '' || $showChangeTime): ?>
+                                                <p class="npc-relationship-change-meta">
+                                                    <?php if ($changeTarget !== ''): ?>
+                                                        <span class="npc-relationship-change-sr"> toward </span>
+                                                        <span class="npc-relationship-change-arrow" aria-hidden="true">&rarr;</span>
+                                                        <span class="npc-relationship-change-target"><?= htmlspecialchars($changeTarget, ENT_QUOTES, 'UTF-8') ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if ($presentation['tier'] !== ''): ?>
+                                                        <span class="npc-relationship-change-tier"><?= htmlspecialchars($presentation['tier'], ENT_QUOTES, 'UTF-8') ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if ($showChangeTime): ?>
+                                                        <time class="npc-relationship-history-time" datetime="<?= $localTimestamp > 0 ? htmlspecialchars(gmdate('c', $localTimestamp), ENT_QUOTES, 'UTF-8') : '' ?>"><?= htmlspecialchars($timeLabel, ENT_QUOTES, 'UTF-8') ?></time>
+                                                    <?php endif; ?>
+                                                </p>
+                                            <?php endif; ?>
+                                        </div>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
                         </li>
                     <?php endforeach; ?>
                 </ol>
