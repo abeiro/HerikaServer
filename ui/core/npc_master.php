@@ -1939,6 +1939,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .modal-inline-actions .btn-toggle{background:transparent; border:none; padding:6px; color:#e9efff; font-size:22px; line-height:1; text-decoration:none; cursor:pointer;}
 .modal-inline-actions .btn-toggle:hover{color: rgb(242, 124, 17); text-decoration:none;}
 .modal-inline-actions .btn-toggle.active{color:#ffd700; font-weight:700;}
+.modal-inline-actions .btn-toggle[data-favorite]:hover,
+.modal-inline-actions .btn-toggle[data-favorite]:focus-visible{color:#ffd700 !important; text-shadow:0 0 8px rgba(255,215,0,.7),0 0 14px rgba(255,215,0,.45) !important;}
+.modal-inline-actions .btn-toggle.active[data-favorite]{color:#ffd700 !important;}
 </style>
 <div data-npc-profile-loaded="1" data-npc-id="<?= htmlspecialchars((string)($editItem['id'] ?? '')) ?>" hidden></div>
 <form method="post" onsubmit='return false' style='display:block'>
@@ -3865,10 +3868,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .btn-toggle[data-lock-id]:focus-visible,
 .btn-toggle[data-pick-picture-id]:hover,
 .btn-toggle[data-pick-picture-id]:focus-visible { color: rgb(242, 124, 17); background:transparent; text-decoration:none; text-shadow: 0 0 6px rgba(242, 124, 17, 0.6), 0 0 12px rgba(242, 124, 17, 0.35); }
-.btn-toggle[data-favorite-id]:hover,
-.btn-toggle[data-favorite-id]:focus-visible { color:#ffd700; text-shadow: 0 0 8px rgba(255, 215, 0, 0.7), 0 0 14px rgba(255, 215, 0, 0.45); }
+.npc-title-actions .btn-toggle[data-favorite-id]:hover,
+.npc-title-actions .btn-toggle[data-favorite-id]:focus-visible { color:#ffd700 !important; text-shadow: 0 0 8px rgba(255, 215, 0, 0.7), 0 0 14px rgba(255, 215, 0, 0.45) !important; }
 .btn-toggle.active { color: rgb(242, 124, 17); font-weight:700; text-decoration:none; }
-.btn-toggle.active[data-favorite-id] { color:#ffd700; }
+.npc-title-actions .btn-toggle.active[data-favorite-id] { color:#ffd700 !important; }
 .btn-trash { background:transparent; border:none; padding:6px; color:#e9efff; font-size:20px; line-height:1; text-decoration:none; transition: color .15s ease, text-shadow .15s ease; }
 .btn-trash:hover, .btn-trash:focus-visible { color:#ff6b6b; text-shadow: 0 0 6px rgba(255, 107, 107, 0.7), 0 0 12px rgba(255, 107, 107, 0.45); }
 .npc-tags-label { font-size:11px; color:#9fb1c9; margin-right:4px; }
@@ -6313,7 +6316,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   async function loadModalStats(){
     // Load model info and NPC counts
     try {
-      const res = await fetch('../../ext/relationship_system/batch_build.php?action=stats');
+      const res = await fetch('../api/relationship_batch_build.php?action=stats');
       const data = await res.json();
       if (data.ok){
         document.getElementById('rel_build_model').textContent = data.model || 'Not configured';
@@ -6397,7 +6400,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         statusEl.textContent = 'Fetching NPC list...';
 
         // Fetch list of NPCs to process
-        const listRes = await fetch('../../ext/relationship_system/batch_build.php?action=list&force=' + force);
+        const listRes = await fetch('../api/relationship_batch_build.php?action=list&force=' + force);
         const listData = await listRes.json();
 
         if (!listData.ok){
@@ -6428,7 +6431,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           statusEl.textContent = 'Processing: ' + npc.name;
 
           try {
-            const res = await fetch('../../ext/relationship_system/batch_build.php?action=process&id=' + npc.id + '&force=' + force);
+            const res = await fetch('../api/relationship_batch_build.php?action=process&id=' + npc.id + '&force=' + force);
             const data = await res.json();
 
             if (data.ok){
@@ -6454,7 +6457,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           log('Running transitive inference...', 'info');
 
           try {
-            const infRes = await fetch('../../ext/relationship_system/batch_build.php?action=infer');
+            const infRes = await fetch('../api/relationship_batch_build.php?action=infer');
             const infData = await infRes.json();
             if (infData.ok){
               log('✓ Inference complete: ' + (infData.count || 0) + ' relationships updated', 'success');
