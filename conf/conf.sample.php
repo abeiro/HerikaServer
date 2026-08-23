@@ -166,12 +166,13 @@ $CORE_CONNECTOR_SCENECLASSIFIER=7; // Gemma 3N E4B
 $SCENE_CLASSIFIER_ENABLED=true; // Enable post-request scene tone/genre classification.
 $CORE_CONNECTOR_PROFILES=1;
 $RELLLM_CONNECTOR=5; // Relationship Management default (Mistral Small 3.2 24B)
+$RELATIONSHIP_UPDATE_CHANCE=50; // Percent chance (0-100) an eligible completed NPC response queues a Relationship Management evaluation. 0 disables automatic evaluations.
 
 ;
 //[AI/LLM Connectors]
 //OpenRouter JSON
 $CONNECTOR["openrouterjson"]["url"]="https://openrouter.ai/api/v1/chat/completions"; //API endpoint.
-$CONNECTOR["openrouterjson"]["model"]="z-ai/glm-4.7"; //LLM model.
+$CONNECTOR["openrouterjson"]["model"]="deepseek/deepseek-v4-flash"; //LLM model.
 $CONNECTOR["openrouterjson"]["reasoning_model"]=true; //This is a reasoning model, could output CoT.
 $CONNECTOR["openrouterjson"]["fallback_models"]=""; //comma separated models.
 $CONNECTOR["openrouterjson"]["PROVIDER"]=""; //use only this list of providers from OpenRouter
@@ -590,7 +591,6 @@ $OGHMA_INFINIUM=true;
 
 $FEATURES["MISC"]["LIFE_LINK_PLUGIN"]=false; // WIP. Use life link plugin for dynamic profiles
 
-$BORED_EVENT_SERVERSIDE=false;
 $RECHAT_ALLOW_ACTIONS=false;
 $RECHAT_MODE='random'; // tight = listener-only, conversational = focused back-and-forth, group = rotate around nearby NPCs, random = roll one mode per chain
 $ENFORCE_STRICT_RECHAT_RESPONSE=false; // if true, rechat responders must address the previous speaker directly

@@ -21,6 +21,7 @@ require_once "{$enginePath}/lib/core/tts_connector.class.php";
 require_once "{$enginePath}/lib/core/itt_connector.class.php";
 require_once "{$enginePath}/lib/core/api_badge.class.php";
 require_once "{$enginePath}/lib/core/import_rules.class.php";
+require_once "{$enginePath}/lib/core/prisma_settings_catalog.php";
 
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
 //function include from below file
@@ -53,37 +54,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
     font-weight: normal;
     font-style: normal;
 }
-main { padding-top: 40px; padding-bottom: 40px; }
+main { padding-top: 10px; padding-bottom: 24px; }
 
-/* Page Header */
-.page-header {
-    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
-    padding: 20px;
-    border-radius: 10px;
-    border: 1px solid #3a3a3a;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
-    text-align: center;
-    margin-bottom: 30px;
-}
-.page-header h1.api-title {
-    margin-bottom: 8px;
-}
-.page-subtitle {
-    color: #bbb;
-    font-size: 1.1em;
-    margin: 0;
-}
-
-h1.api-title {
-    margin: 0 0 20px 0;
-    font-family: 'MagicCards', serif;
-    letter-spacing: 0.7px;
-    word-spacing: 12px;
-    font-size: 2.2em;
-    color: rgb(242, 124, 17);
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    text-align: center;
-}
+/* Page header is the shared compact inline row (.chim-page-head in chim-theme.css). */
 .wide-centered { max-width: 1300px; margin: 0 auto; }
 .two-col-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .connector-card { 
@@ -303,6 +276,11 @@ h1.api-title {
 .provider-grid { display:grid; grid-template-columns: 1fr; gap:12px; align-items:start; }
 .provider-card { background:#2a2a2a; border:1px solid #4a4a4a; border-radius:8px; padding:12px; }
 .provider-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.profile-global-overrides > summary { cursor:pointer; list-style:none; margin-bottom:0; }
+.profile-global-overrides > summary::-webkit-details-marker { display:none; }
+.profile-global-overrides > summary::after { content:'\25B8'; color:rgb(242, 124, 17); font-size:18px; }
+.profile-global-overrides[open] > summary { margin-bottom:8px; }
+.profile-global-overrides[open] > summary::after { content:'\25BE'; }
 .provider-title { display:flex; align-items:center; gap:10px; color:#e0e0e0; }
 .provider-icon { width:28px; height:28px; border-radius:6px; background:#3a3a3a; display:flex; align-items:center; justify-content:center; font-size:16px; }
 .provider-body { display:flex; gap:8px; align-items:center; }
@@ -521,13 +499,7 @@ $__dynOptions = is_array($__confSchema['DYNAMIC_PROFILE_FIELDS']['values'] ?? nu
 $__dynHelp = (string)($__confSchema['DYNAMIC_PROFILE_FIELDS']['description'] ?? '');
 
 // Only profile metadata fields rendered by the visual editor may be copied in bulk.
-$profileSyncableMetadataKeys = [
-    'RECHAT_H', 'RECHAT_P', 'CORE_LANG', 'BORED_EVENT',
-    'DIARY_PROMPT', 'LANG_LLM_XTTS', 'QUEST_COMMENT', 'DIARY_COOLDOWN', 'COMBAT_BARK_COOLDOWN',
-    'CONTEXT_HISTORY', 'MAX_WORDS_LIMIT',
-    'QUEST_COMMENT_CHANCE', 'RECHAT_ALLOW_ACTIONS', 'CONTEXT_HISTORY_DIARY', 'BORED_EVENT_SERVERSIDE',
-    'CONTEXT_HISTORY_DYNAMIC_PROFILE',
-];
+$profileSyncableMetadataKeys = chimPrismaProfileSyncableMetadataKeys();
 
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
@@ -1434,9 +1406,9 @@ $ittById = $byId($ittRows);
 
 ?>
 
-<div class="page-header">
-    <h1 class="api-title">CHIM Profiles</h1>
-    <p class="page-subtitle">Manage NPC profiles with LLM, TTS, and ITT connectors</p>
+<div class="page-header chim-page-head">
+    <h1 class="api-title chim-page-head-title">CHIM Profiles</h1>
+    <p class="page-subtitle chim-page-head-note">Manage NPC profiles with LLM, TTS, and ITT connectors</p>
 </div>
 
 <div class="llm-layout">
@@ -2239,13 +2211,13 @@ const saveAllBtn = document.getElementById('btn_save_all');
     </div>
     
     <!-- Global Settings Overrides -->
-    <div class="provider-card" style="margin-bottom:8px;">
-        <div class="provider-head">
+    <details class="provider-card profile-global-overrides" style="margin-bottom:8px;">
+        <summary class="provider-head">
             <div class="provider-title">
                 <div class="provider-icon">&#x1F310;</div>
                 <div>Global Settings Overrides</div>
             </div>
-        </div>
+        </summary>
         <div class="provider-body" style="display:block;">
             <small style="color:#9fb1c9; display:block; margin-bottom:8px;">Override global settings for this profile. Changes here take precedence over global configurations.</small>
             <?php
@@ -2282,7 +2254,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
             include(__DIR__."/tmpl/override_editor.php");
             ?>
         </div>
-    </div>
+    </details>
     
     <!-- JSON Editor (second chunk) in collapsible -->
     <details id="metadata_section" class="collapsible">

@@ -961,7 +961,7 @@ class NpcMaster
                 if (in_array($k,[
                  "DIARY_COOLDOWN", "COMBAT_BARK_COOLDOWN", "AUTO_DIARY", "AUTO_DIARY_WAIT", "MINIME_T5",
                  "OGHMA_INFINIUM", "OGHMA_AMOUNT", "RECHAT_H", "RECHAT_P", "RECHAT_ALLOW_ACTIONS", "BORED_EVENT",
-                 "BORED_EVENT_SERVERSIDE", "CONTEXT_HISTORY", "CONTEXT_HISTORY_DIARY", "CONTEXT_HISTORY_DYNAMIC_PROFILE",
+                 "CONTEXT_HISTORY", "CONTEXT_HISTORY_DIARY", "CONTEXT_HISTORY_DYNAMIC_PROFILE",
                  "ALIVE_MESSAGE", "TIME_AWARENESS", "QUEST_COMMENT", "QUEST_COMMENT_CHANCE", "CURRENT_TASK",
                  "CORE_LANG", "LANG_LLM_XTTS", "MAX_WORDS_LIMIT",
                  "REMOVE_ASTERISKS_FROM_OUTPUT", "REMOVE_ASTERISKS_FROM_PLAYER_INPUT", "REMOVE_ASTERISKS_FROM_NPC_OUTPUT",
@@ -1402,7 +1402,7 @@ class NpcMaster
     RETURNING id
 ),
 restore AS (
-    SELECT DISTINCT ON (h.npc_id)
+    SELECT
         h.npc_id AS id,
         h.npc_name,
         h.npc_favorite,
@@ -1434,14 +1434,18 @@ restore AS (
         h.base,
         h.tags,
         h.appearance
-    FROM core_npc_master_history h
-    JOIN deleted d ON h.npc_id = d.id
-    WHERE h.gamets_last_updated <= $timestamp OR h.gamets_last_updated IS NULL
-    ORDER BY
-        h.npc_id,
-        h.gamets_last_updated DESC NULLS LAST,
-        CASE WHEN h.extended_data ->> '_chim_history_source' = 'infosave' THEN 1 ELSE 0 END DESC,
-        h.created DESC
+    FROM deleted d
+    JOIN LATERAL (
+        SELECT h.*
+        FROM core_npc_master_history h
+        WHERE h.npc_id = d.id
+          AND (h.gamets_last_updated <= $timestamp OR h.gamets_last_updated IS NULL)
+        ORDER BY
+            h.gamets_last_updated DESC NULLS LAST,
+            CASE WHEN h.extended_data ->> '_chim_history_source' = 'infosave' THEN 1 ELSE 0 END DESC,
+            h.created DESC
+        LIMIT 1
+    ) h ON true
 )
 INSERT INTO core_npc_master (
     id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,

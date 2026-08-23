@@ -298,42 +298,42 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 }
 
 if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about this)
-    $now = time();
-    $db->delete("eventlog", " 1=1");
-    $db->delete("quests", " 1=1");
-    $db->delete("speech", " 1=1 ");
-    $db->delete("currentmission", " 1=1 ");
-    $db->delete("diarylog", " 1=1 ");
-    $db->delete("books", " 1=1 ");
-
-    if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["ENABLED"]) {
-        $results = $db->query("select gamets_truncated,uid from memory_summary where gamets_truncated>{$gameRequest[2]}");
-        while ($memoryRow = $db->fetchArray($results)) {
-            deleteElement($memoryRow["uid"]);
+    try {
+        $db->execQuery("BEGIN");
+        $db->delete("eventlog", " 1=1");
+        $db->delete("quests", " 1=1");
+        $db->delete("speech", " 1=1 ");
+        $db->delete("currentmission", " 1=1 ");
+        $db->delete("diarylog", " 1=1 ");
+        $db->delete("books", " 1=1 ");
+        $db->delete("memory_summary", " 1=1 ");
+        $db->delete("memory", " 1=1 ");
+        if (function_exists('chimQuestEngineResetRuntime')) {
+            chimQuestEngineResetRuntime(true);
         }
-    }
-    $db->delete("memory_summary", " 1=1 ");
-    $db->delete("memory", " 1=1 ");
-    if (function_exists('chimQuestEngineResetRuntime')) {
-        chimQuestEngineResetRuntime(true);
-    }
 
-    //$db->delete("diarylogv2", "true");
-    //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
-    //die(print_r($gameRequest,true));
-    $db->update("responselog", "sent=0", "sent=1 and (action='AASPGDialogueHerika2Branch1Topic')");
-    $db->insert(
-        'eventlog',
-        array(
-            'ts' => $gameRequest[1],
-            'gamets' => $gameRequest[2],
-            'type' => $gameRequest[0],
-            'data' => $gameRequest[3],
-            'sess' => 'pending',
-            'localts' => time(),
-            'people' => resolvePeopleForIncomingEvent($gameRequest[0], $gameRequest[3] ?? "")
-        )
-    );
+        //$db->delete("diarylogv2", "true");
+        //$db->execQuery("insert into diarylogv2 select topic,content,tags,people,location from diarylog");
+        //die(print_r($gameRequest,true));
+        $db->update("responselog", "sent=0", "sent=1 and (action='AASPGDialogueHerika2Branch1Topic')");
+        $db->insert(
+            'eventlog',
+            array(
+                'ts' => $gameRequest[1],
+                'gamets' => $gameRequest[2],
+                'type' => $gameRequest[0],
+                'data' => $gameRequest[3],
+                'sess' => 'pending',
+                'localts' => time(),
+                'people' => resolvePeopleForIncomingEvent($gameRequest[0], $gameRequest[3] ?? "")
+            )
+        );
+        $db->execQuery("COMMIT");
+    } catch (Throwable $e) {
+        $db->execQuery("ROLLBACK");
+        Logger::error("New-game wipe failed: " . $e->getMessage());
+        throw $e;
+    }
 
     // Delete TTS(STT cache
     $directory = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "soundcache";
@@ -1721,9 +1721,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $profData = json_decode($profile->getById($currentNpcData["profile_id"])["metadata"], true);
 
         if (!$offline) {
-            $doAutoGreeting = (isset($profData["SALUTATION_AFTER_1_DAY"]) && $profData["SALUTATION_AFTER_1_DAY"] || isset($meta["SALUTATION_AFTER_1_DAY"]) && $meta["SALUTATION_AFTER_1_DAY"]);
+            $doAutoGreeting = (isset($profData["SALUTATION_AFTER_1_DAY"]) && $profData["SALUTATION_AFTER_1_DAY"] || isset($meta["salutation_after_a_while"]) && $meta["salutation_after_a_while"]);
             if ($doAutoGreeting) {
-                error_log("[auto_greeting] enabled for {$currentNpcData["npc_name"]}, profile:{$profData["SALUTATION_AFTER_1_DAY"]} ,npc:{$meta["SALUTATION_AFTER_1_DAY"]}");
+                error_log("[auto_greeting] enabled for {$currentNpcData["npc_name"]}, profile:{$profData["SALUTATION_AFTER_1_DAY"]} ,npc:{$meta["salutation_after_a_while"]}");
                 $lit = GetLastInteraction($GLOBALS["PLAYER_NAME"], $currentNpcData["npc_name"]);
                 if (gamets2days_between($lit, $gameRequest[2]) > 1) {
                     // If auto greeting is enabled for this NPC and enough time has passed, force a greeting.
@@ -1802,12 +1802,18 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     $splitNameBase = explode("/", $gameRequest[3]);
     if (strtoupper($splitNameBase[0]) == "__CLEAR_ALL__")
-        $db->query("truncate table locations");
+        $db->query("delete from locations where COALESCE(chim_added,0)<>1");
     else {
         //error_log("[UTIL_LOCATION_NAME]  {$gameRequest[3]}");
         if ($splitNameBase[0] && $splitNameBase[1] && !in_array($splitNameBase[1], [241641])) { // Exception for Pellagua Farm) {
             $existingRecord = $db->fetchOne("SELECT * FROM locations WHERE formid = '{$splitNameBase[1]}'");
-            error_log("[UTIL_LOCATION_NAME] Processing location: {$splitNameBase[0]} / {$splitNameBase[1]}");
+            error_log("[UTIL_LOCATION_NAME] Processing location: {$splitNameBase[0]} / {$splitNameBase[1]}, <{$splitNameBase[7]},{$splitNameBase[8]}>");
+            if (strtoupper($splitNameBase[4]) == "CUSTOM") {
+                $chim_added=1;
+            }
+            else 
+                $chim_added=0;
+
             if ($existingRecord) {
                 $db->updateRow(
                     'locations',
@@ -1823,10 +1829,11 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         'refs' => (isset($splitNameBase[9]) && $splitNameBase[9]) ? $splitNameBase[9] : null,
                         'cleared' => intval($splitNameBase[10]) > 0 ? "TRUE" : "FALSE",
                         'updated_at' => 'NOW()',
-                        'world' => $splitNameBase[11] ?? ''
+                        'world' => $splitNameBase[11] ?? '',
+                        "chim_added" => $chim_added
 
                     ),
-                    "formid = '{$splitNameBase[1]}'"
+                    "formid = '{$splitNameBase[1]}' and chim_added<>1"
                 );
             } else {
                 $db->insert(
@@ -1844,7 +1851,8 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                         'refs' => (isset($splitNameBase[9]) && $splitNameBase[9]) ? $splitNameBase[9] : null,
                         'cleared' => intval($splitNameBase[10]) > 0 ? "TRUE" : "FALSE",
                         'updated_at' => 'NOW()',
-                        'world' => $splitNameBase[11] ?? ''
+                        'world' => $splitNameBase[11] ?? '',
+                        "chim_added" => $chim_added
                     )
                 );
             }
@@ -1921,14 +1929,29 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 "world" => $splitNameBase[6] ?? '',
                 "in_interior" => $splitNameBase[7] ?? '',
                 "real_coords" => $splitNameBase[8] ?? '',
+                "rx" => $splitNameBase[9] ?? '',
+                "ry" => $splitNameBase[10] ?? '',
+                "rz" => $splitNameBase[11] ?? '',
+                "running_package_id" => $splitNameBase[12] ?? '',
             ];
 
+            error_log(print_r($splitNameBase, true));
             // Patch to get location name from coords. Can help with "Fake" locations.
-            if (($splitNameBase[8] ?? '') == "1") {
+            if (($splitNameBase[8] ?? '') == "1" 
+            || (($splitNameBase[8] ?? '') == "0" && in_array(strtolower($splitNameBase[6] ?? ''), ["whiterun","solitude","riften","windhelm","markarth"]))) {
                 $pointLiteral = '(' . $splitNameBase[1] . ',' . $splitNameBase[2] . ')';
-                $pointEsc = $db->escape($pointLiteral);
 
+                if (($splitNameBase[8] ?? '') == "0" && in_array(strtolower($splitNameBase[6] ?? ''), ["whiterun","solitude","riften","windhelm","markarth"])) {
+                    // In major cities, we can use the real coords, as they match world coord.
+                    if (isset($splitNameBase[9]) && isset($splitNameBase[10]) && $splitNameBase[9] !== '' && $splitNameBase[10] !== '') {
+                        $pointLiteral = '(' . $splitNameBase[9] . ',' . $splitNameBase[10] . ')';
+                    }
+                }  
+                
+                $pointEsc = $db->escape($pointLiteral);
+                $worldEsc = $db->escape($splitNameBase[6] ?? '');
                 // Abandoned Shack locations is bugged as is child of Batte-Born Farm.
+                // We will search locations with at least one exterior reference
                 $closestLocations = $db->fetchOne(
                     "SELECT
                     name,
@@ -1937,11 +1960,18 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     hold,
                     coords,
                     tags,
-                    is_interior,
+                    is_interior,world,
                     coords <-> '{$pointEsc}'::point AS distance
                 FROM locations
-                WHERE coords IS NOT NULL and is_interior=0
+                WHERE coords IS NOT NULL 
+                and (
+                    ((is_interior & 3) = 0 AND (is_interior & 3) != 2) OR
+                    ((is_interior & 12) = 0 AND (is_interior & 12) != 8) OR
+                    ((is_interior & 48) = 0 AND (is_interior & 48) != 32) OR
+                    ((is_interior & 192) = 0 AND (is_interior & 192) != 128)
+                    )
                 and name<>'Abandoned Shack'
+                and world='{$worldEsc}'
                 ORDER BY distance ASC
                 LIMIT 1"
                 );
@@ -1952,6 +1982,16 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                     $meta['last_coords']['location_formid'] = $closestLocations['formid'];
                     $meta['last_coords']['modified'] = true;
 
+                }
+
+                if (($splitNameBase[8] ?? '') == "0" && in_array(strtolower($splitNameBase[6] ?? ''), ["whiterun","solitude","riften","windhelm","markarth"])) {
+                    // In major cities, we can use the real coords, as they match world coord.
+                    if (isset($splitNameBase[9]) && isset($splitNameBase[10]) && $splitNameBase[9] !== '' && $splitNameBase[10] !== '') {
+                        $meta['last_coords'][0] = $splitNameBase[9];
+                        $meta['last_coords'][1] = $splitNameBase[10];
+                        $meta['last_coords'][2] =  $splitNameBase[11];
+                        $meta['last_coords']['real_coords'] = "1";
+                    }
                 }
             }
 
@@ -1999,6 +2039,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
 
 } elseif (strpos($gameRequest[0], "enable_bg") === 0 || strpos($gameRequest[0], "disable_bg") === 0) {
+    Logger::info("Background Life toggle requested: {$gameRequest[0]} for target: {$gameRequest[3]}");
     $npcMaster = new NpcMaster();
     $splitNameBase = explode("/", (string) ($gameRequest[3] ?? ''), 2);
     $npcName = trim((string) ($splitNameBase[0] ?? ''));

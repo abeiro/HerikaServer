@@ -3618,6 +3618,16 @@ if ($checkTableExists("core_npc_master_history") == -1) {
 } else
     Logger::info(__FILE__." core_npc_master_history exists");
 
+$db->execQuery(
+    "CREATE INDEX IF NOT EXISTS idx_core_npc_master_history_restore
+     ON public.core_npc_master_history (
+         npc_id,
+         gamets_last_updated DESC NULLS LAST,
+         (CASE WHEN extended_data ->> '_chim_history_source' = 'infosave' THEN 1 ELSE 0 END) DESC,
+         created DESC
+     )"
+);
+
 if ($checkTableExists("core_stt_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_stt_connector.sql"));
 } else
@@ -4365,6 +4375,7 @@ $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS refs text"
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS cleared boolean");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP");
 $db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS world text");
+$db->execQuery("ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS chim_added int");
 $db->execQuery("
 CREATE OR REPLACE VIEW public.locations_v
 as
@@ -6897,6 +6908,49 @@ if ($checkVersion("core_action") < 20260610003) {
     Logger::info("Applied patch core_action 20260610003");
 }
 
+if ($checkVersion("core_action") < 20260803001) {
+    Logger::debug("Applying core_action 20260803001 - add held item handoff action");
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name, action_name, description, return_message,
+            available_to_npc, available_to_followers, available_to_narrator,
+            is_activated, parameters_json, metadata, game_function,
+            import_version, script_proxy_program
+        ) VALUES (
+            'TakeHeldItem',
+            'Take_Held_Item',
+            '#HERIKA_NAME# accepts one exact physical item currently held by #PLAYER_NAME#. Use only the exact RefID:ItemName shown in <held_items>. Do not use this for equipped or inventory-only items.',
+            '#HERIKA_NAME# accepts #ITEM# from #PLAYER_NAME#.',
+            TRUE, TRUE, FALSE, TRUE,
+            '{\"type\":\"object\",\"required\":[\"item\"],\"properties\":{\"item\":{\"type\":\"string\",\"description\":\"REQUIRED: Exact RefID:ItemName from <held_items>.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"plugin_command\",\"confirmation\":{\"default_policy\":\"ask\"},\"followup\":{\"enabled\":false}}'::jsonb,
+            TRUE, 0, NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("core_action", 20260803001);
+        Logger::info("Applied patch core_action 20260803001");
+    } else {
+        Logger::error("Failed to apply patch core_action 20260803001");
+    }
+}
+
 //----------------------------------------------------
 
 // Relationship Evaluation and Initialization Queues
@@ -7619,6 +7673,84 @@ if ($checkVersion("prompts") < 20260727001) {
     }
 }
 
+if ($checkVersion("prompts") < 20260805001) {
+    Logger::debug("Applying prompts 20260805001 - keep bored Director dialogue chronological");
+
+    require_once(__DIR__ . "/../lib/rolemaster_bored.php");
+    $boredEventRules = $db->escape(chimRolemasterDefaultBoredEventRules());
+    $description = $db->escape(
+        "Additional Rolemaster rules used only for autonomous bored events. "
+        . "Supports {SEED_ACTOR_RULE}, {SEED_ACTOR}, {NEARBY_ACTORS}, and {PLAYER_NAME} placeholders. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_rules', '{$boredEventRules}', '{$description}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260805001);
+        Logger::info("Applied patch prompts 20260805001 - kept bored Director dialogue chronological");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260805001");
+    }
+}
+
+if ($checkVersion("prompts") < 20260821003) {
+    Logger::debug("Applying prompts 20260821003 - ground autonomous bored dialogue");
+
+    require_once(__DIR__ . "/../lib/rolemaster_bored.php");
+    $boredSystemPrompt = $db->escape(chimRolemasterDefaultBoredSystemPrompt());
+    $systemDescription = $db->escape(
+        "System prompt used only for autonomous Smart Bored planning. "
+        . "Replaces the general Director system prompt and examples for this route. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+    $boredEventRules = $db->escape(chimRolemasterDefaultBoredEventRules());
+    $rulesDescription = $db->escape(
+        "Complete Rolemaster rules used only for autonomous Smart Bored events. "
+        . "Supports {SEED_ACTOR_RULE}, {SEED_ACTOR}, {NEARBY_ACTORS}, {PLAYER_NAME}, and {FUNCTION_LIST} placeholders. "
+        . "Replaces the general Director instruction rules for this route. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+
+    $systemPromptOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_system_prompt', '{$boredSystemPrompt}', '{$systemDescription}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    $rulesPromptOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_rules', '{$boredEventRules}', '{$rulesDescription}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+    $profileMetadataOk = $db->execQuery("
+        UPDATE public.core_profiles
+        SET metadata = metadata - 'BORED_EVENT_SERVERSIDE'
+        WHERE metadata ? 'BORED_EVENT_SERVERSIDE'
+    ") !== false;
+    $migrationOk = $systemPromptOk && $rulesPromptOk && $profileMetadataOk;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260821003);
+        Logger::info("Applied patch prompts 20260821003 - grounded autonomous bored dialogue");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260821003");
+    }
+}
+
 if ($checkVersion("memory_summary") < 20260721001) {
     Logger::debug("Applying memory_summary 20260721001 - normalize diary memory owners");
 
@@ -7762,6 +7894,81 @@ if ($checkVersion("faction_vanilla") < 20260803001) {
     }
 }
 
+if ($checkVersion("market_cache") < 20260805001) {
+    Logger::debug("Applying market_cache 20260805001 - initial market cache setup");
+
+    $migrationOk = $db->execQuery(file_get_contents(__DIR__."/../data/market_cache.sql")) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("market_cache", 20260805001);
+        Logger::info("Applied patch market_cache 20260805001 - initial market cache setup");
+    } else {
+        Logger::error("Failed to apply patch market_cache 20260805001 - initial market cache setup");
+    }
+}
+
+if ($checkVersion("default_npc_tags") < 20260805003) {
+    Logger::debug("Applying default_npc_tags 20260805003 - apply complete default NPC tag audit");
+
+    $migrationPath = __DIR__ . "/../data/default_npc_tag_audit_20260805.sql";
+    $migrationOk = is_readable($migrationPath)
+        && $db->execQuery(file_get_contents($migrationPath)) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("default_npc_tags", 20260805003);
+        Logger::info("Applied patch default_npc_tags 20260805003");
+    } else {
+        Logger::error("Failed to apply patch default_npc_tags 20260805003");
+    }
+}
+
+if ($checkVersion("eventlog_session_payload") < 20260807001) {
+    Logger::debug("Applying eventlog_session_payload 20260807001 - allow complete routing snapshots");
+
+    $migrationOk = $db->execQuery(
+        "ALTER TABLE public.eventlog ALTER COLUMN sess TYPE text"
+    ) !== false;
+
+    if ($migrationOk) {
+        $updateVersion("eventlog_session_payload", 20260807001);
+        Logger::info("Applied patch eventlog_session_payload 20260807001");
+    } else {
+        Logger::error("Failed to apply patch eventlog_session_payload 20260807001");
+    }
+}
+
+
+//----------------------------------------------------
+// AUDIT REQUEST RESPONSE - Store the response text for audit requests
+// Version 20260806001
+//----------------------------------------------------
+$db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"response\"  text");
+
+$db->execQuery("
+DROP VIEW public.eventlog_view;
+ALTER TABLE eventlog ALTER COLUMN sess TYPE text;
+CREATE VIEW public.eventlog_view AS
+ SELECT e.type,
+    e.data,
+    e.sess,
+    e.gamets,
+    e.localts,
+    e.ts,
+    e.rowid,
+    e.people,
+    e.location,
+    e.party,
+    e.utterance_id,
+    e.delivery_state,
+    public.convert_gamets2skyrim_date(e.gamets) AS sk_date,
+    public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
+    public.convert_gamets2days(e.gamets) AS sk_days,
+    public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
+   FROM public.eventlog e;
+
+
+ALTER TABLE public.eventlog_view OWNER TO dwemer;
+");
 
 Logger::info(__FILE__." update file processed");
 

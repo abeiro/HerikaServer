@@ -116,7 +116,6 @@ if ($argv[1] == "1") {
         error_log("[DEBUG] Checking if MailerFly spawned: " . time() . PHP_EOL);
         $res = $GLOBALS["db"]->fetchOne("select count(*) as n from eventlog where type='status_msg' and data like '%spawned@MailerFly@%'");
         $spawned = $res["n"] > 0;
-
     }
 
     $npcMaster = new NpcMaster();
@@ -137,10 +136,10 @@ if ($argv[1] == "1") {
     $json = $skyrimCmd->Actor->RemoveFromAllFactions("0x{$npc["refid"]}");
     $skyrimCmd->send(cmd: $json);
 
-    $json = $skyrimCmd->Actor->AddToFaction("0x{$npc["refid"]}", "0x0001dd09");//WEPlayerFriend
+    $json = $skyrimCmd->Actor->AddToFaction("0x{$npc["refid"]}", "0x0001dd09"); //WEPlayerFriend
     $skyrimCmd->send(cmd: $json);
 
-    $json = $skyrimCmd->Actor->SetFactionRank("0x{$npc["refid"]}", "0x0001dd09", 1);//WEPlayerFriend
+    $json = $skyrimCmd->Actor->SetFactionRank("0x{$npc["refid"]}", "0x0001dd09", 1); //WEPlayerFriend
     $skyrimCmd->send(cmd: $json);
 
 
@@ -155,7 +154,6 @@ if ($argv[1] == "1") {
         $res = $GLOBALS["db"]->fetchOne("select count(*) as n from eventlog where type='status_msg'
      and data like '%spawned%@$cn%success%' ");
         $spawned = $res["n"] > 0;
-
     }
 
 
@@ -188,7 +186,6 @@ if ($argv[1] == "1") {
             $res = $GLOBALS["db"]->fetchOne("select count(*) as n from eventlog where type='infonpc_close' and data like '%MailerFly%' ");
             $present = $res["n"] > 0;
         }
-
     }
 
 
@@ -214,7 +211,6 @@ if ($argv[1] == "1") {
             );
         }
         $gave = $res["n"] > 0;
-
     }
 
 
@@ -249,7 +245,14 @@ function resolveFormIdToDecimal($formId)
 
     return (int) $raw;
 }
+/*
+$npc_profile = array
+    name => name
+    class => noble,merchant,warrior,assassin,mage,beggar,farmer,bard,soldier,forsworn
+    gender => male,female
+    race => nord,breton,redguard,orc,imperial,argonian
 
+*/
 function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
 {
     if (!is_array($npc_profile) || empty($npc_profile['name'])) {
@@ -292,12 +295,17 @@ function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
     $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
     $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
     $npc['speechstyle'] = $npc_profile['speechStyle'];
-    $npc['goals'] = $npc_profile['goal'];
+    //$npc['goals'] = $npc_profile['goal'];
+
     $npc['lock_profile'] = null;
 
-    $metadata = $npcMaster->getExtendedData($npc);
+    $extended_data = $npcMaster->getExtendedData($npc);
+    $extended_data['background_life_goals'] = $npc_profile['goal'] ?? [];
+    $metadata = $npcMaster->getMetadata($npc);
     $metadata['gps_track'] = true;
+
     $npc = $npcMaster->setMetadata($npc, $metadata);
+    $npc = $npcMaster->setExtendedData($npc, $extended_data);
     $npcMaster->updateByArray($npc);
 
     $refid = isset($npc['refid']) ? $npc['refid'] : null;
@@ -346,12 +354,12 @@ function spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems)
     $extended_data['background_life_last_updated'] = $last_gamets;
     $extended_data['background_life_player_unattached'] = true;
     $extended_data['middle_term_enabled'] = 1;
-
+    $extended_data['background_life_goals'] = $npc_profile['goal'] ?? [];
 
     $npc['core'] = "{$npc_profile['name']}. {$npc_profile['gender']} {$npc_profile['class']} {$npc_profile['race']}";
     $npc['npc_static_bio'] = "{$npc_profile['name']}. {$npc_profile['background']}";
     $npc['speechstyle'] = $npc_profile['speechStyle'];
-    $npc['goals'] = $npc_profile['goal'];
+    //$npc['goals'] = $npc_profile['goal'];
     $npc['lock_profile'] = null;
 
     $metadata = $npcMaster->getExtendedData($npc);
@@ -412,7 +420,7 @@ if ($argv[1] == '3') {
         'gender' => 'male',
         'class' => 'farmer',
         'race' => 'nord',
-        'location' => 'Whistling Mine',
+        'location' => 'Yngvild',
         'appearance' => 'a sturdy nord miner',
         'background' => "He was born in a small village and grew up working in the mine 'Whistling Mine'",
         'speechStyle' => 'rude, mining oriented',
@@ -463,7 +471,7 @@ When working at the mine, the character produces resources over time:
 ",
     ];
 
-    $startingPoint = 0x0002b0dd;
+    $startingPoint = 0x000d035b;
     $inventoryItems = [
         ['refid' => '0x0000000F', 'qty' => 100], // 100 gold coins
         ['refid' => '0x00071cf3', 'qty' => 10], // 10 ores
@@ -539,7 +547,7 @@ if ($argv[1] == '6') {
         'gender' => 'female',
         'class' => 'merchant',
         'race' => 'imperial',
-        'location' => 'Whiterun',
+        'location' => 'Markarth',
         'appearance' => 'an elegant imperial journalist',
         'background' => 'Born in Cyrodiil to a family of historians, Cassia Valerius became fascinated by the stories of ordinary people living through extraordinary events. She travelled to Skyrim after the Civil War began, determined to document the truth beyond the official speeches of jarls and generals. She believes every citizen, from a miner to a noble, has a story worth recording.',
         'speechStyle' => 'professional, inquisitive and diplomatic. She asks precise questions, listens carefully, and often references history, politics and local rumors. She is polite but persistent when seeking the truth.',
@@ -570,7 +578,7 @@ When at a city, tavern or social scenario, and intent is work, she generates gol
 ",
     ];
 
-    $startingPoint = 0x2701EE0A;
+    $startingPoint = 0x36f9d;
     $inventoryItems = [
         ['refid' => '0x0000000F', 'qty' => 100],
     ];
@@ -584,19 +592,19 @@ if ($argv[1] == '7') {
 
 if ($argv[1] == '8') {
     $npc_profile = [
-    'name' => 'Sees-the-Tide',
-    'gender' => 'male',
-    'class' => 'farmer',
-    'race' => 'argonian',
-    'location' => 'Windhelm',
-    'appearance' => 'a lean green-scaled Argonian wearing weathered fishing clothes, carrying nets that smell of river water and salt',
-    'background' => 'Born in Black Marsh, Sees-the-Tide travelled north searching for honest work after years of hardship. Like many Argonians, he eventually found employment on the Windhelm docks. Although he is not allowed to live within the city walls, he has built a modest life among the workers along the harbor. He knows the Sea of Ghosts, the White River and every fisherman in the port, believing that patience and hard work matter more than politics.',
-    'speechStyle' => 'Use a calm, measured, and pragmatic speaking style. Speak in fluent, natural English with clear, deliberate sentences, avoiding slang, exaggerated emotion, or unnecessary contractions. Favor concrete observations over opinions, and express feelings through restraint rather than intensity. Be courteous but reserved, respectful without excessive warmth, and let confidence come from quiet certainty instead of bravado. Prefer practical, descriptive language with occasional subtle metaphors drawn from nature, rivers, marshes, predators, prey, or the passage of seasons, but use them sparingly. Avoid broken grammar, Khajiit-like mannerisms (such as referring to oneself as "this one"), or excessive references to the Hist. The overall impression should be thoughtful, observant, patient, and quietly wise, with dialogue that feels grounded, concise, and purposeful.',
-    'disposition' => 'friendly',
-    'goal' => "[Life goals]
+        'name' => 'Sees-the-Tide',
+        'gender' => 'male',
+        'class' => 'farmer',
+        'race' => 'argonian',
+        'location' => 'Windhelm',
+        'appearance' => 'a lean green-scaled Argonian wearing weathered fishing clothes, carrying nets that smell of river water and salt',
+        'background' => 'Born in Black Marsh, Sees-the-Tide travelled north searching for honest work after years of hardship. Like many Argonians, he eventually found employment on the Windhelm docks. Although he is not allowed to live within the city walls, he has built a modest life among the workers along the harbor. He knows the Sea of Ghosts, the White River and every fisherman in the port, believing that patience and hard work matter more than politics.',
+        'speechStyle' => 'Use a calm, measured, and pragmatic speaking style. Speak in fluent, natural English with clear, deliberate sentences, avoiding slang, exaggerated emotion, or unnecessary contractions. Favor concrete observations over opinions, and express feelings through restraint rather than intensity. Be courteous but reserved, respectful without excessive warmth, and let confidence come from quiet certainty instead of bravado. Prefer practical, descriptive language with occasional subtle metaphors drawn from nature, rivers, marshes, predators, prey, or the passage of seasons, but use them sparingly. Avoid broken grammar, Khajiit-like mannerisms (such as referring to oneself as "this one"), or excessive references to the Hist. The overall impression should be thoughtful, observant, patient, and quietly wise, with dialogue that feels grounded, concise, and purposeful.',
+        'disposition' => 'friendly',
+        'goal' => "[Life goals]
 Earn an honest living as one of Windhelm's most dependable fishermen while supporting the Argonian community on the docks.
 
-* Works at 'Windhelm Docks'
+* Works at 'Windhelm Docks Area'
 * Inspect and repair fishing nets and equipment.
 * Spend most of the morning and afternoon fishing along the docks and nearby waters.
 * Sell freshly caught fish (River Betty, item refid:0x00106e1a, common price about 15 gold coins) to merchants, innkeepers and citizens.
@@ -614,14 +622,399 @@ Earn an honest living as one of Windhelm's most dependable fishermen while suppo
 [Production]
 When at the docks, shoreline or fishing areas, and intent is work, he generates fish (River Betty, item refid:0x00106e1a)
 at a rate of 8 each hour.
+Must sell fish to merchants,(e.g at Candlehearth Hall), innkeepers and citizens to earn gold, once he has fishes (River Betty, item refid:0x00106e1a) in his inventory.
 "
-];
+    ];
 
- $startingPoint = 0x27019D09;
+    $startingPoint = 0x02016865;
     $inventoryItems = [
         ['refid' => '0x00106e1a', 'qty' => 10],
     ];
 
     spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems);
 }
-?>
+
+
+if ($argv[1] == '9a') {
+
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Orianne");
+    $meta = $npcMaster->getMetaData($npc);
+    print_r($meta["last_coords"]);
+
+    print_r(getLocationsNearNpcCoords("Orianne"));
+
+    /*
+    // This does not work, because the TravelToRaw only accepts location formid.
+    $db->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'text' => "TravelToRaw@-16772904",
+            'actor' => "Lydia",
+            'action' => 'command'
+        )
+    );
+    */
+    //die();
+    // This works
+    // Jorvasrk 1014097
+    // Silver-Blood Inn
+
+    $db->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x{$npc["refid"]}@TravelTo/100950",
+            'tag' => '',
+        ]
+    );
+}
+
+if ($argv[1] == '9') {
+
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Cassia Valerius");
+    $meta = $npcMaster->getMetaData($npc);
+    print_r($meta["last_coords"]);
+    $testData = resolveTravelLocation("Silver-Blood Inn", $npc, $GLOBALS["db"]);
+    print_r($testData);
+    if (checkInterior($testData["is_interior"])) {
+        echo "Interior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
+    } else {
+        echo "Exterior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
+    }
+
+    print_r(getLocationsNearNpcCoords("Cassia Valerius"));
+
+    /*
+    // This does not work, because the TravelToRaw only accepts location formid.
+    $db->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'text' => "TravelToRaw@-16772904",
+            'actor' => "Lydia",
+            'action' => 'command'
+        )
+    );
+    */
+    die();
+    // This works
+    // Jorvasrk 1014097
+    // Silver-Blood Inn
+
+    $db->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x000A2C94@TravelTo/225181",
+            'tag' => '',
+        ]
+    );
+}
+if ($argv[1] == '10') {
+    // ----------------------------------------------------
+    // NPC 1 - Customer looking for a plumber
+    // ----------------------------------------------------
+    $npc_profile = [
+        'name' => 'Hroldar Stone',
+        'gender' => 'male',
+        'class' => 'noble',
+        'race' => 'nord',
+        'location' => 'Whiterun',
+        'appearance' => 'a middle-aged nord homeowner',
+        'background' => 'Hroldar recently discovered that the water pipes in his house are leaking badly. He has spent days asking around Whiterun for someone capable of repairing them.',
+        'speechStyle' => 'friendly, practical and direct. He explains his plumbing problem clearly and immediately asks whether someone can repair it.',
+        'disposition' => 'friendly',
+        'goal' => "
+[Primary Goal]
+Find a qualified plumber.
+
+- Ask nearby citizens whether they know a plumber.
+- If someone identifies themselves as a plumber, begin negotiating immediately.
+- Explain the plumbing issue.
+- Ask for an estimated price.
+- Negotiate politely.
+- If both parties agree on a price, hire the plumber.
+- After hiring, accompany the plumber to inspect the problem.
+- Eat/drink at least once per day.
+",
+    ];
+
+    $startingPoint = 0x2701EE0A;
+
+    $inventoryItems = [
+        ['refid' => '0x0000000F', 'qty' => 500], // enough gold to pay
+    ];
+
+    spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems);
+
+
+    // ----------------------------------------------------
+    // NPC 2 - Plumber
+    // ----------------------------------------------------
+    $npc_profile = [
+        'name' => 'Lucan Pipewright',
+        'gender' => 'male',
+        'class' => 'farmer',
+        'race' => 'imperial',
+        'location' => 'Whiterun',
+        'appearance' => 'a sturdy imperial craftsman carrying plumbing tools',
+        'background' => 'Lucan travels across Skyrim repairing pipes, wells and water systems for homes and businesses. He earns his living by accepting repair contracts.',
+        'speechStyle' => 'professional, confident and honest. He asks questions about the problem before offering a price.',
+        'disposition' => 'friendly',
+        'goal' => "
+[Primary Goal]
+Earn gold by repairing plumbing.
+
+- Walk around Whiterun looking for customers.
+- If someone says they need a plumber, introduce yourself immediately.
+- Ask what the problem is.
+- Inspect the situation before giving an estimate.
+- Negotiate a fair price.
+- If a deal is reached, perform the repair.
+- Receive payment after completing the work.
+- Continue searching for more customers.
+- Eat/drink at least once per day.
+
+[Production]
+When actively repairing plumbing for a customer, generate 10 gold worth of service value per hour.
+",
+    ];
+
+    $inventoryItems = [
+        ['refid' => '0x0000000F', 'qty' => 50],
+    ];
+
+    spawnBackgroundLifeNpc($npc_profile, $startingPoint, $inventoryItems);
+}
+
+if ($argv[1] == '11') {
+    foreach (DataLastDataExpandedFor("Hulda", -10) as $row) {
+        $historic[] = $row["content"];
+    }
+    print_r(implode("\n", $historic));
+}
+
+if ($argv[1] == '12') {
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Lydia");
+
+    // This does not work, because the TravelToRaw only accepts location formid.
+    $db->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'text' => "TakeHeldItem@0xFF000FF2:Alto Wine",
+            'actor' => "Lydia",
+            'action' => 'command'
+        )
+    );
+}
+
+if ($argv[1] == '13') {
+    $GLOBALS["db"]->upsertRowTrx(
+        "market_cache",
+        [
+            'baseid' => "2602481F",
+            'plugin' => "AIAgent.esp",
+            'name' => "Scroll of Identity",
+            'price' => 0
+        ],
+        ["baseid" => "2602481F", "plugin" => "AIAgent.esp"]
+    );
+}
+
+if ($argv[1] == '14') {
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Orianne Marius");
+    $skyrimCmd = new SkyrimCommandBuilder();
+    //$json = $skyrimCmd->Actor->RemoveFromAllFactions("0x{$npc["refid"]}", "0xFF00127C");
+    //$skyrimCmd->send(cmd: $json);
+    //$json = $skyrimCmd->ObjectReference->MoveTo("0x{$npc["refid"]}", "0x08365D75");
+    //$skyrimCmd->send(cmd: $json);
+    print_r(resolveTravelLocation("Elysium Estate (Interior)",$npc,$GLOBALS["db"]));
+
+}
+
+if ($argv[1] == '15') {
+    // Clone an NPC for BgL
+    // 
+    $name="Orianne";
+    $chimBase = 0x0820D4C5;
+    $chimBaseClothing = 0x000a1983; //Outfit
+    $chimWeapon = 0x00013989;
+    $chimLocation = 0; // nearby
+    $taskIdhack = 2; //submisseive, wont fight
+    $chimAppearanceNPC = 0x0820D4C5; //NPC to copy appearance from (Base Actor)
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|spawnCharacter@$name@$chimBase@$chimBaseClothing@$chimWeapon@$chimLocation@2@$chimAppearanceNPC",
+            'tag' => "",
+        ]
+    );
+    sleep(10);
+    $npc = $npcMaster->getByName($name);
+    $skyrimCmd = new SkyrimCommandBuilder();
+    $json = $skyrimCmd->Actor->RemoveFromAllFactions("0x{$npc["refid"]}");
+    $skyrimCmd->send(cmd: $json);
+
+}
+
+
+if ($argv[1] == '16') {
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Orianne");
+    $npcMaster->renameNPC("Orianne", "Orianne Marius");
+}
+
+if ($argv[1] == '17') {
+    
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0xFF00127C@RemoveFromBgL",
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+    
+}
+
+if ($argv[1] == '18') {
+    // ComeCloser test
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Karrie");
+
+    $db->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'text' => "ComeCloser@",
+            'actor' => "Karrie",
+            'action' => 'command'
+        )
+    );
+}
+
+if ($argv[1] == '19') {
+    // Test for NPC with no refid
+    print_r(buildSituationalMapDescription());
+    echo PHP_EOL;
+}
+
+if ($argv[1] == '20') {
+    // Clone an NPC for BgL
+    // 
+    $name="Karrie";
+    $npcMaster = new NpcMaster();   
+    $npc = $npcMaster->getByName($name);
+    $bedref=0x1813A3AF;
+     $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x{$npc["refid"]}@SleepInBed/$bedref",
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+
+}
+
+if ($argv[1] == '21a') {
+    
+    $name="Lydia";
+    $npcMaster = new NpcMaster();   
+    $npc = $npcMaster->getByName($name);
+    $bedref=0x1A51804C;
+    /*
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x{$npc["refid"]}@SleepInBed/$bedref",
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+    */
+    $skyrimCmd = new SkyrimCommandBuilder();
+    $json = $skyrimCmd->ObjectReference->MoveTo("0x{$npc["refid"]}","0x1A51804C",0,0,155);
+    $skyrimCmd->send(cmd: $json);
+}
+
+if ($argv[1] == '21b') {
+    
+    $name="Lydia";
+    $npcMaster = new NpcMaster();   
+    $npc = $npcMaster->getByName($name);
+   
+    $npc = $npcMaster->getByName($name);
+    $skyrimCmd = new SkyrimCommandBuilder();
+
+    $json = $skyrimCmd->Actor->SetUnconscious("0x{$npc["refid"]}",false);
+    $skyrimCmd->send(cmd: $json);
+
+    /*
+    $json = $skyrimCmd->ObjectReference->MoveTo("0x{$npc["refid"]}","0x1A51804C",0,0,155);
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->EnableAI("0x{$npc["refid"]}",false);
+    $skyrimCmd->send(cmd: $json);
+    */
+}
+
+if ($argv[1] == '22') {
+    
+    $name="Lydia";
+    $npcMaster = new NpcMaster();   
+    $npc = $npcMaster->getByName($name);
+    $bedref=0x1a224b54;
+    
+    
+    $npc = $npcMaster->getByName($name);
+    $skyrimCmd = new SkyrimCommandBuilder();
+
+    $json = $skyrimCmd->Actor->EnableAI("0x{$npc["refid"]}",true);
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->SetUnconscious("0x{$npc["refid"]}",true);
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->UnequipAll("0x{$npc["refid"]}");
+    $skyrimCmd->send(cmd: $json);
+    
+    $json = $skyrimCmd->Actor->EnableAI("0x{$npc["refid"]}",true);
+    $skyrimCmd->send(cmd: $json);
+
+}
+
+if ($argv[1] == '23') {
+    $GLOBALS["db"]->execQuery("INSERT INTO public.responselog VALUES (0, 0, 'Karrie', 'Today, as we gather in this virtual hall, I can''t help but draw inspiration from the vast and enchanting universe of Skyrim/////1/Varek/utt_39b8b31c32bb0abb9a92', 'ScriptQueue', '', nextval('responselog_rowid_seq'::regclass))");
+    
+
+}

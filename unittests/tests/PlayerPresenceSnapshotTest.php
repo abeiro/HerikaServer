@@ -88,6 +88,30 @@ final class PlayerPresenceSnapshotTest extends TestCase
         $this->assertSame([], $snapshot['present_actors']);
     }
 
+    public function testChatShortcutRoutingMarkerIsDecodedFromRoutingSnapshot(): void
+    {
+        $encoded = base64_encode((string)json_encode([
+            'source' => 'plugin_player_routing_v2',
+            'chat_shortcut_routed' => true,
+        ]));
+
+        $snapshot = chimDecodePlayerRoutingSnapshotField($encoded);
+
+        $this->assertTrue($snapshot['chat_shortcut_routed']);
+        $this->assertSame('', $snapshot['audience']);
+    }
+
+    public function testRequestExecutionModeIsIgnored(): void
+    {
+        $encoded = base64_encode((string)json_encode([
+            'execution_mode' => 'whisper',
+        ]));
+
+        $snapshot = chimDecodePlayerRoutingSnapshotField($encoded);
+
+        $this->assertArrayNotHasKey('execution_mode', $snapshot);
+    }
+
     public function testDirectivePeopleIncludeSelectedSpeakerAndExplicitListener(): void
     {
         $people = chimBuildDirectivePeoplePipe(

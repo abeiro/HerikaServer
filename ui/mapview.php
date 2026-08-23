@@ -28,6 +28,7 @@ require_once $enginePath . 'lib/rolemaster_helpers.php';
 require_once $enginePath . 'lib/scriptproxy_papyrus.php';
 require_once $enginePath . 'lib/background_life_requests.php';
 require_once $enginePath . 'lib/background_life_npc_creation.php';
+require_once $enginePath . 'lib/background_life_dashboard.php';
 require_once $enginePath . 'lib/core/player.class.php';
 require_once $enginePath . 'lib/core/npc_master.class.php';
 require_once $enginePath . 'lib/core/api_badge.class.php';
@@ -366,6 +367,9 @@ if (!function_exists('race_icon_web_path')) {
         } elseif ($_POST['action'] === 'toggle_bg_life_setting') {
             handleToggleBgLifeSetting();
             exit;
+        } elseif ($_POST['action'] === 'toggle_all_bg_life_settings') {
+            handleToggleAllBgLifeSettings();
+            exit;
         } elseif ($_POST['action'] === 'create_rumor') {
             [$rumorFlash, $rumorFormData] = handleCreateRumor();
         } elseif ($_POST['action'] === 'update_rumor') {
@@ -549,6 +553,69 @@ if (!function_exists('race_icon_web_path')) {
         }
     }
 
+    // Apply one Background Life rule to every currently enrolled NPC.
+    function handleToggleAllBgLifeSettings() {
+        global $adminConn;
+
+        $setting = trim((string) ($_POST['setting'] ?? ''));
+        $value = filter_var($_POST['value'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $settings = [
+            'bg_life_commands' => [
+                'column' => 'extended_data',
+                'key' => 'background_life_commands',
+                'label' => 'Automatic Actions',
+            ],
+            'bg_life_letters' => [
+                'column' => 'extended_data',
+                'key' => 'background_life_letters',
+                'label' => 'Letters',
+            ],
+            'gps_track' => [
+                'column' => 'metadata',
+                'key' => 'gps_track',
+                'label' => 'Tracking',
+            ],
+        ];
+
+        if (!isset($settings[$setting])) {
+            echo json_encode(['ok' => false, 'message' => 'Invalid setting']);
+            return;
+        }
+
+        $config = $settings[$setting];
+        $column = $config['column'];
+        $query = "
+            UPDATE core_npc_master
+            SET {$column} = jsonb_set(
+                COALESCE({$column}, '{}'::jsonb),
+                ARRAY[$1]::text[],
+                to_jsonb($2::boolean),
+                true
+            )
+            WHERE LOWER(COALESCE(extended_data->>'background_life_enabled', 'false'))
+                IN ('true', '1', 't', 'on')
+        ";
+        $result = pg_query_params($adminConn, $query, [$config['key'], $value ? 'true' : 'false']);
+
+        if (!$result) {
+            echo json_encode(['ok' => false, 'message' => 'Update failed']);
+            return;
+        }
+
+        $updatedCount = pg_affected_rows($result);
+        echo json_encode([
+            'ok' => true,
+            'message' => sprintf(
+                '%s %s for %d Background Life NPC%s',
+                $config['label'],
+                $value ? 'enabled' : 'disabled',
+                $updatedCount,
+                $updatedCount === 1 ? '' : 's'
+            ),
+            'updated_count' => $updatedCount,
+        ]);
+    }
+
     function handleSaveBglSettings() {
         $cooldownHours = isset($_POST['bgl_trigger_hours']) ? floatval($_POST['bgl_trigger_hours']) : 24;
         $cooldownHours = chimNormalizeBackgroundLifeTriggerHours($cooldownHours);
@@ -603,17 +670,52 @@ $mapImageUrl = '../data/maps/Map_of_Skyrim.png?v=7';
     $result  =pg_query($adminConn,"select max(gamets) as last_gamets from eventlog");
     $res = pg_fetch_assoc($result);
     $last_gamets = $res["last_gamets"];
-    $currentDate=convert_gamets2skyrim_date($last_gamets);
+$currentDate=convert_gamets2skyrim_date($last_gamets);
 $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
+
+$bglBulkState = [
+    'total' => 0,
+    'bg_life_commands' => 0,
+    'bg_life_letters' => 0,
+    'gps_track' => 0,
+];
+$bglBulkResult = pg_query($adminConn, "
+    SELECT
+        COUNT(*) AS total,
+        COUNT(*) FILTER (
+            WHERE LOWER(COALESCE(extended_data->>'background_life_commands', 'false'))
+                IN ('true', '1', 't', 'on')
+        ) AS bg_life_commands,
+        COUNT(*) FILTER (
+            WHERE LOWER(COALESCE(extended_data->>'background_life_letters', 'false'))
+                IN ('true', '1', 't', 'on')
+        ) AS bg_life_letters,
+        COUNT(*) FILTER (
+            WHERE LOWER(COALESCE(metadata->>'gps_track', 'false'))
+                IN ('true', '1', 't', 'on')
+        ) AS gps_track
+    FROM core_npc_master
+    WHERE LOWER(COALESCE(extended_data->>'background_life_enabled', 'false'))
+        IN ('true', '1', 't', 'on')
+");
+if ($bglBulkResult && ($bglBulkRow = pg_fetch_assoc($bglBulkResult))) {
+    foreach ($bglBulkState as $key => $unused) {
+        $bglBulkState[$key] = (int) ($bglBulkRow[$key] ?? 0);
+    }
+}
 
     // Filter mode: show all NPCs with tracked coords, or only BG-Life enabled ones
     $showAllCoords = isset($_GET['show_all_coords']) && $_GET['show_all_coords'] === '1';
     $whereClause = $showAllCoords
         ? "metadata->>'last_coords' IS NOT NULL"
         : "extended_data->>'background_life_enabled' = 'true'";
+    $categorySelect = chimBglHistoryCategorySelect($db);
+    $latestCategorySelect = $categorySelect === ''
+        ? 'NULL::text AS category'
+        : 'history.category AS category';
 
     $query = "
-    select A.*,B.content FROM 
+    select A.*,B.content,C.data as last_activity,C.gamets as last_activity_gamets,C.category as last_action_cat FROM
     (SELECT
         npc_name,metadata,extended_data,id,refid,race,extended_data->>'background_life_last_updated' as last_report,
         metadata->>'last_coords' as last_coords,metadata->>'last_coords_history' as last_coords_history
@@ -637,6 +739,13 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
         ) t
         WHERE rn = 1
     ) B ON (B.people=A.npc_name)
+    LEFT JOIN LATERAL (
+        SELECT history.data, history.gamets, {$latestCategorySelect}
+        FROM public.bgl_history history
+        WHERE history.npc = A.npc_name
+        ORDER BY history.gamets DESC, history.ts DESC, history.rowid DESC
+        LIMIT 1
+    ) C ON TRUE
     order by A.npc_name asc
 ";
     //error_log($query);
@@ -677,6 +786,7 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
             $extData   = json_decode($row['extended_data'], true);
             
             // Parse background life settings
+            $backgroundLifeEnabled = isset($extData['background_life_enabled']) ? (bool)$extData['background_life_enabled'] : false;
             $bgLifeCommands = isset($extData['background_life_commands']) ? (bool)$extData['background_life_commands'] : false;
             $bgLifeLetters = isset($extData['background_life_letters']) ? (bool)$extData['background_life_letters'] : false;
             $gpsTrack = isset($meta['gps_track']) ? (bool)$meta['gps_track'] : false;
@@ -733,6 +843,12 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
                 }
             }
             
+            $lastActivity = trim((string)($row['last_activity'] ?? ''));
+            $lastActivityCategory = chimBglActivityCategory(
+                (string)($row['last_action_cat'] ?? ''),
+                $lastActivity
+            );
+
             $markers[] = [
                 'name'        => $row['npc_name'],
                 'ingame_x'    => (int) $x,
@@ -747,7 +863,12 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
                 'refid'       => $row["refid"],
                 'last_pos_ts' => $coordsData["last_updated"]?convert_gamets2skyrim_date($coordsData["last_updated"]).",hours ago:".round(($last_gamets-$coordsData["last_updated"]) *0.0000024,0):null,
                 'last_report' => convert_gamets2skyrim_date($row["last_report"]).",hours ago:".round(($last_gamets-$row["last_report"]) *0.0000024,0),
+                'last_activity' => $lastActivity,
+                'last_action_cat' => $lastActivityCategory,
+                'last_action_icon' => chimBglActivityIcon($lastActivityCategory, $lastActivity),
+                'last_action_label' => chimBglActivityLabel($lastActivityCategory, $lastActivity),
                 'coords_history' => $coordsHistory,
+                'background_life_enabled' => $backgroundLifeEnabled,
                 'bg_life_commands' => $bgLifeCommands,
                 'bg_life_letters' => $bgLifeLetters,
                 'gps_track' => $gpsTrack,
@@ -824,6 +945,10 @@ $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
             'refid'       => $marker['refid'],
             'last_pos_ts' => $marker["last_pos_ts"],
             'last_report' => $marker["last_report"],
+            'last_activity' => $marker['last_activity'],
+            'last_action_cat' => $marker['last_action_cat'],
+            'last_action_icon' => $marker['last_action_icon'],
+            'last_action_label' => $marker['last_action_label'],
             'coords_history' => $translatedHistory,
             'bg_life_commands' => $marker['bg_life_commands'],
             'bg_life_letters' => $marker['bg_life_letters'],
@@ -1122,22 +1247,24 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-radius: 50%;
         border: 2px solid white;
         box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 11px;
+        line-height: 1;
         z-index: 10;
         position: relative;
-        transform: scale(var(--bgl-marker-scale, 1));
         transform-origin: center;
         transition: transform 0.15s ease;
     }
 
     .marker:hover .marker-dot {
-        transform: scale(var(--bgl-marker-hover-scale, 1.1));
+        transform: scale(1.1);
     }
 
     .history-marker {
         position: absolute;
-        transform: translate(-50%, -50%) scale(var(--bgl-marker-scale, 1));
+        transform: translate(-50%, -50%);
         transform-origin: center;
         border-radius: 50%;
         border: 1px solid rgba(255, 255, 255, 0.6);
@@ -1151,7 +1278,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         opacity: 1;
         box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
         z-index: 15;
-        transform: translate(-50%, -50%) scale(var(--bgl-marker-hover-scale, 1.1));
+        transform: translate(-50%, -50%) scale(1.1);
     }
 
     .history-marker-label {
@@ -1162,10 +1289,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-radius: 4px;
         white-space: nowrap;
         font-size: 12px;
-        top: 12px;
+        top: calc(12px * var(--bgl-info-scale, 1));
         left: 50%;
-        transform: translateX(-50%);
-        margin-top: 3px;
+        transform: translateX(-50%) scale(var(--bgl-info-scale, 1));
+        transform-origin: top center;
+        margin-top: calc(3px * var(--bgl-info-scale, 1));
         border: 1px solid rgba(255, 255, 255, 0.4);
         display: none;
         z-index: 20;
@@ -1184,11 +1312,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-radius: 6px;
         white-space: nowrap;
         font-size: 14px;
-        top: calc(15px * var(--bgl-marker-scale, 1));
+        top: calc(15px * var(--bgl-info-scale, 1));
         left: 50%;
-        transform: translateX(-50%) scale(var(--bgl-marker-scale, 1));
+        transform: translateX(-50%) scale(var(--bgl-info-scale, 1));
         transform-origin: top center;
-        margin-top: calc(5px * var(--bgl-marker-scale, 1));
+        margin-top: calc(5px * var(--bgl-info-scale, 1));
         border: 2px solid rgb(242, 124, 17);
         display: none;
         z-index: 20;
@@ -1410,6 +1538,44 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         font-weight: 700;
         letter-spacing: 0.08em;
         text-transform: uppercase;
+    }
+
+    .marker-card-activity {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 8px;
+        align-items: center;
+        margin: 2px 0 8px;
+        padding: 7px 8px;
+        border: 1px solid #3f3f46;
+        border-radius: 6px;
+        background: #222227;
+    }
+
+    .marker-card-activity-icon {
+        font-size: 20px;
+        line-height: 1;
+        text-align: center;
+    }
+
+    .marker-card-activity-copy {
+        min-width: 0;
+    }
+
+    .marker-card-activity-title {
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .marker-card-activity-summary {
+        margin-top: 2px;
+        overflow: hidden;
+        color: #aaaab2;
+        font-size: 10px;
+        line-height: 1.3;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .marker-card-actions {
@@ -1973,6 +2139,47 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         background: rgb(255, 145, 38);
     }
 
+    .bgl-bulk-settings {
+        display: grid;
+        gap: 8px;
+        padding-top: 10px;
+        border-top: 1px solid #4a4a4a;
+    }
+
+    .bgl-bulk-settings-title {
+        color: #ddd;
+        font-size: 13px;
+        font-weight: bold;
+    }
+
+    .bgl-bulk-settings-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .bgl-bulk-toggle {
+        min-height: 36px;
+        padding: 7px 9px;
+        border: 1px solid #555;
+        border-radius: 6px;
+        background: #353535;
+        color: #fff;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .bgl-bulk-toggle:hover:not(:disabled) {
+        border-color: rgb(242, 124, 17);
+        background: #404040;
+    }
+
+    .bgl-bulk-toggle:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+    }
+
     .bgl-settings-message {
         padding: 8px 10px;
         border-radius: 6px;
@@ -2048,7 +2255,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         opacity: 0.8;
         transition: all 0.3s ease;
         border: none;
-        transform: scale(var(--bgl-marker-scale, 1));
         transform-origin: center;
     }
 
@@ -2062,9 +2268,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .location-marker-caption {
         position: absolute;
-        top: calc(30px * var(--bgl-marker-scale, 1));
+        top: 30px;
         left: 50%;
-        transform: translateX(-50%) scale(var(--bgl-marker-scale, 1));
+        transform: translateX(-50%);
         transform-origin: top center;
         color: #ece7dc;
         font-size: 10px;
@@ -2080,7 +2286,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
     .location-marker:hover .location-marker-icon {
         opacity: 1;
-        transform: scale(var(--bgl-marker-hover-scale, 1.1));
+        transform: scale(1.1);
     }
 
     .location-marker:hover .location-marker-icon img {
@@ -2095,11 +2301,11 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         border-radius: 6px;
         white-space: nowrap;
         font-size: 14px;
-        top: calc(15px * var(--bgl-marker-scale, 1));
+        top: calc(15px * var(--bgl-info-scale, 1));
         left: 50%;
-        transform: translateX(-50%) scale(var(--bgl-marker-scale, 1));
+        transform: translateX(-50%) scale(var(--bgl-info-scale, 1));
         transform-origin: top center;
-        margin-top: calc(5px * var(--bgl-marker-scale, 1));
+        margin-top: calc(5px * var(--bgl-info-scale, 1));
         border: none;
         display: none;
         z-index: 30;
@@ -2276,6 +2482,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
                     echo '<div class="marker" style="left: ' . $percentX . '%; top: ' . $percentY . '%; transform: translate(calc(-50% + ' . $offsetX . 'px), calc(-50% + ' . $offsetY . 'px));">';
                     echo '<div class="marker-dot" id="mkr_' . $marker['id'] . '" data-npc-name="' . $markerName . '" role="button" tabindex="0" title="View recent events for ' . $markerName . '" aria-label="View recent events for ' . $markerName . '" style="width: ' . ($marker['size'] * 2) . 'px; height: ' . ($marker['size'] * 2) . 'px; background-color: ' . $marker['color'] . '; opacity: 0.8;">';
+                    echo htmlspecialchars($marker['last_action_icon'], ENT_QUOTES, 'UTF-8');
                     echo '</div>';
                     echo '<div class="marker-label">' . PHP_EOL;
                     echo "<a style='color:white;text-decoration:none' href='#dtl_{$marker["id"]}'>{$marker["name"]} &nbsp; ↗️</a></br>";
@@ -2283,6 +2490,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     echo '<img class="thumb" src="' . $marker['figure'] . '" />';
                     echo '<br/><small>Last reported:' . $marker['last_report'] . '</small>';
                     echo '<br/><small>Last tracked:' . $marker['last_pos_ts'] . '</small>';
+                    echo '<br/><small>Last activity: ' . htmlspecialchars($marker['last_action_icon'] . ' ' . $marker['last_action_label'], ENT_QUOTES, 'UTF-8') . '</small>';
                     echo '</div>';
                     echo '</div>' . PHP_EOL;
                     
@@ -2405,6 +2613,35 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     </div>
                     <div class="bgl-settings-help">Controls how many in-game hours pass before eligible Background Life NPCs automatically run their next update.</div>
                     <button type="submit" class="bgl-settings-save">Save</button>
+                    <div class="bgl-bulk-settings">
+                        <div class="bgl-bulk-settings-title">All Background Life NPCs</div>
+                        <div class="bgl-bulk-settings-grid">
+                            <?php
+                            $bglBulkControls = [
+                                'bg_life_commands' => 'Automatic Actions',
+                                'bg_life_letters' => 'Letters',
+                                'gps_track' => 'Tracking',
+                            ];
+                            foreach ($bglBulkControls as $setting => $label):
+                                $enabledCount = $bglBulkState[$setting];
+                                $totalCount = $bglBulkState['total'];
+                                $allEnabled = $totalCount > 0 && $enabledCount === $totalCount;
+                                $buttonText = ($allEnabled ? 'Disable All ' : 'Enable All ') . $label;
+                            ?>
+                                <button
+                                    type="button"
+                                    class="bgl-bulk-toggle"
+                                    data-setting="<?php echo htmlspecialchars($setting, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-label="<?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-enabled-count="<?php echo $enabledCount; ?>"
+                                    data-total="<?php echo $totalCount; ?>"
+                                    title="<?php echo $enabledCount; ?> of <?php echo $totalCount; ?> enabled"
+                                    onclick="toggleAllBgLifeSettings(this)"
+                                    <?php echo $totalCount === 0 ? 'disabled' : ''; ?>><?php echo htmlspecialchars($buttonText); ?></button>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="bgl-settings-help">Enable or disable each rule for every NPC currently enrolled in Background Life.</div>
+                    </div>
                 </form>
                 <div class="bgl-settings-card">
                     <h3>📍 NPC Markers</h3>
@@ -2433,6 +2670,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                 id="dtl_<?php echo $marker['id'] ?>"
                                 class="marker-item"
                                 data-npc-name="<?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                data-bgl-enrolled="<?php echo $marker['background_life_enabled'] ? '1' : '0'; ?>"
                                 title="View recent events for <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?>"
                                 style="border-left-color:<?php echo $marker['color']; ?>;">
                                 <div class="marker-card-identity">
@@ -2443,6 +2681,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                                         <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="event.stopPropagation(); pulseAnimation('mkr_<?php echo $marker['id'] ?>')" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map" title="Show on map">👀</span>
                                         <span class="marker-map-focus" data-map-focus role="button" tabindex="0" onclick="window.open('https://gamemap.uesp.net/sr/?world=skyrim&layer=day&x=<?php echo $marker['ingame_x'] ?>&y=<?php echo $marker['ingame_y'] ?>&zoom=8', '_blank'); event.stopPropagation();" aria-label="Show <?php echo htmlspecialchars($marker['name'], ENT_QUOTES, 'UTF-8'); ?> on map" title="UESP Map">🗺️</span>
                                     </h4>
+                                </div>
+                                <div class="marker-card-activity">
+                                    <span class="marker-card-activity-icon" aria-hidden="true"><?php echo htmlspecialchars($marker['last_action_icon'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <div class="marker-card-activity-copy">
+                                        <div class="marker-card-activity-title">Last activity: <?php echo htmlspecialchars($marker['last_action_label'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                        <div class="marker-card-activity-summary" title="<?php echo htmlspecialchars($marker['last_activity'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($marker['last_activity'] !== '' ? $marker['last_activity'] : 'No recent activity recorded.', ENT_QUOTES, 'UTF-8'); ?></div>
+                                    </div>
                                 </div>
                                 <div class="marker-card-row-label">Actions</div>
                                 <div class="marker-card-actions">
@@ -2631,11 +2876,65 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
             });
         }
 
+        function updateBulkToggleState(setting, delta) {
+            const button = document.querySelector('.bgl-bulk-toggle[data-setting="' + setting + '"]');
+            if (!button) {
+                return;
+            }
+
+            const total = Number(button.getAttribute('data-total')) || 0;
+            const currentCount = Number(button.getAttribute('data-enabled-count')) || 0;
+            const enabledCount = Math.max(0, Math.min(total, currentCount + delta));
+            const allEnabled = total > 0 && enabledCount === total;
+            const label = button.getAttribute('data-label') || 'Setting';
+
+            button.setAttribute('data-enabled-count', String(enabledCount));
+            button.setAttribute('title', enabledCount + ' of ' + total + ' enabled');
+            button.textContent = (allEnabled ? 'Disable All ' : 'Enable All ') + label;
+        }
+
+        function toggleAllBgLifeSettings(button) {
+            const setting = button.getAttribute('data-setting');
+            const label = button.getAttribute('data-label') || 'setting';
+            const total = Number(button.getAttribute('data-total')) || 0;
+            const enabledCount = Number(button.getAttribute('data-enabled-count')) || 0;
+            const value = !(total > 0 && enabledCount === total);
+            const actionLabel = value ? 'enable' : 'disable';
+
+            if (total === 0 || !window.confirm('Are you sure you want to ' + actionLabel + ' ' + label.toLowerCase() + ' for all Background Life NPCs?')) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'toggle_all_bg_life_settings');
+            formData.append('setting', setting);
+            formData.append('value', value ? '1' : '0');
+
+            button.disabled = true;
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.ok) {
+                    throw new Error(data.message || 'Update failed');
+                }
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+                button.disabled = false;
+            });
+        }
+
         function toggleBgLifeSetting(button) {
             const npcId = button.getAttribute('data-npc-id');
             const setting = button.getAttribute('data-setting');
             const label = button.getAttribute('data-label');
-            const value = button.getAttribute('data-enabled') !== '1';
+            const wasEnabled = button.getAttribute('data-enabled') === '1';
+            const value = !wasEnabled;
             
             const formData = new FormData();
             formData.append('action', 'toggle_bg_life_setting');
@@ -2658,6 +2957,10 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
                     const stateText = value ? 'enabled' : 'disabled';
                     button.setAttribute('aria-label', label + ': ' + stateText);
                     button.setAttribute('title', label + ': ' + stateText);
+                    const markerCard = button.closest('.marker-item');
+                    if (markerCard && markerCard.getAttribute('data-bgl-enrolled') === '1') {
+                        updateBulkToggleState(setting, value ? 1 : -1);
+                    }
                 } else {
                     alert('Error: ' + (data.message || 'Unknown error'));
                 }

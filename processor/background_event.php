@@ -107,11 +107,12 @@ if (is_array($bgevent)) {
                         $targetNpcData = $npcManager->getByRefid($targetRefid);
                         if (isset($targetNpcData) && isset($targetNpcData["npc_name"])) {
                             $npcDestinationname = $targetNpcData["npc_name"];
-                            if ($bgevent["description"])
+                            if ($bgevent["description"]) {
                                 if ($bgevent["event"] == "start")
                                     $bgevent["description"] .= " (target is: {$npcDestinationname})";
-                            if ($bgevent["event"] == "end")
-                                $bgevent["description"] .= "(target was: {$npcDestinationname})";
+                                if ($bgevent["event"] == "end")
+                                    $bgevent["description"] .= "(target was: {$npcDestinationname})";
+                            }
                         }
                     }
 
@@ -147,8 +148,10 @@ if (is_array($bgevent)) {
 
                         if ($bgevent["name"] == "TravelTo" || $bgevent["name"] == "MoveTo") {
                             $message="{$npcData["npc_name"]} reaches destination";
+                            $category="travel";
                         } else {
                             $message="{$npcData["npc_name"]} {$bgevent["event"]} {$bgevent["name"]}";
+                            $category="other";
                         }
 
                         $GLOBALS["db"]->insert(
@@ -158,7 +161,8 @@ if (is_array($bgevent)) {
                                 'ts' => $gameRequest[1],
                                 'gamets' => $gameRequest[2],
                                 'localts' => time(),
-                                'data' => $message
+                                'data' => $message,
+                                'category' => $category,
                             ]
                         );
                     }

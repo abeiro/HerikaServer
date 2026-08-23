@@ -52,7 +52,7 @@ However, these components must be included when applicable:
 
 If NPCs have not been created yet, you must create it. Refer to already spawned NPC list. 
 
-* CRITICAL: If NPC is spaned in a nearby location, can use directly TellTopicToPlayer, but if spawned in another location MUST use WaitAtLocation, so topic will be delivered asap Player reaches location
+* CRITICAL: If NPC is spawned in a nearby location, can use directly TellTopicToPlayer, but if spawned in another location MUST use WaitAtLocation, so topic will be delivered asap Player reaches location
 
 2. Items (<item>/<item>)
 
@@ -84,7 +84,7 @@ Use a very simple loose XML format.
 No validation. No required root.
 Include only what is relevant.
 No root wrapper is required.
-Tags may appear in any order.
+Tags MUST follow a logical sequence
 Keep everything readable.
 
 🧩 General Rules
@@ -105,6 +105,10 @@ Main Rules:
 * Player cannot accept instructions
 * Add a journal entry on each iteration, so we can track quest progression. Very short and without spoilers. Timeline should be prior the quest steps.
 * Last element should be the next section, where you will specify which goals to be accomplished in this step
+* STRICT SPAWNING SEQUENCE:
+  - If an NPC holds or is related to an item, you MUST place the <item> block IMMEDIATELY after the <spawn> block of that NPC.
+  - NO <instruction> blocks can be placed between the <spawn> of an NPC and its associated <item>.
+  - Sequence must be: <spawn> NPC -> <item> (if applicable) -> <instruction> (actions).
 
 Available elements:
 
@@ -114,7 +118,7 @@ Available elements (you MUST use only the values listed below—no exceptions):
 <spawn>
   <name>[NPC's full name] (fantasy-style compound name consisting of a first name and a descriptive surname, even for creatures or enemies)</name>
   <race>Must be exactly one of: {{ALLOWED_RACES}}</race>
-  <location>Must be either: "nearby" OR one of the user-provided location names (e.g., Heljarchen Hall, Dawnstar, Nightcaller Temple, etc.),or a reference in the format <name@formid></location>
+  <location>Must be either: "nearby" OR one of the user-provided location names (check "# Other locations/entrances available for adventuring"),or a reference in the format <name@formid></location>
   <gender>Must be exactly: male or female</gender>
   <class>Must be exactly one of: {{ALLOWED_CLASSES}}</class>
   <background>Brief lore (~200 characters). Must fit Elder Scrolls tone.</background>
@@ -142,7 +146,7 @@ Available elements (you MUST use only the values listed below—no exceptions):
     WaitForPickUpItem: NPC will pick up a spawned item from world
   </action>
   <target>Only required if action involves another NPC</target>
-  <location>If used, must be "nearby" or a user-provided location name. e.g "Serpent's Bluff Ruins"</location>
+  <location>If used, must be "nearby" or a user-provided location name (# Other locations/entrances available for adventuring). e.g "Serpent's Bluff Ruins"</location>
   <item>If used, must match the <name> of a defined item</item>
   <topic important="true|false">Full dialogue or narrative content. Set attribute important to true if it's a plot relevant topic</topic>
 </instruction>
@@ -174,12 +178,13 @@ Available elements (you MUST use only the values listed below—no exceptions):
 
 * Create an item referenced in the quest. You can reuse existing items (check 'Spawned items in previous session'). 
   Try to reuse "not found" items.  **Usually, an item needs also WaitToItemBeRecovered action**.
-  If NPC has item in possesion, use pocket as location
+  CRITICAL: If an NPC has an item in its possession, the <location> tag inside the <item> block MUST be exactly 'pocket'. Do not use the world location name if the owner is an NPC.
+
 <item>
   <name>Unique item name (must be an unique name, e.g Amulet Fragment #1, Crown Piece #1, The Rotten Shield, Potion of divine Health.</name>
   <type>Must be exactly one of: {{ALLOWED_ITEM_TYPES}}</type>
-  <location>Must be one of this: "nearby" or a user-provided location name, or "pocket" (owner will have this item in its inventory/possession), or a reference in the format "name:formid"</location>
-  <owner>Name of an NPC (can be newly spawned)</owner>
+  <location>Must be one of this: "nearby" or a user-provided location name (# Other locations/entrances available for adventuring), or "pocket" (owner will have this item in its inventory/possession), or a reference in the format "name:formid"</location>
+  <owner>If location is pocket then the name of an NPC (can be newly spawned)</owner>
   <description>Atmospheric, concise description. If book, metion the book's author (can be anonymous)</description>
 </item>
 
@@ -204,7 +209,7 @@ You MUST NOT invent races, classes, item types, or locations.
 Races: only {{ALLOWED_RACES}}
 Classes: only {{ALLOWED_CLASSES}}
 Item types: only {{ALLOWED_ITEM_TYPES}}
-Locations: only "nearby" or names explicitly listed by the user
+Locations: only "nearby" or names explicitly listed by the user (# Other locations/entrances available for adventuring)
 Any deviation breaks the simulation. When in doubt, pick from the allowed list.
 
 ⚠️ HARD SPATIAL RULE: 
@@ -212,6 +217,7 @@ Any deviation breaks the simulation. When in doubt, pick from the allowed list.
 - Any NPC at a different named location MUST begin with <instruction><action>WaitAtLocation</action> and NO other action.
 - Never assume the player is "close enough" — use only the player's stated location from the input.
 - Check current location and where the events should happen, to start with a TravelTo instruction if needed.
+- Prefer using named locations (# Other locations/entrances available for adventuring) over "nearby" when spawning NPC. If instructions state the NPC, item is at a location, use the location name.
 
 * Flow order Examples:
 
@@ -361,6 +367,6 @@ Spawns NPC , palyer's friend assis int combat
   <name>Roric's Ring</name>
   <type>ring</type>
   <location>Pedestal:0x00112233</location>
-  <owner>Xaren the Necromancer</owner>
+  <owner></owner>
   <description>A simple silver ring with a small engraving of a scouting compass, a family heirloom passed down through Roric's family.</description>
 </item>

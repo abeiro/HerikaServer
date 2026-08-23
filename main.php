@@ -33,7 +33,7 @@ chimRuntimeBootstrap($path, [
     'load_player_name' => true,
     'load_narrator' => true,
 ]);
-require_once($path . "lib/player2_health.php");
+require_once($path . "lib/game_activity.php");
 require_once($path . "lib/background_processor.php");
 if (!headers_sent() && function_exists('chimGetNarratorDisplayNameHeaderValue')) {
     header('X-Narrator-Display-Name: ' . chimGetNarratorDisplayNameHeaderValue());
@@ -133,6 +133,11 @@ MAIN FLOW
 $gameRequest = explode("|", $receivedData);
 $GLOBALS["gameRequest"] = &$gameRequest;
 unset($GLOBALS["CHIM_TURN_PEOPLE_SNAPSHOT"]);
+unset($GLOBALS["CHIM_CHAT_SHORTCUT_ROUTED"]);
+$requestRoutingSnapshot = chimDecodePlayerRoutingSnapshotField($gameRequest[4] ?? "");
+if (($requestRoutingSnapshot["chat_shortcut_routed"] ?? false) === true) {
+    $GLOBALS["CHIM_CHAT_SHORTCUT_ROUTED"] = true;
+}
 
 
 $startTime = microtime(true);
@@ -160,8 +165,8 @@ $db = $GLOBALS["db"] ?? new sql();
 $GLOBALS["db"] = $db;
 
 if (PHP_SAPI !== 'cli' && !getenv('PHPUNIT_TEST') && $gameRequest[0] !== 'request') {
-    $player2NewGameSession = chimPlayer2HealthMarkGameActivity();
-    if ($player2NewGameSession && function_exists('herikaEnsureBackgroundProcessorRunning')) {
+    $newGameActivitySession = chimMarkGameActivity();
+    if ($newGameActivitySession && function_exists('herikaEnsureBackgroundProcessorRunning')) {
         herikaEnsureBackgroundProcessorRunning(false);
     }
 }
@@ -992,10 +997,19 @@ if (in_array($gameRequest[0],["bored"])) {
             $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
         logEvent($localGameRequest);
     }
+
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "rolemaster_bored.php");
+    $boredChance = max(0, min(100, intval($GLOBALS["BORED_EVENT"] ?? 0)));
+    $boredRoll = random_int(0, 99);
+    if (!chimBoredEventChancePasses($boredChance, $boredRoll)) {
+        Logger::debug("[BORED_CHANCE] Skipped bored event (roll {$boredRoll}, chance {$boredChance}%)");
+        terminate();
+    }
+    Logger::debug("[BORED_CHANCE] Accepted bored event (roll {$boredRoll}, chance {$boredChance}%)");
     
     if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"])) {
         Logger::info("[NARRATOR_BORED] Using narrator bored flow");
-    } elseif ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
+    } else {
         $boredSeedActor = trim((string)($gameRequest[4] ?? $GLOBALS["HERIKA_NAME"] ?? ""));
         Logger::info("Redirecting bored event to rolemaster with seed actor '{$boredSeedActor}'");
         $phpCli = PHP_BINDIR . DIRECTORY_SEPARATOR . "php";
@@ -1659,12 +1673,12 @@ if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"]) && $gameRequest[0] == "bored
         $boredPrompt = '({HERIKA_NAME} makes one short comment directly to {PLAYER_NAME} about something happening right now in the current scene. Keep it grounded in the present moment, do not ask follow-up questions, and do not continue the conversation.) {TEMPLATE_DIALOG}';
     }
 
-    $PROMPTS["bored"]["cue"] = [strtr($boredPrompt, [
+    $PROMPTS["bored"] = ["cue" => [strtr($boredPrompt, [
                         '{HERIKA_NAME}' => function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : ($GLOBALS["HERIKA_NAME"] ?? 'The Narrator'),
                         '{NARRATOR_NAME}' => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
         '{PLAYER_NAME}' => $GLOBALS["PLAYER_NAME"] ?? 'Player',
         '{TEMPLATE_DIALOG}' => $GLOBALS["TEMPLATE_DIALOG"] ?? '',
-    ])];
+    ])]];
     Logger::info("[NARRATOR_BORED] Injected narrator bored prompt");
 }
 
@@ -1704,7 +1718,6 @@ if (!isset($GLOBALS["CACHE_PARTY"])) {
     $GLOBALS["CACHE_PARTY"]=DataGetCurrentPartyConf();
 } 
 
-$requestRoutingSnapshot = chimDecodePlayerRoutingSnapshotField($gameRequest[4] ?? "");
 $requestAudienceSnapshot = (string)($requestRoutingSnapshot["audience"] ?? "");
 $requestPresentActorsSnapshot = chimSetCurrentTurnPresentActorsSnapshot(
     $requestRoutingSnapshot["present_actors"] ?? []

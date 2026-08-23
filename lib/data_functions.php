@@ -879,15 +879,22 @@ function DataDequeue($timestamp = 0)
     } else {
         $clause="";
     }
-    // Use atomic UPDATE...RETURNING to prevent race conditions where multiple concurrent
-    // requests could fetch the same dialogue before it's marked as sent
+    // Claim pending responses atomically, then return them in their original queue order.
     $results = $db->fetchAll(
-        "UPDATE responselog 
-         SET sent=1 
-         WHERE rowid IN (
-             SELECT rowid FROM responselog WHERE sent=0 $clause ORDER BY rowid ASC
+        "WITH queued AS (
+             SELECT rowid
+             FROM responselog
+             WHERE sent=0 $clause
+             ORDER BY rowid ASC
+             FOR UPDATE SKIP LOCKED
+         ), claimed AS (
+             UPDATE responselog AS response
+             SET sent=1
+             FROM queued
+             WHERE response.rowid=queued.rowid
+             RETURNING response.*
          )
-         RETURNING *, rowid"
+         SELECT * FROM claimed ORDER BY rowid ASC"
     );
     
     $finalData = array();
@@ -2538,6 +2545,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     $query="select  
     case 
       when type='infoaction' and a.data like '#%MEMORY%' then 'MEMORY'
+      when type='infoaction' and a.data like '<memory>%' then 'MEMORY'
       when type like 'info%' or type like 'funcret%' or type like 'location%' then 'CONTEXTI'
       when a.type='chat_background' or a.data like '%background chat%' then 'BACKDIAG'
       when type='book' then 'BOOKEVT' 
@@ -6002,15 +6010,18 @@ function call_llm_internal() {
 
                                 } 
                                 if (is_array($dbDestination) && isset($dbDestination["formid"])) {
+                                    // TravelToRaw change
                                     $destination=$dbDestination["formid"];
                                     error_log("[ACTION POSTFILTER TravelTo] found database entry for $localtarget => $destination => {$dbDestination["name"]}, similarity ({$dbDestination["sim"]})");
                                     $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
                                 
                                 } else if (is_array($dbDestinationRegion) && isset($dbDestinationRegion["formid"])) {
-
+                                    // TravelToRaw change
                                     $destination=$dbDestinationRegion["formid"];
+
                                     error_log("[ACTION POSTFILTER TravelTo] found database (searching by region) entry for $localtarget => $destination => {$dbDestinationRegion["name"]}, similarity ({$dbDestinationRegion["sim"]})");
-                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";    
+                                    $actions[$n]="{$actionParts[0]}|{$actionParts[1]}|TravelToRaw@$destination";
+
                                 } else if (stripos($destination,"outside")!==false) {
                                     $destination=DataLastKnownLocationHuman(true,false);
                                     error_log("[ACTION POSTFILTER TravelTo] reference to outside detected , $localtarget => $destination");
@@ -6643,7 +6654,7 @@ function GetExpression($mood) {
      "CombatShout"
      ];
      
-     $result="";
+     $result="MoodNeutral";
      if ($mood=="sarcastic") {
         $result= array_rand(array_flip(["DialoguePuzzled"]), 1);
          
@@ -6680,6 +6691,18 @@ function GetExpression($mood) {
          
      } else if ($mood=="smirking") {
         $result= array_rand(array_flip(["DialogueHappy"]), 1);
+     } else if (in_array($mood, ["sexy", "kindly", "lovely", "seductive", "happy"], true)) {
+        $result="DialogueHappy";
+     } else if (in_array($mood, ["desperate", "scared", "pleading"], true)) {
+        $result="DialogueFear";
+     } else if (in_array($mood, ["assertive", "angry"], true)) {
+        $result="DialogueAnger";
+     } else if ($mood=="sad") {
+        $result="DialogueSad";
+     } else if ($mood=="surprised") {
+        $result="DialogueSurprise";
+     } else if (in_array($mood, ["drunk", "shy"], true)) {
+        $result="DialoguePuzzled";
      
          
      } else if ($mood=="serious") {
@@ -7983,7 +8006,7 @@ function buildSituationalMapDescription() {
 
     // If worldspace is Skyrim, just return base description
     if ($current_worldspace === 'Skyrim') {
-       
+        error_log("buildSituationalMapDescription: Current worldspace is Skyrim, returning base description.");
         // Get all doors in the worldspace Skyrim, with valid coordinates and (distance< 1024 *10), door_x,door_y is relative to player position
         $doors_result = $GLOBALS["db"]->fetchAll(
             "SELECT id, cell_name, door_name, door_id,door_x, door_y, dest_door_exterior, interior,location_id, sqrt((door_x-({$player_x}))*(door_x-({$player_x})) + (door_y-({$player_y}))*(door_y-({$player_y}))) as distance
@@ -7995,7 +8018,7 @@ function buildSituationalMapDescription() {
         );
         
     } else {
-    
+        error_log("buildSituationalMapDescription: Current worldspace is '{$current_worldspace}', fetching doors in the same worldspace.");
         // Get all doors in the same worldspace 
         $doors_result = $GLOBALS["db"]->fetchAll(
             "SELECT id, cell_name, door_name, door_id,door_x, door_y, dest_door_exterior, interior,location_id, sqrt((door_x-({$player_x}))*(door_x-({$player_x})) + (door_y-({$player_y}))*(door_y-({$player_y}))) as distance
@@ -8008,6 +8031,7 @@ function buildSituationalMapDescription() {
     }
     
     if (empty($doors_result)) {
+        error_log("buildSituationalMapDescription: No doors found in worldspace '{$current_worldspace}' for cell ID {$current_cell_id}.");  
         if ($current_worldspace != $current_cell_name)
             return "You are in {$current_worldspace}, {$current_cell_name}. No other exits found.";
         else
@@ -8030,6 +8054,7 @@ function buildSituationalMapDescription() {
 
         
         if ($distance > 1000) {
+            error_log("buildSituationalMapDescription: Ignoring door '{$door_name}' at distance {$distance} meters (too far).");
             // Ignore doors farther than 1000 meters
             continue;
         }
@@ -8122,5 +8147,271 @@ function getCardinalDirection($delta_x, $delta_y) {
     }
 }
 
+/*
+is_interior now represents a bitwise obtained result:
+
+Value	Meaning
+00	    Exists, exterior
+01	    Exists, interior
+10	    Doesn't exist
+11	    Reserved (or treat as invalid)
+Bits	Field
+0-1	    inside_entrance
+2-3	    location_center
+4-5	    raw_location_marker
+6-7	    outside_entrance
+*/
+
+function checkInterior(int $value) {
+    // if inside_entrance is interior, or location_center is interior or raw_location_marker is interior, we return true
+    $insideEntrance = ($value & 0b11) === 0b01;
+    $locationCenter = ($value & 0b1100) === 0b0100;
+    $rawLocationMarker = ($value & 0b110000) === 0b010000;
+
+    return $insideEntrance || $locationCenter || $rawLocationMarker;
+}
+
+function getInteriorRef($locationRow) {
+    // locationRow is a row result orm locations
+    
+    // e.g. 0x0001bdf1:0x1a0559e0;0x0001bdf1:0x1a0559e0;0x0010f63c:0x1a01c7b7
+    // 0x0001bdf1 is the type, 0x1a0559e0 is the reference formid
+    // types:
+    // 0x0001bdf1 locationCenterRefType
+    // 0x000130fb outsideEntranceMarkerRefType
+    // 0x000130fc insideMarkerRefType
+    // 0x0010f63c mapMarkerRefType
+    // so we must parse refs column on $locationRow and get the first reference with this types and precedence order:
+    // 1) insideMarkerRefType
+    // 2) locationCenterRefType
+    // 3) mapMarkerRefType
+
+    $refs = explode(';', $locationRow['refs']);
+    $precedence = [
+        '0x000130fc', // insideMarkerRefType
+        '0x0001bdf1', // locationCenterRefType
+        '0x0010f63c', // mapMarkerRefType
+    ];
+    
+    foreach ($precedence as $type) {
+        foreach ($refs as $ref) {
+            list($refType, $refFormid) = explode(':', $ref);
+            if ($refType === $type) {
+                return $refFormid;
+            }
+        }
+    }
+    return null;
+}
+
+/**
+ * Resolve a TravelTo location using exact + fuzzy matching and optional coord distance.
+ *
+ * @param string $location
+ * @param array $currentNpcData
+ * @param object $db
+ * @return array|null
+ */
+function resolveTravelLocation($location, $currentNpcData, $db)
+{
+    $cnLocation = $db->escape($location);
+
+    if (strcasecmp($cnLocation, 'random') === 0) {
+        return $db->fetchOne(
+            "SELECT name, region, hold, formid, coords
+             FROM locations
+             ORDER BY CASE WHEN name = region THEN 1 ELSE 0 END DESC, random()
+             LIMIT 1"
+        );
+    }
+
+    $npcPoint = getNpcLastCoordsPoint($currentNpcData);
+    $metaData=json_decode($currentNpcData['metadata'] ?? '{}', true);
+    $pointSql = '';
+    $orderByDistanceSql = '';
+    if (!empty($npcPoint) && ($metaData["last_coords"]["world"]=="Skyrim") || $metaData["last_coords"]["world"]=="Whiterun") {// Only use coords on global worldspace
+    
+        $npcPointEsc = $db->escape($npcPoint);
+        $pointSql = ", coords <-> '{$npcPointEsc}'::point AS dist";
+        $orderByDistanceSql = ', dist ASC';
+    }
+
+    // Prefer exact matches first, then fuzzy similarity. If we know NPC coords,
+    // nearest matching marker is preferred when names collide.
+   
+
+    $query = "
+    SELECT
+        name,
+        region,
+        hold,
+        formid,
+        coords,
+        is_interior,refs,
+        (
+            (is_interior & 3) = 1 OR
+            (is_interior & 12) = 4 OR
+            (is_interior & 48) = 16
+        ) AS has_interior
+        $pointSql,
+        GREATEST(
+            COALESCE(similarity(name, '$cnLocation'), 0),
+            COALESCE(similarity(name||' (Interior)', '$cnLocation'), 0),
+            COALESCE(similarity(region, '$cnLocation'), 0),
+            COALESCE(similarity(hold, '$cnLocation'), 0)
+        ) AS sim,
+        CASE
+            WHEN lower(name) = lower('$cnLocation') THEN 3
+            WHEN lower(name||' (Interior)') = lower('$cnLocation')
+                 AND (
+                    (is_interior & 3) = 1 OR
+                    (is_interior & 12) = 4 OR
+                    (is_interior & 48) = 16
+                 )
+            THEN 4
+            WHEN lower(region) = lower('$cnLocation') THEN 2
+            WHEN lower(hold) = lower('$cnLocation') THEN 1
+            ELSE 0
+        END AS exact_rank
+     FROM locations
+     WHERE formid IS NOT NULL
+     ORDER BY exact_rank DESC, sim DESC$orderByDistanceSql
+     LIMIT 1";
+
+
+    //error_log("resolveTravelLocation query: $query");
+    $loc = $db->fetchOne($query);
+
+    if (strpos($location, '(Interior)') !== false && checkInterior($loc['is_interior'])) {
+        // Interior location requested, we should return an interior reference.
+        $loc["direct_destination_ref"] = getInteriorRef($loc);
+    }
+
+    return $loc ?: null;
+}
+
+function DataSearchMemoryByVectorFromContextKeywords($contextKeywords,$npcfilter,$timeThreshold=0) {
+    
+        $localStartTime=microtime(true);
+
+        $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
+        $companionConditionSql = dataGetMemoryCompanionConditionSql($npcfilter);
+        
+        $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
+
+        $data = [
+            
+            'text' => $contextKeywords   
+        ];
+
+        // Convert to JSON
+        $options = [
+            'http' => [
+                'method'  => 'POST',
+                'header'  => "Content-Type: application/json\r\n" .
+                            "Accept: application/json\r\n",
+                'content' => json_encode($data),
+                'ignore_errors' => true // to capture error messages if any
+            ]
+        ];
+
+        // Create context and send the request
+        $context  = stream_context_create($options);
+        
+        error_log("[DataSearchMemoryByVector Embedding start] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+        $response = file_get_contents($url, false, $context);
+        error_log("[DataSearchMemoryByVector Embedding end] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+
+        // Output the response
+        if ($response === false) {
+            Logger::error("Request failed.\n");
+        } else {
+            Logger::info("Request done:\n");
+
+        }
+        $contextKeywords=$GLOBALS["db"]->escape($contextKeywords);
+        $resultNormalized = chimNormalizeTsQueryTerms($contextKeywords);
+        $kwStringAny=implode(" | ",$resultNormalized);
+        $kwStringAll=implode(" & ",$resultNormalized);
+        error_log("[DataSearchMemoryByVector] Generated Tags: $kwStringAny" );
+        $vector=json_decode($response,true);
+
+        if (is_array($vector) && isset($vector["embedding"])) {
+            $vectorString="'[".implode(",",$vector["embedding"])."]'";
+            $rankAnySql = $kwStringAny !== ''
+                ? "ts_rank(native_vec, to_tsquery('" . $GLOBALS["db"]->escape($kwStringAny) . "'))"
+                : "0::real";
+            $rankAllSql = $kwStringAll !== ''
+                ? "ts_rank(native_vec, to_tsquery('" . $GLOBALS["db"]->escape($kwStringAll) . "'))"
+                : "0::real";
+            $rankCombinedSql = "($rankAnySql + $rankAllSql)";
+
+            $finalQuery="
+                SELECT rowid,gamets_truncated,
+                        embedding <-> $vectorString as distance,
+                         $rankAnySql AS rank_any_fts_raw,
+                         $rankAllSql AS rank_all_fts_raw,
+                         $rankCombinedSql AS rank_fts,
+                         (embedding <-> $vectorString) - $rankCombinedSql AS mixed_distance,
+                         summary,
+                         '$contextKeywords' as keywords_used
+                    FROM public.memory_summary 
+                    WHERE embedding IS NOT NULL
+                    and $scopeConditionSql
+                    and $companionConditionSql
+                    and (gamets_truncated<$timeThreshold or $timeThreshold=0)
+                    
+                    ORDER BY
+                        mixed_distance ASC,
+                        distance ASC,
+                        gamets_truncated DESC,
+                        rowid DESC
+                    LIMIT 50 OFFSET 0
+                ";    
+            $memory=$GLOBALS["db"]->fetchAll($finalQuery);
+            $singleMemory = chimSelectBestHybridMemoryCandidate($memory);
+         
+            if (!isset($singleMemory)) {
+                $singleMemory = [
+                    "rank_any" => null,
+                    "rank_all" => null,
+                    "summary" => null,
+                    "distance" => 1.4,
+                    "mixed_distance" => 1.4,
+                ];
+            }
+            
+            /*error_log("
+                 SELECT summary, gamets_truncated,
+                        embedding <-> $vectorString as distance,
+                         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts,
+                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts
+                    FROM public.memory_summary 
+                    WHERE embedding IS NOT NULL
+                    and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
+                    ORDER BY (embedding <-> $vectorString)-ts_rank(native_vec, to_tsquery('$kwStringAny')) 
+                    LIMIT 5 OFFSET 0
+                ");*/
+
+            $GLOBALS["db"]->insert(
+                    'audit_memory',
+                    array(
+                        'input' => $TEST_TEXT,
+                        'keywords' =>'text2vec search / (input plus "'.$contextKeywords.'"',
+                        'rank_any'=> (1.40-$singleMemory["mixed_distance"]),// Try to mimic FTS query rank
+                        'rank_all'=> (1.40-$singleMemory["distance"]),// Try to mimic FTS query rank
+                        'memory'=>$singleMemory["summary"],
+                        'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
+                    )
+                );
+            
+        } else {
+            return null;
+        }
+            
+    
+    return [$singleMemory];
+    
+}
 
 ?>

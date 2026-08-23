@@ -29,6 +29,8 @@ require_once LIB_PATH . DIRECTORY_SEPARATOR . 'logger.php';
 require_once LIB_PATH . DIRECTORY_SEPARATOR . "{$GLOBALS['DBDRIVER']}.class.php";
 require_once LIB_PATH . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'npc_master.class.php';
 require_once LIB_PATH . DIRECTORY_SEPARATOR . 'relationship_manager.php';
+require_once LIB_PATH . DIRECTORY_SEPARATOR . 'utils_game_timestamp.php';
+require_once LIB_PATH . DIRECTORY_SEPARATOR . 'eventlog_helper.php';
 
 $db = new sql();
 $npcMaster = new NpcMaster();
@@ -272,6 +274,190 @@ function chimNpcManagerFindNpc(array $input): array
     }
 
     throw new InvalidArgumentException('NPC not found');
+}
+
+function chimNpcManagerEventRecipients($people): array
+{
+    $recipients = [];
+    foreach (explode('|', trim((string)$people, '|')) as $recipient) {
+        $recipient = trim((string)$recipient);
+        if ($recipient !== '' && !in_array($recipient, $recipients, true)) {
+            $recipients[] = $recipient;
+        }
+    }
+    return $recipients;
+}
+
+function chimNpcManagerHistory(array $input): array
+{
+    $npc = chimNpcManagerFindNpc($input);
+    $npcName = trim((string)($npc['npc_name'] ?? ''));
+    $limit = max(1, min(100, (int)($input['limit'] ?? 100)));
+    $selectedEventType = trim((string)($input['event_type'] ?? ''));
+    $hiddenEventTypes = chimGetPersistedEventLogHiddenTypes($GLOBALS['db']);
+    // Keep NPC History aligned with the PHP Adventure Log's default narrative event list.
+    $allowedEventTypes = [
+        'im_alive',
+        'chat',
+        'infoaction',
+        'rpg_word',
+        'rpg_lvlup',
+        'rechat',
+        'quest',
+        'itemfound',
+        'inputtext',
+        'goodnight',
+        'goodmorning',
+        'ginputtext',
+        'death',
+        'combatendmighty',
+        'combatend',
+    ];
+    $escapedAllowedEventTypes = array_map(static function ($eventType) {
+        return "'" . $GLOBALS['db']->escape($eventType) . "'";
+    }, $allowedEventTypes);
+    $allowedTypesWhere = 'a.type IN (' . implode(',', $escapedAllowedEventTypes) . ')';
+    $peopleWhere = chimBuildNpcEventLogPeopleWhereClause($GLOBALS['db'], $npcName, 'a.people');
+    $visibleWhere = chimBuildVisibleEventLogWhereClause(
+        $GLOBALS['db'],
+        $selectedEventType,
+        $hiddenEventTypes
+    );
+    $rows = $GLOBALS['db']->fetchAll(
+        "SELECT a.rowid, a.type, a.data, a.people, a.gamets, a.localts, a.ts, a.sess
+         FROM eventlog a
+         WHERE {$allowedTypesWhere} AND {$visibleWhere} AND {$peopleWhere}
+         ORDER BY a.gamets DESC, a.ts DESC, a.localts DESC, a.rowid DESC
+         LIMIT {$limit}"
+    );
+    $visibleTypesWhere = chimBuildVisibleEventLogWhereClause($GLOBALS['db'], '', $hiddenEventTypes);
+    $eventTypes = $GLOBALS['db']->fetchAll(
+        "SELECT a.type, COUNT(*) AS total
+         FROM eventlog a
+         WHERE {$allowedTypesWhere} AND {$visibleTypesWhere} AND {$peopleWhere}
+         GROUP BY a.type
+         ORDER BY a.type ASC"
+    );
+
+    $events = array_map(static function ($row) {
+        $gamets = (int)($row['gamets'] ?? 0);
+        return [
+            'rowid' => (int)($row['rowid'] ?? 0),
+            'type' => (string)($row['type'] ?? ''),
+            'data' => (string)($row['data'] ?? ''),
+            'recipients' => chimNpcManagerEventRecipients($row['people'] ?? ''),
+            'gamets' => $gamets,
+            'tamrielic_time' => $gamets > 0 ? convert_gamets2skyrim_long_date2($gamets) : '',
+            'local_time' => !empty($row['localts']) ? gmdate('d-m-Y H:i:s', (int)$row['localts']) : '',
+            'manual_injection' => strtolower((string)($row['type'] ?? '')) === 'inputtext'
+                && (string)($row['sess'] ?? '') === 'npc_editor',
+        ];
+    }, (array)$rows);
+
+    return [
+        'npc' => ['id' => (int)$npc['id'], 'name' => $npcName],
+        'events' => $events,
+        'filters' => [
+            'selected_event_type' => $selectedEventType,
+            'hidden_event_types' => $hiddenEventTypes,
+            'event_types' => array_map(static function ($row) {
+                return [
+                    'type' => (string)($row['type'] ?? ''),
+                    'total' => (int)($row['total'] ?? 0),
+                ];
+            }, (array)$eventTypes),
+        ],
+    ];
+}
+
+function chimNpcManagerResolveEventRecipients(array $input, array $npc): array
+{
+    $ids = [(int)$npc['id']];
+    $requestedIds = is_array($input['recipient_ids'] ?? null) ? $input['recipient_ids'] : [];
+    foreach ($requestedIds as $requestedId) {
+        $requestedId = (int)$requestedId;
+        if ($requestedId > 0 && !in_array($requestedId, $ids, true)) {
+            $ids[] = $requestedId;
+        }
+    }
+    if (count($ids) > 12) {
+        throw new InvalidArgumentException('An event can include at most 12 NPCs');
+    }
+
+    $recipients = [];
+    foreach ($ids as $id) {
+        $row = $id === (int)$npc['id'] ? $npc : chimNpcManagerFindNpc(['id' => $id]);
+        $name = trim((string)($row['npc_name'] ?? ''));
+        if ($name === '' || strpos($name, '|') !== false) {
+            throw new InvalidArgumentException('One of the selected NPC names cannot be used for event routing');
+        }
+        $recipients[] = ['id' => (int)$row['id'], 'name' => $name];
+    }
+    return $recipients;
+}
+
+function chimNpcManagerInjectEvent(array $input): array
+{
+    $npc = chimNpcManagerFindNpc($input);
+    $eventText = trim((string)($input['event'] ?? ''));
+    if (strlen($eventText) >= 2 && $eventText[0] === '(' && substr($eventText, -1) === ')') {
+        $eventText = trim(substr($eventText, 1, -1));
+    }
+    if ($eventText === '') {
+        throw new InvalidArgumentException('Event text is required');
+    }
+    $eventLength = function_exists('mb_strlen') ? mb_strlen($eventText, 'UTF-8') : strlen($eventText);
+    if ($eventLength > 4000) {
+        throw new InvalidArgumentException('Event text must be 4000 characters or fewer');
+    }
+
+    $recipients = chimNpcManagerResolveEventRecipients($input, $npc);
+    $people = '|' . implode('|', array_column($recipients, 'name')) . '|';
+    $rowId = $GLOBALS['db']->insertReturningId('eventlog', [
+        'ts' => max(0, (int)DataLastKnownTS()) + 1,
+        'gamets' => max(0, (int)DataLastKnownGameTS()),
+        'type' => 'inputtext',
+        'data' => '(' . $eventText . ')',
+        'sess' => 'npc_editor',
+        'localts' => time(),
+        'people' => $people,
+        'location' => '',
+        'party' => '',
+    ], 'rowid');
+    if ($rowId <= 0) {
+        throw new RuntimeException('Event could not be injected');
+    }
+
+    return [
+        'message' => 'Event injected for ' . implode(', ', array_column($recipients, 'name')) . '.',
+        'rowid' => $rowId,
+        'recipients' => $recipients,
+    ];
+}
+
+function chimNpcManagerDeleteEvent(array $input): array
+{
+    $npc = chimNpcManagerFindNpc($input);
+    $rowId = (int)($input['rowid'] ?? 0);
+    if ($rowId <= 0) {
+        throw new InvalidArgumentException('Invalid event row');
+    }
+
+    $npcName = trim((string)($npc['npc_name'] ?? ''));
+    $peopleWhere = chimBuildNpcEventLogPeopleWhereClause($GLOBALS['db'], $npcName, 'a.people');
+    $visibleWhere = chimBuildVisibleEventLogWhereClause($GLOBALS['db']);
+    $event = $GLOBALS['db']->fetchOne(
+        "SELECT a.rowid FROM eventlog a WHERE a.rowid = {$rowId} AND {$visibleWhere} AND {$peopleWhere} LIMIT 1"
+    );
+    if (!$event) {
+        throw new InvalidArgumentException('Event is not available in this NPC history');
+    }
+
+    $result = chimDeleteEventLogRow($GLOBALS['db'], $rowId);
+    if (empty($result['ok'])) {
+        throw new RuntimeException((string)($result['message'] ?? 'Event could not be deleted'));
+    }
+    return ['message' => 'Event deleted.', 'rowid' => $rowId];
 }
 
 // Persist only the temporary return point without overwriting live NPC metadata updates.
@@ -655,6 +841,12 @@ try {
             throw new InvalidArgumentException('Invalid JSON request');
         }
         $operation = strtolower(trim((string)($input['operation'] ?? 'save')));
+        if ($operation === 'inject_event') {
+            chimNpcManagerRespond(['success' => true, 'data' => chimNpcManagerInjectEvent($input)]);
+        }
+        if ($operation === 'delete_event') {
+            chimNpcManagerRespond(['success' => true, 'data' => chimNpcManagerDeleteEvent($input)]);
+        }
         if ($operation === 'action') {
             chimNpcManagerRespond(['success' => true, 'data' => chimNpcManagerAction($input)]);
         }
@@ -671,6 +863,9 @@ try {
     if ($operation === 'detail') {
         $row = chimNpcManagerFindNpc($_GET);
         chimNpcManagerRespond(['success' => true, 'data' => chimNpcManagerDetail($row, $profiles)]);
+    }
+    if ($operation === 'history') {
+        chimNpcManagerRespond(['success' => true, 'data' => chimNpcManagerHistory($_GET)]);
     }
     throw new InvalidArgumentException('Unsupported NPC manager operation');
 } catch (InvalidArgumentException $error) {
