@@ -6316,7 +6316,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   async function loadModalStats(){
     // Load model info and NPC counts
     try {
-      const res = await fetch('../../ext/relationship_system/batch_build.php?action=stats');
+      const res = await fetch('../api/relationship_batch_build.php?action=stats');
       const data = await res.json();
       if (data.ok){
         document.getElementById('rel_build_model').textContent = data.model || 'Not configured';
@@ -6400,7 +6400,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         statusEl.textContent = 'Fetching NPC list...';
 
         // Fetch list of NPCs to process
-        const listRes = await fetch('../../ext/relationship_system/batch_build.php?action=list&force=' + force);
+        const listRes = await fetch('../api/relationship_batch_build.php?action=list&force=' + force);
         const listData = await listRes.json();
 
         if (!listData.ok){
@@ -6431,7 +6431,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           statusEl.textContent = 'Processing: ' + npc.name;
 
           try {
-            const res = await fetch('../../ext/relationship_system/batch_build.php?action=process&id=' + npc.id + '&force=' + force);
+            const res = await fetch('../api/relationship_batch_build.php?action=process&id=' + npc.id + '&force=' + force);
             const data = await res.json();
 
             if (data.ok){
@@ -6457,7 +6457,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           log('Running transitive inference...', 'info');
 
           try {
-            const infRes = await fetch('../../ext/relationship_system/batch_build.php?action=infer');
+            const infRes = await fetch('../api/relationship_batch_build.php?action=infer');
             const infData = await infRes.json();
             if (infData.ok){
               log('✓ Inference complete: ' + (infData.count || 0) + ' relationships updated', 'success');
