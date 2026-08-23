@@ -30,7 +30,7 @@ if (!$isEmbedded) {
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
 <style>
-main { padding-top: <?php echo $isEmbedded ? '40' : '80'; ?>px; padding-bottom: 40px; padding-left: 10px; }
+main { padding: <?php echo $isEmbedded ? '10px' : '80px'; ?> 10px 24px; }
 footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
 /* MagicCards font import and heading styling to match core pages */
 @font-face {
@@ -41,30 +41,8 @@ footer { display: <?php echo $isEmbedded? 'none' : 'block'; ?>; }
     font-display: swap;
 }
 h1 { font-family: 'MagicCards', serif; letter-spacing: 1.5px; }
-/* Centered orange header */
-.page-header { 
-    text-align: center; 
-    margin: 0 0 20px 0; 
-    padding: 20px; 
-    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
-    border-radius: 10px; 
-    border: 1px solid #3a3a3a;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
-}
+/* Page header is the shared compact inline row (.chim-page-head in chim-theme.css). */
 .page-header h1, #page-title, #title-text { font-family:'MagicCards', serif !important; }
-.page-header h1 { 
-    margin: 0 0 8px 0; 
-    word-spacing: 8px; 
-    font-size: 2.2em; 
-    color: rgb(242, 124, 17); 
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5); 
-}
-.page-subtitle {
-    margin: 0;
-    color: #bbb;
-    font-size: 1.1em;
-    line-height: 1.6;
-}
 .table-container { 
     background: linear-gradient(135deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
     border-radius: 10px; 
@@ -225,17 +203,17 @@ tr.featured-plugin-row td {
 .package-sync-card {
     display: grid;
     grid-template-columns: minmax(260px, 1fr) auto;
-    gap: 14px;
-    align-items: end;
-    margin-bottom: 20px;
-    padding: 16px;
+    gap: 10px 14px;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px 12px;
     border: 1px solid #3a3a3a;
     border-radius: 8px;
     background: #242424;
 }
-.package-sync-card h2 { margin: 0 0 5px; color: #f27c11; }
-.package-sync-card p { margin: 0; color: #bbb; }
-.package-sync-status { grid-column: 1 / -1; padding: 10px 12px; border-radius: 5px; background: #181818; color: #ddd; }
+.package-sync-card h2 { margin: 0 0 3px; color: #f27c11; font-size: 1.2em; }
+.package-sync-card p { margin: 0; color: #bbb; font-size: 0.9em; }
+.package-sync-status { grid-column: 1 / -1; padding: 8px 10px; border-radius: 5px; background: #181818; color: #ddd; }
 .package-sync-list { display: grid; gap: 6px; margin-top: 8px; }
 .package-sync-row { display: flex; justify-content: space-between; gap: 16px; padding: 7px 9px; background: #202020; border: 1px solid #363636; border-radius: 4px; }
 .package-sync-version { color: #a9e7b7; white-space: nowrap; }
@@ -245,9 +223,9 @@ tr.featured-plugin-row td {
 </style>
 
 <main>
-    <div class="page-header">
-        <h1 id="page-title"><span id="title-text">Server Plugins</span></h1>
-        <p class="page-subtitle">Manage and install plugins to extend CHIM functionality</p>
+    <div class="page-header chim-page-head">
+        <h1 id="page-title" class="chim-page-head-title"><span id="title-text">Server Plugins</span></h1>
+        <p class="page-subtitle chim-page-head-note">Manage and install plugins to extend CHIM functionality</p>
     </div>
 
     <section class="package-sync-card">

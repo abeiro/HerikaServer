@@ -2522,7 +2522,7 @@ function chimMemorySearchInputFromRequest(array $gameRequest): string
     return trim((string)($payload['origin_line'] ?? ''));
 }
 
-function offerMemory($gameRequest)
+function offerMemory($gameRequest, $useLocationContext = false)
 {
     global $db;
     
@@ -2555,6 +2555,11 @@ function offerMemory($gameRequest)
         error_log("[DataSearchMemoryByVector called 1]  : " . (microtime(true) - $localStartTime) . " seconds");
         $res2 = DataSearchMemoryByVector($memorySearchInput, $npc,false,$timeThreshold);
         error_log("[DataSearchMemoryByVector called 2]  : " . (microtime(true) - $localStartTime) . " seconds");
+        if ($useLocationContext) {
+            $location=DataLastKnownLocationHuman();
+            $res2 = DataSearchMemoryByVector("$memorySearchInput $location", $npc,false,$timeThreshold);
+            error_log("[DataSearchMemoryByVector called 2]  : " . (microtime(true) - $localStartTime) . " seconds");
+        }
 
         if (isset($res[0]) && isset($res2[0])) {
             $resFinal = ($res[0]['rank_any'] >= $res2[0]['rank_any']) ? $res : $res2;
@@ -2843,10 +2848,10 @@ function chimParseChatModeShortcut($message)
     $message = (string)$message;
     $rules = [
         ["prefix" => "((", "mode" => "INJECTION_LOG", "suffix" => "))"],
-        ["prefix" => "~~", "mode" => "CLOSE", "suffix" => ""],
+        ["prefix" => "||", "mode" => "CLOSE", "suffix" => ""],
         ["prefix" => "!!", "mode" => "SHOUT", "suffix" => ""],
         ["prefix" => "**", "mode" => "AUTOCHAT", "suffix" => ""],
-        ["prefix" => "~", "mode" => "WHISPER", "suffix" => ""],
+        ["prefix" => "|", "mode" => "WHISPER", "suffix" => ""],
         ["prefix" => "@", "mode" => "NARRATOR", "suffix" => ""],
         ["prefix" => ">", "mode" => "DIRECTOR", "suffix" => ""],
         ["prefix" => "#", "mode" => "CHEATMODE", "suffix" => ""],

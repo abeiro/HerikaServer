@@ -3618,6 +3618,16 @@ if ($checkTableExists("core_npc_master_history") == -1) {
 } else
     Logger::info(__FILE__." core_npc_master_history exists");
 
+$db->execQuery(
+    "CREATE INDEX IF NOT EXISTS idx_core_npc_master_history_restore
+     ON public.core_npc_master_history (
+         npc_id,
+         gamets_last_updated DESC NULLS LAST,
+         (CASE WHEN extended_data ->> '_chim_history_source' = 'infosave' THEN 1 ELSE 0 END) DESC,
+         created DESC
+     )"
+);
+
 if ($checkTableExists("core_stt_connector") == -1) {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_stt_connector.sql"));
 } else
@@ -7691,6 +7701,56 @@ if ($checkVersion("prompts") < 20260805001) {
     }
 }
 
+if ($checkVersion("prompts") < 20260821003) {
+    Logger::debug("Applying prompts 20260821003 - ground autonomous bored dialogue");
+
+    require_once(__DIR__ . "/../lib/rolemaster_bored.php");
+    $boredSystemPrompt = $db->escape(chimRolemasterDefaultBoredSystemPrompt());
+    $systemDescription = $db->escape(
+        "System prompt used only for autonomous Smart Bored planning. "
+        . "Replaces the general Director system prompt and examples for this route. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+    $boredEventRules = $db->escape(chimRolemasterDefaultBoredEventRules());
+    $rulesDescription = $db->escape(
+        "Complete Rolemaster rules used only for autonomous Smart Bored events. "
+        . "Supports {SEED_ACTOR_RULE}, {SEED_ACTOR}, {NEARBY_ACTORS}, {PLAYER_NAME}, and {FUNCTION_LIST} placeholders. "
+        . "Replaces the general Director instruction rules for this route. "
+        . "Used in: service/processors/rolemaster/cmd/instruction.php"
+    );
+
+    $systemPromptOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_system_prompt', '{$boredSystemPrompt}', '{$systemDescription}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    $rulesPromptOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('director_bored_event_rules', '{$boredEventRules}', '{$rulesDescription}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+    $profileMetadataOk = $db->execQuery("
+        UPDATE public.core_profiles
+        SET metadata = metadata - 'BORED_EVENT_SERVERSIDE'
+        WHERE metadata ? 'BORED_EVENT_SERVERSIDE'
+    ") !== false;
+    $migrationOk = $systemPromptOk && $rulesPromptOk && $profileMetadataOk;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260821003);
+        Logger::info("Applied patch prompts 20260821003 - grounded autonomous bored dialogue");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260821003");
+    }
+}
+
 if ($checkVersion("memory_summary") < 20260721001) {
     Logger::debug("Applying memory_summary 20260721001 - normalize diary memory owners");
 
@@ -7877,12 +7937,38 @@ if ($checkVersion("eventlog_session_payload") < 20260807001) {
     }
 }
 
+
 //----------------------------------------------------
 // AUDIT REQUEST RESPONSE - Store the response text for audit requests
 // Version 20260806001
 //----------------------------------------------------
 $db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"response\"  text");
 
+$db->execQuery("
+DROP VIEW public.eventlog_view;
+ALTER TABLE eventlog ALTER COLUMN sess TYPE text;
+CREATE VIEW public.eventlog_view AS
+ SELECT e.type,
+    e.data,
+    e.sess,
+    e.gamets,
+    e.localts,
+    e.ts,
+    e.rowid,
+    e.people,
+    e.location,
+    e.party,
+    e.utterance_id,
+    e.delivery_state,
+    public.convert_gamets2skyrim_date(e.gamets) AS sk_date,
+    public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
+    public.convert_gamets2days(e.gamets) AS sk_days,
+    public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
+   FROM public.eventlog e;
+
+
+ALTER TABLE public.eventlog_view OWNER TO dwemer;
+");
 
 Logger::info(__FILE__." update file processed");
 

@@ -450,6 +450,7 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		$isAudioCpp = pockettts_is_audio_cpp($endpoint);
 		if ($isAudioCpp) {
 			$FFMPEG_FILTER='-filter:a "atrim=start=0.3,asetpts=PTS-STARTPTS"';
+			//$FFMPEG_FILTER='-filter:a "atempo=0.8"';
 			$FFMPEG_FILTER='';
 		}
 

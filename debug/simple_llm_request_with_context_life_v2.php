@@ -851,6 +851,7 @@ $isIdleAction = !empty($lastBackgroundAction)
 $idleGamets = (int) ($lastBackgroundAction['gamets'] ?? 0);
 $idleHours = max(0, round(($last_gamets - $idleGamets) * GAMETS_TO_HOURS, 2));
 
+
 if ($isIdleAction && $idleHours > 1) { // If last Idle was Socialize, there a chance of a follow up.
     $intent = explode(':', (string) ($lastBackgroundAction['fullcall'] ?? ''));
     $lastIntent = $intent[2] ?? '';
@@ -868,26 +869,32 @@ if ($isIdleAction && $idleHours > 1) { // If last Idle was Socialize, there a ch
         $lastIntentBasedHint = "Hint: Last intent was 'Socialize', so probably drank items in inventory.";
     }
 
+    if ($lastIntent === 'Sleep') {
+        $bypassProduction = true;
+    } else {
+        $bypassProduction = false;
+    }
 
-    // We don't need full history, just a short version to determine if we consumed or produced something
-    // We consider only the last 150 lines of history for this purpose
-    $historyShort = implode("\n", array_slice(explode("\n", $history), -150));
+    if (!$bypassProduction) {
+        // We don't need full history, just a short version to determine if we consumed or produced something
+        // We consider only the last 150 lines of history for this purpose
+        $historyShort = implode("\n", array_slice(explode("\n", $history), -150));
 
-    $preStep1Prompt = [
-        ['role' => 'system', 'content' => 'Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls).'],
-        [
-            'role' => 'user',
-            'content' => "<character_sheet>\n{$GLOBALS['HERIKA_NAME']}:\n$dynamicBiography\n</character_sheet>",
-            "cache_control" => ["type" => "ephemeral"]
-        ],
-        [
-            'role' => 'user',
-            'content' => "<context_history>\nContext History (chronological order)\n... $historyShort\n</context_history>\n$postHistory\n",
-            "cache_control" => ["type" => "ephemeral"]
-        ],
-        [
-            'role' => 'user',
-            'content' => "
+        $preStep1Prompt = [
+            ['role' => 'system', 'content' => 'Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls).'],
+            [
+                'role' => 'user',
+                'content' => "<character_sheet>\n{$GLOBALS['HERIKA_NAME']}:\n$dynamicBiography\n</character_sheet>",
+                "cache_control" => ["type" => "ephemeral"]
+            ],
+            [
+                'role' => 'user',
+                'content' => "<context_history>\nContext History (chronological order)\n... $historyShort\n</context_history>\n$postHistory\n",
+                "cache_control" => ["type" => "ephemeral"]
+            ],
+            [
+                'role' => 'user',
+                'content' => "
 The character has been idle for the last `$idleHours` hours.
 
 Your task is to determine what happened during this idle period and return the single most appropriate action.
@@ -924,10 +931,10 @@ Requirements
 Choose the action that best describes what occurred during the idle period.
 $lastIntentBasedHint
 "
-        ],
-        [
-            'role' => 'user',
-            'content' => "
+            ],
+            [
+                'role' => 'user',
+                'content' => "
 Return ONLY a valid JSON object with no extra text, no markdown, and no explanation.
 
 Format:
@@ -953,121 +960,122 @@ Rules:
 - Do not add any keys other than 'action' and 'reasoning'.
 - 1 gold coin (or septim) is represented as itemid 0000000F. 9 gold coins would be represented as 0000000F:9, 900 gold coins would be represented as 0000000F:900, and so on.
 "
-        ]
-    ];
+            ]
+        ];
 
-    Logger::debug(__LINE__ . ' ' . (microtime(true) - $startTime));
+        Logger::debug(__LINE__ . ' ' . (microtime(true) - $startTime));
 
-    $connectionHandler = $connector->getConnector($currentConnectorData);
-    $preResponse = $connectionHandler->fast_request($preStep1Prompt, ['MAX_TOKENS' => 1024], 'backgroundlife');
+        $connectionHandler = $connector->getConnector($currentConnectorData);
+        $preResponse = $connectionHandler->fast_request($preStep1Prompt, ['MAX_TOKENS' => 1024], 'backgroundlife');
 
-    // Keep timestamp of last LLM call for this NPC to avoid too frequent calls
-    updateLastLLMCall($GLOBALS['HERIKA_NAME']);
+        // Keep timestamp of last LLM call for this NPC to avoid too frequent calls
+        updateLastLLMCall($GLOBALS['HERIKA_NAME']);
 
-    $parsedResponse = __jpd_decode_lazy($preResponse);
+        $parsedResponse = __jpd_decode_lazy($preResponse);
 
-    if (isset($parsedResponse[0]) && is_array($parsedResponse[0])) {
-        $parsedResponse = $parsedResponse[0];
-    }
-
-    if (isset($parsedResponse['action']) && is_array($parsedResponse['action'])) {
-        $action = ($parsedResponse['action']);
-    } else {
-        $action = '';
-    }
-    if (isset($parsedResponse['reasoning'])) {
-        $reasoning = $parsedResponse['reasoning'];
-    } else {
-        $reasoning = '';
-    }
-
-
-    if ($action) {
-        $actionTextDescription = [];
-        foreach ($action as $singleAction) {
-            error_log("[BGL RUN] $npcNameEsc — Idle production/consumption detected: $singleAction. Reasoning: $reasoning");
-
-            $skyrimCmd = new SkyrimCommandBuilder();
-            $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
-            // Parse action string
-            list($actionType, $itemId, $count) = explode(':', $singleAction);
-            $itemId = strtr(strtolower($itemId), ["0x" => ""]); // Remove 0x prefix if present
-
-            $count = (int) $count;
-            if ($actionType === 'Consume') {
-                $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x$itemId", $count, true);
-                $skyrimCmd->send(cmd: $json);
-            } elseif ($actionType === 'Produced') {
-                $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x$itemId", $count, true);
-                $skyrimCmd->send(cmd: $json);
-            }
-
-            $itemName = getNameForItemReference(strtoupper($itemId));
-
-            if ($itemName) {
-                $itemNameResolved = "($count {$itemName})";
-            } else {
-                $itemNameResolved = "";
-            }
-
-            $actionText[] = $singleAction;
-            $actionTextDescription[] = $itemNameResolved;
+        if (isset($parsedResponse[0]) && is_array($parsedResponse[0])) {
+            $parsedResponse = $parsedResponse[0];
         }
 
-        $actionTextFinal = implode(', ', $actionText);
-        $actionTextDescriptionFinal = sizeof($actionTextDescription) > 0 ? implode(', ', $actionTextDescription) : "";
+        if (isset($parsedResponse['action']) && is_array($parsedResponse['action'])) {
+            $action = ($parsedResponse['action']);
+        } else {
+            $action = '';
+        }
+        if (isset($parsedResponse['reasoning'])) {
+            $reasoning = $parsedResponse['reasoning'];
+        } else {
+            $reasoning = '';
+        }
 
-        sleep(sizeof($action));   // Allow time for the command to be processed
-        // Send signal to update inventory
-        $db->insert('responselog', [
-            'localts' => time(),
-            'sent' => 0,
-            'actor' => 'rolemaster',
-            'text' => '',
-            'action' => "rolecommand|BackgroundCmd@$sourceRefHexString@UpdateInventory",
-            'tag' => '',
-        ]);
 
-        sleep(1);   // Allow time for the command to be processed
+        if ($action) {
+            $actionTextDescription = [];
+            foreach ($action as $singleAction) {
+                error_log("[BGL RUN] $npcNameEsc — Idle production/consumption detected: $singleAction. Reasoning: $reasoning");
 
-        $db->insert('eventlog', [
-            'ts' => $last_ts,
-            'gamets' => $last_gamets - 10,
-            'type' => 'innerchat',
-            'data' => "The Narrator: $npcName produced/consumed items while idle: $actionTextFinal $actionTextDescriptionFinal. Reasoning: $reasoning",
-            'sess' => $momentum,
-            'localts' => time(),
-            'people' => "|$npcName|",
-            'location' => null,
-            'party' => '',
-        ]);
+                $skyrimCmd = new SkyrimCommandBuilder();
+                $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
+                // Parse action string
+                list($actionType, $itemId, $count) = explode(':', $singleAction);
+                $itemId = strtr(strtolower($itemId), ["0x" => ""]); // Remove 0x prefix if present
 
-        // Insert bgl_history log entry
-        $db->insert(
-            'bgl_history',
-            [
-                'npc' => $npcName,
+                $count = (int) $count;
+                if ($actionType === 'Consume') {
+                    $json = $skyrimCmd->ObjectReference->RemoveItem($sourceRefHexString, "0x$itemId", $count, true);
+                    $skyrimCmd->send(cmd: $json);
+                } elseif ($actionType === 'Produced') {
+                    $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x$itemId", $count, true);
+                    $skyrimCmd->send(cmd: $json);
+                }
+
+                $itemName = getNameForItemReference(strtoupper($itemId));
+
+                if ($itemName) {
+                    $itemNameResolved = "($count {$itemName})";
+                } else {
+                    $itemNameResolved = "";
+                }
+
+                $actionText[] = $singleAction;
+                $actionTextDescription[] = $itemNameResolved;
+            }
+
+            $actionTextFinal = implode(', ', $actionText);
+            $actionTextDescriptionFinal = sizeof($actionTextDescription) > 0 ? implode(', ', $actionTextDescription) : "";
+
+            sleep(sizeof($action));   // Allow time for the command to be processed
+            // Send signal to update inventory
+            $db->insert('responselog', [
+                'localts' => time(),
+                'sent' => 0,
+                'actor' => 'rolemaster',
+                'text' => '',
+                'action' => "rolecommand|BackgroundCmd@$sourceRefHexString@UpdateInventory",
+                'tag' => '',
+            ]);
+
+            sleep(1);   // Allow time for the command to be processed
+
+            $db->insert('eventlog', [
                 'ts' => $last_ts,
                 'gamets' => $last_gamets - 10,
+                'type' => 'innerchat',
+                'data' => "The Narrator: $npcName produced/consumed items while idle: $actionTextFinal $actionTextDescriptionFinal. Reasoning: $reasoning",
+                'sess' => $momentum,
                 'localts' => time(),
-                'data' => "$npcName produced/consumed items while idle: $actionTextFinal $actionTextDescriptionFinal. Reasoning: $reasoning",
-                'category' => 'produce_consume'
-            ]
-        );
+                'people' => "|$npcName|",
+                'location' => null,
+                'party' => '',
+            ]);
 
-        sleep(1);   // Allow time for the command to be processed
+            // Insert bgl_history log entry
+            $db->insert(
+                'bgl_history',
+                [
+                    'npc' => $npcName,
+                    'ts' => $last_ts,
+                    'gamets' => $last_gamets - 10,
+                    'localts' => time(),
+                    'data' => "$npcName produced/consumed items while idle: $actionTextFinal $actionTextDescriptionFinal. Reasoning: $reasoning",
+                    'category' => 'produce_consume'
+                ]
+            );
 
-        // Refetch the NPC data to update the dynamic biography with the new inventory state
-        $dynamicBiography = buildDynamicBiography($GLOBALS, true, true, true);
-        $dynamicBiography = $npcMaster->appendBackgroundLifeGoals($dynamicBiography, $currentNpcData);
+            sleep(1);   // Allow time for the command to be processed
 
-        if (isset($extdata['middle_term_memory'])) {
-            $middleTermMemory = end($extdata['middle_term_memory']);
-            $dynamicBiography .= "\n\n<middle_term_memory>\nPast events\n{$middleTermMemory}\n</middle_term_memory>";
+            // Refetch the NPC data to update the dynamic biography with the new inventory state
+            $dynamicBiography = buildDynamicBiography($GLOBALS, true, true, true);
+            $dynamicBiography = $npcMaster->appendBackgroundLifeGoals($dynamicBiography, $currentNpcData);
+
+            if (isset($extdata['middle_term_memory'])) {
+                $middleTermMemory = end($extdata['middle_term_memory']);
+                $dynamicBiography .= "\n\n<middle_term_memory>\nPast events\n{$middleTermMemory}\n</middle_term_memory>";
+            }
+            $history .= "\nThe Narrator: $npcName produced/consumed items while idle: $actionTextFinal $actionTextDescriptionFinal. Reasoning: $reasoning. Inventory will get updated next turn.";
+        } else {
+            error_log("[BGL RUN] $npcNameEsc — Idle production/consumption detected: " . json_encode($parsedResponse) . ". No action taken.");
         }
-        $history .= "\nThe Narrator: $npcName produced/consumed items while idle: $actionTextFinal $actionTextDescriptionFinal. Reasoning: $reasoning. Inventory will get updated next turn.";
-    } else {
-        error_log("[BGL RUN] $npcNameEsc — Idle production/consumption detected: " . json_encode($parsedResponse) . ". No action taken.");
     }
 }
 
@@ -1115,9 +1123,9 @@ if (
 // Avoid too much transactions.
 
 $byspassTradingActions = false;
-if ($lastBackgroundAction['action'] === 'BuyItem' || $lastBackgroundAction['action'] === 'SellItem') {
-    // Last action was BuyItem or SellItem.
-    // Avoid repeated trading actions in the same turn, as it can lead to infinite loops of buying/selling items.
+if ($lastBackgroundAction['action'] === 'BuyItem' || $lastBackgroundAction['action'] === 'SellItem' || $lastBackgroundAction['action'] === 'SellService') {
+    // Last action was BuyItem, SellItem or SellService.
+    // Avoid repeated trading actions in the same turn, as it can lead to infinite loops of buying/selling items/services.
     // 
     error_log(date("YMd H:i:s") . " [BGL RUN] HINT bypass Trading actions: true");
     $bypassTradingActions = true;
@@ -1127,7 +1135,7 @@ if ($lastBackgroundAction['action'] === 'BuyItem' || $lastBackgroundAction['acti
 
 $localHoursPassed = round($last_gamets - (1 / GAMETS_TO_HOURS), 2);
 
-$tradingGuard = $db->fetchAll("select * from actions_issued where actorname='$npcNameEscDb' and action in ('BuyItem','SellItem') and gamets>$localHoursPassed order by gamets desc limit 5");
+$tradingGuard = $db->fetchAll("select * from actions_issued where actorname='$npcNameEscDb' and action in ('BuyItem','SellItem','SellService') and gamets>$localHoursPassed order by gamets desc limit 5");
 if (sizeof($tradingGuard) > 3) {
     error_log(date("YMd H:i:s") . " [BGL RUN] HINT bypass Trading actions: because transactions>=3 in the last hour");
     $bypassTradingActions = true;
@@ -1341,7 +1349,7 @@ StayAtPlace:<Place>:<intent>
 - At an inn: rest, relax, socialize with patrons. E.G StayAtPlace:Inn:Relax, StayAtPlace:Inn:Socialize (Socialize is preferred if there are other NPCs present)
 - At home: rest, relax, socialize with companions,sleep. e.g StayAtPlace:Breezehome:Sleep
 - If gathering information or spreading rumors, remain for at least 24 hours.
-- After arriving somewhere, prefer interacting (SpeakTo, BuyItem, SellItem) before choosing StayAtPlace again, unless there is no meaningful interaction available.
+- After arriving somewhere, prefer interacting (SpeakTo, BuyItem, SellItem, SellService) before choosing StayAtPlace again, unless there is no meaningful interaction available.
 
 FindNPC:<NPC name>
 - Search for an NPC whose current location is unknown.
@@ -1400,6 +1408,11 @@ GiveItemTo:<NPC name>:<itemid>:<count>,<NPC name>:<itemid>:<count>
 GiveGoldTo:<NPC name>:<gold_amount>,<NPC name>:<gold_amount>
 - Give gold directly to one or more NPCs.
 - Use this for gifts, donations, payments, or helping allies where only gold should be transferred.
+
+SellService:<NPC name>:<service_description>:<total_gold_amount>,<NPC name>:<service_description>:<total_gold_amount>
+- Sell a service to another NPC. No inventory item is moved; only gold changes hands.
+- The service_description is a short label (e.g. 'healing', 'repair', 'lockpicking', 'mercenary work') describing what was provided.
+- total_gold_amount is the full price paid by the buyer for the service.
 PROMPT;
 }
 $step2Content .= <<<PROMPT2
@@ -1449,7 +1462,7 @@ if (
     * TravelTo (keeps moving if current location is not the final destination)";
 } else {
     if ($isSpeakAction) {
-        $actionChoiceDesc = "Hint: The character has just completed a conversation. Analyze the dialogue outcome first. If there is an unresolved transaction, continue it by choosing the appropriate action: BuyItem, SellItem, or GiveItemTo.
+        $actionChoiceDesc = "Hint: The character has just completed a conversation. Analyze the dialogue outcome first. If there is an unresolved transaction, continue it by choosing the appropriate action: BuyItem, SellItem, SellService, or GiveItemTo.
 If no transaction is pending, review the character's active goals and select the action that provides the highest progress toward achieving them.";
     } else {
         $actionChoiceDesc = "";
@@ -1487,6 +1500,11 @@ if (!$bypassTradingActions) {
         . "<action>GiveGoldTo:Lucan Valerius:25</action>\n"
         . "<reason>I want to support Lucan Valerius with some gold.</reason>\n"
         . "```";
+
+    $step2Content .= "Examples ```\n\n"
+        . "<action>SellService:Lucan Valerius:repair:50</action>\n"
+        . "<reason>I repaired Lucan's lock for 50 gold.</reason>\n"
+        . "```";
 }
 $step2Content .= "
 Rules:
@@ -1498,6 +1516,7 @@ For example:
 * To Sell/Buy Item to a trader that maybe is not present: MoveTo:<NPC/Actor name> ->(next iteration) SpeakTo:<NPC/Actor name> ->(next iteration) SellItem:.. 
 * To gift items without taking money: SpeakTo:<NPC/Actor name> ->(next iteration) GiveItemTo:<NPC/Actor name>:<itemid>:<count>
 * To give money without trading items: SpeakTo:<NPC/Actor name> ->(next iteration) GiveGoldTo:<NPC/Actor name>:<amount>
+* To sell a service: SpeakTo:<NPC/Actor name> ->(next iteration) SellService:<NPC/Actor name>:<service_description>:<amount>
 * Buy food at an inn: SpeakTo:<NPC innkeeper> ... ->(next iteration),BuyItem:<NPC/Actor name>... ->(next iteration) StayAtPlace:Inn ...
 * Relax/Socialize at an inn: SpeakTo:<NPC/Actor name> ->(next iteration) ->(next iteration) StayAtPlace:Inn 
 * Relax at home: SpeakTo:<NPC/Actor name> ->(next iteration) StayAtPlace:Home:Sleep
@@ -1611,6 +1630,12 @@ if (!empty($parsed['action'])) {
             break;
         case 'GiveGoldTo':
             handleGiveGoldToAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db);
+            unset($parsed['notification']);
+            unset($parsed['rumor']);
+
+            break;
+        case 'SellService':
+            handleSellServiceAction($actionArg, $currentNpcData, $GLOBALS['HERIKA_NAME'], $last_ts, $last_gamets, $momentum, $db);
             unset($parsed['notification']);
             unset($parsed['rumor']);
 

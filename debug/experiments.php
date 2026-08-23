@@ -942,3 +942,79 @@ if ($argv[1] == '20') {
     );
 
 }
+
+if ($argv[1] == '21a') {
+    
+    $name="Lydia";
+    $npcMaster = new NpcMaster();   
+    $npc = $npcMaster->getByName($name);
+    $bedref=0x1A51804C;
+    /*
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x{$npc["refid"]}@SleepInBed/$bedref",
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+    */
+    $skyrimCmd = new SkyrimCommandBuilder();
+    $json = $skyrimCmd->ObjectReference->MoveTo("0x{$npc["refid"]}","0x1A51804C",0,0,155);
+    $skyrimCmd->send(cmd: $json);
+}
+
+if ($argv[1] == '21b') {
+    
+    $name="Lydia";
+    $npcMaster = new NpcMaster();   
+    $npc = $npcMaster->getByName($name);
+   
+    $npc = $npcMaster->getByName($name);
+    $skyrimCmd = new SkyrimCommandBuilder();
+
+    $json = $skyrimCmd->Actor->SetUnconscious("0x{$npc["refid"]}",false);
+    $skyrimCmd->send(cmd: $json);
+
+    /*
+    $json = $skyrimCmd->ObjectReference->MoveTo("0x{$npc["refid"]}","0x1A51804C",0,0,155);
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->EnableAI("0x{$npc["refid"]}",false);
+    $skyrimCmd->send(cmd: $json);
+    */
+}
+
+if ($argv[1] == '22') {
+    
+    $name="Lydia";
+    $npcMaster = new NpcMaster();   
+    $npc = $npcMaster->getByName($name);
+    $bedref=0x1a224b54;
+    
+    
+    $npc = $npcMaster->getByName($name);
+    $skyrimCmd = new SkyrimCommandBuilder();
+
+    $json = $skyrimCmd->Actor->EnableAI("0x{$npc["refid"]}",true);
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->SetUnconscious("0x{$npc["refid"]}",true);
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->UnequipAll("0x{$npc["refid"]}");
+    $skyrimCmd->send(cmd: $json);
+    
+    $json = $skyrimCmd->Actor->EnableAI("0x{$npc["refid"]}",true);
+    $skyrimCmd->send(cmd: $json);
+
+}
+
+if ($argv[1] == '23') {
+    $GLOBALS["db"]->execQuery("INSERT INTO public.responselog VALUES (0, 0, 'Karrie', 'Today, as we gather in this virtual hall, I can''t help but draw inspiration from the vast and enchanting universe of Skyrim/////1/Varek/utt_39b8b31c32bb0abb9a92', 'ScriptQueue', '', nextval('responselog_rowid_seq'::regclass))");
+    
+
+}

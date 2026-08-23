@@ -55,7 +55,7 @@ function chimProfileManagerLabel(string $name): string
         'LLM_FALLBACK_ENABLED' => 'Fallback LLM', 'RECHAT_H' => 'Rechat Probability',
         'RECHAT_P' => 'Player Rechat Probability', 'RECHAT_ALLOW_ACTIONS' => 'Allow Rechat Actions',
         'CORE_LANG' => 'Language', 'LANG_LLM_XTTS' => 'LLM/TTS Language',
-        'BORED_EVENT' => 'Bored Event', 'BORED_EVENT_SERVERSIDE' => 'Server-side Bored Event',
+        'BORED_EVENT' => 'Bored Event',
         'CONTEXT_HISTORY' => 'Context History', 'CONTEXT_HISTORY_DIARY' => 'Diary Context History',
         'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 'Dynamic Profile Context History', 'MAX_WORDS_LIMIT' => 'Maximum Words',
         'QUEST_COMMENT' => 'Quest Commentary', 'QUEST_COMMENT_CHANCE' => 'Quest Commentary Chance',

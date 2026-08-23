@@ -8290,4 +8290,128 @@ function resolveTravelLocation($location, $currentNpcData, $db)
     return $loc ?: null;
 }
 
+function DataSearchMemoryByVectorFromContextKeywords($contextKeywords,$npcfilter,$timeThreshold=0) {
+    
+        $localStartTime=microtime(true);
+
+        $scopeConditionSql = dataGetMemoryScopeConditionSql($npcfilter);
+        $companionConditionSql = dataGetMemoryCompanionConditionSql($npcfilter);
+        
+        $url = $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["TXTAI_URL"].'/embed';
+
+        $data = [
+            
+            'text' => $contextKeywords   
+        ];
+
+        // Convert to JSON
+        $options = [
+            'http' => [
+                'method'  => 'POST',
+                'header'  => "Content-Type: application/json\r\n" .
+                            "Accept: application/json\r\n",
+                'content' => json_encode($data),
+                'ignore_errors' => true // to capture error messages if any
+            ]
+        ];
+
+        // Create context and send the request
+        $context  = stream_context_create($options);
+        
+        error_log("[DataSearchMemoryByVector Embedding start] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+        $response = file_get_contents($url, false, $context);
+        error_log("[DataSearchMemoryByVector Embedding end] Elapsed time: " . (microtime(true) - $localStartTime) . " seconds");
+
+        // Output the response
+        if ($response === false) {
+            Logger::error("Request failed.\n");
+        } else {
+            Logger::info("Request done:\n");
+
+        }
+        $contextKeywords=$GLOBALS["db"]->escape($contextKeywords);
+        $resultNormalized = chimNormalizeTsQueryTerms($contextKeywords);
+        $kwStringAny=implode(" | ",$resultNormalized);
+        $kwStringAll=implode(" & ",$resultNormalized);
+        error_log("[DataSearchMemoryByVector] Generated Tags: $kwStringAny" );
+        $vector=json_decode($response,true);
+
+        if (is_array($vector) && isset($vector["embedding"])) {
+            $vectorString="'[".implode(",",$vector["embedding"])."]'";
+            $rankAnySql = $kwStringAny !== ''
+                ? "ts_rank(native_vec, to_tsquery('" . $GLOBALS["db"]->escape($kwStringAny) . "'))"
+                : "0::real";
+            $rankAllSql = $kwStringAll !== ''
+                ? "ts_rank(native_vec, to_tsquery('" . $GLOBALS["db"]->escape($kwStringAll) . "'))"
+                : "0::real";
+            $rankCombinedSql = "($rankAnySql + $rankAllSql)";
+
+            $finalQuery="
+                SELECT rowid,gamets_truncated,
+                        embedding <-> $vectorString as distance,
+                         $rankAnySql AS rank_any_fts_raw,
+                         $rankAllSql AS rank_all_fts_raw,
+                         $rankCombinedSql AS rank_fts,
+                         (embedding <-> $vectorString) - $rankCombinedSql AS mixed_distance,
+                         summary,
+                         '$contextKeywords' as keywords_used
+                    FROM public.memory_summary 
+                    WHERE embedding IS NOT NULL
+                    and $scopeConditionSql
+                    and $companionConditionSql
+                    and (gamets_truncated<$timeThreshold or $timeThreshold=0)
+                    
+                    ORDER BY
+                        mixed_distance ASC,
+                        distance ASC,
+                        gamets_truncated DESC,
+                        rowid DESC
+                    LIMIT 50 OFFSET 0
+                ";    
+            $memory=$GLOBALS["db"]->fetchAll($finalQuery);
+            $singleMemory = chimSelectBestHybridMemoryCandidate($memory);
+         
+            if (!isset($singleMemory)) {
+                $singleMemory = [
+                    "rank_any" => null,
+                    "rank_all" => null,
+                    "summary" => null,
+                    "distance" => 1.4,
+                    "mixed_distance" => 1.4,
+                ];
+            }
+            
+            /*error_log("
+                 SELECT summary, gamets_truncated,
+                        embedding <-> $vectorString as distance,
+                         ts_rank(native_vec, to_tsquery('$kwStringAny')) AS rank_any_fts,
+                         ts_rank(native_vec, to_tsquery('$kwStringAll')) AS rank_all_fts
+                    FROM public.memory_summary 
+                    WHERE embedding IS NOT NULL
+                    and companions like '%{$GLOBALS["db"]->escape($npcfilter)}%'
+                    ORDER BY (embedding <-> $vectorString)-ts_rank(native_vec, to_tsquery('$kwStringAny')) 
+                    LIMIT 5 OFFSET 0
+                ");*/
+
+            $GLOBALS["db"]->insert(
+                    'audit_memory',
+                    array(
+                        'input' => $TEST_TEXT,
+                        'keywords' =>'text2vec search / (input plus "'.$contextKeywords.'"',
+                        'rank_any'=> (1.40-$singleMemory["mixed_distance"]),// Try to mimic FTS query rank
+                        'rank_all'=> (1.40-$singleMemory["distance"]),// Try to mimic FTS query rank
+                        'memory'=>$singleMemory["summary"],
+                        'time'=>isset($vector["timing"])?$vector["timing"]["generation_time_seconds"]:"0 secs (text2vec)"
+                    )
+                );
+            
+        } else {
+            return null;
+        }
+            
+    
+    return [$singleMemory];
+    
+}
+
 ?>
