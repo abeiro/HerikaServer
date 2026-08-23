@@ -14,6 +14,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "eventlog_helper.php");
 
 $GLOBALS["ENGINE_PATH"]=$enginePath;
 
@@ -1503,6 +1504,19 @@ if (isset($_GET["edit"])) {
     }
 }
 
+$npcRelationshipChanges = [];
+if (is_array($editItem) && intval($editItem['id'] ?? 0) > 0) {
+    try {
+        $npcRelationshipChanges = chimFetchRecentRelationshipHistoryChanges(
+            $GLOBALS['db'],
+            10,
+            intval($editItem['id'])
+        );
+    } catch (Throwable $e) {
+        error_log('Unable to load NPC relationship change history: ' . $e->getMessage());
+    }
+}
+
 // Partial list renderer for AJAX refresh of grid and pagination
 if (isset($_GET['list']) && $_GET['list'] === '1') {
     try { while (ob_get_level() > 0) { ob_end_clean(); } } catch (Throwable $e) {}
@@ -2246,7 +2260,143 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-bgl-event { padding:9px 10px; border-left:3px solid #666; background:#1d1d1d; color:#ddd; font-size:0.84rem; }
 .npc-bgl-event-time { display:block; margin-top:4px; color:#888; font-size:0.72rem; }
 .npc-bgl-empty { margin:0; padding:10px; color:#888; text-align:center; }
-@media (max-width:700px) { .npc-editor-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+.npc-relationship-history {
+    grid-column:1 / -1;
+    padding:14px;
+    border:1px solid #444;
+    border-radius:8px;
+    background:#252525;
+}
+.npc-relationship-history-header { margin-bottom:10px; }
+.npc-relationship-history h3 { margin:0; color:#f2bd7f; font-size:1rem; }
+.npc-relationship-history-header p { margin:3px 0 0; color:#aaa; font-size:0.82rem; }
+.npc-relationship-history-list { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
+.npc-relationship-history-item {
+    padding:7px 10px;
+    border-left:3px solid rgb(242,124,17);
+    border-radius:0 4px 4px 0;
+    background:#1d1d1d;
+    /* Match the event-log row typography inherited by the shared relationship markup. */
+    color:#dee2e6;
+    font-size:0.8rem;
+    font-weight:700;
+}
+/* Relationship history rows: compact per-change presentation.
+   Same palette and density as the CHIM home dashboard widget. */
+.relationship-change-cell {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.relationship-change-entry {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+    align-items: baseline;
+    min-width: 0;
+}
+
+.relationship-change-delta {
+    min-width: 3.1em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.92em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* The sign carries the meaning, so colour is reinforcement only. */
+.relationship-change-delta.is-up {
+    color: #7ee08a;
+    background: rgba(76, 175, 80, 0.14);
+    border: 1px solid rgba(126, 224, 138, 0.35);
+}
+
+.relationship-change-delta.is-down {
+    color: #ff8a80;
+    background: rgba(244, 67, 54, 0.14);
+    border: 1px solid rgba(255, 138, 128, 0.35);
+}
+
+.relationship-change-delta.is-type {
+    color: #f2bd7f;
+    background: rgba(242, 124, 17, 0.14);
+    border: 1px solid rgba(242, 189, 127, 0.35);
+    font-family: inherit;
+    font-size: 0.72em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.relationship-change-entry-body {
+    display: block;
+    min-width: 0;
+}
+
+.relationship-change-reason {
+    display: block;
+    color: #e2e2e2;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.relationship-change-entry-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 3px 6px;
+    margin-top: 2px;
+    font-size: 0.85em;
+    color: #929292;
+}
+
+.relationship-change-target {
+    color: #bdbdbd;
+    overflow-wrap: anywhere;
+}
+
+.relationship-change-arrow {
+    color: #6f6f6f;
+}
+
+.relationship-change-tier {
+    padding: 0 4px;
+    border: 1px solid #4a4033;
+    border-radius: 3px;
+    color: #d9c39a;
+}
+
+.relationship-change-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+/* One snapshot time per history row, kept compact beneath the shared change list. */
+.npc-relationship-history-time { display:block; margin-top:4px; color:#888; font-size:0.83em; }
+.npc-relationship-history-empty { margin:0; padding:10px; color:#888; text-align:center; }
+@media (max-width:700px) {
+    .npc-editor-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .npc-relationship-history {
+        width:calc(100vw - 16px);
+        max-width:100%;
+        box-sizing:border-box;
+        justify-self:start;
+    }
+    .relationship-change-entry { gap:8px; }
+}
 @media (max-width:850px) {
     .npc-editor-action-card { grid-template-columns:minmax(0, 1fr); }
     .npc-bgl-summary,
@@ -2302,6 +2452,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 
             function sectionFor(unit){
                 if (unit.id === 'relationship-editor-section' || unit.querySelector('#relationship-editor-section')) return 'relationships';
+                if (unit.id === 'relationship-change-history') return 'relationships';
                 const label = unit.querySelector('label:not([for])');
                 if (label && label.textContent.replace(/\s+/g, ' ').trim() === 'Relationships') return 'relationships';
                 const tokens = tokensFor(unit);
@@ -3027,8 +3178,53 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
         <?php if (file_exists(__DIR__."/../../ext/relationship_system/relationship_editor.php")) {
+            // The embedded editor uses $data for each relationship; preserve the NPC list in this parent scope.
+            $npcListRows = $data;
             include(__DIR__."/../../ext/relationship_system/relationship_editor.php");
+            $data = $npcListRows;
+            unset($npcListRows);
         } ?>
+        <section id="relationship-change-history" class="form-item span-2 npc-relationship-history" aria-labelledby="relationship-change-history-title">
+            <div class="npc-relationship-history-header">
+                <h3 id="relationship-change-history-title">Recent Relationship Changes</h3>
+                <p>Read-only history for this NPC. The current relationships above remain editable.</p>
+            </div>
+            <?php if (empty($npcRelationshipChanges)): ?>
+                <p class="npc-relationship-history-empty">No relationship changes recorded for this NPC yet.</p>
+            <?php else: ?>
+                <ol class="npc-relationship-history-list">
+                    <?php foreach ($npcRelationshipChanges as $relationshipChange): ?>
+                        <?php
+                        $localTimestamp = intval($relationshipChange['localts'] ?? 0);
+                        $gameTimestamp = intval($relationshipChange['gamets'] ?? 0);
+                        $timeParts = [];
+                        if ($gameTimestamp > 0) {
+                            $timeParts[] = convert_gamets2skyrim_long_date2($gameTimestamp);
+                        }
+                        if ($localTimestamp > 0) {
+                            $timeParts[] = gmdate('j M Y, H:i', $localTimestamp) . ' UTC';
+                        }
+                        $timeLabel = implode(' · ', $timeParts);
+                        ?>
+                        <li class="npc-relationship-history-item">
+                            <?php
+                            // The shared event-log renderer owns badge, stored reason, target and tier,
+                            // including snapshots that moved several relationships at once. The prose
+                            // summary is only the fallback for older rows with no structured detail.
+                            echo chimRenderRelationshipChangeCellHtml(
+                                $relationshipChange['changes'] ?? [],
+                                $relationshipChange['data'] ?? ''
+                            );
+                            ?>
+                            <?php if ($timeLabel !== ''): ?>
+                                <?php /* The page is already scoped to this NPC, so the row only adds its time. */ ?>
+                                <time class="npc-relationship-history-time" datetime="<?= $localTimestamp > 0 ? htmlspecialchars(gmdate('c', $localTimestamp), ENT_QUOTES, 'UTF-8') : '' ?>"><?= htmlspecialchars($timeLabel, ENT_QUOTES, 'UTF-8') ?></time>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ol>
+            <?php endif; ?>
+        </section>
 <div class="form-item">
             <label for="occupation">Occupation</label>
             <textarea id="occupation" name="occupation" placeholder="Role, job, affiliations."><?= htmlspecialchars($editItem["occupation"] ?? "") ?></textarea>
