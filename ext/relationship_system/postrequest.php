@@ -227,6 +227,12 @@ if ($npcId) {
 $useRelLLM = !empty($GLOBALS['RELLLM_CONNECTOR']) && $GLOBALS['RELLLM_CONNECTOR'] > 0;
 
 if ($useRelLLM && $npcId) {
+    require_once $GLOBALS["ENGINE_PATH"] . "lib/relationship_manager.php";
+    if (!RelationshipManager::shouldRunAutomaticEvaluation()) {
+        Logger::debug("[REL] Skipping automatic evaluation for {$npcName}: RELATIONSHIP_UPDATE_CHANCE gate");
+        return;
+    }
+
     // MODE 1: ASYNC - Queue evaluation for processing by background worker
     // This prevents LLM calls from blocking the current response
     require_once __DIR__ . "/async_queue.php";

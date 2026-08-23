@@ -42,7 +42,7 @@ if ($minimeEnabled) {
             $GLOBALS["PATCH_BYPASS_MINIME_EXTRACT"] = true;
 
             $GLOBALS["MEMORY_THRESHOLD_MODIFIER"] = 0.5;
-            $memoryInjection                      = offerMemory($gameRequest);
+            $memoryInjection                      = offerMemory($gameRequest,$useLocationContext=true);
             if ($memoryInjection) {
 
                 $gameRequestCopy    = $gameRequest;

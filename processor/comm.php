@@ -1721,9 +1721,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $profData = json_decode($profile->getById($currentNpcData["profile_id"])["metadata"], true);
 
         if (!$offline) {
-            $doAutoGreeting = (isset($profData["SALUTATION_AFTER_1_DAY"]) && $profData["SALUTATION_AFTER_1_DAY"] || isset($meta["SALUTATION_AFTER_1_DAY"]) && $meta["SALUTATION_AFTER_1_DAY"]);
+            $doAutoGreeting = (isset($profData["SALUTATION_AFTER_1_DAY"]) && $profData["SALUTATION_AFTER_1_DAY"] || isset($meta["salutation_after_a_while"]) && $meta["salutation_after_a_while"]);
             if ($doAutoGreeting) {
-                error_log("[auto_greeting] enabled for {$currentNpcData["npc_name"]}, profile:{$profData["SALUTATION_AFTER_1_DAY"]} ,npc:{$meta["SALUTATION_AFTER_1_DAY"]}");
+                error_log("[auto_greeting] enabled for {$currentNpcData["npc_name"]}, profile:{$profData["SALUTATION_AFTER_1_DAY"]} ,npc:{$meta["salutation_after_a_while"]}");
                 $lit = GetLastInteraction($GLOBALS["PLAYER_NAME"], $currentNpcData["npc_name"]);
                 if (gamets2days_between($lit, $gameRequest[2]) > 1) {
                     // If auto greeting is enabled for this NPC and enough time has passed, force a greeting.
@@ -1932,6 +1932,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 "rx" => $splitNameBase[9] ?? '',
                 "ry" => $splitNameBase[10] ?? '',
                 "rz" => $splitNameBase[11] ?? '',
+                "running_package_id" => $splitNameBase[12] ?? '',
             ];
 
             error_log(print_r($splitNameBase, true));
@@ -2038,6 +2039,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
 
 } elseif (strpos($gameRequest[0], "enable_bg") === 0 || strpos($gameRequest[0], "disable_bg") === 0) {
+    Logger::info("Background Life toggle requested: {$gameRequest[0]} for target: {$gameRequest[3]}");
     $npcMaster = new NpcMaster();
     $splitNameBase = explode("/", (string) ($gameRequest[3] ?? ''), 2);
     $npcName = trim((string) ($splitNameBase[0] ?? ''));

@@ -297,6 +297,9 @@ function _relProcessQueue($limit = 5, $relLLM = null) {
         }
 
         // Increment retry count for failed entries (will try again later)
+        if (!empty($retryIds)) {
+            _relEnsureRetryColumns('relationship_eval_queue');
+        }
         foreach ($retryIds as $retry) {
             $id = intval($retry['id']);
             $escapedError = $GLOBALS['db']->escape($retry['error']);
@@ -316,6 +319,27 @@ function _relProcessQueue($limit = 5, $relLLM = null) {
     }
 
     return $results;
+}
+
+/**
+ * Ensure retry_count and last_error exist before the retry UPDATE writes to them.
+ *
+ * The ALTERs in _relCreateQueueTable() only run when the table is missing, so an install
+ * whose table predates last_error never gets the column. Idempotent, memoised per process,
+ * and only called when there is something to retry.
+ */
+function _relEnsureRetryColumns($table) {
+    static $ensured = [];
+    if (isset($ensured[$table])) {
+        return;
+    }
+    $ensured[$table] = true;
+    try {
+        $GLOBALS['db']->query("ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0");
+        $GLOBALS['db']->query("ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS last_error TEXT");
+    } catch (Throwable $e) {
+        Logger::warn("[REL-ASYNC] Could not ensure retry columns on {$table}: " . $e->getMessage());
+    }
 }
 
 /**
@@ -503,6 +527,9 @@ function _relProcessInitQueue($limit = 5, $relLLM = null) {
             $GLOBALS['db']->query("DELETE FROM relationship_init_queue WHERE id IN ({$idList})");
         }
 
+        if (!empty($retryIds)) {
+            _relEnsureRetryColumns('relationship_init_queue');
+        }
         foreach ($retryIds as $retry) {
             $id = intval($retry['id']);
             $escapedError = $GLOBALS['db']->escape($retry['error']);

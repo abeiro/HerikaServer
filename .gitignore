@@ -16,3 +16,5 @@ conf/conf_*.php
 /data/voices/*
 !/data/voices/TheNarrator.wav
 */Zone.Identifier
+/data/pictures/gallery/*
+!/data/pictures/gallery/.placeholder

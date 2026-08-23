@@ -38,10 +38,8 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 <style>
     /* Match oghma_upload page layout and colors */
     main {
-        padding-top: 40px;
-        padding-bottom: 40px;
-        padding-left: 10%;
-        padding-right: 10%;
+        /* Compact responsive gutter instead of a fixed 10% on every viewport. */
+        padding: 10px clamp(10px, 2.5vw, 34px) 24px;
         width: 100%;
         margin: 0;
     }
@@ -62,35 +60,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
         font-style: normal;
     }
 
-    /* Title styling to match Oghma */
-    h1.api-title {
-        margin: 0 0 20px 0;
-        font-family: 'MagicCards', serif;
-        word-spacing: 8px;
-        font-size: 2.2em;
-        color: rgb(242, 124, 17);
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        text-align: center;
-    }
-
-    /* Page Header */
-    .page-header {
-        background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
-        padding: 20px;
-        border-radius: 10px;
-        border: 1px solid #3a3a3a;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
-        text-align: center;
-        margin-bottom: 30px;
-    }
-    .page-header h1.api-title {
-        margin-bottom: 8px;
-    }
-    .page-subtitle {
-        color: #bbb;
-        font-size: 1.1em;
-        margin: 0;
-    }
+    /* Page header is the shared compact inline row (.chim-page-head in chim-theme.css). */
 
     .content-grid {
         display: grid;
@@ -129,7 +99,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
     }
     .full-width-section { grid-column: 1 / -1; }
     @media (max-width: 900px) {
-        main { padding-left: 5%; padding-right: 5%; }
         .content-grid { grid-template-columns: 1fr; }
     }
 
@@ -249,9 +218,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
 </style>
 
 <main>
-    <div class="page-header">
-        <h1 class="api-title">API Keys</h1>
-        <p class="page-subtitle">Manage API keys for LLM, TTS, and other service connectors</p>
+    <div class="page-header chim-page-head">
+        <h1 class="api-title chim-page-head-title">API Keys</h1>
+        <p class="page-subtitle chim-page-head-note">Manage API keys for LLM, TTS, and other service connectors</p>
     </div>
     
     <div id="toast" class="toast-notification">

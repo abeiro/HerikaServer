@@ -590,12 +590,9 @@ if (!$isEmbed) {
     font-weight: normal;
     font-style: normal;
 }
-main { padding: <?php echo $isEmbed ? '20px 5px 5px' : '30px 5px 5px'; ?>; }
+main { padding: <?php echo $isEmbed ? '10px 5px 5px' : '30px 5px 5px'; ?>; }
 .page-shell { max-width: 1450px; margin: 0 auto; }
-.page-header { background: linear-gradient(180deg, rgba(42,42,42,.95), rgba(34,34,34,.98)); padding: 20px; border-radius: 10px; border: 1px solid #3a3a3a; box-shadow: 0 2px 8px rgba(0,0,0,.15), inset 0 1px rgba(255,255,255,.03); text-align: center; margin-bottom: 30px; }
-.page-header h1.api-title { margin-bottom: 8px; }
-h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacing: 8px; font-size: 2.2em; color: rgb(242,124,17); text-shadow: 2px 2px 4px rgba(0,0,0,.5); text-align: center; }
-.page-subtitle { color: #bbb; font-size: 1.1em; margin: 0; }
+/* Page header is the shared compact inline row (.chim-page-head in chim-theme.css). */
 .notice { margin-bottom: 14px; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(242,124,17,.25); background: rgba(42,42,42,.9); color: #e7cfac; }
 .layout { display: grid; grid-template-columns: minmax(280px, 340px) 1fr; gap: 18px; align-items: start; }
 .left-col, .right-col { background: linear-gradient(180deg, rgba(42,42,42,.95), rgba(34,34,34,.98)); border: 1px solid #3a3a3a; border-radius: 10px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.15), inset 0 1px rgba(255,255,255,.03); }
@@ -642,9 +639,9 @@ h1.api-title { margin: 0 0 20px 0; font-family: 'MagicCards', serif; word-spacin
 
 <main>
     <div class="page-shell">
-        <div class="page-header">
-            <h1 class="api-title">TTS Connectors</h1>
-            <p class="page-subtitle">Text-to-Speech Setup Options.</p>
+        <div class="page-header chim-page-head">
+            <h1 class="api-title chim-page-head-title">TTS Connectors</h1>
+            <p class="page-subtitle chim-page-head-note">Text-to-Speech Setup Options.</p>
         </div>
 
         <?php if (!empty($_GET['notice'])): ?>
