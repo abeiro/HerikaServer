@@ -156,6 +156,149 @@ function render_widget($title, $content, $type = 'default', $options = []) {
 }
 
 /**
+ * Render the compact "Recent Relationship Changes" widget.
+ *
+ * Each row leads with the signed affinity delta (or a neutral type badge when a
+ * change only swapped the relationship type), followed by the reason behind it.
+ * NPC name, target and timestamp stay subordinate metadata. Rows come from
+ * core_npc_master_history via chimFetchRecentRelationshipHistoryChanges(); the
+ * structured fields are produced by chimBuildRelationshipChangeDetails(), which
+ * wraps RelationshipManager::buildRelationshipChangeSummaries().
+ *
+ * @param array  $relationshipChanges Snapshot rows from the relationship history feed
+ * @param string $webRoot             Application web root, for the timeline link
+ * @param int    $maxRows             Maximum number of change rows to render
+ * @return string HTML string representing the widget
+ */
+function render_relationship_changes_widget($relationshipChanges, $webRoot, $maxRows = 5) {
+    $maxRows = max(1, intval($maxRows));
+    $snapshots = is_array($relationshipChanges) ? $relationshipChanges : [];
+
+    // One snapshot can touch several targets, so flatten to one row per change.
+    $rows = [];
+    foreach ($snapshots as $snapshot) {
+        $npcName = trim((string)($snapshot['npc_name'] ?? ''));
+        $npcName = $npcName !== '' ? $npcName : 'Unknown NPC';
+        $localTimestamp = intval($snapshot['localts'] ?? 0);
+        $changes = (isset($snapshot['changes']) && is_array($snapshot['changes'])) ? $snapshot['changes'] : [];
+        if (empty($changes)) {
+            // Snapshot without structured details: fall back to the prose summary.
+            $changes = [['reason' => (string)($snapshot['data'] ?? '')]];
+        }
+
+        foreach ($changes as $change) {
+            if (!is_array($change)) {
+                continue;
+            }
+            $change['npc_name'] = $npcName;
+            $change['localts'] = $localTimestamp;
+            $rows[] = $change;
+            if (count($rows) >= $maxRows) {
+                break 2;
+            }
+        }
+    }
+
+    if (empty($rows)) {
+        $content = "<p class='relationship-change-empty'>No relationship changes recorded yet.</p>";
+    } else {
+        $content = "<ul class='relationship-change-list' role='list'>";
+        foreach ($rows as $row) {
+            $delta = intval($row['delta'] ?? 0);
+            $tierFrom = trim((string)($row['tier_from'] ?? ''));
+            $tierTo = trim((string)($row['tier_to'] ?? ''));
+            $typeChanged = !empty($row['type_changed']);
+            $typeTo = trim((string)($row['type_to'] ?? ''));
+            $target = trim((string)($row['target'] ?? ''));
+            $reason = trim((string)($row['reason'] ?? ''));
+
+            if ($delta !== 0) {
+                $deltaClass = $delta > 0 ? 'is-up' : 'is-down';
+                $deltaLabel = sprintf('%+d', $delta);
+                $deltaSpoken = 'Affinity ' . $deltaLabel . '.';
+            } elseif (array_key_exists('delta', $row)) {
+                // Type-only change: there is no number to show, so use a neutral badge.
+                $deltaClass = 'is-type';
+                $deltaLabel = 'Type';
+                $deltaSpoken = 'Relationship type change.';
+            } else {
+                // Row carries no structured detail at all.
+                $deltaClass = 'is-type';
+                $deltaLabel = 'Change';
+                $deltaSpoken = 'Relationship change.';
+            }
+
+            // Prefer the note the model wrote; otherwise state the shortest useful outcome.
+            $reasonText = $reason;
+            if ($reasonText === '') {
+                if ($typeChanged && $typeTo !== '') {
+                    $reasonText = 'Now ' . $typeTo;
+                } elseif ($tierTo !== '' && $tierTo !== $tierFrom) {
+                    $reasonText = 'Now ' . $tierTo;
+                } else {
+                    $reasonText = 'No reason recorded';
+                }
+            }
+
+            // The tier hop only earns its own chip when the reason text is not already it.
+            $tierChip = '';
+            if ($reason !== '' && $tierTo !== '' && $tierTo !== $tierFrom) {
+                $tierChip = "<span class='relationship-change-tier'>"
+                    . htmlspecialchars($tierTo, ENT_QUOTES, 'UTF-8')
+                    . "</span>";
+            }
+
+            $timeLabel = 'Time unavailable';
+            $timeTitle = '';
+            $timeAttr = '';
+            $localTimestamp = intval($row['localts'] ?? 0);
+            if ($localTimestamp > 0) {
+                $time = new DateTime("@{$localTimestamp}");
+                $time->setTimezone(new DateTimeZone('UTC'));
+                $timeLabel = $time->format('j M, H:i');
+                $timeTitle = $time->format('jS F, Y, H:i') . ' UTC';
+                $timeAttr = gmdate('c', $localTimestamp);
+            }
+
+            $targetHtml = '';
+            if ($target !== '') {
+                $targetHtml = "<span class='relationship-change-sr'> toward </span>"
+                    . "<span class='relationship-change-arrow' aria-hidden='true'>&rarr;</span>"
+                    . "<span class='relationship-change-target'>" . htmlspecialchars($target, ENT_QUOTES, 'UTF-8') . "</span>";
+            }
+
+            $content .= "<li class='relationship-change-item'>"
+                . "<span class='relationship-change-delta {$deltaClass}'>"
+                . "<span class='relationship-change-sr'>" . htmlspecialchars($deltaSpoken, ENT_QUOTES, 'UTF-8') . " </span>"
+                . "<span aria-hidden='true'>" . htmlspecialchars($deltaLabel, ENT_QUOTES, 'UTF-8') . "</span>"
+                . "</span>"
+                . "<div class='relationship-change-body'>"
+                . "<p class='relationship-change-reason'>" . htmlspecialchars($reasonText, ENT_QUOTES, 'UTF-8') . "</p>"
+                . "<p class='relationship-change-meta'>"
+                . "<span class='relationship-change-npc'>" . htmlspecialchars((string)($row['npc_name'] ?? ''), ENT_QUOTES, 'UTF-8') . "</span>"
+                . $targetHtml
+                . $tierChip
+                . "<time class='relationship-change-time' datetime='" . htmlspecialchars($timeAttr, ENT_QUOTES, 'UTF-8') . "'"
+                . ($timeTitle !== '' ? " title='" . htmlspecialchars($timeTitle, ENT_QUOTES, 'UTF-8') . "'" : '')
+                . ">" . htmlspecialchars($timeLabel, ENT_QUOTES, 'UTF-8') . "</time>"
+                . "</p>"
+                . "</div>"
+                . "</li>";
+        }
+        $content .= '</ul>';
+    }
+
+    $timelineLink = "<a class='relationship-change-link' href='"
+        . htmlspecialchars($webRoot . '/ui/events-memories.php?tab=eventlog', ENT_QUOTES, 'UTF-8')
+        . "'>View full timeline</a>";
+
+    return render_widget('Recent Relationship Changes', $content, 'default', [
+        'class' => 'widget-skyrim-stats',
+        'actions' => $timelineLink,
+    ]);
+}
+
+/**
  * Function to fetch and format stats for a widget
  * 
  * @param string $query The SQL query to fetch stats
@@ -251,38 +394,125 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
         .relationship-change-list {
             display: grid;
-            gap: 10px;
+            gap: 6px;
             margin: 0;
             padding: 0;
             list-style: none;
         }
 
+        /* Delta chip leads the row; everything else is secondary metadata. */
         .relationship-change-item {
             display: grid;
-            grid-template-columns: minmax(120px, 0.25fr) minmax(0, 1fr) auto;
-            gap: 12px;
-            align-items: start;
-            padding: 10px 12px;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 10px;
+            align-items: baseline;
+            padding: 7px 10px;
             border-left: 3px solid rgb(242, 124, 17);
+            border-radius: 0 4px 4px 0;
             background: #222;
+        }
+
+        .relationship-change-delta {
+            min-width: 3.1em;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size: 0.92em;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        /* The sign carries the meaning, so colour is reinforcement only. */
+        .relationship-change-delta.is-up {
+            color: #7ee08a;
+            background: rgba(76, 175, 80, 0.14);
+            border: 1px solid rgba(126, 224, 138, 0.35);
+        }
+
+        .relationship-change-delta.is-down {
+            color: #ff8a80;
+            background: rgba(244, 67, 54, 0.14);
+            border: 1px solid rgba(255, 138, 128, 0.35);
+        }
+
+        .relationship-change-delta.is-type {
+            color: #f2bd7f;
+            background: rgba(242, 124, 17, 0.14);
+            border: 1px solid rgba(242, 189, 127, 0.35);
+            font-family: inherit;
+            font-size: 0.72em;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .relationship-change-body {
+            min-width: 0;
+        }
+
+        .relationship-change-reason {
+            margin: 0;
+            color: #e2e2e2;
+            font-size: 0.92em;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            overflow: hidden;
+        }
+
+        .relationship-change-meta {
+            margin: 2px 0 0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 3px 6px;
+            font-size: 0.74em;
+            color: #929292;
         }
 
         .relationship-change-npc {
             color: #f2bd7f;
-            font-weight: 700;
+            font-weight: 600;
             overflow-wrap: anywhere;
         }
 
-        .relationship-change-text {
-            color: #e2e2e2;
-            line-height: 1.4;
+        .relationship-change-target {
+            color: #bdbdbd;
             overflow-wrap: anywhere;
+        }
+
+        .relationship-change-arrow {
+            color: #6f6f6f;
+        }
+
+        .relationship-change-tier {
+            padding: 0 4px;
+            border: 1px solid #4a4033;
+            border-radius: 3px;
+            color: #d9c39a;
         }
 
         .relationship-change-time {
-            color: #929292;
-            font-size: 0.78em;
+            margin-left: auto;
+            color: #8a8a8a;
             white-space: nowrap;
+        }
+
+        .relationship-change-sr {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: -1px;
+            padding: 0;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            clip-path: inset(50%);
+            white-space: nowrap;
+            border: 0;
         }
 
         .relationship-change-empty {
@@ -376,11 +606,12 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
             }
 
             .relationship-change-item {
-                grid-template-columns: 1fr;
-                gap: 5px;
+                gap: 8px;
+                padding: 7px 8px;
             }
 
             .relationship-change-time {
+                margin-left: 0;
                 white-space: normal;
             }
         }
@@ -794,39 +1025,6 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
             <button onclick="window.open('https://docs.google.com/spreadsheets/d/1UtAR_r18wskmTMMsg8IlhVvr1Fn9tHvRJT8drH6RuzY/edit?gid=1257158105#gid=1257158105', '_blank')" class="dashboard-btn">
                 <span class="btn-icon">🥇</span> AI/LLM Tier List
             </button>
-        </div>
-
-        <div class="dashboard-container">
-            <?php
-            $relationshipChangesContent = '';
-            if (empty($recentRelationshipChanges)) {
-                $relationshipChangesContent = "<p class='relationship-change-empty'>No relationship changes recorded yet.</p>";
-            } else {
-                $relationshipChangesContent = "<ul class='relationship-change-list'>";
-                foreach ($recentRelationshipChanges as $relationshipChange) {
-                    $npcName = trim((string)($relationshipChange['npc_name'] ?? ''));
-                    $npcName = $npcName !== '' ? $npcName : 'Unknown NPC';
-                    $localTimestamp = intval($relationshipChange['localts'] ?? 0);
-                    $timeLabel = 'Time unavailable';
-                    if ($localTimestamp > 0) {
-                        $time = new DateTime("@{$localTimestamp}");
-                        $time->setTimezone(new DateTimeZone('UTC'));
-                        $timeLabel = $time->format('jS F, Y, H:i') . ' UTC';
-                    }
-                    $relationshipChangesContent .= "<li class='relationship-change-item'>"
-                        . "<span class='relationship-change-npc'>" . htmlspecialchars($npcName, ENT_QUOTES, 'UTF-8') . "</span>"
-                        . "<span class='relationship-change-text'>" . htmlspecialchars((string)($relationshipChange['data'] ?? ''), ENT_QUOTES, 'UTF-8') . "</span>"
-                        . "<time class='relationship-change-time' datetime='" . ($localTimestamp > 0 ? gmdate('c', $localTimestamp) : '') . "'>" . htmlspecialchars($timeLabel, ENT_QUOTES, 'UTF-8') . "</time>"
-                        . "</li>";
-                }
-                $relationshipChangesContent .= '</ul>';
-            }
-            $relationshipTimelineLink = "<a class='relationship-change-link' href='" . htmlspecialchars($webRoot . '/ui/events-memories.php?tab=eventlog', ENT_QUOTES, 'UTF-8') . "'>View full timeline</a>";
-            echo render_widget('Recent Relationship Changes', $relationshipChangesContent, 'default', [
-                'class' => 'widget-skyrim-stats',
-                'actions' => $relationshipTimelineLink,
-            ]);
-            ?>
         </div>
 
         <?php if ($hasEventLogData): ?>
@@ -1440,6 +1638,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                         }
                         
                         echo render_widget('Latest Diary Entry', $diaryContent, 'default', ['class' => 'widget-skyrim-stats']);
+
+                        // Recent Relationship Changes sits directly below the diary entry.
+                        echo render_relationship_changes_widget($recentRelationshipChanges, $webRoot);
 
                         // Word Map
                         $generalStats = fetch_widget_stats($conn, "

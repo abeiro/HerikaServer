@@ -272,6 +272,76 @@ if (!function_exists('chimFetchRelationshipHistoryTimelineRows')) {
     }
 }
 
+if (!function_exists('chimBuildRelationshipChangeDetails')) {
+    /**
+     * Break one relationship snapshot into structured, per-target change details.
+     *
+     * Additive companion to chimBuildRelationshipHistoryTimelineRows(): it keeps
+     * RelationshipManager::buildRelationshipChangeSummaries() as the single source
+     * of truth for which targets changed, then pairs each summary with the numbers
+     * behind the sentence (signed affinity delta, tier hop, type hop, reason note)
+     * so compact panels can render a terse row instead of the full prose. Nothing
+     * is read from or written to eventlog.
+     */
+    function chimBuildRelationshipChangeDetails(array $snapshot)
+    {
+        if (!class_exists('RelationshipManager')) {
+            require_once __DIR__ . DIRECTORY_SEPARATOR . 'relationship_manager.php';
+        }
+
+        $currentExtended = json_decode((string)($snapshot['extended_data'] ?? ''), true);
+        $previousExtended = json_decode((string)($snapshot['previous_extended_data'] ?? ''), true);
+        $currentExtended = is_array($currentExtended) ? $currentExtended : [];
+        $previousExtended = is_array($previousExtended) ? $previousExtended : [];
+
+        $changes = RelationshipManager::buildRelationshipChangeSummaries(
+            (string)($snapshot['npc_name'] ?? ''),
+            $previousExtended['relationships'] ?? [],
+            $currentExtended['relationships'] ?? []
+        );
+        if (empty($changes)) {
+            return [];
+        }
+
+        $oldMap = RelationshipManager::normalizeRelationshipMap($previousExtended['relationships'] ?? []);
+        $newMap = RelationshipManager::normalizeRelationshipMap($currentExtended['relationships'] ?? []);
+
+        $details = [];
+        foreach ($changes as $change) {
+            $target = (string)($change['target'] ?? '');
+            $old = isset($oldMap[$target]) && is_array($oldMap[$target]) ? $oldMap[$target] : [];
+            $new = isset($newMap[$target]) && is_array($newMap[$target]) ? $newMap[$target] : [];
+
+            $oldAffinity = (int)($old['aff'] ?? 0);
+            $newAffinity = (int)($new['aff'] ?? 0);
+            $oldType = strtolower(trim((string)($old['type'] ?? 'neutral')));
+            $newType = strtolower(trim((string)($new['type'] ?? 'neutral')));
+            $oldType = $oldType !== '' ? $oldType : 'neutral';
+            $newType = $newType !== '' ? $newType : 'neutral';
+            $oldNote = trim((string)($old['note'] ?? ''));
+            $newNote = trim((string)($new['note'] ?? ''));
+
+            $details[] = [
+                'target' => $target,
+                'direction' => (string)($change['direction'] ?? 'neutral'),
+                'delta' => $newAffinity - $oldAffinity,
+                'affinity_from' => $oldAffinity,
+                'affinity_to' => $newAffinity,
+                'tier_from' => RelationshipManager::getTierLabel($oldAffinity),
+                'tier_to' => RelationshipManager::getTierLabel($newAffinity),
+                'type_changed' => $oldType !== $newType,
+                'type_from' => $oldType,
+                'type_to' => $newType,
+                // Only surface a note the model actually rewrote for this change.
+                'reason' => ($newNote !== '' && $newNote !== $oldNote) ? $newNote : '',
+                'data' => (string)($change['data'] ?? ''),
+            ];
+        }
+
+        return $details;
+    }
+}
+
 if (!function_exists('chimFetchRecentRelationshipHistoryChanges')) {
     /**
      * Read-only feed for compact relationship panels (dashboard widget, NPC editor).
@@ -309,13 +379,19 @@ if (!function_exists('chimFetchRecentRelationshipHistoryChanges')) {
         }
 
         $npcNames = [];
+        $changeDetails = [];
         foreach ($snapshots as $snapshot) {
-            $npcNames[intval($snapshot['history_id'] ?? 0)] = trim((string)($snapshot['npc_name'] ?? ''));
+            $historyId = intval($snapshot['history_id'] ?? 0);
+            $npcNames[$historyId] = trim((string)($snapshot['npc_name'] ?? ''));
+            $changeDetails[$historyId] = chimBuildRelationshipChangeDetails($snapshot);
         }
 
         $rows = chimBuildRelationshipHistoryTimelineRows($snapshots);
         foreach ($rows as $index => $row) {
-            $rows[$index]['npc_name'] = $npcNames[intval($row['relationship_history_id'] ?? 0)] ?? '';
+            $historyId = intval($row['relationship_history_id'] ?? 0);
+            $rows[$index]['npc_name'] = $npcNames[$historyId] ?? '';
+            // Additive: existing consumers keep using the prose in 'data'.
+            $rows[$index]['changes'] = $changeDetails[$historyId] ?? [];
         }
 
         return array_slice($rows, 0, $limit);
