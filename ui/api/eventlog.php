@@ -36,6 +36,8 @@ $sinceRelationshipId = isset($_GET["since_relationship_id"]) ? intval($_GET["sin
 $sinceGamets = isset($_GET["since_gamets"]) ? intval($_GET["since_gamets"]) : 0;
 $selectedEventType = isset($_GET["event_type"]) ? trim((string)$_GET["event_type"]) : '';
 $applySavedFilters = isset($_GET["use_saved_filters"]) && $_GET["use_saved_filters"];
+// Raw format (in-game UI) keeps the stored prose; only the web view renders compact HTML.
+$rawFormat = isset($_GET["format"]) && $_GET["format"] === "raw";
 $savedHiddenTypes = $applySavedFilters ? chimGetPersistedEventLogHiddenTypes($db) : [];
 
 // Base event type filter for the HerikaServer Events page.
@@ -73,7 +75,7 @@ if ($sinceGamets > 0) {
          LIMIT $limit"
     );
     $relationshipResults = $includeRelationships
-        ? chimFetchRelationshipHistoryTimelineRows($db, $limit, 0, 0, $sinceGamets)
+        ? chimFetchRelationshipHistoryTimelineRows($db, $limit, 0, 0, $sinceGamets, !$rawFormat)
         : [];
     $results = chimMergeTimelineRows($eventResults, $relationshipResults, $limit);
 } else if ($sinceRowId > 0 || $sinceRelationshipId > 0) {
@@ -91,7 +93,7 @@ if ($sinceGamets > 0) {
          ORDER BY gamets DESC, ts DESC, localts DESC, rowid DESC"
     );
     $relationshipResults = $includeRelationships
-        ? chimFetchRelationshipHistoryTimelineRows($db, $limit, 0, $sinceRelationshipId)
+        ? chimFetchRelationshipHistoryTimelineRows($db, $limit, 0, $sinceRelationshipId, 0, !$rawFormat)
         : [];
     // Keep both bounded source windows so advancing either cursor cannot skip a burst from the other table.
     $results = chimMergeTimelineRows($eventResults, $relationshipResults);
@@ -106,13 +108,10 @@ if ($sinceGamets > 0) {
          LIMIT $sourceWindow"
     );
     $relationshipResults = $includeRelationships
-        ? chimFetchRelationshipHistoryTimelineRows($db, $sourceWindow)
+        ? chimFetchRelationshipHistoryTimelineRows($db, $sourceWindow, 0, 0, 0, !$rawFormat)
         : [];
     $results = chimMergeTimelineRows($eventResults, $relationshipResults, $limit, $offset);
 }
-
-// Check if raw format is requested (for in-game UI)
-$rawFormat = isset($_GET["format"]) && $_GET["format"] === "raw";
 
 $columnHeaders = [
     'type' => 'Event',
@@ -160,8 +159,13 @@ $mappedResults = array_map(function ($row) use ($columnHeaders, $rawFormat) {
             $value = $dt->format('d-m-Y H:i:s');
         }
         
+        // Relationship history renders compactly in the web view so live-polled rows
+        // match the server-rendered ones; raw responses keep the stored prose.
+        if (!$rawFormat && $key === 'data' && ($row['source'] ?? '') === 'relationship_history') {
+            $value = chimRenderRelationshipChangeCellHtml($row['changes'] ?? [], (string)$value);
+        }
         // Special handling for chat events (only add HTML styling for web view, not raw)
-        if (!$rawFormat && $row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
+        else if (!$rawFormat && $row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
             $value = '<span style="color:rgb(255, 255, 255);">' . htmlspecialchars($value) . '</span>';
         } else {
             $value = htmlspecialchars($value);

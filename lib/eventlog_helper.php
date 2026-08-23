@@ -165,7 +165,7 @@ if (!function_exists('chimBuildRelationshipHistoryTimelineRows')) {
     /**
      * Turn persisted relationship snapshots into virtual timeline rows for user-facing views.
      */
-    function chimBuildRelationshipHistoryTimelineRows(array $snapshots)
+    function chimBuildRelationshipHistoryTimelineRows(array $snapshots, $includeChangeDetails = false)
     {
         if (!class_exists('RelationshipManager')) {
             require_once __DIR__ . DIRECTORY_SEPARATOR . 'relationship_manager.php';
@@ -221,6 +221,10 @@ if (!function_exists('chimBuildRelationshipHistoryTimelineRows')) {
                 'relationship_history_id' => $historyId,
                 'source' => 'relationship_history',
             ];
+            // Additive opt-in: 'data' keeps the full prose for every existing consumer.
+            if ($includeChangeDetails) {
+                $rows[count($rows) - 1]['changes'] = chimBuildRelationshipChangeDetails($snapshot);
+            }
         }
 
         return $rows;
@@ -233,7 +237,8 @@ if (!function_exists('chimFetchRelationshipHistoryTimelineRows')) {
         $limit,
         $offset = 0,
         $sinceHistoryId = 0,
-        $sinceGamets = 0
+        $sinceGamets = 0,
+        $includeChangeDetails = false
     ) {
         $limit = max(1, min(5000, intval($limit)));
         $offset = max(0, intval($offset));
@@ -268,7 +273,7 @@ if (!function_exists('chimFetchRelationshipHistoryTimelineRows')) {
                 LIMIT {$limit} OFFSET {$offset}"
         );
 
-        return chimBuildRelationshipHistoryTimelineRows($snapshots);
+        return chimBuildRelationshipHistoryTimelineRows($snapshots, $includeChangeDetails);
     }
 }
 
@@ -342,6 +347,127 @@ if (!function_exists('chimBuildRelationshipChangeDetails')) {
     }
 }
 
+if (!function_exists('chimBuildRelationshipChangePresentation')) {
+    /**
+     * Reduce one structured change detail to the compact bits every view renders.
+     *
+     * Shared by the dashboard widget and the Events & Memories event log so both
+     * agree on the sign, the colour class, the spoken description and whether the
+     * tier label is worth repeating. Presentation only: no reads, no writes.
+     *
+     * @param array $change One entry from chimBuildRelationshipChangeDetails()
+     * @return array Keys: badge_class, badge_label, badge_spoken, reason, tier
+     */
+    function chimBuildRelationshipChangePresentation(array $change)
+    {
+        $delta = intval($change['delta'] ?? 0);
+        if (!array_key_exists('delta', $change)) {
+            // Row carries no structured detail at all.
+            $badgeClass = 'is-type';
+            $badgeLabel = 'Change';
+            $badgeSpoken = 'Relationship change.';
+        } elseif ($delta !== 0) {
+            // The sign carries the direction, so colour is reinforcement only.
+            $badgeClass = $delta > 0 ? 'is-up' : 'is-down';
+            $badgeLabel = sprintf('%+d', $delta);
+            $badgeSpoken = 'Affinity ' . $badgeLabel . '.';
+        } else {
+            // Type-only change: there is no number to show, so use a neutral badge.
+            $badgeClass = 'is-type';
+            $badgeLabel = 'Type';
+            $badgeSpoken = 'Relationship type change.';
+        }
+
+        $reason = trim((string)($change['reason'] ?? ''));
+        $tierFrom = trim((string)($change['tier_from'] ?? ''));
+        $tierTo = trim((string)($change['tier_to'] ?? ''));
+        $typeTo = trim((string)($change['type_to'] ?? ''));
+        $tierHopped = $tierTo !== '' && $tierTo !== $tierFrom;
+
+        // Prefer the note the model wrote; otherwise state the shortest useful outcome.
+        $reasonText = $reason;
+        if ($reasonText === '') {
+            if (!empty($change['type_changed']) && $typeTo !== '') {
+                $reasonText = 'Now ' . $typeTo;
+            } elseif ($tierHopped) {
+                $reasonText = 'Now ' . $tierTo;
+            } else {
+                $reasonText = 'No reason recorded';
+            }
+        }
+
+        return [
+            'badge_class' => $badgeClass,
+            'badge_label' => $badgeLabel,
+            'badge_spoken' => $badgeSpoken,
+            'reason' => $reasonText,
+            // The tier hop only earns its own chip when the reason text is not already it.
+            'tier' => ($reason !== '' && $tierHopped) ? $tierTo : '',
+        ];
+    }
+}
+
+if (!function_exists('chimRenderRelationshipChangeCellHtml')) {
+    /**
+     * Compact markup for the Events cell of one relationship-history timeline row.
+     *
+     * Mirrors the dashboard widget: every change leads with a signed affinity delta
+     * (or a neutral badge when only the relationship type moved) followed by the
+     * stored reason, with target and tier kept as secondary metadata. Web views
+     * only; raw API responses and non-UI consumers keep the prose in 'data'.
+     *
+     * @param array  $changes      Details from chimBuildRelationshipChangeDetails()
+     * @param string $fallbackText Prose to escape and return when no details exist
+     * @return string Escaped HTML
+     */
+    function chimRenderRelationshipChangeCellHtml($changes, $fallbackText = '')
+    {
+        $changes = is_array($changes) ? array_filter($changes, 'is_array') : [];
+        if (empty($changes)) {
+            return htmlspecialchars(trim((string)$fallbackText), ENT_QUOTES, 'UTF-8');
+        }
+
+        $html = "<ul class='relationship-change-cell' role='list'>";
+        foreach ($changes as $change) {
+            $presentation = chimBuildRelationshipChangePresentation($change);
+            $target = trim((string)($change['target'] ?? ''));
+
+            $metaHtml = '';
+            if ($target !== '') {
+                $metaHtml .= "<span class='relationship-change-sr'> toward </span>"
+                    . "<span class='relationship-change-arrow' aria-hidden='true'>&rarr;</span>"
+                    . "<span class='relationship-change-target'>"
+                    . htmlspecialchars($target, ENT_QUOTES, 'UTF-8')
+                    . "</span>";
+            }
+            if ($presentation['tier'] !== '') {
+                $metaHtml .= "<span class='relationship-change-tier'>"
+                    . htmlspecialchars($presentation['tier'], ENT_QUOTES, 'UTF-8')
+                    . "</span>";
+            }
+
+            $html .= "<li class='relationship-change-entry'>"
+                . "<span class='relationship-change-delta {$presentation['badge_class']}'>"
+                . "<span class='relationship-change-sr'>"
+                . htmlspecialchars($presentation['badge_spoken'], ENT_QUOTES, 'UTF-8')
+                . " </span>"
+                . "<span aria-hidden='true'>"
+                . htmlspecialchars($presentation['badge_label'], ENT_QUOTES, 'UTF-8')
+                . "</span>"
+                . "</span>"
+                . "<span class='relationship-change-entry-body'>"
+                . "<span class='relationship-change-reason'>"
+                . htmlspecialchars($presentation['reason'], ENT_QUOTES, 'UTF-8')
+                . "</span>"
+                . ($metaHtml !== '' ? "<span class='relationship-change-entry-meta'>{$metaHtml}</span>" : '')
+                . "</span>"
+                . "</li>";
+        }
+
+        return $html . '</ul>';
+    }
+}
+
 if (!function_exists('chimFetchRecentRelationshipHistoryChanges')) {
     /**
      * Read-only feed for compact relationship panels (dashboard widget, NPC editor).
@@ -379,19 +505,13 @@ if (!function_exists('chimFetchRecentRelationshipHistoryChanges')) {
         }
 
         $npcNames = [];
-        $changeDetails = [];
         foreach ($snapshots as $snapshot) {
-            $historyId = intval($snapshot['history_id'] ?? 0);
-            $npcNames[$historyId] = trim((string)($snapshot['npc_name'] ?? ''));
-            $changeDetails[$historyId] = chimBuildRelationshipChangeDetails($snapshot);
+            $npcNames[intval($snapshot['history_id'] ?? 0)] = trim((string)($snapshot['npc_name'] ?? ''));
         }
 
-        $rows = chimBuildRelationshipHistoryTimelineRows($snapshots);
+        $rows = chimBuildRelationshipHistoryTimelineRows($snapshots, true);
         foreach ($rows as $index => $row) {
-            $historyId = intval($row['relationship_history_id'] ?? 0);
-            $rows[$index]['npc_name'] = $npcNames[$historyId] ?? '';
-            // Additive: existing consumers keep using the prose in 'data'.
-            $rows[$index]['changes'] = $changeDetails[$historyId] ?? [];
+            $rows[$index]['npc_name'] = $npcNames[intval($row['relationship_history_id'] ?? 0)] ?? '';
         }
 
         return array_slice($rows, 0, $limit);

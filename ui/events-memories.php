@@ -218,6 +218,110 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
         width: 20%;
     }
 
+    /* Relationship history rows: compact per-change presentation.
+       Same palette and density as the CHIM home dashboard widget. */
+    .relationship-change-cell {
+        display: grid;
+        gap: 5px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .relationship-change-entry {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 8px;
+        align-items: baseline;
+        min-width: 0;
+    }
+
+    .relationship-change-delta {
+        min-width: 3.1em;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 0.92em;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    /* The sign carries the meaning, so colour is reinforcement only. */
+    .relationship-change-delta.is-up {
+        color: #7ee08a;
+        background: rgba(76, 175, 80, 0.14);
+        border: 1px solid rgba(126, 224, 138, 0.35);
+    }
+
+    .relationship-change-delta.is-down {
+        color: #ff8a80;
+        background: rgba(244, 67, 54, 0.14);
+        border: 1px solid rgba(255, 138, 128, 0.35);
+    }
+
+    .relationship-change-delta.is-type {
+        color: #f2bd7f;
+        background: rgba(242, 124, 17, 0.14);
+        border: 1px solid rgba(242, 189, 127, 0.35);
+        font-family: inherit;
+        font-size: 0.72em;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .relationship-change-entry-body {
+        display: block;
+        min-width: 0;
+    }
+
+    .relationship-change-reason {
+        display: block;
+        color: #e2e2e2;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+
+    .relationship-change-entry-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 3px 6px;
+        margin-top: 2px;
+        font-size: 0.85em;
+        color: #929292;
+    }
+
+    .relationship-change-target {
+        color: #bdbdbd;
+        overflow-wrap: anywhere;
+    }
+
+    .relationship-change-arrow {
+        color: #6f6f6f;
+    }
+
+    .relationship-change-tier {
+        padding: 0 4px;
+        border: 1px solid #4a4033;
+        border-radius: 3px;
+        color: #d9c39a;
+    }
+
+    .relationship-change-sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+    }
+
     /* Responsive Table */
     @media (max-width: 768px) {
         .table-container {
@@ -669,7 +773,7 @@ function getTimeColor($time) {
             );
             $showRelationshipHistory = !in_array('relationship', $eventLogHiddenTypes, true);
             $relationshipResults = $showRelationshipHistory
-                ? chimFetchRelationshipHistoryTimelineRows($db, $sourceWindow)
+                ? chimFetchRelationshipHistoryTimelineRows($db, $sourceWindow, 0, 0, 0, true)
                 : [];
             $results = chimMergeTimelineRows(
                 $eventResults,
@@ -694,6 +798,11 @@ function getTimeColor($time) {
                     : '<input type="checkbox" class="event-checkbox" data-rowid="' . htmlspecialchars($row['rowid'] ?? '') . '" style="cursor: pointer; width: 18px; height: 18px;">';
                 
                 foreach ($row as $key => $value) {
+                    if ($key === 'changes') {
+                        // Structured relationship details back the compact Events cell below;
+                        // they are not a column, and they are not a scalar to escape.
+                        continue;
+                    }
                     if ($key === 'data' && function_exists('chimRenderNarratorRoleplayText')) {
                         $value = chimRenderNarratorRoleplayText($value);
                     }
@@ -706,8 +815,13 @@ function getTimeColor($time) {
                         $value = $dt->format('d-m-Y H:i:s');
                     }
                     
+                    // Relationship history gets the compact per-change presentation in the
+                    // web view only; the stored prose still backs the API and AI consumers.
+                    if ($key === 'data' && $isRelationshipHistory) {
+                        $value = chimRenderRelationshipChangeCellHtml($row['changes'] ?? [], (string)$value);
+                    }
                     // Special handling for chat events
-                    if ($row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
+                    else if ($row['type'] === 'chat' && ($key === 'data' || $key === 'type')) {
                         $value = '<span style="color:rgb(255, 255, 255);">' . htmlspecialchars($value ?? '') . '</span>';
                     } else {
                         $value = htmlspecialchars($value ?? '');

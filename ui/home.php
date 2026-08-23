@@ -204,47 +204,18 @@ function render_relationship_changes_widget($relationshipChanges, $webRoot, $max
     } else {
         $content = "<ul class='relationship-change-list' role='list'>";
         foreach ($rows as $row) {
-            $delta = intval($row['delta'] ?? 0);
-            $tierFrom = trim((string)($row['tier_from'] ?? ''));
-            $tierTo = trim((string)($row['tier_to'] ?? ''));
-            $typeChanged = !empty($row['type_changed']);
-            $typeTo = trim((string)($row['type_to'] ?? ''));
+            // Badge, reason and tier chip are shared with the Events & Memories event log.
+            $presentation = chimBuildRelationshipChangePresentation($row);
+            $deltaClass = $presentation['badge_class'];
+            $deltaLabel = $presentation['badge_label'];
+            $deltaSpoken = $presentation['badge_spoken'];
+            $reasonText = $presentation['reason'];
             $target = trim((string)($row['target'] ?? ''));
-            $reason = trim((string)($row['reason'] ?? ''));
 
-            if ($delta !== 0) {
-                $deltaClass = $delta > 0 ? 'is-up' : 'is-down';
-                $deltaLabel = sprintf('%+d', $delta);
-                $deltaSpoken = 'Affinity ' . $deltaLabel . '.';
-            } elseif (array_key_exists('delta', $row)) {
-                // Type-only change: there is no number to show, so use a neutral badge.
-                $deltaClass = 'is-type';
-                $deltaLabel = 'Type';
-                $deltaSpoken = 'Relationship type change.';
-            } else {
-                // Row carries no structured detail at all.
-                $deltaClass = 'is-type';
-                $deltaLabel = 'Change';
-                $deltaSpoken = 'Relationship change.';
-            }
-
-            // Prefer the note the model wrote; otherwise state the shortest useful outcome.
-            $reasonText = $reason;
-            if ($reasonText === '') {
-                if ($typeChanged && $typeTo !== '') {
-                    $reasonText = 'Now ' . $typeTo;
-                } elseif ($tierTo !== '' && $tierTo !== $tierFrom) {
-                    $reasonText = 'Now ' . $tierTo;
-                } else {
-                    $reasonText = 'No reason recorded';
-                }
-            }
-
-            // The tier hop only earns its own chip when the reason text is not already it.
             $tierChip = '';
-            if ($reason !== '' && $tierTo !== '' && $tierTo !== $tierFrom) {
+            if ($presentation['tier'] !== '') {
                 $tierChip = "<span class='relationship-change-tier'>"
-                    . htmlspecialchars($tierTo, ENT_QUOTES, 'UTF-8')
+                    . htmlspecialchars($presentation['tier'], ENT_QUOTES, 'UTF-8')
                     . "</span>";
             }
 
