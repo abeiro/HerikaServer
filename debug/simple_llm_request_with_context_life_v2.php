@@ -235,6 +235,7 @@ if (isset($extdata["background_life_last_run"]) && $extdata["background_life_las
 $lastIssuedAction = $db->fetchOne(
     "SELECT gamets, action FROM actions_issued
      WHERE actorname='$npcNameEsc' 
+     and gamets is not null
      ORDER BY gamets DESC, ts ASC"
 );
 
@@ -337,6 +338,16 @@ $history = "";
 //"TravelTo","TravelTo:Elysium Estate:I have successfully completed my business in Whiterun, having finalized wholesale agreements with Ysolda and liquidated gemstones and a Grand Soul Gem with Belethor. Now that the treasury has been bolstered and the supply lines secured, it is time to return to the estate to record these profits in the master ledger and report my success to Varek.","Orianne Marius","273604281978300","1787053128","198555825","backgroundaction","497"
 //"TravelTo","TravelTo:Elysium Estate:I have successfully completed my business in Whiterun, having finalized wholesale agreements with Ysolda and liquidated gemstones and a Grand Soul Gem with Belethor. Now that the treasury has been bolstered and the supply lines secured, it is time to return to the estate to record these profits in the master ledger and report my success to Varek.","Orianne Marius","275230813533300","1787054759","203116385","backgroundaction","500"
 //"TravelTo","TravelTo:Elysium Estate:I have successfully completed my business in Whiterun, having finalized wholesale agreements with Ysolda and liquidated gemstones and a Grand Soul Gem with Belethor. Now that the treasury has been bolstered and the supply lines secured, it is time to return to the estate to record these profits in the master ledger and report my success to Varek.","Orianne Marius","282335400088300","1787061864","206665217","backgroundaction","510"
+// Exmaple 2
+//"action","fullcall","actorname","ts","localts","gamets","original","rowid"
+//"FindNPC","FindNPC:Orianne Marius","Ingesh the Miner","1787485589","1787485599","455147659","backgroundaction","1053"
+//"FindNPC","FindNPC:Orianne Marius","Ingesh the Miner","1787485580","1787485587","455147638","backgroundaction","1052"
+//"FindNPC","FindNPC:Orianne Marius","Ingesh the Miner","706053222187800","1787485578","455147617","backgroundaction","1051"
+//"MoveTo","MoveTo:Orianne Marius","Ingesh the Miner","706046609647600","1787485568","455132289","backgroundaction","1050"
+//"FindNPC","FindNPC:Orianne Marius","Ingesh the Miner","706036532583200","1787485559","455108865","backgroundaction","1049"
+//"MoveTo","MoveTo:Orianne Marius","Ingesh the Miner","706031002810800","1787485551","455096065","backgroundaction","1048"
+//"FindNPC","FindNPC:Orianne Marius","Ingesh the Miner","706021437690800","1787485542","455080993","backgroundaction","1047"
+//"MoveTo","MoveTo:Orianne Marius","Ingesh the Miner","706013937821600","1787485535","455063585","backgroundaction","1046
 
 $actionsRows = $db->fetchAll(
     "SELECT action,actorname,gamets,fullcall FROM actions_issued
@@ -345,34 +356,79 @@ $actionsRows = $db->fetchAll(
      ORDER BY gamets DESC, ts DESC
      LIMIT 10 OFFSET 0"
 );
-// Strip out the reasoning in fullcall to get just the destination
-foreach ($actionsRows as &$row) {
-    if (strpos($row['fullcall'], ':') !== false) {
-        $parts = explode(':', $row['fullcall'], 3);
-        $row['destination'] = $parts[1] ?? '';
-    } else {
-        $row['destination'] = '';
-    }
-    if ($row["action"] == "MoveTo") {
-        $row['action'] = "TravelTo"; // Normalize MoveTo to TravelTo for comparison
-    }
-}
 
-if ($actionsRows && sizeof($actionsRows) >= 2) {
-    if ($actionsRows[0]['action'] === 'TravelTo' && $actionsRows[1]['action'] === 'TravelTo') {
-        // CHeck if it was the same destination, if so, we can assume NPC is stuck and we should solve it
-        if ($actionsRows[0]['destination'] === $actionsRows[1]['destination']) {
-            error_log("[BGL RUN] $npcNameEsc — last 2 actions were TravelTo to the same destination ({$actionsRows[0]['destination']}), assuming NPC is stuck. Teleport it near destination");
-            $destination = $actionsRows[0]['destination'];
+// Prepare the values used by the stuck checks.
+// We only need the action type and the first argument after the action name.
+// Examples:
+//   TravelTo:Elysium Estate:...
+//   MoveTo:Orianne Marius
+//   FindNPC:Orianne Marius
+foreach ($actionsRows as &$row) {
+    $parts = explode(':', $row['fullcall'], 3);
+    $row['destination'] = $parts[1] ?? '';
+
+    // TravelTo and MoveTo are considered the same family for the travel stuck check.
+    $row['action_stuck_check1'] = in_array($row['action'], ['TravelTo', 'MoveTo'], true)
+        ? 'TravelTo'
+        : '';
+
+    // MoveTo and FindNPC are considered the same family for the NPC-target stuck check.
+    $row['action_stuck_check2'] = in_array($row['action'], ['MoveTo', 'FindNPC'], true)
+        ? 'FindNPC'
+        : '';
+}
+unset($row);
+
+// We deliberately require 3 consecutive actions now.
+// This catches patterns such as:
+//   TravelTo -> MoveTo -> TravelTo
+//   TravelTo -> TravelTo -> TravelTo
+//   MoveTo   -> TravelTo -> MoveTo
+// etc.
+//
+// For the NPC-target check it also requires all 3 actions to point to the
+// exact same NPC, so different FindNPC/MoveTo targets do not trigger it.
+if ($actionsRows && sizeof($actionsRows) >= 3) {
+
+    // ---------------------------------------------------------------------
+    // TravelTo / MoveTo stuck check
+    // ---------------------------------------------------------------------
+    $lastThreeTravelActions = array_slice($actionsRows, 0, 3);
+
+    $allTravelActions = count(array_filter(
+        $lastThreeTravelActions,
+        fn($row) => $row['action_stuck_check1'] === 'TravelTo'
+    )) === 3;
+
+    if ($allTravelActions) {
+        $sameDestination = (
+            $lastThreeTravelActions[0]['destination'] !== '' &&
+            $lastThreeTravelActions[0]['destination'] === $lastThreeTravelActions[1]['destination'] &&
+            $lastThreeTravelActions[1]['destination'] === $lastThreeTravelActions[2]['destination']
+        );
+
+        if ($sameDestination) {
+            $destination = $lastThreeTravelActions[0]['destination'];
+
+            error_log("[BGL RUN] $npcNameEsc — last 3 actions were TravelTo/MoveTo to the same destination ({$destination}), assuming NPC is stuck. Teleport it near destination");
+
             $candidateLocation = resolveTravelLocation($destination, $currentNpcData, $GLOBALS['db']);
-            if ($candidateLocation["sim"] > 0.8 && $candidateLocation["refs"] != "") {
-                //We must extract first ref if any, e.g.    [refs] => 0x0001bdf1:0x2101e6ec;0x0001bdf1:0x2101e6ec
+
+            if ($candidateLocation["sim"] > _LOCATION_RESOLVE_SIM_THRESHOLD && $candidateLocation["refs"] != "") {
+                // Extract first ref if any, e.g.
+                // [refs] => 0x0001bdf1:0x2101e6ec;0x0001bdf1:0x2101e6ec
                 $refs = explode(';', $candidateLocation['refs']);
                 $firstReferencePair = explode(":", $refs[0]);
+
                 $skyrimCmd = new SkyrimCommandBuilder();
-                $json = $skyrimCmd->ObjectReference->MoveTo("0x{$currentNpcData['refid']}", "{$firstReferencePair[1]}");
+                $json = $skyrimCmd->ObjectReference->MoveTo(
+                    "0x{$currentNpcData['refid']}",
+                    "{$firstReferencePair[1]}"
+                );
                 $skyrimCmd->send(cmd: $json);
+
                 error_log("[BGL RUN] $npcNameEsc — Teleported to {$candidateLocation['name']} (formid: {$candidateLocation['formid']})");
+
                 $db->insert('actions_issued', [
                     'action' => 'TeleportTo',
                     'fullcall' => "TeleportTo:{$candidateLocation['name']}:Teleporting to resolve stuck NPC",
@@ -382,49 +438,106 @@ if ($actionsRows && sizeof($actionsRows) >= 2) {
                     'localts' => time(),
                     'original' => 'backgroundaction',
                 ]);
+
                 die();
             } else {
                 error_log("[BGL RUN] $npcNameEsc — Could not resolve a valid location for destination: $destination");
             }
-        } else {
-            // Second check. If last action as TravelTo, we must check coords hidtory to determine if NPC is moving or not.
-            // on $extdata['last_coords'] we have the last 5 coords history, if the last 3 in a middle period (last_updated has ingame ts) are the same, we can assume NPC is stuck and we should solve it
+        }
 
-            if (isset($extdata['last_coords']) && is_array($extdata['last_coords'])) {
-                $coordsHistory = $extdata['last_coords'];
-                $recentCoords = array_slice($coordsHistory, -3); // Get the last 3 entries
-                $uniqueLocations = array_unique(array_column($recentCoords, 3)); // Extract location names
+        // If the last 3 actions are TravelTo/MoveTo but their destinations
+        // differ, fall back to the coordinate-history check.
+        if (isset($extdata['last_coords']) && is_array($extdata['last_coords'])) {
+            $coordsHistory = $extdata['last_coords'];
+            $recentCoords = array_slice($coordsHistory, -3);
+            $uniqueLocations = array_unique(array_column($recentCoords, 3));
 
-                if (count($uniqueLocations) === 1) {
-                    error_log("[BGL RUN] $npcNameEsc — last 3 coordinates are the same location ({$uniqueLocations[0]}), assuming NPC is stuck. Teleporting to resolve.");
-                    $candidateLocation = resolveTravelLocation($uniqueLocations[0], $currentNpcData, $GLOBALS['db']);
-                    if ($candidateLocation["sim"] > 0.8 && $candidateLocation["refs"] != "") {
-                        // Extract first ref if any
-                        $refs = explode(';', $candidateLocation['refs']);
-                        $firstReferencePair = explode(":", $refs[0]);
-                        $skyrimCmd = new SkyrimCommandBuilder();
-                        $json = $skyrimCmd->ObjectReference->MoveTo("0x{$currentNpcData['refid']}", "{$firstReferencePair[1]}");
-                        $skyrimCmd->send(cmd: $json);
-                        error_log("[BGL RUN] $npcNameEsc — Teleported to {$candidateLocation['name']} (formid: {$candidateLocation['formid']})");
-                        $db->insert('actions_issued', [
-                            'action' => 'TeleportTo',
-                            'fullcall' => "TeleportTo:{$candidateLocation['name']}:Teleporting to resolve stuck NPC",
-                            'actorname' => $npcName,
-                            'ts' => $last_ts,
-                            'gamets' => $last_gamets,
-                            'localts' => time(),
-                            'original' => 'backgroundaction',
-                        ]);
-                        die();
-                    } else {
-                        error_log("[BGL RUN] $npcNameEsc — Could not resolve a valid location for destination: {$uniqueLocations[0]}");
-                    }
+            if (count($uniqueLocations) === 1) {
+                error_log("[BGL RUN] $npcNameEsc — last 3 coordinates are the same location ({$uniqueLocations[0]}), assuming NPC is stuck. Teleporting to resolve.");
+
+                $candidateLocation = resolveTravelLocation($uniqueLocations[0], $currentNpcData, $GLOBALS['db']);
+
+                if ($candidateLocation["sim"] > _LOCATION_RESOLVE_SIM_THRESHOLD && $candidateLocation["refs"] != "") {
+                    $refs = explode(';', $candidateLocation['refs']);
+                    $firstReferencePair = explode(":", $refs[0]);
+
+                    $skyrimCmd = new SkyrimCommandBuilder();
+                    $json = $skyrimCmd->ObjectReference->MoveTo(
+                        "0x{$currentNpcData['refid']}",
+                        "{$firstReferencePair[1]}"
+                    );
+                    $skyrimCmd->send(cmd: $json);
+
+                    error_log("[BGL RUN] $npcNameEsc — Teleported to {$candidateLocation['name']} (formid: {$candidateLocation['formid']})");
+
+                    $db->insert('actions_issued', [
+                        'action' => 'TeleportTo',
+                        'fullcall' => "TeleportTo:{$candidateLocation['name']}:Teleporting to resolve stuck NPC",
+                        'actorname' => $npcName,
+                        'ts' => $last_ts,
+                        'gamets' => $last_gamets,
+                        'localts' => time(),
+                        'original' => 'backgroundaction',
+                    ]);
+
+                    die();
+                } else {
+                    error_log("[BGL RUN] $npcNameEsc — Could not resolve a valid location for destination: {$uniqueLocations[0]}");
                 }
             }
         }
     }
-}
 
+    // ---------------------------------------------------------------------
+    // MoveTo / FindNPC stuck check
+    // ---------------------------------------------------------------------
+    $lastThreeNpcActions = array_slice($actionsRows, 0, 3);
+
+    $allNpcActions = count(array_filter(
+        $lastThreeNpcActions,
+        fn($row) => $row['action_stuck_check2'] === 'FindNPC'
+    )) === 3;
+
+    if ($allNpcActions) {
+        // All 3 actions must target the exact same NPC.
+        $targetNpcName = $lastThreeNpcActions[0]['destination'];
+
+        $sameTargetNpc = (
+            $targetNpcName !== '' &&
+            $targetNpcName === $lastThreeNpcActions[1]['destination'] &&
+            $targetNpcName === $lastThreeNpcActions[2]['destination']
+        );
+
+        if ($sameTargetNpc) {
+            $targetNpcData = $npcMaster->getByName($targetNpcName);
+
+            if ($targetNpcData && isset($targetNpcData['refid'])) {
+                $skyrimCmd = new SkyrimCommandBuilder();
+                $json = $skyrimCmd->ObjectReference->MoveTo(
+                    "0x{$currentNpcData['refid']}",
+                    "0x{$targetNpcData['refid']}"
+                );
+                $skyrimCmd->send(cmd: $json);
+
+                error_log("[BGL RUN] $npcNameEsc — Last 3 MoveTo/FindNPC actions target the same NPC {$targetNpcName}. Teleported to resolve stuck NPC.");
+
+                $db->insert('actions_issued', [
+                    'action' => 'TeleportTo',
+                    'fullcall' => "TeleportTo:{$targetNpcName}:Teleporting to resolve stuck NPC",
+                    'actorname' => $npcName,
+                    'ts' => $last_ts,
+                    'gamets' => $last_gamets,
+                    'localts' => time(),
+                    'original' => 'backgroundaction',
+                ]);
+
+                die();
+            } else {
+                error_log("[BGL RUN] $npcNameEsc — Could not resolve target NPC {$targetNpcName} for teleportation.");
+            }
+        }
+    }
+}
 // ─── Dynamic Biography ────────────────────────────────────────────────────────
 
 $dynamicBiography = buildDynamicBiography($GLOBALS, true, true, true);
@@ -838,6 +951,7 @@ $lastBackgroundAction = $db->fetchOne(
     "SELECT action, fullcall, gamets
      FROM actions_issued
      WHERE actorname='$npcNameEscBg' AND original='backgroundaction'
+     AND gamets is not null
      ORDER BY gamets DESC, localts DESC
      LIMIT 1"
 );
@@ -1088,6 +1202,7 @@ $lastBackgroundAction = $db->fetchOne(
     "SELECT action, fullcall, gamets
      FROM actions_issued
      WHERE actorname='$npcNameEscBg' AND original='backgroundaction'
+     and gamets is not null
      ORDER BY gamets DESC, localts DESC
      LIMIT 1"
 );
