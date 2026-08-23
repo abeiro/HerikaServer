@@ -495,8 +495,8 @@ if ($argv[1] == '4') {
         'goal' => "[Life goals]
 Earn some gold by mining and selling ores to merchants.
 * She must work in the mine 'Iron-Breaker Mine (Interior)' for the day , can rest at the 'Windpeak Inn' .
-* She sells irons to Gjak, who is at the same location. (check inventory to know if she has ores to sell or must keep mining)
 * Some evenings, travels to the inn 'Windpeak Inn' (at same location Dawnstar) to have some drinks and socialize with other miners.'
+* She sells irons to Orianne Marius at Elysium State (interior). (check inventory to know if she has ores to sell or must keep mining)
 [Production]
 When at a working scenario, she produces iron ore (item refid:0x00071cf3) at a rate of 2 each hour.
 ",
@@ -678,10 +678,10 @@ if ($argv[1] == '9a') {
 if ($argv[1] == '9') {
 
     $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName("Cassia Valerius");
+    $npc = $npcMaster->getByName("Ulfgrar the Void-Seer");
     $meta = $npcMaster->getMetaData($npc);
     print_r($meta["last_coords"]);
-    $testData = resolveTravelLocation("Silver-Blood Inn", $npc, $GLOBALS["db"]);
+    $testData = resolveTravelLocation("The Bee and Barb,", $npc, $GLOBALS["db"]);
     print_r($testData);
     if (checkInterior($testData["is_interior"])) {
         echo "Interior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
@@ -689,7 +689,7 @@ if ($argv[1] == '9') {
         echo "Exterior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
     }
 
-    print_r(getLocationsNearNpcCoords("Cassia Valerius"));
+    print_r(getLocationsNearNpcCoords("Ulfgrar the Void-Seer"));
 
     /*
     // This does not work, because the TravelToRaw only accepts location formid.
@@ -929,7 +929,7 @@ if ($argv[1] == '20') {
     $npcMaster = new NpcMaster();   
     $npc = $npcMaster->getByName($name);
     $bedref=0x1813A3AF;
-     $GLOBALS["db"]->insert(
+    $GLOBALS["db"]->insert(
         'responselog',
         [
             'localts' => time(),
@@ -1017,4 +1017,22 @@ if ($argv[1] == '23') {
     $GLOBALS["db"]->execQuery("INSERT INTO public.responselog VALUES (0, 0, 'Karrie', 'Today, as we gather in this virtual hall, I can''t help but draw inspiration from the vast and enchanting universe of Skyrim/////1/Varek/utt_39b8b31c32bb0abb9a92', 'ScriptQueue', '', nextval('responselog_rowid_seq'::regclass))");
     
 
+}
+
+if ($argv[1] == '24') {
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Karrie");
+    $refHexString = "0x{$npc["refid"]}";
+    $locId = ["formid" => "0x14"];
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@$refHexString@StayAtPlace/0x14/sleep",
+            'tag' => '',
+        ]
+    );
 }

@@ -8275,7 +8275,7 @@ function resolveTravelLocation($location, $currentNpcData, $db)
         END AS exact_rank
      FROM locations
      WHERE formid IS NOT NULL
-     ORDER BY exact_rank DESC, sim DESC$orderByDistanceSql
+     ORDER BY exact_rank DESC, sim DESC$orderByDistanceSql,updated_at DESC
      LIMIT 1";
 
 

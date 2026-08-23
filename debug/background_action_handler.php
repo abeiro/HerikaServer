@@ -1,6 +1,7 @@
 <?php
 
 
+define('_LOCATION_RESOLVE_SIM_THRESHOLD', 0.74); // Minimum similarity score for location resolution
 /**
  * Force-trigger an NPC background life update on the next mid-term BGL check.
  *
@@ -151,7 +152,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
         error_log("[handleTravelToAction] requested='$requestedLocation' resolved='{$resolvedLocation}' formid='{$locId['formid']}'$sim$dist");
     }
 
-    if (!isset($locId["formid"]) || (isset($locId['sim']) && $locId['sim'] < 0.8)) {
+    if (!isset($locId["formid"]) || (isset($locId['sim']) && $locId['sim'] < _LOCATION_RESOLVE_SIM_THRESHOLD)) {
         $db->insert('eventlog', [
             'ts' => $last_ts,
             'gamets' => $last_gamets + 10,
@@ -651,7 +652,7 @@ function handleMoveToAction($targetNpcName, $currentNpcData, $npcName, $last_ts,
         error_log("[handleMoveToAction] Target NPC not found: $targetNpcName");
         $locationCandidate=resolveTravelLocation($targetNpcName, $currentNpcData, $db);
 
-        if ( $locationCandidate && isset($locationCandidate["sim"]) && $locationCandidate["sim"]>0.8) {
+        if ( $locationCandidate && isset($locationCandidate["sim"]) && $locationCandidate["sim"] > _LOCATION_RESOLVE_SIM_THRESHOLD) {
             $db->insert('eventlog', [
                 'ts' => $last_ts,
                 'gamets' => $last_gamets + 5,
