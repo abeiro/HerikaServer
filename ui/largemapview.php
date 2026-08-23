@@ -1075,7 +1075,7 @@ if ($result) {
                 and name<>'Abandoned Shack'
                 and world='Skyrim'
                 ORDER BY distance ASC
-                LIMIT 10";
+                LIMIT 20";
 
         $poiResult = pg_query($adminConn, $poiQuery);
         if ($poiResult) {

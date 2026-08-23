@@ -225,6 +225,7 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'CORE_CONNECTOR_PROFILES',
             'CORE_CONNECTOR_DIRECTOR',
             'RELLLM_CONNECTOR',
+            'RELATIONSHIP_UPDATE_CHANCE',
             'CORE_CONNECTOR_OGHMA_CUSTOM',
             'RELATIONSHIP_SYSTEM_ENABLED',
             'SCENE_CLASSIFIER_ENABLED',
@@ -307,6 +308,7 @@ if (!function_exists('chimPrettySettingLabel')) {
             'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
             'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
             'RELLLM_CONNECTOR' => 'Relationship Management',
+            'RELATIONSHIP_UPDATE_CHANCE' => 'Relationship Update Chance',
             'EMOTEMOODS' => 'Emote Moods',
             'OGHMA_INFINIUM' => 'Oghma Infinium',
             'OGHMA_AMOUNT' => 'Oghma Articles Amount',
@@ -345,7 +347,7 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
 
         if (
             strpos($flatId, 'PROMPT_') === 0
-            || in_array($flatId, ['EMOTEMOODS', 'DETECT_MAGIC_EVENT', 'MAGIC_EVENT_BLACKLIST', 'LOCATION_BLACKLIST', 'ITEM_BLACKLIST', 'EVENT_TYPE_FILTER'], true)
+            || in_array($flatId, ['EMOTEMOODS', 'DETECT_MAGIC_EVENT', 'MAGIC_EVENT_BLACKLIST', 'LOCATION_BLACKLIST', 'ITEM_BLACKLIST', 'EVENT_TYPE_FILTER', 'RELATIONSHIP_UPDATE_CHANCE'], true)
         ) {
             return 'Prompt';
         }

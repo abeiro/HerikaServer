@@ -220,36 +220,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
     font-weight: normal;
     font-style: normal;
 }
-main { padding: 30px 5px 5px; }
+main { padding: 10px 5px 5px; }
 
-/* Page Header */
-.page-header {
-    background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
-    padding: 20px;
-    border-radius: 10px;
-    border: 1px solid #3a3a3a;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), inset 0 1px rgba(255, 255, 255, 0.03);
-    text-align: center;
-    margin-bottom: 30px;
-}
-.page-header h1.api-title {
-    margin-bottom: 8px;
-}
-.page-subtitle {
-    color: #bbb;
-    font-size: 1.1em;
-    margin: 0;
-}
-
-h1.api-title {
-    margin: 0 0 20px 0;
-    font-family: 'MagicCards', serif;
-    word-spacing: 8px;
-    font-size: 2.2em;
-    color: rgb(242, 124, 17);
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    text-align: center;
-}
+/* Page header is the shared compact inline row (.chim-page-head in chim-theme.css). */
 .llm-left .llm-title { font-family: 'MagicCards', serif; word-spacing: 6px; }
 .toast-notification { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: #fff; font-weight: 500; z-index: 10000; opacity: 0; transform: translateX(400px); transition: all 0.3s ease; max-width: 400px; }
 .toast-notification.show { opacity: 1; transform: translateX(0); }
@@ -850,7 +823,7 @@ if (isset($_GET["partial"]) && $_GET["partial"] === "editor") {
         }
     })();
     </script>
-    <div id="toast" class="toast-notification" style="position:static; margin: 8px auto 12px; display:block; opacity:0; transform:none; max-width:960px; width: calc(100% - 20px);"><span class="message"></span></div>
+    <div id="toast" class="toast-notification" style="position:static; margin: 0 auto 8px; display:block; opacity:0; transform:none; max-width:960px; width: calc(100% - 20px);"><span class="message"></span></div>
     <script>
     // Toast helper for embedded editor
     if (typeof window.showToast !== 'function') {
@@ -1481,12 +1454,12 @@ if (isset($_GET["edit"])) {
 }
 ?>
 
-<div class="page-header">
-    <h1 class="api-title">LLM Connectors</h1>
-    <p class="page-subtitle">Configure Language Model connectors for AI dialogue generation</p>
+<div class="page-header chim-page-head">
+    <h1 class="api-title chim-page-head-title">LLM Connectors</h1>
+    <p class="page-subtitle chim-page-head-note">Configure Language Model connectors for AI dialogue generation</p>
 </div>
 
-<div id="toast" class="toast-notification" style="position:static; margin: 8px auto 12px; display:block; opacity:0; transform:none; max-width:960px; width: calc(100% - 20px);"><span class="message"></span></div>
+<div id="toast" class="toast-notification" style="position:static; margin: 0 auto 8px; display:block; opacity:0; transform:none; max-width:960px; width: calc(100% - 20px);"><span class="message"></span></div>
 
 <div class="llm-layout">
     <div class="llm-left position-sticky">

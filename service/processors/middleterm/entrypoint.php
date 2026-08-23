@@ -179,6 +179,14 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         if (isset($npcIsNearToPlayer) && $npcIsNearToPlayer["n"] > 0) {
             $localDelta = ($npcIsNearToPlayer["n"] - $oneHourAgoGamets) * 0.0000024;
             error_log("[BGL] Skipping Passive event for {$npc["npc_name"]}, is NEAR TO PLAYER, delta: {$localDelta}");
+            // We're gonna update background_life_last_updated
+            // Passive events are intended for dismissed followers/spouses...
+            // If the NPC is near a player, we don't want to trigger a passive event, but we still want to update the last updated timestamp to avoid repeated checks.
+            $npcManager= new NpcMaster();
+            $mwdata = json_decode($npc["extended_data"], true);
+            $mwdata["background_life_last_updated"] = $maxRow;
+            $mwdata["background_life_last_updated_presence_delta"] = 0;
+            $npcManager->updateExtendedKeysByName($npc["npc_name"], $mwdata);
             continue;
            
         }
@@ -273,7 +281,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
                         'sent' => 0,
                         'actor' => "rolemaster",
                         'text' => "",
-                        'action' => "rolecommand|Instruction@{$npc["npc_name"]}@Should do whatever he came to do@0",
+                        'action' => "rolecommand|Instruction@{$npc["npc_name"]}@Should review own life goals, latest inner thoughts, and take a related action or express his/her concerns@0",
                         'tag' => "",
                     ]
                 );

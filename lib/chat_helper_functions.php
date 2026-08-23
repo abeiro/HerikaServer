@@ -2522,7 +2522,7 @@ function chimMemorySearchInputFromRequest(array $gameRequest): string
     return trim((string)($payload['origin_line'] ?? ''));
 }
 
-function offerMemory($gameRequest)
+function offerMemory($gameRequest, $useLocationContext = false)
 {
     global $db;
     
@@ -2555,6 +2555,11 @@ function offerMemory($gameRequest)
         error_log("[DataSearchMemoryByVector called 1]  : " . (microtime(true) - $localStartTime) . " seconds");
         $res2 = DataSearchMemoryByVector($memorySearchInput, $npc,false,$timeThreshold);
         error_log("[DataSearchMemoryByVector called 2]  : " . (microtime(true) - $localStartTime) . " seconds");
+        if ($useLocationContext) {
+            $location=DataLastKnownLocationHuman();
+            $res2 = DataSearchMemoryByVector("$memorySearchInput $location", $npc,false,$timeThreshold);
+            error_log("[DataSearchMemoryByVector called 2]  : " . (microtime(true) - $localStartTime) . " seconds");
+        }
 
         if (isset($res[0]) && isset($res2[0])) {
             $resFinal = ($res[0]['rank_any'] >= $res2[0]['rank_any']) ? $res : $res2;
@@ -2843,10 +2848,10 @@ function chimParseChatModeShortcut($message)
     $message = (string)$message;
     $rules = [
         ["prefix" => "((", "mode" => "INJECTION_LOG", "suffix" => "))"],
-        ["prefix" => "~~", "mode" => "CLOSE", "suffix" => ""],
+        ["prefix" => "||", "mode" => "CLOSE", "suffix" => ""],
         ["prefix" => "!!", "mode" => "SHOUT", "suffix" => ""],
         ["prefix" => "**", "mode" => "AUTOCHAT", "suffix" => ""],
-        ["prefix" => "~", "mode" => "WHISPER", "suffix" => ""],
+        ["prefix" => "|", "mode" => "WHISPER", "suffix" => ""],
         ["prefix" => "@", "mode" => "NARRATOR", "suffix" => ""],
         ["prefix" => ">", "mode" => "DIRECTOR", "suffix" => ""],
         ["prefix" => "#", "mode" => "CHEATMODE", "suffix" => ""],
@@ -3527,6 +3532,76 @@ function chimParseServerSideRechatPayload($rawData)
     return $payload;
 }
 
+// Build a fresh rechat-only state map from the latest plugin actor scan.
+function chimLatestRechatActorStateMap($maxAgeSeconds = 45)
+{
+    $db = $GLOBALS["db"] ?? null;
+    if (!$db || !method_exists($db, "fetchOne")) {
+        return [];
+    }
+
+    $maxAgeSeconds = max(1, intval($maxAgeSeconds));
+    $cutoff = time() - $maxAgeSeconds;
+    $row = $db->fetchOne(
+        "SELECT data, localts
+         FROM eventlog
+         WHERE type='infonpc' AND localts > {$cutoff}
+         ORDER BY rowid DESC
+         LIMIT 1"
+    );
+    if (!is_array($row)) {
+        return [];
+    }
+
+    $eventLocalTs = intval($row["localts"] ?? 0);
+    $ageSeconds = $eventLocalTs > 0 ? max(0, time() - $eventLocalTs) : PHP_INT_MAX;
+    if ($ageSeconds > $maxAgeSeconds) {
+        return [];
+    }
+
+    $actorList = trim((string)($row["data"] ?? ""));
+    $actorList = preg_replace('/^\s*\(beings in range:/iu', '', $actorList);
+    $actorList = preg_replace('/\)\s*$/u', '', (string)$actorList);
+    if (trim((string)$actorList) === "") {
+        return [];
+    }
+
+    $stateMap = [];
+    foreach (explode(",", (string)$actorList) as $actorToken) {
+        $actorToken = trim((string)$actorToken);
+        if (!preg_match('/^(.*?)\s*\((busy|sleeping|unconscious)\)\s*$/iu', $actorToken, $matches)) {
+            continue;
+        }
+
+        $actorName = normalizeDialogueListenerName($matches[1]);
+        if ($actorName === "") {
+            continue;
+        }
+
+        $stateMap[mb_strtolower($actorName, "UTF-8")] = strtolower((string)$matches[2]);
+    }
+
+    return $stateMap;
+}
+
+function chimRechatActorStateBlockReason($actorName, array $stateMap, $directlyAddressed = false)
+{
+    $actorName = normalizeDialogueListenerName($actorName);
+    if ($actorName === "") {
+        return "";
+    }
+
+    $state = $stateMap[mb_strtolower($actorName, "UTF-8")] ?? "";
+    if ($state === "busy" || $state === "unconscious") {
+        return $state;
+    }
+    if ($state === "sleeping" && !$directlyAddressed) {
+        return $state;
+    }
+
+    return "";
+}
+
 function chimResolveServerSideRechatTarget(array $payload)
 {
     $speakerName = normalizeDialogueListenerName($payload["speaker"] ?? ($GLOBALS["HERIKA_NAME"] ?? ""));
@@ -3593,8 +3668,14 @@ function chimResolveServerSideRechatTarget(array $payload)
     $candidates = chimNormalizeRechatActorList($candidates);
     $npcMaster = new NpcMaster();
     $selected = "";
+    $actorStateMap = chimLatestRechatActorStateMap();
+    $speakerBlockReason = chimRechatActorStateBlockReason($speakerName, $actorStateMap, false);
 
-    foreach ($candidates as $candidate) {
+    if ($speakerBlockReason !== "") {
+        Logger::info("[RECHAT_SELECT] Terminating rechat for {$speakerName}: {$speakerBlockReason}");
+    }
+
+    foreach ($speakerBlockReason === "" ? $candidates : [] as $candidate) {
         if ($candidate === "") {
             continue;
         }
@@ -3608,6 +3689,20 @@ function chimResolveServerSideRechatTarget(array $payload)
             continue;
         }
         if (!$npcMaster->getByName($candidate)) {
+            continue;
+        }
+
+        $directlyAddressed = (
+            ($rechatTargetHint !== "" && strcasecmp($candidate, $rechatTargetHint) === 0) ||
+            ($listenerHint !== "" && strcasecmp($candidate, $listenerHint) === 0)
+        );
+        $candidateBlockReason = chimRechatActorStateBlockReason(
+            $candidate,
+            $actorStateMap,
+            $directlyAddressed
+        );
+        if ($candidateBlockReason !== "") {
+            Logger::info("[RECHAT_SELECT] Skipping {$candidate}: {$candidateBlockReason}");
             continue;
         }
 

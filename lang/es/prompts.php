@@ -83,33 +83,6 @@ $PROMPTS=array(
         "extra" => (!empty($GLOBALS["RPG_COMMENTS"]) && in_array("bleedout", $GLOBALS["RPG_COMMENTS"])) ? [] : ["dontuse" => true]
     ],
 
-    "bored"=>[
-        "cue"=>[
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre la ubicación actual) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre el clima actual) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre el día de hoy) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre lo que estás pensando actualmente) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre los Dioses del Universo Elder Scrolls) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre cómo se siente actualmente) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre un evento histórico del Universo Elder Scrolls) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre algo que le gusta o disgusta) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre la última tarea que hemos completado) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre un rumor reciente) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre algo que sucedió en tu pasado) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre algo que le causa curiosidad respecto a {$GLOBALS["PLAYER_NAME"]}) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre sus pensamientos actuales sobre {$GLOBALS["PLAYER_NAME"]}) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre una entidad aleatoria en el área) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre lo que podría suceder después) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre sus pensamientos del viaje hasta ahora) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre algo que le gusta o disgusta) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario sobre algo que ha estado queriendo hacer) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario aleatorio sobre algo completamente no relacionado) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario vago sobre algo que no puede explicar bien) {$GLOBALS["TEMPLATE_DIALOG"]}",
-            "({$GLOBALS["HERIKA_NAME"]} hace un comentario casual sobre el último encuentro de combate) {$GLOBALS["TEMPLATE_DIALOG"]}"
-        ]
-        ,"extra" => ["dontuse" => (rand(0, 99) >= $GLOBALS["BORED_EVENT"])] 
-    ],
-
     "goodmorning"=>[
         "cue"=>["({$GLOBALS["HERIKA_NAME"]} comenta sobre la siesta de {$GLOBALS["PLAYER_NAME"]}. {$GLOBALS["TEMPLATE_DIALOG"]}"],
         "player_request"=>["(despertando después de dormir). ahhhh  "],
