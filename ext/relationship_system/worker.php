@@ -4,11 +4,11 @@
  * RELATIONSHIP SYSTEM - Background Worker Daemon
  *
  * Processes queued relationship evaluations in the background.
- * Auto-started by context.php when RELLLM_CONNECTOR is configured.
+ * Auto-started after a relationship evaluation is successfully queued.
  *
  * Usage:
  *   php worker.php              # Run once and exit
- *   php worker.php --daemon     # Run continuously (auto-started by context.php)
+ *   php worker.php --daemon     # Run continuously (auto-started by async_queue.php)
  *   php worker.php --interval=5 # Custom interval in seconds (default: 2)
  *
  * DAEMONIZATION:
