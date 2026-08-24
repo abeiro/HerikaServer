@@ -666,9 +666,9 @@ echo '<section class="qs-section" id="qs_openrouter_section"' . ($player2ForceAl
 // Settings Profile lives in its own section, as a sibling of OpenRouter, because Player2 hides
 // the OpenRouter section entirely and the profile picker must stay reachable in that mode.
 echo '<section class="qs-section qs-profile-section" id="qs_settings_preset_section">
-        <h2 class="qs-section-title">Settings Profile</h2>
+        <h2 class="qs-section-title">Setup</h2>
         <div class="form-group qs-field qs-settings-preset">
-            <fieldset class="qs-preset-fieldset" id="qs_settings_preset" aria-describedby="qs_settings_preset_desc qs_settings_preset_help">
+            <fieldset class="qs-preset-fieldset" id="qs_settings_preset" aria-describedby="qs_settings_preset_desc">
                 <legend class="qs-preset-label">Profile</legend>
                 <div class="qs-preset-options">
                     <label class="qs-preset-option">
@@ -688,23 +688,20 @@ echo '<section class="qs-section qs-profile-section" id="qs_settings_preset_sect
                 </div>
             </fieldset>
             <p class="qs-preset-desc" id="qs_settings_preset_desc" role="status" aria-live="polite">' . htmlspecialchars($quickstartPresetSelectedDescription) . '</p>
-            <p class="qs-preset-help" id="qs_settings_preset_help">Nothing changes yet. The selected profile is applied when you press Save and Continue.</p>
         </div>
         <div class="qs-local-llm" id="qs_local_llm_panel" hidden>
             <div class="qs-local-llm-head">
                 <h3 class="qs-local-llm-title">Local LLM Setup</h3>
-                <p class="qs-local-llm-sub">HerikaServer runs inside WSL. Point it at the machine hosting your model server, usually your Windows desktop.</p>
             </div>
             <p class="qs-local-llm-note qs-local-llm-note-warn" id="qs_local_llm_player2_warning" role="status" aria-live="polite" hidden>Player2 is on. Player2 handles every LLM call, so these Local LLM fields are turned off and will not be used. Your values are kept if you switch Player2 back off.</p>
             <div class="qs-local-llm-grid">
                 <div class="qs-local-llm-field">
                     <label for="qs_local_llm_server_type">Server type</label>
                     <div class="qs-select-wrap">
-                        <select class="form-control" id="qs_local_llm_server_type" name="qs_local_llm_server_type" aria-describedby="qs_local_llm_server_type_help">
+                        <select class="form-control" id="qs_local_llm_server_type" name="qs_local_llm_server_type">
                             ' . $quickstartLocalLlmServerOptions . '
                         </select>
                     </div>
-                    <small class="form-text" id="qs_local_llm_server_type_help">Fills the URL with the default endpoint for that server. Other keeps the URL you typed.</small>
                 </div>
                 <div class="qs-local-llm-field">
                     <label for="qs_local_llm_model">Model name</label>
@@ -1013,7 +1010,7 @@ echo '<section class="qs-section">
                 <h2 class="qs-section-title">LLM Connectors Note</h2>
                 <p class="form-text" id="qs_llm_connectors_note_default"' . $llmNoteDefaultStyle . '>Quickstart gives you four hot-swappable LLMs for in-game use.</p>
                 <p class="form-text" id="qs_llm_connectors_note_player2"' . $llmNotePlayer2Style . '>Player2 mode is active. Standard, Fast, Powerful, and Experimental all use the local Player2 connector.</p>
-                <p class="form-text" id="qs_llm_connectors_note_local" style="display:none;">Local LLM profile selected. The recap below reflects the Local LLM Setup fields in the Settings Profile section and is applied on Save and Continue.</p>
+                <p class="form-text" id="qs_llm_connectors_note_local" style="display:none;">Local LLM profile selected. The recap below reflects the Local LLM Setup fields in the Setup section and is applied on Save and Continue.</p>
                 <div id="qs_llm_connectors_cards_default" style="' . $llmCardsDefaultStyle . '">
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F579;&#xFE0F; <b>Standard</b></div>
@@ -1324,12 +1321,6 @@ echo '<style>
         font-size: 0.9rem;
     }
 
-    .qs-preset-help {
-        margin: 0;
-        color: #9ca3af;
-        font-size: 0.85rem;
-    }
-
     .qs-local-llm {
         margin-top: 14px;
         padding: 12px;
@@ -1354,12 +1345,6 @@ echo '<style>
         color: #f1f4fa;
         font-weight: 600;
         font-size: 1rem;
-    }
-
-    .qs-local-llm-sub {
-        margin: 4px 0 0 0;
-        color: #9ca3af;
-        font-size: 0.85rem;
     }
 
     .qs-local-llm-grid {
