@@ -1359,7 +1359,9 @@ if (!$isEmbed) {
 </style>
 <?php endif; ?>
 
-<main>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/player-narration.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'player-narration.css'); ?>">
+
+<main class="player-narration-settings narration-settings-page<?php echo $isEmbed ? ' is-embedded' : ''; ?>">
     <div class="page-container">
         <div id="toast" class="toast-notification <?php echo $saveSuccess ? '' : 'error'; ?>">
             <span class="message"><?php echo htmlspecialchars($saveMessage); ?></span>
@@ -1379,15 +1381,15 @@ if (!$isEmbed) {
             </script>
         <?php endif; ?>
 
-        <div class="page-header">
-            <h1>
-                🗣️ Narrator Management
-            </h1>
-            <p>Configure narrator behavior and settings</p>
+        <div class="page-header chim-page-head">
+            <h1 class="chim-page-head-title">🗣️ Narrator Management</h1>
+            <div class="chim-page-head-note">
+                <p>Configure narrator behavior and settings</p>
+            </div>
         </div>
 
         <form method="post" action="">
-            <div class="narrator-settings-actions">
+            <div class="narrator-settings-actions settings-page-actions">
                 <button type="submit" class="btn-save" name="save_narrator" value="1">Save Narration Settings</button>
                 <a class="btn-narrator-transfer" href="<?php echo $webRoot; ?>/ui/cmd/settings_portability.php?scope=narration&amp;action=export">&#128228; Export Narration</a>
                 <button type="button" class="btn-narrator-transfer" id="import_narration_settings_btn">&#128229; Import Narration</button>

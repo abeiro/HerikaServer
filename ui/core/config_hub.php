@@ -32,8 +32,7 @@ $configSections = [
         'tabs' => [
             'npc' => 'CHIM NPCs',
             'profiles' => 'Profiles',
-            'player' => 'Player',
-            'narrator' => 'Narration',
+            'player_narration' => 'Player & Narration',
             'npcbio' => 'NPC Biographies',
         ],
     ],
@@ -64,8 +63,7 @@ $configSections = [
 $tabIcons = [
     'npc' => '&#x1F31F;',
     'profiles' => '&#x1F5C3;&#xFE0F;',
-    'player' => '&#x1F464;',
-    'narrator' => '&#x1F5E3;&#xFE0F;',
+    'player_narration' => '&#x1F464;',
     'npcbio' => '&#x1F6AA;',
     'llm' => '&#x1F9E0;',
     'ttscfg' => '&#x1F50A;',
@@ -95,6 +93,21 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
 .tab-content.active { display: flex; flex-grow: 1; }
 .embed-wrap { height: 100%; width: 100%; border: 1px solid #4a4a4a; border-radius: 8px; overflow: hidden; background: #2a2a2a; }
 .embed { width: 100%; height: 100%; border: 0; background: transparent; }
+.player-narration-shell { display: flex; flex-direction: column; width: 100%; height: 100%; min-width: 0; min-height: 0; }
+.player-narration-tabs { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid #3f3f3f; background: #1d1d1d; }
+.player-narration-tab { min-height: 34px; padding: 6px 18px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: #bdbdbd; font-family: 'MagicCards', serif; font-size: 0.98rem; letter-spacing: 0.35px; cursor: pointer; }
+.player-narration-tab:hover { color: #f0f0f0; background: #292929; border-color: #454545; }
+.player-narration-tab[aria-selected="true"] { color: #f27c11; background: #2b2b2b; border-color: #95501a; }
+.player-narration-tab:focus-visible { outline: 2px solid #6aa9d8; outline-offset: 2px; }
+.player-narration-panel { flex: 1 1 auto; min-height: 0; border: 0; border-radius: 0 0 8px 8px; }
+.player-narration-panel[hidden] { display: none; }
+.tab-button[data-tab="player_narration"] { gap: 5px; font-size: 0.83em; letter-spacing: 0.65px; word-spacing: 2px; }
+@media (max-width: 640px) {
+    .player-narration-tabs { padding: 5px; }
+    .player-narration-tab { flex: 1 1 50%; padding: 7px 10px; }
+    .tab-button[data-tab="player_narration"] { padding-left: 7px; padding-right: 7px; font-size: 0.78em; letter-spacing: 0; word-spacing: 0; }
+    .tab-button[data-tab="player_narration"] .tab-icon { display: none; }
+}
 @media (max-height: 800px) { .embed-wrap { min-height: 420px; } }
 </style>
 
@@ -133,14 +146,54 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
                 <iframe class="embed" loading="eager" src="<?php echo $webRoot; ?>/ui/core/npc_master.php?embed=1"></iframe>
             </div>
         </div>
-        <div id="player" class="tab-content">
-            <div class="embed-wrap">
-                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/player_management.php?embed=1"></iframe>
-            </div>
-        </div>
-        <div id="narrator" class="tab-content">
-            <div class="embed-wrap">
-                <iframe class="embed" loading="lazy" src="about:blank" data-src="<?php echo $webRoot; ?>/ui/core/narrator_management.php?embed=1"></iframe>
+        <div id="player_narration" class="tab-content">
+            <div class="player-narration-shell">
+                <div class="player-narration-tabs" role="tablist" aria-label="Player and narration settings">
+                    <button
+                        id="player_narration_player_tab"
+                        class="player-narration-tab"
+                        type="button"
+                        role="tab"
+                        aria-selected="true"
+                        aria-controls="player_narration_player_panel"
+                        data-player-narration-section="player">Player</button>
+                    <button
+                        id="player_narration_narration_tab"
+                        class="player-narration-tab"
+                        type="button"
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="player_narration_narration_panel"
+                        tabindex="-1"
+                        data-player-narration-section="narration">Narration</button>
+                </div>
+                <div
+                    id="player_narration_player_panel"
+                    class="embed-wrap player-narration-panel"
+                    role="tabpanel"
+                    aria-labelledby="player_narration_player_tab">
+                    <iframe
+                        id="player_narration_player_frame"
+                        class="embed"
+                        title="Player settings"
+                        loading="lazy"
+                        src="about:blank"
+                        data-src="<?php echo $webRoot; ?>/ui/core/player_management.php?embed=1"></iframe>
+                </div>
+                <div
+                    id="player_narration_narration_panel"
+                    class="embed-wrap player-narration-panel"
+                    role="tabpanel"
+                    aria-labelledby="player_narration_narration_tab"
+                    hidden>
+                    <iframe
+                        id="player_narration_narration_frame"
+                        class="embed"
+                        title="Narration settings"
+                        loading="lazy"
+                        src="about:blank"
+                        data-src="<?php echo $webRoot; ?>/ui/core/narrator_management.php?embed=1"></iframe>
+                </div>
             </div>
         </div>
         <div id="profiles" class="tab-content">
@@ -231,9 +284,16 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
     const buttons = document.querySelectorAll('.tab-button');
     const groups = document.querySelectorAll('.tab-group');
     const tabs = document.querySelectorAll('.tab-content');
+    const playerNarrationTabs = Array.from(document.querySelectorAll('[data-player-narration-section]'));
+    const playerNarrationContainer = document.getElementById('player_narration');
+    const playerNarrationPanels = {
+        player: document.getElementById('player_narration_player_panel'),
+        narration: document.getElementById('player_narration_narration_panel')
+    };
+    let playerNarrationSection = 'player';
 
     function reloadIframe(container) {
-        const iframe = container.querySelector('iframe');
+        const iframe = container.querySelector('.player-narration-panel:not([hidden]) iframe') || container.querySelector('iframe');
         if (!iframe) return;
         const base = iframe.getAttribute('data-src') || iframe.getAttribute('src');
         if (!base) return;
@@ -242,28 +302,82 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
         iframe.src = url.toString();
     }
 
-    function activate(id) {
+    function ensureIframeLoaded(container) {
+        const iframe = container ? container.querySelector('iframe') : null;
+        if (!iframe) return;
+        const currentSource = iframe.getAttribute('src') || '';
+        if (currentSource === '' || currentSource === 'about:blank') {
+            reloadIframe(container);
+        }
+    }
+
+    function setPlayerNarrationSection(section, reload, updateUrl) {
+        const normalized = section === 'narration' ? 'narration' : 'player';
+        playerNarrationSection = normalized;
+
+        playerNarrationTabs.forEach(function(button){
+            const active = button.dataset.playerNarrationSection === normalized;
+            button.setAttribute('aria-selected', active ? 'true' : 'false');
+            button.tabIndex = active ? 0 : -1;
+        });
+
+        Object.keys(playerNarrationPanels).forEach(function(panelSection){
+            const panel = playerNarrationPanels[panelSection];
+            if (panel) panel.hidden = panelSection !== normalized;
+        });
+
+        if (reload && playerNarrationPanels[normalized]) {
+            ensureIframeLoaded(playerNarrationPanels[normalized]);
+        }
+        if (updateUrl) {
+            const url = new URL(window.location);
+            url.searchParams.set('tab', 'player_narration');
+            url.searchParams.set('section', normalized);
+            window.history.replaceState({}, '', url);
+        }
+    }
+
+    function activate(id, requestedPlayerNarrationSection) {
+        let canonicalId = id;
+        let innerSection = requestedPlayerNarrationSection;
+        if (id === 'player') {
+            canonicalId = 'player_narration';
+            innerSection = 'player';
+        } else if (id === 'narrator' || id === 'narration') {
+            canonicalId = 'player_narration';
+            innerSection = 'narration';
+        }
+
         const selectedButton = Array.from(buttons).find(function(button){
-            return button.dataset.tab === id;
+            return button.dataset.tab === canonicalId;
         });
         if (!selectedButton) return;
+
+        if (canonicalId === 'player_narration') {
+            setPlayerNarrationSection(innerSection || playerNarrationSection, false, false);
+        }
 
         const category = selectedButton.dataset.category;
         groups.forEach(function(group){
             group.classList.toggle('active', group.dataset.category === category);
         });
         buttons.forEach(function(button){
-            button.classList.toggle('active', button.dataset.tab === id);
+            button.classList.toggle('active', button.dataset.tab === canonicalId);
         });
         tabs.forEach(function(tab){
-            const active = tab.id === id;
+            const active = tab.id === canonicalId;
             tab.classList.toggle('active', active);
             if (active) {
                 reloadIframe(tab);
             }
         });
         const url = new URL(window.location);
-        url.searchParams.set('tab', id);
+        url.searchParams.set('tab', canonicalId);
+        if (canonicalId === 'player_narration') {
+            url.searchParams.set('section', playerNarrationSection);
+        } else {
+            url.searchParams.delete('section');
+        }
         window.history.replaceState({}, '', url);
     }
 
@@ -273,9 +387,29 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
         });
     });
 
-    const initialTab = new URL(window.location).searchParams.get('tab');
-    if (initialTab && document.getElementById(initialTab)) {
-        activate(initialTab);
+    playerNarrationTabs.forEach(function(button, index){
+        button.addEventListener('click', function(){
+            setPlayerNarrationSection(button.dataset.playerNarrationSection, true, true);
+        });
+        button.addEventListener('keydown', function(event){
+            let nextIndex = null;
+            if (event.key === 'ArrowRight') nextIndex = (index + 1) % playerNarrationTabs.length;
+            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + playerNarrationTabs.length) % playerNarrationTabs.length;
+            if (event.key === 'Home') nextIndex = 0;
+            if (event.key === 'End') nextIndex = playerNarrationTabs.length - 1;
+            if (nextIndex === null) return;
+            event.preventDefault();
+            playerNarrationTabs[nextIndex].focus();
+            playerNarrationTabs[nextIndex].click();
+        });
+    });
+
+    const initialUrl = new URL(window.location);
+    const initialTab = initialUrl.searchParams.get('tab');
+    const legacyPlayerNarrationTabs = ['player', 'narrator', 'narration'];
+    if (initialTab && (document.getElementById(initialTab) || legacyPlayerNarrationTabs.includes(initialTab))) {
+        const initialSection = initialUrl.searchParams.get('section');
+        activate(initialTab, initialSection);
     } else {
         activate('npc');
     }

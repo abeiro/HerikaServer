@@ -1056,7 +1056,9 @@ if (!$isEmbed) {
 </style>
 <?php endif; ?>
 
-<main>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/player-narration.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'player-narration.css'); ?>">
+
+<main class="player-narration-settings player-settings-page<?php echo $isEmbed ? ' is-embedded' : ''; ?>">
     <div class="page-container">
         <div id="toast" class="toast-notification <?php echo (!$saveSuccess && $saveMessage) ? 'error' : ''; ?>">
             <span class="message"><?php echo htmlspecialchars($saveMessage); ?></span>
@@ -1159,7 +1161,7 @@ if (!$isEmbed) {
         </div>
 
     <form id="player-form" method="post" action="">
-        <div class="player-actions">
+        <div class="player-actions settings-page-actions">
             <button type="submit" class="btn-save" name="save_player" value="1">Save Player Settings</button>
             <a class="btn-portable" href="<?php echo $webRoot; ?>/ui/cmd/settings_portability.php?scope=player&amp;action=export">&#128228; Export Player</a>
             <button type="button" class="btn-portable" id="import_player_settings_btn">&#128229; Import Player</button>
