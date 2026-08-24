@@ -21,6 +21,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPA
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "tts_connector.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "itt_connector.class.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "api_badge.class.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "local_llm_setup.php");
 
 if (!isset($GLOBALS["db"])) {
     $GLOBALS["db"] = new sql();
@@ -117,6 +118,10 @@ function profileConnectorTestsLlmRequiresApiKey(array $row): bool
     $service = strtolower(profileConnectorTestsString($row['service'] ?? ''));
     $provider = strtolower(profileConnectorTestsString($row['provider'] ?? ''));
     $url = strtolower(profileConnectorTestsString($row['url'] ?? ''));
+
+    if ($driver === 'openaijson' && herikaLocalLlmUrlIsAllowed($url)) {
+        return false;
+    }
 
     $remoteDrivers = [
         'anthropic',

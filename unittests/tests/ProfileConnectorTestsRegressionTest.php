@@ -4,6 +4,12 @@ use PHPUnit\Framework\TestCase;
 
 final class ProfileConnectorTestsRegressionTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'core' .
+            DIRECTORY_SEPARATOR . 'local_llm_setup.php';
+    }
+
     public function testLlmHealthCheckInitializesCommandPrompt(): void
     {
         $source = file_get_contents(
@@ -16,5 +22,35 @@ final class ProfileConnectorTestsRegressionTest extends TestCase
         $llmTestFunction = substr($source, $start, $end - $start);
 
         $this->assertStringContainsString('$GLOBALS["COMMAND_PROMPT"] = \'\';', $llmTestFunction);
+    }
+
+    public function testLocalLlmUrlValidationAllowsOnlyLoopbackAndPrivateLanHosts(): void
+    {
+        $this->assertSame(
+            'http://192.168.1.10:1234/v1/chat/completions',
+            herikaLocalLlmValidateUrl('http://192.168.1.10:1234/v1/chat/completions')
+        );
+        $this->assertTrue(herikaLocalLlmUrlIsAllowed('http://127.0.0.1:11434/v1/chat/completions'));
+        $this->assertTrue(herikaLocalLlmUrlIsAllowed('http://[::1]:8080/v1/chat/completions'));
+        $this->assertFalse(herikaLocalLlmUrlIsAllowed('http://169.254.169.254/latest/meta-data'));
+        $this->assertFalse(herikaLocalLlmUrlIsAllowed('https://api.openai.com/v1/chat/completions'));
+        $this->assertFalse(herikaLocalLlmUrlIsAllowed('file:///etc/passwd'));
+    }
+
+    public function testLocalLlmSetupRequiresAnAllowlistedServerScopeAndModel(): void
+    {
+        $setup = herikaLocalLlmNormalizeSetup([
+            'server_type' => 'ollama',
+            'url' => 'http://10.0.0.5:11434/v1/chat/completions',
+            'model' => 'qwen2.5:14b',
+            'scope' => 'conversations',
+            'disable_streaming' => '1',
+            'timeout' => '45',
+        ]);
+
+        $this->assertSame('ollama', $setup['server_type']);
+        $this->assertSame('conversations', $setup['scope']);
+        $this->assertTrue($setup['disable_streaming']);
+        $this->assertSame(45, $setup['timeout']);
     }
 }

@@ -396,7 +396,7 @@ function chimSettingsPresetApplyProfiles(array $snapshot): int
     return $count;
 }
 
-function chimSettingsPresetApply(string $presetId): array
+function chimSettingsPresetApply(string $presetId, bool $manageTransaction = true): array
 {
     $preset = chimSettingsPresetLoad($presetId);
     $snapshot = (array)($preset['snapshot'] ?? []);
@@ -405,7 +405,7 @@ function chimSettingsPresetApply(string $presetId): array
         throw new RuntimeException('Database connection is unavailable.');
     }
 
-    if ($db->execQuery('BEGIN') === false) {
+    if ($manageTransaction && $db->execQuery('BEGIN') === false) {
         throw new RuntimeException('Could not start the preset update.');
     }
     try {
@@ -423,15 +423,19 @@ function chimSettingsPresetApply(string $presetId): array
         }
         $settingsUpdated++;
         $profilesUpdated = chimSettingsPresetApplyProfiles($snapshot);
-        if ($db->execQuery('COMMIT') === false) {
+        if ($manageTransaction && $db->execQuery('COMMIT') === false) {
             throw new RuntimeException('Could not commit the preset update.');
         }
     } catch (Throwable $e) {
-        $db->execQuery('ROLLBACK');
+        if ($manageTransaction) {
+            $db->execQuery('ROLLBACK');
+        }
         throw $e;
     }
 
-    chimLoadGeneralSettingsIntoGlobals();
+    if ($manageTransaction) {
+        chimLoadGeneralSettingsIntoGlobals();
+    }
     return [
         'preset_id' => (string)$preset['id'],
         'name' => (string)$preset['name'],
