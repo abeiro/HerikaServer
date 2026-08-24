@@ -138,6 +138,8 @@ function chimSettingsPresetBuiltIns(): array
                     'POWER_AWARENESS_ENABLED' => false,
                     'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 1000,
                     'PROMPT_TIMESTAMP' => false,
+                    'PLAYER_RESPEECH' => true,
+                    'CORE_CONNECTOR_DIRECTOR_ENABLED' => true,
                 ] + chimSettingsPresetConnectorAvailability(false),
                 'prompt_context_options' => chimNormalizePromptContextOptions([
                     'enabled_sections' => [
