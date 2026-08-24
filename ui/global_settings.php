@@ -2744,7 +2744,7 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
     });
 
     function idleStatus() {
-        return customCount > 0 ? '' : 'No custom presets saved yet.';
+        return '';
     }
 
     async function loadPresets(preferredId) {
