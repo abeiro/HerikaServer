@@ -25,7 +25,7 @@ function chimSettingsPresetBuiltIns(): array
             'id' => 'builtin:default',
             'name' => 'Default',
             'built_in' => true,
-            'description' => 'Standard CHIM context and response limits used by current installs.',
+            'description' => '',
             'affects_profiles' => true,
             'snapshot' => [
                 'version' => 1,

@@ -2510,7 +2510,9 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
         presetApplyBtn.disabled = barBusy || !preset;
         presetSaveNewBtn.disabled = barBusy;
         presetOverwriteBtn.disabled = barBusy || !preset || preset.built_in === true;
-        presetDesc.textContent = preset && preset.description ? String(preset.description) : '';
+        const description = preset && preset.description ? String(preset.description) : '';
+        presetDesc.textContent = description;
+        presetDesc.hidden = description === '';
     }
 
     function setBarBusy(busy) {
