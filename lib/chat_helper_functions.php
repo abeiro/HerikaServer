@@ -15,7 +15,7 @@ require_once(__DIR__."/core/event_type.php");
 function chimBuildLatestDiaryContextBlock(string $npcName, array $profileData): string
 {
     $safeNpcName = trim($npcName);
-    if ($safeNpcName === '' || strcasecmp($safeNpcName, 'The Narrator') === 0) {
+    if ($safeNpcName === '') {
         return '';
     }
 
