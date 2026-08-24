@@ -79,6 +79,7 @@ main.player-narration-settings .settings-page-actions .btn-narrator-transfer {
     box-shadow: none;
     font-size: 0.86rem;
     line-height: 1.2;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 main.player-narration-settings .content-grid {

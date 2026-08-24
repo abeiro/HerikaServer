@@ -424,6 +424,10 @@ if (!$isEmbed) {
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<?php if ($isEmbed): ?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/chim-theme.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'chim-theme.css'); ?>">
+<?php endif; ?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/player-narration.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'player-narration.css'); ?>">
 <style>
     /* Font Face Declaration */
     @font-face {
@@ -1352,14 +1356,11 @@ if (!$isEmbed) {
 </style>
 
 <?php if ($isEmbed): ?>
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/chim-theme.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'chim-theme.css'); ?>">
 <style>
     /* Embedded in hub: remove extra top padding since navbar is hidden */
     main { padding-top: 20px; }
 </style>
 <?php endif; ?>
-
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/player-narration.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'player-narration.css'); ?>">
 
 <main class="player-narration-settings narration-settings-page<?php echo $isEmbed ? ' is-embedded' : ''; ?>">
     <div class="page-container">
