@@ -13,6 +13,11 @@ $GLOBALS["active_profile"]=md5("The Narrator");
 $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_DIRECTOR')) {
+    logMsg('Director Mode is disabled globally; skipping character generation');
+    return;
+}
+
 $connector=new LLMConnector();
 $npcMaster=new NpcMaster();
 

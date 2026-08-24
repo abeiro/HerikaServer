@@ -831,6 +831,11 @@ function processAutoDiary($gameRequest, $eventType) {
 // Function to process a single NPC's dynamic profile
 function processSingleDynamicProfile($npcName, $gameRequest) {
     global $db;
+
+    if (function_exists('chimIsGlobalLlmConnectorEnabled') && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_PROFILES')) {
+        Logger::debug("processSingleDynamicProfile: Profile Tasks are disabled globally");
+        return false;
+    }
     
     // Ensure required dependencies are loaded
     if (!function_exists('DataSpeechJournal') || !function_exists('buildDynamicProfileDisplay')) {
@@ -942,6 +947,11 @@ function processSingleDynamicProfile($npcName, $gameRequest) {
  * @return bool Success status
  */
 function processNarratorDynamicProfile($db) {
+    if (function_exists('chimIsGlobalLlmConnectorEnabled') && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_PROFILES')) {
+        Logger::debug("processNarratorDynamicProfile: Profile Tasks are disabled globally");
+        return false;
+    }
+
     require_once(__DIR__ . "/core/narrator.class.php");
     require_once(__DIR__ . "/core/core_profiles.class.php");
     require_once(__DIR__ . "/core/llm_connector.class.php");
@@ -1337,6 +1347,11 @@ function getDynamicProfileHistoryData($npcName) {
 
 
 function updateDynamicProfileField($npcName, $field, $historyData) {
+    if (function_exists('chimIsGlobalLlmConnectorEnabled') && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_PROFILES')) {
+        Logger::debug("updateDynamicProfileField: Profile Tasks are disabled globally");
+        return false;
+    }
+
     // Map field names to their corresponding HERIKA prompts
     $fieldMapping = [
         'personality' => 'DYNAMIC_PROMPT_PERSONALITY',

@@ -19,8 +19,6 @@ function chimSettingsPresetDefaultGlobalSettings(): array
     return [
         'RELATIONSHIP_UPDATE_CHANCE' => 50,
         'FEATURES@MEMORY_EMBEDDING@ENABLED' => true,
-        'SCENE_CLASSIFIER_ENABLED' => true,
-        'RELATIONSHIP_SYSTEM_ENABLED' => true,
         'AUTOFILL_CUSTOM_PROFILES' => true,
         'BGL_TRIGGER_HOURS' => 24,
         'CHIM_AI_QUEST_PROGRESSION' => false,
@@ -33,6 +31,24 @@ function chimSettingsPresetDefaultGlobalSettings(): array
         'POWER_AWARENESS_ENABLED' => false,
         'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 500,
         'PROMPT_TIMESTAMP' => false,
+    ] + chimSettingsPresetConnectorAvailability(true);
+}
+
+/**
+ * Availability switches for the eight Global Connector slots. Presets only flip these
+ * booleans, so connector assignments, credentials, models and URLs survive untouched.
+ */
+function chimSettingsPresetConnectorAvailability(bool $available): array
+{
+    return [
+        'PLAYER_RESPEECH' => $available,
+        'CORE_CONNECTOR_SUMMARY_ENABLED' => $available,
+        'CORE_CONNECTOR_MEDIUMTERM_ENABLED' => $available,
+        'SCENE_CLASSIFIER_ENABLED' => $available,
+        'CORE_CONNECTOR_PROFILES_ENABLED' => $available,
+        'CORE_CONNECTOR_DIRECTOR_ENABLED' => $available,
+        'CORE_CONNECTOR_BGL_ENABLED' => $available,
+        'RELATIONSHIP_SYSTEM_ENABLED' => $available,
     ];
 }
 
@@ -110,8 +126,6 @@ function chimSettingsPresetBuiltIns(): array
                 'global_settings' => [
                     'RELATIONSHIP_UPDATE_CHANCE' => 0,
                     'FEATURES@MEMORY_EMBEDDING@ENABLED' => false,
-                    'SCENE_CLASSIFIER_ENABLED' => false,
-                    'RELATIONSHIP_SYSTEM_ENABLED' => false,
                     'AUTOFILL_CUSTOM_PROFILES' => false,
                     'BGL_TRIGGER_HOURS' => 720,
                     'CHIM_AI_QUEST_PROGRESSION' => false,
@@ -124,7 +138,7 @@ function chimSettingsPresetBuiltIns(): array
                     'POWER_AWARENESS_ENABLED' => false,
                     'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 1000,
                     'PROMPT_TIMESTAMP' => false,
-                ],
+                ] + chimSettingsPresetConnectorAvailability(false),
                 'prompt_context_options' => chimNormalizePromptContextOptions([
                     'enabled_sections' => [
                         'roleplay_instructions', 'world', 'knowledge', 'available_actions_list',

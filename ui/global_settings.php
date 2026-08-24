@@ -47,8 +47,11 @@ $tabControlPanels = [
     'global-connectors' => 'settings-panel-global-connectors-global-connectors',
 ];
 
-// Paired connector toggles remain beside their connector instead of appearing twice.
-$pairedConnectorToggles = ['RELATIONSHIP_SYSTEM_ENABLED', 'SCENE_CLASSIFIER_ENABLED', 'OGHMA_CUSTOM'];
+$connectorAvailabilityToggles = chimGlobalLlmConnectorAvailabilityMap();
+
+// Paired toggles stay beside their connector instead of appearing twice. OGHMA_CUSTOM picks
+// the Oghma extraction backend rather than gating a slot, so it keeps its plain checkbox.
+$pairedConnectorToggles = array_merge(array_values($connectorAvailabilityToggles), ['OGHMA_CUSTOM']);
 foreach ($gsSections as $sectionName => $fields) {
     $gsSections[$sectionName] = array_values(array_filter($fields, static function (array $field) use ($pairedConnectorToggles): bool {
         return !in_array($field['name'] ?? '', $pairedConnectorToggles, true);
@@ -89,10 +92,10 @@ function pretty_label(string $flatName): string
     $customLabels = [
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
         'CORE_CONNECTOR_SUMMARY' => 'Summaries',
-        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory',
+        'CORE_CONNECTOR_MEDIUMTERM' => 'Background & Memory Tasks',
         'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
         'SCENE_CLASSIFIER_ENABLED' => 'Scene Classifier',
-        'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
+        'CORE_CONNECTOR_PROFILES' => 'Profile Tasks',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'CORE_CONNECTOR_BGL' => 'Background Life',
         'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
@@ -272,6 +275,26 @@ function current_description(string $flatName, array $rowMap): string
     return chimGetSchemaDescription($flatName);
 }
 
+function render_connector_availability_switch(string $connectorField, string $toggleField): string
+{
+    $isOn = (bool) current_value($toggleField);
+    $inputId = 'availability-' . strtolower(preg_replace('/[^a-z0-9]+/i', '-', $toggleField));
+    $connectorLabel = pretty_label($connectorField);
+    $escapedName = htmlspecialchars($toggleField, ENT_QUOTES, 'UTF-8');
+    $escapedId = htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8');
+    $hint = 'Turn off to make ' . $connectorLabel . ' unavailable. The connector selection is kept.';
+
+    return '<div class="connector-availability' . ($isOn ? '' : ' is-off') . '" title="' . htmlspecialchars($hint, ENT_QUOTES, 'UTF-8') . '">'
+        . '<input type="hidden" name="' . $escapedName . '" value="false">'
+        . '<label class="connector-availability-label" for="' . $escapedId . '">'
+        . '<span class="connector-availability-sr">' . htmlspecialchars($connectorLabel, ENT_QUOTES, 'UTF-8') . ' available</span>'
+        . '<span class="connector-availability-state" aria-hidden="true">' . ($isOn ? 'On' : 'Off') . '</span>'
+        . '</label>'
+        . '<input type="checkbox" class="connector-availability-input" id="' . $escapedId . '"'
+        . ' name="' . $escapedName . '" value="true"' . ($isOn ? ' checked' : '') . '>'
+        . '</div>';
+}
+
 function render_provider_help(string $flatName, string $help, string $webRoot): string
 {
     if ($flatName === 'CHIM_AI_QUEST_PROGRESSION') {
@@ -364,12 +387,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
         }
     }
 
-    $specialBooleans = [
-        'RELATIONSHIP_SYSTEM_ENABLED',
-        'SCENE_CLASSIFIER_ENABLED',
-        'OGHMA_CUSTOM',
-    ];
-    foreach ($specialBooleans as $name) {
+    foreach ($pairedConnectorToggles as $name) {
         $value = normalize_posted_value('boolean', $_POST[$name] ?? 'false');
         $description = current_description($name, $generalSettingRowMap);
         if (!chimSetGeneralSetting($name, $value, $description)) {
@@ -578,6 +596,11 @@ body .settings-tabs .settings-tab.is-active {
     align-items: start;
 }
 
+.connector-section .provider-title {
+    flex-wrap: wrap;
+    row-gap: 6px;
+}
+
 .connector-section .provider-body {
     width: 100%;
 }
@@ -704,6 +727,69 @@ body .settings-tabs .settings-tab.is-active {
     transform: scale(1.6);
     transform-origin: center;
     cursor: pointer;
+}
+
+/* On/Off switch for a global connector. Its select stays editable while switched off. */
+.connector-availability {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.connector-availability-label {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    cursor: pointer;
+}
+
+.connector-availability-state {
+    min-width: 34px;
+    padding: 2px 9px;
+    border: 1px solid rgba(23, 101, 41, 0.8);
+    border-radius: 999px;
+    background: rgba(23, 101, 41, 0.28);
+    color: #a5e2b3;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 1.55;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.connector-availability.is-off .connector-availability-state {
+    border-color: #4d4d4d;
+    background: rgba(70, 70, 70, 0.35);
+    color: #b8b8b8;
+}
+
+.connector-availability-input {
+    accent-color: #176529;
+    transform: scale(1.6);
+    transform-origin: center;
+    margin: 0 4px;
+    flex: 0 0 auto;
+    cursor: pointer;
+}
+
+.connector-availability-input:focus-visible {
+    outline: 2px solid rgba(242, 124, 17, 0.85);
+    outline-offset: 4px;
+}
+
+.connector-availability-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    clip-path: inset(50%);
 }
 
 .provider-help {
@@ -1680,17 +1766,8 @@ body .settings-tabs .settings-tab.is-active {
                                                 <input type="checkbox" name="<?php echo htmlspecialchars($fieldName); ?>" value="true" <?php echo ($current ? 'checked' : ''); ?> <?php echo $isReadonly ? 'disabled' : ''; ?>>
                                             </div>
                                         <?php endif; ?>
-                                        <?php if ($fieldName === 'RELLLM_CONNECTOR'): ?>
-                                            <div class="provider-toggle">
-                                                <input type="hidden" name="RELATIONSHIP_SYSTEM_ENABLED" value="false">
-                                                <input type="checkbox" name="RELATIONSHIP_SYSTEM_ENABLED" value="true" <?php echo (current_value('RELATIONSHIP_SYSTEM_ENABLED') ? 'checked' : ''); ?> title="Enable/Disable Relationship System">
-                                            </div>
-                                        <?php endif; ?>
-                                        <?php if ($fieldName === 'CORE_CONNECTOR_SCENECLASSIFIER'): ?>
-                                            <div class="provider-toggle">
-                                                <input type="hidden" name="SCENE_CLASSIFIER_ENABLED" value="false">
-                                                <input type="checkbox" name="SCENE_CLASSIFIER_ENABLED" value="true" <?php echo (current_value('SCENE_CLASSIFIER_ENABLED') ? 'checked' : ''); ?> title="Enable/Disable Scene Classifier">
-                                            </div>
+                                        <?php if (isset($connectorAvailabilityToggles[$fieldName])): ?>
+                                            <?php echo render_connector_availability_switch($fieldName, $connectorAvailabilityToggles[$fieldName]); ?>
                                         <?php endif; ?>
                                         <?php if ($fieldName === 'CORE_CONNECTOR_OGHMA_CUSTOM'): ?>
                                             <div class="provider-toggle">
@@ -1845,6 +1922,27 @@ body .settings-tabs .settings-tab.is-active {
             // Keep the default tab when storage is unavailable.
         }
         activateTab(initialTab);
+    })();
+    </script>
+
+    <script>
+    (() => {
+        // Keep the visible On/Off text in step with each connector availability checkbox.
+        document.querySelectorAll('.connector-availability').forEach((wrap) => {
+            const input = wrap.querySelector('.connector-availability-input');
+            const state = wrap.querySelector('.connector-availability-state');
+            if (!input || !state) {
+                return;
+            }
+
+            const sync = () => {
+                wrap.classList.toggle('is-off', !input.checked);
+                state.textContent = input.checked ? 'On' : 'Off';
+            };
+
+            input.addEventListener('change', sync);
+            sync();
+        });
     })();
     </script>
 
@@ -2555,7 +2653,7 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
         };
 
         addGroup('Built-in', builtIns, null);
-        addGroup('Custom', customs, 'No custom presets yet');
+        addGroup('Custom', customs, null);
 
         if (previous && findPreset(previous)) {
             presetSelect.value = previous;

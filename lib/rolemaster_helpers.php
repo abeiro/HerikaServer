@@ -321,6 +321,9 @@ function checkHistory($npc)
 
 function askLLMForTopic($npc, $topic, $last_llm_call)
 {
+    if (function_exists('chimIsGlobalLlmConnectorEnabled') && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+        return ["res" => false, "missing" => "disabled"];
+    }
 
     $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
@@ -882,6 +885,10 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
     }
 
     if ($basetype == "note" || $basetype == "book") {
+        if (function_exists('chimIsGlobalLlmConnectorEnabled') && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+            Logger::debug('SkCreateItem: book generation skipped because Background & Memory Tasks are disabled globally');
+            return false;
+        }
 
         // Generate content for the book/note
         $connector = new LLMConnector();
@@ -1838,6 +1845,10 @@ function getQuestDataTxt($quest_data)
 
 function enhanceProfileUsingQuestData($quest_data, $npc)
 {
+    if (function_exists('chimIsGlobalLlmConnectorEnabled') && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+        Logger::debug('enhanceProfileUsingQuestData: skipped because Background & Memory Tasks are disabled globally');
+        return;
+    }
 
     $questDataTxt = getQuestDataTxt($quest_data);
     $questData = json_decode(file_get_contents($GLOBALS["ENGINE_PATH"] . "log" . DIRECTORY_SEPARATOR . "snqe_state.json"), true);

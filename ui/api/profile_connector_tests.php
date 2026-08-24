@@ -303,12 +303,13 @@ function profileConnectorTestsGlobalValue(string $fieldName, $default = '')
 function profileConnectorTestsBuildGlobalPlan(): array
 {
     $slotDefinitions = [
-        ['field' => 'CORE_CONNECTOR_PLAYER', 'type' => 'llm', 'label' => 'Player Respeech'],
-        ['field' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'llm', 'label' => 'Summaries'],
-        ['field' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'llm', 'label' => 'Middle Term Memory'],
+        ['field' => 'CORE_CONNECTOR_PLAYER', 'type' => 'llm', 'label' => 'Player Respeech', 'enabled_by' => 'PLAYER_RESPEECH'],
+        ['field' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'llm', 'label' => 'Summaries', 'enabled_by' => 'CORE_CONNECTOR_SUMMARY_ENABLED'],
+        ['field' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'llm', 'label' => 'Background & Memory Tasks', 'enabled_by' => 'CORE_CONNECTOR_MEDIUMTERM_ENABLED'],
         ['field' => 'CORE_CONNECTOR_SCENECLASSIFIER', 'type' => 'llm', 'label' => 'Scene Classifier', 'enabled_by' => 'SCENE_CLASSIFIER_ENABLED', 'enabled_label' => 'Scene Classifier'],
-        ['field' => 'CORE_CONNECTOR_PROFILES', 'type' => 'llm', 'label' => 'Dynamic Profile'],
-        ['field' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'llm', 'label' => 'Director Mode'],
+        ['field' => 'CORE_CONNECTOR_PROFILES', 'type' => 'llm', 'label' => 'Profile Tasks', 'enabled_by' => 'CORE_CONNECTOR_PROFILES_ENABLED'],
+        ['field' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'llm', 'label' => 'Director Mode', 'enabled_by' => 'CORE_CONNECTOR_DIRECTOR_ENABLED'],
+        ['field' => 'CORE_CONNECTOR_BGL', 'type' => 'llm', 'label' => 'Background Life', 'enabled_by' => 'CORE_CONNECTOR_BGL_ENABLED'],
         ['field' => 'RELLLM_CONNECTOR', 'type' => 'llm', 'label' => 'Relationship Management', 'enabled_by' => 'RELATIONSHIP_SYSTEM_ENABLED', 'enabled_label' => 'Relationship Management'],
         ['field' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'llm', 'label' => 'Custom Oghma LLM', 'enabled_by' => 'OGHMA_CUSTOM', 'enabled_label' => 'Custom Oghma LLM'],
     ];

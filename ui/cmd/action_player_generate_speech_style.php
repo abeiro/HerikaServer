@@ -150,6 +150,9 @@ try {
     $connector = new LLMConnector();
     $candidateConnectorIds = [];
     foreach (["CORE_CONNECTOR_PLAYER", "CORE_CONNECTOR_PROFILES"] as $key) {
+        if (!chimIsGlobalLlmConnectorEnabled($key)) {
+            continue;
+        }
         $id = isset($GLOBALS[$key]) ? intval($GLOBALS[$key]) : 0;
         if ($id > 0 && !in_array($id, $candidateConnectorIds, true)) {
             $candidateConnectorIds[] = $id;

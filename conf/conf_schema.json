@@ -95,13 +95,18 @@
   "CONNECTORS_DIARY": {"type":"select","values":["openrouter","openai","google_openaijson","koboldcpp"],"description":"Connector used for diary-related generation (manual diary, auto-diary, and dynamic profile updates).<br><br><strong>This is separate from long-term memory recall and memory summary compaction.</strong>"},
   "HERIKA_DYNAMIC": {"userlvl":"basic","type": "longstring","description": "Deprecated. Use the new fields listed above instead."},
   "CORE_CONNECTOR_DIRECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Director mode. Recommend to use a 💪Powerful LLM."},
+  "CORE_CONNECTOR_DIRECTOR_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","default":true,"description":"Make the Director Mode connector available. When off, Director Mode tasks are skipped and the connector assignment above is kept for later."},
   "CORE_CONNECTOR_PLAYER": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for player re-speech. Recommend to use a very 🏃‍♀️‍➡️Fast LLM."},
   "CORE_CONNECTOR_SUMMARY": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for generating and compacting memory summaries that power long-term memory recall. Recommend using a smaller LLM."},
+  "CORE_CONNECTOR_SUMMARY_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","default":true,"description":"Make the Summaries connector available. When off, memory summary generation and compaction are skipped and the connector assignment above is kept for later."},
   "CORE_CONNECTOR_MEDIUMTERM": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to generate longer memories summaries after every 10 memory summaries. Can be enabled in CHIM NPC page. Recommend to user a smaller LLM."},
+  "CORE_CONNECTOR_MEDIUMTERM_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","default":true,"description":"Make the Background & Memory Tasks connector available. When off, those tasks are skipped and the connector assignment above is kept for later."},
   "CORE_CONNECTOR_SCENECLASSIFIER": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to classify recent scene tone/genre for post-request ambient cues. Recommend using a very fast small LLM.","scope":"global"},
   "CORE_CONNECTOR_BGL": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Background Life. Recommend using a not expensive LLM. (gemini-3-flash, gtp-oss-120)","scope":"global"},
+  "CORE_CONNECTOR_BGL_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","default":true,"description":"Make the Background Life connector available. When off, Background Life tasks are skipped and the connector assignment above is kept for later."},
   "SCENE_CLASSIFIER_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable the Scene Classifier. When enabled, CHIM runs a small post-request genre/tone classification pass for ambient scene cues. Requires CORE_CONNECTOR_SCENECLASSIFIER or a valid fallback connector.","_title":"Scene Classifier"},
   "CORE_CONNECTOR_PROFILES": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used to update CHIM NPC Dynamic Profiles. Recommend to use a 🕹️Standard LLM.","scope":"global"},
+  "CORE_CONNECTOR_PROFILES_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","default":true,"description":"Make the Profile Tasks connector available. When off, profile tasks are skipped and the connector assignment above is kept for later."},
   "CORE_CONNECTOR_OGHMA_CUSTOM": {"userlvl": "basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for custom Oghma LLM topic extraction. Will be slower than MiniMe T5 and slow down responses. Recommend to use a very very 🏃‍♀️‍➡️Fast LLM.","scope": "global"},
   "RELATIONSHIP_SYSTEM_ENABLED": {"userlvl":"basic","type":"boolean","scope":"global","description":"Enable the Relationship Management System. When enabled, NPCs will dynamically form and update relationships based on conversations and events. Requires RELLLM_CONNECTOR to be configured.","_title":"Relationship System"},
   "RELLLM_CONNECTOR": {"userlvl":"basic","type": "foreign:core_llm_connector:id:label","description": "Connector used for Relationship Management system. Analyzes and updates NPC relationships. Recommend to use a 🏃‍♀️‍➡️Fast LLM with ❄️low temperature (0.1-0.3) for consistent evaluations.","scope":"global"},
@@ -449,7 +454,7 @@
       "API_KEY":{"type":"apikey","scope":"global","description":"DeepL api key. Default profile only.<br/><strong>Required</strong> even when using the free version."}
     }
   },
-  "PLAYER_RESPEECH":{"type":"boolean","description":"Allows the AI to rewrite player speech with Chat Assist & Creation modes.","scope":"global"},
+  "PLAYER_RESPEECH":{"userlvl":"basic","type":"boolean","default":true,"description":"Make the Player Respeech connector available. When off, player speech is never rewritten and the connector assignment is kept for later.","scope":"global"},
   "STTFUNCTION": {
     "type":"select","values":["deepgram","parakeet","whisper","localwhisper","gemini","azure","inworld","none"],"description":"Speech-to-Text service options. Translates your voice to text.", 
     "_title":"Speech-to-Text Service","scope":"global"

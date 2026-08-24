@@ -144,7 +144,8 @@ if ($EXECUTION_MODE=="STANDARD") {
     
     $cleaned_player_dialogue = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
     $gameRequest[3]="**(".trim($cleaned_player_dialogue).")";
-    $GLOBALS["PLAYER_RESPEECH"] = true; // Route through player_rewrite.php for bio/speech style context
+    // Route through player_rewrite.php only when Player Respeech is globally available.
+    $GLOBALS["PLAYER_RESPEECH"] = chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_PLAYER');
     
 } else if ($EXECUTION_MODE=="INJECTION_LOG") {
     $cleaned_player_dialogue = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
