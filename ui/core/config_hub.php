@@ -81,19 +81,22 @@ $tabIcons = [
     'serverplugins' => '&#x1F9E9;',
 ];
 
-// Player and Narration are separate outer buttons that share the combined
+// Player and Narration are separate Settings buttons that share the combined
 // Player & Narration content shell, so both embedded forms stay mounted and
-// unsaved values survive a switch between them.
+// unsaved values survive a switch between them. Each button also labels the
+// panel it controls, so the shell needs no inner tab strip of its own.
 $tabTargets = [
     'player' => [
         'content' => 'player_narration',
         'section' => 'player',
         'panel' => 'player_narration_player_panel',
+        'button' => 'player_narration_player_button',
     ],
     'narration' => [
         'content' => 'player_narration',
         'section' => 'narration',
         'panel' => 'player_narration_narration_panel',
+        'button' => 'player_narration_narration_button',
     ],
 ];
 
@@ -112,33 +115,20 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
 .embed-wrap { height: 100%; width: 100%; border: 1px solid #4a4a4a; border-radius: 8px; overflow: hidden; background: #2a2a2a; }
 .embed { width: 100%; height: 100%; border: 0; background: transparent; }
 .player-narration-shell { display: flex; flex-direction: column; width: 100%; height: 100%; min-width: 0; min-height: 0; }
-.player-narration-tabs { display: flex; justify-content: center; gap: 8px; padding: 8px; border-bottom: 1px solid #3f3f3f; background: #1d1d1d; }
-.player-narration-tab { display: inline-flex; flex: 0 1 220px; align-items: center; justify-content: center; gap: 8px; min-width: 160px; min-height: 44px; padding: 9px 30px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: #bdbdbd; font-family: 'MagicCards', serif; font-size: 1.08rem; letter-spacing: 0.35px; cursor: pointer; }
-.player-narration-tab-icon { font-family: sans-serif; font-size: 1.15em; line-height: 1; }
-.player-narration-tab:hover { color: #f0f0f0; background: #292929; border-color: #454545; }
-.player-narration-tab[aria-selected="true"] { color: #f27c11; background: #2b2b2b; border-color: #95501a; }
-.player-narration-tab:focus-visible { outline: 2px solid #6aa9d8; outline-offset: 2px; }
-.player-narration-panel { flex: 1 1 auto; min-height: 0; border: 0; border-radius: 0 0 8px 8px; }
+.player-narration-panel { flex: 1 1 auto; min-height: 0; border: 0; border-radius: 8px; }
 .player-narration-panel[hidden] { display: none; }
-.tab-group[data-category="settings"] .tab-buttons { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.tab-group[data-category="settings"] .tab-button { grid-column: span 2; }
-.tab-group[data-category="settings"] .tab-button[data-tab="player"],
-.tab-group[data-category="settings"] .tab-button[data-tab="narration"] { grid-column: span 3; }
+/* Settings carries 5 buttons: 3 on the first row, then 2 of the same width on
+   the second row, whose third slot stays empty. */
+.tab-group[data-category="settings"] .tab-buttons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (min-width: 1001px) {
     .tab-groups { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.1fr); }
 }
 @media (min-width: 1001px) and (max-width: 1500px) {
     .tab-group[data-category="settings"] .tab-button { gap: 4px; padding-left: 6px; padding-right: 6px; font-size: 0.84em; letter-spacing: 0.7px; word-spacing: 1px; }
 }
-@media (max-width: 640px) {
-    .player-narration-tabs { padding: 5px; }
-    .player-narration-tab { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 10px; font-size: 1rem; }
-}
 @media (max-width: 620px) {
     .tab-group[data-category="settings"] .tab-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .tab-group[data-category="settings"] .tab-button,
-    .tab-group[data-category="settings"] .tab-button[data-tab="player"],
-    .tab-group[data-category="settings"] .tab-button[data-tab="narration"] { grid-column: auto; gap: 4px; padding-left: 6px; padding-right: 6px; font-size: 0.84em; letter-spacing: 0.7px; word-spacing: 1px; }
+    .tab-group[data-category="settings"] .tab-button { gap: 4px; padding-left: 6px; padding-right: 6px; font-size: 0.84em; letter-spacing: 0.7px; word-spacing: 1px; }
 }
 @media (max-height: 800px) { .embed-wrap { min-height: 420px; } }
 </style>
@@ -161,7 +151,8 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
                                     $tabContentId = $tabTarget['content'] ?? $tabId;
                                     $tabExtraAttrs = '';
                                     if ($tabTarget !== null) {
-                                        $tabExtraAttrs = ' data-section="' . htmlspecialchars($tabTarget['section'], ENT_QUOTES, 'UTF-8') . '"'
+                                        $tabExtraAttrs = ' id="' . htmlspecialchars($tabTarget['button'], ENT_QUOTES, 'UTF-8') . '"'
+                                            . ' data-section="' . htmlspecialchars($tabTarget['section'], ENT_QUOTES, 'UTF-8') . '"'
                                             . ' aria-controls="' . htmlspecialchars($tabTarget['panel'], ENT_QUOTES, 'UTF-8') . '"';
                                     }
                                 ?>
@@ -190,30 +181,11 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
         </div>
         <div id="player_narration" class="tab-content">
             <div class="player-narration-shell">
-                <div class="player-narration-tabs" role="tablist" aria-label="Player and narration settings">
-                    <button
-                        id="player_narration_player_tab"
-                        class="player-narration-tab"
-                        type="button"
-                        role="tab"
-                        aria-selected="true"
-                        aria-controls="player_narration_player_panel"
-                        data-player-narration-section="player"><span class="player-narration-tab-icon" aria-hidden="true">&#x1F464;</span><span>Player</span></button>
-                    <button
-                        id="player_narration_narration_tab"
-                        class="player-narration-tab"
-                        type="button"
-                        role="tab"
-                        aria-selected="false"
-                        aria-controls="player_narration_narration_panel"
-                        tabindex="-1"
-                        data-player-narration-section="narration"><span class="player-narration-tab-icon" aria-hidden="true">&#x1F5E3;&#xFE0F;</span><span>Narration</span></button>
-                </div>
                 <div
                     id="player_narration_player_panel"
                     class="embed-wrap player-narration-panel"
                     role="tabpanel"
-                    aria-labelledby="player_narration_player_tab">
+                    aria-labelledby="player_narration_player_button">
                     <iframe
                         id="player_narration_player_frame"
                         class="embed"
@@ -226,7 +198,7 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
                     id="player_narration_narration_panel"
                     class="embed-wrap player-narration-panel"
                     role="tabpanel"
-                    aria-labelledby="player_narration_narration_tab"
+                    aria-labelledby="player_narration_narration_button"
                     hidden>
                     <iframe
                         id="player_narration_narration_frame"
@@ -326,7 +298,6 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
     const buttons = Array.from(document.querySelectorAll('.tab-button'));
     const groups = document.querySelectorAll('.tab-group');
     const tabs = document.querySelectorAll('.tab-content');
-    const playerNarrationTabs = Array.from(document.querySelectorAll('[data-player-narration-section]'));
     const playerNarrationContainer = document.getElementById('player_narration');
     const playerNarrationPanels = {
         player: document.getElementById('player_narration_player_panel'),
@@ -364,7 +335,7 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
         });
     }
 
-    // Keeps the two outer Player / Narration buttons mirroring the inner tabs.
+    // Keeps the two Settings Player / Narration buttons mirroring the open panel.
     function syncPlayerNarrationButtons(section) {
         const visible = playerNarrationVisible();
         buttons.forEach(function(button){
@@ -396,12 +367,6 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
         const normalized = normalizeSection(section);
         playerNarrationSection = normalized;
 
-        playerNarrationTabs.forEach(function(button){
-            const active = button.dataset.playerNarrationSection === normalized;
-            button.setAttribute('aria-selected', active ? 'true' : 'false');
-            button.tabIndex = active ? 0 : -1;
-        });
-
         Object.keys(playerNarrationPanels).forEach(function(panelSection){
             const panel = playerNarrationPanels[panelSection];
             if (panel) panel.hidden = panelSection !== normalized;
@@ -425,8 +390,8 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
         const selectedButton = findButton(target.tab, target.section);
         if (!selectedButton) return;
 
-        // Moving between the outer Player and Narration buttons only swaps the
-        // inner tab, so neither embedded form reloads and unsaved values survive.
+        // Moving between the Player and Narration buttons only swaps the visible
+        // panel, so neither embedded form reloads and unsaved values survive.
         if (target.tab === PLAYER_NARRATION_TAB && playerNarrationVisible()) {
             setPlayerNarrationSection(target.section, true, true);
             return;
@@ -463,23 +428,6 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
     buttons.forEach(function(button){
         button.addEventListener('click', function(){
             activate(button.dataset.tab);
-        });
-    });
-
-    playerNarrationTabs.forEach(function(button, index){
-        button.addEventListener('click', function(){
-            setPlayerNarrationSection(button.dataset.playerNarrationSection, true, true);
-        });
-        button.addEventListener('keydown', function(event){
-            let nextIndex = null;
-            if (event.key === 'ArrowRight') nextIndex = (index + 1) % playerNarrationTabs.length;
-            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + playerNarrationTabs.length) % playerNarrationTabs.length;
-            if (event.key === 'Home') nextIndex = 0;
-            if (event.key === 'End') nextIndex = playerNarrationTabs.length - 1;
-            if (nextIndex === null) return;
-            event.preventDefault();
-            playerNarrationTabs[nextIndex].focus();
-            playerNarrationTabs[nextIndex].click();
         });
     });
 
