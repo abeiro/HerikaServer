@@ -94,8 +94,9 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
 .embed-wrap { height: 100%; width: 100%; border: 1px solid #4a4a4a; border-radius: 8px; overflow: hidden; background: #2a2a2a; }
 .embed { width: 100%; height: 100%; border: 0; background: transparent; }
 .player-narration-shell { display: flex; flex-direction: column; width: 100%; height: 100%; min-width: 0; min-height: 0; }
-.player-narration-tabs { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid #3f3f3f; background: #1d1d1d; }
-.player-narration-tab { min-height: 34px; padding: 6px 18px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: #bdbdbd; font-family: 'MagicCards', serif; font-size: 0.98rem; letter-spacing: 0.35px; cursor: pointer; }
+.player-narration-tabs { display: flex; justify-content: center; gap: 8px; padding: 8px; border-bottom: 1px solid #3f3f3f; background: #1d1d1d; }
+.player-narration-tab { display: inline-flex; flex: 0 1 220px; align-items: center; justify-content: center; gap: 8px; min-width: 160px; min-height: 44px; padding: 9px 30px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: #bdbdbd; font-family: 'MagicCards', serif; font-size: 1.08rem; letter-spacing: 0.35px; cursor: pointer; }
+.player-narration-tab-icon { font-family: sans-serif; font-size: 1.15em; line-height: 1; }
 .player-narration-tab:hover { color: #f0f0f0; background: #292929; border-color: #454545; }
 .player-narration-tab[aria-selected="true"] { color: #f27c11; background: #2b2b2b; border-color: #95501a; }
 .player-narration-tab:focus-visible { outline: 2px solid #6aa9d8; outline-offset: 2px; }
@@ -104,7 +105,7 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
 .tab-button[data-tab="player_narration"] { gap: 5px; font-size: 0.83em; letter-spacing: 0.65px; word-spacing: 2px; }
 @media (max-width: 640px) {
     .player-narration-tabs { padding: 5px; }
-    .player-narration-tab { flex: 1 1 50%; padding: 7px 10px; }
+    .player-narration-tab { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 10px; font-size: 1rem; }
     .tab-button[data-tab="player_narration"] { padding-left: 7px; padding-right: 7px; font-size: 0.78em; letter-spacing: 0; word-spacing: 0; }
     .tab-button[data-tab="player_narration"] .tab-icon { display: none; }
 }
@@ -156,7 +157,7 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
                         role="tab"
                         aria-selected="true"
                         aria-controls="player_narration_player_panel"
-                        data-player-narration-section="player">Player</button>
+                        data-player-narration-section="player"><span class="player-narration-tab-icon" aria-hidden="true">&#x1F464;</span><span>Player</span></button>
                     <button
                         id="player_narration_narration_tab"
                         class="player-narration-tab"
@@ -165,7 +166,7 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
                         aria-selected="false"
                         aria-controls="player_narration_narration_panel"
                         tabindex="-1"
-                        data-player-narration-section="narration">Narration</button>
+                        data-player-narration-section="narration"><span class="player-narration-tab-icon" aria-hidden="true">&#x1F5E3;&#xFE0F;</span><span>Narration</span></button>
                 </div>
                 <div
                     id="player_narration_player_panel"
