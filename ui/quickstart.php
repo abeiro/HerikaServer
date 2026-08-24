@@ -603,7 +603,7 @@ if (!empty($generalLlmConnectorSummary)) {
 $quickstartPresetDefaultId = 'builtin:default';
 $quickstartLocalLlmPresetId = 'builtin:local_llm';
 $quickstartPresetDescriptions = [
-    'builtin:default' => 'Current install defaults.',
+    'builtin:default' => 'The Recommended CHIM experience.',
     'builtin:local_llm' => 'Minimal mode for a local model around 13B sharing your GPU with Skyrim. NPCs still talk and act, but prompts and replies are shorter and most optional background AI features are turned off.',
 ];
 $quickstartPresetSelectedDescription = (string)($quickstartPresetDescriptions[$quickstartPresetDefaultId] ?? '');
