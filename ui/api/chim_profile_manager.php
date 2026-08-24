@@ -235,6 +235,43 @@ try {
             $result['detail'] = chimProfileManagerDetail($profiles, $id);
             chimProfileManagerRespond(['success' => true, 'data' => $result]);
         }
+        if ($operation === 'save_preset_new' || $operation === 'overwrite_preset') {
+            $id = (int)($body['id'] ?? 0);
+            $metadata = array_key_exists('metadata', $body) ? $body['metadata'] : null;
+            if ($metadata !== null && !is_array($metadata)) {
+                throw new InvalidArgumentException('Profile metadata must be an object.');
+            }
+            $snapshot = chimProfileSettingsPresetCapture($id, $metadata);
+            if ($operation === 'save_preset_new') {
+                $preset = chimProfileSettingsPresetSaveNew((string)($body['name'] ?? ''), $snapshot);
+            } else {
+                $preset = chimProfileSettingsPresetOverwrite((string)($body['preset_id'] ?? ''), $snapshot);
+            }
+            chimProfileManagerRespond(['success' => true, 'data' => [
+                'preset' => $preset,
+                'profile_presets' => chimProfileSettingsPresetCatalog(),
+            ]]);
+        }
+        if ($operation === 'export_preset') {
+            chimProfileManagerRespond(['success' => true, 'data' => chimProfileSettingsPresetExport(
+                trim((string)($body['preset_id'] ?? ''))
+            )]);
+        }
+        if ($operation === 'import_preset') {
+            $document = $body['document'] ?? null;
+            if (!is_array($document)) {
+                throw new InvalidArgumentException('Profile preset document is required.');
+            }
+            $encodedDocument = json_encode($document, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if ($encodedDocument === false || strlen($encodedDocument) > 262144) {
+                throw new InvalidArgumentException('Profile preset files must be under 256 KB.');
+            }
+            $preset = chimProfileSettingsPresetImport($document);
+            chimProfileManagerRespond(['success' => true, 'data' => [
+                'preset' => $preset,
+                'profile_presets' => chimProfileSettingsPresetCatalog(),
+            ]]);
+        }
         throw new InvalidArgumentException('Unknown operation.');
     }
 

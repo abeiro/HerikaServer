@@ -89,4 +89,45 @@ final class ProfileConnectorTestsRegressionTest extends TestCase
         $this->assertSame(100, $presets['builtin:local_llm']['profile_overrides']['COMBAT_BARK_COOLDOWN']);
         $this->assertSame(60, $presets['builtin:follower']['profile_overrides']['RECHAT_P']);
     }
+
+    public function testCustomProfilePresetSnapshotUsesOnlyManagedSettings(): void
+    {
+        $snapshot = chimProfileSettingsPresetNormalizeSnapshot([
+            'version' => 1,
+            'profile_values' => [
+                'CONTEXT_HISTORY' => 44,
+                'CONTEXT_HISTORY_DIARY' => 55,
+                'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 66,
+                'MAX_WORDS_LIMIT' => 77,
+            ],
+            'profile_overrides' => [
+                'RECHAT_P' => 42,
+                'RECHAT_ALLOW_ACTIONS' => false,
+            ],
+        ]);
+
+        $this->assertSame(1, $snapshot['version']);
+        $this->assertSame(44, $snapshot['profile_values']['CONTEXT_HISTORY']);
+        $this->assertCount(4, $snapshot['profile_values']);
+        $this->assertArrayNotHasKey('chim_context_mode', $snapshot['profile_values']);
+        $this->assertSame(['RECHAT_P' => 42, 'RECHAT_ALLOW_ACTIONS' => false], $snapshot['profile_overrides']);
+        $this->assertCount(14, chimProfileSettingsPresetManagedOverrideKeys());
+    }
+
+    public function testCustomProfilePresetRejectsUnknownSettingsAndBuiltInNames(): void
+    {
+        try {
+            chimProfileSettingsPresetNormalizeSnapshot([
+                'version' => 1,
+                'profile_values' => [],
+                'profile_overrides' => ['llm_primary_id' => 99],
+            ]);
+            $this->fail('Unknown settings must be rejected.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('Unknown profile preset setting', $e->getMessage());
+        }
+
+        $this->expectException(InvalidArgumentException::class);
+        chimProfileSettingsPresetValidateName('Follower');
+    }
 }

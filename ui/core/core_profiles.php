@@ -503,6 +503,14 @@ body .setting-key .profile-setting-sync-btn:hover { border-color:#f27c11 !import
     font-size:12px;
 }
 .profile-preset-apply { padding:6px 14px; font-size:12px; }
+.profile-preset-actions {
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:6px;
+}
+.profile-preset-btn { padding:6px 10px; font-size:12px; white-space:nowrap; }
+.profile-preset-file { display:none; }
 .profile-preset-status {
     flex:1 1 200px;
     min-width:0;
@@ -518,17 +526,20 @@ body .setting-key .profile-setting-sync-btn:hover { border-color:#f27c11 !import
 .profile-preset-status.is-error { color:#ff9b9b; }
 .profile-preset-status.is-success { color:#8fe0b0; }
 .profile-preset-row[aria-busy="true"] .profile-preset-select,
-.profile-preset-row[aria-busy="true"] .profile-preset-apply { cursor:progress; }
+.profile-preset-row[aria-busy="true"] .profile-preset-apply,
+.profile-preset-row[aria-busy="true"] .profile-preset-btn { cursor:progress; }
 .profile-preset-row:focus-visible,
 .profile-preset-select:focus-visible,
 .profile-preset-apply:focus-visible,
-.profile-preset-modal button:focus-visible {
+.profile-preset-btn:focus-visible,
+.profile-preset-modal button:focus-visible,
+.profile-preset-modal input:focus-visible {
     outline:2px solid #f27c11;
     outline-offset:2px;
     box-shadow:none;
 }
 
-/* Confirmation dialog for applying a preset */
+/* Confirmation dialog for applying or overwriting a preset, and the save-as-new prompt */
 .profile-preset-modal {
     position:fixed;
     inset:0;
@@ -551,11 +562,41 @@ body .setting-key .profile-setting-sync-btn:hover { border-color:#f27c11 !import
 .profile-preset-modal-title { margin:0 0 8px; font-size:16px; font-weight:700; }
 .profile-preset-modal-desc { margin:0 0 16px; color:#9fb1c9; font-size:13px; line-height:1.45; }
 .profile-preset-modal-actions { display:flex; gap:8px; justify-content:flex-end; }
+.profile-preset-modal-label {
+    display:block;
+    margin:0 0 6px;
+    color:#9fb1c9;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+}
+.profile-preset-modal-input {
+    width:100%;
+    margin:0;
+    padding:8px 10px;
+    border:1px solid #4a4a4a;
+    border-radius:6px;
+    background:#2a2a2a;
+    color:#e9efff;
+    font-size:13px;
+    box-sizing:border-box;
+}
+.profile-preset-modal-message {
+    margin:8px 0 16px;
+    min-height:16px;
+    color:#9fb1c9;
+    font-size:12px;
+    line-height:1.35;
+}
+.profile-preset-modal-message.is-error { color:#ff9b9b; }
 
 @container (max-width: 540px) {
     .profile-preset-row { flex-direction:column; align-items:stretch; }
     .profile-preset-select,
     .profile-preset-apply { width:100%; max-width:none; }
+    .profile-preset-actions { flex-direction:column; align-items:stretch; min-width:0; width:100%; }
+    .profile-preset-btn { width:100%; min-width:0; max-width:100%; white-space:normal; overflow-wrap:anywhere; }
     .profile-preset-status { flex:0 0 auto; white-space:normal; overflow:visible; }
 }
 </style>
@@ -2006,10 +2047,25 @@ $ittById = $byId($ittRows);
         <select id="profile_preset_select" class="profile-preset-select" aria-describedby="profile_preset_status">
             <option value="">Choose preset&hellip;</option>
             <?php foreach (chimProfileSettingsPresetCatalog() as $profilePresetOption): ?>
-            <option value="<?= htmlspecialchars($profilePresetOption['id']) ?>" data-preset-name="<?= htmlspecialchars($profilePresetOption['name']) ?>" data-preset-description="<?= htmlspecialchars($profilePresetOption['description']) ?>"><?= htmlspecialchars($profilePresetOption['name']) ?></option>
+            <?php
+                $profilePresetOptionId = (string)($profilePresetOption['id'] ?? '');
+                // Custom presets can be overwritten and exported; built-ins cannot.
+                $profilePresetIsBuiltIn = array_key_exists('built_in', $profilePresetOption)
+                    ? !empty($profilePresetOption['built_in'])
+                    : (strpos($profilePresetOptionId, 'builtin:') === 0);
+            ?>
+            <option value="<?= htmlspecialchars($profilePresetOptionId) ?>" data-preset-name="<?= htmlspecialchars($profilePresetOption['name']) ?>" data-preset-description="<?= htmlspecialchars($profilePresetOption['description'] ?? '') ?>" data-preset-builtin="<?= $profilePresetIsBuiltIn ? '1' : '0' ?>"><?= htmlspecialchars($profilePresetOption['name']) ?></option>
             <?php endforeach; ?>
         </select>
         <button type="button" id="profile_preset_apply" class="btn-save profile-preset-apply" disabled>Apply</button>
+        <div class="profile-preset-actions">
+            <button type="button" id="profile_preset_save_new" class="btn-secondary profile-preset-btn">Save as new&hellip;</button>
+            <button type="button" id="profile_preset_overwrite" class="btn-secondary profile-preset-btn" disabled>Overwrite&hellip;</button>
+            <button type="button" id="profile_preset_export" class="btn-secondary profile-preset-btn" disabled>Export</button>
+            <button type="button" id="profile_preset_import" class="btn-secondary profile-preset-btn">Import</button>
+        </div>
+        <!-- Unnamed on purpose: the profile form serialises itself with FormData. -->
+        <input type="file" id="profile_preset_import_file" class="profile-preset-file" accept="application/json,.json">
         <span id="profile_preset_status" class="profile-preset-status" role="status" aria-live="polite"></span>
     </div>
 
@@ -2024,31 +2080,67 @@ $ittById = $byId($ittRows);
         </div>
     </div>
 
+    <div id="profile_preset_name_modal" class="profile-preset-modal" hidden>
+        <div class="profile-preset-modal-shell" role="dialog" aria-modal="true" aria-labelledby="profile_preset_name_title" aria-describedby="profile_preset_name_desc">
+            <h2 id="profile_preset_name_title" class="profile-preset-modal-title">Save as new preset</h2>
+            <p id="profile_preset_name_desc" class="profile-preset-modal-desc"></p>
+            <label class="profile-preset-modal-label" for="profile_preset_name_input">Preset name</label>
+            <input type="text" id="profile_preset_name_input" class="profile-preset-modal-input" maxlength="60" autocomplete="off" spellcheck="false" aria-describedby="profile_preset_name_message">
+            <p id="profile_preset_name_message" class="profile-preset-modal-message" role="status" aria-live="polite"></p>
+            <div class="profile-preset-modal-actions">
+                <button type="button" id="profile_preset_name_cancel" class="btn-secondary">Cancel</button>
+                <button type="button" id="profile_preset_name_save" class="btn-save">Save Preset</button>
+            </div>
+        </div>
+    </div>
+
     <script>
     (function(){
         const row = document.getElementById('profile_preset_row');
         const select = document.getElementById('profile_preset_select');
         const applyBtn = document.getElementById('profile_preset_apply');
+        const saveNewBtn = document.getElementById('profile_preset_save_new');
+        const overwriteBtn = document.getElementById('profile_preset_overwrite');
+        const exportBtn = document.getElementById('profile_preset_export');
+        const importBtn = document.getElementById('profile_preset_import');
+        const fileInput = document.getElementById('profile_preset_import_file');
         const statusEl = document.getElementById('profile_preset_status');
         const modal = document.getElementById('profile_preset_modal');
-        if (!row || !select || !applyBtn || !statusEl || !modal) return;
+        const nameModal = document.getElementById('profile_preset_name_modal');
+        if (!row || !select || !applyBtn || !saveNewBtn || !overwriteBtn || !exportBtn || !importBtn || !fileInput || !statusEl || !modal || !nameModal) return;
 
         const modalTitle = document.getElementById('profile_preset_modal_title');
         const modalDesc = document.getElementById('profile_preset_modal_desc');
         const cancelBtn = document.getElementById('profile_preset_cancel');
         const confirmBtn = document.getElementById('profile_preset_confirm');
+        const nameDesc = document.getElementById('profile_preset_name_desc');
+        const nameInput = document.getElementById('profile_preset_name_input');
+        const nameMessage = document.getElementById('profile_preset_name_message');
+        const nameCancelBtn = document.getElementById('profile_preset_name_cancel');
+        const nameSaveBtn = document.getElementById('profile_preset_name_save');
+        if (!modalTitle || !modalDesc || !cancelBtn || !confirmBtn || !nameDesc || !nameInput || !nameMessage || !nameCancelBtn || !nameSaveBtn) return;
+
         const API_URL = <?= json_encode($webRoot . '/ui/api/chim_profile_manager.php') ?>;
         const PROFILE_ID = <?= json_encode((int)($editItem['id'] ?? 0)) ?>;
         const PROFILE_NAME = <?= json_encode((string)($editItem['label'] ?? 'this profile')) ?>;
         const NOTICE_KEY = 'chimProfilePresetNotice';
+        const MAX_IMPORT_BYTES = 256 * 1024;
         let lastFocused = null;
+        let nameLastFocused = null;
+        let pendingAction = null;
         let busy = false;
+        let nameBusy = false;
 
         // .llm-right is a CSS container, which would trap a position:fixed overlay inside it.
         if (modal.parentNode !== document.body) document.body.appendChild(modal);
+        if (nameModal.parentNode !== document.body) document.body.appendChild(nameModal);
 
         function selectedOption(){
             return select.options[select.selectedIndex] || null;
+        }
+
+        function isCustom(option){
+            return !!option && !!option.value && option.dataset.presetBuiltin === '0';
         }
 
         function setStatus(message, tone){
@@ -2058,28 +2150,133 @@ $ittById = $byId($ittRows);
             statusEl.title = message || '';
         }
 
-        function setBusy(state){
-            busy = state;
-            row.setAttribute('aria-busy', state ? 'true' : 'false');
-            select.disabled = state;
-            applyBtn.disabled = state || !select.value;
-            applyBtn.textContent = state ? 'Applying...' : 'Apply';
-            // Disabling the button drops focus to <body>; park it on the row so the
-            // aria-live status stays in context for keyboard and screen reader users.
-            if (state && row.contains(document.activeElement)) row.focus();
+        function toast(message, isError){
+            try { if (typeof showToast === 'function') showToast(message, !!isError); } catch(_e){}
         }
 
-        // Selecting a preset only previews its description; nothing is saved until Apply is confirmed.
+        // Built-in presets ship with the server, so only custom presets can be overwritten or exported.
+        function syncActionState(){
+            const custom = isCustom(selectedOption());
+            select.disabled = busy;
+            fileInput.disabled = busy;
+            applyBtn.disabled = busy || !select.value;
+            saveNewBtn.disabled = busy || !PROFILE_ID;
+            overwriteBtn.disabled = busy || !custom || !PROFILE_ID;
+            exportBtn.disabled = busy || !custom;
+            importBtn.disabled = busy;
+        }
+
+        function setBusy(state, applyLabel){
+            busy = !!state;
+            row.setAttribute('aria-busy', busy ? 'true' : 'false');
+            applyBtn.textContent = (busy && applyLabel) ? applyLabel : 'Apply';
+            syncActionState();
+            // Disabling the button drops focus to <body>; park it on the row so the
+            // aria-live status stays in context for keyboard and screen reader users.
+            if (busy && row.contains(document.activeElement)) row.focus();
+        }
+
+        // Selecting a preset only previews its description; nothing is saved until an action is confirmed.
         select.addEventListener('change', function(){
             const option = selectedOption();
-            applyBtn.disabled = busy || !select.value;
+            syncActionState();
             setStatus(option && option.dataset.presetDescription ? option.dataset.presetDescription : '');
         });
 
-        function trapFocus(event){
-            if (event.key !== 'Tab') return;
-            const first = cancelBtn;
-            const last = confirmBtn;
+        async function postJson(payload){
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify(payload)
+            });
+            let json = null;
+            try { json = await res.json(); } catch(_e){ json = null; }
+            if (!res.ok || !json || !json.success) {
+                throw new Error((json && json.error) ? json.error : ('Request failed (' + res.status + ')'));
+            }
+            return json.data || {};
+        }
+
+        // Mirror what a profile save would send by letting the existing editors consolidate into
+        // the hidden metadata field. The server still decides which keys a preset may keep.
+        function captureProfileMetadata(){
+            let consolidated = true;
+            try {
+                if (typeof consolidation === 'function') consolidated = consolidation(null, 'core_profile_form');
+            } catch(_e){ throw new Error('The profile editor is still loading. Try again.'); }
+            if (consolidated === false) return null;
+            try {
+                if (typeof window.syncProfileGlobalOverrides === 'function') window.syncProfileGlobalOverrides();
+            } catch(_e){ throw new Error('Could not read the current profile settings.'); }
+
+            const form = document.getElementById('core_profile_form');
+            if (!form) return {};
+
+            let metadata = {};
+            const field = form.querySelector('textarea[name="metadata"]');
+            const raw = field ? String(field.value || '').trim() : '';
+            if (raw !== '') {
+                let parsed = null;
+                try { parsed = JSON.parse(raw); } catch(_e){ throw new Error('Fix the metadata JSON before saving a preset.'); }
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) metadata = parsed;
+            }
+            return metadata;
+        }
+
+        function optionForPreset(preset){
+            const option = document.createElement('option');
+            option.value = String(preset.id);
+            option.textContent = String(preset.name || preset.id);
+            option.dataset.presetName = String(preset.name || preset.id);
+            option.dataset.presetDescription = String(preset.description || '');
+            option.dataset.presetBuiltin = preset.built_in ? '1' : '0';
+            return option;
+        }
+
+        function findOption(presetId){
+            const wanted = String(presetId);
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === wanted) return select.options[i];
+            }
+            return null;
+        }
+
+        // Refresh the dropdown in place so unsaved profile edits survive the round trip.
+        function refreshPresets(list, preset){
+            if (Array.isArray(list) && list.length) {
+                while (select.options.length > 1) select.remove(1);
+                list.forEach(function(item){
+                    if (item && item.id) select.appendChild(optionForPreset(item));
+                });
+            } else if (preset && preset.id) {
+                const existing = findOption(preset.id);
+                const replacement = optionForPreset(preset);
+                if (existing) {
+                    select.replaceChild(replacement, existing);
+                } else {
+                    select.appendChild(replacement);
+                }
+            }
+            if (preset && preset.id && findOption(preset.id)) select.value = String(preset.id);
+            syncActionState();
+        }
+
+        function presetFromData(data, fallbackId, fallbackName){
+            if (data && data.preset && data.preset.id) return data.preset;
+            const id = (data && data.preset_id) || fallbackId;
+            if (!id) return null;
+            return { id: id, name: (data && data.preset_name) || fallbackName || String(id), description: '', built_in: false };
+        }
+
+        function trapFocus(event, items){
+            if (!items.length) return;
+            const first = items[0];
+            const last = items[items.length - 1];
+            if (items.indexOf(document.activeElement) === -1) {
+                event.preventDefault();
+                first.focus();
+                return;
+            }
             if (event.shiftKey && document.activeElement === first) {
                 event.preventDefault();
                 last.focus();
@@ -2095,13 +2292,15 @@ $ittById = $byId($ittRows);
                 closeModal();
                 return;
             }
-            trapFocus(event);
+            if (event.key === 'Tab') trapFocus(event, [cancelBtn, confirmBtn]);
         }
 
-        function openModal(presetName){
+        function openModal(config){
+            pendingAction = config.action;
             lastFocused = document.activeElement;
-            modalTitle.textContent = 'Apply "' + presetName + '" to "' + PROFILE_NAME + '"?';
-            modalDesc.textContent = 'This saves immediately. Any unsaved edits to "' + PROFILE_NAME + '" will be discarded.';
+            modalTitle.textContent = config.title;
+            modalDesc.textContent = config.description;
+            confirmBtn.textContent = config.confirmLabel;
             modal.hidden = false;
             document.addEventListener('keydown', onModalKeydown, true);
             cancelBtn.focus();
@@ -2109,6 +2308,7 @@ $ittById = $byId($ittRows);
 
         function closeModal(restoreFocus){
             if (modal.hidden) return;
+            pendingAction = null;
             modal.hidden = true;
             document.removeEventListener('keydown', onModalKeydown, true);
             if (restoreFocus !== false && lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
@@ -2123,30 +2323,48 @@ $ittById = $byId($ittRows);
         applyBtn.addEventListener('click', function(){
             const option = selectedOption();
             if (busy || !select.value || !option) return;
-            openModal(option.dataset.presetName || option.textContent || 'this preset');
+            const presetName = option.dataset.presetName || option.textContent || 'this preset';
+            openModal({
+                action: 'apply',
+                title: 'Apply "' + presetName + '" to "' + PROFILE_NAME + '"?',
+                description: 'This saves immediately. Any unsaved edits to "' + PROFILE_NAME + '" will be discarded.',
+                confirmLabel: 'Apply Preset'
+            });
         });
 
-        confirmBtn.addEventListener('click', async function(){
+        overwriteBtn.addEventListener('click', function(){
             const option = selectedOption();
-            if (busy || !select.value || !option) return;
+            if (busy || !isCustom(option)) return;
+            const presetName = option.dataset.presetName || option.textContent || 'this preset';
+            openModal({
+                action: 'overwrite',
+                title: 'Overwrite "' + presetName + '"?',
+                description: 'The preset will be replaced with the current settings for "' + PROFILE_NAME + '".',
+                confirmLabel: 'Overwrite Preset'
+            });
+        });
+
+        confirmBtn.addEventListener('click', function(){
+            const action = pendingAction;
+            const option = selectedOption();
+            if (busy || !option) { closeModal(); return; }
+            closeModal(false);
+            if (action === 'apply') {
+                applyBtn.focus();
+                runApply(option);
+            } else if (action === 'overwrite') {
+                overwriteBtn.focus();
+                runOverwrite(option);
+            }
+        });
+
+        async function runApply(option){
             const presetId = select.value;
             const presetName = option.dataset.presetName || option.textContent || 'preset';
-            closeModal(false);
-            applyBtn.focus();
-            setBusy(true);
+            setBusy(true, 'Applying...');
             setStatus('Applying "' + presetName + '"...');
             try {
-                const res = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                    body: JSON.stringify({ operation: 'apply_preset', id: PROFILE_ID, preset_id: presetId })
-                });
-                let json = null;
-                try { json = await res.json(); } catch(_e){ json = null; }
-                if (!res.ok || !json || !json.success) {
-                    throw new Error((json && json.error) ? json.error : ('Request failed (' + res.status + ')'));
-                }
-                const data = json.data || {};
+                const data = await postJson({ operation: 'apply_preset', id: PROFILE_ID, preset_id: presetId });
                 const notice = 'Applied preset "' + (data.preset_name || presetName) + '" to "' + (data.profile_name || PROFILE_NAME) + '".';
                 try { sessionStorage.setItem(NOTICE_KEY, notice); } catch(_e){}
                 window.location.assign('core_profiles.php?edit=' + encodeURIComponent(String(PROFILE_ID)));
@@ -2155,9 +2373,234 @@ $ittById = $byId($ittRows);
                 const message = 'Could not apply preset: ' + (err && err.message ? err.message : 'Unknown error');
                 setStatus(message, 'error');
                 applyBtn.focus();
-                try { if (typeof showToast === 'function') showToast(message, true); } catch(_e){}
+                toast(message, true);
             }
+        }
+
+        async function runOverwrite(option){
+            const presetId = select.value;
+            const presetName = option.dataset.presetName || option.textContent || 'preset';
+            let metadata;
+            try {
+                metadata = captureProfileMetadata();
+            } catch (err) {
+                setStatus(err.message, 'error');
+                overwriteBtn.focus();
+                return;
+            }
+            if (metadata === null) return;
+            setBusy(true);
+            setStatus('Saving "' + presetName + '"...');
+            try {
+                const data = await postJson({ operation: 'overwrite_preset', id: PROFILE_ID, preset_id: presetId, metadata: metadata });
+                setBusy(false);
+                const preset = presetFromData(data, presetId, presetName);
+                refreshPresets(data.profile_presets, preset);
+                const message = 'Updated preset "' + ((preset && preset.name) || presetName) + '".';
+                setStatus(message, 'success');
+                toast(message);
+            } catch (err) {
+                setBusy(false);
+                const message = 'Could not overwrite preset: ' + (err && err.message ? err.message : 'Unknown error');
+                setStatus(message, 'error');
+                toast(message, true);
+            }
+            overwriteBtn.focus();
+        }
+
+        exportBtn.addEventListener('click', async function(){
+            const option = selectedOption();
+            if (busy || !isCustom(option)) return;
+            const presetId = select.value;
+            const presetName = option.dataset.presetName || option.textContent || 'preset';
+            setBusy(true);
+            setStatus('Exporting "' + presetName + '"...');
+            try {
+                const data = await postJson({ operation: 'export_preset', preset_id: presetId });
+                if (!data.document) throw new Error('Export was empty');
+                downloadJson(data.filename, data.document);
+                setBusy(false);
+                const message = 'Exported "' + presetName + '".';
+                setStatus(message, 'success');
+                toast(message);
+            } catch (err) {
+                setBusy(false);
+                const message = 'Could not export preset: ' + (err && err.message ? err.message : 'Unknown error');
+                setStatus(message, 'error');
+                toast(message, true);
+            }
+            exportBtn.focus();
         });
+
+        function downloadJson(filename, payload){
+            const text = (typeof payload === 'string') ? payload : JSON.stringify(payload, null, 2);
+            const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = String(filename || 'profile_preset.json');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+        }
+
+        importBtn.addEventListener('click', function(){
+            if (busy) return;
+            fileInput.value = '';
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', function(){
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) return;
+            if (file.size > MAX_IMPORT_BYTES) {
+                fileInput.value = '';
+                setStatus('That file is too large. Preset files must be under 256 KB.', 'error');
+                importBtn.focus();
+                return;
+            }
+            const reader = new FileReader();
+            reader.onerror = function(){
+                fileInput.value = '';
+                setStatus('Could not read that file.', 'error');
+                importBtn.focus();
+            };
+            reader.onload = function(){
+                fileInput.value = '';
+                let parsed = null;
+                try { parsed = JSON.parse(String(reader.result || '')); } catch(_e){ parsed = null; }
+                if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                    setStatus('That file is not a valid preset export.', 'error');
+                    importBtn.focus();
+                    return;
+                }
+                runImport(parsed);
+            };
+            reader.readAsText(file);
+        });
+
+        async function runImport(presetDocument){
+            setBusy(true);
+            setStatus('Importing preset...');
+            try {
+                const data = await postJson({ operation: 'import_preset', document: presetDocument });
+                setBusy(false);
+                const preset = presetFromData(data, null, 'Imported preset');
+                refreshPresets(data.profile_presets, preset);
+                const message = 'Imported preset "' + ((preset && preset.name) || 'preset') + '".';
+                setStatus(message, 'success');
+                toast(message);
+            } catch (err) {
+                setBusy(false);
+                const message = 'Could not import preset: ' + (err && err.message ? err.message : 'Unknown error');
+                setStatus(message, 'error');
+                toast(message, true);
+            }
+            importBtn.focus();
+        }
+
+        function setNameMessage(message, tone){
+            nameMessage.textContent = message || '';
+            nameMessage.classList.toggle('is-error', tone === 'error');
+        }
+
+        function nameFocusables(){
+            return [nameInput, nameCancelBtn, nameSaveBtn].filter(function(el){ return !el.disabled; });
+        }
+
+        function setNameBusy(state){
+            nameBusy = !!state;
+            nameModal.setAttribute('aria-busy', nameBusy ? 'true' : 'false');
+            nameInput.disabled = nameBusy;
+            nameCancelBtn.disabled = nameBusy;
+            nameSaveBtn.disabled = nameBusy;
+            nameSaveBtn.textContent = nameBusy ? 'Saving...' : 'Save Preset';
+        }
+
+        function onNameKeydown(event){
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                if (!nameBusy) closeNameModal();
+                return;
+            }
+            if (event.key === 'Enter' && document.activeElement === nameInput) {
+                event.preventDefault();
+                submitNewPreset();
+                return;
+            }
+            if (event.key === 'Tab') trapFocus(event, nameFocusables());
+        }
+
+        function openNameModal(){
+            nameLastFocused = document.activeElement;
+            nameDesc.textContent = 'Saves the current settings for "' + PROFILE_NAME + '" as a preset.';
+            nameInput.value = PROFILE_NAME;
+            setNameBusy(false);
+            setNameMessage('');
+            nameModal.hidden = false;
+            document.addEventListener('keydown', onNameKeydown, true);
+            nameInput.focus();
+            nameInput.select();
+        }
+
+        function closeNameModal(restoreFocus){
+            if (nameModal.hidden) return;
+            nameModal.hidden = true;
+            document.removeEventListener('keydown', onNameKeydown, true);
+            if (restoreFocus !== false && nameLastFocused && typeof nameLastFocused.focus === 'function') nameLastFocused.focus();
+            nameLastFocused = null;
+        }
+
+        nameModal.addEventListener('click', function(event){
+            if (event.target === nameModal && !nameBusy) closeNameModal();
+        });
+        nameCancelBtn.addEventListener('click', function(){ if (!nameBusy) closeNameModal(); });
+        nameSaveBtn.addEventListener('click', function(){ submitNewPreset(); });
+
+        saveNewBtn.addEventListener('click', function(){
+            if (busy || !PROFILE_ID) return;
+            openNameModal();
+        });
+
+        async function submitNewPreset(){
+            if (nameBusy) return;
+            const name = String(nameInput.value || '').trim();
+            if (name === '') {
+                setNameMessage('Enter a preset name.', 'error');
+                nameInput.focus();
+                return;
+            }
+            let metadata;
+            try {
+                metadata = captureProfileMetadata();
+            } catch (err) {
+                setNameMessage(err.message, 'error');
+                return;
+            }
+            if (metadata === null) return;
+            setNameBusy(true);
+            setNameMessage('Saving...');
+            setBusy(true);
+            try {
+                const data = await postJson({ operation: 'save_preset_new', id: PROFILE_ID, name: name, metadata: metadata });
+                setNameBusy(false);
+                setBusy(false);
+                closeNameModal(false);
+                saveNewBtn.focus();
+                const preset = presetFromData(data, null, name);
+                refreshPresets(data.profile_presets, preset);
+                const message = 'Saved preset "' + ((preset && preset.name) || name) + '".';
+                setStatus(message, 'success');
+                toast(message);
+            } catch (err) {
+                setNameBusy(false);
+                setBusy(false);
+                setNameMessage(err && err.message ? err.message : 'Could not save preset.', 'error');
+                nameInput.focus();
+            }
+        }
+
+        syncActionState();
 
         // Carry the success message across the reload that refreshes this same profile.
         try {
@@ -2165,9 +2608,7 @@ $ittById = $byId($ittRows);
             if (notice) {
                 sessionStorage.removeItem(NOTICE_KEY);
                 setStatus(notice, 'success');
-                window.addEventListener('load', function(){
-                    try { if (typeof showToast === 'function') showToast(notice); } catch(_e){}
-                });
+                window.addEventListener('load', function(){ toast(notice); });
             }
         } catch(_e){}
     })();

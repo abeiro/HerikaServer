@@ -191,13 +191,34 @@ function chimProfileSettingsPresetBuiltIns(): array
 
 function chimProfileSettingsPresetCatalog(): array
 {
-    return array_values(array_map(static function(array $preset): array {
+    $presets = array_values(array_map(static function(array $preset): array {
         return [
             'id' => (string)$preset['id'],
             'name' => (string)$preset['name'],
             'description' => (string)($preset['description'] ?? ''),
+            'built_in' => true,
         ];
     }, chimProfileSettingsPresetBuiltIns()));
+
+    $db = $GLOBALS['db'] ?? null;
+    if ($db) {
+        try {
+            $rows = $db->fetchAll('SELECT id, name, updated_at FROM public.profile_settings_presets ORDER BY lower(name), id');
+            foreach ((array)$rows as $row) {
+                $presets[] = [
+                    'id' => 'custom:' . (int)$row['id'],
+                    'name' => (string)$row['name'],
+                    'description' => 'Saved profile settings.',
+                    'built_in' => false,
+                    'updated_at' => (string)($row['updated_at'] ?? ''),
+                ];
+            }
+        } catch (Throwable $e) {
+            // Built-ins remain available while an older installation awaits its schema update.
+        }
+    }
+
+    return $presets;
 }
 
 function chimSettingsPresetBuiltIns(): array
@@ -433,7 +454,254 @@ function chimSettingsPresetNormalizeProfileOverrides(array $values): array
     return $normalized;
 }
 
-/** Apply one built-in profile preset without changing profile identity or connector columns. */
+function chimProfileSettingsPresetManagedValueKeys(): array
+{
+    return ['CONTEXT_HISTORY', 'CONTEXT_HISTORY_DIARY', 'CONTEXT_HISTORY_DYNAMIC_PROFILE', 'MAX_WORDS_LIMIT'];
+}
+
+function chimProfileSettingsPresetManagedOverrideKeys(): array
+{
+    $keys = [];
+    foreach (chimProfileSettingsPresetBuiltIns() as $preset) {
+        foreach (array_keys((array)($preset['profile_overrides'] ?? [])) as $name) {
+            $keys[(string)$name] = true;
+        }
+    }
+    return array_keys($keys);
+}
+
+function chimProfileSettingsPresetEnsureStorage(): void
+{
+    $db = $GLOBALS['db'] ?? null;
+    if (!$db) {
+        throw new RuntimeException('Database connection is unavailable.');
+    }
+    $schemaFile = __DIR__ . DIRECTORY_SEPARATOR . 'database_schema' . DIRECTORY_SEPARATOR . 'profile_settings_presets.sql';
+    $schema = @file_get_contents($schemaFile);
+    if ($schema === false || $db->execQuery($schema) === false) {
+        throw new RuntimeException('Could not prepare profile preset storage.');
+    }
+}
+
+function chimProfileSettingsPresetValidateName(string $name): string
+{
+    $name = trim(preg_replace('/\s+/u', ' ', $name) ?? '');
+    if ($name === '') {
+        throw new InvalidArgumentException('Preset name is required.');
+    }
+    $length = function_exists('mb_strlen') ? mb_strlen($name) : strlen($name);
+    if ($length > 60) {
+        throw new InvalidArgumentException('Preset name must be 60 characters or fewer.');
+    }
+    $normalized = function_exists('mb_strtolower') ? mb_strtolower($name) : strtolower($name);
+    foreach (chimProfileSettingsPresetBuiltIns() as $preset) {
+        $builtInName = function_exists('mb_strtolower')
+            ? mb_strtolower((string)$preset['name'])
+            : strtolower((string)$preset['name']);
+        if ($normalized === $builtInName) {
+            throw new InvalidArgumentException('That name is reserved for a built-in preset.');
+        }
+    }
+    return $name;
+}
+
+function chimProfileSettingsPresetCustomId(string $presetId): int
+{
+    if (!preg_match('/^custom:([1-9][0-9]*)$/', $presetId, $matches)) {
+        throw new InvalidArgumentException('Invalid custom profile preset.');
+    }
+    return (int)$matches[1];
+}
+
+/** Normalize one portable custom snapshot to the server-owned profile preset allowlist. */
+function chimProfileSettingsPresetNormalizeSnapshot(array $snapshot): array
+{
+    if (($snapshot['version'] ?? null) !== 1) {
+        throw new InvalidArgumentException('Unsupported profile preset version.');
+    }
+
+    $rawValues = (array)($snapshot['profile_values'] ?? []);
+    $unknownValues = array_diff(array_keys($rawValues), chimProfileSettingsPresetManagedValueKeys());
+    if ($unknownValues) {
+        throw new InvalidArgumentException('Unknown profile preset setting: ' . (string)reset($unknownValues));
+    }
+    foreach ($rawValues as $name => $value) {
+        if (!is_numeric($value)) {
+            throw new InvalidArgumentException('Invalid ' . (string)$name . ': Expected an integer.');
+        }
+    }
+    $values = chimSettingsPresetNormalizeProfileValues($rawValues);
+    $values = array_intersect_key($values, array_flip(chimProfileSettingsPresetManagedValueKeys()));
+
+    $rawOverrides = (array)($snapshot['profile_overrides'] ?? []);
+    $unknownOverrides = array_diff(array_keys($rawOverrides), chimProfileSettingsPresetManagedOverrideKeys());
+    if ($unknownOverrides) {
+        throw new InvalidArgumentException('Unknown profile preset setting: ' . (string)reset($unknownOverrides));
+    }
+
+    return [
+        'version' => 1,
+        'profile_values' => $values,
+        'profile_overrides' => chimSettingsPresetNormalizeProfileOverrides($rawOverrides),
+    ];
+}
+
+function chimProfileSettingsPresetCapture(int $profileId, ?array $submittedMetadata = null): array
+{
+    $db = $GLOBALS['db'] ?? null;
+    if (!$db || $profileId <= 0) {
+        throw new InvalidArgumentException('Invalid profile.');
+    }
+    $profile = $db->fetchOne('SELECT id, metadata FROM public.core_profiles WHERE id = ' . $profileId . ' LIMIT 1');
+    if (!isset($profile['id'])) {
+        throw new InvalidArgumentException('Profile not found.');
+    }
+
+    if ($submittedMetadata === null) {
+        $metadata = json_decode((string)($profile['metadata'] ?? '{}'), true);
+        if (!is_array($metadata)) $metadata = [];
+    } else {
+        $metadata = $submittedMetadata;
+    }
+
+    $defaults = chimSettingsPresetProfileDefaults();
+    $values = [];
+    foreach (chimProfileSettingsPresetManagedValueKeys() as $name) {
+        $values[$name] = array_key_exists($name, $metadata) ? $metadata[$name] : $defaults[$name];
+    }
+    $overrides = [];
+    foreach (chimProfileSettingsPresetManagedOverrideKeys() as $name) {
+        if (array_key_exists($name, $metadata)) $overrides[$name] = $metadata[$name];
+    }
+
+    return chimProfileSettingsPresetNormalizeSnapshot([
+        'version' => 1,
+        'profile_values' => $values,
+        'profile_overrides' => $overrides,
+    ]);
+}
+
+function chimProfileSettingsPresetSaveNew(string $name, array $snapshot): array
+{
+    chimProfileSettingsPresetEnsureStorage();
+    $db = $GLOBALS['db'];
+    $name = chimProfileSettingsPresetValidateName($name);
+    $snapshot = chimProfileSettingsPresetNormalizeSnapshot($snapshot);
+    $existing = $db->fetchOne('SELECT id FROM public.profile_settings_presets WHERE lower(name) = lower(' . $db->escapeLiteral($name) . ') LIMIT 1');
+    if (isset($existing['id'])) {
+        throw new InvalidArgumentException('A preset with that name already exists. Select it and use Overwrite.');
+    }
+    $id = $db->insertReturningId('profile_settings_presets', [
+        'name' => $name,
+        'snapshot' => json_encode($snapshot, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+    ]);
+    if ($id <= 0) {
+        throw new RuntimeException('Could not save the profile preset.');
+    }
+    return ['id' => 'custom:' . $id, 'name' => $name, 'description' => 'Saved profile settings.', 'built_in' => false];
+}
+
+function chimProfileSettingsPresetOverwrite(string $presetId, array $snapshot): array
+{
+    chimProfileSettingsPresetEnsureStorage();
+    $db = $GLOBALS['db'];
+    $id = chimProfileSettingsPresetCustomId($presetId);
+    $row = $db->fetchOne('SELECT name FROM public.profile_settings_presets WHERE id = ' . $id . ' LIMIT 1');
+    if (!isset($row['name'])) {
+        throw new InvalidArgumentException('Profile preset not found.');
+    }
+    $snapshot = chimProfileSettingsPresetNormalizeSnapshot($snapshot);
+    $updated = $db->updateRow('profile_settings_presets', [
+        'snapshot' => json_encode($snapshot, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        'updated_at' => date('Y-m-d H:i:s'),
+    ], 'id = ' . $id);
+    if ($updated === false) {
+        throw new RuntimeException('Could not overwrite the profile preset.');
+    }
+    return ['id' => 'custom:' . $id, 'name' => (string)$row['name'], 'description' => 'Saved profile settings.', 'built_in' => false];
+}
+
+function chimProfileSettingsPresetLoad(string $presetId): array
+{
+    $builtIns = chimProfileSettingsPresetBuiltIns();
+    if (isset($builtIns[$presetId])) {
+        return $builtIns[$presetId] + ['built_in' => true];
+    }
+
+    chimProfileSettingsPresetEnsureStorage();
+    $db = $GLOBALS['db'];
+    $id = chimProfileSettingsPresetCustomId($presetId);
+    $row = $db->fetchOne('SELECT id, name, snapshot FROM public.profile_settings_presets WHERE id = ' . $id . ' LIMIT 1');
+    if (!isset($row['id'])) {
+        throw new InvalidArgumentException('Profile preset not found.');
+    }
+    $snapshot = json_decode((string)$row['snapshot'], true);
+    if (!is_array($snapshot)) {
+        throw new RuntimeException('The saved profile preset is invalid.');
+    }
+    $snapshot = chimProfileSettingsPresetNormalizeSnapshot($snapshot);
+    return [
+        'id' => 'custom:' . (int)$row['id'],
+        'name' => (string)$row['name'],
+        'description' => 'Saved profile settings.',
+        'built_in' => false,
+        'profile_values' => $snapshot['profile_values'],
+        'profile_overrides' => $snapshot['profile_overrides'],
+    ];
+}
+
+function chimProfileSettingsPresetExport(string $presetId): array
+{
+    chimProfileSettingsPresetCustomId($presetId);
+    $preset = chimProfileSettingsPresetLoad($presetId);
+    $snapshot = chimProfileSettingsPresetNormalizeSnapshot([
+        'version' => 1,
+        'profile_values' => $preset['profile_values'],
+        'profile_overrides' => $preset['profile_overrides'],
+    ]);
+    $slug = trim(preg_replace('/[^a-z0-9_-]+/i', '_', strtolower((string)$preset['name'])) ?? '', '_');
+    if ($slug === '') $slug = 'profile_preset';
+    return [
+        'filename' => $slug . '_profile_preset.json',
+        'document' => [
+            'format' => 'chim-profile-settings-preset',
+            'version' => 1,
+            'name' => (string)$preset['name'],
+            'snapshot' => $snapshot,
+        ],
+    ];
+}
+
+function chimProfileSettingsPresetUniqueImportedName(string $name): string
+{
+    $db = $GLOBALS['db'];
+    $name = chimProfileSettingsPresetValidateName($name);
+    $base = preg_replace('/(?:\s*\(Imported(?: \d+)?\))+$/i', '', $name) ?: $name;
+    for ($index = 1; $index <= 999; $index++) {
+        $suffix = $index === 1 ? ' (Imported)' : ' (Imported ' . $index . ')';
+        $maxBaseLength = 60 - strlen($suffix);
+        $candidateBase = function_exists('mb_substr') ? mb_substr($base, 0, $maxBaseLength) : substr($base, 0, $maxBaseLength);
+        $candidate = rtrim($candidateBase) . $suffix;
+        $row = $db->fetchOne('SELECT id FROM public.profile_settings_presets WHERE lower(name) = lower(' . $db->escapeLiteral($candidate) . ') LIMIT 1');
+        if (!isset($row['id'])) return $candidate;
+    }
+    throw new RuntimeException('Could not choose a unique imported preset name.');
+}
+
+function chimProfileSettingsPresetImport(array $document): array
+{
+    if (($document['format'] ?? null) !== 'chim-profile-settings-preset' || ($document['version'] ?? null) !== 1) {
+        throw new InvalidArgumentException('Unsupported profile preset file.');
+    }
+    if (!isset($document['snapshot']) || !is_array($document['snapshot'])) {
+        throw new InvalidArgumentException('Profile preset settings are required.');
+    }
+    chimProfileSettingsPresetEnsureStorage();
+    $name = chimProfileSettingsPresetUniqueImportedName((string)($document['name'] ?? ''));
+    return chimProfileSettingsPresetSaveNew($name, $document['snapshot']);
+}
+
+/** Apply one profile preset without changing profile identity or connector columns. */
 function chimProfileSettingsPresetApply(int $profileId, string $presetId): array
 {
     $db = $GLOBALS['db'] ?? null;
@@ -444,11 +712,7 @@ function chimProfileSettingsPresetApply(int $profileId, string $presetId): array
         throw new InvalidArgumentException('Invalid profile.');
     }
 
-    $builtIns = chimProfileSettingsPresetBuiltIns();
-    if (!isset($builtIns[$presetId])) {
-        throw new InvalidArgumentException('Invalid profile preset.');
-    }
-    $preset = $builtIns[$presetId];
+    $preset = chimProfileSettingsPresetLoad($presetId);
     $profile = $db->fetchOne('SELECT id, label, metadata FROM public.core_profiles WHERE id = ' . $profileId . ' LIMIT 1');
     if (!isset($profile['id'])) {
         throw new InvalidArgumentException('Profile not found.');
@@ -458,8 +722,11 @@ function chimProfileSettingsPresetApply(int $profileId, string $presetId): array
     if (!is_array($metadata)) {
         $metadata = [];
     }
+    foreach (array_merge(chimProfileSettingsPresetManagedValueKeys(), chimProfileSettingsPresetManagedOverrideKeys()) as $name) {
+        unset($metadata[$name]);
+    }
     $values = chimSettingsPresetNormalizeProfileValues((array)$preset['profile_values']);
-    foreach (['CONTEXT_HISTORY', 'CONTEXT_HISTORY_DIARY', 'CONTEXT_HISTORY_DYNAMIC_PROFILE', 'MAX_WORDS_LIMIT'] as $name) {
+    foreach (chimProfileSettingsPresetManagedValueKeys() as $name) {
         $metadata[$name] = $values[$name];
     }
     $overrides = chimSettingsPresetNormalizeProfileOverrides((array)$preset['profile_overrides']);
@@ -489,7 +756,7 @@ function chimProfileSettingsPresetApply(int $profileId, string $presetId): array
         'preset_name' => (string)$preset['name'],
         'profile_id' => (int)$profile['id'],
         'profile_name' => (string)($profile['label'] ?? ('Profile ' . $profileId)),
-        'settings_updated' => 4 + count($overrides),
+        'settings_updated' => count(chimProfileSettingsPresetManagedValueKeys()) + count(chimProfileSettingsPresetManagedOverrideKeys()),
     ];
 }
 
