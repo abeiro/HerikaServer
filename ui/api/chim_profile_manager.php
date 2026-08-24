@@ -21,6 +21,7 @@ require_once LIB_PATH . DIRECTORY_SEPARATOR . 'runtime_bootstrap.php';
 chimRuntimeBootstrap(BASE_PATH . DIRECTORY_SEPARATOR, ['load_general_settings' => true]);
 require_once LIB_PATH . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'core_profiles.class.php';
 require_once LIB_PATH . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'prisma_settings_catalog.php';
+require_once LIB_PATH . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'settings_presets.php';
 require_once BASE_PATH . DIRECTORY_SEPARATOR . 'conf' . DIRECTORY_SEPARATOR . 'conf_loader.php';
 
 $profiles = new CoreProfile();
@@ -227,6 +228,13 @@ try {
             }
             chimProfileManagerRespond(['success' => true, 'data' => ['copied' => $key]]);
         }
+        if ($operation === 'apply_preset') {
+            $id = (int)($body['id'] ?? 0);
+            $presetId = trim((string)($body['preset_id'] ?? ''));
+            $result = chimProfileSettingsPresetApply($id, $presetId);
+            $result['detail'] = chimProfileManagerDetail($profiles, $id);
+            chimProfileManagerRespond(['success' => true, 'data' => $result]);
+        }
         throw new InvalidArgumentException('Unknown operation.');
     }
 
@@ -237,6 +245,7 @@ try {
             'llm' => chimProfileManagerOptions('core_llm_connector'),
             'tts' => chimProfileManagerOptions('core_tts_connector'),
         ],
+        'profile_presets' => chimProfileSettingsPresetCatalog(),
     ];
     if ($id > 0) $data['detail'] = chimProfileManagerDetail($profiles, $id);
     chimProfileManagerRespond(['success' => true, 'data' => $data]);

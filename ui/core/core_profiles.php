@@ -22,6 +22,7 @@ require_once "{$enginePath}/lib/core/itt_connector.class.php";
 require_once "{$enginePath}/lib/core/api_badge.class.php";
 require_once "{$enginePath}/lib/core/import_rules.class.php";
 require_once "{$enginePath}/lib/core/prisma_settings_catalog.php";
+require_once "{$enginePath}/lib/core/settings_presets.php";
 
 //function renderSelect($obj, $fieldName, $labelText, $selectedValue = "") 
 //function include from below file
@@ -466,6 +467,96 @@ body .setting-key .profile-setting-sync-btn:hover { border-color:#f27c11 !import
     .profile-toggle-grid { grid-template-columns:1fr; }
     .connector-group-fields { grid-template-columns:1fr; }
     .profile-default-card { grid-column:auto; }
+}
+
+/* Profile Preset action row (sits directly under the editor toolbar) */
+.profile-preset-row {
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:10px;
+    margin:-4px 0 10px;
+    padding:8px 12px;
+    border:1px solid #3f3f3f;
+    border-radius:8px;
+    background:#202020;
+}
+.profile-preset-label {
+    margin:0;
+    color:#9fb1c9;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    white-space:nowrap;
+}
+.profile-preset-select {
+    width:auto;
+    min-width:190px;
+    max-width:260px;
+    margin:0;
+    padding:6px 8px;
+    border:1px solid #4a4a4a;
+    border-radius:6px;
+    background:#2a2a2a;
+    color:#e9efff;
+    font-size:12px;
+}
+.profile-preset-apply { padding:6px 14px; font-size:12px; }
+.profile-preset-status {
+    flex:1 1 200px;
+    min-width:0;
+    margin:0;
+    color:#9fb1c9;
+    font-size:11px;
+    line-height:1.35;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.profile-preset-status:empty { flex-basis:0; }
+.profile-preset-status.is-error { color:#ff9b9b; }
+.profile-preset-status.is-success { color:#8fe0b0; }
+.profile-preset-row[aria-busy="true"] .profile-preset-select,
+.profile-preset-row[aria-busy="true"] .profile-preset-apply { cursor:progress; }
+.profile-preset-row:focus-visible,
+.profile-preset-select:focus-visible,
+.profile-preset-apply:focus-visible,
+.profile-preset-modal button:focus-visible {
+    outline:2px solid #f27c11;
+    outline-offset:2px;
+    box-shadow:none;
+}
+
+/* Confirmation dialog for applying a preset */
+.profile-preset-modal {
+    position:fixed;
+    inset:0;
+    z-index:10001;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,0.7);
+}
+.profile-preset-modal:not([hidden]) { display:flex; }
+.profile-preset-modal-shell {
+    width:90%;
+    max-width:440px;
+    padding:24px;
+    border:1px solid #4a4a4a;
+    border-radius:12px;
+    background:#1e1e1e;
+    color:#e9efff;
+    box-shadow:0 12px 32px rgba(0,0,0,0.45);
+}
+.profile-preset-modal-title { margin:0 0 8px; font-size:16px; font-weight:700; }
+.profile-preset-modal-desc { margin:0 0 16px; color:#9fb1c9; font-size:13px; line-height:1.45; }
+.profile-preset-modal-actions { display:flex; gap:8px; justify-content:flex-end; }
+
+@container (max-width: 540px) {
+    .profile-preset-row { flex-direction:column; align-items:stretch; }
+    .profile-preset-select,
+    .profile-preset-apply { width:100%; max-width:none; }
+    .profile-preset-status { flex:0 0 auto; white-space:normal; overflow:visible; }
 }
 </style>
 
@@ -1908,6 +1999,180 @@ $ittById = $byId($ittRows);
         </div>
         <button type="button" id="btn_save_all" class="btn-save">Save All</button>
     </div>
+
+    <?php if ($editItem): ?>
+    <div class="profile-preset-row" id="profile_preset_row" tabindex="-1">
+        <label class="profile-preset-label" for="profile_preset_select">Profile Preset</label>
+        <select id="profile_preset_select" class="profile-preset-select" aria-describedby="profile_preset_status">
+            <option value="">Choose preset&hellip;</option>
+            <?php foreach (chimProfileSettingsPresetCatalog() as $profilePresetOption): ?>
+            <option value="<?= htmlspecialchars($profilePresetOption['id']) ?>" data-preset-name="<?= htmlspecialchars($profilePresetOption['name']) ?>" data-preset-description="<?= htmlspecialchars($profilePresetOption['description']) ?>"><?= htmlspecialchars($profilePresetOption['name']) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <button type="button" id="profile_preset_apply" class="btn-save profile-preset-apply" disabled>Apply</button>
+        <span id="profile_preset_status" class="profile-preset-status" role="status" aria-live="polite"></span>
+    </div>
+
+    <div id="profile_preset_modal" class="profile-preset-modal" hidden>
+        <div class="profile-preset-modal-shell" role="dialog" aria-modal="true" aria-labelledby="profile_preset_modal_title" aria-describedby="profile_preset_modal_desc">
+            <h2 id="profile_preset_modal_title" class="profile-preset-modal-title">Apply preset?</h2>
+            <p id="profile_preset_modal_desc" class="profile-preset-modal-desc"></p>
+            <div class="profile-preset-modal-actions">
+                <button type="button" id="profile_preset_cancel" class="btn-secondary">Cancel</button>
+                <button type="button" id="profile_preset_confirm" class="btn-save">Apply Preset</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        const row = document.getElementById('profile_preset_row');
+        const select = document.getElementById('profile_preset_select');
+        const applyBtn = document.getElementById('profile_preset_apply');
+        const statusEl = document.getElementById('profile_preset_status');
+        const modal = document.getElementById('profile_preset_modal');
+        if (!row || !select || !applyBtn || !statusEl || !modal) return;
+
+        const modalTitle = document.getElementById('profile_preset_modal_title');
+        const modalDesc = document.getElementById('profile_preset_modal_desc');
+        const cancelBtn = document.getElementById('profile_preset_cancel');
+        const confirmBtn = document.getElementById('profile_preset_confirm');
+        const API_URL = <?= json_encode($webRoot . '/ui/api/chim_profile_manager.php') ?>;
+        const PROFILE_ID = <?= json_encode((int)($editItem['id'] ?? 0)) ?>;
+        const PROFILE_NAME = <?= json_encode((string)($editItem['label'] ?? 'this profile')) ?>;
+        const NOTICE_KEY = 'chimProfilePresetNotice';
+        let lastFocused = null;
+        let busy = false;
+
+        // .llm-right is a CSS container, which would trap a position:fixed overlay inside it.
+        if (modal.parentNode !== document.body) document.body.appendChild(modal);
+
+        function selectedOption(){
+            return select.options[select.selectedIndex] || null;
+        }
+
+        function setStatus(message, tone){
+            statusEl.textContent = message || '';
+            statusEl.classList.toggle('is-error', tone === 'error');
+            statusEl.classList.toggle('is-success', tone === 'success');
+            statusEl.title = message || '';
+        }
+
+        function setBusy(state){
+            busy = state;
+            row.setAttribute('aria-busy', state ? 'true' : 'false');
+            select.disabled = state;
+            applyBtn.disabled = state || !select.value;
+            applyBtn.textContent = state ? 'Applying...' : 'Apply';
+            // Disabling the button drops focus to <body>; park it on the row so the
+            // aria-live status stays in context for keyboard and screen reader users.
+            if (state && row.contains(document.activeElement)) row.focus();
+        }
+
+        // Selecting a preset only previews its description; nothing is saved until Apply is confirmed.
+        select.addEventListener('change', function(){
+            const option = selectedOption();
+            applyBtn.disabled = busy || !select.value;
+            setStatus(option && option.dataset.presetDescription ? option.dataset.presetDescription : '');
+        });
+
+        function trapFocus(event){
+            if (event.key !== 'Tab') return;
+            const first = cancelBtn;
+            const last = confirmBtn;
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        }
+
+        function onModalKeydown(event){
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeModal();
+                return;
+            }
+            trapFocus(event);
+        }
+
+        function openModal(presetName){
+            lastFocused = document.activeElement;
+            modalTitle.textContent = 'Apply "' + presetName + '" to "' + PROFILE_NAME + '"?';
+            modalDesc.textContent = 'This saves immediately. Any unsaved edits to "' + PROFILE_NAME + '" will be discarded.';
+            modal.hidden = false;
+            document.addEventListener('keydown', onModalKeydown, true);
+            cancelBtn.focus();
+        }
+
+        function closeModal(restoreFocus){
+            if (modal.hidden) return;
+            modal.hidden = true;
+            document.removeEventListener('keydown', onModalKeydown, true);
+            if (restoreFocus !== false && lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+            lastFocused = null;
+        }
+
+        modal.addEventListener('click', function(event){
+            if (event.target === modal) closeModal();
+        });
+        cancelBtn.addEventListener('click', function(){ closeModal(); });
+
+        applyBtn.addEventListener('click', function(){
+            const option = selectedOption();
+            if (busy || !select.value || !option) return;
+            openModal(option.dataset.presetName || option.textContent || 'this preset');
+        });
+
+        confirmBtn.addEventListener('click', async function(){
+            const option = selectedOption();
+            if (busy || !select.value || !option) return;
+            const presetId = select.value;
+            const presetName = option.dataset.presetName || option.textContent || 'preset';
+            closeModal(false);
+            applyBtn.focus();
+            setBusy(true);
+            setStatus('Applying "' + presetName + '"...');
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify({ operation: 'apply_preset', id: PROFILE_ID, preset_id: presetId })
+                });
+                let json = null;
+                try { json = await res.json(); } catch(_e){ json = null; }
+                if (!res.ok || !json || !json.success) {
+                    throw new Error((json && json.error) ? json.error : ('Request failed (' + res.status + ')'));
+                }
+                const data = json.data || {};
+                const notice = 'Applied preset "' + (data.preset_name || presetName) + '" to "' + (data.profile_name || PROFILE_NAME) + '".';
+                try { sessionStorage.setItem(NOTICE_KEY, notice); } catch(_e){}
+                window.location.assign('core_profiles.php?edit=' + encodeURIComponent(String(PROFILE_ID)));
+            } catch (err) {
+                setBusy(false);
+                const message = 'Could not apply preset: ' + (err && err.message ? err.message : 'Unknown error');
+                setStatus(message, 'error');
+                applyBtn.focus();
+                try { if (typeof showToast === 'function') showToast(message, true); } catch(_e){}
+            }
+        });
+
+        // Carry the success message across the reload that refreshes this same profile.
+        try {
+            const notice = sessionStorage.getItem(NOTICE_KEY);
+            if (notice) {
+                sessionStorage.removeItem(NOTICE_KEY);
+                setStatus(notice, 'success');
+                window.addEventListener('load', function(){
+                    try { if (typeof showToast === 'function') showToast(notice); } catch(_e){}
+                });
+            }
+        } catch(_e){}
+    })();
+    </script>
+    <?php endif; ?>
 
     <div class="connector-card" style="margin-bottom:12px;">
         <div class="connector-title">Profile Core</div>

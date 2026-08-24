@@ -8,6 +8,8 @@ final class ProfileConnectorTestsRegressionTest extends TestCase
     {
         require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'core' .
             DIRECTORY_SEPARATOR . 'local_llm_setup.php';
+        require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'core' .
+            DIRECTORY_SEPARATOR . 'settings_presets.php';
     }
 
     public function testLlmHealthCheckInitializesCommandPrompt(): void
@@ -52,5 +54,39 @@ final class ProfileConnectorTestsRegressionTest extends TestCase
         $this->assertSame('conversations', $setup['scope']);
         $this->assertTrue($setup['disable_streaming']);
         $this->assertSame(45, $setup['timeout']);
+    }
+
+    public function testProfilePresetCatalogAndQuickstartPresetsStayInSync(): void
+    {
+        $profilePresets = chimProfileSettingsPresetBuiltIns();
+        $settingsPresets = chimSettingsPresetBuiltIns();
+
+        $this->assertSame(
+            ['builtin:default', 'builtin:local_llm', 'builtin:follower', 'builtin:passive'],
+            array_keys($profilePresets)
+        );
+        $this->assertSame(['builtin:default', 'builtin:local_llm'], array_keys($settingsPresets));
+
+        foreach (['builtin:default', 'builtin:local_llm'] as $id) {
+            $this->assertSame(
+                $profilePresets[$id]['profile_values'],
+                $settingsPresets[$id]['snapshot']['built_in_profile_values']
+            );
+            $this->assertSame(
+                $profilePresets[$id]['profile_overrides'],
+                $settingsPresets[$id]['snapshot']['built_in_profile_overrides']
+            );
+        }
+    }
+
+    public function testRequestedProfilePresetConversationValues(): void
+    {
+        $presets = chimProfileSettingsPresetBuiltIns();
+
+        $this->assertTrue($presets['builtin:default']['profile_overrides']['RECHAT_ALLOW_ACTIONS']);
+        $this->assertSame(50, $presets['builtin:local_llm']['profile_overrides']['RECHAT_P']);
+        $this->assertSame(30, $presets['builtin:local_llm']['profile_overrides']['BORED_EVENT']);
+        $this->assertSame(100, $presets['builtin:local_llm']['profile_overrides']['COMBAT_BARK_COOLDOWN']);
+        $this->assertSame(60, $presets['builtin:follower']['profile_overrides']['RECHAT_P']);
     }
 }

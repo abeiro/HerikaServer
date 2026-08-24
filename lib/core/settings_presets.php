@@ -57,7 +57,7 @@ function chimSettingsPresetDefaultProfileRuntimeValues(): array
     return [
         'RECHAT_H' => 2,
         'RECHAT_P' => 50,
-        'RECHAT_ALLOW_ACTIONS' => false,
+        'RECHAT_ALLOW_ACTIONS' => true,
         'BORED_EVENT' => 30,
         'RPG_COMMENTS_CHANCE' => 50,
         'COMBAT_BARK_COOLDOWN' => 30,
@@ -82,20 +82,129 @@ function chimSettingsPresetLocalProfileRuntimeValues(): array
 {
     return [
         'RECHAT_H' => 1,
-        'RECHAT_P' => 0,
+        'RECHAT_P' => 50,
         'RECHAT_ALLOW_ACTIONS' => false,
-        'BORED_EVENT' => 0,
+        'BORED_EVENT' => 30,
         'RPG_COMMENTS_CHANCE' => 0,
-        'COMBAT_BARK_COOLDOWN' => 600,
+        'COMBAT_BARK_COOLDOWN' => 100,
         'QUEST_COMMENT' => false,
     ];
 }
 
+/**
+ * Built-in presets for one NPC profile. Values are server-owned so Quickstart,
+ * the PHP Profiles page and Prisma cannot drift apart.
+ */
+function chimProfileSettingsPresetBuiltIns(): array
+{
+    $defaultValues = chimSettingsPresetProfileDefaults();
+    $defaultValues['CONTEXT_HISTORY'] = 75;
+
+    $defaultOverrides = chimSettingsPresetDefaultProfileOverrides();
+    $localOverrides = [
+        'DYNAMIC_PROFILE_ENABLED' => false,
+        'MIDDLE_TERM_MEMORY_ENABLED' => false,
+        'AUTO_DIARY_ENABLED' => false,
+        'AUTO_DIARY_WAIT_ENABLED' => false,
+        'MATERIALIZE_DIARY_ENABLED' => false,
+        'LATEST_DIARY_CONTEXT_ENABLED' => false,
+        'LLM_RANDOMIZER_ENABLED' => false,
+    ] + chimSettingsPresetLocalProfileRuntimeValues();
+
+    return [
+        'builtin:default' => [
+            'id' => 'builtin:default',
+            'name' => 'Default',
+            'description' => 'The Recommended CHIM experience.',
+            'profile_values' => $defaultValues,
+            'profile_overrides' => $defaultOverrides,
+            'profile_runtime_defaults' => chimSettingsPresetDefaultProfileRuntimeValues(),
+        ],
+        'builtin:local_llm' => [
+            'id' => 'builtin:local_llm',
+            'name' => 'Local LLM',
+            'description' => 'Shorter context and replies with optional background AI features turned off.',
+            'profile_values' => [
+                'CONTEXT_HISTORY' => 20,
+                'CONTEXT_HISTORY_DIARY' => 20,
+                'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 20,
+                'MAX_WORDS_LIMIT' => 60,
+                'chim_context_mode' => 1,
+            ],
+            'profile_overrides' => $localOverrides,
+            'profile_runtime_defaults' => chimSettingsPresetLocalProfileRuntimeValues(),
+        ],
+        'builtin:follower' => [
+            'id' => 'builtin:follower',
+            'name' => 'Follower',
+            'description' => 'More roleplay, memory and conversation features for a regular companion.',
+            'profile_values' => [
+                'CONTEXT_HISTORY' => 100,
+                'CONTEXT_HISTORY_DIARY' => 150,
+                'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 100,
+                'MAX_WORDS_LIMIT' => 0,
+                'chim_context_mode' => 0,
+            ],
+            'profile_overrides' => [
+                'DYNAMIC_PROFILE_ENABLED' => true,
+                'MIDDLE_TERM_MEMORY_ENABLED' => true,
+                'AUTO_DIARY_ENABLED' => true,
+                'AUTO_DIARY_WAIT_ENABLED' => true,
+                'MATERIALIZE_DIARY_ENABLED' => true,
+                'LATEST_DIARY_CONTEXT_ENABLED' => true,
+                'LLM_RANDOMIZER_ENABLED' => false,
+                'RECHAT_H' => 4,
+                'RECHAT_P' => 60,
+                'RECHAT_ALLOW_ACTIONS' => true,
+                'BORED_EVENT' => 50,
+                'RPG_COMMENTS_CHANCE' => 75,
+                'COMBAT_BARK_COOLDOWN' => 20,
+                'QUEST_COMMENT' => true,
+            ],
+            'profile_runtime_defaults' => [],
+        ],
+        'builtin:passive' => [
+            'id' => 'builtin:passive',
+            'name' => 'Passive',
+            'description' => 'Full-quality responses with fewer unsolicited conversations and comments.',
+            'profile_values' => $defaultValues,
+            'profile_overrides' => [
+                'DYNAMIC_PROFILE_ENABLED' => false,
+                'MIDDLE_TERM_MEMORY_ENABLED' => false,
+                'AUTO_DIARY_ENABLED' => false,
+                'AUTO_DIARY_WAIT_ENABLED' => false,
+                'MATERIALIZE_DIARY_ENABLED' => false,
+                'LATEST_DIARY_CONTEXT_ENABLED' => false,
+                'LLM_RANDOMIZER_ENABLED' => false,
+                'RECHAT_H' => 1,
+                'RECHAT_P' => 10,
+                'RECHAT_ALLOW_ACTIONS' => false,
+                'BORED_EVENT' => 5,
+                'RPG_COMMENTS_CHANCE' => 20,
+                'COMBAT_BARK_COOLDOWN' => 120,
+                'QUEST_COMMENT' => false,
+            ],
+            'profile_runtime_defaults' => [],
+        ],
+    ];
+}
+
+function chimProfileSettingsPresetCatalog(): array
+{
+    return array_values(array_map(static function(array $preset): array {
+        return [
+            'id' => (string)$preset['id'],
+            'name' => (string)$preset['name'],
+            'description' => (string)($preset['description'] ?? ''),
+        ];
+    }, chimProfileSettingsPresetBuiltIns()));
+}
+
 function chimSettingsPresetBuiltIns(): array
 {
-    // Fresh installs seed the first profile at 75 events while later profiles inherit 50.
-    $defaultProfileValues = chimSettingsPresetProfileDefaults();
-    $defaultProfileValues['CONTEXT_HISTORY'] = 75;
+    $profilePresets = chimProfileSettingsPresetBuiltIns();
+    $defaultProfilePreset = $profilePresets['builtin:default'];
+    $localProfilePreset = $profilePresets['builtin:local_llm'];
 
     return [
         'builtin:default' => [
@@ -110,9 +219,9 @@ function chimSettingsPresetBuiltIns(): array
                 'prompt_context_options' => chimGetDefaultPromptContextOptions(),
                 'profile_defaults' => chimSettingsPresetProfileDefaults(),
                 'profiles' => [],
-                'built_in_profile_values' => $defaultProfileValues,
-                'built_in_profile_overrides' => chimSettingsPresetDefaultProfileOverrides(),
-                'profile_runtime_defaults' => chimSettingsPresetDefaultProfileRuntimeValues(),
+                'built_in_profile_values' => $defaultProfilePreset['profile_values'],
+                'built_in_profile_overrides' => $defaultProfilePreset['profile_overrides'],
+                'profile_runtime_defaults' => $defaultProfilePreset['profile_runtime_defaults'],
             ],
         ],
         'builtin:local_llm' => [
@@ -166,23 +275,9 @@ function chimSettingsPresetBuiltIns(): array
                     'chim_context_mode' => 1,
                 ],
                 'profiles' => [],
-                'built_in_profile_values' => [
-                    'CONTEXT_HISTORY' => 20,
-                    'CONTEXT_HISTORY_DIARY' => 20,
-                    'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 20,
-                    'MAX_WORDS_LIMIT' => 60,
-                    'chim_context_mode' => 1,
-                ],
-                'built_in_profile_overrides' => [
-                    'DYNAMIC_PROFILE_ENABLED' => false,
-                    'MIDDLE_TERM_MEMORY_ENABLED' => false,
-                    'AUTO_DIARY_ENABLED' => false,
-                    'AUTO_DIARY_WAIT_ENABLED' => false,
-                    'MATERIALIZE_DIARY_ENABLED' => false,
-                    'LATEST_DIARY_CONTEXT_ENABLED' => false,
-                    'LLM_RANDOMIZER_ENABLED' => false,
-                ] + chimSettingsPresetLocalProfileRuntimeValues(),
-                'profile_runtime_defaults' => chimSettingsPresetLocalProfileRuntimeValues(),
+                'built_in_profile_values' => $localProfilePreset['profile_values'],
+                'built_in_profile_overrides' => $localProfilePreset['profile_overrides'],
+                'profile_runtime_defaults' => $localProfilePreset['profile_runtime_defaults'],
             ],
         ],
     ];
@@ -336,6 +431,66 @@ function chimSettingsPresetNormalizeProfileOverrides(array $values): array
         $normalized[$name] = $value;
     }
     return $normalized;
+}
+
+/** Apply one built-in profile preset without changing profile identity or connector columns. */
+function chimProfileSettingsPresetApply(int $profileId, string $presetId): array
+{
+    $db = $GLOBALS['db'] ?? null;
+    if (!$db) {
+        throw new RuntimeException('Database connection is unavailable.');
+    }
+    if ($profileId <= 0) {
+        throw new InvalidArgumentException('Invalid profile.');
+    }
+
+    $builtIns = chimProfileSettingsPresetBuiltIns();
+    if (!isset($builtIns[$presetId])) {
+        throw new InvalidArgumentException('Invalid profile preset.');
+    }
+    $preset = $builtIns[$presetId];
+    $profile = $db->fetchOne('SELECT id, label, metadata FROM public.core_profiles WHERE id = ' . $profileId . ' LIMIT 1');
+    if (!isset($profile['id'])) {
+        throw new InvalidArgumentException('Profile not found.');
+    }
+
+    $metadata = json_decode((string)($profile['metadata'] ?? '{}'), true);
+    if (!is_array($metadata)) {
+        $metadata = [];
+    }
+    $values = chimSettingsPresetNormalizeProfileValues((array)$preset['profile_values']);
+    foreach (['CONTEXT_HISTORY', 'CONTEXT_HISTORY_DIARY', 'CONTEXT_HISTORY_DYNAMIC_PROFILE', 'MAX_WORDS_LIMIT'] as $name) {
+        $metadata[$name] = $values[$name];
+    }
+    $overrides = chimSettingsPresetNormalizeProfileOverrides((array)$preset['profile_overrides']);
+    foreach ($overrides as $name => $value) {
+        $metadata[$name] = $value;
+    }
+
+    if ($db->execQuery('BEGIN') === false) {
+        throw new RuntimeException('Could not start the profile preset update.');
+    }
+    try {
+        if ($db->updateRow('core_profiles', [
+            'metadata' => json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        ], 'id = ' . $profileId) === false) {
+            throw new RuntimeException('Could not update the profile.');
+        }
+        if ($db->execQuery('COMMIT') === false) {
+            throw new RuntimeException('Could not finish the profile preset update.');
+        }
+    } catch (Throwable $e) {
+        $db->execQuery('ROLLBACK');
+        throw $e;
+    }
+
+    return [
+        'preset_id' => (string)$preset['id'],
+        'preset_name' => (string)$preset['name'],
+        'profile_id' => (int)$profile['id'],
+        'profile_name' => (string)($profile['label'] ?? ('Profile ' . $profileId)),
+        'settings_updated' => 4 + count($overrides),
+    ];
 }
 
 function chimSettingsPresetCaptureProfiles(): array
