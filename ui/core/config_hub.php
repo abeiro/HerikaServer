@@ -120,15 +120,8 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
 /* Settings carries 5 buttons: 3 on the first row, then 2 of the same width on
    the second row, whose third slot stays empty. */
 .tab-group[data-category="settings"] .tab-buttons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-@media (min-width: 1001px) {
-    .tab-groups { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.1fr); }
-}
-@media (min-width: 1001px) and (max-width: 1500px) {
-    .tab-group[data-category="settings"] .tab-button { gap: 4px; padding-left: 6px; padding-right: 6px; font-size: 0.84em; letter-spacing: 0.7px; word-spacing: 1px; }
-}
 @media (max-width: 620px) {
     .tab-group[data-category="settings"] .tab-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .tab-group[data-category="settings"] .tab-button { gap: 4px; padding-left: 6px; padding-right: 6px; font-size: 0.84em; letter-spacing: 0.7px; word-spacing: 1px; }
 }
 @media (max-height: 800px) { .embed-wrap { min-height: 420px; } }
 </style>
