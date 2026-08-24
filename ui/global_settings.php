@@ -2457,6 +2457,7 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
 
     const presetEndpoint = <?php echo json_encode($webRoot . '/ui/api/chim_settings_presets.php', JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
     const presetFlashKey = 'herika-settings-preset-flash';
+    const presetAppliedKey = 'herika-settings-preset-applied';
 
     const presetSelect = document.getElementById('preset-select');
     const presetApplyBtn = document.getElementById('preset-apply-btn');
@@ -2807,6 +2808,7 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
                         ? ', ' + profilesUpdated + ' NPC profile' + (profilesUpdated === 1 ? '' : 's') + ' updated.'
                         : '.';
                     try {
+                        sessionStorage.setItem(presetAppliedKey, String(preset.id));
                         sessionStorage.setItem(presetFlashKey, message);
                     } catch (_error) {
                         // Storage can be unavailable in privacy-restricted browsers.
@@ -2889,14 +2891,18 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
     });
 
     let presetFlash = '';
+    let presetApplied = '';
     try {
+        presetApplied = sessionStorage.getItem(presetAppliedKey) || '';
         presetFlash = sessionStorage.getItem(presetFlashKey) || '';
         if (presetFlash) sessionStorage.removeItem(presetFlashKey);
     } catch (_error) {
+        presetApplied = '';
         presetFlash = '';
     }
 
-    loadPresets().then(() => {
+    // A missing or stale id falls through to renderOptions' built-in default.
+    loadPresets(presetApplied || undefined).then(() => {
         if (presetFlash) setStatus(presetFlash, false);
     });
 })();
