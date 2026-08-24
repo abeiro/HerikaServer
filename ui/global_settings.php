@@ -1585,7 +1585,7 @@ body .settings-tabs .settings-tab.is-active {
         <div class="page-header-row">
             <h1 class="gs-title">Global Settings</h1>
             <div class="page-header-actions">
-                <a class="btn-settings-transfer" href="<?php echo $webRoot; ?>/ui/cmd/settings_portability.php?scope=global&amp;action=export">&#128228; Export Settings</a>
+                <a id="export_global_settings_link" class="btn-settings-transfer" href="<?php echo $webRoot; ?>/ui/cmd/settings_portability.php?scope=global&amp;action=export">&#128228; Export Settings</a>
                 <button type="button" id="import_global_settings_btn" class="btn-settings-transfer">&#128229; Import Settings</button>
                 <input type="file" id="import_global_settings_file" accept="application/json,.json" hidden>
                 <button type="button" id="global_connector_test_btn" class="btn-action-blue">Test Global Connectors</button>
@@ -2564,6 +2564,8 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
     const presetStatus = document.getElementById('preset-status');
     const presetDesc = document.getElementById('preset-desc');
     const presetForm = document.getElementById('gs_form');
+    const exportLink = document.getElementById('export_global_settings_link');
+    const exportBaseHref = exportLink ? exportLink.getAttribute('href') : '';
 
     const presetDialogBackdrop = document.getElementById('preset-dialog-backdrop');
     const presetDialogTitle = document.getElementById('preset-dialog-title');
@@ -2612,6 +2614,20 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
         const description = preset && preset.description ? String(preset.description) : '';
         presetDesc.textContent = description;
         presetDesc.hidden = description === '';
+        syncExportLink();
+    }
+
+    // Names the export download after the selected preset; the server sanitizes the raw name.
+    function syncExportLink() {
+        if (!exportLink || exportBaseHref === '') {
+            return;
+        }
+        const preset = selectedPreset();
+        const name = preset ? String(preset.name || preset.id || '') : '';
+        exportLink.setAttribute(
+            'href',
+            name === '' ? exportBaseHref : exportBaseHref + '&preset=' + encodeURIComponent(name)
+        );
     }
 
     function setBarBusy(busy) {
