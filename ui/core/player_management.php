@@ -1156,8 +1156,7 @@ if (!$isEmbed) {
         <div class="page-header chim-page-head">
             <h1 class="chim-page-head-title">👤 Player Management</h1>
             <div class="chim-page-head-note">
-                <p>Manage your character's information and view in-game statistics</p>
-                <p>Changes made here will be used by AI NPCs to understand your character better</p>
+                <p>Change Player roleplay settings</p>
             </div>
         </div>
 
