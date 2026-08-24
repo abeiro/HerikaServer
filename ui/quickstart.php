@@ -793,7 +793,7 @@ echo '<section class="qs-section qs-profile-section" id="qs_settings_preset_sect
             </details>
             <div class="qs-local-llm-test">
                 <button type="button" class="btn-primary qs-mini-btn qs-test-btn" id="qs_test_local_llm" aria-describedby="qs_local_llm_status">Test connection</button>
-                <div class="qs-status qs-local-llm-status" id="qs_local_llm_status" role="status" aria-live="polite">Not tested. Testing sends one short request and saves nothing.</div>
+                <div class="qs-status qs-local-llm-status" id="qs_local_llm_status" role="status" aria-live="polite" hidden></div>
             </div>
             <pre class="qs-local-llm-preview" id="qs_local_llm_preview" hidden></pre>
         </div>
@@ -1959,6 +1959,7 @@ function qsLocalLlmUpdateRecap(){
 function qsLocalLlmSetStatus(text, state){
   const status = qsEl("qs_local_llm_status");
   if (!status) return;
+  status.hidden = text === "";
   status.className = "qs-status qs-local-llm-status" + (state ? (" " + state) : "");
   status.textContent = text;
 }
@@ -1977,7 +1978,7 @@ function qsLocalLlmSetPreview(text){
 }
 
 function qsLocalLlmInvalidateTest(){
-  qsLocalLlmSetStatus("Not tested. Testing sends one short request and saves nothing.", "");
+  qsLocalLlmSetStatus("", "");
   qsLocalLlmSetPreview("");
 }
 
