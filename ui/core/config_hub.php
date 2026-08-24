@@ -27,13 +27,14 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . "../profile_loader.php");
 $TITLE = "Configuration";
 
 $configSections = [
-    'characters' => [
-        'label' => 'Characters',
+    'settings' => [
+        'label' => 'Settings',
         'tabs' => [
-            'npc' => 'CHIM NPCs',
+            'globals' => 'Global Settings',
             'profiles' => 'Profiles',
-            'player_narration' => 'Player & Narration',
-            'npcbio' => 'NPC Biographies',
+            'npc' => 'CHIM NPCs',
+            'player' => 'Player',
+            'narration' => 'Narration',
         ],
     ],
     'ai-voice' => [
@@ -50,7 +51,7 @@ $configSections = [
     'world-behavior' => [
         'label' => 'World & Behavior',
         'tabs' => [
-            'globals' => 'Global Settings',
+            'npcbio' => 'NPC Biographies',
             'oghma' => 'Oghma Infinium',
             'items' => 'Descriptions',
             'actions' => 'Action Editor',
@@ -63,7 +64,8 @@ $configSections = [
 $tabIcons = [
     'npc' => '&#x1F31F;',
     'profiles' => '&#x1F5C3;&#xFE0F;',
-    'player_narration' => '&#x1F464;',
+    'player' => '&#x1F464;',
+    'narration' => '&#x1F5E3;&#xFE0F;',
     'npcbio' => '&#x1F6AA;',
     'llm' => '&#x1F9E0;',
     'ttscfg' => '&#x1F50A;',
@@ -77,6 +79,22 @@ $tabIcons = [
     'actions' => '&#x2694;&#xFE0F;',
     'prompts' => '&#x1F4AC;',
     'serverplugins' => '&#x1F9E9;',
+];
+
+// Player and Narration are separate outer buttons that share the combined
+// Player & Narration content shell, so both embedded forms stay mounted and
+// unsaved values survive a switch between them.
+$tabTargets = [
+    'player' => [
+        'content' => 'player_narration',
+        'section' => 'player',
+        'panel' => 'player_narration_player_panel',
+    ],
+    'narration' => [
+        'content' => 'player_narration',
+        'section' => 'narration',
+        'panel' => 'player_narration_narration_panel',
+    ],
 ];
 
 $BODY_CLASS = 'hub-page';
@@ -102,12 +120,25 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
 .player-narration-tab:focus-visible { outline: 2px solid #6aa9d8; outline-offset: 2px; }
 .player-narration-panel { flex: 1 1 auto; min-height: 0; border: 0; border-radius: 0 0 8px 8px; }
 .player-narration-panel[hidden] { display: none; }
-.tab-button[data-tab="player_narration"] { gap: 5px; font-size: 0.83em; letter-spacing: 0.65px; word-spacing: 2px; }
+.tab-group[data-category="settings"] .tab-buttons { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.tab-group[data-category="settings"] .tab-button { grid-column: span 2; }
+.tab-group[data-category="settings"] .tab-button[data-tab="player"],
+.tab-group[data-category="settings"] .tab-button[data-tab="narration"] { grid-column: span 3; }
+@media (min-width: 1001px) {
+    .tab-groups { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.1fr); }
+}
+@media (min-width: 1001px) and (max-width: 1500px) {
+    .tab-group[data-category="settings"] .tab-button { gap: 4px; padding-left: 6px; padding-right: 6px; font-size: 0.84em; letter-spacing: 0.7px; word-spacing: 1px; }
+}
 @media (max-width: 640px) {
     .player-narration-tabs { padding: 5px; }
     .player-narration-tab { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 10px; font-size: 1rem; }
-    .tab-button[data-tab="player_narration"] { padding-left: 7px; padding-right: 7px; font-size: 0.78em; letter-spacing: 0; word-spacing: 0; }
-    .tab-button[data-tab="player_narration"] .tab-icon { display: none; }
+}
+@media (max-width: 620px) {
+    .tab-group[data-category="settings"] .tab-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tab-group[data-category="settings"] .tab-button,
+    .tab-group[data-category="settings"] .tab-button[data-tab="player"],
+    .tab-group[data-category="settings"] .tab-button[data-tab="narration"] { grid-column: auto; gap: 4px; padding-left: 6px; padding-right: 6px; font-size: 0.84em; letter-spacing: 0.7px; word-spacing: 1px; }
 }
 @media (max-height: 800px) { .embed-wrap { min-height: 420px; } }
 </style>
@@ -121,15 +152,25 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
         <div class="config-navigation" aria-label="Configuration sections">
             <div class="tab-groups">
                 <?php foreach ($configSections as $sectionId => $section): ?>
-                    <section class="tab-group <?php echo $sectionId === 'characters' ? 'active' : ''; ?>" data-category="<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">
+                    <section class="tab-group <?php echo $sectionId === 'settings' ? 'active' : ''; ?>" data-category="<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="tab-group-label"><?php echo htmlspecialchars($section['label'], ENT_QUOTES, 'UTF-8'); ?></div>
                         <div class="tab-buttons" role="tablist" aria-label="<?php echo htmlspecialchars($section['label'], ENT_QUOTES, 'UTF-8'); ?> configuration pages">
                             <?php foreach ($section['tabs'] as $tabId => $tabLabel): ?>
+                                <?php
+                                    $tabTarget = $tabTargets[$tabId] ?? null;
+                                    $tabContentId = $tabTarget['content'] ?? $tabId;
+                                    $tabExtraAttrs = '';
+                                    if ($tabTarget !== null) {
+                                        $tabExtraAttrs = ' data-section="' . htmlspecialchars($tabTarget['section'], ENT_QUOTES, 'UTF-8') . '"'
+                                            . ' aria-controls="' . htmlspecialchars($tabTarget['panel'], ENT_QUOTES, 'UTF-8') . '"';
+                                    }
+                                ?>
                                 <button
                                     class="tab-button <?php echo $tabId === 'npc' ? 'active' : ''; ?>"
                                     type="button"
                                     data-tab="<?php echo htmlspecialchars($tabId, ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-category="<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>">
+                                    data-content="<?php echo htmlspecialchars($tabContentId, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-category="<?php echo htmlspecialchars($sectionId, ENT_QUOTES, 'UTF-8'); ?>"<?php echo $tabExtraAttrs; ?>>
                                     <span class="tab-icon" aria-hidden="true"><?php echo $tabIcons[$tabId] ?? ''; ?></span>
                                     <span><?php echo htmlspecialchars($tabLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                                 </button>
@@ -282,7 +323,7 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
 
 <script>
 (function(){
-    const buttons = document.querySelectorAll('.tab-button');
+    const buttons = Array.from(document.querySelectorAll('.tab-button'));
     const groups = document.querySelectorAll('.tab-group');
     const tabs = document.querySelectorAll('.tab-content');
     const playerNarrationTabs = Array.from(document.querySelectorAll('[data-player-narration-section]'));
@@ -291,7 +332,46 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
         player: document.getElementById('player_narration_player_panel'),
         narration: document.getElementById('player_narration_narration_panel')
     };
+    const PLAYER_NARRATION_TAB = 'player_narration';
+    // ?tab= values that resolve into the combined shell, including the legacy
+    // ?tab=player / ?tab=narrator links.
+    const playerNarrationAliases = ['player', 'narrator', 'narration', PLAYER_NARRATION_TAB];
     let playerNarrationSection = 'player';
+
+    function normalizeSection(section) {
+        return section === 'narration' ? 'narration' : 'player';
+    }
+
+    function playerNarrationVisible() {
+        return !!playerNarrationContainer && playerNarrationContainer.classList.contains('active');
+    }
+
+    // Maps an outer button id (or a legacy ?tab= value) onto the content shell it
+    // opens plus, for the combined shell, which inner section to select.
+    function resolveTarget(id, requestedSection) {
+        if (id === 'player') return { tab: PLAYER_NARRATION_TAB, section: 'player' };
+        if (id === 'narrator' || id === 'narration') return { tab: PLAYER_NARRATION_TAB, section: 'narration' };
+        if (id === PLAYER_NARRATION_TAB) {
+            return { tab: PLAYER_NARRATION_TAB, section: normalizeSection(requestedSection || playerNarrationSection) };
+        }
+        return { tab: id, section: null };
+    }
+
+    function findButton(tabId, section) {
+        return buttons.find(function(button){
+            if (button.dataset.content !== tabId) return false;
+            return !section || !button.dataset.section || button.dataset.section === section;
+        });
+    }
+
+    // Keeps the two outer Player / Narration buttons mirroring the inner tabs.
+    function syncPlayerNarrationButtons(section) {
+        const visible = playerNarrationVisible();
+        buttons.forEach(function(button){
+            if (button.dataset.content !== PLAYER_NARRATION_TAB) return;
+            button.classList.toggle('active', visible && button.dataset.section === section);
+        });
+    }
 
     function reloadIframe(container) {
         const iframe = container.querySelector('.player-narration-panel:not([hidden]) iframe') || container.querySelector('iframe');
@@ -313,7 +393,7 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
     }
 
     function setPlayerNarrationSection(section, reload, updateUrl) {
-        const normalized = section === 'narration' ? 'narration' : 'player';
+        const normalized = normalizeSection(section);
         playerNarrationSection = normalized;
 
         playerNarrationTabs.forEach(function(button){
@@ -327,35 +407,33 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
             if (panel) panel.hidden = panelSection !== normalized;
         });
 
+        syncPlayerNarrationButtons(normalized);
+
         if (reload && playerNarrationPanels[normalized]) {
             ensureIframeLoaded(playerNarrationPanels[normalized]);
         }
         if (updateUrl) {
             const url = new URL(window.location);
-            url.searchParams.set('tab', 'player_narration');
+            url.searchParams.set('tab', PLAYER_NARRATION_TAB);
             url.searchParams.set('section', normalized);
             window.history.replaceState({}, '', url);
         }
     }
 
     function activate(id, requestedPlayerNarrationSection) {
-        let canonicalId = id;
-        let innerSection = requestedPlayerNarrationSection;
-        if (id === 'player') {
-            canonicalId = 'player_narration';
-            innerSection = 'player';
-        } else if (id === 'narrator' || id === 'narration') {
-            canonicalId = 'player_narration';
-            innerSection = 'narration';
-        }
-
-        const selectedButton = Array.from(buttons).find(function(button){
-            return button.dataset.tab === canonicalId;
-        });
+        const target = resolveTarget(id, requestedPlayerNarrationSection);
+        const selectedButton = findButton(target.tab, target.section);
         if (!selectedButton) return;
 
-        if (canonicalId === 'player_narration') {
-            setPlayerNarrationSection(innerSection || playerNarrationSection, false, false);
+        // Moving between the outer Player and Narration buttons only swaps the
+        // inner tab, so neither embedded form reloads and unsaved values survive.
+        if (target.tab === PLAYER_NARRATION_TAB && playerNarrationVisible()) {
+            setPlayerNarrationSection(target.section, true, true);
+            return;
+        }
+
+        if (target.tab === PLAYER_NARRATION_TAB) {
+            setPlayerNarrationSection(target.section, false, false);
         }
 
         const category = selectedButton.dataset.category;
@@ -363,18 +441,18 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
             group.classList.toggle('active', group.dataset.category === category);
         });
         buttons.forEach(function(button){
-            button.classList.toggle('active', button.dataset.tab === canonicalId);
+            button.classList.toggle('active', button === selectedButton);
         });
         tabs.forEach(function(tab){
-            const active = tab.id === canonicalId;
+            const active = tab.id === target.tab;
             tab.classList.toggle('active', active);
             if (active) {
                 reloadIframe(tab);
             }
         });
         const url = new URL(window.location);
-        url.searchParams.set('tab', canonicalId);
-        if (canonicalId === 'player_narration') {
+        url.searchParams.set('tab', target.tab);
+        if (target.tab === PLAYER_NARRATION_TAB) {
             url.searchParams.set('section', playerNarrationSection);
         } else {
             url.searchParams.delete('section');
@@ -407,8 +485,7 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
 
     const initialUrl = new URL(window.location);
     const initialTab = initialUrl.searchParams.get('tab');
-    const legacyPlayerNarrationTabs = ['player', 'narrator', 'narration'];
-    if (initialTab && (document.getElementById(initialTab) || legacyPlayerNarrationTabs.includes(initialTab))) {
+    if (initialTab && (document.getElementById(initialTab) || playerNarrationAliases.includes(initialTab))) {
         const initialSection = initialUrl.searchParams.get('section');
         activate(initialTab, initialSection);
     } else {
