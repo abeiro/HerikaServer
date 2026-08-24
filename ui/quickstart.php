@@ -325,6 +325,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
 
     if ($action === 'profile_quicksave_metadata') {
         require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "settings.php");
+        require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "settings_presets.php");
         $truthy = function($v) {
             if ($v === null) return null;
             $s = strtolower(trim((string)$v));
@@ -336,7 +337,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         if ($pid <= 0) { echo json_encode(['ok'=>false,'error'=>'No profile found']); exit; }
         $oghma  = $truthy($_POST['oghma_infinium'] ?? null);
         $player2Force = $truthy($_POST['player2_force_all_llm'] ?? null);
-        $localLlmPreset = $truthy($_POST['local_llm_preset'] ?? null);
+        $settingsPresetId = trim((string)($_POST['settings_preset_id'] ?? 'builtin:default'));
+        try {
+            $settingsPresetResult = chimSettingsPresetApply($settingsPresetId);
+        } catch (Throwable $presetError) {
+            echo json_encode(['ok'=>false,'error'=>'Unable to apply settings preset: ' . $presetError->getMessage()]);
+            exit;
+        }
         if ($oghma !== null && !chimSetGeneralSetting('OGHMA_INFINIUM', $oghma, chimGetSchemaDescription('OGHMA_INFINIUM'))) {
             echo json_encode(['ok'=>false,'error'=>'Unable to save Oghma Infinium']);
             exit;
@@ -347,104 +354,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
             $player2ConnectorId = LLMRandomizer::setPlayer2ForceEnabled($player2Force ? true : false);
         }
 
-        $localLlmPresetApplied = false;
-        if ($localLlmPreset === true) {
-            $localLlmContextOptions = chimNormalizePromptContextOptions([
-                'enabled_sections' => [
-                    'roleplay_instructions',
-                    'world',
-                    'knowledge',
-                    'available_actions_list',
-                    'nearby_actors',
-                    'nearby_items',
-                    'adventuring_party',
-                    'scene_notes',
-                    'paralinguistic_tags',
-                ],
-                'enabled_character_subsections' => [
-                    'basic_summary',
-                    'groups',
-                    'personality',
-                    'relationships',
-                    'occupation',
-                    'skills',
-                    'speech_style',
-                    'goals',
-                    'middle_term_memory',
-                    'group',
-                    'storyline_starring',
-                    'quest_topics',
-                ],
-                'enabled_appearance_subsections' => [
-                    'appearance',
-                    'equipment',
-                    'inventory',
-                    'current_activity',
-                    'current_condition',
-                    'reanimation_status',
-                ],
-                'enabled_general_subsections' => [
-                    'current_plans',
-                ],
-                'enabled_nearby_actor_subsections' => [
-                    'equipment',
-                    'current_activity',
-                ],
-                'enabled_nearby_item_subsections' => [
-                    'group_duplicates',
-                ],
-            ]);
-            $localLlmContextJson = json_encode($localLlmContextOptions, JSON_UNESCAPED_SLASHES);
-            if ($localLlmContextJson === false) {
-                echo json_encode(['ok'=>false,'error'=>'Unable to prepare the Local LLM context preset']);
-                exit;
-            }
-            $localLlmContextValue = $GLOBALS['db']->escapeLiteral($localLlmContextJson);
-            $localLlmContextDescription = $GLOBALS['db']->escapeLiteral(chimGetSchemaDescription('PROMPT_CONTEXT_OPTIONS'));
-            $localLlmPresetSaved = $GLOBALS['db']->execQuery(
-                "WITH updated_profiles AS (
-                    UPDATE core_profiles
-                    SET metadata = jsonb_set(
-                        jsonb_set(
-                            jsonb_set(
-                                jsonb_set(COALESCE(metadata, '{}'::jsonb), '{CONTEXT_HISTORY}', '\"40\"'::jsonb, true),
-                                '{CONTEXT_HISTORY_DIARY}', '\"40\"'::jsonb, true
-                            ),
-                            '{CONTEXT_HISTORY_DYNAMIC_PROFILE}', '\"30\"'::jsonb, true
-                        ),
-                        '{MAX_WORDS_LIMIT}', '\"60\"'::jsonb, true
-                    )
-                    RETURNING id
-                 ),
-                 updated_context_options AS (
-                    INSERT INTO public.general_settings (id, value, description, updated_at)
-                    VALUES ('PROMPT_CONTEXT_OPTIONS', {$localLlmContextValue}, {$localLlmContextDescription}, CURRENT_TIMESTAMP)
-                    ON CONFLICT (id) DO UPDATE SET
-                        value = EXCLUDED.value,
-                        description = EXCLUDED.description,
-                        updated_at = CURRENT_TIMESTAMP
-                    RETURNING id
-                 )
-                 INSERT INTO conf_opts (id, value) VALUES
-                    ('CONTEXT_HISTORY', '40'),
-                    ('CONTEXT_HISTORY_DIARY', '40'),
-                    ('CONTEXT_HISTORY_DYNAMIC_PROFILE', '30'),
-                    ('MAX_WORDS_LIMIT', '60'),
-                    ('chim_context_mode', '1')
-                 ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value"
-            );
-            if ($localLlmPresetSaved === false) {
-                echo json_encode(['ok'=>false,'error'=>'Unable to apply the Local LLM preset']);
-                exit;
-            }
-            $localLlmPresetApplied = true;
-        }
-
         echo json_encode([
             'ok'=>true,
             'id'=>$pid,
             'player2_connector_id' => $player2ConnectorId,
-            'local_llm_preset_applied' => $localLlmPresetApplied,
+            'settings_preset' => $settingsPresetResult,
         ]);
         exit;
     }
@@ -535,6 +449,7 @@ chimRuntimeBootstrapIfNeeded($rootPath, [
     'load_player_name' => true,
     'load_narrator' => true,
 ]);
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "settings_presets.php");
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
@@ -636,6 +551,66 @@ if (!empty($generalLlmConnectorSummary)) {
     }
     $generalLlmConnectorListHtml .= '</ul>';
 }
+
+// Settings Preset dropdown: prefers the shared catalog helper, with built-in fallback copy.
+$quickstartPresetDefaultId = 'builtin:default';
+$quickstartPresetBuiltInCopy = [
+    'builtin:default' => 'Current install defaults',
+    'builtin:local_llm' => 'Smaller context and shorter responses for local models around 13B',
+];
+$quickstartPresetCatalog = [];
+if (function_exists('chimSettingsPresetCatalog')) {
+    try {
+        $quickstartPresetCatalogRaw = chimSettingsPresetCatalog();
+        if (is_array($quickstartPresetCatalogRaw)) {
+            $quickstartPresetCatalog = (isset($quickstartPresetCatalogRaw['presets']) && is_array($quickstartPresetCatalogRaw['presets']))
+                ? $quickstartPresetCatalogRaw['presets']
+                : $quickstartPresetCatalogRaw;
+        }
+    } catch (Throwable $_e) {
+        $quickstartPresetCatalog = [];
+    }
+}
+if (count($quickstartPresetCatalog) === 0) {
+    $quickstartPresetCatalog = [
+        ['id' => 'builtin:default', 'name' => 'Default', 'built_in' => true],
+        ['id' => 'builtin:local_llm', 'name' => 'Local LLM', 'built_in' => true],
+    ];
+}
+$quickstartPresetBuiltInOptions = '';
+$quickstartPresetCustomOptions = '';
+foreach ($quickstartPresetCatalog as $quickstartPresetEntry) {
+    if (!is_array($quickstartPresetEntry)) {
+        continue;
+    }
+    $quickstartPresetId = trim((string)($quickstartPresetEntry['id'] ?? ''));
+    $quickstartPresetName = trim((string)($quickstartPresetEntry['name'] ?? ''));
+    if ($quickstartPresetId === '' || $quickstartPresetName === '') {
+        continue;
+    }
+    $quickstartPresetDescription = isset($quickstartPresetBuiltInCopy[$quickstartPresetId])
+        ? $quickstartPresetBuiltInCopy[$quickstartPresetId]
+        : trim((string)($quickstartPresetEntry['description'] ?? ''));
+    $quickstartPresetLabel = $quickstartPresetDescription !== ''
+        ? $quickstartPresetName . ' — ' . $quickstartPresetDescription
+        : $quickstartPresetName;
+    $quickstartPresetOption = '<option value="' . htmlspecialchars($quickstartPresetId) . '"'
+        . ($quickstartPresetId === $quickstartPresetDefaultId ? ' selected' : '') . '>'
+        . htmlspecialchars($quickstartPresetLabel) . '</option>';
+    if (!empty($quickstartPresetEntry['built_in'])) {
+        $quickstartPresetBuiltInOptions .= $quickstartPresetOption;
+    } else {
+        $quickstartPresetCustomOptions .= $quickstartPresetOption;
+    }
+}
+$quickstartPresetOptionsHtml = '';
+if ($quickstartPresetBuiltInOptions !== '') {
+    $quickstartPresetOptionsHtml .= '<optgroup label="Built-in">' . $quickstartPresetBuiltInOptions . '</optgroup>';
+}
+if ($quickstartPresetCustomOptions !== '') {
+    $quickstartPresetOptionsHtml .= '<optgroup label="Custom">' . $quickstartPresetCustomOptions . '</optgroup>';
+}
+
 
 echo '<section class="qs-section" id="qs_openrouter_section"' . ($player2ForceAllLlm ? ' style="display:none;"' : '') . '>
         <h2 class="qs-section-title">OpenRouter</h2>
@@ -934,20 +909,12 @@ echo '<section class="qs-section">
                     <div class="qs-general-connector-title">Other Connectors Used:</div>
                     ' . ($generalLlmConnectorListHtml !== '' ? $generalLlmConnectorListHtml : '<div class="qs-general-connector-empty">No additional general-settings connectors are configured.</div>') . '
                 </div>
-                <div class="form-group qs-field qs-local-llm-preset">
-                    <div class="qs-toggle-block">
-                        <div class="qs-toggle-header">
-                            <label class="qs-toggle-title" for="qs_local_llm_preset">Optimize for Local LLMs</label>
-                            <div class="qs-toggle-control">
-                                <input class="form-check-input qs-switch-input" type="checkbox" id="qs_local_llm_preset" value="1">
-                                <label class="form-check-label qs-switch-label" for="qs_local_llm_preset">
-                                    <span class="qs-switch-track"></span>
-                                    <span class="qs-switch-copy" data-off="Off" data-on="On"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <small class="form-text">Recommended for local small and medium models. Applies a compact 40-event context, shorter 60-word responses, enables Compact Chat, and trims high-cost secondary context while preserving roleplay, actions, memory, inventory, and Oghma knowledge. New profiles inherit the smaller defaults.</small>
+                <div class="form-group qs-field qs-settings-preset">
+                    <label class="qs-preset-label" for="qs_settings_preset">Settings Preset</label>
+                    <select class="form-control qs-preset-select" id="qs_settings_preset" aria-describedby="qs_settings_preset_help">
+                        ' . $quickstartPresetOptionsHtml . '
+                    </select>
+                    <small class="form-text" id="qs_settings_preset_help">Applied when you press Save and Continue. Default restores current install limits. Local LLM trims context and response length for local models around 13B. Presets update context and response limits for all NPC profiles.</small>
                 </div>
                 <p class="qs-note warning-text3">
                     Once done click Save and startup Skyrim with the AIAgent mod installed. Please read the <a href="https://dwemerdynamics.com/chim/index.html" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
@@ -1061,6 +1028,25 @@ echo '<style>
 
     .qs-field {
         margin-bottom: 0;
+    }
+
+    .qs-settings-preset {
+        display: grid;
+        gap: 6px;
+    }
+
+    .qs-preset-label {
+        margin: 0;
+        color: #cfd9ea;
+        font-weight: 600;
+    }
+
+    .qs-preset-select {
+        max-width: 560px;
+    }
+
+    .qs-settings-preset .form-text {
+        margin-top: 0;
     }
 
     .qs-general-connector-wrap {
@@ -1335,8 +1321,8 @@ echo '<script>
 const WEB_ROOT = '.json_encode($webRoot).';
 
 async function saveQuickstartAndDB(){
+  const finishUrl = WEB_ROOT + "/ui/home.php";
   try {
-    const finishUrl = WEB_ROOT + "/ui/home.php";
     // 1) Save API keys
     const fd = new FormData();
     const orKey = document.getElementById("qs_openrouter_api_key");
@@ -1349,7 +1335,7 @@ async function saveQuickstartAndDB(){
     // 2) Save profile metadata flags
     const fdm = new FormData();
     try { fdm.append("player2_force_all_llm", document.getElementById("qs_player2_force_all_llm").checked ? "1" : "0"); } catch(_e){}
-    try { fdm.append("local_llm_preset", document.getElementById("qs_local_llm_preset").checked ? "1" : "0"); } catch(_e){}
+    try { fdm.append("settings_preset_id", document.getElementById("qs_settings_preset").value || "builtin:default"); } catch(_e){}
     fdm.append("qs_action", "profile_quicksave_metadata");
     const profileResponse = await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
     const profileResult = await profileResponse.json();

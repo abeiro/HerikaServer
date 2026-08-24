@@ -1235,6 +1235,165 @@ body .settings-tabs .settings-tab.is-active {
     cursor: pointer;
 }
 
+/* Settings Presets: preset- prefixed so the header row stays merge-friendly. */
+.preset-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #3a3a3a;
+}
+
+.preset-label {
+    color: #cfd9ea;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.preset-select {
+    flex: 0 1 auto;
+    min-width: 220px;
+    max-width: 340px;
+    height: 36px;
+    padding: 6px 10px;
+    background-color: rgba(26, 26, 26, 0.8);
+    color: #e9efff;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.preset-select:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+}
+
+.preset-select:disabled,
+.preset-row button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.preset-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.preset-btn-compact {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 36px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.preset-status {
+    flex: 1 1 180px;
+    min-width: 0;
+    color: #9fb1c9;
+    font-size: 12px;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.preset-status.is-error {
+    color: #ff9ca4;
+}
+
+.preset-desc {
+    flex: 1 1 100%;
+    color: #8d9cb2;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.preset-dialog-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    background: rgba(0, 0, 0, 0.72);
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.preset-dialog-backdrop.is-open {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.preset-dialog {
+    width: 100%;
+    max-width: 480px;
+    border: 1px solid #3a3a3a;
+    border-radius: 10px;
+    background: #222;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    padding: 16px;
+}
+
+.preset-dialog h2 {
+    margin: 0 0 8px;
+    font-family: 'MagicCards', serif;
+    word-spacing: 7px;
+    font-size: 1.1em;
+    color: rgb(242, 124, 17);
+}
+
+.preset-dialog p {
+    margin: 0;
+    color: #cfd9ea;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.preset-dialog-field {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.preset-dialog-field label {
+    color: #cfd9ea;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.preset-dialog-field input {
+    width: 100%;
+    padding: 8px 10px;
+    background-color: rgba(26, 26, 26, 0.8);
+    color: #e9efff;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+}
+
+.preset-dialog-field input:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+}
+
+.preset-dialog .result-error {
+    font-size: 13px;
+}
+
+.preset-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
 @media (max-width: 1000px) {
     .provider-card {
         grid-template-columns: 1fr;
@@ -1258,6 +1417,43 @@ body .settings-tabs .settings-tab.is-active {
 
     .page-header-actions {
         margin-left: 0;
+        width: 100%;
+    }
+
+    .preset-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .preset-select {
+        width: 100%;
+        max-width: none;
+    }
+
+    .preset-actions {
+        width: 100%;
+    }
+
+    .preset-actions > button {
+        flex: 1 1 auto;
+    }
+
+    .preset-status {
+        flex: 0 0 auto;
+        width: 100%;
+        text-align: left;
+    }
+
+    .preset-desc {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    .preset-dialog-actions {
+        flex-direction: column-reverse;
+    }
+
+    .preset-dialog-actions > button {
         width: 100%;
     }
 
@@ -1309,6 +1505,19 @@ body .settings-tabs .settings-tab.is-active {
                 <button type="button" id="global_connector_test_btn" class="btn-action-blue">Test Global Connectors</button>
                 <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
             </div>
+        </div>
+        <div class="preset-row">
+            <label class="preset-label" for="preset-select">Settings Preset</label>
+            <select id="preset-select" class="preset-select" aria-describedby="preset-status" disabled>
+                <option value="">Loading presets&hellip;</option>
+            </select>
+            <div class="preset-actions">
+                <button type="button" id="preset-apply-btn" class="btn-action-blue preset-btn-compact" disabled>Apply</button>
+                <button type="button" id="preset-save-new-btn" class="btn-settings-transfer" disabled>Save as new&hellip;</button>
+                <button type="button" id="preset-overwrite-btn" class="btn-settings-transfer" disabled>Overwrite&hellip;</button>
+            </div>
+            <div id="preset-status" class="preset-status" role="status" aria-live="polite">Loading presets&hellip;</div>
+            <div id="preset-desc" class="preset-desc"></div>
         </div>
     </div>
 
@@ -1652,6 +1861,22 @@ body .settings-tabs .settings-tab.is-active {
                 <div id="global-connector-test-summary" class="global-test-summary"></div>
                 <div class="global-test-progress"><div id="global-connector-test-progress-fill"></div></div>
                 <div id="global-connector-test-results"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="preset-dialog-backdrop" class="preset-dialog-backdrop" aria-hidden="true">
+        <div class="preset-dialog" role="dialog" aria-modal="true" aria-labelledby="preset-dialog-title" aria-describedby="preset-dialog-body">
+            <h2 id="preset-dialog-title">Settings Preset</h2>
+            <p id="preset-dialog-body"></p>
+            <div class="preset-dialog-field" id="preset-dialog-name-wrap" hidden>
+                <label for="preset-dialog-name">Preset name</label>
+                <input type="text" id="preset-dialog-name" maxlength="60" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="result-error" id="preset-dialog-error" hidden></div>
+            <div class="preset-dialog-actions">
+                <button type="button" id="preset-dialog-cancel" class="filter-modal-close">Cancel</button>
+                <button type="button" id="preset-dialog-confirm" class="btn-save-green preset-btn-compact">Confirm</button>
             </div>
         </div>
     </div>
@@ -2222,6 +2447,455 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
         if (event.key === 'Escape' && modal.classList.contains('is-open')) {
             closeModal();
         }
+    });
+})();
+</script>
+
+<script>
+(() => {
+    'use strict';
+
+    const presetEndpoint = <?php echo json_encode($webRoot . '/ui/api/chim_settings_presets.php', JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+    const presetFlashKey = 'herika-settings-preset-flash';
+
+    const presetSelect = document.getElementById('preset-select');
+    const presetApplyBtn = document.getElementById('preset-apply-btn');
+    const presetSaveNewBtn = document.getElementById('preset-save-new-btn');
+    const presetOverwriteBtn = document.getElementById('preset-overwrite-btn');
+    const presetStatus = document.getElementById('preset-status');
+    const presetDesc = document.getElementById('preset-desc');
+    const presetForm = document.getElementById('gs_form');
+
+    const presetDialogBackdrop = document.getElementById('preset-dialog-backdrop');
+    const presetDialogTitle = document.getElementById('preset-dialog-title');
+    const presetDialogBody = document.getElementById('preset-dialog-body');
+    const presetDialogNameWrap = document.getElementById('preset-dialog-name-wrap');
+    const presetDialogName = document.getElementById('preset-dialog-name');
+    const presetDialogError = document.getElementById('preset-dialog-error');
+    const presetDialogCancel = document.getElementById('preset-dialog-cancel');
+    const presetDialogConfirm = document.getElementById('preset-dialog-confirm');
+
+    if (!presetSelect || !presetApplyBtn || !presetDialogBackdrop) {
+        return;
+    }
+
+    let presets = [];
+    let customCount = 0;
+    let barBusy = false;
+    let dialogBusy = false;
+    let dialogConfig = null;
+    let dialogInvoker = null;
+
+    function setStatus(message, isError) {
+        presetStatus.textContent = message || '';
+        presetStatus.classList.toggle('is-error', !!isError);
+    }
+
+    function errorText(error) {
+        const message = error && error.message ? String(error.message) : String(error || '');
+        return message === '' ? 'Unknown error.' : message;
+    }
+
+    function findPreset(id) {
+        return presets.find((preset) => preset && String(preset.id) === String(id)) || null;
+    }
+
+    function selectedPreset() {
+        return findPreset(presetSelect.value);
+    }
+
+    function syncBar() {
+        const preset = selectedPreset();
+        presetSelect.disabled = barBusy || presets.length === 0;
+        presetApplyBtn.disabled = barBusy || !preset;
+        presetSaveNewBtn.disabled = barBusy;
+        presetOverwriteBtn.disabled = barBusy || !preset || preset.built_in === true;
+        presetDesc.textContent = preset && preset.description ? String(preset.description) : '';
+    }
+
+    function setBarBusy(busy) {
+        barBusy = !!busy;
+        syncBar();
+    }
+
+    function renderOptions(preferredId) {
+        const previous = preferredId || presetSelect.value;
+        presetSelect.replaceChildren();
+
+        if (presets.length === 0) {
+            const placeholder = new Option('No presets available', '');
+            placeholder.disabled = true;
+            presetSelect.appendChild(placeholder);
+            syncBar();
+            return;
+        }
+
+        const builtIns = presets.filter((preset) => preset.built_in === true);
+        const customs = presets.filter((preset) => preset.built_in !== true);
+
+        const addGroup = (label, items, emptyLabel) => {
+            if (items.length === 0 && !emptyLabel) {
+                return;
+            }
+            const group = document.createElement('optgroup');
+            group.label = label;
+            if (items.length === 0) {
+                const empty = new Option(emptyLabel, '');
+                empty.disabled = true;
+                group.appendChild(empty);
+            } else {
+                items.forEach((preset) => {
+                    group.appendChild(new Option(String(preset.name || preset.id), String(preset.id)));
+                });
+            }
+            presetSelect.appendChild(group);
+        };
+
+        addGroup('Built-in', builtIns, null);
+        addGroup('Custom', customs, 'No custom presets yet');
+
+        if (previous && findPreset(previous)) {
+            presetSelect.value = previous;
+        } else {
+            presetSelect.value = String(presets[0].id);
+        }
+        syncBar();
+    }
+
+    async function presetRequest(body) {
+        const options = { cache: 'no-store', credentials: 'same-origin' };
+        if (body) {
+            options.method = 'POST';
+            options.headers = { 'Content-Type': 'application/json' };
+            options.body = JSON.stringify(body);
+        }
+        const response = await fetch(presetEndpoint, options);
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (_error) {
+            throw new Error('The preset service returned an unreadable response (HTTP ' + response.status + ').');
+        }
+        if (!response.ok || !payload || payload.success !== true) {
+            throw new Error((payload && payload.error) || ('HTTP ' + response.status));
+        }
+        return payload.data || payload.result || {};
+    }
+
+    // Mirrors submitting #gs_form, so unsaved on-screen edits are captured.
+    function serializeGlobalSettingsForm() {
+        const settings = {};
+        const promptContextOptions = {};
+        if (!presetForm) {
+            return { settings: settings, prompt_context_options: promptContextOptions };
+        }
+        for (const entry of new FormData(presetForm).entries()) {
+            const rawName = String(entry[0]);
+            const rawValue = entry[1];
+            if (rawName === 'save_all') {
+                continue;
+            }
+            if (rawName.endsWith('[]')) {
+                const listName = rawName.slice(0, -2);
+                if (listName.indexOf('prompt_context_') === 0) {
+                    const bucket = listName.slice('prompt_context_'.length);
+                    if (!promptContextOptions[bucket]) promptContextOptions[bucket] = [];
+                    promptContextOptions[bucket].push(String(rawValue));
+                }
+                continue;
+            }
+            settings[rawName] = typeof rawValue === 'string' ? rawValue : String(rawValue);
+        }
+        // FormData omits unchecked checkboxes; presets must preserve an explicit Off value.
+        presetForm.querySelectorAll('input[type="checkbox"][name]:not([name$="[]"])').forEach((input) => {
+            settings[input.name] = input.checked ? String(input.value || 'true') : 'false';
+        });
+        // Buckets with every checkbox cleared must still post an empty list.
+        presetForm.querySelectorAll('input[name^="prompt_context_"][name$="[]"]').forEach((input) => {
+            const bucket = input.name.slice('prompt_context_'.length, -2);
+            if (!promptContextOptions[bucket]) promptContextOptions[bucket] = [];
+        });
+        return { settings: settings, prompt_context_options: promptContextOptions };
+    }
+
+    function dialogFocusable() {
+        // offsetParent filters out the name field while it is hidden for confirm-only dialogs.
+        return Array.from(presetDialogBackdrop.querySelectorAll('button:not([disabled]), input:not([disabled])'))
+            .filter((element) => element.offsetParent !== null);
+    }
+
+    function setDialogBusy(busy, label) {
+        dialogBusy = !!busy;
+        presetDialogConfirm.disabled = dialogBusy;
+        presetDialogCancel.disabled = dialogBusy;
+        presetDialogName.disabled = dialogBusy;
+        presetDialogConfirm.textContent = label || 'Confirm';
+    }
+
+    function setDialogError(message) {
+        presetDialogError.textContent = message || '';
+        presetDialogError.hidden = !message;
+    }
+
+    function openDialog(config) {
+        dialogConfig = config;
+        dialogInvoker = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        presetDialogTitle.textContent = config.title;
+        presetDialogBody.textContent = config.body;
+        presetDialogNameWrap.hidden = !config.needsName;
+        presetDialogName.value = config.needsName ? (config.nameValue || '') : '';
+        setDialogError('');
+        setDialogBusy(false, config.confirmLabel);
+        presetDialogBackdrop.classList.add('is-open');
+        presetDialogBackdrop.setAttribute('aria-hidden', 'false');
+        if (config.needsName && config.focusName) {
+            presetDialogName.focus();
+            presetDialogName.select();
+        } else {
+            // Destructive actions start on Cancel so Enter never fires them by accident.
+            presetDialogCancel.focus();
+        }
+    }
+
+    function closeDialog() {
+        if (!presetDialogBackdrop.classList.contains('is-open')) {
+            return;
+        }
+        presetDialogBackdrop.classList.remove('is-open');
+        presetDialogBackdrop.setAttribute('aria-hidden', 'true');
+        dialogConfig = null;
+        setDialogBusy(false, 'Confirm');
+        const invoker = dialogInvoker;
+        dialogInvoker = null;
+        if (invoker && document.contains(invoker) && !invoker.disabled) {
+            invoker.focus();
+        }
+    }
+
+    presetDialogBackdrop.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            if (dialogBusy) return;
+            event.preventDefault();
+            event.stopPropagation();
+            closeDialog();
+            return;
+        }
+        if (event.key === 'Enter' && dialogConfig && dialogConfig.needsName && event.target === presetDialogName) {
+            event.preventDefault();
+            presetDialogConfirm.click();
+            return;
+        }
+        if (event.key !== 'Tab') {
+            return;
+        }
+        const focusable = dialogFocusable();
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+
+    presetDialogBackdrop.addEventListener('mousedown', (event) => {
+        if (event.target === presetDialogBackdrop && !dialogBusy) closeDialog();
+    });
+
+    presetDialogCancel.addEventListener('click', () => {
+        if (!dialogBusy) closeDialog();
+    });
+
+    presetDialogConfirm.addEventListener('click', () => {
+        if (dialogBusy || !dialogConfig) return;
+        const config = dialogConfig;
+        let name = '';
+        if (config.needsName) {
+            name = presetDialogName.value.trim();
+            if (name === '') {
+                setDialogError('Enter a name for this preset.');
+                presetDialogName.focus();
+                return;
+            }
+        }
+        setDialogError('');
+        setDialogBusy(true, config.busyLabel);
+        Promise.resolve()
+            .then(() => config.onConfirm(name))
+            .then(() => {
+                setDialogBusy(false, config.confirmLabel);
+                closeDialog();
+            })
+            .catch((error) => {
+                setDialogBusy(false, config.confirmLabel);
+                setDialogError(errorText(error));
+                presetDialogConfirm.focus();
+            });
+    });
+
+    // Keep focus inside the dialog when something outside steals it.
+    document.addEventListener('focusin', (event) => {
+        if (!presetDialogBackdrop.classList.contains('is-open')) return;
+        if (presetDialogBackdrop.contains(event.target)) return;
+        presetDialogCancel.focus();
+    });
+
+    function idleStatus() {
+        return customCount > 0 ? '' : 'No custom presets saved yet.';
+    }
+
+    async function loadPresets(preferredId) {
+        setStatus('Loading presets…', false);
+        setBarBusy(true);
+        try {
+            const data = await presetRequest(null);
+            presets = Array.isArray(data.presets) ? data.presets.filter((preset) => preset && preset.id) : [];
+            const reported = Number(data.custom_count);
+            customCount = Number.isFinite(reported) ? reported : presets.filter((preset) => preset.built_in !== true).length;
+            renderOptions(preferredId);
+            setStatus(idleStatus(), false);
+        } catch (error) {
+            presets = [];
+            customCount = 0;
+            renderOptions();
+            setStatus('Could not load presets: ' + errorText(error), true);
+        } finally {
+            setBarBusy(false);
+        }
+    }
+
+    function applyConfirmBody(preset) {
+        const name = String(preset.name || preset.id);
+        let body = 'Apply “' + name + '”? This saves the settings included in this preset immediately.';
+        if (preset.affects_profiles) {
+            body += ' It also updates context and response limits for all NPC profiles.';
+        }
+        return body + ' Unsaved edits on this page will be lost.';
+    }
+
+    // Selecting alone changes nothing; only button availability and the description update.
+    presetSelect.addEventListener('change', () => {
+        syncBar();
+        setStatus(idleStatus(), false);
+    });
+
+    presetApplyBtn.addEventListener('click', () => {
+        const preset = selectedPreset();
+        if (!preset) return;
+        const name = String(preset.name || preset.id);
+        openDialog({
+            title: 'Apply settings preset',
+            body: applyConfirmBody(preset),
+            confirmLabel: 'Apply preset',
+            busyLabel: 'Applying…',
+            needsName: false,
+            onConfirm: async () => {
+                setBarBusy(true);
+                setStatus('Applying “' + name + '”…', false);
+                try {
+                    const result = await presetRequest({ operation: 'apply', preset_id: String(preset.id) });
+                    const settingsUpdated = Number(result.settings_updated || 0);
+                    const profilesUpdated = Number(result.profiles_updated || 0);
+                    let message = 'Applied “' + String(result.name || name) + '”. '
+                        + settingsUpdated + ' setting' + (settingsUpdated === 1 ? '' : 's') + ' updated';
+                    message += profilesUpdated > 0
+                        ? ', ' + profilesUpdated + ' NPC profile' + (profilesUpdated === 1 ? '' : 's') + ' updated.'
+                        : '.';
+                    try {
+                        sessionStorage.setItem(presetFlashKey, message);
+                    } catch (_error) {
+                        // Storage can be unavailable in privacy-restricted browsers.
+                    }
+                    setStatus(message, false);
+                    window.location.reload();
+                } catch (error) {
+                    setBarBusy(false);
+                    setStatus('Apply failed: ' + errorText(error), true);
+                    throw error;
+                }
+            }
+        });
+    });
+
+    presetSaveNewBtn.addEventListener('click', () => {
+        openDialog({
+            title: 'Save current setup as a preset',
+            body: 'Name this preset. It stores safe Global Settings currently on screen, including context selections and unsaved edits. Connector choices and service URLs stay unchanged.',
+            confirmLabel: 'Save preset',
+            busyLabel: 'Saving…',
+            needsName: true,
+            focusName: true,
+            onConfirm: async (name) => {
+                const payload = serializeGlobalSettingsForm();
+                setBarBusy(true);
+                setStatus('Saving “' + name + '”…', false);
+                try {
+                    const result = await presetRequest({
+                        operation: 'save_new',
+                        name: name,
+                        settings: payload.settings,
+                        prompt_context_options: payload.prompt_context_options
+                    });
+                    const saved = result.preset || {};
+                    setBarBusy(false);
+                    await loadPresets(saved.id ? String(saved.id) : undefined);
+                    setStatus('Saved preset “' + String(saved.name || name) + '”.', false);
+                } catch (error) {
+                    setBarBusy(false);
+                    setStatus('Save failed: ' + errorText(error), true);
+                    throw error;
+                }
+            }
+        });
+    });
+
+    presetOverwriteBtn.addEventListener('click', () => {
+        const preset = selectedPreset();
+        if (!preset || preset.built_in === true) return;
+        const name = String(preset.name || preset.id);
+        openDialog({
+            title: 'Overwrite settings preset',
+            body: 'Overwrite “' + name + '” with the safe Global Settings currently on screen, including unsaved edits? Connector choices and service URLs stay unchanged. The stored preset values are replaced and cannot be recovered.',
+            confirmLabel: 'Overwrite preset',
+            busyLabel: 'Saving…',
+            needsName: false,
+            onConfirm: async () => {
+                const payload = serializeGlobalSettingsForm();
+                setBarBusy(true);
+                setStatus('Overwriting “' + name + '”…', false);
+                try {
+                    const result = await presetRequest({
+                        operation: 'overwrite',
+                        preset_id: String(preset.id),
+                        settings: payload.settings,
+                        prompt_context_options: payload.prompt_context_options
+                    });
+                    const saved = result.preset || {};
+                    setBarBusy(false);
+                    await loadPresets(String(saved.id || preset.id));
+                    setStatus('Overwrote preset “' + String(saved.name || name) + '”.', false);
+                } catch (error) {
+                    setBarBusy(false);
+                    setStatus('Overwrite failed: ' + errorText(error), true);
+                    throw error;
+                }
+            }
+        });
+    });
+
+    let presetFlash = '';
+    try {
+        presetFlash = sessionStorage.getItem(presetFlashKey) || '';
+        if (presetFlash) sessionStorage.removeItem(presetFlashKey);
+    } catch (_error) {
+        presetFlash = '';
+    }
+
+    loadPresets().then(() => {
+        if (presetFlash) setStatus(presetFlash, false);
     });
 })();
 </script>
