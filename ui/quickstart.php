@@ -599,64 +599,13 @@ if (!empty($generalLlmConnectorSummary)) {
     $generalLlmConnectorListHtml .= '</ul>';
 }
 
-// Settings Profile dropdown: prefers the shared catalog helper, with built-in fallback copy.
+// Quickstart offers the two built-in profiles as a compact choice.
 $quickstartPresetDefaultId = 'builtin:default';
 $quickstartLocalLlmPresetId = 'builtin:local_llm';
-$quickstartPresetBuiltInCopy = [
+$quickstartPresetDescriptions = [
     'builtin:default' => 'Current install defaults for context size and response length.',
     'builtin:local_llm' => 'Smaller context and shorter responses, tuned for local models around 13B.',
 ];
-$quickstartPresetCatalog = [];
-if (function_exists('chimSettingsPresetCatalog')) {
-    try {
-        $quickstartPresetCatalogRaw = chimSettingsPresetCatalog();
-        if (is_array($quickstartPresetCatalogRaw)) {
-            $quickstartPresetCatalog = (isset($quickstartPresetCatalogRaw['presets']) && is_array($quickstartPresetCatalogRaw['presets']))
-                ? $quickstartPresetCatalogRaw['presets']
-                : $quickstartPresetCatalogRaw;
-        }
-    } catch (Throwable $_e) {
-        $quickstartPresetCatalog = [];
-    }
-}
-if (count($quickstartPresetCatalog) === 0) {
-    $quickstartPresetCatalog = [
-        ['id' => 'builtin:default', 'name' => 'Default', 'built_in' => true],
-        ['id' => 'builtin:local_llm', 'name' => 'Local LLM', 'built_in' => true],
-    ];
-}
-$quickstartPresetBuiltInOptions = '';
-$quickstartPresetCustomOptions = '';
-$quickstartPresetDescriptions = [];
-foreach ($quickstartPresetCatalog as $quickstartPresetEntry) {
-    if (!is_array($quickstartPresetEntry)) {
-        continue;
-    }
-    $quickstartPresetId = trim((string)($quickstartPresetEntry['id'] ?? ''));
-    $quickstartPresetName = trim((string)($quickstartPresetEntry['name'] ?? ''));
-    if ($quickstartPresetId === '' || $quickstartPresetName === '') {
-        continue;
-    }
-    // The option label stays a bare name; the description renders in its own line below the select.
-    $quickstartPresetDescriptions[$quickstartPresetId] = isset($quickstartPresetBuiltInCopy[$quickstartPresetId])
-        ? $quickstartPresetBuiltInCopy[$quickstartPresetId]
-        : trim((string)($quickstartPresetEntry['description'] ?? ''));
-    $quickstartPresetOption = '<option value="' . htmlspecialchars($quickstartPresetId) . '"'
-        . ($quickstartPresetId === $quickstartPresetDefaultId ? ' selected' : '') . '>'
-        . htmlspecialchars($quickstartPresetName) . '</option>';
-    if (!empty($quickstartPresetEntry['built_in'])) {
-        $quickstartPresetBuiltInOptions .= $quickstartPresetOption;
-    } else {
-        $quickstartPresetCustomOptions .= $quickstartPresetOption;
-    }
-}
-$quickstartPresetOptionsHtml = '';
-if ($quickstartPresetBuiltInOptions !== '') {
-    $quickstartPresetOptionsHtml .= '<optgroup label="Built-in">' . $quickstartPresetBuiltInOptions . '</optgroup>';
-}
-if ($quickstartPresetCustomOptions !== '') {
-    $quickstartPresetOptionsHtml .= '<optgroup label="Custom">' . $quickstartPresetCustomOptions . '</optgroup>';
-}
 $quickstartPresetSelectedDescription = (string)($quickstartPresetDescriptions[$quickstartPresetDefaultId] ?? '');
 $quickstartPresetDescriptionsJson = json_encode($quickstartPresetDescriptions, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 if ($quickstartPresetDescriptionsJson === false) {
@@ -719,12 +668,25 @@ echo '<section class="qs-section" id="qs_openrouter_section"' . ($player2ForceAl
 echo '<section class="qs-section qs-profile-section" id="qs_settings_preset_section">
         <h2 class="qs-section-title">Settings Profile</h2>
         <div class="form-group qs-field qs-settings-preset">
-            <label class="qs-preset-label" for="qs_settings_preset">Profile</label>
-            <div class="qs-select-wrap">
-                <select class="form-control qs-preset-select" id="qs_settings_preset" aria-describedby="qs_settings_preset_desc qs_settings_preset_help">
-                    ' . $quickstartPresetOptionsHtml . '
-                </select>
-            </div>
+            <fieldset class="qs-preset-fieldset" id="qs_settings_preset" aria-describedby="qs_settings_preset_desc qs_settings_preset_help">
+                <legend class="qs-preset-label">Profile</legend>
+                <div class="qs-preset-options">
+                    <label class="qs-preset-option">
+                        <input class="qs-preset-input" type="radio" name="qs_settings_preset" value="' . htmlspecialchars($quickstartPresetDefaultId) . '" checked>
+                        <span class="qs-preset-card">
+                            <span class="qs-preset-mark" aria-hidden="true"></span>
+                            <span class="qs-preset-title">Default</span>
+                        </span>
+                    </label>
+                    <label class="qs-preset-option">
+                        <input class="qs-preset-input" type="radio" name="qs_settings_preset" value="' . htmlspecialchars($quickstartLocalLlmPresetId) . '">
+                        <span class="qs-preset-card">
+                            <span class="qs-preset-mark" aria-hidden="true"></span>
+                            <span class="qs-preset-title">Local LLM</span>
+                        </span>
+                    </label>
+                </div>
+            </fieldset>
             <p class="qs-preset-desc" id="qs_settings_preset_desc" role="status" aria-live="polite">' . htmlspecialchars($quickstartPresetSelectedDescription) . '</p>
             <p class="qs-preset-help" id="qs_settings_preset_help">Nothing changes yet. The selected profile is applied when you press Save and Continue.</p>
         </div>
@@ -1242,40 +1204,118 @@ echo '<style>
         gap: 6px;
     }
 
-    .qs-preset-label {
+    .confwizard fieldset.qs-preset-fieldset {
+        display: block;
+        width: 100%;
+        min-width: 0;
         margin: 0;
-        color: #cfd9ea;
-        font-weight: 600;
+        padding: 0;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
     }
 
-    /* Native select kept for platform behaviour; chevron drawn so the control reads as a dropdown. */
-    .qs-select-wrap {
-        position: relative;
+    .confwizard fieldset.qs-preset-fieldset > legend.qs-preset-label {
         display: block;
+        float: none;
+        width: auto;
+        padding: 0;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent !important;
+        color: #cfd9ea !important;
+        font-family: inherit;
+        font-weight: 600;
+        font-size: 0.9rem;
+        line-height: 1.3;
+    }
+
+    .qs-preset-options {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 6px;
         max-width: 560px;
     }
 
-    .qs-select-wrap > select.form-control {
-        width: 100%;
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        padding-right: 34px;
-        background-image: none;
+    .qs-preset-option {
+        position: relative;
+        display: block;
+        min-width: 0;
+        margin: 0;
+        cursor: pointer;
+        font-weight: 400;
     }
 
-    .qs-select-wrap::after {
-        content: "";
+    .qs-preset-input {
         position: absolute;
-        right: 13px;
-        top: 50%;
-        width: 8px;
-        height: 8px;
-        margin-top: -6px;
-        border-right: 2px solid #cfd9ea;
-        border-bottom: 2px solid #cfd9ea;
-        transform: rotate(45deg);
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        padding: 0;
+        opacity: 0;
         pointer-events: none;
+    }
+
+    .qs-preset-card {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 46px;
+        height: 100%;
+        padding: 9px 11px;
+        border: 1px solid #4a4a4a;
+        border-radius: 6px;
+        background: #2c2c2c;
+        text-align: center;
+    }
+
+    .qs-preset-option:hover .qs-preset-card {
+        border-color: #5c5c5c;
+        background: #383838;
+    }
+
+    .qs-preset-mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 15px;
+        height: 15px;
+        border: 1px solid #6b6b6b;
+        border-radius: 50%;
+        font-size: 0.7rem;
+        line-height: 1;
+    }
+
+    .qs-preset-title {
+        min-width: 0;
+        color: #e9eefb;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .qs-preset-input:checked + .qs-preset-card {
+        border-color: #ffcc00;
+        background: rgba(90, 70, 20, 0.22);
+    }
+
+    .qs-preset-input:checked + .qs-preset-card .qs-preset-mark {
+        border-color: #ffcc00;
+        background: #ffcc00;
+        color: #1b1b1b;
+    }
+
+    .qs-preset-input:checked + .qs-preset-card .qs-preset-mark::before {
+        content: "\2713";
+    }
+
+    .qs-preset-input:focus-visible + .qs-preset-card {
+        outline: 2px solid #f6d365;
+        outline-offset: 2px;
     }
 
     .qs-preset-desc {
@@ -1978,9 +2018,13 @@ function qsEl(id){
   return document.getElementById(id);
 }
 
+function qsSettingsPresetValue(){
+  const checked = document.querySelector("input[name=\"qs_settings_preset\"]:checked");
+  return checked ? String(checked.value || "") : "builtin:default";
+}
+
 function qsLocalLlmSelected(){
-  const select = qsEl("qs_settings_preset");
-  return !!select && String(select.value || "") === QS_LOCAL_LLM_PRESET_ID;
+  return qsSettingsPresetValue() === QS_LOCAL_LLM_PRESET_ID;
 }
 
 // The scope control is a radio group, so the value comes from whichever card is checked.
@@ -2208,10 +2252,9 @@ async function testLocalLlmConnection(){
 // Selecting a profile only changes what this page shows; nothing is written until Save and Continue.
 function updateQuickstartProfileUI(){
   try {
-    const select = qsEl("qs_settings_preset");
     const description = qsEl("qs_settings_preset_desc");
     const panel = qsEl("qs_local_llm_panel");
-    const selectedId = select ? String(select.value || "") : "";
+    const selectedId = qsSettingsPresetValue();
     if (description) {
       const copy = String(QS_PRESET_DESCRIPTIONS[selectedId] || "");
       description.textContent = copy;
@@ -2247,7 +2290,7 @@ async function saveQuickstartAndDB(){
     // 2) Save profile metadata flags
     const fdm = new FormData();
     try { fdm.append("player2_force_all_llm", document.getElementById("qs_player2_force_all_llm").checked ? "1" : "0"); } catch(_e){}
-    try { fdm.append("settings_preset_id", document.getElementById("qs_settings_preset").value || "builtin:default"); } catch(_e){}
+    try { fdm.append("settings_preset_id", qsSettingsPresetValue()); } catch(_e){}
     try { if (qsLocalLlmSelected()) { qsAppendLocalLlmValues(fdm); } } catch(_e){}
     fdm.append("qs_action", "profile_quicksave_metadata");
     const profileResponse = await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
@@ -2361,9 +2404,9 @@ document.addEventListener("DOMContentLoaded", function(){
     });
   }
 
-  const presetSelect = qsEl("qs_settings_preset");
-  if (presetSelect) {
-    presetSelect.addEventListener("change", function(){
+  const presetChoices = qsEl("qs_settings_preset");
+  if (presetChoices) {
+    presetChoices.addEventListener("change", function(){
       updateQuickstartProfileUI();
       updatePlayer2QuickstartUI();
     });
