@@ -770,7 +770,7 @@ echo '<section class="qs-section qs-profile-section" id="qs_settings_preset_sect
                                     <span class="qs-scope-title" id="qs_local_llm_scope_conversations_title">Dialogue only</span>
                                     <span class="qs-scope-badge" id="qs_local_llm_scope_conversations_badge">Recommended</span>
                                 </span>
-                                <span class="qs-scope-desc" id="qs_local_llm_scope_conversations_desc">Use this local model for in-game dialogue. Other AI tasks keep their current connectors.</span>
+                                <span class="qs-scope-desc" id="qs_local_llm_scope_conversations_desc">Use this local model for in-game dialogue. Other AI tasks continue using OpenRouter.</span>
                             </span>
                         </label>
                         <label class="qs-scope-option">
