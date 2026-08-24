@@ -688,9 +688,9 @@ foreach (herikaLocalLlmServerCatalog() as $serverType => $serverDefinition) {
         . ($serverType === $quickstartLocalLlmServerType ? ' selected' : '') . '>'
         . htmlspecialchars($serverDefinition['label']) . '</option>';
 }
-$quickstartLocalLlmScopeOptions = '<option value="conversations"'
-    . ($quickstartLocalLlmScope === 'conversations' ? ' selected' : '') . '>NPC conversations</option>'
-    . '<option value="all"' . ($quickstartLocalLlmScope === 'all' ? ' selected' : '') . '>All CHIM AI</option>';
+// "all" is the only opt-in value; anything else falls back to the dialogue-only default.
+$quickstartLocalLlmScopeAllChecked = ($quickstartLocalLlmScope === 'all') ? ' checked' : '';
+$quickstartLocalLlmScopeConversationsChecked = ($quickstartLocalLlmScope === 'all') ? '' : ' checked';
 $quickstartHostIpDisabled = ($quickstartHostIp === '') ? ' disabled' : '';
 $quickstartHostIpTitle = ($quickstartHostIp === '')
     ? 'Network/HOST_IP is not configured yet.'
@@ -759,15 +759,32 @@ echo '<section class="qs-section qs-profile-section" id="qs_settings_preset_sect
                     <small class="form-text" id="qs_local_llm_url_help">OpenAI compatible chat completions endpoint. Defaults: LM Studio 1234, Ollama 11434, llama.cpp 8080, KoboldCPP 5001, path /v1/chat/completions.</small>
                     <p class="qs-local-llm-note qs-local-llm-note-warn" id="qs_local_llm_loopback_warning" role="status" aria-live="polite" hidden>Warning: this URL points at the WSL container itself. HerikaServer runs in WSL, so localhost and 127.0.0.1 will not reach a server running on Windows. Use the Windows host IP instead.</p>
                 </div>
-                <div class="qs-local-llm-field qs-local-llm-field-wide">
-                    <label for="qs_local_llm_scope">Use this model for</label>
-                    <div class="qs-select-wrap">
-                        <select class="form-control" id="qs_local_llm_scope" name="qs_local_llm_scope" aria-describedby="qs_local_llm_scope_help">
-                            ' . $quickstartLocalLlmScopeOptions . '
-                        </select>
+                <fieldset class="qs-local-llm-field-wide qs-scope-fieldset">
+                    <legend class="qs-scope-legend">Where should CHIM use this model?</legend>
+                    <div class="qs-scope-cards">
+                        <label class="qs-scope-option">
+                            <input class="qs-scope-input" type="radio" id="qs_local_llm_scope_conversations" name="qs_local_llm_scope" value="conversations"' . $quickstartLocalLlmScopeConversationsChecked . ' aria-labelledby="qs_local_llm_scope_conversations_title qs_local_llm_scope_conversations_badge" aria-describedby="qs_local_llm_scope_conversations_desc">
+                            <span class="qs-scope-card">
+                                <span class="qs-scope-head">
+                                    <span class="qs-scope-mark" aria-hidden="true"></span>
+                                    <span class="qs-scope-title" id="qs_local_llm_scope_conversations_title">Dialogue only</span>
+                                    <span class="qs-scope-badge" id="qs_local_llm_scope_conversations_badge">Recommended</span>
+                                </span>
+                                <span class="qs-scope-desc" id="qs_local_llm_scope_conversations_desc">Use this local model for in-game dialogue. Other AI tasks keep their current connectors.</span>
+                            </span>
+                        </label>
+                        <label class="qs-scope-option">
+                            <input class="qs-scope-input" type="radio" id="qs_local_llm_scope_all" name="qs_local_llm_scope" value="all"' . $quickstartLocalLlmScopeAllChecked . ' aria-labelledby="qs_local_llm_scope_all_title" aria-describedby="qs_local_llm_scope_all_desc">
+                            <span class="qs-scope-card">
+                                <span class="qs-scope-head">
+                                    <span class="qs-scope-mark" aria-hidden="true"></span>
+                                    <span class="qs-scope-title" id="qs_local_llm_scope_all_title">Dialogue + background tasks</span>
+                                </span>
+                                <span class="qs-scope-desc" id="qs_local_llm_scope_all_desc">Also use it for memories, summaries, relationships, profiles, scene handling, and other supporting tasks.</span>
+                            </span>
+                        </label>
                     </div>
-                    <small class="form-text" id="qs_local_llm_scope_help">NPC conversations routes the four in-game model slots. All CHIM AI also routes summaries, memory, profiles, relationships, and other helper tasks.</small>
-                </div>
+                </fieldset>
             </div>
             <details class="qs-local-llm-advanced">
                 <summary>Advanced</summary>
@@ -1338,6 +1355,145 @@ echo '<style>
         max-width: none;
     }
 
+    /* Routing scope: native radio group, whole card is the click target. */
+    .confwizard fieldset.qs-scope-fieldset {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .confwizard fieldset.qs-scope-fieldset > legend.qs-scope-legend {
+        display: block;
+        float: none;
+        width: auto;
+        margin: 0 0 6px 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent !important;
+        color: #cfd9ea !important;
+        font-family: inherit;
+        font-weight: 600;
+        font-size: 0.9rem;
+        line-height: 1.3;
+    }
+
+    .qs-scope-cards {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .qs-scope-option {
+        display: block;
+        position: relative;
+        margin: 0;
+        min-width: 0;
+        cursor: pointer;
+        font-weight: 400;
+    }
+
+    .qs-scope-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        padding: 0;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .qs-scope-card {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-height: 44px;
+        height: 100%;
+        padding: 9px 11px;
+        border: 1px solid #4a4a4a;
+        border-radius: 6px;
+        background: #2c2c2c;
+    }
+
+    .qs-scope-option:hover .qs-scope-card {
+        border-color: #5c5c5c;
+        background: #383838;
+    }
+
+    .qs-scope-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .qs-scope-mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 15px;
+        height: 15px;
+        border: 1px solid #6b6b6b;
+        border-radius: 50%;
+        font-size: 0.7rem;
+        line-height: 1;
+    }
+
+    .qs-scope-title {
+        color: #e9eefb;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .qs-scope-badge {
+        padding: 1px 6px;
+        border: 1px solid #8a6d2f;
+        border-radius: 10px;
+        background: rgba(90, 70, 20, 0.28);
+        color: #ffe6a6;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+    }
+
+    .qs-scope-desc {
+        color: #9ca3af;
+        font-size: 0.8rem;
+        line-height: 1.35;
+    }
+
+    /* Selected state is marked by the checkmark as well as border and background. */
+    .qs-scope-input:checked + .qs-scope-card {
+        border-color: #ffcc00;
+        background: rgba(90, 70, 20, 0.22);
+    }
+
+    .qs-scope-input:checked + .qs-scope-card .qs-scope-mark {
+        border-color: #ffcc00;
+        background: #ffcc00;
+        color: #1b1b1b;
+    }
+
+    .qs-scope-input:checked + .qs-scope-card .qs-scope-mark::before {
+        content: "\2713";
+    }
+
+    .qs-scope-input:checked + .qs-scope-card .qs-scope-desc {
+        color: #bfc7d4;
+    }
+
+    .qs-scope-input:disabled + .qs-scope-card {
+        cursor: not-allowed;
+    }
+
     .qs-local-llm-actions {
         display: flex;
         flex-wrap: wrap;
@@ -1488,6 +1644,18 @@ echo '<style>
         outline-offset: 2px;
     }
 
+    /* The radio itself is visually hidden, so the card label carries the focus ring. */
+    .qs-profile-section .qs-scope-input:focus,
+    .qs-profile-section .qs-scope-input:focus-visible {
+        outline: none;
+    }
+
+    .qs-scope-input:focus + .qs-scope-card,
+    .qs-scope-input:focus-visible + .qs-scope-card {
+        outline: 2px solid #ffcc00;
+        outline-offset: 2px;
+    }
+
     @media (max-width: 480px) {
         #qs_llm_connectors_cards_local {
             grid-template-columns: 1fr !important;
@@ -1499,6 +1667,10 @@ echo '<style>
 
         .qs-local-llm-field-wide {
             grid-column: auto;
+        }
+
+        .qs-scope-cards {
+            grid-template-columns: 1fr;
         }
 
         .qs-local-llm-actions .qs-mini-btn {
@@ -1798,7 +1970,8 @@ const QS_LOCAL_LLM_FIELD_IDS = [
   "qs_local_llm_api_key",
   "qs_local_llm_disable_streaming",
   "qs_local_llm_timeout",
-  "qs_local_llm_scope"
+  "qs_local_llm_scope_conversations",
+  "qs_local_llm_scope_all"
 ];
 
 function qsEl(id){
@@ -1808,6 +1981,13 @@ function qsEl(id){
 function qsLocalLlmSelected(){
   const select = qsEl("qs_settings_preset");
   return !!select && String(select.value || "") === QS_LOCAL_LLM_PRESET_ID;
+}
+
+// The scope control is a radio group, so the value comes from whichever card is checked.
+function qsLocalLlmScopeValue(){
+  const checked = document.querySelector("input[name=\"qs_local_llm_scope\"]:checked");
+  const value = checked ? String(checked.value || "").trim() : "";
+  return value === "all" ? "all" : "conversations";
 }
 
 function qsPlayer2Enabled(){
@@ -1832,7 +2012,7 @@ function qsLocalLlmValues(){
     qs_local_llm_api_key: apiKey ? String(apiKey.value || "") : "",
     qs_local_llm_disable_streaming: (streaming && streaming.checked) ? "1" : "0",
     qs_local_llm_timeout: timeout !== "" ? timeout : "30",
-    qs_local_llm_scope: text("qs_local_llm_scope") || "conversations"
+    qs_local_llm_scope: qsLocalLlmScopeValue()
   };
 }
 
@@ -2207,9 +2387,9 @@ document.addEventListener("DOMContentLoaded", function(){
     modelInput.addEventListener("input", qsLocalLlmUpdateRecap);
   }
 
-  const scopeSelect = qsEl("qs_local_llm_scope");
-  if (scopeSelect) {
-    scopeSelect.addEventListener("change", qsLocalLlmUpdateRecap);
+  const scopeRadios = document.querySelectorAll("input[name=\"qs_local_llm_scope\"]");
+  for (let i = 0; i < scopeRadios.length; i++) {
+    scopeRadios[i].addEventListener("change", qsLocalLlmUpdateRecap);
   }
 
   const hostIpButton = qsEl("qs_local_llm_use_host_ip");
