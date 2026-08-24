@@ -14,6 +14,67 @@ function chimSettingsPresetProfileDefaults(): array
     ];
 }
 
+function chimSettingsPresetDefaultGlobalSettings(): array
+{
+    return [
+        'RELATIONSHIP_UPDATE_CHANCE' => 50,
+        'FEATURES@MEMORY_EMBEDDING@ENABLED' => true,
+        'SCENE_CLASSIFIER_ENABLED' => true,
+        'RELATIONSHIP_SYSTEM_ENABLED' => true,
+        'AUTOFILL_CUSTOM_PROFILES' => true,
+        'BGL_TRIGGER_HOURS' => 24,
+        'CHIM_AI_QUEST_PROGRESSION' => false,
+        'DETECT_MAGIC_EVENT' => true,
+        'GROUND_ITEMS_DESCRIPTIONS_ONLY' => false,
+        'INVENTORY_ITEMS_DESCRIPTIONS_ONLY' => false,
+        'HIDE_AMBIENT_COMBAT' => false,
+        'DISABLE_REANIMATION_TRACKING' => true,
+        'TRANSFORMATION_DETECTION' => true,
+        'POWER_AWARENESS_ENABLED' => false,
+        'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 500,
+        'PROMPT_TIMESTAMP' => false,
+    ];
+}
+
+function chimSettingsPresetDefaultProfileRuntimeValues(): array
+{
+    return [
+        'RECHAT_H' => 2,
+        'RECHAT_P' => 50,
+        'RECHAT_ALLOW_ACTIONS' => false,
+        'BORED_EVENT' => 30,
+        'RPG_COMMENTS_CHANCE' => 50,
+        'COMBAT_BARK_COOLDOWN' => 30,
+        'QUEST_COMMENT' => false,
+    ];
+}
+
+function chimSettingsPresetDefaultProfileOverrides(): array
+{
+    return [
+        'DYNAMIC_PROFILE_ENABLED' => false,
+        'MIDDLE_TERM_MEMORY_ENABLED' => false,
+        'AUTO_DIARY_ENABLED' => false,
+        'AUTO_DIARY_WAIT_ENABLED' => false,
+        'MATERIALIZE_DIARY_ENABLED' => false,
+        'LATEST_DIARY_CONTEXT_ENABLED' => false,
+        'LLM_RANDOMIZER_ENABLED' => false,
+    ] + chimSettingsPresetDefaultProfileRuntimeValues();
+}
+
+function chimSettingsPresetLocalProfileRuntimeValues(): array
+{
+    return [
+        'RECHAT_H' => 1,
+        'RECHAT_P' => 0,
+        'RECHAT_ALLOW_ACTIONS' => false,
+        'BORED_EVENT' => 0,
+        'RPG_COMMENTS_CHANCE' => 0,
+        'COMBAT_BARK_COOLDOWN' => 600,
+        'QUEST_COMMENT' => false,
+    ];
+}
+
 function chimSettingsPresetBuiltIns(): array
 {
     // Fresh installs seed the first profile at 75 events while later profiles inherit 50.
@@ -29,22 +90,41 @@ function chimSettingsPresetBuiltIns(): array
             'affects_profiles' => true,
             'snapshot' => [
                 'version' => 1,
-                'global_settings' => [],
+                'global_settings' => chimSettingsPresetDefaultGlobalSettings(),
                 'prompt_context_options' => chimGetDefaultPromptContextOptions(),
                 'profile_defaults' => chimSettingsPresetProfileDefaults(),
                 'profiles' => [],
                 'built_in_profile_values' => $defaultProfileValues,
+                'built_in_profile_overrides' => chimSettingsPresetDefaultProfileOverrides(),
+                'profile_runtime_defaults' => chimSettingsPresetDefaultProfileRuntimeValues(),
             ],
         ],
         'builtin:local_llm' => [
             'id' => 'builtin:local_llm',
             'name' => 'Local LLM',
             'built_in' => true,
-            'description' => 'Smaller context and shorter responses for local models around 13B.',
+            'description' => 'Minimal mode for a local model around 13B sharing a GPU with Skyrim. Keeps NPC dialogue and actions while most optional background AI features are turned off.',
             'affects_profiles' => true,
             'snapshot' => [
                 'version' => 1,
-                'global_settings' => [],
+                'global_settings' => [
+                    'RELATIONSHIP_UPDATE_CHANCE' => 0,
+                    'FEATURES@MEMORY_EMBEDDING@ENABLED' => false,
+                    'SCENE_CLASSIFIER_ENABLED' => false,
+                    'RELATIONSHIP_SYSTEM_ENABLED' => false,
+                    'AUTOFILL_CUSTOM_PROFILES' => false,
+                    'BGL_TRIGGER_HOURS' => 720,
+                    'CHIM_AI_QUEST_PROGRESSION' => false,
+                    'DETECT_MAGIC_EVENT' => false,
+                    'GROUND_ITEMS_DESCRIPTIONS_ONLY' => true,
+                    'INVENTORY_ITEMS_DESCRIPTIONS_ONLY' => true,
+                    'HIDE_AMBIENT_COMBAT' => true,
+                    'DISABLE_REANIMATION_TRACKING' => true,
+                    'TRANSFORMATION_DETECTION' => false,
+                    'POWER_AWARENESS_ENABLED' => false,
+                    'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 1000,
+                    'PROMPT_TIMESTAMP' => false,
+                ],
                 'prompt_context_options' => chimNormalizePromptContextOptions([
                     'enabled_sections' => [
                         'roleplay_instructions', 'world', 'knowledge', 'available_actions_list',
@@ -52,33 +132,41 @@ function chimSettingsPresetBuiltIns(): array
                         'paralinguistic_tags',
                     ],
                     'enabled_character_subsections' => [
-                        'basic_summary', 'groups', 'personality', 'relationships', 'occupation',
-                        'skills', 'speech_style', 'goals', 'middle_term_memory', 'group',
-                        'storyline_starring', 'quest_topics',
+                        'basic_summary', 'personality', 'relationships', 'occupation',
+                        'speech_style', 'goals', 'quest_topics',
                     ],
                     'enabled_appearance_subsections' => [
-                        'appearance', 'equipment', 'inventory', 'current_activity',
-                        'current_condition', 'reanimation_status',
+                        'appearance', 'equipment', 'current_activity', 'current_condition',
                     ],
                     'enabled_general_subsections' => ['current_plans'],
-                    'enabled_nearby_actor_subsections' => ['equipment', 'current_activity'],
+                    'enabled_nearby_actor_subsections' => ['current_activity'],
                     'enabled_nearby_item_subsections' => ['group_duplicates'],
                 ]),
                 'profile_defaults' => [
-                    'CONTEXT_HISTORY' => 40,
-                    'CONTEXT_HISTORY_DIARY' => 40,
-                    'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 30,
+                    'CONTEXT_HISTORY' => 20,
+                    'CONTEXT_HISTORY_DIARY' => 20,
+                    'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 20,
                     'MAX_WORDS_LIMIT' => 60,
                     'chim_context_mode' => 1,
                 ],
                 'profiles' => [],
                 'built_in_profile_values' => [
-                    'CONTEXT_HISTORY' => 40,
-                    'CONTEXT_HISTORY_DIARY' => 40,
-                    'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 30,
+                    'CONTEXT_HISTORY' => 20,
+                    'CONTEXT_HISTORY_DIARY' => 20,
+                    'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 20,
                     'MAX_WORDS_LIMIT' => 60,
                     'chim_context_mode' => 1,
                 ],
+                'built_in_profile_overrides' => [
+                    'DYNAMIC_PROFILE_ENABLED' => false,
+                    'MIDDLE_TERM_MEMORY_ENABLED' => false,
+                    'AUTO_DIARY_ENABLED' => false,
+                    'AUTO_DIARY_WAIT_ENABLED' => false,
+                    'MATERIALIZE_DIARY_ENABLED' => false,
+                    'LATEST_DIARY_CONTEXT_ENABLED' => false,
+                    'LLM_RANDOMIZER_ENABLED' => false,
+                ] + chimSettingsPresetLocalProfileRuntimeValues(),
+                'profile_runtime_defaults' => chimSettingsPresetLocalProfileRuntimeValues(),
             ],
         ],
     ];
@@ -182,6 +270,58 @@ function chimSettingsPresetNormalizeProfileValues(array $values): array
     return $normalized;
 }
 
+function chimSettingsPresetProfileFieldMap(): array
+{
+    $map = [];
+    foreach (chimPrismaProfileMetadataCatalog() as $fields) {
+        foreach ($fields as $field) {
+            $map[(string)$field['name']] = $field;
+        }
+    }
+    return $map;
+}
+
+function chimSettingsPresetNormalizeProfileOverrides(array $values): array
+{
+    $fields = chimSettingsPresetProfileFieldMap();
+    $normalized = [];
+    foreach ($values as $name => $value) {
+        $name = (string)$name;
+        if (!isset($fields[$name])) {
+            throw new InvalidArgumentException("Unknown profile setting: {$name}");
+        }
+        $field = $fields[$name];
+        $type = strtolower((string)($field['type'] ?? 'string'));
+        if ($type === 'boolean') {
+            $normalized[$name] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            continue;
+        }
+        if ($type === 'integer') {
+            if (!is_numeric($value)) {
+                throw new InvalidArgumentException("Invalid {$name}: Expected an integer.");
+            }
+            $value = (int)$value;
+            if (isset($field['min'])) $value = max((int)$field['min'], $value);
+            if (isset($field['max'])) $value = min((int)$field['max'], $value);
+            $normalized[$name] = $value;
+            continue;
+        }
+        if ($type === 'multiselect') {
+            if (!is_array($value)) {
+                throw new InvalidArgumentException("Invalid {$name}: Expected a list.");
+            }
+            $normalized[$name] = array_values(array_filter(array_map('strval', $value), static fn(string $item): bool => $item !== ''));
+            continue;
+        }
+        $value = (string)$value;
+        if (isset($field['values']) && !in_array($value, array_map('strval', $field['values']), true)) {
+            throw new InvalidArgumentException("Invalid {$name}: Value is not allowed.");
+        }
+        $normalized[$name] = $value;
+    }
+    return $normalized;
+}
+
 function chimSettingsPresetCaptureProfiles(): array
 {
     $db = $GLOBALS['db'] ?? null;
@@ -197,8 +337,20 @@ function chimSettingsPresetCaptureProfiles(): array
     }
     $defaults = chimSettingsPresetNormalizeProfileValues($defaults);
 
+    $runtimeDefaults = chimSettingsPresetDefaultProfileRuntimeValues();
+    foreach (array_keys($runtimeDefaults) as $name) {
+        $row = $db->fetchOne('SELECT value FROM public.conf_opts WHERE id = ' . $db->escapeLiteral($name) . ' LIMIT 1');
+        if (isset($row['value'])) {
+            $runtimeDefaults[$name] = $row['value'];
+        }
+    }
+    $runtimeDefaults = chimSettingsPresetNormalizeProfileOverrides($runtimeDefaults);
+
     $profiles = [];
+    $profileOverrides = [];
+    $overrideDefaults = chimSettingsPresetDefaultProfileOverrides();
     foreach ($db->fetchAll('SELECT id, metadata FROM public.core_profiles ORDER BY id ASC') as $row) {
+        $id = (string)(int)$row['id'];
         $metadata = json_decode((string)($row['metadata'] ?? '{}'), true);
         if (!is_array($metadata)) {
             $metadata = [];
@@ -209,9 +361,24 @@ function chimSettingsPresetCaptureProfiles(): array
                 $values[$name] = $metadata[$name];
             }
         }
-        $profiles[(string)(int)$row['id']] = chimSettingsPresetNormalizeProfileValues($values);
+        $profiles[$id] = chimSettingsPresetNormalizeProfileValues($values);
+
+        $overrides = $overrideDefaults;
+        foreach (array_keys($overrides) as $name) {
+            if (array_key_exists($name, $metadata)) {
+                $overrides[$name] = $metadata[$name];
+            } elseif (array_key_exists($name, $runtimeDefaults)) {
+                $overrides[$name] = $runtimeDefaults[$name];
+            }
+        }
+        $profileOverrides[$id] = chimSettingsPresetNormalizeProfileOverrides($overrides);
     }
-    return ['profile_defaults' => $defaults, 'profiles' => $profiles];
+    return [
+        'profile_defaults' => $defaults,
+        'profile_runtime_defaults' => $runtimeDefaults,
+        'profiles' => $profiles,
+        'profile_overrides' => $profileOverrides,
+    ];
 }
 
 function chimSettingsPresetCaptureSnapshot(array $settings, $promptContextOptions): array
@@ -222,7 +389,9 @@ function chimSettingsPresetCaptureSnapshot(array $settings, $promptContextOption
         'global_settings' => chimSettingsPresetNormalizeSettings($settings),
         'prompt_context_options' => chimNormalizePromptContextOptions($promptContextOptions),
         'profile_defaults' => $profileSnapshot['profile_defaults'],
+        'profile_runtime_defaults' => $profileSnapshot['profile_runtime_defaults'],
         'profiles' => $profileSnapshot['profiles'],
+        'profile_overrides' => $profileSnapshot['profile_overrides'],
     ];
 }
 
@@ -367,6 +536,9 @@ function chimSettingsPresetApplyProfiles(array $snapshot): int
     $builtInValues = isset($snapshot['built_in_profile_values'])
         ? chimSettingsPresetNormalizeProfileValues((array)$snapshot['built_in_profile_values'])
         : null;
+    $builtInOverrides = chimSettingsPresetNormalizeProfileOverrides((array)($snapshot['built_in_profile_overrides'] ?? []));
+    $runtimeDefaults = chimSettingsPresetNormalizeProfileOverrides((array)($snapshot['profile_runtime_defaults'] ?? []));
+    $profileOverrides = (array)($snapshot['profile_overrides'] ?? []);
     $count = 0;
     foreach ($db->fetchAll('SELECT id, metadata FROM public.core_profiles ORDER BY id ASC') as $row) {
         $id = (string)(int)$row['id'];
@@ -378,6 +550,10 @@ function chimSettingsPresetApplyProfiles(array $snapshot): int
         foreach (['CONTEXT_HISTORY', 'CONTEXT_HISTORY_DIARY', 'CONTEXT_HISTORY_DYNAMIC_PROFILE', 'MAX_WORDS_LIMIT'] as $name) {
             $metadata[$name] = (string)$values[$name];
         }
+        $overrides = $builtInOverrides ?: chimSettingsPresetNormalizeProfileOverrides((array)($profileOverrides[$id] ?? []));
+        foreach ($overrides as $name => $value) {
+            $metadata[$name] = $value;
+        }
         if ($db->updateRow('core_profiles', [
             'metadata' => json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
         ], 'id = ' . (int)$row['id']) === false) {
@@ -388,6 +564,15 @@ function chimSettingsPresetApplyProfiles(array $snapshot): int
     foreach ($defaults as $name => $value) {
         $query = 'INSERT INTO public.conf_opts (id, value) VALUES ('
             . $db->escapeLiteral($name) . ', ' . $db->escapeLiteral((string)$value) . ')
+            ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value';
+        if ($db->execQuery($query) === false) {
+            throw new RuntimeException("Could not update {$name}.");
+        }
+    }
+    foreach ($runtimeDefaults as $name => $value) {
+        $storedValue = is_bool($value) ? ($value ? 'true' : 'false') : (is_array($value) ? json_encode($value) : (string)$value);
+        $query = 'INSERT INTO public.conf_opts (id, value) VALUES ('
+            . $db->escapeLiteral($name) . ', ' . $db->escapeLiteral($storedValue) . ')
             ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value';
         if ($db->execQuery($query) === false) {
             throw new RuntimeException("Could not update {$name}.");

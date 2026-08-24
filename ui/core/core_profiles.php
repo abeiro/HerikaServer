@@ -1359,14 +1359,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["delete_import_rule"])
 // Create a blank profile and open it for editing
 if (isset($_GET["create_blank"])) {
     try {
-        $defaultMeta = json_encode([
-            'RPG_COMMENTS'=>['levelup','combat_end','bleedout'],
-            'DYNAMIC_PROFILE_FIELDS'=>['personality','speechstyle','goals'],
-            'RPG_COMMENTS_CHANCE'=>50
-        ], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
-        $row = $GLOBALS["db"]->fetchOne("INSERT INTO core_profiles (label, metadata) VALUES ('New Profile', '".pg_escape_string($defaultMeta)."') RETURNING id");
-        $newId = is_array($row) ? ($row['id'] ?? '') : '';
-        $redir = 'core_profiles.php' . ($newId !== '' ? ('?edit=' . urlencode($newId)) : '');
+        $newId = $profiles->create(['label' => 'New Profile']);
+        $redir = 'core_profiles.php' . ($newId ? ('?edit=' . urlencode($newId)) : '');
         header("Location: $redir");
         exit;
     } catch (Throwable $e) {

@@ -603,8 +603,8 @@ if (!empty($generalLlmConnectorSummary)) {
 $quickstartPresetDefaultId = 'builtin:default';
 $quickstartLocalLlmPresetId = 'builtin:local_llm';
 $quickstartPresetDescriptions = [
-    'builtin:default' => 'Current install defaults for context size and response length.',
-    'builtin:local_llm' => 'Smaller context and shorter responses, tuned for local models around 13B.',
+    'builtin:default' => 'Current install defaults.',
+    'builtin:local_llm' => 'Minimal mode for a local model around 13B sharing your GPU with Skyrim. NPCs still talk and act, but prompts and replies are shorter and most optional background AI features are turned off.',
 ];
 $quickstartPresetSelectedDescription = (string)($quickstartPresetDescriptions[$quickstartPresetDefaultId] ?? '');
 $quickstartPresetDescriptionsJson = json_encode($quickstartPresetDescriptions, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -1078,8 +1078,11 @@ echo '<section class="qs-section">
                     </div>
                 </div>
                 <div class="qs-general-connector-wrap">
-                    <div class="qs-general-connector-title">Other Connectors Used:</div>
-                    ' . ($generalLlmConnectorListHtml !== '' ? $generalLlmConnectorListHtml : '<div class="qs-general-connector-empty">No additional general-settings connectors are configured.</div>') . '
+                    <div class="qs-general-connector-title" id="qs_general_connector_title">Other Connectors Used:</div>
+                    <div id="qs_general_connector_default">
+                        ' . ($generalLlmConnectorListHtml !== '' ? $generalLlmConnectorListHtml : '<div class="qs-general-connector-empty">No additional general-settings connectors are configured.</div>') . '
+                    </div>
+                    <div class="qs-general-connector-empty" id="qs_general_connector_local" style="display:none;">OpenRouter</div>
                 </div>
                 <p class="qs-note warning-text3">
                     Once done click Save and startup Skyrim with the AIAgent mod installed. Please read the <a href="https://dwemerdynamics.com/chim/index.html" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
@@ -2354,6 +2357,9 @@ function updatePlayer2QuickstartUI(){
     const defaultCards = document.getElementById("qs_llm_connectors_cards_default");
     const player2Cards = document.getElementById("qs_llm_connectors_cards_player2");
     const localCards = document.getElementById("qs_llm_connectors_cards_local");
+    const generalTitle = document.getElementById("qs_general_connector_title");
+    const generalDefault = document.getElementById("qs_general_connector_default");
+    const generalLocal = document.getElementById("qs_general_connector_local");
     // Player2 wins over the Settings Profile because it routes every LLM call.
     const localMode = !enabled && qsLocalLlmSelected();
     if (openrouterSection) {
@@ -2376,6 +2382,16 @@ function updatePlayer2QuickstartUI(){
     }
     if (localCards) {
       localCards.style.display = localMode ? "grid" : "none";
+    }
+    if (generalTitle) {
+      generalTitle.textContent = localMode ? "Other AI tasks:" : "Other Connectors Used:";
+    }
+    if (generalDefault) {
+      generalDefault.style.display = localMode ? "none" : "";
+    }
+    if (generalLocal) {
+      generalLocal.style.display = localMode ? "" : "none";
+      generalLocal.textContent = qsLocalLlmScopeValue() === "all" ? "Local LLM" : "OpenRouter";
     }
   } catch(_e){}
 }
@@ -2417,7 +2433,10 @@ document.addEventListener("DOMContentLoaded", function(){
 
   const scopeRadios = document.querySelectorAll("input[name=\"qs_local_llm_scope\"]");
   for (let i = 0; i < scopeRadios.length; i++) {
-    scopeRadios[i].addEventListener("change", qsLocalLlmUpdateRecap);
+    scopeRadios[i].addEventListener("change", function(){
+      qsLocalLlmUpdateRecap();
+      updatePlayer2QuickstartUI();
+    });
   }
 
   const hostIpButton = qsEl("qs_local_llm_use_host_ip");
