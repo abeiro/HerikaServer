@@ -396,6 +396,124 @@ if (!function_exists('race_icon_web_path')) {
     }
 }
 
+// Helper: ordered source-mod chain for an actor.
+// metadata.mods keeps game order: the first entry defines the actor, the last may override it.
+if (!function_exists('npc_mod_chain')) {
+    function npc_mod_chain($metadata){
+        $mods = null;
+        if (is_array($metadata)) {
+            $mods = $metadata['mods'] ?? null;
+        }
+        if (is_string($mods)) {
+            $mods = preg_split('/[#,\r\n]+/', $mods);
+        }
+        if (!is_array($mods)) return [];
+        $chain = [];
+        foreach ($mods as $mod) {
+            if (!is_scalar($mod)) continue;
+            $label = trim((string)$mod);
+            if ($label !== '') $chain[] = $label;
+        }
+        return $chain;
+    }
+}
+
+// Helper: the mod that defines this actor, or '' when nothing is recorded
+if (!function_exists('npc_defining_mod')) {
+    function npc_defining_mod($row, array $chain, $metadata = null){
+        if (is_array($metadata)) {
+            $identity = $metadata['actor_identity'] ?? null;
+            if (is_array($identity)) {
+                $recorded = trim((string)($identity['source_mod'] ?? ''));
+                if ($recorded !== '') return $recorded;
+            }
+        }
+        $explicit = '';
+        if (is_array($row)) {
+            $explicit = trim((string)($row['source_mod'] ?? ''));
+        }
+        if ($explicit !== '') return $explicit;
+        return $chain === [] ? '' : $chain[0];
+    }
+}
+
+// Helper: the stable actor key, from the column or the recorded identity metadata
+if (!function_exists('npc_actor_key')) {
+    function npc_actor_key($row, $metadata = null){
+        $key = is_array($row) ? trim((string)($row['actor_key'] ?? '')) : '';
+        if ($key !== '') return $key;
+        if (is_array($metadata) && is_array($metadata['actor_identity'] ?? null)) {
+            return trim((string)($metadata['actor_identity']['actor_key'] ?? ''));
+        }
+        return '';
+    }
+}
+
+// Helper: normalise a RefID for display. FF RefIDs are assigned at runtime.
+if (!function_exists('npc_refid_display')) {
+    function npc_refid_display($refid){
+        $raw = strtoupper(preg_replace('/^0X/i', '', trim((string)$refid)));
+        if (!preg_match('/^[0-9A-F]{1,8}$/', $raw)) {
+            return ['text' => 'No RefID', 'runtime' => false, 'known' => false];
+        }
+        $padded = str_pad($raw, 8, '0', STR_PAD_LEFT);
+        return ['text' => $padded, 'runtime' => strpos($padded, 'FF') === 0, 'known' => true];
+    }
+}
+
+// Helper: how many stored profiles share this visible name
+if (!function_exists('npc_duplicate_count')) {
+    function npc_duplicate_count(array $counts, $name){
+        $key = mb_strtolower(trim((string)$name));
+        if ($key === '') return 1;
+        $count = (int)($counts[$key] ?? 1);
+        return $count > 1 ? $count : 1;
+    }
+}
+
+// Helper: compact identity line plus the hover/focus mod-chain detail for one card
+if (!function_exists('render_npc_identity_lines')) {
+    function render_npc_identity_lines(array $row, array $metaTmp){
+        $refid = npc_refid_display($row['refid'] ?? '');
+        $chain = npc_mod_chain($metaTmp);
+        $source = npc_defining_mod($row, $chain, $metaTmp);
+        $actorKey = npc_actor_key($row, $metaTmp);
+        $chainId = 'npc_chain_' . (string)($row['id'] ?? '0');
+
+        // The actor key is the real identity but too long for a card line, so it rides
+        // along as the RefID tooltip instead.
+        $refidTitle = $actorKey !== ''
+            ? 'Actor key: ' . $actorKey
+            : ($refid['runtime'] ? 'Runtime RefID, assigned by the game and not stable across saves.' : 'Reference ID recorded for this actor.');
+
+        echo '<div class="npc-line"><span class="npc-muted">RefID:</span> ';
+        echo '<span class="npc-refid' . ($refid['known'] ? '' : ' npc-identity-unknown') . '" title="' . htmlspecialchars($refidTitle, ENT_QUOTES) . '">' . htmlspecialchars($refid['text']) . '</span>';
+        if ($refid['runtime']) {
+            echo ' <span class="npc-runtime-chip" title="FF RefIDs are assigned at runtime and can change between saves.">Runtime</span>';
+        }
+        echo '</div>';
+
+        echo '<div class="npc-line npc-source-line"><span class="npc-muted">Source:</span> ';
+        if (count($chain) > 1) {
+            echo '<span class="npc-source-chip" tabindex="0" aria-describedby="' . htmlspecialchars($chainId, ENT_QUOTES) . '">'
+                . htmlspecialchars($source) . '<span class="npc-source-more" aria-hidden="true">+' . (count($chain) - 1) . '</span></span>';
+            echo '<span class="npc-source-chain" id="' . htmlspecialchars($chainId, ENT_QUOTES) . '" role="tooltip">';
+            echo '<span class="npc-source-chain-title">Mod chain</span>';
+            foreach ($chain as $index => $mod) {
+                $role = $index === 0 ? 'defining' : ($index === count($chain) - 1 ? 'final override' : 'override');
+                echo '<span class="npc-source-chain-entry"><span class="npc-source-chain-mod">' . htmlspecialchars($mod) . '</span>'
+                    . '<span class="npc-source-chain-role">' . htmlspecialchars($role) . '</span></span>';
+            }
+            echo '</span>';
+        } elseif ($source !== '') {
+            echo '<span class="npc-source-single" title="' . htmlspecialchars($source, ENT_QUOTES) . '">' . htmlspecialchars($source) . '</span>';
+        } else {
+            echo '<span class="npc-source-single npc-identity-unknown">Unknown source</span>';
+        }
+        echo '</div>';
+    }
+}
+
 // Helper: map gender text to an icon character
 if (!function_exists('gender_icon_char')) {
     function gender_icon_char($gender){
@@ -1315,7 +1433,23 @@ $where = "1=1";
 if ($q !== ''){
     $qEsc = "%".$GLOBALS['db']->escape($q)."%";
     // Match by name primarily; include a few related fields
-    $where .= " and (npc_name ilike '".$qEsc."' or coalesce(race,'') ilike '".$qEsc."' or coalesce(voiceid,'') ilike '".$qEsc."' or coalesce(refid,'') ilike '".$qEsc."' or coalesce(tags,'') ilike '".$qEsc."')";
+    $clauses = [
+        "npc_name ilike '".$qEsc."'",
+        "coalesce(race,'') ilike '".$qEsc."'",
+        "coalesce(voiceid,'') ilike '".$qEsc."'",
+        "coalesce(refid,'') ilike '".$qEsc."'",
+        "coalesce(tags,'') ilike '".$qEsc."'",
+    ];
+    // Same-named actors are told apart by RefID, so accept it typed with or without 0x
+    $qRefid = preg_replace('/^0x/i', '', $q);
+    if ($qRefid !== '' && $qRefid !== $q) {
+        $clauses[] = "coalesce(refid,'') ilike '%".$GLOBALS['db']->escape($qRefid)."%'";
+    }
+    // ...and by the mods that define or override them (metadata is jsonb)
+    $clauses[] = "exists (select 1 from jsonb_array_elements_text("
+        ."case when jsonb_typeof(metadata->'mods') = 'array' then metadata->'mods' else '[]'::jsonb end"
+        .") as chain_mod where chain_mod ilike '".$qEsc."')";
+    $where .= " and (".implode(' or ', $clauses).")";
 }
 if ($nameLetterFilter !== '') {
     $letterEsc = $GLOBALS['db']->escape(strtolower($nameLetterFilter));
@@ -1362,6 +1496,19 @@ if ($page > $totalPages) $page = $totalPages;
 $offset = ($page - 1) * $perPage;
 error_log("{$where} {$order} limit {$perPage} offset {$offset}");
 $data = $npc->getAll("{$where} {$order} limit {$perPage} offset {$offset}");
+
+// Same-name profile counts across the whole table, so the badge is not page-local.
+$npcNameCounts = [];
+try {
+    $dupRows = $GLOBALS["db"]->fetchAll("SELECT lower(npc_name) AS name_key, COUNT(*) AS total FROM core_npc_master GROUP BY 1 HAVING COUNT(*) > 1");
+    foreach (($dupRows ?: []) as $dupRow) {
+        $nameKey = (string)($dupRow['name_key'] ?? '');
+        if ($nameKey !== '') $npcNameCounts[$nameKey] = (int)($dupRow['total'] ?? 0);
+    }
+} catch (Throwable $e) {
+    $npcNameCounts = [];
+}
+
 $editItem = null;
 
 if (!function_exists('renderNpcLetterFilter')) {
@@ -1613,7 +1760,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                         $levelDisp = ' ('.intval($metaTmp['stats']['level']).')';
                     }
-            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($imbEnabled)): ?><span class="npc-imb-icon" title="Individual memory bank enabled">🧠</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Greeting enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
+            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span><?php $dupCount = npc_duplicate_count($npcNameCounts ?? [], $row['npc_name'] ?? ''); if ($dupCount > 1): ?><span class="npc-dup-badge" title="<?= htmlspecialchars($dupCount.' profiles share the name "'.($row['npc_name'] ?? '').'"', ENT_QUOTES) ?>"><span aria-hidden="true">&times;<?= (int)$dupCount ?></span><span class="npc-sr-only"><?= (int)$dupCount ?> profiles share this name</span></span><?php endif; ?> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($imbEnabled)): ?><span class="npc-imb-icon" title="Individual memory bank enabled">🧠</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Greeting enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
             <div class="npc-title-actions">
                     <?php if ($tagsDisp !== ''): ?>
                     <span class="npc-tags-top" title="<?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
@@ -1630,7 +1777,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"><?= htmlspecialchars($row["gender"] ?? "") ?></span></div>
                     <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"><?= htmlspecialchars($row["race"] ?? "") ?></span></div>
                     <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"><?= htmlspecialchars($row["voiceid"] ?? "") ?></span></div>
-                    <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"><?= htmlspecialchars($row["refid"] ?? "") ?></span></div>
+                    <?php render_npc_identity_lines($row, $metaTmp); ?>
                     <?php $oghmaVal = trim((string)($row["oghma_knowledge_tags"] ?? "")); $oghmaDisp = ($oghmaVal === "") ? "none" : $oghmaVal; ?>
                     <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"><?= htmlspecialchars($oghmaDisp) ?></span></div>
                     <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"><?= htmlspecialchars($profLabel) ?></span></div>
@@ -2894,10 +3041,42 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <small class="hint">Optional: base form identifier or template this NPC derives from.</small>
         </div>
 
+        <?php
+        $editMeta = [];
+        if (is_array($editItem ?? null) && !empty($editItem['metadata'])) {
+            $tmpEditMeta = json_decode((string)$editItem['metadata'], true);
+            if (is_array($tmpEditMeta)) $editMeta = $tmpEditMeta;
+        }
+        $editChain = npc_mod_chain($editMeta);
+        $editSource = npc_defining_mod($editItem ?? [], $editChain, $editMeta);
+        $editActorKey = npc_actor_key($editItem ?? [], $editMeta);
+        $editRefid = npc_refid_display($editItem['refid'] ?? '');
+        $editDupCount = npc_duplicate_count($npcNameCounts ?? [], $editItem['npc_name'] ?? '');
+        ?>
         <div class="form-item">
             <label for="refid">Ref ID</label>
-            <input type="text" id="refid" name="refid" placeholder="Game reference ID (000A2C94)" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>">
-            <small class="hint">Skyrim reference ID for in-game linkage.</small>
+            <input type="text" id="refid" name="refid" placeholder="Game reference ID (000A2C94)" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>" readonly aria-describedby="refid_hint">
+            <small class="hint" id="refid_hint">Read-only. Skyrim reference ID for in-game linkage<?= $editRefid['runtime'] ? ' (Runtime: assigned by the game, not stable across saves).' : '.' ?></small>
+        </div>
+
+        <div class="form-item span-2">
+            <span class="npc-identity-label" id="actor_identity_label">Actor Identity</span>
+            <div class="npc-identity-readonly" role="group" aria-labelledby="actor_identity_label">
+                <div class="npc-identity-row"><span class="npc-muted">RefID:</span> <span class="npc-refid<?= $editRefid['known'] ? '' : ' npc-identity-unknown' ?>"><?= htmlspecialchars($editRefid['text']) ?></span><?php if ($editRefid['runtime']): ?> <span class="npc-runtime-chip">Runtime</span><?php endif; ?></div>
+                <div class="npc-identity-row"><span class="npc-muted">Actor Key:</span> <span class="npc-actor-key"><?= htmlspecialchars($editActorKey !== '' ? $editActorKey : 'Not recorded') ?></span></div>
+                <div class="npc-identity-row"><span class="npc-muted">Defining Mod:</span> <span class="<?= $editSource !== '' ? 'npc-source-single' : 'npc-source-single npc-identity-unknown' ?>"><?= htmlspecialchars($editSource !== '' ? $editSource : 'Unknown source') ?></span></div>
+                <div class="npc-identity-row"><span class="npc-muted">Name Sharing:</span> <span><?= $editDupCount > 1 ? htmlspecialchars($editDupCount.' profiles share this name') : 'This name is unique' ?></span></div>
+                <?php if ($editChain !== []): ?>
+                <div class="npc-identity-row npc-identity-chain-row"><span class="npc-muted">Mod Chain:</span>
+                    <ol class="npc-identity-chain">
+                        <?php foreach ($editChain as $chainIndex => $chainMod): ?>
+                        <li><span class="npc-source-chain-mod"><?= htmlspecialchars($chainMod) ?></span> <span class="npc-source-chain-role"><?= $chainIndex === 0 ? 'defining' : ($chainIndex === count($editChain) - 1 ? 'final override' : 'override') ?></span></li>
+                        <?php endforeach; ?>
+                    </ol>
+                </div>
+                <?php endif; ?>
+            </div>
+            <small class="hint">Read-only. These values bind this profile to one game actor and tell same-named NPCs apart.</small>
         </div>
 
         <div class="form-item">
@@ -3852,9 +4031,44 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-blc-icon { margin-left:6px; color:#8db4e2; opacity:0.95; }
 .npc-gps-icon { margin-left:6px; color:#ff6b6b; opacity:0.95; }
 .npc-divider { height:1px; background: linear-gradient(90deg, transparent, rgba(242, 124, 17, 0.3) 50%, transparent); margin:6px 0 10px; }
-.npc-fields { display:flex; flex-direction:column; gap:8px; }
-.npc-line { color:#e0e0e0; font-size:13px; line-height:1.35; }
+.npc-fields { display:flex; flex-direction:column; gap:8px; min-width:0; }
+.npc-line { color:#e0e0e0; font-size:13px; line-height:1.35; min-width:0; overflow-wrap:anywhere; }
 .npc-muted { color:rgb(242, 124, 17); }
+/* --- Same-named actor identity --- */
+.npc-sr-only { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; border:0; }
+.npc-dup-badge { display:inline-block; margin-left:6px; padding:1px 7px; border:1px solid #8a5a1d; border-radius:999px; background:#4a3418; color:#ffd39c; font-size:12px; font-weight:700; vertical-align:middle; }
+.npc-refid { font-family:"Consolas","Courier New",monospace; letter-spacing:0.02em; }
+.npc-actor-key { font-family:"Consolas","Courier New",monospace; font-size:12px; color:#c7cdd6; }
+.npc-identity-unknown { color:#9aa3ae; font-style:italic; font-family:inherit; }
+.npc-runtime-chip { display:inline-block; margin-left:6px; padding:1px 6px; border-radius:999px; background:#2c3b46; color:#9fd6ef; font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em; vertical-align:middle; }
+.npc-source-line { position:relative; }
+.npc-source-single { color:#c2b39b; }
+.npc-source-chip { color:#c2b39b; border-bottom:1px dotted #7c6a53; cursor:help; }
+.npc-source-chip:focus-visible { outline:2px solid rgb(242, 124, 17); outline-offset:2px; border-radius:3px; }
+.npc-source-more { margin-left:5px; padding:0 5px; border-radius:999px; background:#3a3a40; color:#d5d3d0; font-size:11px; }
+/* Full chain lives outside the card body; opacity (not display) keeps it announced by
+   aria-describedby while it is only painted on hover or keyboard focus. */
+.npc-source-chain {
+    position:absolute; top:calc(100% + 5px); left:0; z-index:20;
+    display:flex; flex-direction:column; gap:3px; width:max-content; max-width:min(320px, 90vw);
+    padding:8px 10px; border:1px solid rgba(242, 124, 17, 0.45); border-radius:6px;
+    background:#1b1b1f; box-shadow:0 10px 24px rgba(0, 0, 0, 0.55);
+    color:#ded8d0; font-size:12px; line-height:1.35;
+    opacity:0; pointer-events:none; transition:opacity .12s ease;
+}
+.npc-source-chip:hover + .npc-source-chain,
+.npc-source-chip:focus + .npc-source-chain,
+.npc-source-chip:focus-visible + .npc-source-chain { opacity:1; }
+.npc-source-chain-title { color:rgb(242, 124, 17); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; }
+.npc-source-chain-entry { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.npc-source-chain-mod { min-width:0; overflow-wrap:anywhere; }
+.npc-source-chain-role { flex:0 0 auto; color:#9aa3ae; font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em; }
+.npc-identity-label { display:block; font-weight:700; color:rgb(242, 124, 17); }
+.npc-identity-readonly { display:flex; flex-direction:column; gap:6px; padding:10px 12px; border:1px solid #3a3a3a; border-radius:8px; background:rgba(26, 26, 26, 0.6); }
+.npc-identity-row { color:#e0e0e0; font-size:13px; line-height:1.4; overflow-wrap:anywhere; }
+.npc-identity-chain-row { display:flex; flex-direction:column; gap:4px; }
+.npc-identity-chain { display:flex; flex-direction:column; gap:4px; margin:0; padding-left:20px; }
+.npc-identity-chain li::marker { color:#9aa3ae; font-size:11px; }
 .npc-actions { display:flex; gap:8px; margin-top:6px; justify-content:center; }
 .npc-actions .btn { padding:6px 10px; border-radius:6px; border:1px solid #4a4a4a; background:#2a2a2a; color:#e9efff; text-decoration:none; cursor:pointer; }
 .npc-actions .btn:hover { background:#3a3a3a; }
@@ -4539,7 +4753,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                     $levelDisp2 = ' ('.intval($metaTmp['stats']['level']).')';
                 }
-            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($imbEnabled)): ?><span class="npc-imb-icon" title="Individual memory bank enabled">🧠</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Greeting enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
+            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span><?php $dupCount = npc_duplicate_count($npcNameCounts ?? [], $row['npc_name'] ?? ''); if ($dupCount > 1): ?><span class="npc-dup-badge" title="<?= htmlspecialchars($dupCount.' profiles share the name "'.($row['npc_name'] ?? '').'"', ENT_QUOTES) ?>"><span aria-hidden="true">&times;<?= (int)$dupCount ?></span><span class="npc-sr-only"><?= (int)$dupCount ?> profiles share this name</span></span><?php endif; ?> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($imbEnabled)): ?><span class="npc-imb-icon" title="Individual memory bank enabled">🧠</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Greeting enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
             <div class="npc-title-actions">
                 <?php if ($tagsDisp !== ''): ?>
                 <span class="npc-tags-label">Tags:</span>
@@ -4557,7 +4771,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"><?= htmlspecialchars($row["gender"] ?? "") ?></span></div>
                 <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"><?= htmlspecialchars($row["race"] ?? "") ?></span></div>
                 <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"><?= htmlspecialchars($row["voiceid"] ?? "") ?></span></div>
-                <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"><?= htmlspecialchars($row["refid"] ?? "") ?></span></div>
+                <?php render_npc_identity_lines($row, $metaTmp); ?>
                 <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"><?= htmlspecialchars($oghmaDisp) ?></span></div>
                 <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"><?= htmlspecialchars($profLabel) ?></span></div>
             </div>
@@ -6209,7 +6423,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <div class="npc-line"><span class="npc-muted">Gender:</span> <span class="npc-gender"></span></div>
                 <div class="npc-line"><span class="npc-muted">Race:</span> <span class="npc-race"></span></div>
                 <div class="npc-line"><span class="npc-muted">Voice:</span> <span class="npc-voiceid"></span></div>
-                <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"></span></div>
+                <div class="npc-line"><span class="npc-muted">RefID:</span> <span class="npc-refid"></span> <span class="npc-runtime-chip" style="display:none" title="FF RefIDs are assigned at runtime and can change between saves.">Runtime</span></div>
+                <div class="npc-line npc-source-line"><span class="npc-muted">Source:</span> <span class="npc-source-single"></span></div>
                 <div class="npc-line"><span class="npc-muted">Oghma Tags:</span> <span class="npc-oghma"></span></div>
                 <div class="npc-line"><span class="npc-muted">Profile:</span> <span class="npc-profile"></span></div>
               </div>
@@ -6228,7 +6443,30 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         setText('.npc-gender', data.gender);
         setText('.npc-race', data.race);
         setText('.npc-voiceid', data.voiceid);
-        setText('.npc-refid', data.refid);
+        // Keep the new card's identity line consistent with the server-rendered ones.
+        (function(){
+          const raw = String(data.refid==null?'':data.refid).trim().replace(/^0x/i,'').toUpperCase();
+          const known = /^[0-9A-F]{1,8}$/.test(raw);
+          const text = known ? raw.padStart(8,'0') : 'No RefID';
+          setText('.npc-refid', text);
+          const refidEl = card.querySelector('.npc-refid');
+          if (refidEl) refidEl.classList.toggle('npc-identity-unknown', !known);
+          const runtime = card.querySelector('.npc-runtime-chip');
+          if (runtime) runtime.style.display = (known && text.startsWith('FF')) ? 'inline-block' : 'none';
+          let chain = [];
+          try {
+            const meta = JSON.parse(String(data.metadata||'{}')||'{}');
+            let mods = meta && meta.mods;
+            if (typeof mods === 'string') mods = mods.split(/[#,\r\n]+/);
+            if (Array.isArray(mods)) chain = mods.map(m=>String(m==null?'':m).trim()).filter(Boolean);
+          } catch(_e){}
+          const source = card.querySelector('.npc-source-single');
+          if (source){
+            source.textContent = chain.length ? chain.join(' \u2192 ') : 'Unknown source';
+            source.classList.toggle('npc-identity-unknown', chain.length === 0);
+            if (chain.length) source.title = chain.join(' \u2192 '); else source.removeAttribute('title');
+          }
+        })();
         setText('.npc-oghma', (data.oghma_knowledge_tags==null || String(data.oghma_knowledge_tags).trim()==='') ? 'none' : data.oghma_knowledge_tags);
         // Update title tags pill
         try {

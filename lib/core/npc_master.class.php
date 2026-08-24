@@ -4,6 +4,34 @@ if (!function_exists('chimParseStableFormReference')) {
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "game_plugins.php");
 }
 
+if (!function_exists('chimGetPromptCharacterName')) {
+    function chimGetPromptCharacterName(): string
+    {
+        $canonicalName = trim((string)($GLOBALS['HERIKA_NAME'] ?? ''));
+        if ($canonicalName === '' || strcasecmp($canonicalName, 'The Narrator') === 0) {
+            return function_exists('chimGetNarratorRoleplayName')
+                ? chimGetNarratorRoleplayName()
+                : ($canonicalName !== '' ? $canonicalName : 'The Narrator');
+        }
+
+        $currentNpcData = is_array($GLOBALS['CHIM_CORE_CURRENT_NPC_DATA'] ?? null)
+            ? $GLOBALS['CHIM_CORE_CURRENT_NPC_DATA']
+            : [];
+        $refid = strtoupper(preg_replace('/^0X/i', '', trim((string)($currentNpcData['refid'] ?? ''))));
+        if ($refid !== '' && preg_match('/^[0-9A-F]{1,8}$/', $refid)) {
+            return $canonicalName . ' [RefID: ' . str_pad($refid, 8, '0', STR_PAD_LEFT) . ']';
+        }
+        return $canonicalName;
+    }
+}
+
+if (!function_exists('chimGetResponseActorIdentifier')) {
+    function chimGetResponseActorIdentifier(): string
+    {
+        return chimGetPromptCharacterName();
+    }
+}
+
 if (!function_exists('herikaRolemasterStateToBool')) {
     function herikaRolemasterStateToBool($value)
     {
@@ -381,7 +409,7 @@ class NpcMaster
         $db = $GLOBALS["db"];
 
         $escaped = $db->escape($npcName);
-        $query   = "SELECT 1 FROM core_npc_master WHERE npc_name = '{$escaped}' LIMIT 1";
+        $query   = "SELECT 1 FROM core_npc_master WHERE npc_name = '{$escaped}' ORDER BY (actor_key IS NULL) DESC, id ASC LIMIT 1";
         $result  = $db->fetchOne($query);
 
         if ($result) {
@@ -433,6 +461,7 @@ class NpcMaster
             "base",
             "core",
             "tags",
+            "actor_key",
         ];
 
         foreach ($data as $k => $v) {
@@ -441,7 +470,11 @@ class NpcMaster
                 $data[$k] = null;
             }
         }
-        $data["md5"] = md5($data["npc_name"]);
+        if (empty($data["md5"])) {
+            $data["md5"] = !empty($data["actor_key"])
+                ? md5($data["actor_key"])
+                : md5($data["npc_name"]);
+        }
         $filtered    = array_intersect_key($data, array_flip($fields));
         return $this->db->insert($this->table, $filtered);
     }
@@ -454,7 +487,7 @@ class NpcMaster
         return $this->db->fetchOne($query);
     }
 
-    // Read NPC by unique name
+    // Read the legacy/template row first when multiple actor-bound rows share a display name.
     public function getByName($npcName)
     {
         // The Narrator is now managed via core_narrator table, not core_npc_master
@@ -463,8 +496,38 @@ class NpcMaster
         }
 
         $escaped = $this->escape($npcName);
-        $query   = "SELECT * FROM {$this->table} WHERE npc_name = '{$escaped}' LIMIT 1";
+        $query   = "SELECT * FROM {$this->table} WHERE npc_name = '{$escaped}' ORDER BY (actor_key IS NULL) DESC, id ASC LIMIT 1";
         return $this->db->fetchOne($query);
+    }
+
+    public function getByActorKey($actorKey)
+    {
+        $actorKey = trim((string)$actorKey);
+        if ($actorKey === '') {
+            return null;
+        }
+
+        $escaped = $this->escape($actorKey);
+        return $this->db->fetchOne("SELECT * FROM {$this->table} WHERE actor_key = '{$escaped}' LIMIT 1");
+    }
+
+    public function getByPromptIdentifier($identifier)
+    {
+        $identifier = trim((string)$identifier);
+        if (!preg_match('/^(.*?)\s*\[RefID:\s*(?:0x)?([0-9a-f]{1,8})\]\s*$/i', $identifier, $matches)) {
+            return $this->getByName($identifier);
+        }
+
+        $name = trim($matches[1]);
+        $refid = strtoupper(str_pad($matches[2], 8, '0', STR_PAD_LEFT));
+        $escapedName = $this->escape($name);
+        $escapedRefid = $this->escape($refid);
+        return $this->db->fetchOne(
+            "SELECT * FROM {$this->table}
+             WHERE lower(npc_name) = lower('{$escapedName}') AND upper(refid) = '{$escapedRefid}'
+             ORDER BY (actor_key IS NOT NULL) DESC, gamets_last_updated DESC NULLS LAST, id ASC
+             LIMIT 1"
+        );
     }
 
     // Read NPC by md5
@@ -528,6 +591,7 @@ class NpcMaster
             "base",
             "core",
             "tags",
+            "actor_key",
         ];
 
         $id    = (int) $id;
@@ -785,8 +849,9 @@ class NpcMaster
         $codename        = $this->npcNameToCodename($npcname);
         $baseprofileName = $this->npcNameToCodename($baseprofile);
 
-        // Check if NPC already exists in DB
-        $existing = $this->getByName($npcname);
+        // Actor-bound profiles may share a display name; legacy calls still resolve the template row by name.
+        $actorKey = trim((string)($FORCE_PARMS['actor_key'] ?? ''));
+        $existing = $actorKey !== '' ? $this->getByActorKey($actorKey) : $this->getByName($npcname);
 
         if ($existing && ! $overwrite) {
             // Profile exists, and no overwrite requested
@@ -1004,7 +1069,9 @@ class NpcMaster
         }
 
         $currentNpcData['profile_id'] = $defaultProfileId;
-        $currentNpcData['md5']        = md5($currentNpcData["npc_name"]); // Default profile
+        $currentNpcData['md5']        = !empty($currentNpcData['actor_key'])
+            ? md5($currentNpcData['actor_key'])
+            : md5($currentNpcData["npc_name"]); // Default profile
 
         return $currentNpcData;
 

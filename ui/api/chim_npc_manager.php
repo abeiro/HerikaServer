@@ -169,13 +169,28 @@ function chimNpcManagerPortraitUrl(array $row, array $metadata): string
 function chimNpcManagerCard(array $row, array $profileMap): array
 {
     $metadata = chimNpcManagerDecodeJson($row['metadata'] ?? '{}');
+    $mods = is_array($metadata['mods'] ?? null)
+        ? array_values(array_filter(array_map('trim', $metadata['mods'])))
+        : [];
     $profile = $profileMap[(string)($row['profile_id'] ?? '')] ?? null;
+    $duplicateCount = isset($row['duplicate_count']) ? (int)$row['duplicate_count'] : 0;
+    if ($duplicateCount <= 0 && !empty($row['npc_name'])) {
+        $escapedName = $GLOBALS['db']->escape((string)$row['npc_name']);
+        $countRow = $GLOBALS['db']->fetchOne(
+            "SELECT COUNT(*) AS total FROM core_npc_master WHERE lower(npc_name) = lower('{$escapedName}')"
+        );
+        $duplicateCount = (int)($countRow['total'] ?? 1);
+    }
     return [
         'id' => (int)($row['id'] ?? 0),
         'name' => trim((string)($row['npc_name'] ?? 'Unknown NPC')),
         'gender' => trim((string)($row['gender'] ?? '')),
         'race' => trim((string)($row['race'] ?? '')),
         'refid' => trim((string)($row['refid'] ?? '')),
+        'actor_key' => trim((string)($row['actor_key'] ?? '')),
+        'source_mod' => (string)($metadata['actor_identity']['source_mod'] ?? ($mods[0] ?? '')),
+        'mods' => $mods,
+        'duplicate_count' => max(1, $duplicateCount),
         'profile_id' => isset($row['profile_id']) ? (int)$row['profile_id'] : null,
         'profile_label' => $profile['label'] ?? 'No Profile',
         'favorite' => chimNpcManagerBool($row['npc_favorite'] ?? false),
@@ -258,18 +273,24 @@ function chimNpcManagerFindNpc(array $input): array
     $refid = trim((string)($input['refid'] ?? ''));
     if ($refid !== '') {
         $escaped = $GLOBALS['db']->escape(strtolower($refid));
-        $row = $GLOBALS['db']->fetchOne("SELECT * FROM core_npc_master WHERE lower(refid) = '{$escaped}' ORDER BY gamets_last_updated DESC NULLS LAST LIMIT 1");
-        if ($row) {
-            return $row;
+        $rows = $GLOBALS['db']->fetchAll("SELECT * FROM core_npc_master WHERE lower(refid) = '{$escaped}' ORDER BY gamets_last_updated DESC NULLS LAST, id ASC LIMIT 2");
+        if (count((array)$rows) === 1) {
+            return $rows[0];
+        }
+        if (count((array)$rows) > 1) {
+            throw new InvalidArgumentException('RefID matches more than one profile; use the profile id');
         }
     }
 
     $name = trim((string)($input['name'] ?? $input['npc_name'] ?? ''));
     if ($name !== '') {
         $escaped = $GLOBALS['db']->escape($name);
-        $row = $GLOBALS['db']->fetchOne("SELECT * FROM core_npc_master WHERE npc_name = '{$escaped}' ORDER BY gamets_last_updated DESC NULLS LAST LIMIT 1");
-        if ($row) {
-            return $row;
+        $rows = $GLOBALS['db']->fetchAll("SELECT * FROM core_npc_master WHERE npc_name = '{$escaped}' ORDER BY (actor_key IS NULL) DESC, id ASC LIMIT 2");
+        if (count((array)$rows) === 1) {
+            return $rows[0];
+        }
+        if (count((array)$rows) > 1) {
+            throw new InvalidArgumentException('NPC name matches more than one profile; use the profile id or RefID');
         }
     }
 
@@ -633,7 +654,11 @@ function chimNpcManagerList(array $profiles): array
     $search = trim((string)($_GET['search'] ?? ''));
     if ($search !== '') {
         $escaped = $GLOBALS['db']->escape('%' . $search . '%');
-        $conditions[] = "(npc_name ILIKE '{$escaped}' OR race ILIKE '{$escaped}' OR refid ILIKE '{$escaped}')";
+        $normalizedSearch = preg_replace('/^0x/i', '', $search);
+        $escapedNormalized = $GLOBALS['db']->escape('%' . $normalizedSearch . '%');
+        $conditions[] = "(npc_name ILIKE '{$escaped}' OR race ILIKE '{$escaped}' OR refid ILIKE '{$escaped}'
+            OR replace(lower(refid), '0x', '') LIKE lower('{$escapedNormalized}')
+            OR actor_key ILIKE '{$escaped}' OR metadata::text ILIKE '{$escaped}')";
     }
 
     $profileId = (int)($_GET['profile_id'] ?? 0);
@@ -664,7 +689,16 @@ function chimNpcManagerList(array $profiles): array
     $countRow = $GLOBALS['db']->fetchOne("SELECT COUNT(*) AS total FROM core_npc_master WHERE {$where}");
     $total = (int)($countRow['total'] ?? 0);
     $rows = $GLOBALS['db']->fetchAll(
-        "SELECT * FROM core_npc_master WHERE {$where} ORDER BY npc_favorite DESC NULLS LAST, npc_name ASC, id ASC LIMIT {$limit} OFFSET {$offset}"
+        "SELECT core_npc_master.*, name_counts.duplicate_count
+         FROM core_npc_master
+         JOIN (
+             SELECT lower(npc_name) AS normalized_name, COUNT(*) AS duplicate_count
+             FROM core_npc_master
+             GROUP BY lower(npc_name)
+         ) name_counts ON name_counts.normalized_name = lower(core_npc_master.npc_name)
+         WHERE {$where}
+         ORDER BY npc_favorite DESC NULLS LAST, npc_name ASC, id ASC
+         LIMIT {$limit} OFFSET {$offset}"
     );
     $profileMap = chimNpcManagerProfileMap($profiles);
 

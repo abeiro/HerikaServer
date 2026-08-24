@@ -7937,6 +7937,46 @@ if ($checkVersion("eventlog_session_payload") < 20260807001) {
     }
 }
 
+//----------------------------------------------------
+// SAME-NAMED NPC ACTOR IDENTITIES
+//----------------------------------------------------
+
+if ($checkVersion("npc_actor_identity") < 20260824001) {
+    Logger::debug("Applying npc_actor_identity 20260824001 - allow separate profiles for same-named actors");
+    $migrationOk = true;
+
+    try {
+        $migrationOk = $db->execQuery(
+            "ALTER TABLE public.core_npc_master ADD COLUMN IF NOT EXISTS actor_key text"
+        ) !== false && $migrationOk;
+        $migrationOk = $db->execQuery(
+            "ALTER TABLE public.core_npc_master DROP CONSTRAINT IF EXISTS npc_master_npc_name_key"
+        ) !== false && $migrationOk;
+        $migrationOk = $db->execQuery(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_core_npc_master_actor_key
+             ON public.core_npc_master (actor_key)
+             WHERE actor_key IS NOT NULL"
+        ) !== false && $migrationOk;
+        $migrationOk = $db->execQuery(
+            "CREATE INDEX IF NOT EXISTS idx_core_npc_master_name_lookup
+             ON public.core_npc_master (lower(npc_name), id)"
+        ) !== false && $migrationOk;
+        $migrationOk = $db->execQuery(
+            "CREATE INDEX IF NOT EXISTS idx_core_npc_master_refid_lookup
+             ON public.core_npc_master (lower(refid))
+             WHERE refid IS NOT NULL"
+        ) !== false && $migrationOk;
+    } catch (Throwable $e) {
+        $migrationOk = false;
+        Logger::error("Failed applying npc_actor_identity 20260824001: " . $e->getMessage());
+    }
+
+    if ($migrationOk) {
+        $updateVersion("npc_actor_identity", 20260824001);
+        Logger::info("Applied patch npc_actor_identity 20260824001");
+    }
+}
+
 
 //----------------------------------------------------
 // AUDIT REQUEST RESPONSE - Store the response text for audit requests

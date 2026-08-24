@@ -1435,11 +1435,58 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $baseProfile = "";
 
     $npcMaster = new NpcMaster();
-    // Refids are not stable identity for profile creation: spawned actors, recycled refs,
-    // and modlist changes can make a new visible actor collide with an old profile row.
-    // Always create/resolve by the incoming visible name, then store refid as metadata below.
-    $retVal = createProfile($localName, [], false, $baseProfile); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
-    $currentNpcData = $npcMaster->getByName($localName);
+    $actorKey = trim((string)($splitNameBase[44] ?? ''));
+    if ($actorKey !== '' && !preg_match('/^skyrim-(?:ref|runtime)-v1:[a-z0-9:-]{8,512}$/i', $actorKey)) {
+        error_log("[ADDNPC] Ignoring invalid actor key for {$localName}");
+        $actorKey = '';
+    }
+
+    $currentNpcData = $actorKey !== '' ? $npcMaster->getByActorKey($actorKey) : null;
+    if (!$currentNpcData && $actorKey !== '') {
+        // Bind a legacy row only when the old runtime RefID and defining source both agree.
+        // Name alone is intentionally insufficient because generic actors share it.
+        $incomingRefid = strtoupper(trim((string)($splitNameBase[4] ?? '')));
+        $incomingMods = array_values(array_filter(array_map('trim', explode('#', (string)($splitNameBase[41] ?? '')))));
+        $incomingSource = $incomingMods[0] ?? '';
+        $escapedName = $db->escape($localName);
+        $legacyRows = $db->fetchAll(
+            "SELECT * FROM core_npc_master
+             WHERE lower(npc_name) = lower('{$escapedName}') AND actor_key IS NULL
+             ORDER BY id ASC"
+        );
+        foreach ((array)$legacyRows as $legacyRow) {
+            $legacyRefid = strtoupper(trim((string)($legacyRow['refid'] ?? '')));
+            $legacyMeta = $npcMaster->getMetadata($legacyRow);
+            $legacyMods = is_array($legacyMeta['mods'] ?? null) ? $legacyMeta['mods'] : [];
+            $legacySource = trim((string)($legacyMods[0] ?? ''));
+            if ($incomingRefid !== '' && $incomingSource !== ''
+                && $legacyRefid === $incomingRefid
+                && strcasecmp($legacySource, $incomingSource) === 0) {
+                $npcMaster->update((int)$legacyRow['id'], [
+                    'actor_key' => $actorKey,
+                    'md5' => md5($actorKey),
+                ]);
+                $currentNpcData = $npcMaster->getById((int)$legacyRow['id']);
+                error_log("[ADDNPC] Bound legacy profile #{$legacyRow['id']} to actor key {$actorKey}");
+                break;
+            }
+        }
+    }
+
+    if ($currentNpcData) {
+        $retVal = 2;
+    } else {
+        $retVal = createProfile(
+            $localName,
+            [],
+            false,
+            $baseProfile,
+            $actorKey !== '' ? ['actor_key' => $actorKey] : []
+        ); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
+        $currentNpcData = $actorKey !== ''
+            ? $npcMaster->getByActorKey($actorKey)
+            : $npcMaster->getByName($localName);
+    }
     audit_log("comm.php addnpc $localName");
 
     // If using sendAllNpcs from plugin, this is no loner valid
@@ -1449,7 +1496,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     // Update new data
 
-    if (isset($splitNameBase[4]) && $retVal == 1) {
+    if ($actorKey === '' && isset($splitNameBase[4]) && $retVal == 1) {
         $currentNpcDataAlt = $npcMaster->getByRefId($splitNameBase[4]);
         if ($currentNpcDataAlt && $currentNpcDataAlt["npc_name"] != $currentNpcData["npc_name"]) {
             // Seems an NPC has changed name.
@@ -1549,6 +1596,16 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
             $meta["stats"]["scale"] = isset($splitNameBase[40]) ? floatval($splitNameBase[40]) : 1.0;
 
             $meta["mods"] = isset($splitNameBase[41]) ? explode("#", $splitNameBase[41]) : null;
+            if ($actorKey !== '') {
+                $meta['actor_identity'] = [
+                    'version' => 1,
+                    'actor_key' => $actorKey,
+                    'runtime_refid' => strtoupper(trim((string)($splitNameBase[4] ?? ''))),
+                    'source_mod' => trim((string)($meta['mods'][0] ?? '')),
+                ];
+                $currentNpcData['actor_key'] = $actorKey;
+                $currentNpcData['md5'] = md5($actorKey);
+            }
 
             // NPC factions - format: formID1:rank1[:PluginName.esp|LocalFormId]#formID2:rank2[:...]
             // You cannot use | as separator, because it's already used as primary request separator.
