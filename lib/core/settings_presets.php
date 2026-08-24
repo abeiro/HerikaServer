@@ -103,7 +103,7 @@ function chimSettingsPresetBuiltIns(): array
             'id' => 'builtin:local_llm',
             'name' => 'Local LLM',
             'built_in' => true,
-            'description' => 'Minimal mode for a local model around 13B sharing a GPU with Skyrim. Keeps NPC dialogue and actions while most optional background AI features are turned off.',
+            'description' => '',
             'affects_profiles' => true,
             'snapshot' => [
                 'version' => 1,
