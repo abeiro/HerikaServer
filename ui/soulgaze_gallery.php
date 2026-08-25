@@ -256,6 +256,7 @@ foreach (chimVisualContextList(1000) as $record) {
                     <a id="lb_reimage6" href="#" title="Will send image to Replicate to create a reimagined version, needs a Replicate API key">Replicate Kontext NSFW ($)</a>
                     <a id="lb_reimage7" href="#" title="Will send image to Replicate to create a reimagined version, needs a Replicate API key">Replicate Gemini($)</a>
                     <a id="lb_reimage8" href="#" title="Will send image to Replicate to create a reimagined version, needs a Replicate API key">Replicate KLEIN9B</a>
+                    <a id="lb_reimage9" href="#" title="Will send image to Replicate to create a reimagined version, needs a Replicate API key">Replicate GrokImagine</a>
                 </div>
             </div>
             <button id="lb_close" type="button">Close</button>
@@ -284,6 +285,7 @@ foreach (chimVisualContextList(1000) as $record) {
   const lb_reimage6 = document.getElementById('lb_reimage6');
   const lb_reimage7 = document.getElementById('lb_reimage7');
   const lb_reimage8 = document.getElementById('lb_reimage8');
+  const lb_reimage9 = document.getElementById('lb_reimage9');
 
   const lb_del = document.getElementById('lb_del');
   const lb_reimagine_toggle = document.getElementById('lb_reimagine_toggle');
@@ -550,7 +552,30 @@ function close(){ if (!lb) return; lb.style.display='none'; lbImg.removeAttribut
         .catch((error) => {
             console.error('Error:', error);
         });
-     } else if (e.target === lb_del) {
+     }  else if (e.target === lb_reimage9) {
+        showProcessing();
+        if (lb_reimagine_menu) lb_reimagine_menu.style.display = 'none';
+        uHint=prompt('Hint','Skin color/race ... ');
+        fetch('cmd/gallery_tool_convert_style_replicate_grok.php', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ source: lbImg.src,userhint:uHint })
+
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            close()
+            // Reload the current document to reflect changes
+            window.location.reload();
+            // Handle the response data here
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+     }  else if (e.target === lb_del) {
         if (confirm('Sure thing?. No recycle bin here')) {
             showProcessing();
 
