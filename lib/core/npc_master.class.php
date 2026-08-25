@@ -401,27 +401,38 @@ class NpcMaster
     private $table = "core_npc_master";
     private $db;
 
-    // The md5 column is the profile lookup key. Actor-bound rows key on the stable actor_key so
-    // same-named actors keep distinct profiles; legacy rows without an actor_key keep keying on
-    // the visible name. Always derive it from the stored row, never from client input.
-    public static function identityMd5($row, $npcName = null)
+    public static function normalizeRefId($refid)
     {
-        $actorKey = is_array($row) ? trim((string) ($row['actor_key'] ?? '')) : '';
-        if ($actorKey !== '') {
-            return md5($actorKey);
+        $refid = preg_replace('/^0x/i', '', trim((string)$refid));
+        if ($refid === '' || !preg_match('/^[0-9a-f]{1,8}$/i', $refid)) {
+            return '';
         }
+        return strtoupper(str_pad($refid, 8, '0', STR_PAD_LEFT));
+    }
 
+    // Name plus normalized RefID is both the visible actor identifier and profile lookup key.
+    public static function displayIdentifier($npcName, $refid = '')
+    {
+        $name = trim((string)$npcName);
+        $normalizedRefid = self::normalizeRefId($refid);
+        return $normalizedRefid !== '' ? "{$name} [RefID: {$normalizedRefid}]" : $name;
+    }
+
+    public static function identityMd5($row, $npcName = null, $refid = null)
+    {
         $name = $npcName !== null
             ? trim((string) $npcName)
             : (is_array($row) ? trim((string) ($row['npc_name'] ?? '')) : '');
-
-        return md5($name);
+        $storedRefid = $refid !== null
+            ? $refid
+            : (is_array($row) ? ($row['refid'] ?? '') : '');
+        return md5(self::displayIdentifier($name, $storedRefid));
     }
 
-    // Helper: true when this row is bound to a specific game actor rather than just a name.
+    // A recorded RefID distinguishes this profile from other actors with the same display name.
     public static function isActorBound($row)
     {
-        return is_array($row) && trim((string) ($row['actor_key'] ?? '')) !== '';
+        return is_array($row) && self::normalizeRefId($row['refid'] ?? '') !== '';
     }
 
     public static function profileExists($npcName, $checkLegacyFile = false)
@@ -432,7 +443,7 @@ class NpcMaster
         $db = $GLOBALS["db"];
 
         $escaped = $db->escape($npcName);
-        $query   = "SELECT 1 FROM core_npc_master WHERE npc_name = '{$escaped}' ORDER BY (actor_key IS NULL) DESC, id ASC LIMIT 1";
+        $query   = "SELECT 1 FROM core_npc_master WHERE npc_name = '{$escaped}' ORDER BY id ASC LIMIT 1";
         $result  = $db->fetchOne($query);
 
         if ($result) {
@@ -484,7 +495,6 @@ class NpcMaster
             "base",
             "core",
             "tags",
-            "actor_key",
         ];
 
         foreach ($data as $k => $v) {
@@ -493,11 +503,8 @@ class NpcMaster
                 $data[$k] = null;
             }
         }
-        if (empty($data["md5"])) {
-            $data["md5"] = !empty($data["actor_key"])
-                ? md5($data["actor_key"])
-                : md5($data["npc_name"]);
-        }
+        $data["refid"] = self::normalizeRefId($data["refid"] ?? '');
+        $data["md5"] = self::identityMd5($data);
         $filtered    = array_intersect_key($data, array_flip($fields));
         return $this->db->insert($this->table, $filtered);
     }
@@ -523,26 +530,17 @@ class NpcMaster
             "SELECT * FROM {$this->table} WHERE npc_name = '{$escaped}' ORDER BY id ASC"
         );
 
-        $actorBound = [];
-        foreach ((array)$rows as $row) {
-            if (!self::isActorBound($row)) {
-                return $row;
-            }
-            $actorBound[] = $row;
+        if (count((array)$rows) === 1) {
+            return $rows[0];
         }
 
-        return count($actorBound) === 1 ? $actorBound[0] : null;
-    }
-
-    public function getByActorKey($actorKey)
-    {
-        $actorKey = trim((string)$actorKey);
-        if ($actorKey === '') {
-            return null;
+        $legacyRows = array_values(array_filter((array)$rows, static function ($row) {
+            return self::normalizeRefId($row['refid'] ?? '') === '';
+        }));
+        if (count($legacyRows) === 1) {
+            return $legacyRows[0];
         }
-
-        $escaped = $this->escape($actorKey);
-        return $this->db->fetchOne("SELECT * FROM {$this->table} WHERE actor_key = '{$escaped}' LIMIT 1");
+        return null;
     }
 
     public function getByPromptIdentifier($identifier)
@@ -559,17 +557,8 @@ class NpcMaster
         $rows = $this->db->fetchAll(
             "SELECT * FROM {$this->table}
              WHERE lower(npc_name) = lower('{$escapedName}') AND upper(refid) = '{$escapedRefid}'
-             ORDER BY (actor_key IS NOT NULL) DESC, gamets_last_updated DESC NULLS LAST, id ASC"
+             ORDER BY gamets_last_updated DESC NULLS LAST, id ASC"
         );
-
-        $actorBound = array_values(array_filter((array)$rows, [self::class, 'isActorBound']));
-        if (count($actorBound) === 1) {
-            return $actorBound[0];
-        }
-        if (count($actorBound) > 1) {
-            return null;
-        }
-
         return count((array)$rows) === 1 ? $rows[0] : null;
     }
 
@@ -606,6 +595,9 @@ class NpcMaster
     public function update($id, $data)
     {
         $data = $this->normalizeNpcDataForPersistence($data);
+        if (array_key_exists('refid', $data)) {
+            $data['refid'] = self::normalizeRefId($data['refid']);
+        }
 
         $fields = [
             "npc_name",
@@ -634,7 +626,6 @@ class NpcMaster
             "base",
             "core",
             "tags",
-            "actor_key",
         ];
 
         $id    = (int) $id;
@@ -648,14 +639,11 @@ class NpcMaster
             }
         }
 
-        // Keep the lookup key anchored to the row's real identity: a caller that posts
-        // md5(npc_name) must never re-key an actor-bound row onto the shared-name hash.
         if (is_array($existing)) {
             $data['md5'] = self::identityMd5(
-                [
-                    'actor_key' => $data['actor_key'] ?? ($existing['actor_key'] ?? ''),
-                    'npc_name'  => $data['npc_name'] ?? ($existing['npc_name'] ?? ''),
-                ]
+                $existing,
+                $data['npc_name'] ?? ($existing['npc_name'] ?? ''),
+                $data['refid'] ?? ($existing['refid'] ?? '')
             );
         }
 
@@ -903,9 +891,10 @@ class NpcMaster
         $codename        = $this->npcNameToCodename($npcname);
         $baseprofileName = $this->npcNameToCodename($baseprofile);
 
-        // Actor-bound profiles may share a display name; legacy calls still resolve the template row by name.
-        $actorKey = trim((string)($FORCE_PARMS['actor_key'] ?? ''));
-        $existing = $actorKey !== '' ? $this->getByActorKey($actorKey) : $this->getByName($npcname);
+        $refid = self::normalizeRefId($FORCE_PARMS['refid'] ?? '');
+        $existing = $refid !== ''
+            ? $this->getByPromptIdentifier(self::displayIdentifier($npcname, $refid))
+            : $this->getByName($npcname);
 
         if ($existing && ! $overwrite) {
             // Profile exists, and no overwrite requested
@@ -1123,9 +1112,7 @@ class NpcMaster
         }
 
         $currentNpcData['profile_id'] = $defaultProfileId;
-        $currentNpcData['md5']        = !empty($currentNpcData['actor_key'])
-            ? md5($currentNpcData['actor_key'])
-            : md5($currentNpcData["npc_name"]); // Default profile
+        $currentNpcData['md5'] = self::identityMd5($currentNpcData); // Default profile
 
         return $currentNpcData;
 
@@ -1526,14 +1513,14 @@ class NpcMaster
                 npc_id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
                 oghma_knowledge_tags, emote_moods, personality, relationships,
                 occupation, skills, speechstyle, goals, voiceid, metadata,
-                gender, race, refid, actor_key, profile_id, dynamic_profile, extended_data,
+                gender, race, refid, profile_id, dynamic_profile, extended_data,
                 md5, gamets_last_updated, core, base, tags, appearance, created
             )
             SELECT
                 id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
                 oghma_knowledge_tags, emote_moods, personality, relationships,
                 occupation, skills, speechstyle, goals, voiceid, metadata,
-                gender, race, refid, actor_key, profile_id, dynamic_profile,
+                gender, race, refid, profile_id, dynamic_profile,
                 COALESCE(extended_data, '{}'::jsonb) || jsonb_build_object('_chim_history_source', 'infosave'),
                 md5, $timestamp, core, base, tags, appearance, '{$createdTimestamp}'
             FROM core_npc_master
@@ -1578,7 +1565,6 @@ restore AS (
         h.gender,
         h.race,
         h.refid,
-        h.actor_key,
         h.profile_id,
         h.dynamic_profile,
         CASE
@@ -1608,14 +1594,14 @@ INSERT INTO core_npc_master (
     id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
     oghma_knowledge_tags, emote_moods, personality, relationships,
     occupation, skills, speechstyle, goals, voiceid, metadata,
-    gender, race, refid, actor_key, profile_id, dynamic_profile, extended_data,
+    gender, race, refid, profile_id, dynamic_profile, extended_data,
     md5, gamets_last_updated, core, base, tags, appearance
 )
 SELECT
     id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
     oghma_knowledge_tags, emote_moods, personality, relationships,
     occupation, skills, speechstyle, goals, voiceid, metadata,
-    gender, race, refid, actor_key, profile_id, dynamic_profile, extended_data,
+    gender, race, refid, profile_id, dynamic_profile, extended_data,
     md5, gamets_last_updated, core, base, tags, appearance
 FROM restore
 ";

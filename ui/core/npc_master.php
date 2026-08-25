@@ -437,18 +437,6 @@ if (!function_exists('npc_defining_mod')) {
     }
 }
 
-// Helper: the stable actor key, from the column or the recorded identity metadata
-if (!function_exists('npc_actor_key')) {
-    function npc_actor_key($row, $metadata = null){
-        $key = is_array($row) ? trim((string)($row['actor_key'] ?? '')) : '';
-        if ($key !== '') return $key;
-        if (is_array($metadata) && is_array($metadata['actor_identity'] ?? null)) {
-            return trim((string)($metadata['actor_identity']['actor_key'] ?? ''));
-        }
-        return '';
-    }
-}
-
 // Helper: normalise a RefID for display. FF RefIDs are assigned at runtime.
 if (!function_exists('npc_refid_display')) {
     function npc_refid_display($refid){
@@ -477,14 +465,11 @@ if (!function_exists('render_npc_identity_lines')) {
         $refid = npc_refid_display($row['refid'] ?? '');
         $chain = npc_mod_chain($metaTmp);
         $source = npc_defining_mod($row, $chain, $metaTmp);
-        $actorKey = npc_actor_key($row, $metaTmp);
         $chainId = 'npc_chain_' . (string)($row['id'] ?? '0');
 
-        // The actor key is the real identity but too long for a card line, so it rides
-        // along as the RefID tooltip instead.
-        $refidTitle = $actorKey !== ''
-            ? 'Actor key: ' . $actorKey
-            : ($refid['runtime'] ? 'Runtime RefID, assigned by the game and not stable across saves.' : 'Reference ID recorded for this actor.');
+        $refidTitle = $refid['runtime']
+            ? 'Runtime RefID, assigned by the game and not stable across saves.'
+            : 'Reference ID recorded for this actor.';
 
         echo '<div class="npc-line"><span class="npc-muted">RefID:</span> ';
         echo '<span class="npc-refid' . ($refid['known'] ? '' : ' npc-identity-unknown') . '" title="' . htmlspecialchars($refidTitle, ENT_QUOTES) . '">' . htmlspecialchars($refid['text']) . '</span>';
@@ -717,10 +702,7 @@ if (!function_exists('chimResolveNpcIdAfterCreate')) {
     }
 }
 
-// Actor identity is read-only in management. The editor posts the RefID back from a readonly
-// field, so drop it for actor-bound rows (unchanged values stay harmless, changed ones never
-// persist) and re-derive the md5 lookup key from the stored row instead of the posted name:
-// actor-bound profiles key on md5(actor_key), legacy ones keep md5(npc_name).
+// RefID is read-only in management because Name + RefID is the profile lookup identity.
 if (!function_exists('chimApplyStoredNpcIdentityToPost')) {
     function chimApplyStoredNpcIdentityToPost($npc, $id): void
     {
@@ -3126,21 +3108,20 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         }
         $editChain = npc_mod_chain($editMeta);
         $editSource = npc_defining_mod($editItem ?? [], $editChain, $editMeta);
-        $editActorKey = npc_actor_key($editItem ?? [], $editMeta);
+        $editActorBound = NpcMaster::isActorBound($editItem ?? []);
         $editRefid = npc_refid_display($editItem['refid'] ?? '');
         $editDupCount = npc_duplicate_count($npcNameCounts ?? [], $editItem['npc_name'] ?? '');
         ?>
         <div class="form-item">
             <label for="refid">Ref ID</label>
             <input type="text" id="refid" name="refid" placeholder="Game reference ID (000A2C94)" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>" readonly aria-describedby="refid_hint">
-            <small class="hint" id="refid_hint">Read-only. Skyrim reference ID for in-game linkage<?= $editRefid['runtime'] ? ' (Runtime: assigned by the game, not stable across saves).' : '.' ?><?= $editActorKey !== '' ? ' This profile is bound to a specific actor, so a changed value is never saved.' : '' ?></small>
+            <small class="hint" id="refid_hint">Read-only. Skyrim reference ID for in-game linkage<?= $editRefid['runtime'] ? ' (Runtime: assigned by the game, not stable across saves).' : '.' ?><?= $editActorBound ? ' This profile is bound to a specific actor, so a changed value is never saved.' : '' ?></small>
         </div>
 
         <div class="form-item span-2">
             <span class="npc-identity-label" id="actor_identity_label">Actor Identity</span>
             <div class="npc-identity-readonly" role="group" aria-labelledby="actor_identity_label">
                 <div class="npc-identity-row"><span class="npc-muted">RefID:</span> <span class="npc-refid<?= $editRefid['known'] ? '' : ' npc-identity-unknown' ?>"><?= htmlspecialchars($editRefid['text']) ?></span><?php if ($editRefid['runtime']): ?> <span class="npc-runtime-chip">Runtime</span><?php endif; ?></div>
-                <div class="npc-identity-row"><span class="npc-muted">Actor Key:</span> <span class="npc-actor-key"><?= htmlspecialchars($editActorKey !== '' ? $editActorKey : 'Not recorded') ?></span></div>
                 <div class="npc-identity-row"><span class="npc-muted">Defining Mod:</span> <span class="<?= $editSource !== '' ? 'npc-source-single' : 'npc-source-single npc-identity-unknown' ?>"><?= htmlspecialchars($editSource !== '' ? $editSource : 'Unknown source') ?></span></div>
                 <div class="npc-identity-row"><span class="npc-muted">Name Sharing:</span> <span><?= $editDupCount > 1 ? htmlspecialchars($editDupCount.' profiles share this name') : 'This name is unique' ?></span></div>
                 <?php if ($editChain !== []): ?>
@@ -4115,7 +4096,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-sr-only { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; border:0; }
 .npc-dup-badge { display:inline-block; margin-left:6px; padding:1px 7px; border:1px solid #8a5a1d; border-radius:999px; background:#4a3418; color:#ffd39c; font-size:12px; font-weight:700; vertical-align:middle; }
 .npc-refid { font-family:"Consolas","Courier New",monospace; letter-spacing:0.02em; }
-.npc-actor-key { font-family:"Consolas","Courier New",monospace; font-size:12px; color:#c7cdd6; }
 .npc-identity-unknown { color:#9aa3ae; font-style:italic; font-family:inherit; }
 .npc-runtime-chip { display:inline-block; margin-left:6px; padding:1px 6px; border-radius:999px; background:#2c3b46; color:#9fd6ef; font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em; vertical-align:middle; }
 .npc-source-line { position:relative; }

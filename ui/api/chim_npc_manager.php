@@ -187,8 +187,7 @@ function chimNpcManagerCard(array $row, array $profileMap): array
         'gender' => trim((string)($row['gender'] ?? '')),
         'race' => trim((string)($row['race'] ?? '')),
         'refid' => trim((string)($row['refid'] ?? '')),
-        'actor_key' => trim((string)($row['actor_key'] ?? '')),
-        'source_mod' => (string)($metadata['actor_identity']['source_mod'] ?? ($mods[0] ?? '')),
+        'source_mod' => (string)($mods[0] ?? ''),
         'mods' => $mods,
         'duplicate_count' => max(1, $duplicateCount),
         'profile_id' => isset($row['profile_id']) ? (int)$row['profile_id'] : null,
@@ -286,7 +285,7 @@ function chimNpcManagerFindNpc(array $input): array
     $name = trim((string)($input['name'] ?? $input['npc_name'] ?? ''));
     if ($name !== '') {
         $escaped = $GLOBALS['db']->escape($name);
-        $rows = $GLOBALS['db']->fetchAll("SELECT * FROM core_npc_master WHERE npc_name = '{$escaped}' ORDER BY (actor_key IS NULL) DESC, id ASC LIMIT 2");
+        $rows = $GLOBALS['db']->fetchAll("SELECT * FROM core_npc_master WHERE npc_name = '{$escaped}' ORDER BY id ASC LIMIT 2");
         if (count((array)$rows) === 1) {
             return $rows[0];
         }
@@ -707,7 +706,7 @@ function chimNpcManagerList(array $profiles): array
         $escapedNormalized = $GLOBALS['db']->escape('%' . $normalizedSearch . '%');
         $conditions[] = "(npc_name ILIKE '{$escaped}' OR race ILIKE '{$escaped}' OR refid ILIKE '{$escaped}'
             OR replace(lower(refid), '0x', '') LIKE lower('{$escapedNormalized}')
-            OR actor_key ILIKE '{$escaped}' OR metadata::text ILIKE '{$escaped}')";
+            OR metadata::text ILIKE '{$escaped}')";
     }
 
     $profileId = (int)($_GET['profile_id'] ?? 0);
@@ -809,14 +808,12 @@ function chimNpcManagerSave(array $input, array $profiles): array
         throw new InvalidArgumentException('NPC name is required');
     }
 
-    // Actor identity is read-only in management. Dropping the field keeps unchanged posted values
-    // harmless while a changed RefID never reaches the row that the actor key already identifies.
+    // RefID is part of the profile selector, so management cannot change it independently.
     if (NpcMaster::isActorBound($row)) {
         unset($update['refid']);
     }
 
-    // The lookup key always follows the stored row: md5(actor_key) for actor-bound profiles,
-    // md5(npc_name) for legacy ones. It is never taken from client input.
+    // The lookup key always follows the stored Name + RefID identity, never client-supplied md5.
     $update['md5'] = NpcMaster::identityMd5($row, $update['npc_name'] ?? ($row['npc_name'] ?? ''));
 
     $extended = chimNpcManagerDecodeJson($row['extended_data'] ?? '{}');

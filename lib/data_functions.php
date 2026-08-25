@@ -6749,7 +6749,7 @@ function profile_exists($npcname) {
     return file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php");
 }
 
-function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $baseprofile = '', $actorIdentity = [])
+function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $baseprofile = '', $profileIdentity = [])
 {
     // This should be done at NpcMaster::createProfile
     global $db;
@@ -6764,16 +6764,12 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
     $baseprofileName = npcNameToCodename($baseprofile);
 
     $npcMaster = new NpcMaster();
-    $actorKey = is_array($actorIdentity) ? trim((string)($actorIdentity['actor_key'] ?? '')) : '';
-    if ($actorKey !== '' && !preg_match('/^skyrim-(?:ref|runtime)-v1:[a-z0-9:-]{8,512}$/i', $actorKey)) {
-        error_log("[CREATEPROFILE] Ignoring invalid actor key for {$npcname}");
-        $actorKey = '';
-    }
-    $identityFields = $actorKey !== ''
-        ? ['actor_key' => $actorKey, 'md5' => md5($actorKey)]
+    $refid = is_array($profileIdentity) ? NpcMaster::normalizeRefId($profileIdentity['refid'] ?? '') : '';
+    $identityFields = $refid !== ''
+        ? ['refid' => $refid, 'md5' => NpcMaster::identityMd5(['npc_name' => $npcname, 'refid' => $refid])]
         : [];
-    $currentNpcData = $actorKey !== ''
-        ? $npcMaster->getByActorKey($actorKey)
+    $currentNpcData = $refid !== ''
+        ? $npcMaster->getByPromptIdentifier(NpcMaster::displayIdentifier($npcname, $refid))
         : $npcMaster->getByName($npcname);
 
     $EMPTY_PROFILE=false;
@@ -6881,8 +6877,8 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
                     "npc_name" => $npcname
                 ], $identityFields));
             $EMPTY_PROFILE=true;
-            $newData = $actorKey !== ''
-                ? $npcMaster->getByActorKey($actorKey)
+            $newData = $refid !== ''
+                ? $npcMaster->getByPromptIdentifier(NpcMaster::displayIdentifier($npcname, $refid))
                 : $npcMaster->GetByName($npcname);
             
 
@@ -6948,8 +6944,8 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         }
 
         // 3) Assign (may remain empty if nothing found)
-        $currentData = $actorKey !== ''
-            ? $npcMaster->getByActorKey($actorKey)
+        $currentData = $refid !== ''
+            ? $npcMaster->getByPromptIdentifier(NpcMaster::displayIdentifier($npcname, $refid))
             : $npcMaster->GetByName($npcname);
         $currentData["voiceid"] = $voiceid;
 
@@ -6983,7 +6979,7 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         }
 
         $currentData['profile_id'] = $defaultProfileId;
-        $currentData['md5'] = $actorKey !== '' ? md5($actorKey) : md5($currentData["npc_name"]);
+        $currentData['md5'] = NpcMaster::identityMd5($currentData);
         $currentData['gamets_last_updated'] = $GLOBALS["gameRequest"][2];
 
         if ($EMPTY_PROFILE) {

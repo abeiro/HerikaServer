@@ -59,7 +59,7 @@ if (!function_exists('chimRuntimeNeedsDbUpdates')) {
             'prompts' => 20260615001,
             'skyrim_quest_definitions' => 20260628003,
             'core_tts_connector_omnivoice' => 20260708001,
-            'npc_actor_identity' => 20260824001,
+            'npc_actor_identity' => 20260824003,
         ];
 
         try {

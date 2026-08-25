@@ -52,8 +52,7 @@ CREATE TABLE public.core_npc_master (
     gamets_last_updated numeric,
     core text,
     base text,
-    tags text,
-    actor_key text
+    tags text
 );
 
 
@@ -122,12 +121,12 @@ SELECT pg_catalog.setval('public.npc_master_id_seq', 2189, true);
 
 
 --
--- Name: core_npc_master actor key identity; Type: INDEX; Schema: public; Owner: dwemer
+-- Name: core_npc_master display identity; Type: INDEX; Schema: public; Owner: dwemer
 --
 
-CREATE UNIQUE INDEX idx_core_npc_master_actor_key
-    ON public.core_npc_master (actor_key)
-    WHERE actor_key IS NOT NULL;
+CREATE UNIQUE INDEX idx_core_npc_master_display_identity
+    ON public.core_npc_master (lower(npc_name), upper(refid))
+    WHERE refid IS NOT NULL AND BTRIM(refid) <> '';
 
 CREATE INDEX idx_core_npc_master_name_lookup
     ON public.core_npc_master (lower(npc_name), id);
