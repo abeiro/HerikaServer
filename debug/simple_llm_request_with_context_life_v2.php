@@ -30,6 +30,7 @@ $GLOBALS['SCRIPTLINE_ANIMATION'] = '';
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+ini_set('max_execution_time', 120); // Set maximum execution time to 2 minutes
 
 $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR;
 $GLOBALS['ENGINE_PATH'] = $enginePath;
