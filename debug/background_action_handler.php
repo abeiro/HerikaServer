@@ -1109,6 +1109,8 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             }
             if (!gameIsPaused())
                 $retryCount++;
+            else
+                $retryCount=$retryCount+0.1;
             sleep(1);
         }
     }
@@ -1712,7 +1714,8 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         if ($itemName) {
             $itemNameResolved = "($count {$itemName})";
         } else {
-            $itemNameResolved = '';
+            $row = $GLOBALS["DB"]->fetchOne("select COALESCE(description,name) as name from market_cache where baseid='0x$itemId'");
+            $itemNameResolved = $row ? "($count {$row['name']})" : "($count Unknown Item)";
         }
 
         $db->insert('eventlog', [
