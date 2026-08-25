@@ -2890,6 +2890,7 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
         "audience" => "",
         "present_actors" => [],
         "chat_shortcut_routed" => false,
+        "player_mood" => "",
     ];
     $rawField = trim((string)$rawField);
     if ($rawField === "") {
@@ -2916,7 +2917,35 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
     $result["chat_shortcut_routed"] =
         ($payload["source"] ?? "") === "plugin_player_routing_v2" &&
         ($payload["chat_shortcut_routed"] ?? false) === true;
+    if (($payload["source"] ?? "") === "plugin_player_routing_v2") {
+        $playerMood = strtolower(trim((string)($payload["player_mood"] ?? "")));
+        if (in_array($playerMood, ["happy", "sad", "angry", "scared", "surprised"], true)) {
+            $result["player_mood"] = $playerMood;
+        }
+    }
     return $result;
+}
+
+// Build a short prompt-only delivery cue from a validated Prisma player mood.
+function chimBuildPlayerMoodPromptCue($playerMood, $playerName)
+{
+    $descriptions = [
+        "happy" => "says with a smile on their face",
+        "sad" => "says with a sad expression",
+        "angry" => "says with an angry expression",
+        "scared" => "says with a frightened expression",
+        "surprised" => "says with a surprised expression",
+    ];
+    $playerMood = strtolower(trim((string)$playerMood));
+    if (!isset($descriptions[$playerMood])) {
+        return "";
+    }
+
+    $playerName = trim((string)$playerName);
+    if ($playerName === "") {
+        $playerName = "Player";
+    }
+    return "({$playerName} {$descriptions[$playerMood]})";
 }
 
 function chimDecodeAudienceSnapshotField($rawField)

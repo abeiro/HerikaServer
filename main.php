@@ -1694,6 +1694,18 @@ if ($gameRequest[0] == "narrator_welcome") {
 // Take care of override request if needed..
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php");
 
+$playerMoodCue = chimBuildPlayerMoodPromptCue(
+    $requestRoutingSnapshot["player_mood"] ?? "",
+    $GLOBALS["PLAYER_NAME"] ?? "Player"
+);
+if ($playerMoodCue !== "" && in_array(
+    $gameRequest[0] ?? "",
+    ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"],
+    true
+)) {
+    $request = rtrim((string)$request) . "\n" . $playerMoodCue;
+}
+
 
 
 /*
