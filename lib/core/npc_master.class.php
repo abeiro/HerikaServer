@@ -401,6 +401,29 @@ class NpcMaster
     private $table = "core_npc_master";
     private $db;
 
+    // The md5 column is the profile lookup key. Actor-bound rows key on the stable actor_key so
+    // same-named actors keep distinct profiles; legacy rows without an actor_key keep keying on
+    // the visible name. Always derive it from the stored row, never from client input.
+    public static function identityMd5($row, $npcName = null)
+    {
+        $actorKey = is_array($row) ? trim((string) ($row['actor_key'] ?? '')) : '';
+        if ($actorKey !== '') {
+            return md5($actorKey);
+        }
+
+        $name = $npcName !== null
+            ? trim((string) $npcName)
+            : (is_array($row) ? trim((string) ($row['npc_name'] ?? '')) : '');
+
+        return md5($name);
+    }
+
+    // Helper: true when this row is bound to a specific game actor rather than just a name.
+    public static function isActorBound($row)
+    {
+        return is_array($row) && trim((string) ($row['actor_key'] ?? '')) !== '';
+    }
+
     public static function profileExists($npcName, $checkLegacyFile = false)
     {
         // Access global DB instance
@@ -487,7 +510,7 @@ class NpcMaster
         return $this->db->fetchOne($query);
     }
 
-    // Read the legacy/template row first when multiple actor-bound rows share a display name.
+    // Preserve legacy name lookup, but never choose an arbitrary actor when a name is ambiguous.
     public function getByName($npcName)
     {
         // The Narrator is now managed via core_narrator table, not core_npc_master
@@ -496,8 +519,19 @@ class NpcMaster
         }
 
         $escaped = $this->escape($npcName);
-        $query   = "SELECT * FROM {$this->table} WHERE npc_name = '{$escaped}' ORDER BY (actor_key IS NULL) DESC, id ASC LIMIT 1";
-        return $this->db->fetchOne($query);
+        $rows = $this->db->fetchAll(
+            "SELECT * FROM {$this->table} WHERE npc_name = '{$escaped}' ORDER BY id ASC"
+        );
+
+        $actorBound = [];
+        foreach ((array)$rows as $row) {
+            if (!self::isActorBound($row)) {
+                return $row;
+            }
+            $actorBound[] = $row;
+        }
+
+        return count($actorBound) === 1 ? $actorBound[0] : null;
     }
 
     public function getByActorKey($actorKey)
@@ -522,12 +556,21 @@ class NpcMaster
         $refid = strtoupper(str_pad($matches[2], 8, '0', STR_PAD_LEFT));
         $escapedName = $this->escape($name);
         $escapedRefid = $this->escape($refid);
-        return $this->db->fetchOne(
+        $rows = $this->db->fetchAll(
             "SELECT * FROM {$this->table}
              WHERE lower(npc_name) = lower('{$escapedName}') AND upper(refid) = '{$escapedRefid}'
-             ORDER BY (actor_key IS NOT NULL) DESC, gamets_last_updated DESC NULLS LAST, id ASC
-             LIMIT 1"
+             ORDER BY (actor_key IS NOT NULL) DESC, gamets_last_updated DESC NULLS LAST, id ASC"
         );
+
+        $actorBound = array_values(array_filter((array)$rows, [self::class, 'isActorBound']));
+        if (count($actorBound) === 1) {
+            return $actorBound[0];
+        }
+        if (count($actorBound) > 1) {
+            return null;
+        }
+
+        return count((array)$rows) === 1 ? $rows[0] : null;
     }
 
     // Read NPC by md5
@@ -603,6 +646,17 @@ class NpcMaster
             if (isset($data['npc_name']) && $data['npc_name'] !== $existing['npc_name']) {
                 unset($data['npc_name']);
             }
+        }
+
+        // Keep the lookup key anchored to the row's real identity: a caller that posts
+        // md5(npc_name) must never re-key an actor-bound row onto the shared-name hash.
+        if (is_array($existing)) {
+            $data['md5'] = self::identityMd5(
+                [
+                    'actor_key' => $data['actor_key'] ?? ($existing['actor_key'] ?? ''),
+                    'npc_name'  => $data['npc_name'] ?? ($existing['npc_name'] ?? ''),
+                ]
+            );
         }
 
         $data = $this->preserveRelationshipExtendedDataOnGenericUpdate($data, $existing);
@@ -1325,13 +1379,10 @@ class NpcMaster
     }
 
 
-    public function updateExtendedKeysByName(string $npcName, array $setValues = [], array $unsetKeys = []): bool
+    // Build the jsonb column expression shared by the by-name and by-id extended_data writers.
+    // Returns null when there is nothing to set or unset.
+    private function buildExtendedDataExpression(array $setValues, array $unsetKeys): ?string
     {
-        $npcName = trim($npcName);
-        if ($npcName === '') {
-            return false;
-        }
-
         $normalizedSetValues = [];
         foreach ($setValues as $key => $value) {
             $metadataKey = trim((string) $key);
@@ -1357,7 +1408,7 @@ class NpcMaster
         }
 
         if (count($normalizedSetValues) === 0 && count($normalizedUnsetKeys) === 0) {
-            return false;
+            return null;
         }
 
         $metadataExpr = "COALESCE(extended_data, '{}'::jsonb)";
@@ -1378,11 +1429,49 @@ class NpcMaster
             $metadataExpr = "jsonb_set({$metadataExpr}, '{\"{$escapedKey}\"}', '{$escapedValue}'::jsonb, true)";
         }
 
+        return $metadataExpr;
+    }
+
+    public function updateExtendedKeysByName(string $npcName, array $setValues = [], array $unsetKeys = []): bool
+    {
+        $npcName = trim($npcName);
+        if ($npcName === '') {
+            return false;
+        }
+
+        $metadataExpr = $this->buildExtendedDataExpression($setValues, $unsetKeys);
+        if ($metadataExpr === null) {
+            return false;
+        }
+
         $escapedNpcName = $this->db->escape($npcName);
         $query = "
             UPDATE {$this->table}
             SET extended_data = {$metadataExpr}
             WHERE npc_name = '{$escapedNpcName}'
+        ";
+
+        return $this->db->execQuery($query) !== false;
+    }
+
+    // Same as updateExtendedKeysByName, scoped to one row. Same-named actors keep separate
+    // profiles, so anything chosen by row id in the UI must not fan out across the whole name.
+    public function updateExtendedKeysById($id, array $setValues = [], array $unsetKeys = []): bool
+    {
+        $id = (int) $id;
+        if ($id <= 0) {
+            return false;
+        }
+
+        $metadataExpr = $this->buildExtendedDataExpression($setValues, $unsetKeys);
+        if ($metadataExpr === null) {
+            return false;
+        }
+
+        $query = "
+            UPDATE {$this->table}
+            SET extended_data = {$metadataExpr}
+            WHERE id = {$id}
         ";
 
         return $this->db->execQuery($query) !== false;

@@ -514,6 +514,30 @@ if (!function_exists('render_npc_identity_lines')) {
     }
 }
 
+// Helper: the delete confirmation for a card. Cards can show several profiles that share one
+// visible name, so the prompt names the exact row: name, normalised RefID and defining mod.
+if (!function_exists('npc_delete_confirm_onclick')) {
+    function npc_delete_confirm_onclick(array $row, $metadata = null){
+        $name = trim((string)($row['npc_name'] ?? ''));
+        if ($name === '') $name = 'this NPC';
+        $refid = npc_refid_display($row['refid'] ?? '');
+        $chain = npc_mod_chain($metadata);
+        $source = npc_defining_mod($row, $chain, $metadata);
+
+        $lines = ['Delete "' . $name . '"?', '', 'RefID: ' . $refid['text']];
+        if ($source !== '') $lines[] = 'Defining mod: ' . $source;
+        $lines[] = '';
+        $lines[] = 'Only this profile is deleted. Other NPCs sharing this name are kept.';
+
+        // JSON_HEX_* escapes every quote and angle bracket, so the literal is safe to drop
+        // straight into the double-quoted onclick attribute.
+        return 'return confirm(' . json_encode(
+            implode("\n", $lines),
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+        ) . ');';
+    }
+}
+
 // Helper: map gender text to an icon character
 if (!function_exists('gender_icon_char')) {
     function gender_icon_char($gender){
@@ -693,6 +717,27 @@ if (!function_exists('chimResolveNpcIdAfterCreate')) {
     }
 }
 
+// Actor identity is read-only in management. The editor posts the RefID back from a readonly
+// field, so drop it for actor-bound rows (unchanged values stay harmless, changed ones never
+// persist) and re-derive the md5 lookup key from the stored row instead of the posted name:
+// actor-bound profiles key on md5(actor_key), legacy ones keep md5(npc_name).
+if (!function_exists('chimApplyStoredNpcIdentityToPost')) {
+    function chimApplyStoredNpcIdentityToPost($npc, $id): void
+    {
+        $id = (int)$id;
+        $existing = $id > 0 ? $npc->getById($id) : null;
+        if (!is_array($existing)) {
+            $_POST["md5"] = md5(trim((string)($_POST["npc_name"] ?? '')));
+            return;
+        }
+
+        if (NpcMaster::isActorBound($existing)) {
+            unset($_POST["refid"]);
+        }
+        $_POST["md5"] = NpcMaster::identityMd5($existing, $_POST["npc_name"] ?? ($existing["npc_name"] ?? ''));
+    }
+}
+
 // Handle Create
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["create"])) {
     if (chimUiAutoLockProfileEnabled()) {
@@ -728,7 +773,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
         if (file_exists(__DIR__."/../../ext/relationship_system/npc_save_handler.php")) {
             include(__DIR__."/../../ext/relationship_system/npc_save_handler.php");
         }
-        $_POST["md5"]=md5($_POST["npc_name"]);
+        chimApplyStoredNpcIdentityToPost($npc, $_POST["id"] ?? 0);
         $saveNpc = function () use ($npc) {
             return $npc->update($_POST["id"], $_POST);
         };
@@ -849,7 +894,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
             }
             echo json_encode(["ok"=>true, "id"=>$newId]);
         } else {
-            $_POST["md5"]=md5($_POST["npc_name"]);
+            chimApplyStoredNpcIdentityToPost($npc, $id);
             $saveNpc = function () use ($npc, $id) {
                 return $npc->update($id, $_POST);
             };
@@ -1147,10 +1192,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bgl_inception"])) {
     header('Content-Type: application/json');
     try {
         $id = intval($_POST['target_id'] ?? 0);
-        
-        $npcData=$npc->getById($id);
-        $extendedData['bgl_inception'] = $_POST['idea'] ?? '';
-        $npc->updateExtendedKeysByName($npcData['npc_name'], $extendedData);
+        $npcData = $id > 0 ? $npc->getById($id) : null;
+        if (!is_array($npcData)) {
+            echo json_encode(["ok"=>false, "error"=>"NPC <{$id}> was not found"]);
+            exit;
+        }
+        // Row-scoped: same-named actors keep separate profiles, so the thought must not fan out
+        // to every row sharing this NPC's name.
+        if (!$npc->updateExtendedKeysById($id, ['bgl_inception' => (string)($_POST['idea'] ?? '')])) {
+            echo json_encode(["ok"=>false, "error"=>"Background Life thought could not be saved"]);
+            exit;
+        }
         echo json_encode(["ok"=>true]);
     } catch (Throwable $e) {
         echo json_encode(["ok"=>false, "error"=>$e->getMessage()]);
@@ -1768,7 +1820,7 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock - Locked profiles are protected from history pullback when loading saves"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
-                <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">❌</a>
+                <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : npc_delete_confirm_onclick($row, $metaTmp) ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">❌</a>
                 </div>
             </div>
             <div class="npc-divider"></div>
@@ -2341,6 +2393,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-editor-action-card textarea { min-height:84px; resize:vertical; }
 .npc-editor-action-status { min-height:1.2rem; margin:0; color:#aaa; font-size:0.82rem; }
 .npc-editor-action-status.is-error { color:#ef8f96; }
+.npc-editor-action-note.is-error { color:#ef8f96; }
 .npc-bgl-dashboard { display:grid; gap:12px; }
 .npc-bgl-section {
     padding:14px;
@@ -2655,6 +2708,30 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                     apiUrl: '../api/chim_npc_manager.php'
                 })
                 : null;
+
+            // The event log identifies NPCs by name only, so a shared name makes this history
+            // shared too. Say so up front instead of implying the events belong to one RefID.
+            const historySharedNameCount = <?= (int)npc_duplicate_count($npcNameCounts ?? [], $editItem['npc_name'] ?? '') ?>;
+            if (historyController && historySharedNameCount > 1) {
+                const sharedNotice = document.createElement('p');
+                sharedNotice.className = 'npc-editor-action-note is-error';
+                sharedNotice.setAttribute('role', 'note');
+                sharedNotice.textContent = historySharedNameCount + ' profiles share the name "' + targetName
+                    + '". The event log identifies NPCs by name only, so this history is shared by all of them'
+                    + ' and injecting or deleting events is unavailable here.';
+                panels.history.prepend(sharedNotice);
+
+                const sharedInjectButton = panels.history.querySelector('[data-history-inject]');
+                const sharedInjectText = panels.history.querySelector('[data-history-event-text]');
+                if (sharedInjectButton) {
+                    sharedInjectButton.disabled = true;
+                    sharedInjectButton.title = 'Unavailable while other profiles share this name';
+                }
+                if (sharedInjectText) {
+                    sharedInjectText.disabled = true;
+                    sharedInjectText.placeholder = 'Unavailable while other profiles share this name.';
+                }
+            }
             panels.actions.innerHTML = `
                 <p class="npc-editor-action-note">The game must be running and unpaused for Visit, Teleport, and Return NPC.</p>
                 <div class="npc-editor-action-list">
@@ -3056,7 +3133,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         <div class="form-item">
             <label for="refid">Ref ID</label>
             <input type="text" id="refid" name="refid" placeholder="Game reference ID (000A2C94)" value="<?= htmlspecialchars($editItem["refid"] ?? "") ?>" readonly aria-describedby="refid_hint">
-            <small class="hint" id="refid_hint">Read-only. Skyrim reference ID for in-game linkage<?= $editRefid['runtime'] ? ' (Runtime: assigned by the game, not stable across saves).' : '.' ?></small>
+            <small class="hint" id="refid_hint">Read-only. Skyrim reference ID for in-game linkage<?= $editRefid['runtime'] ? ' (Runtime: assigned by the game, not stable across saves).' : '.' ?><?= $editActorKey !== '' ? ' This profile is bound to a specific actor, so a changed value is never saved.' : '' ?></small>
         </div>
 
         <div class="form-item span-2">
@@ -4762,7 +4839,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
                 <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock - Locked profiles are protected from history pullback when loading saves"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
-                <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : "return confirm('Delete this NPC?');" ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">❌</a>
+                <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : npc_delete_confirm_onclick($row, $metaTmp) ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">❌</a>
             </div>
         </div>
         <div class="npc-divider"></div>
@@ -6414,7 +6491,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 <span class="npc-tags-top" style="display:none"></span>
                 <a class="btn btn-toggle" href="#" data-favorite-id="${id}" title="Toggle favorite">☆</a>
                 <a class="btn btn-toggle" href="#" data-lock-id="${id}" title="Toggle lock - Locked profiles are protected from history pullback when loading saves">🔓</a>
-                <a class="btn btn-trash" href="?delete=${id}" onclick="return confirm('Delete this NPC?');" title="Delete">❌</a>
+                <a class="btn btn-trash" href="?delete=${id}" title="Delete">❌</a>
               </div>
             </div>
             <div class="npc-divider"></div>
@@ -6465,6 +6542,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             source.textContent = chain.length ? chain.join(' \u2192 ') : 'Unknown source';
             source.classList.toggle('npc-identity-unknown', chain.length === 0);
             if (chain.length) source.title = chain.join(' \u2192 '); else source.removeAttribute('title');
+          }
+          const deleteButton = card.querySelector('.btn-trash');
+          if (deleteButton) {
+            const deleteLines = [
+              'Delete "' + String(data.npc_name || 'this NPC') + '"?',
+              '',
+              'RefID: ' + text
+            ];
+            if (chain.length) deleteLines.push('Defining mod: ' + chain[0]);
+            deleteLines.push('', 'Only this profile is deleted. Other NPCs sharing this name are kept.');
+            deleteButton.onclick = function(){ return confirm(deleteLines.join('\n')); };
           }
         })();
         setText('.npc-oghma', (data.oghma_knowledge_tags==null || String(data.oghma_knowledge_tags).trim()==='') ? 'none' : data.oghma_knowledge_tags);

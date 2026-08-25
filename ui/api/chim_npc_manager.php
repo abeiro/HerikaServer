@@ -251,6 +251,7 @@ function chimNpcManagerDetail(array $row, array $profiles): array
             'auto_diary_wait_enabled' => chimNpcManagerToggleState($extended['auto_diary_wait_enabled'] ?? null, $profileMetadata, 'AUTO_DIARY_WAIT_ENABLED'),
             'salutation_after_a_while' => chimNpcManagerToggleState($extended['salutation_after_a_while'] ?? null, $profileMetadata, 'SALUTATION_AFTER_A_WHILE'),
         ],
+        'readonly_fields' => NpcMaster::isActorBound($row) ? ['refid'] : [],
         'relationships' => RelationshipManager::normalizeRelationshipMap($extended['relationships'] ?? []),
         'relationships_locked' => chimNpcManagerBool($extended['relationships_locked'] ?? false),
         'metadata' => $metadata,
@@ -295,6 +296,39 @@ function chimNpcManagerFindNpc(array $input): array
     }
 
     throw new InvalidArgumentException('NPC not found');
+}
+
+// The event log stores recipients as a '|'-delimited list of visible names, so anything routed
+// through it is name-scoped. Count the profiles sharing a name to detect when that is ambiguous.
+function chimNpcManagerSharedNameCount(string $npcName): int
+{
+    $npcName = trim($npcName);
+    if ($npcName === '') {
+        return 0;
+    }
+    $escaped = $GLOBALS['db']->escape($npcName);
+    $row = $GLOBALS['db']->fetchOne(
+        "SELECT COUNT(*) AS total FROM core_npc_master WHERE lower(npc_name) = lower('{$escaped}')"
+    );
+    return max(1, (int)($row['total'] ?? 1));
+}
+
+function chimNpcManagerSharedNameNotice(string $npcName, int $count): string
+{
+    return $count . ' profiles share the name "' . $npcName . '", and the event log identifies NPCs'
+        . ' by name only, so events cannot be routed to just one of them.';
+}
+
+// Name-scoped event writes must refuse rather than silently reach every same-named actor.
+function chimNpcManagerGuardSharedNameEvents(string $npcName, string $operationLabel): void
+{
+    $count = chimNpcManagerSharedNameCount($npcName);
+    if ($count > 1) {
+        throw new InvalidArgumentException(
+            $operationLabel . ' is unavailable for "' . $npcName . '": '
+            . chimNpcManagerSharedNameNotice($npcName, $count)
+        );
+    }
 }
 
 function chimNpcManagerEventRecipients($people): array
@@ -375,8 +409,18 @@ function chimNpcManagerHistory(array $input): array
         ];
     }, (array)$rows);
 
+    $sharedNameCount = chimNpcManagerSharedNameCount($npcName);
+
     return [
         'npc' => ['id' => (int)$npc['id'], 'name' => $npcName],
+        'shared_name' => [
+            'shared' => $sharedNameCount > 1,
+            'count' => $sharedNameCount,
+            'notice' => $sharedNameCount > 1
+                ? 'This history is shared: ' . chimNpcManagerSharedNameNotice($npcName, $sharedNameCount)
+                    . ' Injecting and deleting events is unavailable here.'
+                : '',
+        ],
         'events' => $events,
         'filters' => [
             'selected_event_type' => $selectedEventType,
@@ -433,6 +477,9 @@ function chimNpcManagerInjectEvent(array $input): array
     }
 
     $recipients = chimNpcManagerResolveEventRecipients($input, $npc);
+    foreach ($recipients as $recipient) {
+        chimNpcManagerGuardSharedNameEvents($recipient['name'], 'Event injection');
+    }
     $people = '|' . implode('|', array_column($recipients, 'name')) . '|';
     $rowId = $GLOBALS['db']->insertReturningId('eventlog', [
         'ts' => max(0, (int)DataLastKnownTS()) + 1,
@@ -465,6 +512,7 @@ function chimNpcManagerDeleteEvent(array $input): array
     }
 
     $npcName = trim((string)($npc['npc_name'] ?? ''));
+    chimNpcManagerGuardSharedNameEvents($npcName, 'Event deletion');
     $peopleWhere = chimBuildNpcEventLogPeopleWhereClause($GLOBALS['db'], $npcName, 'a.people');
     $visibleWhere = chimBuildVisibleEventLogWhereClause($GLOBALS['db']);
     $event = $GLOBALS['db']->fetchOne(
@@ -518,7 +566,8 @@ function chimNpcManagerAction(array $input): array
         if ($idea === '') {
             throw new InvalidArgumentException('Background Life inception requires a thought');
         }
-        if (!(new NpcMaster())->updateExtendedKeysByName($npcName, ['bgl_inception' => $idea])) {
+        // Row-scoped: same-named actors keep separate profiles, so only the selected row changes.
+        if (!$npcManager->updateExtendedKeysById((int)$row['id'], ['bgl_inception' => $idea])) {
             throw new RuntimeException('Background Life inception could not be saved');
         }
         return ['message' => "Background Life thought set for {$npcName}."];
@@ -756,12 +805,19 @@ function chimNpcManagerSave(array $input, array $profiles): array
         }
     }
 
-    if (array_key_exists('npc_name', $update)) {
-        if ($update['npc_name'] === '') {
-            throw new InvalidArgumentException('NPC name is required');
-        }
-        $update['md5'] = md5($update['npc_name']);
+    if (array_key_exists('npc_name', $update) && $update['npc_name'] === '') {
+        throw new InvalidArgumentException('NPC name is required');
     }
+
+    // Actor identity is read-only in management. Dropping the field keeps unchanged posted values
+    // harmless while a changed RefID never reaches the row that the actor key already identifies.
+    if (NpcMaster::isActorBound($row)) {
+        unset($update['refid']);
+    }
+
+    // The lookup key always follows the stored row: md5(actor_key) for actor-bound profiles,
+    // md5(npc_name) for legacy ones. It is never taken from client input.
+    $update['md5'] = NpcMaster::identityMd5($row, $update['npc_name'] ?? ($row['npc_name'] ?? ''));
 
     $extended = chimNpcManagerDecodeJson($row['extended_data'] ?? '{}');
     $relationshipChanged = false;
