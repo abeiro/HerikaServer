@@ -1495,6 +1495,35 @@ FROM restore
 
         $GLOBALS["db"]->execQuery($bglife_q);
 
+        // Clear the background_life_last_updated timestamp for NPCs that were restored from history,
+        //  so that they can be re-evaluated for background life generation.
+        $bglife_q="UPDATE public.core_npc_master
+        SET extended_data = jsonb_set(
+            extended_data,
+            '{background_life_last_updated}',   -- JSON path
+            '0'::jsonb,                -- new value
+            true                           -- create if missing (optional)
+        )
+        WHERE (extended_data ->> 'background_life_last_updated')::bigint > {$timestamp}";
+
+
+        $GLOBALS["db"]->execQuery($bglife_q);
+
+
+        // Clear the background_life_last_run timestamp for NPCs that were restored from history,
+        //  so that they can be re-evaluated for background life generation.
+        $bglife_q="UPDATE public.core_npc_master
+        SET extended_data = jsonb_set(
+            extended_data,
+            '{background_life_last_run}',   -- JSON path
+            '0'::jsonb,                -- new value
+            true                           -- create if missing (optional)
+        )
+        WHERE (extended_data ->> 'background_life_last_run')::bigint > {$timestamp}";
+
+
+        $GLOBALS["db"]->execQuery($bglife_q);
+
         // RELATIONSHIP SYSTEM: Clear "future" relationship data from NPCs that weren't restored
         // NPCs added AFTER the save timestamp don't have history entries, so they keep their
         // current (future) state. We need to clear their relationship data to prevent paradoxes.
