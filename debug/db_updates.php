@@ -6951,6 +6951,35 @@ if ($checkVersion("core_action") < 20260803001) {
     }
 }
 
+if ($checkVersion("core_action") < 20260825001) {
+    Logger::debug("Applying core_action 20260825001 - make Brawl player-only and unarmed");
+
+    $migrationOk = $db->execQuery("
+        UPDATE public.core_action
+           SET description = '#HERIKA_NAME# starts a Skyrim brawl with #PLAYER_NAME#: an agreed, bare-fisted fight that is not meant to kill. Fists only, no weapons, shields, spells, staves, or poisons. #PLAYER_NAME# is the only valid target. Use Attack instead when #HERIKA_NAME# truly means to kill.',
+               parameters_json = '{\"type\":\"object\",\"required\":[\"target\"],\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"Always #PLAYER_NAME#. A brawl only works against the player, so no other name is accepted here.\"}}}'::jsonb,
+               updated_at = NOW()
+         WHERE code_name = 'Brawl'
+    ") !== false;
+
+    $migrationOk = $db->execQuery("
+        UPDATE public.core_action_custom
+           SET description = '#HERIKA_NAME# starts a Skyrim brawl with #PLAYER_NAME#: an agreed, bare-fisted fight that is not meant to kill. Fists only, no weapons, shields, spells, staves, or poisons. #PLAYER_NAME# is the only valid target. Use Attack instead when #HERIKA_NAME# truly means to kill.',
+               parameters_json = '{\"type\":\"object\",\"required\":[\"target\"],\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"Always #PLAYER_NAME#. A brawl only works against the player, so no other name is accepted here.\"}}}'::jsonb,
+               updated_at = NOW()
+         WHERE code_name = 'Brawl'
+           AND description = '#HERIKA_NAME# engages in non-lethal combat with another actor, using weapons.'
+           AND parameters_json = '{\"type\":\"object\",\"required\":[\"target\"],\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"Target NPC, Actor, or being\"}}}'::jsonb
+    ") !== false && $migrationOk;
+
+    if ($migrationOk) {
+        $updateVersion("core_action", 20260825001);
+        Logger::info("Applied patch core_action 20260825001");
+    } else {
+        Logger::error("Failed to apply patch core_action 20260825001");
+    }
+}
+
 //----------------------------------------------------
 
 // Relationship Evaluation and Initialization Queues

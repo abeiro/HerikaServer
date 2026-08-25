@@ -69,7 +69,7 @@ $F_TRANSLATIONS_LOCAL["WaitHere"]="{$GLOBALS["HERIKA_NAME"]} bleibt an der aktue
 $F_TRANSLATIONS_LOCAL["TakeGoldFromPlayer"]="{$GLOBALS["HERIKA_NAME"]} nimmt eine bestimmte Menge Gold von {$GLOBALS["PLAYER_NAME"]}, sobald {$GLOBALS["PLAYER_NAME"]} zustimmt.";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"]="{$GLOBALS["HERIKA_NAME"]} folgt {$GLOBALS["PLAYER_NAME"]}.";
 $F_TRANSLATIONS_LOCAL["ComeCloser"]="{$GLOBALS["HERIKA_NAME"]} nähert sich {$GLOBALS["PLAYER_NAME"]}.";
-$F_TRANSLATIONS_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} startet einen nicht-tödlichen Kampf mit einer anderen Person und nutzt dabei Waffen.";
+$F_TRANSLATIONS_LOCAL["Brawl"]="{$GLOBALS["HERIKA_NAME"]} beginnt eine Prügelei mit {$GLOBALS["PLAYER_NAME"]}: ein verabredeter Faustkampf ohne Tötungsabsicht. Nur Fäuste, keine Waffen, Schilde, Zauber, Stäbe oder Gifte. {$GLOBALS["PLAYER_NAME"]} ist das einzige gültige Ziel. Nutze stattdessen Angreifen, wenn {$GLOBALS["HERIKA_NAME"]} wirklich töten will.";
 $F_TRANSLATIONS_LOCAL["ReturnBackHome"]="{$GLOBALS["HERIKA_NAME"]} reist zurück nach Hause bzw. an ihren Ursprungsort.";
 $F_TRANSLATIONS_LOCAL["GiveGoldTo"]="{$GLOBALS["HERIKA_NAME"]} gibt einer einzelnen Person/einem NPC oder {$GLOBALS["PLAYER_NAME"]} Gold. Empfänger und Betrag müssen angegeben werden.";
 $F_TRANSLATIONS_LOCAL["GiveItemTo"]="{$GLOBALS["HERIKA_NAME"]} gibt einer einzelnen Person/einem NPC oder {$GLOBALS["PLAYER_NAME"]} einen Gegenstand. Empfänger und exakter Gegenstandsname müssen angegeben werden.";
@@ -547,7 +547,7 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "Ziel: NPC oder Wesen",
+                    "description" => "Immer {$GLOBALS["PLAYER_NAME"]}. Eine Prügelei ist nur gegen den Spieler möglich, ein anderer Name ist hier nicht zulässig.",
                 ]
             ],
             "required" => ["target"],
