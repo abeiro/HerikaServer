@@ -79,7 +79,7 @@ final class ProfileConnectorTestsRegressionTest extends TestCase
         }
     }
 
-    public function testSettingsPresetsNeverManageConnectorState(): void
+    public function testSettingsPresetsManageAvailabilityWithoutChangingConnectorAssignments(): void
     {
         $connectorStateFields = [
             'PLAYER_RESPEECH',
@@ -92,14 +92,23 @@ final class ProfileConnectorTestsRegressionTest extends TestCase
             'RELATIONSHIP_SYSTEM_ENABLED',
         ];
 
-        foreach (chimSettingsPresetBuiltIns() as $preset) {
-            foreach ($connectorStateFields as $field) {
-                $this->assertArrayNotHasKey($field, $preset['snapshot']['global_settings']);
-            }
+        $presets = chimSettingsPresetBuiltIns();
+        foreach ($connectorStateFields as $field) {
+            $this->assertTrue($presets['builtin:default']['snapshot']['global_settings'][$field]);
+        }
+        $this->assertTrue($presets['builtin:local_llm']['snapshot']['global_settings']['PLAYER_RESPEECH']);
+        $this->assertTrue($presets['builtin:local_llm']['snapshot']['global_settings']['CORE_CONNECTOR_DIRECTOR_ENABLED']);
+        foreach (array_diff($connectorStateFields, ['PLAYER_RESPEECH', 'CORE_CONNECTOR_DIRECTOR_ENABLED']) as $field) {
+            $this->assertFalse($presets['builtin:local_llm']['snapshot']['global_settings'][$field]);
         }
 
         $normalized = chimSettingsPresetNormalizeSettings(array_fill_keys($connectorStateFields, true));
-        $this->assertSame([], $normalized);
+        $this->assertSame(array_fill_keys($connectorStateFields, 'true'), $normalized);
+
+        $this->assertSame([], chimSettingsPresetNormalizeSettings([
+            'CORE_CONNECTOR_SUMMARY' => 99,
+            'CORE_CONNECTOR_DIRECTOR' => 99,
+        ]));
     }
 
     public function testRequestedProfilePresetConversationValues(): void
