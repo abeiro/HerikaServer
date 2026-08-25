@@ -1594,7 +1594,7 @@ body .settings-tabs .settings-tab.is-active {
         </div>
         <div class="preset-row">
             <label class="preset-label" for="preset-select">Settings Preset</label>
-            <select id="preset-select" class="preset-select" aria-describedby="preset-status" disabled>
+            <select id="preset-select" class="preset-select" aria-describedby="preset-desc preset-status" disabled>
                 <option value="">Loading presets&hellip;</option>
             </select>
             <div class="preset-actions">
@@ -2581,7 +2581,6 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
     }
 
     let presets = [];
-    let customCount = 0;
     let barBusy = false;
     let dialogBusy = false;
     let dialogConfig = null;
@@ -2860,23 +2859,17 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
         presetDialogCancel.focus();
     });
 
-    function idleStatus() {
-        return '';
-    }
-
     async function loadPresets(preferredId) {
         setStatus('Loading presets…', false);
         setBarBusy(true);
         try {
             const data = await presetRequest(null);
             presets = Array.isArray(data.presets) ? data.presets.filter((preset) => preset && preset.id) : [];
-            const reported = Number(data.custom_count);
-            customCount = Number.isFinite(reported) ? reported : presets.filter((preset) => preset.built_in !== true).length;
             renderOptions(preferredId);
-            setStatus(idleStatus(), false);
+            // Idle state carries no message; the row keeps its width without showing text.
+            setStatus('', false);
         } catch (error) {
             presets = [];
-            customCount = 0;
             renderOptions();
             setStatus('Could not load presets: ' + errorText(error), true);
         } finally {
@@ -2896,7 +2889,7 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
     // Selecting alone changes nothing; only button availability and the description update.
     presetSelect.addEventListener('change', () => {
         syncBar();
-        setStatus(idleStatus(), false);
+        setStatus('', false);
     });
 
     presetApplyBtn.addEventListener('click', () => {

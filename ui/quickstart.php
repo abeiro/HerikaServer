@@ -587,7 +587,7 @@ $llmNotePlayer2Style = $player2ForceAllLlm ? '' : ' style="display:none;"';
 $llmCardsBaseStyle = 'display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:8px;';
 $llmCardsDefaultStyle = $llmCardsBaseStyle . ($player2ForceAllLlm ? ' display:none;' : '');
 $llmCardsPlayer2Style = $llmCardsBaseStyle . ($player2ForceAllLlm ? '' : ' display:none;');
-// The Local LLM recap starts hidden; the default Settings Profile is selected on load.
+// The Local LLM recap starts hidden; the default Setup profile is selected on load.
 $llmCardsLocalStyle = $llmCardsBaseStyle . ' display:none;';
 $generalLlmConnectorSummary = herikaQuickstartGetGeneralLlmConnectorSummary($db);
 $generalLlmConnectorListHtml = '';
@@ -663,7 +663,7 @@ echo '<section class="qs-section" id="qs_openrouter_section"' . ($player2ForceAl
         </div>
       </section>';
 
-// Settings Profile lives in its own section, as a sibling of OpenRouter, because Player2 hides
+// Setup lives in its own section, as a sibling of OpenRouter, because Player2 hides
 // the OpenRouter section entirely and the profile picker must stay reachable in that mode.
 echo '<section class="qs-section qs-profile-section" id="qs_settings_preset_section">
         <h2 class="qs-section-title">Setup</h2>
@@ -1198,7 +1198,7 @@ echo '<style>
         margin-bottom: 0;
     }
 
-    /* Settings Profile + Local LLM Setup ------------------------------------ */
+    /* Setup section: profile tiles + Local LLM ------------------------------ */
     .qs-settings-preset {
         display: grid;
         gap: 6px;
@@ -2360,7 +2360,7 @@ function updatePlayer2QuickstartUI(){
     const generalTitle = document.getElementById("qs_general_connector_title");
     const generalDefault = document.getElementById("qs_general_connector_default");
     const generalLocal = document.getElementById("qs_general_connector_local");
-    // Player2 wins over the Settings Profile because it routes every LLM call.
+    // Player2 wins over the Setup profile because it routes every LLM call.
     const localMode = !enabled && qsLocalLlmSelected();
     if (openrouterSection) {
       openrouterSection.style.display = enabled ? "none" : "";

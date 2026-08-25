@@ -117,12 +117,6 @@ main { padding: 0 10px 8px; height: calc(100vh - var(--hub-navbar-offset)); }
 .player-narration-shell { display: flex; flex-direction: column; width: 100%; height: 100%; min-width: 0; min-height: 0; }
 .player-narration-panel { flex: 1 1 auto; min-height: 0; border: 0; border-radius: 8px; }
 .player-narration-panel[hidden] { display: none; }
-/* Settings carries 5 buttons: 3 on the first row, then 2 of the same width on
-   the second row, whose third slot stays empty. */
-.tab-group[data-category="settings"] .tab-buttons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-@media (max-width: 620px) {
-    .tab-group[data-category="settings"] .tab-buttons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 @media (max-height: 800px) { .embed-wrap { min-height: 420px; } }
 </style>
 
