@@ -31,24 +31,6 @@ function chimSettingsPresetDefaultGlobalSettings(): array
         'POWER_AWARENESS_ENABLED' => false,
         'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 500,
         'PROMPT_TIMESTAMP' => false,
-    ] + chimSettingsPresetConnectorAvailability(true);
-}
-
-/**
- * Availability switches for the eight Global Connector slots. Presets only flip these
- * booleans, so connector assignments, credentials, models and URLs survive untouched.
- */
-function chimSettingsPresetConnectorAvailability(bool $available): array
-{
-    return [
-        'PLAYER_RESPEECH' => $available,
-        'CORE_CONNECTOR_SUMMARY_ENABLED' => $available,
-        'CORE_CONNECTOR_MEDIUMTERM_ENABLED' => $available,
-        'SCENE_CLASSIFIER_ENABLED' => $available,
-        'CORE_CONNECTOR_PROFILES_ENABLED' => $available,
-        'CORE_CONNECTOR_DIRECTOR_ENABLED' => $available,
-        'CORE_CONNECTOR_BGL_ENABLED' => $available,
-        'RELATIONSHIP_SYSTEM_ENABLED' => $available,
     ];
 }
 
@@ -268,9 +250,7 @@ function chimSettingsPresetBuiltIns(): array
                     'POWER_AWARENESS_ENABLED' => false,
                     'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 1000,
                     'PROMPT_TIMESTAMP' => false,
-                    'PLAYER_RESPEECH' => true,
-                    'CORE_CONNECTOR_DIRECTOR_ENABLED' => true,
-                ] + chimSettingsPresetConnectorAvailability(false),
+                ],
                 'prompt_context_options' => chimNormalizePromptContextOptions([
                     'enabled_sections' => [
                         'roleplay_instructions', 'world', 'knowledge', 'available_actions_list',
@@ -318,9 +298,20 @@ function chimSettingsPresetFieldMap(): array
 function chimSettingsPresetSafeFields(): array
 {
     $safe = [];
+    // Presets control behavior only; connector routing and availability remain user-owned.
+    $connectorStateFields = array_fill_keys([
+        'PLAYER_RESPEECH',
+        'CORE_CONNECTOR_SUMMARY_ENABLED',
+        'CORE_CONNECTOR_MEDIUMTERM_ENABLED',
+        'SCENE_CLASSIFIER_ENABLED',
+        'CORE_CONNECTOR_PROFILES_ENABLED',
+        'CORE_CONNECTOR_DIRECTOR_ENABLED',
+        'CORE_CONNECTOR_BGL_ENABLED',
+        'RELATIONSHIP_SYSTEM_ENABLED',
+    ], true);
     foreach (chimSettingsPresetFieldMap() as $name => $field) {
         $type = strtolower((string)($field['type'] ?? 'string'));
-        if (strpos($type, 'foreign:') === 0 || $type === 'url') {
+        if (isset($connectorStateFields[$name]) || strpos($type, 'foreign:') === 0 || $type === 'url') {
             continue;
         }
         $safe[$name] = $field;

@@ -79,6 +79,29 @@ final class ProfileConnectorTestsRegressionTest extends TestCase
         }
     }
 
+    public function testSettingsPresetsNeverManageConnectorState(): void
+    {
+        $connectorStateFields = [
+            'PLAYER_RESPEECH',
+            'CORE_CONNECTOR_SUMMARY_ENABLED',
+            'CORE_CONNECTOR_MEDIUMTERM_ENABLED',
+            'SCENE_CLASSIFIER_ENABLED',
+            'CORE_CONNECTOR_PROFILES_ENABLED',
+            'CORE_CONNECTOR_DIRECTOR_ENABLED',
+            'CORE_CONNECTOR_BGL_ENABLED',
+            'RELATIONSHIP_SYSTEM_ENABLED',
+        ];
+
+        foreach (chimSettingsPresetBuiltIns() as $preset) {
+            foreach ($connectorStateFields as $field) {
+                $this->assertArrayNotHasKey($field, $preset['snapshot']['global_settings']);
+            }
+        }
+
+        $normalized = chimSettingsPresetNormalizeSettings(array_fill_keys($connectorStateFields, true));
+        $this->assertSame([], $normalized);
+    }
+
     public function testRequestedProfilePresetConversationValues(): void
     {
         $presets = chimProfileSettingsPresetBuiltIns();
