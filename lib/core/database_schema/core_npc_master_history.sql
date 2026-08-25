@@ -46,6 +46,7 @@ CREATE TABLE public.core_npc_master_history (
     gender text,
     race text,
     refid character varying(16),
+    actor_key text,
     profile_id integer,
     dynamic_profile integer,
     extended_data jsonb,

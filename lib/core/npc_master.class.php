@@ -1526,14 +1526,14 @@ class NpcMaster
                 npc_id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
                 oghma_knowledge_tags, emote_moods, personality, relationships,
                 occupation, skills, speechstyle, goals, voiceid, metadata,
-                gender, race, refid, profile_id, dynamic_profile, extended_data,
+                gender, race, refid, actor_key, profile_id, dynamic_profile, extended_data,
                 md5, gamets_last_updated, core, base, tags, appearance, created
             )
             SELECT
                 id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
                 oghma_knowledge_tags, emote_moods, personality, relationships,
                 occupation, skills, speechstyle, goals, voiceid, metadata,
-                gender, race, refid, profile_id, dynamic_profile,
+                gender, race, refid, actor_key, profile_id, dynamic_profile,
                 COALESCE(extended_data, '{}'::jsonb) || jsonb_build_object('_chim_history_source', 'infosave'),
                 md5, $timestamp, core, base, tags, appearance, '{$createdTimestamp}'
             FROM core_npc_master
@@ -1578,6 +1578,7 @@ restore AS (
         h.gender,
         h.race,
         h.refid,
+        h.actor_key,
         h.profile_id,
         h.dynamic_profile,
         CASE
@@ -1607,14 +1608,14 @@ INSERT INTO core_npc_master (
     id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
     oghma_knowledge_tags, emote_moods, personality, relationships,
     occupation, skills, speechstyle, goals, voiceid, metadata,
-    gender, race, refid, profile_id, dynamic_profile, extended_data,
+    gender, race, refid, actor_key, profile_id, dynamic_profile, extended_data,
     md5, gamets_last_updated, core, base, tags, appearance
 )
 SELECT
     id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
     oghma_knowledge_tags, emote_moods, personality, relationships,
     occupation, skills, speechstyle, goals, voiceid, metadata,
-    gender, race, refid, profile_id, dynamic_profile, extended_data,
+    gender, race, refid, actor_key, profile_id, dynamic_profile, extended_data,
     md5, gamets_last_updated, core, base, tags, appearance
 FROM restore
 ";

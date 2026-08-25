@@ -7977,6 +7977,25 @@ if ($checkVersion("npc_actor_identity") < 20260824001) {
     }
 }
 
+if ($checkVersion("npc_actor_identity") < 20260824002) {
+    Logger::debug("Applying npc_actor_identity 20260824002 - preserve actor identity through save restores");
+    $migrationOk = true;
+
+    try {
+        $migrationOk = $db->execQuery(
+            "ALTER TABLE public.core_npc_master_history ADD COLUMN IF NOT EXISTS actor_key text"
+        ) !== false && $migrationOk;
+    } catch (Throwable $e) {
+        $migrationOk = false;
+        Logger::error("Failed applying npc_actor_identity 20260824002: " . $e->getMessage());
+    }
+
+    if ($migrationOk) {
+        $updateVersion("npc_actor_identity", 20260824002);
+        Logger::info("Applied patch npc_actor_identity 20260824002");
+    }
+}
+
 
 //----------------------------------------------------
 // AUDIT REQUEST RESPONSE - Store the response text for audit requests
