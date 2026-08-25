@@ -892,7 +892,7 @@ if ($argv[1] == '17') {
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|BackgroundCmd@0xFF00127C@RemoveFromBgL",
+            'action' => "rolecommand|BackgroundCmd@0x0D24507B@RemoveFromBgL",
             'tag' => __FILE__ . ":" . __LINE__,
         ]
     );
