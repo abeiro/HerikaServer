@@ -1730,4 +1730,58 @@ FROM restore
         $GLOBALS['TTS']['CARTESIA']['voiceid'] = $voiceId;
         $GLOBALS['TTS']['INWORLD']['voiceid'] = $voiceId;
     }
+
+    /* For reference. Restores the last version of each NPC list from history. */
+    
+    private function restoreLastNpcList() {
+
+         $GLOBALS["db"]->execQuery("INSERT INTO core_npc_master (
+    id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
+    oghma_knowledge_tags, emote_moods, personality, relationships,
+    occupation, skills, speechstyle, goals, voiceid, metadata,
+    gender, race, refid, profile_id, dynamic_profile, extended_data,
+    md5, gamets_last_updated, core, base, tags, appearance
+)
+SELECT
+    npc_id AS id,
+    npc_name,
+    npc_favorite,
+    lock_profile,
+    prompt_head,
+    npc_static_bio,
+    oghma_knowledge_tags,
+    emote_moods,
+    personality,
+    relationships,
+    occupation,
+    skills,
+    speechstyle,
+    goals,
+    voiceid,
+    metadata,
+    gender,
+    race,
+    refid,
+    profile_id,
+    dynamic_profile,
+    extended_data,
+    md5,
+    gamets_last_updated,
+    core,
+    base,
+    tags,
+    appearance
+FROM (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY npc_name
+            ORDER BY gamets_last_updated DESC
+        ) AS rn
+    FROM core_npc_master_history
+) t
+WHERE rn = 1
+AND npc_name not in (select distinct npc_name from core_npc_master)");
+    }
 }
+
