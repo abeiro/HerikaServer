@@ -7448,6 +7448,50 @@ if ($checkVersion("general_settings") < 20260720002) {
     }
 }
 
+if ($checkVersion("general_settings") < 20260825001) {
+    Logger::debug("Applying general_settings 20260825001 - move Compact Chat to global settings");
+
+    $b_ok = true;
+    try {
+        $settingId = 'COMPACT_CHAT_ENABLED';
+        $existingRow = chimGetGeneralSettingRow($settingId);
+
+        if ($existingRow) {
+            $currentValue = $existingRow['value'] ?? true;
+        } else {
+            $legacyRow = $db->fetchOne("SELECT value FROM public.conf_opts WHERE id = 'chim_context_mode' LIMIT 1");
+            if (is_array($legacyRow) && array_key_exists('value', $legacyRow)) {
+                $currentValue = in_array(
+                    strtolower(trim(strval($legacyRow['value']))),
+                    ['1', 'true', 'yes', 'on'],
+                    true
+                );
+            } else {
+                $definition = chimGetSchemaDefinition($settingId);
+                $currentValue = $definition['default'] ?? true;
+            }
+        }
+
+        $description = chimGetManagedGeneralSettingDescriptions()[$settingId]
+            ?? chimGetSchemaDescription($settingId);
+        if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+            throw new Exception("Failed writing {$settingId}");
+        }
+
+        if ($db->execQuery("DELETE FROM public.conf_opts WHERE id = 'chim_context_mode'") === false) {
+            throw new Exception('Failed removing legacy Compact Chat setting');
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error moving Compact Chat to global settings: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260825001);
+        Logger::info("Applied patch general_settings 20260825001");
+    }
+}
+
 if ($checkVersion("quest_asset_library") < 20260718003) {
     Logger::debug("Applying quest_asset_library 20260718003 - add curated quest spawn templates");
 

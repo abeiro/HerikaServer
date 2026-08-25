@@ -96,6 +96,8 @@ final class ProfileConnectorTestsRegressionTest extends TestCase
         foreach ($connectorStateFields as $field) {
             $this->assertTrue($presets['builtin:default']['snapshot']['global_settings'][$field]);
         }
+        $this->assertTrue($presets['builtin:default']['snapshot']['global_settings']['COMPACT_CHAT_ENABLED']);
+        $this->assertTrue($presets['builtin:local_llm']['snapshot']['global_settings']['COMPACT_CHAT_ENABLED']);
         $this->assertTrue($presets['builtin:local_llm']['snapshot']['global_settings']['PLAYER_RESPEECH']);
         $this->assertTrue($presets['builtin:local_llm']['snapshot']['global_settings']['CORE_CONNECTOR_DIRECTOR_ENABLED']);
         foreach (array_diff($connectorStateFields, ['PLAYER_RESPEECH', 'CORE_CONNECTOR_DIRECTOR_ENABLED']) as $field) {

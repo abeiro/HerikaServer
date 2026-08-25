@@ -252,6 +252,7 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'CHIM_AI_QUEST_PROGRESSION',
             'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT',
             'PROMPT_TIMESTAMP',
+            'COMPACT_CHAT_ENABLED',
             'PROMPT_CONTEXT_OPTIONS',
             'RECHAT_MODE',
             'ENFORCE_STRICT_RECHAT_RESPONSE',
