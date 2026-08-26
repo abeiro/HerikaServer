@@ -43,6 +43,7 @@ require_once($path . "lib/model_dynmodel.php");
 require_once($path . "lib/minimet5_service.php");
 require_once($path . "lib/data_functions.php");
 require_once($path . "lib/chat_helper_functions.php");
+require_once($path . "lib/player_mood_prompts.php");
 require_once($path . "lib/compact_context_history.php");
 require_once($path . "lib/lazy_xml.php");
 require_once($path . "lib/memory_helper_vectordb.php");
@@ -1694,15 +1695,21 @@ if ($gameRequest[0] == "narrator_welcome") {
 // Take care of override request if needed..
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php");
 
+$playerMoodRequestTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
 if (in_array(
     $gameRequest[0] ?? "",
-    ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"],
+    $playerMoodRequestTypes,
     true
 )) {
+    $playerMood = $requestRoutingSnapshot["player_mood"] ?? "";
     $gameRequest[3] = chimAppendPlayerMoodToHistoryLine(
         $gameRequest[3] ?? "",
-        $requestRoutingSnapshot["player_mood"] ?? ""
+        $playerMood
     );
+    $playerMoodPrompt = chimResolvePlayerMoodPrompt($playerMood, $GLOBALS["PLAYER_NAME"] ?? "Player", $db ?? null);
+    if ($playerMoodPrompt !== "") {
+        $request = rtrim((string)$request) . "\n" . $playerMoodPrompt;
+    }
 }
 
 

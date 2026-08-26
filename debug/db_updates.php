@@ -7795,6 +7795,39 @@ if ($checkVersion("prompts") < 20260821003) {
     }
 }
 
+if ($checkVersion("prompts") < 20260826001) {
+    Logger::debug("Applying prompts 20260826001 - add editable Prisma player mood prompts");
+
+    require_once(__DIR__ . "/../lib/player_mood_prompts.php");
+    $promptRows = [];
+    foreach (chimPlayerMoodPromptCatalog() as $mood => $entry) {
+        $promptKey = $db->escape($entry["prompt_key"]);
+        $defaultPrompt = $db->escape($entry["default_prompt"]);
+        $moodLabel = ucfirst($mood);
+        $description = $db->escape(
+            "Instruction added to the current LLM request when the player selects the {$moodLabel} mood in Prisma Chat. "
+            . "Supports {PLAYER_NAME} and {MOOD}. The compact mood tag in chat history remains unchanged."
+        );
+        $promptRows[] = "('{$promptKey}', '{$defaultPrompt}', '{$description}')";
+    }
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES " . implode(",\n", $promptRows) . "
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260826001);
+        Logger::info("Applied patch prompts 20260826001 - added editable Prisma player mood prompts");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260826001");
+    }
+}
+
 if ($checkVersion("memory_summary") < 20260721001) {
     Logger::debug("Applying memory_summary 20260721001 - normalize diary memory owners");
 
