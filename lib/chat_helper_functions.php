@@ -2891,6 +2891,7 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
         "present_actors" => [],
         "chat_shortcut_routed" => false,
         "player_mood" => "",
+        "player_mood_custom" => "",
     ];
     $rawField = trim((string)$rawField);
     if ($rawField === "") {
@@ -2921,6 +2922,11 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
         $playerMood = chimNormalizePlayerMood($payload["player_mood"] ?? "");
         if ($playerMood !== "") {
             $result["player_mood"] = $playerMood;
+            if ($playerMood === "custom") {
+                $result["player_mood_custom"] = chimNormalizeCustomPlayerMood(
+                    $payload["player_mood_custom"] ?? ""
+                );
+            }
         }
     }
     return $result;
@@ -2941,6 +2947,7 @@ function chimNormalizePlayerMood($playerMood)
         "suspicious",
         "playful",
         "flirty",
+        "custom",
     ], true)
         ? $playerMood
         : "";
@@ -2959,6 +2966,31 @@ function chimAppendPlayerMoodToHistoryLine($playerDialogue, $moodPrompt)
         return "";
     }
     return "{$playerDialogue} {$moodPrompt}";
+}
+
+// Keep custom delivery directions short and single-line before prompt insertion.
+function chimNormalizeCustomPlayerMood($customMood)
+{
+    if (!is_string($customMood)) {
+        return "";
+    }
+
+    $customMood = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', (string)$customMood);
+    if (!is_string($customMood)) {
+        return "";
+    }
+    $customMood = preg_replace('/\s+/u', ' ', trim($customMood));
+    if (!is_string($customMood) || $customMood === "") {
+        return "";
+    }
+
+    if (function_exists('mb_substr')) {
+        return mb_substr($customMood, 0, 80, 'UTF-8');
+    }
+    if (preg_match_all('/./us', $customMood, $characters) === false) {
+        return "";
+    }
+    return implode('', array_slice($characters[0], 0, 80));
 }
 
 function chimDecodeAudienceSnapshotField($rawField)

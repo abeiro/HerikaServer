@@ -44,15 +44,26 @@ function chimPlayerMoodPromptCatalog()
             "prompt_key" => "player_mood_flirty_prompt",
             "default_prompt" => "(speaks in a flirtatious tone.)",
         ],
+        "custom" => [
+            "prompt_key" => "player_mood_custom_prompt",
+            "default_prompt" => "(speaks {CUSTOM_MOOD}.)",
+        ],
     ];
 }
 
 // Resolve the selected mood through its fixed Prompt Manager key without trusting client text as SQL.
-function chimResolvePlayerMoodPrompt($playerMood, $playerName = null, $db = null)
+function chimResolvePlayerMoodPrompt($playerMood, $playerName = null, $db = null, $customPlayerMood = "")
 {
     $playerMood = strtolower(trim((string)$playerMood));
     $catalog = chimPlayerMoodPromptCatalog();
     if (!isset($catalog[$playerMood])) {
+        return "";
+    }
+
+    $customPlayerMood = $playerMood === "custom"
+        ? chimNormalizeCustomPlayerMood($customPlayerMood)
+        : "";
+    if ($playerMood === "custom" && $customPlayerMood === "") {
         return "";
     }
 
@@ -90,5 +101,6 @@ function chimResolvePlayerMoodPrompt($playerMood, $playerName = null, $db = null
     return strtr($prompt, [
         "{PLAYER_NAME}" => $playerName,
         "{MOOD}" => $playerMood,
+        "{CUSTOM_MOOD}" => $customPlayerMood,
     ]);
 }

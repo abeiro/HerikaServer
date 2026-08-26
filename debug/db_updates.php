@@ -7804,9 +7804,12 @@ if ($checkVersion("prompts") < 20260826002) {
         $promptKey = $db->escape($entry["prompt_key"]);
         $defaultPrompt = $db->escape($entry["default_prompt"]);
         $moodLabel = ucfirst($mood);
+        $supportedPlaceholders = $mood === "custom"
+            ? "{PLAYER_NAME}, {MOOD}, and {CUSTOM_MOOD}"
+            : "{PLAYER_NAME} and {MOOD}";
         $description = $db->escape(
             "Phrase appended to the player's eventlog message and dialogue history when the {$moodLabel} mood is selected in Prisma Chat. "
-            . "Supports {PLAYER_NAME} and {MOOD}. Leave blank to use the default phrase."
+            . "Supports {$supportedPlaceholders}. Leave blank to use the default phrase."
         );
         $promptRows[] = "('{$promptKey}', '{$defaultPrompt}', '{$description}')";
     }
@@ -7825,6 +7828,35 @@ if ($checkVersion("prompts") < 20260826002) {
         Logger::info("Applied patch prompts 20260826002 - added editable Prisma player mood prompts");
     } else {
         Logger::error("Failed to apply patch prompts 20260826002");
+    }
+}
+
+if ($checkVersion("prompts") < 20260826003) {
+    Logger::debug("Applying prompts 20260826003 - add editable custom Prisma player mood prompt");
+
+    require_once(__DIR__ . "/../lib/player_mood_prompts.php");
+    $customMoodEntry = chimPlayerMoodPromptCatalog()["custom"];
+    $promptKey = $db->escape($customMoodEntry["prompt_key"]);
+    $defaultPrompt = $db->escape($customMoodEntry["default_prompt"]);
+    $description = $db->escape(
+        "Phrase appended to the player's eventlog message and dialogue history when Custom mood is selected in Prisma Chat. "
+        . "Supports {PLAYER_NAME}, {MOOD}, and {CUSTOM_MOOD}. Leave blank to use the default phrase."
+    );
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('{$promptKey}', '{$defaultPrompt}', '{$description}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260826003);
+        Logger::info("Applied patch prompts 20260826003 - added editable custom Prisma player mood prompt");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260826003");
     }
 }
 
