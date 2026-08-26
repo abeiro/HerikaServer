@@ -1681,6 +1681,29 @@ if ($checkVersion("core_action") < 20260430015) {
     Logger::info("Applied patch core_action 20260430015");
 }
 
+if ($checkVersion("core_action") < 20260826001) {
+    Logger::debug("Applying core_action 20260826001 - remove server activity requirements from GoToSleep");
+
+    $migrationOk = true;
+    foreach (['core_action', 'core_action_custom'] as $tableName) {
+        $migrationResult = $db->execQuery("
+            UPDATE public.{$tableName}
+            SET metadata = COALESCE(metadata, '{}'::jsonb) - 'requirements',
+                updated_at = NOW()
+            WHERE LOWER(code_name) = LOWER('GoToSleep')
+              AND COALESCE(metadata, '{}'::jsonb) @> '{\"source\":\"functions.php\",\"builtin\":true}'::jsonb
+        ");
+        $migrationOk = $migrationOk && $migrationResult !== false;
+    }
+
+    if ($migrationOk) {
+        $updateVersion("core_action", 20260826001);
+        Logger::info("Applied patch core_action 20260826001");
+    } else {
+        Logger::error("Failed to apply patch core_action 20260826001");
+    }
+}
+
 if ($checkVersion("game_plugins") < 20260427001) {
     Logger::debug("Applying game_plugins 20260427001 - create loaded plugin manifest table");
 

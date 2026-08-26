@@ -1197,11 +1197,6 @@ function herikaActionCatalogGetBuiltinRequirements($codeName)
                 'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'sitting', 'using', 'leaning'],
             ],
         ],
-        'GoToSleep' => [
-            'activity' => [
-                'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking'],
-            ],
-        ],
         'Relax' => [
             'activity' => [
                 'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking'],
@@ -1985,9 +1980,20 @@ function herikaActionCatalogIsActionOnCooldown($codeName, $cooldownSeconds)
     return ($ingameNow - $lastTriggered) < $cooldownSeconds;
 }
 
+function herikaActionCatalogIsCheatModeRequest()
+{
+    $requestType = strtolower(trim(strval($GLOBALS["gameRequest"][0] ?? '')));
+    $executionMode = strtoupper(trim(strval($GLOBALS["CHIM_EXECUTION_MODE"] ?? '')));
+    return $requestType === 'cheatmode' || $executionMode === 'CHEATMODE';
+}
+
 function herikaActionCatalogRowMatchesRequirements($row, $context = null)
 {
     if (!is_array($row)) {
+        return true;
+    }
+
+    if (herikaActionCatalogIsCheatModeRequest()) {
         return true;
     }
 
