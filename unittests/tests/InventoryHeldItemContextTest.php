@@ -44,7 +44,7 @@ final class InventoryHeldItemContextTest extends TestCase
 
     protected function tearDown(): void
     {
-        unset($GLOBALS['db'], $GLOBALS['PLAYER_NAME']);
+        unset($GLOBALS['db'], $GLOBALS['PLAYER_NAME'], $GLOBALS['HELD_ITEM_GRAB_CONTEXT']);
     }
 
     public function testInventoryMarkdownIncludesNormalizedBaseIdsCountsAndDescriptions(): void
@@ -142,5 +142,59 @@ final class InventoryHeldItemContextTest extends TestCase
         ]);
 
         $this->assertStringContainsString('`0x00001234:Odd &#96;&lt;Sword&gt; &amp; Relic`', $pickup[3]);
+    }
+
+    public function testRecentGrabContextUsesAPlainNarrativeWithoutTheRefId(): void
+    {
+        $GLOBALS['HELD_ITEM_GRAB_CONTEXT'] = true;
+        $pickup = HeldItems::processEventRequest([
+            'ext_vr_item_raw',
+            '0',
+            '0',
+            'Alto Wine^pickup^right^ff001234',
+        ]);
+
+        $this->assertFalse(herikaShouldExcludeEventFromPromptContext([
+            'type' => $pickup[0],
+            'data' => $pickup[3],
+        ]));
+        $this->assertSame('Prisoner grabs Alto Wine.', herikaFormatHeldItemGrabContext($pickup[3]));
+        $this->assertStringContainsString('- Right: `0xFF001234:Alto Wine`', HeldItems::getHeldItemsContext());
+    }
+
+    public function testRecentGrabContextCanBeDisabledWhileDropsStayExcluded(): void
+    {
+        $GLOBALS['HELD_ITEM_GRAB_CONTEXT'] = false;
+        $pickup = HeldItems::processEventRequest(['ext_vr_item_raw', '0', '0', 'Goblet^pickup^both^1234']);
+        $drop = HeldItems::processEventRequest(['ext_vr_item_raw', '0', '0', 'Goblet^drop^both^1234']);
+
+        $this->assertTrue(herikaShouldExcludeEventFromPromptContext([
+            'type' => $pickup[0],
+            'data' => $pickup[3],
+        ]));
+        $this->assertTrue(herikaShouldExcludeEventFromPromptContext([
+            'type' => $drop[0],
+            'data' => $drop[3],
+        ]));
+        $this->assertSame(
+            "and type not in ('ext_held_item_pickup','ext_held_item_drop')",
+            herikaHeldItemHistorySqlFilter()
+        );
+    }
+
+    public function testEnabledRecentGrabContextStillPrefiltersDropRows(): void
+    {
+        $GLOBALS['HELD_ITEM_GRAB_CONTEXT'] = 'true';
+
+        $this->assertSame("and type<>'ext_held_item_drop'", herikaHeldItemHistorySqlFilter());
+    }
+
+    public function testMalformedRecentGrabRowsRemainOutOfPromptContext(): void
+    {
+        $GLOBALS['HELD_ITEM_GRAB_CONTEXT'] = true;
+        $row = ['type' => 'ext_held_item_pickup', 'data' => '<HELD_ITEM>unexpected</HELD_ITEM>'];
+
+        $this->assertSame('', herikaFormatHeldItemGrabContext($row['data']));
+        $this->assertTrue(herikaShouldExcludeEventFromPromptContext($row));
     }
 }

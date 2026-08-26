@@ -161,6 +161,7 @@ function icon_for_field(string $flatName): string
         'TRANSFORMATION_DETECTION' => '🐺',
         'POWER_AWARENESS_ENABLED' => '⚔️',
         'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => '💰',
+        'HELD_ITEM_GRAB_CONTEXT' => '🤲',
         'PROMPT_TIMESTAMP' => '🕐',
         'MAGIC_EVENT_BLACKLIST' => '🪄',
         'LOCATION_BLACKLIST' => '📍',

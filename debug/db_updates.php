@@ -7470,6 +7470,30 @@ if ($checkVersion("general_settings") < 20260825001) {
     }
 }
 
+if ($checkVersion("general_settings") < 20260826001) {
+    Logger::debug("Applying general_settings 20260826001 - add held item grab context setting");
+
+    $b_ok = true;
+    try {
+        $settingId = 'HELD_ITEM_GRAB_CONTEXT';
+        $existingRow = chimGetGeneralSettingRow($settingId);
+        $currentValue = $existingRow['value'] ?? (chimGetSchemaDefinition($settingId)['default'] ?? true);
+        $description = chimGetSchemaDescription($settingId);
+
+        if (!chimSetGeneralSetting($settingId, $currentValue, $description)) {
+            throw new Exception("Failed writing {$settingId}");
+        }
+    } catch (Throwable $e) {
+        $b_ok = false;
+        Logger::error("Error adding held item grab context setting: " . $e->getMessage());
+    }
+
+    if ($b_ok) {
+        $updateVersion("general_settings", 20260826001);
+        Logger::info("Applied patch general_settings 20260826001");
+    }
+}
+
 if ($checkVersion("quest_asset_library") < 20260718003) {
     Logger::debug("Applying quest_asset_library 20260718003 - add curated quest spawn templates");
 

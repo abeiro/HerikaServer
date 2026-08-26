@@ -69,6 +69,12 @@ function chimPrismaGlobalSettingsSections(): array
             ['name' => 'TRANSFORMATION_DETECTION', 'type' => 'boolean'],
             ['name' => 'POWER_AWARENESS_ENABLED', 'type' => 'boolean'],
             ['name' => 'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE', 'type' => 'integer', 'min' => 0],
+            [
+                'name' => 'HELD_ITEM_GRAB_CONTEXT',
+                'type' => 'boolean',
+                'default' => true,
+                'help' => 'Adds a recent event when the player grabs an object, helping NPCs understand phrases like "look at this" or "take this." Turn this off if frequent VR grabbing adds too much context. Current held items are still shown separately.',
+            ],
             ['name' => 'PROMPT_TIMESTAMP', 'type' => 'boolean'],
         ],
         'Context Selections' => [

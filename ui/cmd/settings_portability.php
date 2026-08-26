@@ -71,6 +71,7 @@ function chimPortableGlobalFields(): array
         'TRANSFORMATION_DETECTION' => 'boolean',
         'POWER_AWARENESS_ENABLED' => 'boolean',
         'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 'integer',
+        'HELD_ITEM_GRAB_CONTEXT' => 'boolean',
         'PROMPT_TIMESTAMP' => 'boolean',
         'MAGIC_EVENT_BLACKLIST' => 'string',
         'LOCATION_BLACKLIST' => 'string',

@@ -2460,6 +2460,47 @@ function getTimeCategory($hoursAgo) {
     return "Days ago";
 }
 
+function herikaHeldItemGrabContextEnabled(): bool
+{
+    $value = $GLOBALS['HELD_ITEM_GRAB_CONTEXT'] ?? true;
+    if (is_bool($value)) {
+        return $value;
+    }
+
+    return in_array(strtolower(trim(strval($value))), ['1', 'true', 'yes', 'on'], true);
+}
+
+function herikaHeldItemHistorySqlFilter(): string
+{
+    return herikaHeldItemGrabContextEnabled()
+        ? "and type<>'ext_held_item_drop'"
+        : "and type not in ('ext_held_item_pickup','ext_held_item_drop')";
+}
+
+function herikaFormatHeldItemGrabContext(string $data): string
+{
+    if (preg_match('/^<HELD_ITEM>\s*(.*?)\s*<\/HELD_ITEM>$/isu', trim($data), $wrapperMatch) !== 1) {
+        return '';
+    }
+
+    $text = trim($wrapperMatch[1]);
+    if (preg_match('/^(.+?)\s+picked up\s+(.+?)(?:\s+with their (?:left|right) hand)?\.\s*$/iu', $text, $matches) !== 1) {
+        return '';
+    }
+
+    $playerName = trim($matches[1]);
+    $itemName = trim($matches[2]);
+    if (preg_match('/^`0x[0-9a-f]{8}:(.*)`$/iu', $itemName, $identifierMatch) === 1) {
+        $itemName = trim($identifierMatch[1]);
+    }
+
+    if ($playerName === '' || $itemName === '') {
+        return '';
+    }
+
+    return "{$playerName} grabs {$itemName}.";
+}
+
 
 function herikaShouldExcludeEventFromPromptContext(array $row): bool
 {
@@ -2477,19 +2518,17 @@ function herikaShouldExcludeEventFromPromptContext(array $row): bool
         'npcvoice_refresh',
     ];
 
-    static $promptOnlyEventTypes = [
-        'ext_held_item_pickup',
-        'ext_held_item_drop',
-    ];
-
     if (in_array($type, $csvImportEventTypes, true)) {
         return true;
     }
 
-    // Held item state is injected separately through <held_items>; avoid replaying
-    // every pickup/drop as historic NPC event context.
-    if (in_array($type, $promptOnlyEventTypes, true)) {
+    if ($type === 'ext_held_item_drop') {
         return true;
+    }
+
+    if ($type === 'ext_held_item_pickup') {
+        return !herikaHeldItemGrabContextEnabled()
+            || herikaFormatHeldItemGrabContext($data) === '';
     }
 
     if ($type === 'status_msg' && stripos($data, 'csv_import@') === 0) {
@@ -2528,6 +2567,8 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     } else {
         $removeBooks ="and type<>'contentbook' " ;
     }
+
+    $heldItemHistorySql = herikaHeldItemHistorySqlFilter();
     
     $ext_sqlfilter1 = $GLOBALS["EXT_CONTEXT_SQL_FILTER1"] ?? "";
     $ext_sqlfilter2 = $GLOBALS["EXT_CONTEXT_SQL_FILTER2"] ?? "";
@@ -2566,6 +2607,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='info_timeforward' then 'TIMELAPSE' 
       when type='backgroundaction' then 'CONTEXTI' 
       when type='innerchat' then 'BGLCHAT' 
+      when type='ext_held_item_pickup' then 'CONTEXTI'
       when type like 'ext_%' then 'PLUGIN'
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
@@ -2579,7 +2621,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     AND type<>'narrator_welcome'
     and (type<>'chat' or {$visibleChatStateSql})
     AND type<>'funccall' AND type<>'togglemodel'
-    {$removeBooks} {$sqlfilter} {$ext_sqlfilter1}
+    {$removeBooks} {$heldItemHistorySql} {$sqlfilter} {$ext_sqlfilter1}
     ".(($b_actor) ? "
     AND (
      people like '%|$actorEscaped|%'
@@ -2636,6 +2678,13 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
 
     foreach ($orderedData as $n=>$row) {
         $rowData = $row["data"];
+
+        if ($row["type"] === "ext_held_item_pickup") {
+            $rowData = herikaFormatHeldItemGrabContext((string)$rowData);
+            if ($rowData === '') {
+                continue;
+            }
+        }
         
         if ($rowData==="The Narrator:") // Hunt empty rows
             continue;
