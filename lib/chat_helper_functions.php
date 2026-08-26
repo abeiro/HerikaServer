@@ -2930,7 +2930,18 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
 function chimNormalizePlayerMood($playerMood)
 {
     $playerMood = strtolower(trim((string)$playerMood));
-    return in_array($playerMood, ["happy", "sad", "angry", "scared", "surprised", "flirty"], true)
+    return in_array($playerMood, [
+        "happy",
+        "sad",
+        "angry",
+        "annoyed",
+        "scared",
+        "surprised",
+        "confused",
+        "suspicious",
+        "playful",
+        "flirty",
+    ], true)
         ? $playerMood
         : "";
 }
