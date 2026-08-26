@@ -2890,6 +2890,7 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
         "audience" => "",
         "present_actors" => [],
         "chat_shortcut_routed" => false,
+        "player_mood" => "",
     ];
     $rawField = trim((string)$rawField);
     if ($rawField === "") {
@@ -2916,7 +2917,48 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
     $result["chat_shortcut_routed"] =
         ($payload["source"] ?? "") === "plugin_player_routing_v2" &&
         ($payload["chat_shortcut_routed"] ?? false) === true;
+    if (($payload["source"] ?? "") === "plugin_player_routing_v2") {
+        $playerMood = chimNormalizePlayerMood($payload["player_mood"] ?? "");
+        if ($playerMood !== "") {
+            $result["player_mood"] = $playerMood;
+        }
+    }
     return $result;
+}
+
+// Normalize the supported Prisma mood enum shared by decoding and history formatting.
+function chimNormalizePlayerMood($playerMood)
+{
+    $playerMood = strtolower(trim((string)$playerMood));
+    return in_array($playerMood, [
+        "happy",
+        "sad",
+        "angry",
+        "annoyed",
+        "scared",
+        "surprised",
+        "confused",
+        "suspicious",
+        "playful",
+        "flirty",
+    ], true)
+        ? $playerMood
+        : "";
+}
+
+// Append a compact mood tag to the player line that enters persistent dialogue history.
+function chimAppendPlayerMoodToHistoryLine($playerDialogue, $playerMood)
+{
+    $playerDialogue = (string)$playerDialogue;
+    $playerMood = chimNormalizePlayerMood($playerMood);
+    if ($playerDialogue === "" || $playerMood === "") {
+        return $playerDialogue;
+    }
+    $playerDialogue = rtrim($playerDialogue);
+    if ($playerDialogue === "") {
+        return "";
+    }
+    return "{$playerDialogue} [mood: {$playerMood}]";
 }
 
 function chimDecodeAudienceSnapshotField($rawField)
