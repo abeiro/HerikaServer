@@ -92,4 +92,3 @@ function chimResolvePlayerMoodPrompt($playerMood, $playerName = null, $db = null
         "{MOOD}" => $playerMood,
     ]);
 }
-
