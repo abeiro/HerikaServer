@@ -2946,19 +2946,19 @@ function chimNormalizePlayerMood($playerMood)
         : "";
 }
 
-// Append a compact mood tag to the player line that enters persistent dialogue history.
-function chimAppendPlayerMoodToHistoryLine($playerDialogue, $playerMood)
+// Append the resolved mood phrase to the player line that enters persistent dialogue history.
+function chimAppendPlayerMoodToHistoryLine($playerDialogue, $moodPrompt)
 {
     $playerDialogue = (string)$playerDialogue;
-    $playerMood = chimNormalizePlayerMood($playerMood);
-    if ($playerDialogue === "" || $playerMood === "") {
+    $moodPrompt = trim((string)$moodPrompt);
+    if ($playerDialogue === "" || $moodPrompt === "") {
         return $playerDialogue;
     }
     $playerDialogue = rtrim($playerDialogue);
     if ($playerDialogue === "") {
         return "";
     }
-    return "{$playerDialogue} [mood: {$playerMood}]";
+    return "{$playerDialogue} {$moodPrompt}";
 }
 
 function chimDecodeAudienceSnapshotField($rawField)

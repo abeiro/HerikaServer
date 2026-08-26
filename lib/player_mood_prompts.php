@@ -6,43 +6,43 @@ function chimPlayerMoodPromptCatalog()
     return [
         "happy" => [
             "prompt_key" => "player_mood_happy_prompt",
-            "default_prompt" => "({PLAYER_NAME} speaks in a happy tone.)",
+            "default_prompt" => "(speaks in a happy tone.)",
         ],
         "sad" => [
             "prompt_key" => "player_mood_sad_prompt",
-            "default_prompt" => "({PLAYER_NAME} speaks in a sad tone.)",
+            "default_prompt" => "(speaks in a sad tone.)",
         ],
         "angry" => [
             "prompt_key" => "player_mood_angry_prompt",
-            "default_prompt" => "({PLAYER_NAME} speaks in an angry tone.)",
+            "default_prompt" => "(speaks in an angry tone.)",
         ],
         "annoyed" => [
             "prompt_key" => "player_mood_annoyed_prompt",
-            "default_prompt" => "({PLAYER_NAME} speaks in an annoyed tone.)",
+            "default_prompt" => "(speaks in an annoyed tone.)",
         ],
         "scared" => [
             "prompt_key" => "player_mood_scared_prompt",
-            "default_prompt" => "({PLAYER_NAME} speaks in a frightened tone.)",
+            "default_prompt" => "(speaks in a frightened tone.)",
         ],
         "surprised" => [
             "prompt_key" => "player_mood_surprised_prompt",
-            "default_prompt" => "({PLAYER_NAME} speaks in a surprised tone.)",
+            "default_prompt" => "(speaks in a surprised tone.)",
         ],
         "confused" => [
             "prompt_key" => "player_mood_confused_prompt",
-            "default_prompt" => "({PLAYER_NAME} speaks in a confused tone.)",
+            "default_prompt" => "(speaks in a confused tone.)",
         ],
         "suspicious" => [
             "prompt_key" => "player_mood_suspicious_prompt",
-            "default_prompt" => "({PLAYER_NAME} speaks in a suspicious tone.)",
+            "default_prompt" => "(speaks in a suspicious tone.)",
         ],
         "playful" => [
             "prompt_key" => "player_mood_playful_prompt",
-            "default_prompt" => "({PLAYER_NAME} speaks in a playful tone.)",
+            "default_prompt" => "(speaks in a playful tone.)",
         ],
         "flirty" => [
             "prompt_key" => "player_mood_flirty_prompt",
-            "default_prompt" => "({PLAYER_NAME} speaks in a flirtatious tone.)",
+            "default_prompt" => "(speaks in a flirtatious tone.)",
         ],
     ];
 }

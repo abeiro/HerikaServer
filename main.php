@@ -1702,14 +1702,11 @@ if (in_array(
     true
 )) {
     $playerMood = $requestRoutingSnapshot["player_mood"] ?? "";
+    $playerMoodPrompt = chimResolvePlayerMoodPrompt($playerMood, $GLOBALS["PLAYER_NAME"] ?? "Player", $db ?? null);
     $gameRequest[3] = chimAppendPlayerMoodToHistoryLine(
         $gameRequest[3] ?? "",
-        $playerMood
+        $playerMoodPrompt
     );
-    $playerMoodPrompt = chimResolvePlayerMoodPrompt($playerMood, $GLOBALS["PLAYER_NAME"] ?? "Player", $db ?? null);
-    if ($playerMoodPrompt !== "") {
-        $request = rtrim((string)$request) . "\n" . $playerMoodPrompt;
-    }
 }
 
 
