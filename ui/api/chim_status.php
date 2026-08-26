@@ -42,14 +42,15 @@ try {
         if (isset($GLOBALS["DBDRIVER"])) {
             require_once(LIB_PATH . DIRECTORY_SEPARATOR . $GLOBALS["DBDRIVER"] . '.class.php');
             $db = new sql();
+            $GLOBALS['db'] = $db;
+            require_once(LIB_PATH . DIRECTORY_SEPARATOR . 'settings.php');
             
             // Get current mode
             $modeResult = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
             $status['mode'] = isset($modeResult['value']) ? strtoupper(trim($modeResult['value'])) : 'STANDARD';
             
             // Get Compact Chat setting
-            $focusChatResult = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_context_mode'");
-            $status['focus_chat'] = isset($focusChatResult['value']) && $focusChatResult['value'] == '1';
+            $status['compact_chat'] = chimGetGeneralSettingBool('COMPACT_CHAT_ENABLED', true);
             
             // Get active profile slot
             $modelSlotResult = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_profile_model'");
@@ -106,7 +107,7 @@ try {
                 'tts' => $status['tts']
             ],
             'mode' => $status['mode'] ?? 'STANDARD',
-            'focus_chat' => $status['focus_chat'] ?? false,
+            'compact_chat' => $status['compact_chat'] ?? true,
             'model_slot_label' => $status['model_slot_label'] ?? 'Standard',
             'connector' => [
                 'label' => $status['connector_label'] ?? '',

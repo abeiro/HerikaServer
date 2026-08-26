@@ -53,7 +53,6 @@ $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"
 
 $connector->setOldGlobals($currentConnectorData);
 
-$CLEAN_CONTEXT_FOCUS_CHAT = false;
 $COMMAND_PROMPT           = '';
 
 $res  = $db->fetchAll("select max(gamets) as last_gamets from eventlog");

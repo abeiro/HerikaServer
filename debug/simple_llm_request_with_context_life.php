@@ -134,8 +134,6 @@ $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
 $connector->setOldGlobals($currentConnectorData);
 $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 
-$CLEAN_CONTEXT_FOCUS_CHAT = false;
-
 $COMMAND_PROMPT = '';
 
 $dbNpcName = $db->escape($argv[1]);
