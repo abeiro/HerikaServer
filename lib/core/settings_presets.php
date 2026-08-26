@@ -10,7 +10,6 @@ function chimSettingsPresetProfileDefaults(): array
         'CONTEXT_HISTORY_DIARY' => 100,
         'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 50,
         'MAX_WORDS_LIMIT' => 0,
-        'chim_context_mode' => 0,
     ];
 }
 
@@ -31,6 +30,7 @@ function chimSettingsPresetDefaultGlobalSettings(): array
         'POWER_AWARENESS_ENABLED' => false,
         'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 500,
         'PROMPT_TIMESTAMP' => false,
+        'COMPACT_CHAT_ENABLED' => true,
     ] + chimSettingsPresetConnectorAvailability(true);
 }
 
@@ -126,7 +126,6 @@ function chimProfileSettingsPresetBuiltIns(): array
                 'CONTEXT_HISTORY_DIARY' => 20,
                 'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 20,
                 'MAX_WORDS_LIMIT' => 60,
-                'chim_context_mode' => 1,
             ],
             'profile_overrides' => $localOverrides,
             'profile_runtime_defaults' => chimSettingsPresetLocalProfileRuntimeValues(),
@@ -140,7 +139,6 @@ function chimProfileSettingsPresetBuiltIns(): array
                 'CONTEXT_HISTORY_DIARY' => 150,
                 'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 100,
                 'MAX_WORDS_LIMIT' => 0,
-                'chim_context_mode' => 0,
             ],
             'profile_overrides' => [
                 'DYNAMIC_PROFILE_ENABLED' => true,
@@ -265,6 +263,7 @@ function chimSettingsPresetBuiltIns(): array
                     'POWER_AWARENESS_ENABLED' => false,
                     'CHIM_ITEM_PICKUP_EVENTLOG_MIN_VALUE' => 1000,
                     'PROMPT_TIMESTAMP' => false,
+                    'COMPACT_CHAT_ENABLED' => true,
                     'PLAYER_RESPEECH' => true,
                     'CORE_CONNECTOR_DIRECTOR_ENABLED' => true,
                 ] + chimSettingsPresetConnectorAvailability(false),
@@ -290,7 +289,6 @@ function chimSettingsPresetBuiltIns(): array
                     'CONTEXT_HISTORY_DIARY' => 20,
                     'CONTEXT_HISTORY_DYNAMIC_PROFILE' => 20,
                     'MAX_WORDS_LIMIT' => 60,
-                    'chim_context_mode' => 1,
                 ],
                 'profiles' => [],
                 'built_in_profile_values' => $localProfilePreset['profile_values'],
@@ -385,7 +383,6 @@ function chimSettingsPresetNormalizeProfileValues(array $values): array
         'CONTEXT_HISTORY_DIARY' => [0, 400],
         'CONTEXT_HISTORY_DYNAMIC_PROFILE' => [0, 400],
         'MAX_WORDS_LIMIT' => [0, 10000],
-        'chim_context_mode' => [0, 1],
     ];
     $defaults = chimSettingsPresetProfileDefaults();
     $normalized = [];

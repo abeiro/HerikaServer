@@ -48,8 +48,6 @@ $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"
 
 $connector->setOldGlobals($currentConnectorData);
 
-$CLEAN_CONTEXT_FOCUS_CHAT = false;
-
 $COMMAND_PROMPT = '';
 
 $database_desc=file_get_contents(__DIR__."/../lib/core/database_schema/database_description.txt");

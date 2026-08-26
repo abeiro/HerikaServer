@@ -9,22 +9,30 @@ final class CompactNpcContextHistoryTest extends TestCase
     protected function tearDown(): void
     {
         unset(
-            $GLOBALS['FOCUS_CHAT_MODE'],
+            $GLOBALS['COMPACT_CHAT_ENABLED'],
             $GLOBALS['HERIKA_NAME']
         );
     }
 
-    public function testSettingIsDisabledByDefault(): void
+    public function testSettingIsEnabledByDefault(): void
     {
         $GLOBALS['HERIKA_NAME'] = 'Lucan Valerius';
 
-        $this->assertFalse(chimFocusChatContextEnabled());
-        $this->assertFalse(chimShouldCompactNpcContextHistory());
+        $this->assertTrue(chimCompactChatEnabled());
+        $this->assertTrue(chimShouldCompactNpcContextHistory());
+    }
+
+    public function testSettingCanBeDisabled(): void
+    {
+        $GLOBALS['COMPACT_CHAT_ENABLED'] = false;
+
+        $this->assertFalse(chimCompactChatEnabled());
+        $this->assertFalse(chimShouldCompactNpcContextHistory('Lucan Valerius'));
     }
 
     public function testNarratorIsExcludedWhenSettingIsEnabled(): void
     {
-        $GLOBALS['FOCUS_CHAT_MODE'] = true;
+        $GLOBALS['COMPACT_CHAT_ENABLED'] = true;
 
         $this->assertFalse(chimShouldCompactNpcContextHistory('The Narrator'));
         $this->assertTrue(chimShouldCompactNpcContextHistory('Lucan Valerius'));

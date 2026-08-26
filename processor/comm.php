@@ -1282,21 +1282,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
     // logEvent($gameRequest);
 
     $vars = explode("@", $gameRequest[3]);
-    if ($vars[0] == "chim_context_mode") {
-        $cRw = $db->fetchOne("select value from conf_opts where id='{$vars[0]}'");
-        $vars[1] = (isset($cRw["value"]) && $cRw["value"] == "1") ? "0" : "1";
-        $GLOBALS["db"]->insert(
-            'responselog',
-            array(
-                'localts' => time(),
-                'sent' => 0,
-                'actor' => "rolemaster",
-                'text' => '',
-                'action' => "rolecommand|DebugNotification@Compact Chat mode " . ($vars[1] ? "enabled" : "disabled"),
-                'tag' => ""
-            )
-        );
-    } else if ($vars[0] == "chim_renamenpc") {
+    if ($vars[0] == "chim_renamenpc") {
         // Convert signed to unsigned using bitwise AND
         $unsignedInt = ($vars[3] + 0) & 0xFFFFFFFF;
         // Represent as 8-digit zero-padded hex with 0x prefix

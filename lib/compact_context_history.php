@@ -6,10 +6,10 @@
  * Live response JSON and action schemas are intentionally handled elsewhere.
  */
 
-if (!function_exists('chimFocusChatContextEnabled')) {
-    function chimFocusChatContextEnabled(): bool
+if (!function_exists('chimCompactChatEnabled')) {
+    function chimCompactChatEnabled(): bool
     {
-        $value = $GLOBALS['FOCUS_CHAT_MODE'] ?? false;
+        $value = $GLOBALS['COMPACT_CHAT_ENABLED'] ?? true;
         if (is_bool($value)) {
             return $value;
         }
@@ -21,7 +21,7 @@ if (!function_exists('chimFocusChatContextEnabled')) {
 if (!function_exists('chimShouldCompactNpcContextHistory')) {
     function chimShouldCompactNpcContextHistory(?string $actorName = null): bool
     {
-        if (!chimFocusChatContextEnabled()) {
+        if (!chimCompactChatEnabled()) {
             return false;
         }
 

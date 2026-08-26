@@ -182,7 +182,6 @@ if (empty($GLOBALS['PLAYER_NAME'])) {
 }
 
 // Variables expected by some library functions
-$CLEAN_CONTEXT_FOCUS_CHAT = false;
 $COMMAND_PROMPT = '';
 
 // ─── NPC & Connector Setup ────────────────────────────────────────────────────
