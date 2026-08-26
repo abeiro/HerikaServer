@@ -1071,13 +1071,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                 $chimMode = (!isset($chimModeRow['error']) && !empty($chimModeRow) && isset($chimModeRow[0]['value'])) ? $chimModeRow[0]['value'] : 'STANDARD';
 
                 // Fetch Compact Chat mode
-                $chimContextModeRow = fetch_widget_stats($conn, "
-                    SELECT value 
-                    FROM {$schema}.conf_opts 
-                    WHERE id = 'chim_context_mode' 
-                    LIMIT 1
-                ");
-                $chimContextMode = (!isset($chimContextModeRow['error']) && !empty($chimContextModeRow) && isset($chimContextModeRow[0]['value']) && $chimContextModeRow[0]['value'])==1 ? 'ENABLED' : 'DISABLED';
+                $compactChatStatus = chimGetGeneralSettingBool('COMPACT_CHAT_ENABLED', true) ? 'ENABLED' : 'DISABLED';
 
                 // Fetch Current active model
                 $chimModelRow = fetch_widget_stats($conn, "
@@ -1217,7 +1211,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                             </tr>
                             <tr>
                                 <td>Compact Chat</td>
-                                <td>" . htmlspecialchars($chimContextMode) . "</td>
+                                <td>" . htmlspecialchars($compactChatStatus) . "</td>
                             </tr>
                             <tr>
                                 <td>Background Life NPCs</td>

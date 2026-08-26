@@ -16,8 +16,6 @@ $currentNpcData = $npcMaster->getByName($selectedNpc);
 $connector->setOldGlobals($currentConnectorData);
 $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 
-$CLEAN_CONTEXT_FOCUS_CHAT = false;
-
 $COMMAND_PROMPT = '';
 
 $extended_data=$npcMaster->getExtendedData($currentNpcData);

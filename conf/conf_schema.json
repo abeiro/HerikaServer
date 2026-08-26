@@ -10,6 +10,7 @@
   "PROMPT_HEAD": {"userlvl":"pro","type":"longstring","description":"System Prompt. Defines the rules of the roleplay."},
   "PLAYER_SPEECH_STYLE":{"type":"longstring","description":"Instructions for how the player character speaks and communicates. This will be used as context when rewriting player dialogue.","scope":"global"},
   "PROMPT_TIMESTAMP": {"userlvl":"basic","type":"boolean","description":"Add rough timestamp subdividers to event context (e.g., 'Moments Ago', 'A while ago') to help the AI NPCs understand when events happend.","scope":"global"},
+  "COMPACT_CHAT_ENABLED": {"userlvl":"basic","type":"boolean","default":true,"description":"Reduce conversation history size while keeping important dialogue, actions, and context. Does not affect the Narrator.","scope":"global"},
   "PROMPT_CONTEXT_OPTIONS": {"userlvl":"basic","type":"longstring","description":"Controls which XML-like prompt context sections are included in the final system prompt sent to the LLM. Managed from Global Settings.","scope":"global"},
   "use_emotions_expression": {"userlvl":"basic","type":"boolean","description":"Emotions expression support.","scope":"global"},
    "HERIKA_PERS": {"userlvl":"basic","type":"longstring","description":"Basic Summary of the NPC.","helpurl":"https://dwemerdynamics.com/chim/roleplay-settings.html#ChimNpcsMenu"},
