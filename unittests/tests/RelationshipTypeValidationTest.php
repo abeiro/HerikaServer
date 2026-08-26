@@ -5,6 +5,8 @@ use PHPUnit\Framework\TestCase;
 $GLOBALS['ENGINE_PATH'] = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR;
 require_once $GLOBALS['ENGINE_PATH'] . 'lib' . DIRECTORY_SEPARATOR . 'relationship_manager.php';
 require_once $GLOBALS['ENGINE_PATH'] . 'lib' . DIRECTORY_SEPARATOR . 'eventlog_helper.php';
+require_once $GLOBALS['ENGINE_PATH'] . 'lib' . DIRECTORY_SEPARATOR . 'core'
+    . DIRECTORY_SEPARATOR . 'npc_master.class.php';
 require_once $GLOBALS['ENGINE_PATH'] . 'ext' . DIRECTORY_SEPARATOR . 'relationship_system'
     . DIRECTORY_SEPARATOR . 'relationship_llm.php';
 
@@ -188,5 +190,121 @@ final class RelationshipTypeValidationTest extends TestCase
         $this->assertSame('relationship:42', $rows[0]['rowid']);
         $this->assertSame('relationship_history', $rows[0]['source']);
         $this->assertStringContainsString('increased by 5', $rows[0]['data']);
+    }
+
+    public function testRelationshipRestoreClearsOnlyRowsWithoutEligibleHistory(): void
+    {
+        $query = chimRelationshipFutureClearQuery(100);
+
+        $this->assertStringContainsString('UPDATE public.core_npc_master AS c', $query);
+        $this->assertStringContainsString('AND NOT EXISTS', $query);
+        $this->assertStringContainsString('h.npc_id = c.id', $query);
+        $this->assertStringContainsString('h.gamets_last_updated <= 100', $query);
+        $this->assertStringContainsString("h.extended_data ? 'relationships'", $query);
+    }
+
+    public function testNeverClearSettingPreservesLiveRelationshipsAndSkipsTimelineRollback(): void
+    {
+        $hadDatabase = array_key_exists('db', $GLOBALS);
+        $previousDatabase = $hadDatabase ? $GLOBALS['db'] : null;
+        $hadSetting = array_key_exists('NEVER_CLEAR_RELATIONSHIP_DATA', $GLOBALS);
+        $previousSetting = $hadSetting ? $GLOBALS['NEVER_CLEAR_RELATIONSHIP_DATA'] : null;
+        $GLOBALS['NEVER_CLEAR_RELATIONSHIP_DATA'] = true;
+        $GLOBALS['db'] = new class {
+            public array $queries = [];
+            public array $fetchQueries = [];
+
+            public function query($query)
+            {
+                $this->queries[] = $query;
+                return true;
+            }
+
+            public function fetchOne($query)
+            {
+                $this->fetchQueries[] = $query;
+                return ['affected' => 0, 'sample_names' => ''];
+            }
+
+            public function execQuery($query)
+            {
+                return true;
+            }
+        };
+
+        try {
+            $npcMaster = new NpcMaster();
+            $this->assertTrue($npcMaster->restoreNPC(100));
+            $restoreQuery = $GLOBALS['db']->queries[0] ?? '';
+
+            $this->assertStringContainsString('WHEN TRUE THEN', $restoreQuery);
+            $this->assertStringContainsString("d.current_extended_data -> 'relationships'", $restoreQuery);
+            $this->assertStringContainsString('NOT TRUE', $restoreQuery);
+            $this->assertSame([], $GLOBALS['db']->fetchQueries);
+        } finally {
+            if ($hadDatabase) {
+                $GLOBALS['db'] = $previousDatabase;
+            } else {
+                unset($GLOBALS['db']);
+            }
+            if ($hadSetting) {
+                $GLOBALS['NEVER_CLEAR_RELATIONSHIP_DATA'] = $previousSetting;
+            } else {
+                unset($GLOBALS['NEVER_CLEAR_RELATIONSHIP_DATA']);
+            }
+        }
+    }
+
+    public function testDefaultRestoreStillRunsTimelineRollbackAndFutureOnlyCleanup(): void
+    {
+        $hadDatabase = array_key_exists('db', $GLOBALS);
+        $previousDatabase = $hadDatabase ? $GLOBALS['db'] : null;
+        $hadSetting = array_key_exists('NEVER_CLEAR_RELATIONSHIP_DATA', $GLOBALS);
+        $previousSetting = $hadSetting ? $GLOBALS['NEVER_CLEAR_RELATIONSHIP_DATA'] : null;
+        $GLOBALS['NEVER_CLEAR_RELATIONSHIP_DATA'] = false;
+        $GLOBALS['db'] = new class {
+            public array $queries = [];
+            public array $fetchQueries = [];
+
+            public function query($query)
+            {
+                $this->queries[] = $query;
+                return true;
+            }
+
+            public function fetchOne($query)
+            {
+                $this->fetchQueries[] = $query;
+                return ['affected' => 0, 'sample_names' => ''];
+            }
+
+            public function execQuery($query)
+            {
+                return true;
+            }
+        };
+
+        try {
+            $npcMaster = new NpcMaster();
+            $this->assertTrue($npcMaster->restoreNPC(100));
+            $restoreQuery = $GLOBALS['db']->queries[0] ?? '';
+
+            $this->assertStringContainsString('WHEN FALSE THEN', $restoreQuery);
+            $this->assertCount(2, $GLOBALS['db']->fetchQueries);
+            $this->assertStringContainsString('WITH restore AS', $GLOBALS['db']->fetchQueries[0]);
+            $this->assertStringContainsString('WITH cleared AS', $GLOBALS['db']->fetchQueries[1]);
+            $this->assertStringContainsString('AND NOT EXISTS', $GLOBALS['db']->fetchQueries[1]);
+        } finally {
+            if ($hadDatabase) {
+                $GLOBALS['db'] = $previousDatabase;
+            } else {
+                unset($GLOBALS['db']);
+            }
+            if ($hadSetting) {
+                $GLOBALS['NEVER_CLEAR_RELATIONSHIP_DATA'] = $previousSetting;
+            } else {
+                unset($GLOBALS['NEVER_CLEAR_RELATIONSHIP_DATA']);
+            }
+        }
     }
 }

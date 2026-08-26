@@ -44,6 +44,7 @@ function chimGlobalSettingsLabel(string $name): string
         'OGHMA_AMOUNT' => 'Oghma Articles Amount', 'RACIAL_OGHMA' => 'Force Racial Oghma',
         'LOCATION_OGHMA' => 'Force Location Oghma', 'DETECT_MAGIC_EVENT' => 'Detect Magic Events',
         'COMPACT_CHAT_ENABLED' => 'Compact Chat',
+        'NEVER_CLEAR_RELATIONSHIP_DATA' => 'Never Clear Relationship Data',
     ];
     if (isset($custom[$name])) {
         return $custom[$name];

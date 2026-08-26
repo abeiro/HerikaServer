@@ -38,6 +38,7 @@ function chimPrismaGlobalSettingsSections(): array
             ],
             ['name' => 'SCENE_CLASSIFIER_ENABLED', 'type' => 'boolean'],
             ['name' => 'RELATIONSHIP_SYSTEM_ENABLED', 'type' => 'boolean'],
+            ['name' => 'NEVER_CLEAR_RELATIONSHIP_DATA', 'type' => 'boolean', 'default' => false],
         ],
         'Misc' => [
             ['name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean'],
