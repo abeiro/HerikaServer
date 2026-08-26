@@ -2918,34 +2918,36 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
         ($payload["source"] ?? "") === "plugin_player_routing_v2" &&
         ($payload["chat_shortcut_routed"] ?? false) === true;
     if (($payload["source"] ?? "") === "plugin_player_routing_v2") {
-        $playerMood = strtolower(trim((string)($payload["player_mood"] ?? "")));
-        if (in_array($playerMood, ["happy", "sad", "angry", "scared", "surprised"], true)) {
+        $playerMood = chimNormalizePlayerMood($payload["player_mood"] ?? "");
+        if ($playerMood !== "") {
             $result["player_mood"] = $playerMood;
         }
     }
     return $result;
 }
 
-// Build a short prompt-only delivery cue from a validated Prisma player mood.
-function chimBuildPlayerMoodPromptCue($playerMood, $playerName)
+// Normalize the supported Prisma mood enum shared by decoding and history formatting.
+function chimNormalizePlayerMood($playerMood)
 {
-    $descriptions = [
-        "happy" => "says with a smile on their face",
-        "sad" => "says with a sad expression",
-        "angry" => "says with an angry expression",
-        "scared" => "says with a frightened expression",
-        "surprised" => "says with a surprised expression",
-    ];
     $playerMood = strtolower(trim((string)$playerMood));
-    if (!isset($descriptions[$playerMood])) {
+    return in_array($playerMood, ["happy", "sad", "angry", "scared", "surprised", "flirty"], true)
+        ? $playerMood
+        : "";
+}
+
+// Append a compact mood tag to the player line that enters persistent dialogue history.
+function chimAppendPlayerMoodToHistoryLine($playerDialogue, $playerMood)
+{
+    $playerDialogue = (string)$playerDialogue;
+    $playerMood = chimNormalizePlayerMood($playerMood);
+    if ($playerDialogue === "" || $playerMood === "") {
+        return $playerDialogue;
+    }
+    $playerDialogue = rtrim($playerDialogue);
+    if ($playerDialogue === "") {
         return "";
     }
-
-    $playerName = trim((string)$playerName);
-    if ($playerName === "") {
-        $playerName = "Player";
-    }
-    return "({$playerName} {$descriptions[$playerMood]})";
+    return "{$playerDialogue} [mood: {$playerMood}]";
 }
 
 function chimDecodeAudienceSnapshotField($rawField)
