@@ -1197,6 +1197,11 @@ function herikaActionCatalogGetBuiltinRequirements($codeName)
                 'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'sitting', 'using', 'leaning'],
             ],
         ],
+        'GoToSleep' => [
+            'activity' => [
+                'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking'],
+            ],
+        ],
         'Relax' => [
             'activity' => [
                 'current_action_not_in' => ['dead', 'unconscious', 'sleeping', 'combat', 'attacking'],

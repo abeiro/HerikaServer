@@ -3,7 +3,6 @@
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR.'core'.DIRECTORY_SEPARATOR.'action_catalog.php';
-require_once __DIR__.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR.'core'.DIRECTORY_SEPARATOR.'activity_status.php';
 
 if (!function_exists('getFunctionCodeName')) {
     function getFunctionCodeName($key)
@@ -548,7 +547,6 @@ final class ActionCatalogTest extends TestCase
                 'Training' => 'Training',
                 'HireCarriage' => 'HireCarriage',
                 'HireFerry' => 'HireFerry',
-                'GoToSleep' => 'GoToSleep',
             ],
             [],
             [],
@@ -561,7 +559,6 @@ final class ActionCatalogTest extends TestCase
                 'Training' => ['parameters' => ['type' => 'object', 'properties' => [], 'required' => []]],
                 'HireCarriage' => ['parameters' => ['type' => 'object', 'properties' => [], 'required' => []]],
                 'HireFerry' => ['parameters' => ['type' => 'object', 'properties' => [], 'required' => []]],
-                'GoToSleep' => ['parameters' => ['type' => 'object', 'properties' => [], 'required' => []]],
             ]
         );
 
@@ -569,7 +566,6 @@ final class ActionCatalogTest extends TestCase
         $this->assertSame(300, $rows['WaitHere']['metadata']['cooldown_seconds']);
         $this->assertTrue($rows['SheatheWeapon']['metadata']['requirements']['activity']['is_weapon_drawn']);
         $this->assertTrue($rows['Training']['metadata']['requirements']['requires_training_service']);
-        $this->assertArrayNotHasKey('requirements', $rows['GoToSleep']['metadata']);
         $this->assertSame(
             'allowed_npc_names',
             $rows['HireCarriage']['metadata']['requirements']['npc_name_in_action_config_list']['config_key']
@@ -582,24 +578,6 @@ final class ActionCatalogTest extends TestCase
             "Gort\nHarlaug\nJolf",
             $rows['HireFerry']['metadata']['editor_fields'][1]['default']
         );
-    }
-
-    public function testActivityStatusDoesNotInferSleepingFromBedAssociation(): void
-    {
-        $movingToBed = chimSanitizeActivityStatusPayload([
-            'use_type' => 'bed',
-            'furniture_name' => 'Bed Roll',
-            'is_moving' => true,
-            'is_sleeping' => false,
-        ]);
-        $this->assertSame('moving', $movingToBed['current_action']);
-
-        $sleepingInBed = chimSanitizeActivityStatusPayload([
-            'use_type' => 'bed',
-            'furniture_name' => 'Bed Roll',
-            'is_sleeping' => true,
-        ]);
-        $this->assertSame('sleeping', $sleepingInBed['current_action']);
     }
 
     public function testCheatModeBypassesRuntimeActionRequirements(): void

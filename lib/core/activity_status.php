@@ -103,9 +103,10 @@ function chimInferCurrentActionFromStatus(array $status): string
             }
             return 'sitting';
         }
-        if ($status['use_type'] !== 'bed') {
-            return 'using';
+        if ($status['use_type'] === 'bed') {
+            return 'sleeping';
         }
+        return 'using';
     }
     if (!empty($status['is_sitting'])) {
         return 'sitting';
