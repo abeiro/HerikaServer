@@ -1,5 +1,22 @@
 <?php
 
+// Replaces only the Prompt Head wrapper after XML-based context filtering has finished.
+function chimFormatPromptHeadSection(string $systemPrompt, bool $markdownEnabled): string
+{
+    if (!$markdownEnabled) {
+        return $systemPrompt;
+    }
+
+    $formattedPrompt = preg_replace(
+        '/(^|\n)<roleplay_instructions>\n(.*?)\n<\/roleplay_instructions>(?=\n|$)/s',
+        '$1## Roleplay Instructions' . "\n\n" . '$2',
+        $systemPrompt,
+        1
+    );
+
+    return is_string($formattedPrompt) ? $formattedPrompt : $systemPrompt;
+}
+
 function chimPromptCompositionCharacterCount($value)
 {
     if (is_string($value) || is_numeric($value)) {

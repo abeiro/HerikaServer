@@ -13,6 +13,12 @@ function chimPrismaGlobalSettingsSections(): array
             ['name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random']],
             ['name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean'],
             ['name' => 'COMPACT_CHAT_ENABLED', 'type' => 'boolean', 'default' => true],
+            [
+                'name' => 'PROMPT_HEAD_MARKDOWN_ENABLED',
+                'type' => 'boolean',
+                'default' => false,
+                'help' => 'When enabled, the Prompt Head is sent under a Markdown heading instead of the XML roleplay_instructions wrapper. All other prompt sections stay unchanged.',
+            ],
             ['name' => 'RELATIONSHIP_UPDATE_CHANCE', 'type' => 'integer', 'min' => 0, 'max' => 100, 'default' => 50],
         ],
         'Oghma' => [

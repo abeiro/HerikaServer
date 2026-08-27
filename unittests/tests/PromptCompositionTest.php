@@ -6,6 +6,25 @@ require_once dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPAR
 
 final class PromptCompositionTest extends TestCase
 {
+    public function testPromptHeadKeepsXmlWrapperWhenMarkdownIsDisabled(): void
+    {
+        $systemPrompt = "<roleplay_instructions>\nStay in character.\n</roleplay_instructions>\n\n<world>\nWhiterun\n</world>\n";
+
+        $this->assertSame($systemPrompt, chimFormatPromptHeadSection($systemPrompt, false));
+    }
+
+    public function testPromptHeadUsesMarkdownHeadingWhenEnabled(): void
+    {
+        $systemPrompt = "<roleplay_instructions>\nStay in character.\n</roleplay_instructions>\n\n<world>\nWhiterun\n</world>\n";
+
+        $formatted = chimFormatPromptHeadSection($systemPrompt, true);
+
+        $this->assertStringStartsWith("## Roleplay Instructions\n\nStay in character.", $formatted);
+        $this->assertStringNotContainsString('<roleplay_instructions>', $formatted);
+        $this->assertStringNotContainsString('</roleplay_instructions>', $formatted);
+        $this->assertStringContainsString("<world>\nWhiterun\n</world>", $formatted);
+    }
+
     public function testMeasuresStringsAndMessageArraysWithoutSerializingMetadata(): void
     {
         $messages = [
