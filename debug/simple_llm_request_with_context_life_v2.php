@@ -233,7 +233,7 @@ if (isset($extdata["background_life_last_run"]) && $extdata["background_life_las
 }
 
 $lastIssuedAction = $db->fetchOne(
-    "SELECT gamets, action FROM actions_issued
+    "SELECT gamets, action,fullcall FROM actions_issued
      WHERE actorname='$npcNameEsc' 
      and gamets is not null
      ORDER BY gamets DESC, ts ASC"
@@ -931,7 +931,13 @@ if (sizeof($actionIdleRows) > 3) {
     error_log("[BGL RUN] $npcNameEscDb — summary of last 48h idle actions: " . json_encode($summaryIdleActions));
 }
 
-
+if ($lastIssuedAction['action'] === 'StayAtPlace') {
+    $data = explode(":", $lastIssuedAction['fullcall']);
+    if (isset($data[2]) && $data[2] == "Sleep") {
+        error_log("[BGL RUN] $npcNameEscDb — last issued action was StayAtPlace:Sleep, indicating the NPC is currently sleeping and waking up.");
+        $lastMinuteNotes .= "\nNote: {$GLOBALS['HERIKA_NAME']} wakes up, has been sleeping since " . convert_gamets2skyrim_long_date($lastIssuedAction['gamets']) . ".\n";
+    }
+}
 
 // ─── Language Detection ───────────────────────────────────────────────────────
 
