@@ -29,6 +29,17 @@ final class PromptCompositionTest extends TestCase
         $this->assertStringNotContainsString('#Activity', $formatted);
     }
 
+    public function testMarkdownUsesHyphenListMarkersOnlyAtLineStarts(): void
+    {
+        $systemPrompt = "<condition>\n  • Health\n* Stamina\n+ Magicka\n- Existing\nInline • marker and *emphasis*.\n</condition>\n";
+
+        $this->assertSame(
+            "## Condition\n\n  - Health\n- Stamina\n- Magicka\n- Existing\nInline • marker and *emphasis*.\n",
+            chimFormatPromptHeadSection($systemPrompt, true)
+        );
+        $this->assertSame($systemPrompt, chimFormatPromptHeadSection($systemPrompt, false));
+    }
+
     public function testMeasuresStringsAndMessageArraysWithoutSerializingMetadata(): void
     {
         $messages = [

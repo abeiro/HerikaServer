@@ -33,6 +33,7 @@ function chimFormatPromptHeadSection(string $systemPrompt, bool $markdownEnabled
         (string) $formattedPrompt
     );
     $formattedPrompt = preg_replace('/\n{3,}/', "\n\n", (string) $formattedPrompt);
+    $formattedPrompt = preg_replace('/^([ \t]*)(?:•|\*|\+)[ \t]+/m', '$1- ', (string) $formattedPrompt);
 
     return is_string($formattedPrompt) ? $formattedPrompt : $systemPrompt;
 }
