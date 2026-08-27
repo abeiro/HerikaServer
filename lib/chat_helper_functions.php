@@ -833,6 +833,7 @@ function shouldStripNpcOutputAsterisks() {
 }
 
 function normalizeAsteriskTextForSpeech($text) {
+    // This just removes the asterisks (twice)
     $normalizedText = preg_replace('/\*([^*]+)\*/', '$1', (string)$text);
     return str_replace('*', '', $normalizedText);
 }
@@ -1189,9 +1190,15 @@ function unmoodSentence($sentence) {
 
     if (!$isPlayerSpeech && $processAsterisks === true ) {
         error_log("[unmoodSentence] NPC output asterisk filtering is active! $sentence <" . ($GLOBALS['strip_emotes_from_output'] ?? 'N/A') . "> <" . ($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] ?? $GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] ?? 'N/A') . ">" );
+        
+        if (!isInlineNarrationEnabled()) {// Removes ALL text between asterisks.
+            error_log("[unmoodSentence] NPC output asterisk filtering is enabled; removing text between asterisks in speech");
+            $output = preg_replace('/\*([^*]+)\*/', '', (string)$output);
+        }
 
         $output = formatNpcSpeechText($output);
     }
+
     else if (!$isPlayerSpeech) {
         error_log("[unmoodSentence] NPC output asterisk filtering is disabled; keeping asterisk content in speech");
         $output = formatNpcSpeechText($output);
@@ -1387,7 +1394,7 @@ function returnLines($lines,$writeOutput=true)
             if (strlen($responseForSubtitles) > _MAX_SUBTITLE_LENGTH) {
                 $responseForSubtitles = substr($responseForSubtitles, 0, _MAX_SUBTITLE_LENGTH);
             }
-        } elseif (!$splitNarration) {
+        } elseif (!$splitNarration && $inlineNarrationEnabled) {
             $responseForSubtitles = formatNpcSubtitleText($sentenceForSubtitles);
             if (strlen($responseForSubtitles) > _MAX_SUBTITLE_LENGTH) {
                 $responseForSubtitles = substr($responseForSubtitles, 0, _MAX_SUBTITLE_LENGTH);
@@ -1758,6 +1765,15 @@ function returnLines($lines,$writeOutput=true)
                     Logger::debug("Transliterated Japanese text to: $responseTextPhonetic");
                 }
                 
+                // We should check here is responseForSubtitles is different from responseTextUnmooded
+                // If so, and no responseTextPhonetic, responseTextPhonetic should be responseTextUnmooded
+                // 
+
+                if (empty($responseTextPhonetic) && $responseForSubtitles !== $responseTextUnmooded) {
+                    $responseTextPhonetic = $responseTextUnmooded;
+                    Logger::debug("No phonetic conversion available; using unmooded text for phonetic output: $responseTextPhonetic");
+                }
+
                 $volumeBoost = 1.0;
 
                 // Output here with volumeBoost appended
