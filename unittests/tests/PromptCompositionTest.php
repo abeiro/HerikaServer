@@ -17,16 +17,19 @@ final class PromptCompositionTest extends TestCase
     {
         $systemPrompt = "<roleplay_instructions>\nStay in character.\n</roleplay_instructions>\n\n"
             . "<world>\n<location>Whiterun</location>\n</world>\n\n"
-            . "<character>\n<activity>\n#Activity\nIdle.\n</activity>\nUse <speech_style> for reference.\n</character>\n";
+            . "<character>\n<activity>\n#Activity\nIdle.\n</activity>\n"
+            . "<personality>\n<traits>Loyal.</traits>\n</personality>\nUse <speech_style> for reference.\n</character>\n";
 
         $formatted = chimFormatPromptHeadSection($systemPrompt, true);
 
-        $this->assertStringStartsWith("## Roleplay Instructions\n\nStay in character.", $formatted);
-        $this->assertStringContainsString("## World\n\n## Location\nWhiterun", $formatted);
-        $this->assertStringContainsString("## Character\n\n## Activity\n\nIdle.", $formatted);
+        $this->assertStringStartsWith("# Roleplay Instructions\n\nStay in character.", $formatted);
+        $this->assertStringContainsString("# World\n\n- Location: Whiterun", $formatted);
+        $this->assertStringContainsString("# Character\n\n## Activity\n\nIdle.", $formatted);
+        $this->assertStringContainsString("## Personality\n\n### Traits\n\nLoyal.", $formatted);
         $this->assertStringContainsString('Use `Speech Style` for reference.', $formatted);
         $this->assertDoesNotMatchRegularExpression('/<\/?[A-Za-z][A-Za-z0-9_-]*>/', $formatted);
         $this->assertStringNotContainsString('#Activity', $formatted);
+        $this->assertSame($formatted, chimFormatPromptHeadSection($formatted, true));
     }
 
     public function testMarkdownUsesHyphenListMarkersOnlyAtLineStarts(): void
@@ -34,10 +37,30 @@ final class PromptCompositionTest extends TestCase
         $systemPrompt = "<condition>\n  • Health\n* Stamina\n+ Magicka\n- Existing\nInline • marker and *emphasis*.\n</condition>\n";
 
         $this->assertSame(
-            "## Condition\n\n  - Health\n- Stamina\n- Magicka\n- Existing\nInline • marker and *emphasis*.\n",
+            "# Condition\n\n  - Health\n- Stamina\n- Magicka\n- Existing\nInline • marker and *emphasis*.\n",
             chimFormatPromptHeadSection($systemPrompt, true)
         );
         $this->assertSame($systemPrompt, chimFormatPromptHeadSection($systemPrompt, false));
+    }
+
+    public function testMarkdownKeepsListEntriesAndInstructionsWithoutDuplicateHeadings(): void
+    {
+        $systemPrompt = "<available_actions_list>\n#Available Actions\nUse an action:\nAVAILABLE ACTION: Talk\n</available_actions_list>\n"
+            . "<nearby_actors>\n# NEARBY ACTORS/NPC IN THE SCENE\n## Anoriath (Male Wood Elf)\n</nearby_actors>\n"
+            . "<nearby_items>\n# NEARBY ITEMS (format: RefID:ItemName)\n## 0x123:Bucket\n"
+            . "# ITEM DESCRIPTIONS\n## Bucket: Wooden.\n</nearby_items>\n"
+            . "<scene_notes>\n# SCENE NOTES\n## Someone is waiting.</scene_notes>\n"
+            . "<knowledge>\n#Lore Information (You know this): Whiterun\nA city.\n</knowledge>\n";
+
+        $this->assertSame(
+            "# Available Actions\n\nUse an action:\n- AVAILABLE ACTION: Talk\n\n"
+                . "# Nearby Actors\n\n- Anoriath (Male Wood Elf)\n\n"
+                . "# Nearby Items\n\n(format: RefID:ItemName)\n- 0x123:Bucket\n\n"
+                . "## Item Descriptions\n\n- Bucket: Wooden.\n\n"
+                . "# Scene Notes\n\n- Someone is waiting.\n\n"
+                . "# Knowledge\n\n## Lore Information (You know this): Whiterun\n\nA city.\n",
+            chimFormatPromptHeadSection($systemPrompt, true)
+        );
     }
 
     public function testMeasuresStringsAndMessageArraysWithoutSerializingMetadata(): void
