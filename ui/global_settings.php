@@ -268,6 +268,10 @@ function current_value(string $flatName)
 
 function current_description(string $flatName, array $rowMap): string
 {
+    // Use the revised Compact Chat help even when an older description was stored.
+    if ($flatName === 'COMPACT_CHAT_ENABLED') {
+        return chimGetSchemaDescription($flatName);
+    }
     $row = $rowMap[$flatName] ?? null;
     $description = is_array($row) ? trim(strval($row['description'] ?? '')) : '';
     if ($description !== '') {
