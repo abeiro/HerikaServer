@@ -2968,6 +2968,15 @@ function chimAppendPlayerMoodToHistoryLine($playerDialogue, $moodPrompt)
     return "{$playerDialogue} {$moodPrompt}";
 }
 
+// Keep player playback separate from routing and mood cues added only for persistent history.
+function chimResolvePlayerTtsSourceText($fallbackDialogue)
+{
+    if (array_key_exists("PLAYER_TTS_SOURCE_TEXT", $GLOBALS)) {
+        return (string)$GLOBALS["PLAYER_TTS_SOURCE_TEXT"];
+    }
+    return (string)$fallbackDialogue;
+}
+
 // Keep custom delivery directions short and single-line before prompt insertion.
 function chimNormalizeCustomPlayerMood($customMood)
 {

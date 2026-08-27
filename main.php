@@ -1692,10 +1692,15 @@ if ($gameRequest[0] == "narrator_welcome") {
     $PROMPTS["narrator_welcome"]["cue"] = [$welcomePrompt];
 }
 
+$playerMoodRequestTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
+if (in_array($gameRequest[0] ?? "", $playerMoodRequestTypes, true)) {
+    // Player playback must use the authored line, before routing and mood cues decorate persistent history.
+    $GLOBALS["PLAYER_TTS_SOURCE_TEXT"] = $gameRequest[3] ?? "";
+}
+
 // Take care of override request if needed..
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php");
 
-$playerMoodRequestTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
 if (in_array(
     $gameRequest[0] ?? "",
     $playerMoodRequestTypes,

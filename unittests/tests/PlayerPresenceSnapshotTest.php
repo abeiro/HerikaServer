@@ -10,6 +10,7 @@ final class PlayerPresenceSnapshotTest extends TestCase
     protected function tearDown(): void
     {
         unset($GLOBALS['CHIM_TURN_PRESENT_ACTORS_SNAPSHOT']);
+        unset($GLOBALS['PLAYER_TTS_SOURCE_TEXT']);
     }
 
     public function testPresenceIsDecodedSeparatelyFromManagedAudience(): void
@@ -160,6 +161,16 @@ final class PlayerPresenceSnapshotTest extends TestCase
             'RANGROO: Custom delivery. (whispers nervously.)',
             chimAppendPlayerMoodToHistoryLine('RANGROO: Custom delivery.', '(whispers nervously.)')
         );
+    }
+
+    public function testPlayerPlaybackUsesUndecoratedSourceWhileHistoryKeepsMoodAndTarget(): void
+    {
+        $historyLine = 'RANGROO: Hello. (Talking to Fralia Gray-Mane) (speaks in a happy tone.)';
+
+        $this->assertSame($historyLine, chimResolvePlayerTtsSourceText($historyLine));
+
+        $GLOBALS['PLAYER_TTS_SOURCE_TEXT'] = 'RANGROO: Hello.';
+        $this->assertSame('RANGROO: Hello.', chimResolvePlayerTtsSourceText($historyLine));
     }
 
     public function testPlayerMoodPromptCatalogIncludesEverySupportedMood(): void
