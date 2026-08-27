@@ -99,7 +99,7 @@ function pretty_label(string $flatName): string
         'RELLLM_CONNECTOR' => 'Relationship Management',
         'RELATIONSHIP_UPDATE_CHANCE' => 'Relationship Update Chance',
         'COMPACT_CHAT_ENABLED' => 'Compact Chat',
-        'PROMPT_HEAD_MARKDOWN_ENABLED' => 'Markdown Prompt Head',
+        'PROMPT_HEAD_MARKDOWN_ENABLED' => 'Compact Prompt Info',
         'PLAYER_WORST_MEMORY_GAME_DAYS' => 'Worst Memory Lifespan',
         'EMOTEMOODS' => 'Emote Moods',
         'OGHMA_INFINIUM' => 'Oghma Infinium',

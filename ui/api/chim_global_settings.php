@@ -44,7 +44,7 @@ function chimGlobalSettingsLabel(string $name): string
         'OGHMA_AMOUNT' => 'Oghma Articles Amount', 'RACIAL_OGHMA' => 'Force Racial Oghma',
         'LOCATION_OGHMA' => 'Force Location Oghma', 'DETECT_MAGIC_EVENT' => 'Detect Magic Events',
         'COMPACT_CHAT_ENABLED' => 'Compact Chat',
-        'PROMPT_HEAD_MARKDOWN_ENABLED' => 'Markdown Prompt Head',
+        'PROMPT_HEAD_MARKDOWN_ENABLED' => 'Compact Prompt Info',
     ];
     if (isset($custom[$name])) {
         return $custom[$name];

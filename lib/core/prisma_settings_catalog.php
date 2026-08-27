@@ -14,7 +14,7 @@ function chimPrismaGlobalSettingsSections(): array
             ['name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean'],
             ['name' => 'COMPACT_CHAT_ENABLED', 'type' => 'boolean', 'default' => true],
             [
-                'name' => 'PROMPT_HEAD_MARKDOWN_ENABLED',
+                'name' => 'PROMPT_HEAD_MARKDOWN_ENABLED', // Compact Prompt Info; keep the stored key for compatibility.
                 'type' => 'boolean',
                 'default' => false,
                 'help' => 'Use Markdown headings instead of XML tags for all prompt sections.',
