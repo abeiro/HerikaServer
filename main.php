@@ -2579,9 +2579,13 @@ $systemPrompt = chimFormatPromptXmlSections(
 );
 
 $systemPrompt = chimApplyPromptContextOptionsToSystemPrompt($systemPrompt);
+$systemPrompt = chimFormatPromptHeadSection(
+    $systemPrompt,
+    !empty($GLOBALS["PROMPT_HEAD_MARKDOWN_ENABLED"])
+);
 
 $head[] = array('role' => 'system', 'content' => $systemPrompt);
-$head = chimAppendCompactHistoryToPrompt($head, $compactHistoryBlock);
+$head = chimAppendCompactHistoryToPrompt($head, $compactHistoryBlock, !empty($GLOBALS["PROMPT_HEAD_MARKDOWN_ENABLED"]));
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
     //avoid reinjecting command prompt that we have already appended

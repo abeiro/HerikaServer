@@ -12,7 +12,18 @@ function chimPrismaGlobalSettingsSections(): array
             ['name' => 'EMOTEMOODS', 'type' => 'longstring'],
             ['name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random']],
             ['name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean'],
-            ['name' => 'COMPACT_CHAT_ENABLED', 'type' => 'boolean', 'default' => true],
+            [
+                'name' => 'COMPACT_CHAT_ENABLED',
+                'type' => 'boolean',
+                'default' => true,
+                'help' => 'Use compact text instead of separate messages for conversation history. Does not affect the Narrator.',
+            ],
+            [
+                'name' => 'PROMPT_HEAD_MARKDOWN_ENABLED', // Compact Prompt Info; keep the stored key for compatibility.
+                'type' => 'boolean',
+                'default' => false,
+                'help' => 'Use Markdown headings instead of XML tags for all prompt sections.',
+            ],
             ['name' => 'RELATIONSHIP_UPDATE_CHANCE', 'type' => 'integer', 'min' => 0, 'max' => 100, 'default' => 50],
         ],
         'Oghma' => [

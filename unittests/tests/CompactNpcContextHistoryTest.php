@@ -130,4 +130,24 @@ final class CompactNpcContextHistoryTest extends TestCase
             $result[0]['content']
         );
     }
+
+    public function testMarkdownHistoryUsesOneHeadingAndHyphenEntries(): void
+    {
+        $worldContext = [['role' => 'system', 'content' => "# Character\n\nLucan."]];
+        $history = chimFormatCompactNpcContextHistory([
+            ['role' => 'user', 'content' => 'RANGROO: Hello. (Talking to Lucan Valerius)'],
+            ['role' => 'assistant', 'content' => 'Hello! # Still part of the dialogue.'],
+        ], 'Lucan Valerius');
+        $expected = "# Conversation History\n\n- RANGROO, speaking to Lucan Valerius: Hello.\n"
+            . "- Lucan Valerius: Hello! # Still part of the dialogue.";
+
+        $result = chimAppendCompactHistoryToPrompt($worldContext, $history, true);
+        $this->assertSame([['role' => 'system', 'content' => "# Character\n\nLucan.\n\n" . $expected]], $result);
+        $this->assertSame([['role' => 'system', 'content' => $expected]], chimAppendCompactHistoryToPrompt([], $history, true));
+        $this->assertSame($worldContext, chimAppendCompactHistoryToPrompt($worldContext, '', true));
+        $this->assertSame(
+            chimAppendCompactHistoryToPrompt($worldContext, $history),
+            chimAppendCompactHistoryToPrompt($worldContext, $history, false)
+        );
+    }
 }
