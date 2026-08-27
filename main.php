@@ -933,7 +933,7 @@ if (in_array($gameRequest[0], ["ext_held_item_raw", "ext_vr_item_raw"], true)) {
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "vr_items.php");
     $processedHeldItemRequest = HeldItems::processEventRequest($gameRequest);
     if ($processedHeldItemRequest !== null) {
-        logEvent($processedHeldItemRequest);
+        logEvent($processedHeldItemRequest,DataBeingsInCloseRange(true));// Check this, seems ext_held_item_raw is not giving info about people around.
     }
     terminate();
 }
