@@ -640,7 +640,7 @@ if ($argv[1] == '9a') {
     $npcMaster = new NpcMaster();
     $npcname = "Jaryra";
     $npc = $npcMaster->getByName($npcname);
-
+    
     $GLOBALS["db"]->insert(
         'responselog',
         [
@@ -653,6 +653,7 @@ if ($argv[1] == '9a') {
         ]
     );
     sleep(1);
+    
     $meta = $npcMaster->getMetaData($npc);
     print_r($meta["last_coords"]);
 
@@ -1034,19 +1035,32 @@ if ($argv[1] == '23') {
 
 }
 
-if ($argv[1] == '24') {
+if ($argv[1] == '25') {
+
+    $name = "Lydia";
     $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName("Karrie");
+    $npc = $npcMaster->getByName($name);
     $refHexString = "0x{$npc["refid"]}";
-    $locId = ["formid" => "0x14"];
-    $GLOBALS["db"]->insert(
+    /*
+    $db->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'text' => "TakeASeat@",
+            'actor' => "Lydia",
+            'action' => 'command'
+        )
+    );*/
+
+     $db->insert(
         'responselog',
         [
             'localts' => time(),
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|BackgroundCmd@$refHexString@StayAtPlace/0x14/sleep",
+            'action' => "rolecommand|BackgroundCmd@$refHexString@StayAtPlace/436259230/sleep",
             'tag' => '',
         ]
     );
