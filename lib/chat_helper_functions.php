@@ -1188,14 +1188,14 @@ function unmoodSentence($sentence) {
     }
     
 
+    if (!isInlineNarrationEnabled()) {// Removes ALL text between asterisks.
+        error_log("[unmoodSentence] Narration is disabled. Removing all asterisked content from output: $output");
+        $output = preg_replace('/\*([^*]+)\*/', '', (string)$output);
+    }
+    
     if (!$isPlayerSpeech && $processAsterisks === true ) {
         error_log("[unmoodSentence] NPC output asterisk filtering is active! $sentence <" . ($GLOBALS['strip_emotes_from_output'] ?? 'N/A') . "> <" . ($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] ?? $GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] ?? 'N/A') . ">" );
         
-        if (!isInlineNarrationEnabled()) {// Removes ALL text between asterisks.
-            error_log("[unmoodSentence] NPC output asterisk filtering is enabled; removing text between asterisks in speech");
-            $output = preg_replace('/\*([^*]+)\*/', '', (string)$output);
-        }
-
         $output = formatNpcSpeechText($output);
     }
 
@@ -1203,6 +1203,8 @@ function unmoodSentence($sentence) {
         error_log("[unmoodSentence] NPC output asterisk filtering is disabled; keeping asterisk content in speech");
         $output = formatNpcSpeechText($output);
     }
+
+ 
 
     // Non-asterisk-related cleanup always applies
     $output = strtr($output, [
