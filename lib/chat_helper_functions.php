@@ -1216,6 +1216,8 @@ function unmoodSentence($sentence) {
     $output = preg_replace('/\s*# ?ACTIONS.*/', '', $output);  // Remove "#ACTIONS ..."
     $output = preg_replace('/#[A-Za-z]+/', '', $output);       // Remove "#<text>"
 
+    $output = preg_replace('/\[mood: [^\]]*\]/i', '', $output);       // Removes "[mood: <text>]"
+
     // Remove quotes
     $output = preg_replace('/"/', '', $output);
 
