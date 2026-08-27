@@ -2477,6 +2477,7 @@ function herikaShouldExcludeEventFromPromptContext(array $row): bool
         'npcvoice_refresh',
     ];
 
+    
     static $promptOnlyEventTypes = [
         'ext_held_item_pickup',
         'ext_held_item_drop',
@@ -2488,8 +2489,13 @@ function herikaShouldExcludeEventFromPromptContext(array $row): bool
 
     // Held item state is injected separately through <held_items>; avoid replaying
     // every pickup/drop as historic NPC event context.
-    if (in_array($type, $promptOnlyEventTypes, true)) {
-        return true;
+    
+    $shouldRemoveHeldEvents=false;// Make this configuruable.
+
+    if ($shouldRemoveHeldEvents) {
+        if (in_array($type, $promptOnlyEventTypes, true)) {
+            return true;
+        }
     }
 
     if ($type === 'status_msg' && stripos($data, 'csv_import@') === 0) {
@@ -2566,6 +2572,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='info_timeforward' then 'TIMELAPSE' 
       when type='backgroundaction' then 'CONTEXTI' 
       when type='innerchat' then 'BGLCHAT' 
+      when type='ext_held_item_pickup' or type='ext_held_item_drop' then 'HELD_ITEM' 
       when type like 'ext_%' then 'PLUGIN'
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
@@ -2599,23 +2606,52 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     // Keep generic far-away actors out of historic context. Shared narrator rows are flattened on write.
     $results = $db->fetchAll($query);
 
+
+
     // Filter stored event types, treating legacy background chat rows as chat_background.
     if (isset($GLOBALS["EVENT_TYPE_FILTER"]) && !empty($GLOBALS["EVENT_TYPE_FILTER"])) {
         $results = chimFilterRowsByEventType($results, $GLOBALS["EVENT_TYPE_FILTER"]);
     }
 
+    
+
+
     $results = array_filter($results, function ($row) {
         return !herikaShouldExcludeEventFromPromptContext($row);
     });
 
+    
     //error_log($query);
     $rawData=[];
     foreach ($results as $row) {
         $rawData[md5($row["data"].$row["localts"])] = $row;
     }
 
+    $rawDataFiltered=[];
+
+    // $rawDataFiltered is ordered by gamets desc. We want to keep only first HELD_ITEM subtype found if:
+    // 1. type='ext_held_item_pickup'         
+    // 2. event is in the first 5 entries.
     
-    $orderedData = array_reverse($rawData);
+    $heldItemAdded=false;
+    $localCounter = 0;
+    foreach ($rawData as $key => $row) {
+        if ($row["subtype"]=="HELD_ITEM") {
+            if ($row["type"]=="ext_held_item_pickup") {
+                if ($localCounter < 5 && !$heldItemAdded) {
+                    $rawDataFiltered[] = $row;
+                    $heldItemAdded = true;
+                }
+            } else if ($row["type"]=="ext_held_item_drop") {
+                $heldItemAdded=true; // Mark as added to prevent further pickups from being added
+            }
+        } else
+            $rawDataFiltered[] = $row;
+        
+        $localCounter++;    
+    }
+    
+    $orderedData = array_reverse($rawDataFiltered);
 
     //$orderedData = array_slice($orderedData, $lastNelements);
 
@@ -2750,7 +2786,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         } else if ($row["subtype"]=="TIMELAPSE") {
             $rowData = strtoupper($rowData);
             
-        }  else if ($row["subtype"]=="PLUGIN") {
+        } else if ($row["subtype"]=="HELD_ITEM") {
+            $rowData = trim(strip_tags($rowData))." Holding it in hand (held item)";
+            $speaker = "narratorci";
+        } else if ($row["subtype"]=="PLUGIN") {
             $speaker = $row["type"];
             
         } else {
@@ -2859,7 +2898,7 @@ New setting: $currentLocation
         $previousRow=$row;
 
     }
-
+    
     if (isset($previousRow)) {
         if (sizeof($previousRow)>0) {
             if (sizeof($lastDialogFull) === 0 || $previousRow !== end($lastDialogFull)) {
