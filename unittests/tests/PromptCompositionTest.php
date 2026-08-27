@@ -15,14 +15,18 @@ final class PromptCompositionTest extends TestCase
 
     public function testPromptHeadUsesMarkdownHeadingWhenEnabled(): void
     {
-        $systemPrompt = "<roleplay_instructions>\nStay in character.\n</roleplay_instructions>\n\n<world>\nWhiterun\n</world>\n";
+        $systemPrompt = "<roleplay_instructions>\nStay in character.\n</roleplay_instructions>\n\n"
+            . "<world>\n<location>Whiterun</location>\n</world>\n\n"
+            . "<character>\n<activity>\n#Activity\nIdle.\n</activity>\nUse <speech_style> for reference.\n</character>\n";
 
         $formatted = chimFormatPromptHeadSection($systemPrompt, true);
 
         $this->assertStringStartsWith("## Roleplay Instructions\n\nStay in character.", $formatted);
-        $this->assertStringNotContainsString('<roleplay_instructions>', $formatted);
-        $this->assertStringNotContainsString('</roleplay_instructions>', $formatted);
-        $this->assertStringContainsString("<world>\nWhiterun\n</world>", $formatted);
+        $this->assertStringContainsString("## World\n\n## Location\nWhiterun", $formatted);
+        $this->assertStringContainsString("## Character\n\n## Activity\n\nIdle.", $formatted);
+        $this->assertStringContainsString('Use `Speech Style` for reference.', $formatted);
+        $this->assertDoesNotMatchRegularExpression('/<\/?[A-Za-z][A-Za-z0-9_-]*>/', $formatted);
+        $this->assertStringNotContainsString('#Activity', $formatted);
     }
 
     public function testMeasuresStringsAndMessageArraysWithoutSerializingMetadata(): void

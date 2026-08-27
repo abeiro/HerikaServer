@@ -1,18 +1,38 @@
 <?php
 
-// Replaces only the Prompt Head wrapper after XML-based context filtering has finished.
+// Converts prompt section tags after XML-based context filtering has finished.
 function chimFormatPromptHeadSection(string $systemPrompt, bool $markdownEnabled): string
 {
     if (!$markdownEnabled) {
         return $systemPrompt;
     }
 
-    $formattedPrompt = preg_replace(
-        '/(^|\n)<roleplay_instructions>\n(.*?)\n<\/roleplay_instructions>(?=\n|$)/s',
-        '$1## Roleplay Instructions' . "\n\n" . '$2',
-        $systemPrompt,
-        1
+    $systemPrompt = str_replace(["\r\n", "\r"], "\n", $systemPrompt);
+    $formatTagName = static function (string $tag): string {
+        return ucwords(str_replace(['_', '-'], ' ', strtolower($tag)));
+    };
+
+    $formattedPrompt = preg_replace_callback(
+        '/^[ \t]*<([A-Za-z][A-Za-z0-9_-]*)>[ \t]*(?:\n[ \t]*#{1,6}[ \t]*\1[ \t]*(?=\n|$))?/mi',
+        static function (array $matches) use ($formatTagName): string {
+            return '## ' . $formatTagName($matches[1]) . "\n";
+        },
+        $systemPrompt
     );
+    if (!is_string($formattedPrompt)) {
+        return $systemPrompt;
+    }
+
+    $formattedPrompt = preg_replace('/^[ \t]*<\/[A-Za-z][A-Za-z0-9_-]*>[ \t]*(?:\n|$)/m', '', $formattedPrompt);
+    $formattedPrompt = preg_replace('/[ \t]*<\/[A-Za-z][A-Za-z0-9_-]*>/', '', (string) $formattedPrompt);
+    $formattedPrompt = preg_replace_callback(
+        '/<([A-Za-z][A-Za-z0-9_-]*)>/',
+        static function (array $matches) use ($formatTagName): string {
+            return '`' . $formatTagName($matches[1]) . '`';
+        },
+        (string) $formattedPrompt
+    );
+    $formattedPrompt = preg_replace('/\n{3,}/', "\n\n", (string) $formattedPrompt);
 
     return is_string($formattedPrompt) ? $formattedPrompt : $systemPrompt;
 }
