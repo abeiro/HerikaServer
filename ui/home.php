@@ -1618,7 +1618,7 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
 
                         if (!isset($generalStats['error']) && !empty($generalStats)) {
                             // Process the chat messages to extract just the dialogue
-                            $processedText = [];
+                            $wordFrequencies = [];
                             foreach ($generalStats as $row) {
                                 $text = $row['data'];
                                 
@@ -1667,13 +1667,13 @@ include(__DIR__.DIRECTORY_SEPARATOR."tmpl/navbar.php");
                                     return strlen($word) > 2 && !in_array($word, $stopWords);
                                 });
                                 
-                                if (!empty($words)) {
-                                    $processedText = array_merge($processedText, $words);
+                                // Count in place instead of copying all previous words for every row.
+                                foreach ($words as $word) {
+                                    $wordFrequencies[$word] = ($wordFrequencies[$word] ?? 0) + 1;
                                 }
                             }
 
-                            // Count word frequencies
-                            $wordFrequencies = array_count_values($processedText);
+                            // Rank word frequencies
                             arsort($wordFrequencies);
                             
                             // Take top 100 words
