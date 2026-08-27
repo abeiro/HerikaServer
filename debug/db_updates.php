@@ -8031,31 +8031,35 @@ if ($checkVersion("default_npc_tags") < 20260805003) {
     }
 }
 
-if ($checkVersion("eventlog_session_payload") < 20260807001) {
-    Logger::debug("Applying eventlog_session_payload 20260807001 - allow complete routing snapshots");
-
-    $migrationOk = $db->execQuery(
-        "ALTER TABLE public.eventlog ALTER COLUMN sess TYPE text"
-    ) !== false;
-
-    if ($migrationOk) {
-        $updateVersion("eventlog_session_payload", 20260807001);
-        Logger::info("Applied patch eventlog_session_payload 20260807001");
-    } else {
-        Logger::error("Failed to apply patch eventlog_session_payload 20260807001");
-    }
-}
-
-
 //----------------------------------------------------
 // AUDIT REQUEST RESPONSE - Store the response text for audit requests
 // Version 20260806001
 //----------------------------------------------------
 $db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"response\"  text");
 
-$db->execQuery("DROP VIEW public.eventlog_view");
-$db->execQuery("ALTER TABLE eventlog ALTER COLUMN sess TYPE text");
-$db->execQuery("CREATE VIEW public.eventlog_view AS
+// Keep view cleanup, the type change, and public view recreation atomic. Older
+// snapshot views may depend on eventlog directly, bypassing eventlog_view CASCADE.
+$migrationOk = $db->execQuery(<<<'SQL'
+DO $$
+DECLARE
+    snapshot_view RECORD;
+BEGIN
+    FOR snapshot_view IN
+        SELECT DISTINCT n.nspname, v.relname
+        FROM pg_depend d
+        JOIN pg_rewrite r ON d.classid = 'pg_rewrite'::regclass AND r.oid = d.objid
+        JOIN pg_class v ON v.oid = r.ev_class AND v.relkind = 'v'
+        JOIN pg_namespace n ON n.oid = v.relnamespace
+        WHERE d.refclassid = 'pg_class'::regclass
+          AND d.refobjid = 'public.eventlog'::regclass
+          AND left(n.nspname, 13) = 'chim_profile_'
+    LOOP
+        EXECUTE format('DROP VIEW IF EXISTS %I.%I CASCADE', snapshot_view.nspname, snapshot_view.relname);
+    END LOOP;
+
+    DROP VIEW IF EXISTS public.eventlog_view CASCADE;
+    ALTER TABLE public.eventlog ALTER COLUMN sess TYPE text;
+    CREATE VIEW public.eventlog_view AS
  SELECT e.type,
     e.data,
     e.sess,
@@ -8072,10 +8076,22 @@ $db->execQuery("CREATE VIEW public.eventlog_view AS
     public.convert_gamets2skyrim_long_date(e.gamets) AS sk_long_date,
     public.convert_gamets2days(e.gamets) AS sk_days,
     public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
-   FROM public.eventlog e");
+   FROM public.eventlog e;
 
+    ALTER VIEW public.eventlog_view OWNER TO dwemer;
+END;
+$$;
+SQL
+) !== false;
 
-$db->execQuery("ALTER TABLE public.eventlog_view OWNER TO dwemer");
+if ($migrationOk) {
+    if ($checkVersion("eventlog_session_payload") < 20260807001) {
+        $updateVersion("eventlog_session_payload", 20260807001);
+        Logger::info("Applied patch eventlog_session_payload 20260807001");
+    }
+} else {
+    Logger::error("Failed to apply eventlog_session_payload migration; existing views were preserved");
+}
 
 Logger::info(__FILE__." update file processed");
 
