@@ -1065,3 +1065,9 @@ if ($argv[1] == '25') {
         ]
     );
 }
+
+if ($argv[1]=='26') {
+    
+    print_r(buildHistoricContext("Lydia",-1,"and type<>'prechat'"));
+
+}
