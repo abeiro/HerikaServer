@@ -43,6 +43,7 @@ require_once($path . "lib/model_dynmodel.php");
 require_once($path . "lib/minimet5_service.php");
 require_once($path . "lib/data_functions.php");
 require_once($path . "lib/chat_helper_functions.php");
+require_once($path . "lib/player_mood_prompts.php");
 require_once($path . "lib/compact_context_history.php");
 require_once($path . "lib/lazy_xml.php");
 require_once($path . "lib/memory_helper_vectordb.php");
@@ -1691,17 +1692,31 @@ if ($gameRequest[0] == "narrator_welcome") {
     $PROMPTS["narrator_welcome"]["cue"] = [$welcomePrompt];
 }
 
+$playerMoodRequestTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
+if (in_array($gameRequest[0] ?? "", $playerMoodRequestTypes, true)) {
+    // Player playback must use the authored line, before routing and mood cues decorate persistent history.
+    $GLOBALS["PLAYER_TTS_SOURCE_TEXT"] = $gameRequest[3] ?? "";
+}
+
 // Take care of override request if needed..
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php");
 
 if (in_array(
     $gameRequest[0] ?? "",
-    ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"],
+    $playerMoodRequestTypes,
     true
 )) {
+    $playerMood = $requestRoutingSnapshot["player_mood"] ?? "";
+    $customPlayerMood = $requestRoutingSnapshot["player_mood_custom"] ?? "";
+    $playerMoodPrompt = chimResolvePlayerMoodPrompt(
+        $playerMood,
+        $GLOBALS["PLAYER_NAME"] ?? "Player",
+        $db ?? null,
+        $customPlayerMood
+    );
     $gameRequest[3] = chimAppendPlayerMoodToHistoryLine(
         $gameRequest[3] ?? "",
-        $requestRoutingSnapshot["player_mood"] ?? ""
+        $playerMoodPrompt
     );
 }
 
@@ -2564,9 +2579,13 @@ $systemPrompt = chimFormatPromptXmlSections(
 );
 
 $systemPrompt = chimApplyPromptContextOptionsToSystemPrompt($systemPrompt);
+$systemPrompt = chimFormatPromptHeadSection(
+    $systemPrompt,
+    !empty($GLOBALS["PROMPT_HEAD_MARKDOWN_ENABLED"])
+);
 
 $head[] = array('role' => 'system', 'content' => $systemPrompt);
-$head = chimAppendCompactHistoryToPrompt($head, $compactHistoryBlock);
+$head = chimAppendCompactHistoryToPrompt($head, $compactHistoryBlock, !empty($GLOBALS["PROMPT_HEAD_MARKDOWN_ENABLED"]));
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
     //avoid reinjecting command prompt that we have already appended

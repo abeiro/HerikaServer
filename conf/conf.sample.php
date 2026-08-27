@@ -34,7 +34,8 @@ $OGHMA_AMOUNT=1; //Number of Oghma keywords to extract from each response. More 
 $PLAYER_RESPEECH=true; //Use default diary connector AI to rewrite player speech. Currently only triggers when starting speech with **.
 $PLAYER_SPEECH_STYLE=""; //Instructions for how the player character speaks and communicates. Used as context when rewriting player dialogue.
 $PROMPT_TIMESTAMP=false; //Add rough timestamp subdividers to event context (e.g., 'Moments Ago', 'A while ago') to help the LLM understand temporal relationships.
-$COMPACT_CHAT_ENABLED=true; //Reduce conversation history size while keeping important dialogue, actions, and context. Does not affect the Narrator.
+$PROMPT_HEAD_MARKDOWN_ENABLED=false; //Use Markdown headings instead of XML tags for all prompt sections.
+$COMPACT_CHAT_ENABLED=true; //Use compact text instead of separate messages for conversation history. Does not affect the Narrator.
 $use_emotions_expression = false; //Add emotions support. Changes the affect context/json object offered to LLM must be false by default.
 
 //[Advanced Configuration]

@@ -1,6 +1,9 @@
 <?php
 
-$cleaned_dialogue = preg_replace('/^[^:]+:/', '', $gameRequest[3]);
+$playerTtsSourceText = function_exists('chimResolvePlayerTtsSourceText')
+    ? chimResolvePlayerTtsSourceText($gameRequest[3] ?? '')
+    : ($gameRequest[3] ?? '');
+$cleaned_dialogue = preg_replace('/^[^:]+:/', '', $playerTtsSourceText);
 
 if (!function_exists('emitPlayerTextOnlyScriptQueueLine')) {
     function emitPlayerTextOnlyScriptQueueLine($line)
