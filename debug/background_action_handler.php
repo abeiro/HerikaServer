@@ -1714,7 +1714,7 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         if ($itemName) {
             $itemNameResolved = "($count {$itemName})";
         } else {
-            $row = $GLOBALS["DB"]->fetchOne("select COALESCE(description,name) as name from market_cache where baseid='0x$itemId'");
+            $row = $db->fetchOne("select COALESCE(description,name) as name from market_cache where baseid='$itemId'");
             $itemNameResolved = $row ? "($count {$row['name']})" : "($count Unknown Item)";
         }
 
