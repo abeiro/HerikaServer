@@ -259,11 +259,14 @@ if (!function_exists('chimFormatCompactNpcContextHistory')) {
 }
 
 if (!function_exists('chimAppendCompactHistoryToPrompt')) {
-    function chimAppendCompactHistoryToPrompt(array $worldContext, string $historyBlock): array
+    function chimAppendCompactHistoryToPrompt(array $worldContext, string $historyBlock, bool $markdownEnabled = false): array
     {
         $historyBlock = trim($historyBlock);
         if ($historyBlock === '') {
             return $worldContext;
+        }
+        if ($markdownEnabled) {
+            $historyBlock = "# Conversation History\n\n" . preg_replace('/^# /m', '- ', $historyBlock);
         }
 
         foreach ($worldContext as &$entry) {
