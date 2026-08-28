@@ -1436,15 +1436,35 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     $npcMaster = new NpcMaster();
     $incomingRefid = NpcMaster::normalizeRefId($splitNameBase[4] ?? '');
+    $referenceSource = chimConvertRuntimeFormIdToStableReference($incomingRefid);
+    if (!empty($splitNameBase[44])) {
+        $reportedSource = chimParseNpcReferenceSource($splitNameBase[44]);
+        if (!$reportedSource || !$referenceSource ||
+            !chimStableFormReferenceEquals($referenceSource, $reportedSource['stable_key'])) {
+            // A late packet or an unsynced load order must never bind the wrong profile.
+            error_log('[ADDNPC] Reference origin does not match the current plugin manifest; registration skipped');
+            $MUST_END = true;
+            return;
+        }
+    }
     $currentNpcData = $incomingRefid !== ''
         ? $npcMaster->getByPromptIdentifier(NpcMaster::displayIdentifier($localName, $incomingRefid))
         : $npcMaster->getByName($localName);
+    if ($currentNpcData && $referenceSource) {
+        $storedSource = $npcMaster->getMetadata($currentNpcData)['refid_source'] ?? '';
+        if ($storedSource !== '' && !chimStableFormReferenceEquals($storedSource, $referenceSource)) {
+            error_log('[ADDNPC] Stored reference origin conflicts with registration; profile left unchanged');
+            $MUST_END = true;
+            return;
+        }
+    }
     if (!$currentNpcData && $incomingRefid !== '') {
         // Reuse one legacy name-only row; otherwise create a separate Name + RefID profile.
         $escapedName = $db->escape($localName);
         $legacyRows = $db->fetchAll(
             "SELECT * FROM core_npc_master
              WHERE lower(npc_name) = lower('{$escapedName}') AND COALESCE(BTRIM(refid), '') = ''
+               AND COALESCE(metadata->>'refid_source', '') = ''
              ORDER BY id ASC"
         );
         if (count((array)$legacyRows) === 1) {
@@ -1505,6 +1525,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
 
             $meta = $npcMaster->getMetadata($currentNpcData);
+            if ($referenceSource) {
+                $meta['refid_source'] = $referenceSource;
+            }
             if ($incomingDisplayName !== "" && strcasecmp((string) $currentNpcData["npc_name"], $incomingDisplayName) !== 0) {
                 $meta["current_display_name"] = $incomingDisplayName;
                 if (!isset($meta["display_name_aliases"]) || !is_array($meta["display_name_aliases"])) {

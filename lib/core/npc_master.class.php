@@ -3,6 +3,7 @@
 if (!function_exists('chimParseStableFormReference')) {
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "game_plugins.php");
 }
+require_once __DIR__ . '/npc_reference.php';
 
 if (!function_exists('chimGetPromptCharacterName')) {
     function chimGetPromptCharacterName(): string
@@ -426,13 +427,25 @@ class NpcMaster
         $storedRefid = $refid !== null
             ? $refid
             : (is_array($row) ? ($row['refid'] ?? '') : '');
+        if (self::normalizeRefId($storedRefid) === '' && is_array($row)) {
+            $metadata = is_array($row['metadata'] ?? null)
+                ? $row['metadata'] : (json_decode($row['metadata'] ?? '{}', true) ?: []);
+            $source = chimParseNpcReferenceSource($metadata['refid_source'] ?? '');
+            if ($source) {
+                return md5($name . ' [Source: ' . $source['stable_key'] . ']');
+            }
+        }
         return md5(self::displayIdentifier($name, $storedRefid));
     }
 
     // A recorded RefID distinguishes this profile from other actors with the same display name.
     public static function isActorBound($row)
     {
-        return is_array($row) && self::normalizeRefId($row['refid'] ?? '') !== '';
+        if (!is_array($row)) {
+            return false;
+        }
+        $metadata = is_array($row['metadata'] ?? null) ? $row['metadata'] : (json_decode($row['metadata'] ?? '{}', true) ?: []);
+        return self::normalizeRefId($row['refid'] ?? '') !== '' || chimParseNpcReferenceSource($metadata['refid_source'] ?? '') !== null;
     }
 
     public static function profileExists($npcName, $checkLegacyFile = false)
@@ -535,7 +548,8 @@ class NpcMaster
         }
 
         $legacyRows = array_values(array_filter((array)$rows, static function ($row) {
-            return self::normalizeRefId($row['refid'] ?? '') === '';
+            $metadata = json_decode($row['metadata'] ?? '{}', true) ?: [];
+            return self::normalizeRefId($row['refid'] ?? '') === '' && empty($metadata['refid_source']);
         }));
         if (count($legacyRows) === 1) {
             return $legacyRows[0];
@@ -639,12 +653,25 @@ class NpcMaster
             }
         }
 
+        $referenceGuard = '';
         if (is_array($existing)) {
-            $data['md5'] = self::identityMd5(
-                $existing,
-                $data['npc_name'] ?? ($existing['npc_name'] ?? ''),
-                $data['refid'] ?? ($existing['refid'] ?? '')
-            );
+            $existingMetadata = $this->getMetadata($existing);
+            $incomingMetadata = array_key_exists('metadata', $data)
+                ? (is_array($data['metadata']) ? $data['metadata'] : $this->getMetadata($data)) : $existingMetadata;
+            $existingSource = chimParseNpcReferenceSource($existingMetadata['refid_source'] ?? '');
+            $source = $existingSource ?? chimParseNpcReferenceSource($incomingMetadata['refid_source'] ?? '');
+            if ($source) {
+                // Historical restores and stale worker snapshots must not restore an obsolete load-order prefix.
+                $incomingMetadata['refid_source'] = $source['stable_key'];
+                $data['metadata'] = json_encode($incomingMetadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if ($existingSource) {
+                    $data['refid'] = $existing['refid'];
+                    $expectedRefid = $existing['refid'] === null ? 'NULL' : "'" . $this->escape($existing['refid']) . "'";
+                    // Fail closed if a manifest remap wins the race after getById().
+                    $referenceGuard = " AND refid IS NOT DISTINCT FROM {$expectedRefid}";
+                }
+            }
+            $data['md5'] = self::identityMd5(array_replace($existing, $data));
         }
 
         $data = $this->preserveRelationshipExtendedDataOnGenericUpdate($data, $existing);
@@ -657,7 +684,7 @@ class NpcMaster
         }
 
         $id       = intval($id);
-        $where    = "id = {$id}";
+        $where    = "id = {$id}" . $referenceGuard;
         $filtered = array_intersect_key($data, array_flip($fields));
         return $GLOBALS["db"]->updateRow($this->table, $filtered, $where);
 

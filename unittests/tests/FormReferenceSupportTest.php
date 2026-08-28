@@ -8,6 +8,59 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' .
 
 final class FormReferenceSupportTest extends TestCase
 {
+    public function testNpcReferencesSurviveNormalAndLightLoadOrderChanges(): void
+    {
+        $old = [
+            ['plugin_name' => 'First.esp', 'formid_prefix' => '05'],
+            ['plugin_name' => 'Second.esp', 'formid_prefix' => '07'],
+            ['plugin_name' => 'Light.esp', 'formid_prefix' => 'FE012', 'is_light' => true],
+        ];
+        $new = $old;
+        $new[0]['formid_prefix'] = '07';
+        $new[1]['formid_prefix'] = '05';
+        $new[2]['formid_prefix'] = 'FE034';
+        $rows = [];
+        foreach (['05001234', '07001234', 'FE012ABC', 'FF001234'] as $index => $refid) {
+            $rows[] = ['id' => $index + 1, 'npc_name' => 'Guard', 'refid' => $refid, 'metadata' => '{}'];
+        }
+        $updates = chimPlanNpcReferenceRemap($rows, $old, $new);
+        $this->assertSame(['07001234', '05001234', 'FE034ABC'], array_column($updates, 'refid'));
+        $this->assertSame(['First.esp|00001234', 'Second.esp|00001234', 'Light.esp|00000ABC'], array_column($updates, 'source'));
+        $this->assertSame(md5('Guard [RefID: 07001234]'), $updates[0]['md5']);
+        $this->assertSame('First.esp|00001234', chimParseNpcReferenceSource('First.esp/00001234')['stable_key']);
+        $this->assertNull(chimParseNpcReferenceSource('../First.esp/1234'));
+        $this->assertNull(chimParseNpcReferenceSource('First.esp/FF001234'));
+        $this->assertSame('VR.esp|00012ABC', chimConvertRuntimeFormIdToStableReference('FE012ABC',
+            chimIndexLoadedGamePluginsByPrefix([['plugin_name' => 'VR.esp', 'formid_prefix' => 'FE']])));
+    }
+
+    public function testRemovedPluginProfilesRemainUnavailableUntilTheirPluginReturns(): void
+    {
+        $row = ['id' => 1, 'npc_name' => 'Guard', 'refid' => '05001234',
+            'metadata' => '{"refid_source":"First.esp|00001234","mods":["First.esp"]}'];
+        $other = [['plugin_name' => 'Unrelated.esp', 'formid_prefix' => '05']];
+        $updates = chimPlanNpcReferenceRemap([$row], [], $other);
+        $this->assertNull($updates[0]['refid']);
+        $row['refid'] = null;
+        $row['md5'] = $updates[0]['md5'];
+        $this->assertSame($row['md5'], NpcMaster::identityMd5($row));
+        $this->assertSame([], chimPlanNpcReferenceRemap([$row], [], $other));
+        $restored = chimPlanNpcReferenceRemap([$row], $other, [['plugin_name' => 'First.esp', 'formid_prefix' => '09']]);
+        $this->assertSame('09001234', $restored[0]['refid']);
+    }
+
+    public function testNpcReferenceRemapRejectsAmbiguousDestinations(): void
+    {
+        $rows = [
+            ['id' => 1, 'npc_name' => 'Guard', 'refid' => '05001234', 'metadata' => '{}'],
+            ['id' => 2, 'npc_name' => 'Guard', 'refid' => '07001234', 'metadata' => '{}'],
+        ];
+        $this->expectException(RuntimeException::class);
+        chimPlanNpcReferenceRemap($rows,
+            [['plugin_name' => 'First.esp', 'formid_prefix' => '05']],
+            [['plugin_name' => 'First.esp', 'formid_prefix' => '07']]);
+    }
+
     protected function setUp(): void
     {
         $GLOBALS['db'] = new class {

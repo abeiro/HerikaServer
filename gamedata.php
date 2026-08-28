@@ -23,6 +23,7 @@ require_once(__DIR__ . "/lib/core/npc_master.class.php");
 require_once(__DIR__ . "/lib/core/activity_status.php");
 require_once(__DIR__ . "/lib/core/transformation_state.php");
 require_once(__DIR__ . "/lib/core/game_plugins.php");
+require_once(__DIR__ . "/lib/core/npc_reference.php");
 require_once(__DIR__ . "/lib/logger.php");
 require_once(__DIR__ . "/lib/chim_quest_engine.php");
 require_once(__DIR__ . "/lib/quest_reference_data.php");
@@ -353,7 +354,7 @@ function handleLoadedPluginsUpdate(array $data): void
         return;
     }
 
-    $pluginCount = chimReplaceLoadedGamePlugins($data['plugins']);
+    $pluginCount = chimSyncNpcReferenceLoadOrder($data['plugins']);
     Logger::debug("[gamedata.php] Updated loaded plugin manifest ({$pluginCount} plugins)");
 
     $repair = quest_reference_repair_runtime_formids_to_stable($data['plugins']);
