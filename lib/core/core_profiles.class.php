@@ -5,6 +5,18 @@ class CoreProfile
     private $table     = "core_profiles";
     private $lastError = '';
 
+    private function configuredInt(string $name, int $fallback, int $min, int $max): int
+    {
+        if (!preg_match('/^[A-Z0-9_]+$/', $name)) {
+            return $fallback;
+        }
+        $row = $GLOBALS['db']->fetchOne("SELECT value FROM public.conf_opts WHERE id = '{$name}' LIMIT 1");
+        $value = isset($row['value']) && is_numeric($row['value'])
+            ? (int)$row['value']
+            : (is_numeric($GLOBALS[$name] ?? null) ? (int)$GLOBALS[$name] : $fallback);
+        return max($min, min($max, $value));
+    }
+
     public function create($data)
     {
         $fields = [
@@ -34,8 +46,8 @@ class CoreProfile
                     'speechstyle',
                     'goals',
                 ],
-                'RPG_COMMENTS_CHANCE'    => 50,
-                'COMBAT_BARK_COOLDOWN'   => 30,
+                'RPG_COMMENTS_CHANCE'    => $this->configuredInt('RPG_COMMENTS_CHANCE', 50, 0, 100),
+                'COMBAT_BARK_COOLDOWN'   => $this->configuredInt('COMBAT_BARK_COOLDOWN', 30, 10, 600),
                 'LATEST_DIARY_CONTEXT_ENABLED' => false,
             ];
             $data['metadata'] = json_encode($defaultMeta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

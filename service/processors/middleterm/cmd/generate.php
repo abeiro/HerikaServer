@@ -1,5 +1,10 @@
 <?php
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+    Logger::debug('[MIDDLETERM] Generation skipped because Background & Memory Tasks are disabled globally');
+    return;
+}
+
 if (isset($GLOBALS["ONCE_PER_RUN"]) && $GLOBALS["ONCE_PER_RUN"]==true) {
     return;
 

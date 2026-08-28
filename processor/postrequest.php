@@ -135,7 +135,7 @@ if ($minimeEnabled) {
                 }
             }
 
-            if (empty($currentConnectorData) && $mediumTermConnectorId > 0) {
+            if (empty($currentConnectorData) && chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM') && $mediumTermConnectorId > 0) {
                 Logger::info("[SCENE CLASSIFIER] CORE_CONNECTOR_SCENECLASSIFIER not configured or invalid, falling back to CORE_CONNECTOR_MEDIUMTERM");
                 $currentConnectorData = $connector->getById($mediumTermConnectorId);
             }

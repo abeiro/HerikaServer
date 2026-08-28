@@ -167,6 +167,15 @@ $CORE_CONNECTOR_MEDIUMTERM=4;
 $CORE_CONNECTOR_SCENECLASSIFIER=7; // Gemma 3N E4B
 $SCENE_CLASSIFIER_ENABLED=true; // Enable post-request scene tone/genre classification.
 $CORE_CONNECTOR_PROFILES=1;
+$CORE_CONNECTOR_BGL=1;
+
+// Availability switches for the global connector slots. Turning one off skips that
+// connector's tasks while its assignment, credentials, model and URL stay untouched.
+$CORE_CONNECTOR_SUMMARY_ENABLED=true;
+$CORE_CONNECTOR_MEDIUMTERM_ENABLED=true;
+$CORE_CONNECTOR_PROFILES_ENABLED=true;
+$CORE_CONNECTOR_DIRECTOR_ENABLED=true;
+$CORE_CONNECTOR_BGL_ENABLED=true;
 $RELLLM_CONNECTOR=5; // Relationship Management default (Mistral Small 3.2 24B)
 $RELATIONSHIP_UPDATE_CHANCE=50; // Percent chance (0-100) an eligible completed NPC response queues a Relationship Management evaluation. 0 disables automatic evaluations.
 

@@ -53,6 +53,44 @@ if (!function_exists('chimSettingsNormalizeScalar')) {
     }
 }
 
+if (!function_exists('chimGlobalLlmConnectorAvailabilityMap')) {
+    /** Keep every Global Connectors assignment paired with its authoritative availability switch. */
+    function chimGlobalLlmConnectorAvailabilityMap(): array
+    {
+        return [
+            'CORE_CONNECTOR_PLAYER' => 'PLAYER_RESPEECH',
+            'CORE_CONNECTOR_SUMMARY' => 'CORE_CONNECTOR_SUMMARY_ENABLED',
+            'CORE_CONNECTOR_MEDIUMTERM' => 'CORE_CONNECTOR_MEDIUMTERM_ENABLED',
+            'CORE_CONNECTOR_SCENECLASSIFIER' => 'SCENE_CLASSIFIER_ENABLED',
+            'CORE_CONNECTOR_PROFILES' => 'CORE_CONNECTOR_PROFILES_ENABLED',
+            'CORE_CONNECTOR_DIRECTOR' => 'CORE_CONNECTOR_DIRECTOR_ENABLED',
+            'CORE_CONNECTOR_BGL' => 'CORE_CONNECTOR_BGL_ENABLED',
+            'RELLLM_CONNECTOR' => 'RELATIONSHIP_SYSTEM_ENABLED',
+        ];
+    }
+}
+
+if (!function_exists('chimIsGlobalLlmConnectorEnabled')) {
+    /** Read a connector's switch without clearing or changing its saved assignment. */
+    function chimIsGlobalLlmConnectorEnabled(string $connectorField): bool
+    {
+        $toggleField = chimGlobalLlmConnectorAvailabilityMap()[$connectorField] ?? '';
+        if ($toggleField === '') {
+            return true;
+        }
+
+        $value = function_exists('chimReadLegacyGlobalValue')
+            ? chimReadLegacyGlobalValue($toggleField, true)
+            : ($GLOBALS[$toggleField] ?? true);
+
+        if (is_string($value)) {
+            return in_array(strtolower(trim($value)), ['1', 'true', 'yes', 'on'], true);
+        }
+
+        return (bool)$value;
+    }
+}
+
 if (!function_exists('chimLoadRawConfSchema')) {
     function chimLoadRawConfSchema(): array
     {
@@ -225,7 +263,14 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'CORE_CONNECTOR_SCENECLASSIFIER',
             'CORE_CONNECTOR_PROFILES',
             'CORE_CONNECTOR_DIRECTOR',
+            'CORE_CONNECTOR_BGL',
             'RELLLM_CONNECTOR',
+            'PLAYER_RESPEECH',
+            'CORE_CONNECTOR_SUMMARY_ENABLED',
+            'CORE_CONNECTOR_MEDIUMTERM_ENABLED',
+            'CORE_CONNECTOR_PROFILES_ENABLED',
+            'CORE_CONNECTOR_DIRECTOR_ENABLED',
+            'CORE_CONNECTOR_BGL_ENABLED',
             'RELATIONSHIP_UPDATE_CHANCE',
             'CORE_CONNECTOR_OGHMA_CUSTOM',
             'RELATIONSHIP_SYSTEM_ENABLED',
@@ -303,12 +348,18 @@ if (!function_exists('chimPrettySettingLabel')) {
         $customLabels = [
             'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
             'CORE_CONNECTOR_SUMMARY' => 'Summaries',
-            'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory',
+            'CORE_CONNECTOR_MEDIUMTERM' => 'Background & Memory Tasks',
             'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
             'SCENE_CLASSIFIER_ENABLED' => 'Scene Classifier',
-            'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
+            'CORE_CONNECTOR_PROFILES' => 'Profile Tasks',
             'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
             'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
+            'PLAYER_RESPEECH' => 'Player Respeech Available',
+            'CORE_CONNECTOR_SUMMARY_ENABLED' => 'Summaries Available',
+            'CORE_CONNECTOR_MEDIUMTERM_ENABLED' => 'Background & Memory Tasks Available',
+            'CORE_CONNECTOR_PROFILES_ENABLED' => 'Profile Tasks Available',
+            'CORE_CONNECTOR_DIRECTOR_ENABLED' => 'Director Mode Available',
+            'CORE_CONNECTOR_BGL_ENABLED' => 'Background Life Available',
             'RELLLM_CONNECTOR' => 'Relationship Management',
             'RELATIONSHIP_UPDATE_CHANCE' => 'Relationship Update Chance',
             'NEVER_CLEAR_RELATIONSHIP_DATA' => 'Never Clear Relationship Data',
@@ -373,7 +424,7 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
 
         if (
             strpos($flatId, 'CORE_CONNECTOR_') === 0
-            || in_array($flatId, ['RELLLM_CONNECTOR', 'GLOBAL_STT_CONNECTOR_ID', 'GLOBAL_ITT_CONNECTOR_ID'], true)
+            || in_array($flatId, ['RELLLM_CONNECTOR', 'PLAYER_RESPEECH', 'GLOBAL_STT_CONNECTOR_ID', 'GLOBAL_ITT_CONNECTOR_ID'], true)
         ) {
             return 'Global Connectors';
         }
@@ -421,7 +472,8 @@ if (!function_exists('chimGetSelectOptionsForOverrideSetting')) {
             ],
         ];
 
-        if (strpos($flatId, 'CORE_CONNECTOR_') === 0 || $flatId === 'RELLLM_CONNECTOR') {
+        $definition = chimGetSchemaDefinition($flatId);
+        if (strpos(strval($definition['type'] ?? ''), 'foreign:core_llm_connector') === 0) {
             $definitions[$flatId] = [
                 'query' => "SELECT id, COALESCE(NULLIF(label, ''), NULLIF(model, ''), CAST(id AS text)) AS option_label FROM public.core_llm_connector ORDER BY LOWER(COALESCE(NULLIF(label, ''), model)) ASC",
             ];

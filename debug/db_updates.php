@@ -123,6 +123,14 @@ try {
     $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_profiles.sql"));
     $db->execQuery("SET search_path TO public");
 }
+    if ($checkTableExists("global_settings_presets") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/global_settings_presets.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
+    if ($checkTableExists("profile_settings_presets") == -1) {
+        $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/profile_settings_presets.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
     if ($checkTableExists("core_action") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_action.sql"));
         $db->execQuery("SET search_path TO public");
@@ -141,6 +149,20 @@ try {
     }
 } catch (Exception $e) {
     Logger::warn("Bootstrap core tables: " . $e->getMessage());
+}
+
+if ($checkVersion("global_settings_presets") < 20260823001) {
+    Logger::debug("Applying global_settings_presets 20260823001 - add custom Global Settings presets");
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/global_settings_presets.sql"));
+    $updateVersion("global_settings_presets", 20260823001);
+    Logger::info("Applied patch global_settings_presets 20260823001");
+}
+
+if ($checkVersion("profile_settings_presets") < 20260824001) {
+    Logger::debug("Applying profile_settings_presets 20260824001 - add custom Profile presets");
+    $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/profile_settings_presets.sql"));
+    $updateVersion("profile_settings_presets", 20260824001);
+    Logger::info("Applied patch profile_settings_presets 20260824001");
 }
 
 if ($checkVersion("core_action") < 20260426001) {

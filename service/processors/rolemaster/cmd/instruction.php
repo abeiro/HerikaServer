@@ -16,6 +16,11 @@ $GLOBALS["active_profile"]=md5("The Narrator");
 $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_DIRECTOR')) {
+    logMsg('Director Mode is disabled globally; skipping instruction task');
+    return;
+}
+
 $connector=new LLMConnector();
 $currentConnectorData = $connector->getById(intval($GLOBALS["CORE_CONNECTOR_DIRECTOR"] ?? 0));
 $connectionHandler = $connector->getConnector($currentConnectorData);

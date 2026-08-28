@@ -221,6 +221,10 @@ if (!$isEmbed) {
 ?>
 
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<?php if ($isEmbed): ?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/chim-theme.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'chim-theme.css'); ?>">
+<?php endif; ?>
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/player-narration.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'player-narration.css'); ?>">
 <style>
     /* Font Face Declaration */
     @font-face {
@@ -1049,14 +1053,13 @@ if (!$isEmbed) {
 </style>
 
 <?php if ($isEmbed): ?>
-<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/chim-theme.css?v=<?php echo filemtime(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'chim-theme.css'); ?>">
 <style>
     /* Embedded in hub: remove extra top padding since navbar is hidden */
     main { padding-top: 10px; }
 </style>
 <?php endif; ?>
 
-<main>
+<main class="player-narration-settings player-settings-page<?php echo $isEmbed ? ' is-embedded' : ''; ?>">
     <div class="page-container">
         <div id="toast" class="toast-notification <?php echo (!$saveSuccess && $saveMessage) ? 'error' : ''; ?>">
             <span class="message"><?php echo htmlspecialchars($saveMessage); ?></span>
@@ -1153,13 +1156,12 @@ if (!$isEmbed) {
         <div class="page-header chim-page-head">
             <h1 class="chim-page-head-title">👤 Player Management</h1>
             <div class="chim-page-head-note">
-                <p>Manage your character's information and view in-game statistics</p>
-                <p>Changes made here will be used by AI NPCs to understand your character better</p>
+                <p>Change Player roleplay settings</p>
             </div>
         </div>
 
     <form id="player-form" method="post" action="">
-        <div class="player-actions">
+        <div class="player-actions settings-page-actions">
             <button type="submit" class="btn-save" name="save_player" value="1">Save Player Settings</button>
             <a class="btn-portable" href="<?php echo $webRoot; ?>/ui/cmd/settings_portability.php?scope=player&amp;action=export">&#128228; Export Player</a>
             <button type="button" class="btn-portable" id="import_player_settings_btn">&#128229; Import Player</button>

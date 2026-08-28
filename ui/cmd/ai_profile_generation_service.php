@@ -193,6 +193,15 @@ function aiProfileStampGenerationFailure(array $currentNpcData, NpcMaster $npcMa
 function aiProfileGenerate(array $options): array
 {
     $startTime = microtime(true);
+
+    if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_PROFILES')) {
+        return [
+            'done' => false,
+            'error' => 'Profile Tasks are turned off in Global Settings.',
+            'error_type' => 'profile_tasks_disabled',
+        ];
+    }
+
     $db = $options['db'];
     $name = trim((string)($options['name'] ?? ''));
     $source = trim((string)($options['source'] ?? 'manual'));
