@@ -5042,6 +5042,39 @@ function DataShortTermMemoryFor($actor, $sqlfilter = "")
     }
 }
 
+/**
+ * Merges short-term memory ahead of the verbatim window and returns the combined message list.
+ *
+ * Crops window entries the newest returned summary already covers, so no event appears both
+ * summarised and verbatim, then removes the internal '_g' gamets stamp from every entry. The
+ * '_g' strip runs whether or not summaries were attached.
+ *
+ * $allowStm is the caller's decision; this function does not read it from globals.
+ */
+function chimAttachShortTermMemoryToWindow(array $window, string $actor, string $sqlfilter, bool $allowStm): array
+{
+    if ($allowStm) {
+        $stm = DataShortTermMemoryFor($actor, $sqlfilter);
+        if (!empty($stm)) {
+            if (!empty($GLOBALS["STM_CROP_GAMETS"])) {
+                $cropBoundary = intval($GLOBALS["STM_CROP_GAMETS"]);
+                $window = array_values(array_filter($window, function ($e) use ($cropBoundary) {
+                    return !is_array($e) || empty($e['_g']) || intval($e['_g']) > $cropBoundary;
+                }));
+            }
+            $window = array_merge($stm, $window);
+        }
+    }
+
+    foreach ($window as $k => $e) {
+        if (is_array($e) && array_key_exists('_g', $e)) {
+            unset($window[$k]['_g']);
+        }
+    }
+
+    return array_values($window);
+}
+
 
 function DataSearchMemory($rawstring,$npcfilter) {
     
