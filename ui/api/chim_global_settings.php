@@ -45,10 +45,12 @@ function chimGlobalSettingsLabel(string $name): string
         'CORE_CONNECTOR_PROFILES_ENABLED' => 'Profile Tasks Available',
         'CORE_CONNECTOR_DIRECTOR_ENABLED' => 'Director Mode Available',
         'CORE_CONNECTOR_BGL_ENABLED' => 'Background Life Available',
-        'COMPACT_CHAT_ENABLED' => 'Compact Chat',
         'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time', 'OGHMA_INFINIUM' => 'Oghma Infinium',
         'OGHMA_AMOUNT' => 'Oghma Articles Amount', 'RACIAL_OGHMA' => 'Force Racial Oghma',
         'LOCATION_OGHMA' => 'Force Location Oghma', 'DETECT_MAGIC_EVENT' => 'Detect Magic Events',
+        'COMPACT_CHAT_ENABLED' => 'Compact Chat',
+        'NEVER_CLEAR_RELATIONSHIP_DATA' => 'Never Clear Relationship Data',
+        'PROMPT_HEAD_MARKDOWN_ENABLED' => 'Compact Prompt Info',
     ];
     if (isset($custom[$name])) {
         return $custom[$name];

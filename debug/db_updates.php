@@ -7817,6 +7817,71 @@ if ($checkVersion("prompts") < 20260821003) {
     }
 }
 
+if ($checkVersion("prompts") < 20260826002) {
+    Logger::debug("Applying prompts 20260826002 - add editable Prisma player mood prompts");
+
+    require_once(__DIR__ . "/../lib/player_mood_prompts.php");
+    $promptRows = [];
+    foreach (chimPlayerMoodPromptCatalog() as $mood => $entry) {
+        $promptKey = $db->escape($entry["prompt_key"]);
+        $defaultPrompt = $db->escape($entry["default_prompt"]);
+        $moodLabel = ucfirst($mood);
+        $supportedPlaceholders = $mood === "custom"
+            ? "{PLAYER_NAME}, {MOOD}, and {CUSTOM_MOOD}"
+            : "{PLAYER_NAME} and {MOOD}";
+        $description = $db->escape(
+            "Phrase appended to the player's eventlog message and dialogue history when the {$moodLabel} mood is selected in Prisma Chat. "
+            . "Supports {$supportedPlaceholders}. Leave blank to use the default phrase."
+        );
+        $promptRows[] = "('{$promptKey}', '{$defaultPrompt}', '{$description}')";
+    }
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES " . implode(",\n", $promptRows) . "
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260826002);
+        Logger::info("Applied patch prompts 20260826002 - added editable Prisma player mood prompts");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260826002");
+    }
+}
+
+if ($checkVersion("prompts") < 20260826003) {
+    Logger::debug("Applying prompts 20260826003 - add editable custom Prisma player mood prompt");
+
+    require_once(__DIR__ . "/../lib/player_mood_prompts.php");
+    $customMoodEntry = chimPlayerMoodPromptCatalog()["custom"];
+    $promptKey = $db->escape($customMoodEntry["prompt_key"]);
+    $defaultPrompt = $db->escape($customMoodEntry["default_prompt"]);
+    $description = $db->escape(
+        "Phrase appended to the player's eventlog message and dialogue history when Custom mood is selected in Prisma Chat. "
+        . "Supports {PLAYER_NAME}, {MOOD}, and {CUSTOM_MOOD}. Leave blank to use the default phrase."
+    );
+
+    $migrationOk = $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES ('{$promptKey}', '{$defaultPrompt}', '{$description}')
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ") !== false;
+
+    if ($migrationOk) {
+        $updateVersion("prompts", 20260826003);
+        Logger::info("Applied patch prompts 20260826003 - added editable custom Prisma player mood prompt");
+    } else {
+        Logger::error("Failed to apply patch prompts 20260826003");
+    }
+}
+
 if ($checkVersion("memory_summary") < 20260721001) {
     Logger::debug("Applying memory_summary 20260721001 - normalize diary memory owners");
 
@@ -7988,32 +8053,35 @@ if ($checkVersion("default_npc_tags") < 20260805003) {
     }
 }
 
-if ($checkVersion("eventlog_session_payload") < 20260807001) {
-    Logger::debug("Applying eventlog_session_payload 20260807001 - allow complete routing snapshots");
-
-    $migrationOk = $db->execQuery(
-        "ALTER TABLE public.eventlog ALTER COLUMN sess TYPE text"
-    ) !== false;
-
-    if ($migrationOk) {
-        $updateVersion("eventlog_session_payload", 20260807001);
-        Logger::info("Applied patch eventlog_session_payload 20260807001");
-    } else {
-        Logger::error("Failed to apply patch eventlog_session_payload 20260807001");
-    }
-}
-
-
 //----------------------------------------------------
 // AUDIT REQUEST RESPONSE - Store the response text for audit requests
 // Version 20260806001
 //----------------------------------------------------
 $db->execQuery("ALTER TABLE public.audit_request ADD COLUMN IF NOT EXISTS \"response\"  text");
 
-$db->execQuery("
-DROP VIEW public.eventlog_view;
-ALTER TABLE eventlog ALTER COLUMN sess TYPE text;
-CREATE VIEW public.eventlog_view AS
+// Keep view cleanup, the type change, and public view recreation atomic. Older
+// snapshot views may depend on eventlog directly, bypassing eventlog_view CASCADE.
+$migrationOk = $db->execQuery(<<<'SQL'
+DO $$
+DECLARE
+    snapshot_view RECORD;
+BEGIN
+    FOR snapshot_view IN
+        SELECT DISTINCT n.nspname, v.relname
+        FROM pg_depend d
+        JOIN pg_rewrite r ON d.classid = 'pg_rewrite'::regclass AND r.oid = d.objid
+        JOIN pg_class v ON v.oid = r.ev_class AND v.relkind = 'v'
+        JOIN pg_namespace n ON n.oid = v.relnamespace
+        WHERE d.refclassid = 'pg_class'::regclass
+          AND d.refobjid = 'public.eventlog'::regclass
+          AND left(n.nspname, 13) = 'chim_profile_'
+    LOOP
+        EXECUTE format('DROP VIEW IF EXISTS %I.%I CASCADE', snapshot_view.nspname, snapshot_view.relname);
+    END LOOP;
+
+    DROP VIEW IF EXISTS public.eventlog_view CASCADE;
+    ALTER TABLE public.eventlog ALTER COLUMN sess TYPE text;
+    CREATE VIEW public.eventlog_view AS
  SELECT e.type,
     e.data,
     e.sess,
@@ -8032,9 +8100,20 @@ CREATE VIEW public.eventlog_view AS
     public.convert_gamets2gregorian_date(e.gamets) AS gregorian_date
    FROM public.eventlog e;
 
+    ALTER VIEW public.eventlog_view OWNER TO dwemer;
+END;
+$$;
+SQL
+) !== false;
 
-ALTER TABLE public.eventlog_view OWNER TO dwemer;
-");
+if ($migrationOk) {
+    if ($checkVersion("eventlog_session_payload") < 20260807001) {
+        $updateVersion("eventlog_session_payload", 20260807001);
+        Logger::info("Applied patch eventlog_session_payload 20260807001");
+    }
+} else {
+    Logger::error("Failed to apply eventlog_session_payload migration; existing views were preserved");
+}
 
 Logger::info(__FILE__." update file processed");
 

@@ -34,6 +34,17 @@ SQL;
         $this->assertTrue(pts_clone_function_is_current($currentDefinition));
     }
 
+    public function testViewCloningFunctionNeedsRefresh(): void
+    {
+        $legacyDefinition = <<<'SQL'
+INSERT INTO destination OVERRIDING SYSTEM VALUE SELECT * FROM source;
+PERFORM chim_meta.sync_schema_sequences(dest_schema);
+EXECUTE format('CREATE OR REPLACE VIEW %I.%I AS %s', dest_schema, obj.table_name, obj.view_definition);
+SQL;
+
+        $this->assertFalse(pts_clone_function_is_current($legacyDefinition));
+    }
+
     public function testSchemaClonePreservesGeneratedIdentityValues(): void
     {
         $sql = file_get_contents(
@@ -42,6 +53,7 @@ SQL;
         );
 
         $this->assertIsString($sql);
+        $this->assertStringNotContainsString('CREATE OR REPLACE VIEW', $sql);
         $this->assertStringContainsString(
             'INSERT INTO %I.%I OVERRIDING SYSTEM VALUE SELECT * FROM %I.%I ON CONFLICT DO NOTHING',
             $sql

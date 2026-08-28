@@ -1961,7 +1961,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
                 ORDER BY distance ASC
                 LIMIT 1"
                 );
-                error_log("[UTIL_LOCATION_NPC] Closest location to {$pointLiteral} is: " . print_r($closestLocations, true));
+                error_log("[UTIL_LOCATION_NPC] Closest location to {$pointLiteral} on world {$worldEsc} is: " . print_r($closestLocations, true));
                 if (isset($closestLocations['name'])) {
                     $meta['last_coords']['location_name'] = $closestLocations['name'];
                     $meta['last_coords'][3] = $closestLocations['name'];

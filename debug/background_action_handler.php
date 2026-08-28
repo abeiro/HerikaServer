@@ -1109,6 +1109,8 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             }
             if (!gameIsPaused())
                 $retryCount++;
+            else
+                $retryCount=$retryCount+0.1;
             sleep(1);
         }
     }
@@ -1214,7 +1216,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                     . "(at this point {$GLOBALS["HERIKA_NAME"]} thinks to himsel/herself:{$GLOBALS['LAST_REASON']})\n"
                     . "Write a brief, immersive dialogue between $npcName and $resolvedName.\n"
                     . "The conversation is initiated by $npcName.\n"
-                    . "The dialogue must be consistent with the context_history above.\n"
+                    . "The dialogue must be consistent with the context_history above, must avoid repeating lines.\n"
                     . "Format each line exactly as:\n"
                     . "$npcName: ...\n$resolvedName: ...\n"
                     . 'Keep it to 3–5 exchanges total.'
@@ -1712,7 +1714,8 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         if ($itemName) {
             $itemNameResolved = "($count {$itemName})";
         } else {
-            $itemNameResolved = '';
+            $row = $db->fetchOne("select COALESCE(description,name) as name from market_cache where baseid='$itemId'");
+            $itemNameResolved = $row ? "($count {$row['name']})" : "($count Unknown Item)";
         }
 
         $db->insert('eventlog', [

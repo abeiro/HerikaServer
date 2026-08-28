@@ -223,7 +223,11 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         $mwdata = json_decode($npc["extended_data"], true);
         $mustInstructBypassBgl=false;
         $npcIsNearToPlayer = $GLOBALS["db"]->fetchOne("SELECT max(gamets) as n from eventlog where 
-            type='infonpc' and data like '%" . ($GLOBALS["db"]->escape($npc["npc_name"])) . "%' and gamets > $oneHourAgoGamets");
+            type='infonpc_close' and 
+            (data like '%/" . ($GLOBALS["db"]->escape($npc["npc_name"])) . "%/'
+                or data like '" . ($GLOBALS["db"]->escape($npc["npc_name"])) . "%/'
+                or data like '%/" . ($GLOBALS["db"]->escape($npc["npc_name"])) . "')
+            and gamets > $oneHourAgoGamets");
 
         if (isset($npcIsNearToPlayer) && $npcIsNearToPlayer["n"] > 0) {
             $localDelta = ($npcIsNearToPlayer["n"] - $oneHourAgoGamets) * 0.0000024;
@@ -305,10 +309,23 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
 
     $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
 
-    if (chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_SUMMARY') && ($maxRow - $lastMemory) > ($pfi)) {
-        // Run memory compaction silently
-        $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 2>/dev/null");
+    if (chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_SUMMARY')) {
+        if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"] === true) {
+            error_log("[MIDDLETERM] Auto-create summary is enabled, interval: {$pfi}");
+            if (($maxRow - $lastMemory) > ($pfi)) {
+                // Run memory compaction silently
+                $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 2>/dev/null");
+            }
+
+        } else {
+            error_log("[MIDDLETERM] Auto-create summary is disabled");
+            if (($maxRow - $lastMemory) > ($pfi)) {
+                // Run memory compaction silently
+                $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 0 2>/dev/null");
+            }
+        }
     }
+   
 
     //unset($GLOBALS["db"]);
 

@@ -45,6 +45,7 @@ function chimPortableGlobalFields(): array
 {
     return [
         'PROMPT_HEAD' => 'string',
+        'PROMPT_HEAD_MARKDOWN_ENABLED' => 'boolean',
         'EMOTEMOODS' => 'string',
         'RECHAT_MODE' => 'string',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'boolean',

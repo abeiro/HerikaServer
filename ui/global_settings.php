@@ -101,6 +101,9 @@ function pretty_label(string $flatName): string
         'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
         'RELLLM_CONNECTOR' => 'Relationship Management',
         'RELATIONSHIP_UPDATE_CHANCE' => 'Relationship Update Chance',
+        'NEVER_CLEAR_RELATIONSHIP_DATA' => 'Never Clear Relationship Data',
+        'COMPACT_CHAT_ENABLED' => 'Compact Chat',
+        'PROMPT_HEAD_MARKDOWN_ENABLED' => 'Compact Prompt Info',
         'PLAYER_WORST_MEMORY_GAME_DAYS' => 'Worst Memory Lifespan',
         'EMOTEMOODS' => 'Emote Moods',
         'OGHMA_INFINIUM' => 'Oghma Infinium',
@@ -131,6 +134,7 @@ function icon_for_field(string $flatName): string
     $icons = [
         'PLAYER_NAME' => '🏷️',
         'PROMPT_HEAD' => '🔝',
+        'PROMPT_HEAD_MARKDOWN_ENABLED' => '📝',
         'EMOTEMOODS' => '🎭',
         'RECHAT_MODE' => '🔁',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => '🎯',
@@ -154,6 +158,8 @@ function icon_for_field(string $flatName): string
         'RELATIONSHIP_SYSTEM_ENABLED' => '💞',
         'RELLLM_CONNECTOR' => '🔗',
         'RELATIONSHIP_UPDATE_CHANCE' => '🎲',
+        'NEVER_CLEAR_RELATIONSHIP_DATA' => '🕰️',
+        'COMPACT_CHAT_ENABLED' => '💬',
         'DETECT_MAGIC_EVENT' => '✨',
         'GROUND_ITEMS_DESCRIPTIONS_ONLY' => '🪨',
         'INVENTORY_ITEMS_DESCRIPTIONS_ONLY' => '🎒',
@@ -267,6 +273,10 @@ function current_value(string $flatName)
 
 function current_description(string $flatName, array $rowMap): string
 {
+    // Use the revised Compact Chat help even when an older description was stored.
+    if ($flatName === 'COMPACT_CHAT_ENABLED') {
+        return chimGetSchemaDescription($flatName);
+    }
     $row = $rowMap[$flatName] ?? null;
     $description = is_array($row) ? trim(strval($row['description'] ?? '')) : '';
     if ($description !== '') {
