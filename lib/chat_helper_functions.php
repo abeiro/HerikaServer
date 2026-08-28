@@ -872,6 +872,8 @@ function stripOutputSpeakerPrefix($text, $speakerName = null) {
         return (string)$text;
     }
 
+    $promptName = function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : $speakerName;
+    $text = preg_replace('/^' . preg_quote((string)$promptName, '/') . '\s*:\s*/i', '', (string)$text);
     return preg_replace('/^' . preg_quote((string)$speakerName, '/') . '\s*:\s*/i', '', (string)$text);
 }
 
@@ -881,10 +883,16 @@ function stripOutputSpeakerPrefixAfterInlineNarration($text, $speakerName = null
         return (string)$text;
     }
 
+    $promptName = function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : $speakerName;
+    $text = preg_replace(
+        '/^(\s*(?:\*[^*]+\*\s*)+)' . preg_quote((string)$promptName, '/') . '\s*:\s*/i',
+        '$1',
+        (string)$text
+    );
     return preg_replace(
         '/^(\s*(?:\*[^*]+\*\s*)+)' . preg_quote((string)$speakerName, '/') . '\s*:\s*/i',
         '$1',
-        (string)$text
+        $text
     );
 }
 
@@ -1593,7 +1601,9 @@ function returnLines($lines,$writeOutput=true)
             'localts' => time(),
             'sent' => 1,
             'text' => trim(preg_replace('/\s\s+/', ' ', $responseText)),
-            'actor' => $GLOBALS["HERIKA_NAME"],
+            'actor' => function_exists('chimGetResponseActorIdentifier')
+                ? chimGetResponseActorIdentifier()
+                : $GLOBALS["HERIKA_NAME"],
             'action' => "AASPGQuestDialogue2Topic1B1Topic",
             'tag' => (isset($tag) ? $tag : "")
         );

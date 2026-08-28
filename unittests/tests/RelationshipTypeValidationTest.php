@@ -214,6 +214,8 @@ final class RelationshipTypeValidationTest extends TestCase
             public array $queries = [];
             public array $fetchQueries = [];
 
+            public function fetchAll($query) { return []; }
+
             public function query($query)
             {
                 $this->queries[] = $query;
@@ -265,6 +267,8 @@ final class RelationshipTypeValidationTest extends TestCase
         $GLOBALS['db'] = new class {
             public array $queries = [];
             public array $fetchQueries = [];
+
+            public function fetchAll($query) { return []; }
 
             public function query($query)
             {

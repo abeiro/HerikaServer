@@ -617,10 +617,25 @@ if (!function_exists('chimGetPromptCharacterName')) {
     {
         $canonicalName = trim((string)($GLOBALS['HERIKA_NAME'] ?? ''));
         if ($canonicalName !== '' && strcasecmp($canonicalName, Narrator::CANONICAL_NAME) !== 0) {
+            $currentNpcData = is_array($GLOBALS['CHIM_CORE_CURRENT_NPC_DATA'] ?? null)
+                ? $GLOBALS['CHIM_CORE_CURRENT_NPC_DATA']
+                : [];
+            $refid = strtoupper(trim((string)($currentNpcData['refid'] ?? '')));
+            $refid = preg_replace('/^0X/i', '', $refid);
+            if ($refid !== '' && preg_match('/^[0-9A-F]{1,8}$/', $refid)) {
+                return $canonicalName . ' [RefID: ' . str_pad($refid, 8, '0', STR_PAD_LEFT) . ']';
+            }
             return $canonicalName;
         }
 
         return chimGetNarratorRoleplayName();
+    }
+}
+
+if (!function_exists('chimGetResponseActorIdentifier')) {
+    function chimGetResponseActorIdentifier(): string
+    {
+        return chimGetPromptCharacterName();
     }
 }
 

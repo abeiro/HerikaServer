@@ -603,8 +603,13 @@ class RelationshipManager {
             return null;
         }
 
-        $npcData = $npcMaster->getByName($raw);
+        $npcData = $npcMaster->getByPromptIdentifier($raw);
         if ($npcData) { return $npcData; }
+        // Dialogue already has a physical speaker context; never choose another same-name row.
+        $speaker = $GLOBALS['CHIM_CORE_CURRENT_NPC_DATA'] ?? null;
+        if (is_array($speaker) && strcasecmp(trim($speaker['npc_name'] ?? ''), $raw) === 0) {
+            return $npcMaster->getById((int)$speaker['id']);
+        }
 
         $clean = preg_replace('/\s*\((?:far away|too far away|busy|hostile|in combat|dead|disabled|unavailable)\)\s*$/iu', '', $raw);
         $clean = trim(preg_replace('/\s+/u', ' ', (string)$clean));
@@ -620,13 +625,12 @@ class RelationshipManager {
         $escaped = $GLOBALS["db"]->escape($clean);
         $rows = $GLOBALS["db"]->fetchAll(
             "SELECT * FROM core_npc_master WHERE LOWER(npc_name) = LOWER('{$escaped}') AND npc_name <> 'The Narrator'
-             ORDER BY gamets_last_updated DESC NULLS LAST, id DESC LIMIT 2"
+             ORDER BY id"
         );
         if (!empty($rows)) {
-            if (count($rows) > 1) {
-                error_log("[REL] Name resolve: multiple case-insensitive matches for '{$clean}', using newest row '{$rows[0]['npc_name']}'");
-            }
-            return $rows[0];
+            $owners = array_unique(array_map(static fn($row) => (int)($row['profile_owner_npc_id'] ?? $row['id']), $rows));
+            if (count($owners) !== 1) { return null; }
+            return $npcMaster->getById((int)reset($owners));
         }
 
         // Bridge: compare against in-range actors ignoring case/punctuation/spacing drift
@@ -965,11 +969,12 @@ class RelationshipManager {
             $result = chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
                 return $npcMaster->updateByArray([
                     'id' => $npcData['id'],
+                    '_profile_binding' => $npcData['_profile_binding'] ?? ':',
                     'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
                 ]);
             });
             if ($result !== false && function_exists('chimRelationshipTimelineStamp')) {
-                chimRelationshipTimelineStamp($npcData['id']);
+                chimRelationshipTimelineStamp($npcData['profile_owner_npc_id'] ?? $npcData['id']);
             }
         }
 
@@ -1012,11 +1017,12 @@ class RelationshipManager {
         $result = chimRunWithRelationshipExtendedDataWrite(function () use ($npcMaster, $npcData, $extended) {
             return $npcMaster->updateByArray([
                 'id' => $npcData['id'],
+                '_profile_binding' => $npcData['_profile_binding'] ?? ':',
                 'extended_data' => json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             ]);
         });
         if ($result !== false && function_exists('chimRelationshipTimelineStamp')) {
-            chimRelationshipTimelineStamp($npcData['id']);
+            chimRelationshipTimelineStamp($npcData['profile_owner_npc_id'] ?? $npcData['id']);
         }
 
         error_log("[REL] Set $npcName -> $targetName: " . $rels[$targetName]['aff'] .

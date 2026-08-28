@@ -542,8 +542,7 @@ if (isset($_GET["profile"])) {
                 || ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") === 0);
 
             if ($fallbackNpcName !== null && strcasecmp($fallbackNpcName, "The Narrator") !== 0) {
-                $escapedNpcName = $db->escape($fallbackNpcName);
-                $fallbackNpcData = $db->fetchOne("SELECT * FROM core_npc_master WHERE lower(npc_name)=lower('{$escapedNpcName}') LIMIT 1");
+                $fallbackNpcData = $npcMaster->getByPromptIdentifier($fallbackNpcName);
                 if ($fallbackNpcData) {
                     $npcMaster->setOldGlobalsFromCurrentNpcData($fallbackNpcData);
                     $GLOBALS["CHIM_CORE_CURRENT_NPC_DATA"] = $fallbackNpcData;

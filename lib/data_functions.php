@@ -6788,7 +6788,7 @@ function profile_exists($npcname) {
     return file_exists($path . "conf".DIRECTORY_SEPARATOR."conf_$newConfFile.php");
 }
 
-function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $baseprofile = '')
+function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $baseprofile = '', $profileIdentity = [])
 {
     // This should be done at NpcMaster::createProfile
     global $db;
@@ -6803,7 +6803,13 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
     $baseprofileName = npcNameToCodename($baseprofile);
 
     $npcMaster = new NpcMaster();
-    $currentNpcData = $npcMaster->getByName($npcname);
+    $refid = is_array($profileIdentity) ? NpcMaster::normalizeRefId($profileIdentity['refid'] ?? '') : '';
+    $identityFields = $refid !== ''
+        ? ['refid' => $refid, 'md5' => NpcMaster::identityMd5(['npc_name' => $npcname, 'refid' => $refid])]
+        : [];
+    $currentNpcData = $refid !== ''
+        ? $npcMaster->getByPromptIdentifier(NpcMaster::displayIdentifier($npcname, $refid))
+        : $npcMaster->getByName($npcname);
 
     $EMPTY_PROFILE=false;
 
@@ -6853,7 +6859,7 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
                 $coreFull = trim($npcname);
             }
 
-            $npcMaster->create([
+            $npcMaster->create(array_merge([
 
                     "npc_name" => $npcname,
                     'npc_static_bio' => $npcNewFields[0]["npc_static_bio"] ?? '',
@@ -6867,8 +6873,7 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
                     'goals' => $npcNewFields[0]["goals"] ?? '',
                     'oghma_knowledge_tags' => $npcNewFields[0]["oghma_knowledge_tags"] ?? ''
 
-                ]
-            );
+                ], $identityFields));
 
             // RealNamesExtended support for generic npcs
         } elseif (!empty($bracketMatch)) {
@@ -6886,7 +6891,7 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
                 }
                 if ($coreFull2 === '') { $coreFull2 = trim($npcname); }
 
-                $npcMaster->create([
+                $npcMaster->create(array_merge([
                         "npc_name" => $npcname,
                         'npc_static_bio' => $npcNewFields2[0]["npc_static_bio"] ?? '',
                         'personality' => $npcNewFields2[0]["personality"] ?? '',
@@ -6898,23 +6903,22 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
                         'speechstyle' => $npcNewFields2[0]["speechstyle"] ?? '',
                         'goals' => $npcNewFields2[0]["goals"] ?? '',
                         'oghma_knowledge_tags' => $npcNewFields2[0]["oghma_knowledge_tags"] ?? ''
-                    ]
-                );
+                    ], $identityFields));
             } else {
                 error_log("Creating initial empty profile");
-                $npcMaster->create([
+                $npcMaster->create(array_merge([
                         "npc_name" => $npcname
-                    ]
-                );
+                    ], $identityFields));
             }
         } else {
             error_log("Creating initial empty profile");
-            $npcMaster->create([
+            $npcMaster->create(array_merge([
                     "npc_name" => $npcname
-                ]
-            );
+                ], $identityFields));
             $EMPTY_PROFILE=true;
-            $newData = $npcMaster->GetByName($npcname);
+            $newData = $refid !== ''
+                ? $npcMaster->getByPromptIdentifier(NpcMaster::displayIdentifier($npcname, $refid))
+                : $npcMaster->GetByName($npcname);
             
 
         }
@@ -6979,7 +6983,9 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         }
 
         // 3) Assign (may remain empty if nothing found)
-        $currentData = $npcMaster->GetByName($npcname);
+        $currentData = $refid !== ''
+            ? $npcMaster->getByPromptIdentifier(NpcMaster::displayIdentifier($npcname, $refid))
+            : $npcMaster->GetByName($npcname);
         $currentData["voiceid"] = $voiceid;
 
         $existingMetadata = [];
@@ -7012,7 +7018,7 @@ function createProfile($npcname, $FORCE_PARMS = [], $overwrite = false, $basepro
         }
 
         $currentData['profile_id'] = $defaultProfileId;
-        $currentData['md5'] = md5($currentData["npc_name"]);
+        $currentData['md5'] = NpcMaster::identityMd5($currentData);
         $currentData['gamets_last_updated'] = $GLOBALS["gameRequest"][2];
 
         if ($EMPTY_PROFILE) {

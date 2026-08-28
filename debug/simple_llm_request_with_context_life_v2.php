@@ -185,7 +185,12 @@ $COMMAND_PROMPT = '';
 $npcMaster = new NpcMaster();
 $connector = new LLMConnector();
 
-$currentNpcData = $npcMaster->getByName($npcName);
+$currentNpcData = $npcMaster->getByPromptIdentifier($npcName);
+if (!$currentNpcData) { return; }
+$workerNpcId = (int)$currentNpcData['id'];
+$workerProfileBinding = $currentNpcData['_profile_binding'];
+$npcName = $currentNpcData['npc_name'];
+$GLOBALS['CHIM_CORE_CURRENT_NPC_DATA'] = $currentNpcData;
 $currentConnectorData = $connector->getById($GLOBALS['CORE_CONNECTOR_BGL']);
 
 $profile = new CoreProfile();
@@ -273,7 +278,7 @@ if (empty($lastInteractionRow['gamets'])) {
     } else {
         error_log('[BGL RUN] No prior interaction found, but background_life_player_unattached is false — skipping.');
         $extdata['background_life_last_updated'] = $last_gamets;
-        $npcMaster->updateExtendedKeysByName($npcName, $extdata);
+        $npcMaster->updateExtendedKeysById($workerNpcId, $extdata, [], $workerProfileBinding);
 
 
         return;
@@ -313,7 +318,7 @@ if (($last_gamets - $lastItGamets) < $minDeltaForRerun) {
     error_log("[BGL RUN] $npcNameEsc — last interaction was less than {$bglTriggerHours} hours ago.");
 
     $extLocaldata['background_life_last_updated'] = $last_gamets;
-    $npcMaster->updateExtendedKeysByName($npcName, $extLocaldata);
+    $npcMaster->updateExtendedKeysById($workerNpcId, $extLocaldata, [], $workerProfileBinding);
 
     if ($forceLetter) {
         error_log("[BGL RUN] $npcNameEsc — bypassing interaction cooldown via forceletter.");
@@ -1307,15 +1312,15 @@ if ($localHoursPassed < 0.5 && !$wasSocializeIntentAction) {
 if (isset($extdata['bgl_inception']) && !empty($extdata['bgl_inception'])) {
     $lastMinuteNotes .= "\nImportant:A thought crosses {$GLOBALS['HERIKA_NAME']}'s mind: He should {$extdata['bgl_inception']}\n";
     $npcMaster = new NpcMaster();
-    $npcData = $npcMaster->getByName($GLOBALS['HERIKA_NAME']);
-    $npcMaster->updateExtendedKeysByName($GLOBALS['HERIKA_NAME'], ['bgl_inception' => ""]);
+    $npcData = $npcMaster->getById($workerNpcId);
+    $npcMaster->updateExtendedKeysById($workerNpcId, ['bgl_inception' => ""], [], $workerProfileBinding);
     error_log("[BGL RUN] HINT inception: {$extdata['bgl_inception']}");
 }
 
 
 // Check gold
 
-$currentNpcData = $npcMaster->getByName($npcName); // Refresh NPC data to ensure we have the latest metadata
+$currentNpcData = $npcMaster->getById($workerNpcId); // Refresh this physical actor, not an ambiguous name.
 
 $npcMetadata = json_decode($currentNpcData['metadata'], true) ?? [];
 $profileMetadata = json_decode($currentProfileData['metadata'], true) ?? [];
@@ -1657,14 +1662,14 @@ echo $decisionBuffer . PHP_EOL;
 // Refresh NPC data to ensure we have the latest information before executing any actions
 // This is important because the NPC's state may have changed during the decision-making process
 
-$currentNpcData = $npcMaster->getByName($npcName);
+$currentNpcData = $npcMaster->getById($workerNpcId);
 $extdata = $npcMaster->getExtendedData($currentNpcData);
 $metadata = $npcMaster->getMetadata($currentNpcData);
 
 // ─── Update Background-Life Timestamp ────────────────────────────────────────
 
 $extdata['background_life_last_updated'] = $last_gamets;
-$npcMaster->updateExtendedKeysByName($npcName, $extdata);
+$npcMaster->updateExtendedKeysById($workerNpcId, $extdata, [], $workerProfileBinding);
 
 
 // ─── Parse LLM Decision Response ─────────────────────────────────────────────
@@ -1843,7 +1848,8 @@ if ($innerThoughtBuffer && $recordInnerThoughts) {
 }
 // ─── Mark NPC as Background-Life Enabled ─────────────────────────────────────
 
-$currentNpcData = $npcMaster->getByName($npcName);
+$currentNpcData = $npcMaster->getById($workerNpcId);
+$currentNpcData['_profile_binding'] = $workerProfileBinding;
 $extdata = $npcMaster->getExtendedData($currentNpcData);
 if (!$extdata['background_life_enabled']) {
     $extdata['background_life_enabled'] = true;

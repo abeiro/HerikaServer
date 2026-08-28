@@ -59,13 +59,14 @@ if (!function_exists('chimRuntimeNeedsDbUpdates')) {
             'prompts' => 20260615001,
             'skyrim_quest_definitions' => 20260628003,
             'core_tts_connector_omnivoice' => 20260708001,
+            'npc_actor_identity' => 20260824003,
         ];
 
         try {
             $versionRows = $db->fetchAll(
                 "SELECT tablename, version
                  FROM public.database_versioning
-                 WHERE tablename IN ('general_settings','core_stt_connector','core_itt_connector','descriptions_defaults','prompts','skyrim_quest_definitions','core_tts_connector_omnivoice')"
+                 WHERE tablename IN ('general_settings','core_stt_connector','core_itt_connector','descriptions_defaults','prompts','skyrim_quest_definitions','core_tts_connector_omnivoice','npc_actor_identity')"
             );
         } catch (\Throwable $e) {
             $decision = true;

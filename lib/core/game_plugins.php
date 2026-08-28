@@ -331,7 +331,14 @@ if (!function_exists('chimConvertRuntimeFormIdToStableReference')) {
             $pluginRow = $pluginsByPrefix[strtoupper($formIdPrefix)] ?? null;
         }
 
-        $localFormId = chimExtractLocalFormIdFromRuntimeFormId($runtimeFormId);
+        // Non-ESL Skyrim VR can use FE as a full plugin slot rather than a light index.
+        if (!$pluginRow && strlen($formIdPrefix) === 5) {
+            $formIdPrefix = 'FE';
+            $pluginRow = $pluginsByPrefix === null
+                ? chimGetLoadedGamePluginByFormIdPrefix($formIdPrefix)
+                : ($pluginsByPrefix[$formIdPrefix] ?? null);
+        }
+        $localFormId = sprintf('%08X', hexdec($runtimeFormId) & (strlen($formIdPrefix) === 5 ? 0xFFF : 0xFFFFFF));
         if (!is_array($pluginRow) || empty($pluginRow['plugin_name']) || $localFormId === '') {
             return null;
         }
@@ -475,7 +482,9 @@ if (!function_exists('chimReplaceLoadedGamePlugins')) {
             return 0;
         }
 
-        $db->execQuery('DELETE FROM public.game_plugins');
+        if ($db->execQuery('DELETE FROM public.game_plugins') === false) {
+            throw new RuntimeException('Could not replace loaded plugin manifest');
+        }
 
         foreach ($normalizedPlugins as $pluginRow) {
             $escapedPluginName = $db->escape($pluginRow['plugin_name']);
@@ -485,7 +494,7 @@ if (!function_exists('chimReplaceLoadedGamePlugins')) {
             $smallFileCompileIndex = intval($pluginRow['small_file_compile_index']);
             $partialIndex = intval($pluginRow['partial_index']);
 
-            $db->execQuery("
+            if ($db->execQuery("
                 INSERT INTO public.game_plugins (
                     plugin_name,
                     is_light,
@@ -510,7 +519,9 @@ if (!function_exists('chimReplaceLoadedGamePlugins')) {
                     partial_index = EXCLUDED.partial_index,
                     formid_prefix = EXCLUDED.formid_prefix,
                     updated_at = CURRENT_TIMESTAMP
-            ");
+            ") === false) {
+                throw new RuntimeException('Could not save loaded plugin manifest');
+            }
         }
 
         return count($normalizedPlugins);

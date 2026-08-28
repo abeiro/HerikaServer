@@ -174,6 +174,9 @@ if (isset($returnFunction[2])) {
 $debugNotificationText = chimSanitizeDebugNotificationText($returnFunction[3] ?? '');
 if ($debugNotificationText !== '' && chimActionShouldEmitDebugNotification($functionCodeName)) {
 	$notificationSpeaker = trim(strval($GLOBALS["HERIKA_NAME"] ?? ''));
+	if (function_exists('chimGetResponseActorIdentifier')) {
+		$notificationSpeaker = chimGetResponseActorIdentifier();
+	}
 	if ($notificationSpeaker === '') {
 		$notificationSpeaker = 'The Narrator';
 	}

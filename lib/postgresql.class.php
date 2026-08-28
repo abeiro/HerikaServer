@@ -454,7 +454,7 @@ class sql
             return "";
     }
 
-    public function updateRow($table, $data, $where)
+    public function updateRow($table, $data, $where, $requireAffectedRow = false)
     {
         $startTime = microtime(true);
         $setClauses = [];
@@ -488,7 +488,8 @@ class sql
             Logger::error("SQL: updateRow failed {$query} " .$this->GetLastError() . $this->extract_caller() );
             return false;
         }
-        return true;
+        // Optimistic identity/profile guards must not report success when a concurrent write won.
+        return !$requireAffectedRow || pg_affected_rows($result) > 0;
     }
 
     public function upsertRow($table, $data, $where) {

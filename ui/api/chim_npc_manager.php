@@ -169,13 +169,34 @@ function chimNpcManagerPortraitUrl(array $row, array $metadata): string
 function chimNpcManagerCard(array $row, array $profileMap): array
 {
     $metadata = chimNpcManagerDecodeJson($row['metadata'] ?? '{}');
+    $mods = is_array($metadata['mods'] ?? null)
+        ? array_values(array_filter(array_map('trim', $metadata['mods'])))
+        : [];
     $profile = $profileMap[(string)($row['profile_id'] ?? '')] ?? null;
+    $duplicateCount = isset($row['duplicate_count']) ? (int)$row['duplicate_count'] : 0;
+    if ($duplicateCount <= 0 && !empty($row['npc_name'])) {
+        $escapedName = $GLOBALS['db']->escape((string)$row['npc_name']);
+        $countRow = $GLOBALS['db']->fetchOne(
+            "SELECT COUNT(*) AS total FROM core_npc_master WHERE lower(npc_name) = lower('{$escapedName}')"
+        );
+        $duplicateCount = (int)($countRow['total'] ?? 1);
+    }
     return [
         'id' => (int)($row['id'] ?? 0),
         'name' => trim((string)($row['npc_name'] ?? 'Unknown NPC')),
         'gender' => trim((string)($row['gender'] ?? '')),
         'race' => trim((string)($row['race'] ?? '')),
         'refid' => trim((string)($row['refid'] ?? '')),
+        'refid_source' => (string)($metadata['refid_source'] ?? ''),
+        'profile_sharing' => [
+            'linked' => !empty($row['profile_owner_npc_id']) || chimNpcManagerBool($row['_has_shared_profile'] ?? false),
+            'automatic' => !empty($metadata['_chim_auto_link_group']),
+            'auto_link_disabled' => !empty($metadata['_chim_auto_link_disabled']),
+            'owner_id' => (int)($row['profile_owner_npc_id'] ?? $row['id']),
+        ],
+        'source_mod' => (string)($mods[0] ?? ''),
+        'mods' => $mods,
+        'duplicate_count' => max(1, $duplicateCount),
         'profile_id' => isset($row['profile_id']) ? (int)$row['profile_id'] : null,
         'profile_label' => $profile['label'] ?? 'No Profile',
         'favorite' => chimNpcManagerBool($row['npc_favorite'] ?? false),
@@ -196,6 +217,11 @@ function chimNpcManagerLatestMemory(array $extended): string
 
 function chimNpcManagerDetail(array $row, array $profiles): array
 {
+    $raw = (new NpcMaster())->getActorById((int)$row['id']);
+    $sharing = chimNpcProfileSharing($raw);
+    $revision = chimNpcProfileRevision(chimNpcProfileMembers($raw));
+    $row = chimNpcEffectiveProfile($raw);
+    $row['_has_shared_profile'] = $sharing['linked'];
     $metadata = chimNpcManagerDecodeJson($row['metadata'] ?? '{}');
     $extended = chimNpcManagerDecodeJson($row['extended_data'] ?? '{}');
     $profileMap = chimNpcManagerProfileMap($profiles);
@@ -204,6 +230,8 @@ function chimNpcManagerDetail(array $row, array $profiles): array
 
     return [
         'card' => chimNpcManagerCard($row, $profileMap),
+        'profile_sharing' => $sharing,
+        'profile_revision' => $revision,
         'fields' => [
             'npc_name' => (string)($row['npc_name'] ?? ''),
             'profile_id' => isset($row['profile_id']) ? (int)$row['profile_id'] : null,
@@ -236,6 +264,7 @@ function chimNpcManagerDetail(array $row, array $profiles): array
             'auto_diary_wait_enabled' => chimNpcManagerToggleState($extended['auto_diary_wait_enabled'] ?? null, $profileMetadata, 'AUTO_DIARY_WAIT_ENABLED'),
             'salutation_after_a_while' => chimNpcManagerToggleState($extended['salutation_after_a_while'] ?? null, $profileMetadata, 'SALUTATION_AFTER_A_WHILE'),
         ],
+        'readonly_fields' => NpcMaster::isActorBound($row) ? ['refid'] : [],
         'relationships' => RelationshipManager::normalizeRelationshipMap($extended['relationships'] ?? []),
         'relationships_locked' => chimNpcManagerBool($extended['relationships_locked'] ?? false),
         'metadata' => $metadata,
@@ -251,29 +280,69 @@ function chimNpcManagerFindNpc(array $input): array
     if ($id > 0) {
         $row = $GLOBALS['db']->fetchOne("SELECT * FROM core_npc_master WHERE id = {$id} LIMIT 1");
         if ($row) {
-            return $row;
+            return chimNpcEffectiveProfile($row);
         }
+        throw new InvalidArgumentException('NPC profile no longer exists');
     }
 
     $refid = trim((string)($input['refid'] ?? ''));
     if ($refid !== '') {
         $escaped = $GLOBALS['db']->escape(strtolower($refid));
-        $row = $GLOBALS['db']->fetchOne("SELECT * FROM core_npc_master WHERE lower(refid) = '{$escaped}' ORDER BY gamets_last_updated DESC NULLS LAST LIMIT 1");
-        if ($row) {
-            return $row;
+        $rows = $GLOBALS['db']->fetchAll("SELECT * FROM core_npc_master WHERE lower(refid) = '{$escaped}' ORDER BY gamets_last_updated DESC NULLS LAST, id ASC LIMIT 2");
+        if (count((array)$rows) === 1) {
+            return chimNpcEffectiveProfile($rows[0]);
+        }
+        if (count((array)$rows) > 1) {
+            throw new InvalidArgumentException('RefID matches more than one profile; use the profile id');
         }
     }
 
     $name = trim((string)($input['name'] ?? $input['npc_name'] ?? ''));
     if ($name !== '') {
         $escaped = $GLOBALS['db']->escape($name);
-        $row = $GLOBALS['db']->fetchOne("SELECT * FROM core_npc_master WHERE npc_name = '{$escaped}' ORDER BY gamets_last_updated DESC NULLS LAST LIMIT 1");
-        if ($row) {
-            return $row;
+        $rows = $GLOBALS['db']->fetchAll("SELECT * FROM core_npc_master WHERE npc_name = '{$escaped}' ORDER BY id ASC LIMIT 2");
+        if (count((array)$rows) === 1) {
+            return chimNpcEffectiveProfile($rows[0]);
+        }
+        if (count((array)$rows) > 1) {
+            throw new InvalidArgumentException('NPC name matches more than one profile; use the profile id or RefID');
         }
     }
 
     throw new InvalidArgumentException('NPC not found');
+}
+
+// The event log stores recipients as a '|'-delimited list of visible names, so anything routed
+// through it is name-scoped. Count the profiles sharing a name to detect when that is ambiguous.
+function chimNpcManagerSharedNameCount(string $npcName): int
+{
+    $npcName = trim($npcName);
+    if ($npcName === '') {
+        return 0;
+    }
+    $escaped = $GLOBALS['db']->escape($npcName);
+    $row = $GLOBALS['db']->fetchOne(
+        "SELECT COUNT(*) AS total FROM core_npc_master WHERE lower(npc_name) = lower('{$escaped}')"
+    );
+    return max(1, (int)($row['total'] ?? 1));
+}
+
+function chimNpcManagerSharedNameNotice(string $npcName, int $count): string
+{
+    return $count . ' profiles share the name "' . $npcName . '", and the event log identifies NPCs'
+        . ' by name only, so events cannot be routed to just one of them.';
+}
+
+// Name-scoped event writes must refuse rather than silently reach every same-named actor.
+function chimNpcManagerGuardSharedNameEvents(string $npcName, string $operationLabel): void
+{
+    $count = chimNpcManagerSharedNameCount($npcName);
+    if ($count > 1) {
+        throw new InvalidArgumentException(
+            $operationLabel . ' is unavailable for "' . $npcName . '": '
+            . chimNpcManagerSharedNameNotice($npcName, $count)
+        );
+    }
 }
 
 function chimNpcManagerEventRecipients($people): array
@@ -354,8 +423,18 @@ function chimNpcManagerHistory(array $input): array
         ];
     }, (array)$rows);
 
+    $sharedNameCount = chimNpcManagerSharedNameCount($npcName);
+
     return [
         'npc' => ['id' => (int)$npc['id'], 'name' => $npcName],
+        'shared_name' => [
+            'shared' => $sharedNameCount > 1,
+            'count' => $sharedNameCount,
+            'notice' => $sharedNameCount > 1
+                ? 'This history is shared: ' . chimNpcManagerSharedNameNotice($npcName, $sharedNameCount)
+                    . ' Injecting and deleting events is unavailable here.'
+                : '',
+        ],
         'events' => $events,
         'filters' => [
             'selected_event_type' => $selectedEventType,
@@ -412,6 +491,9 @@ function chimNpcManagerInjectEvent(array $input): array
     }
 
     $recipients = chimNpcManagerResolveEventRecipients($input, $npc);
+    foreach ($recipients as $recipient) {
+        chimNpcManagerGuardSharedNameEvents($recipient['name'], 'Event injection');
+    }
     $people = '|' . implode('|', array_column($recipients, 'name')) . '|';
     $rowId = $GLOBALS['db']->insertReturningId('eventlog', [
         'ts' => max(0, (int)DataLastKnownTS()) + 1,
@@ -444,6 +526,7 @@ function chimNpcManagerDeleteEvent(array $input): array
     }
 
     $npcName = trim((string)($npc['npc_name'] ?? ''));
+    chimNpcManagerGuardSharedNameEvents($npcName, 'Event deletion');
     $peopleWhere = chimBuildNpcEventLogPeopleWhereClause($GLOBALS['db'], $npcName, 'a.people');
     $visibleWhere = chimBuildVisibleEventLogWhereClause($GLOBALS['db']);
     $event = $GLOBALS['db']->fetchOne(
@@ -497,7 +580,8 @@ function chimNpcManagerAction(array $input): array
         if ($idea === '') {
             throw new InvalidArgumentException('Background Life inception requires a thought');
         }
-        if (!(new NpcMaster())->updateExtendedKeysByName($npcName, ['bgl_inception' => $idea])) {
+        // Row-scoped: same-named actors keep separate profiles, so only the selected row changes.
+        if (!$npcManager->updateExtendedKeysById((int)$row['id'], ['bgl_inception' => $idea])) {
             throw new RuntimeException('Background Life inception could not be saved');
         }
         return ['message' => "Background Life thought set for {$npcName}."];
@@ -530,7 +614,7 @@ function chimNpcManagerAction(array $input): array
             $locationName = trim((string)($location['name'] ?? 'previous location'));
         }
 
-        $targetName = str_replace('@', '', $npcName);
+        $targetName = str_replace('@', '', NpcMaster::displayIdentifier($npcName, $row['refid']));
         $locationName = str_replace('@', '', $locationName);
         $roleCommand = $locationFormId !== ''
             ? "rolecommand|TeleportNPCRaw@{$targetName}@{$locationFormId}@{$locationName}"
@@ -633,12 +717,18 @@ function chimNpcManagerList(array $profiles): array
     $search = trim((string)($_GET['search'] ?? ''));
     if ($search !== '') {
         $escaped = $GLOBALS['db']->escape('%' . $search . '%');
-        $conditions[] = "(npc_name ILIKE '{$escaped}' OR race ILIKE '{$escaped}' OR refid ILIKE '{$escaped}')";
+        $normalizedSearch = preg_replace('/^0x/i', '', $search);
+        $escapedNormalized = $GLOBALS['db']->escape('%' . $normalizedSearch . '%');
+        $conditions[] = "(npc_name ILIKE '{$escaped}' OR race ILIKE '{$escaped}' OR refid ILIKE '{$escaped}'
+            OR replace(lower(refid), '0x', '') LIKE lower('{$escapedNormalized}')
+            OR metadata::text ILIKE '{$escaped}')";
     }
 
     $profileId = (int)($_GET['profile_id'] ?? 0);
     if ($profileId > 0) {
-        $conditions[] = "profile_id = {$profileId}";
+        $conditions[] = "(CASE WHEN profile_owner_npc_id IS NULL THEN profile_id ELSE
+            (SELECT owner.profile_id FROM core_npc_master owner WHERE owner.id = core_npc_master.profile_owner_npc_id)
+            END) = {$profileId}";
     }
 
     $refids = array_values(array_filter(array_map('trim', explode(',', (string)($_GET['refids'] ?? '')))));
@@ -664,13 +754,24 @@ function chimNpcManagerList(array $profiles): array
     $countRow = $GLOBALS['db']->fetchOne("SELECT COUNT(*) AS total FROM core_npc_master WHERE {$where}");
     $total = (int)($countRow['total'] ?? 0);
     $rows = $GLOBALS['db']->fetchAll(
-        "SELECT * FROM core_npc_master WHERE {$where} ORDER BY npc_favorite DESC NULLS LAST, npc_name ASC, id ASC LIMIT {$limit} OFFSET {$offset}"
+        "SELECT core_npc_master.*, name_counts.duplicate_count,
+            CASE WHEN EXISTS (SELECT 1 FROM core_npc_master child WHERE child.profile_owner_npc_id = core_npc_master.id)
+                THEN 1 ELSE 0 END AS _has_shared_profile
+         FROM core_npc_master
+         JOIN (
+             SELECT lower(npc_name) AS normalized_name, COUNT(*) AS duplicate_count
+             FROM core_npc_master
+             GROUP BY lower(npc_name)
+         ) name_counts ON name_counts.normalized_name = lower(core_npc_master.npc_name)
+         WHERE {$where}
+         ORDER BY npc_favorite DESC NULLS LAST, npc_name ASC, id ASC
+         LIMIT {$limit} OFFSET {$offset}"
     );
     $profileMap = chimNpcManagerProfileMap($profiles);
 
     return [
         'npcs' => array_map(static function ($row) use ($profileMap) {
-            return chimNpcManagerCard($row, $profileMap);
+            return chimNpcManagerCard(chimNpcEffectiveProfile($row), $profileMap);
         }, (array)$rows),
         'profiles' => array_map(static function ($profile) {
             return ['id' => $profile['id'], 'label' => $profile['label']];
@@ -688,9 +789,17 @@ function chimNpcManagerSave(array $input, array $profiles): array
 {
     $row = chimNpcManagerFindNpc($input);
     $id = (int)$row['id'];
+    $raw = (new NpcMaster())->getActorById($id);
+    $members = chimNpcProfileMembers($raw);
+    // Older clients remain compatible for never-linked rows. A shared/previously shared editor must be current.
+    if (chimNpcProfileBinding($raw) !== ':' || isset($input['profile_revision'])) {
+        if (!hash_equals(chimNpcProfileRevision($members), (string)($input['profile_revision'] ?? ''))) {
+            throw new InvalidArgumentException('Profile changed. Reopen this NPC before saving.');
+        }
+    }
     $fields = is_array($input['fields'] ?? null) ? $input['fields'] : [];
     $overrides = is_array($input['overrides'] ?? null) ? $input['overrides'] : [];
-    $update = [];
+    $update = ['_profile_binding' => $row['_profile_binding'] ?? ':'];
 
     $allowedFields = [
         'npc_name', 'profile_id', 'lock_profile', 'npc_favorite', 'gender', 'race', 'base',
@@ -722,12 +831,17 @@ function chimNpcManagerSave(array $input, array $profiles): array
         }
     }
 
-    if (array_key_exists('npc_name', $update)) {
-        if ($update['npc_name'] === '') {
-            throw new InvalidArgumentException('NPC name is required');
-        }
-        $update['md5'] = md5($update['npc_name']);
+    if (array_key_exists('npc_name', $update) && $update['npc_name'] === '') {
+        throw new InvalidArgumentException('NPC name is required');
     }
+
+    // RefID is part of the profile selector, so management cannot change it independently.
+    if (NpcMaster::isActorBound($row)) {
+        unset($update['refid']);
+    }
+
+    // The lookup key always follows the stored Name + RefID identity, never client-supplied md5.
+    $update['md5'] = NpcMaster::identityMd5($row, $update['npc_name'] ?? ($row['npc_name'] ?? ''));
 
     $extended = chimNpcManagerDecodeJson($row['extended_data'] ?? '{}');
     $relationshipChanged = false;
@@ -804,7 +918,8 @@ function chimNpcManagerSave(array $input, array $profiles): array
     }
 
     $update['extended_data'] = json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    $lockId = $relationshipChanged ? 1001000000 + $id : null;
+    $ownerId = (int)($row['profile_owner_npc_id'] ?? $id);
+    $lockId = $relationshipChanged ? 1001000000 + $ownerId : null;
     try {
         if ($lockId !== null) {
             $GLOBALS['db']->execQuery("SELECT pg_advisory_lock({$lockId})");
@@ -818,9 +933,9 @@ function chimNpcManagerSave(array $input, array $profiles): array
             throw new RuntimeException('NPC update failed');
         }
         if ($relationshipChanged && function_exists('chimRelationshipTimelineStamp')) {
-            chimRelationshipTimelineStamp($id);
+            chimRelationshipTimelineStamp($ownerId);
         }
-        (new NpcMaster())->backupNpcById($id);
+        (new NpcMaster())->backupNpcById($ownerId);
     } finally {
         if ($lockId !== null) {
             $GLOBALS['db']->execQuery("SELECT pg_advisory_unlock({$lockId})");

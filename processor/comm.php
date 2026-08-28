@@ -1421,11 +1421,59 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $baseProfile = "";
 
     $npcMaster = new NpcMaster();
-    // Refids are not stable identity for profile creation: spawned actors, recycled refs,
-    // and modlist changes can make a new visible actor collide with an old profile row.
-    // Always create/resolve by the incoming visible name, then store refid as metadata below.
-    $retVal = createProfile($localName, [], false, $baseProfile); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
-    $currentNpcData = $npcMaster->getByName($localName);
+    $incomingRefid = NpcMaster::normalizeRefId($splitNameBase[4] ?? '');
+    $referenceSource = chimConvertRuntimeFormIdToStableReference($incomingRefid);
+    if (!empty($splitNameBase[44])) {
+        $reportedSource = chimParseNpcReferenceSource($splitNameBase[44]);
+        if (!$reportedSource || !$referenceSource ||
+            !chimStableFormReferenceEquals($referenceSource, $reportedSource['stable_key'])) {
+            // A late packet or an unsynced load order must never bind the wrong profile.
+            error_log('[ADDNPC] Reference origin does not match the current plugin manifest; registration skipped');
+            $MUST_END = true;
+            return;
+        }
+    }
+    $currentNpcData = $incomingRefid !== ''
+        ? $npcMaster->getByPromptIdentifier(NpcMaster::displayIdentifier($localName, $incomingRefid))
+        : $npcMaster->getByName($localName);
+    if ($currentNpcData && $referenceSource) {
+        $storedSource = $npcMaster->getMetadata($currentNpcData)['refid_source'] ?? '';
+        if ($storedSource !== '' && !chimStableFormReferenceEquals($storedSource, $referenceSource)) {
+            error_log('[ADDNPC] Stored reference origin conflicts with registration; profile left unchanged');
+            $MUST_END = true;
+            return;
+        }
+    }
+    if (!$currentNpcData && $incomingRefid !== '') {
+        // Reuse one legacy name-only row; otherwise create a separate Name + RefID profile.
+        $escapedName = $db->escape($localName);
+        $legacyRows = $db->fetchAll(
+            "SELECT * FROM core_npc_master
+             WHERE lower(npc_name) = lower('{$escapedName}') AND COALESCE(BTRIM(refid), '') = ''
+               AND COALESCE(metadata->>'refid_source', '') = ''
+             ORDER BY id ASC"
+        );
+        if (count((array)$legacyRows) === 1) {
+            $npcMaster->update((int)$legacyRows[0]['id'], ['refid' => $incomingRefid]);
+            $currentNpcData = $npcMaster->getById((int)$legacyRows[0]['id']);
+            error_log("[ADDNPC] Bound legacy profile #{$legacyRows[0]['id']} to {$localName} [RefID: {$incomingRefid}]");
+        }
+    }
+
+    if ($currentNpcData) {
+        $retVal = 2;
+    } else {
+        $retVal = createProfile(
+            $localName,
+            [],
+            false,
+            $baseProfile,
+            $incomingRefid !== '' ? ['refid' => $incomingRefid] : []
+        ); //1-NEW PROFILE, 2-PROFILE ALREADY EXISTS
+        $currentNpcData = $incomingRefid !== ''
+            ? $npcMaster->getByPromptIdentifier(NpcMaster::displayIdentifier($localName, $incomingRefid))
+            : $npcMaster->getByName($localName);
+    }
     audit_log("comm.php addnpc $localName");
 
     // If using sendAllNpcs from plugin, this is no loner valid
@@ -1435,7 +1483,7 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
     // Update new data
 
-    if (isset($splitNameBase[4]) && $retVal == 1) {
+    if ($incomingRefid === '' && isset($splitNameBase[4]) && $retVal == 1) {
         $currentNpcDataAlt = $npcMaster->getByRefId($splitNameBase[4]);
         if ($currentNpcDataAlt && $currentNpcDataAlt["npc_name"] != $currentNpcData["npc_name"]) {
             // Seems an NPC has changed name.
@@ -1463,6 +1511,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
 
             $meta = $npcMaster->getMetadata($currentNpcData);
+            if ($referenceSource) {
+                $meta['refid_source'] = $referenceSource;
+            }
             if ($incomingDisplayName !== "" && strcasecmp((string) $currentNpcData["npc_name"], $incomingDisplayName) !== 0) {
                 $meta["current_display_name"] = $incomingDisplayName;
                 if (!isset($meta["display_name_aliases"]) || !is_array($meta["display_name_aliases"])) {
@@ -1693,15 +1744,23 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
         $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
 
+        // Persist the validated physical reference before linking known quest versions.
+        // Reload after linking so autofill and subsequent work use the kept profile and current binding.
+        if ($npcMaster->updateByArray($currentNpcData) === false) {
+            throw new RuntimeException('NPC registration changed; retry with current actor identity');
+        }
+        if (chimNpcAutoLinkProfile($currentNpcData)) {
+            $currentNpcData = $npcMaster->getById((int)$currentNpcData['id']);
+        }
+
         if (!empty($GLOBALS['AUTOFILL_CUSTOM_PROFILES'])) {
             require_once $GLOBALS["ENGINE_PATH"] . "ui" . DIRECTORY_SEPARATOR . "cmd" . DIRECTORY_SEPARATOR . "ai_profile_generation_service.php";
             if (!aiProfileHasMeaningfulAutofillData($currentNpcData)) {
                 $trigger = intval($GLOBALS['AUTOFILL_CUSTOM_PROFILES_TRIGGER'] ?? 20);
                 $currentNpcData = aiProfileMarkPendingAutofill($currentNpcData, $npcMaster, $trigger);
+                $npcMaster->updateByArray($currentNpcData);
             }
         }
-
-        $npcMaster->updateByArray($currentNpcData);
 
         $profile = new CoreProfile();
         $profData = json_decode($profile->getById($currentNpcData["profile_id"])["metadata"], true);
