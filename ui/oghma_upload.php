@@ -1732,7 +1732,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <summary>Article editing tips</summary>
                     <p>Use lowercase topic titles with underscores instead of spaces &mdash; "Fishy Stick" becomes <code>fishy_stick</code>.</p>
                     <p><code>common</code> marks an article as public basic knowledge. Use it only on articles, not NPC tags. An empty basic class is also unrestricted.</p>
-                    <p><a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&amp;gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Read the Project Oghma guide</a></p>
                 </details>
             </div>
 
