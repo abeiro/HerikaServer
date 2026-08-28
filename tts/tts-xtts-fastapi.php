@@ -86,6 +86,8 @@ function xtts_fastapi_settings($settings, $resetAfter = false)
 	}
 }
 
+// Player and NPC voices can load different providers in the same request.
+if (!function_exists('num2kan_decimal')) {
 // convert numbers into Japanese kanji
 function num2kan_decimal($instr)
 {
@@ -127,6 +129,7 @@ function num2kan_decimal($instr)
 	}
 
 	return $outstr;
+}
 }
 
 
