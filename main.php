@@ -1122,7 +1122,7 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 if (in_array($gameRequest[0],["rechat","narration"]) ) {
     $configuredChimMode = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
     $configuredChimMode = strtoupper(trim((string)($configuredChimMode["value"] ?? "")));
-    if (in_array($configuredChimMode, ["WHISPER", "CLOSE"], true)) {
+    if (!chimExecutionModeAllowsRechatEvent($configuredChimMode, $gameRequest[0])) {
         Logger::info("[RECHAT_SELECT] {$configuredChimMode} mode is active; terminating private rechat/narration request");
         terminate();
     }
@@ -1241,7 +1241,8 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     // Trigger after any NPC response (after first NPC responds to player)
     // AND only on "rechat" events (not on events already converted to "narration")
     // AND only if The Narrator wasn't the last speaker (prevent consecutive narrations)
-    if (!empty($GLOBALS["RANDOM_NARATION"]) && $GLOBALS["RANDOM_NARATION"] && $gameRequest[0] === "rechat" && sizeof($rechatHistory) >= 1) {
+    if (chimExecutionModeAllowsRechatEvent($configuredChimMode, "narration") &&
+        !empty($GLOBALS["RANDOM_NARATION"]) && $GLOBALS["RANDOM_NARATION"] && $gameRequest[0] === "rechat" && sizeof($rechatHistory) >= 1) {
         // Check if the last event was a narration event (if so, skip to prevent consecutive narrations)
         $lastEvent = $db->fetchOne("SELECT type FROM eventlog WHERE type IN ('rechat', 'narration') ORDER BY gamets DESC, ts DESC LIMIT 1");
         $wasLastNarration = ($lastEvent && $lastEvent['type'] === 'narration');
@@ -2116,7 +2117,8 @@ if (isset($GLOBALS["CHIM_EXECUTION_MODE"]) && strtoupper((string)$GLOBALS["CHIM_
     if (!isset($GLOBALS["COMMAND_PROMPT"]) || !is_string($GLOBALS["COMMAND_PROMPT"])) {
         $GLOBALS["COMMAND_PROMPT"] = "";
     }
-    $GLOBALS["COMMAND_PROMPT"] .= "\n\n[Close mode is active. {$GLOBALS["PLAYER_NAME"]} is speaking privately to you at close range. Respond only to {$GLOBALS["PLAYER_NAME"]}; do not assume any bystanders can hear or participate.]";
+    $closeAudience = implode(', ', parsePeoplePipeList(chimGetCurrentTurnPeopleSnapshot()));
+    $GLOBALS["COMMAND_PROMPT"] .= "\n\n[Close mode is active. {$GLOBALS["PLAYER_NAME"]} is speaking at close range to the nearby group. Only these people can hear or take part: {$closeAudience}. Do not involve anyone outside this audience.]";
 }
 
 

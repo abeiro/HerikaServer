@@ -3297,6 +3297,15 @@ function isCloseExecutionMode()
     return ($mode === "CLOSE");
 }
 
+// Close permits audience-scoped NPC replies, but still excludes random Narrator interjections.
+function chimExecutionModeAllowsRechatEvent(string $mode, string $eventType): bool
+{
+    $mode = strtoupper(trim($mode));
+    return in_array($eventType, ['rechat', 'narration'], true)
+        && $mode !== 'WHISPER'
+        && !($mode === 'CLOSE' && $eventType === 'narration');
+}
+
 function isPrivateConversationExecutionMode()
 {
     return isWhisperExecutionMode() || isCloseExecutionMode();
