@@ -701,10 +701,12 @@ class NpcMaster
             $existingMetadata = $this->getMetadata($existing);
             $incomingMetadata = array_key_exists('metadata', $data)
                 ? (is_array($data['metadata']) ? $data['metadata'] : $this->getMetadata($data)) : $existingMetadata;
-            // Structural merge epochs cannot be changed by imports, restores or arbitrary metadata.
-            unset($incomingMetadata['_chim_profile_epoch']);
-            if (isset($existingMetadata['_chim_profile_epoch'])) {
-                $incomingMetadata['_chim_profile_epoch'] = $existingMetadata['_chim_profile_epoch'];
+            // Imports, restores and arbitrary metadata cannot change sharing or its manual opt-out.
+            foreach (CHIM_NPC_PROFILE_METADATA_KEYS as $key) {
+                unset($incomingMetadata[$key]);
+                if (array_key_exists($key, $existingMetadata)) {
+                    $incomingMetadata[$key] = $existingMetadata[$key];
+                }
             }
             if (array_key_exists('metadata', $data)) {
                 $data['metadata'] = json_encode($incomingMetadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -1390,8 +1392,9 @@ class NpcMaster
         }
         $actor = $this->getByPromptIdentifier($npcName);
         if (!$actor) { return false; }
-        unset($setValues['_chim_profile_epoch'], $setValues['refid_source']);
-        $unsetKeys = array_diff($unsetKeys, ['_chim_profile_epoch', 'refid_source']);
+        $protected = array_merge(CHIM_NPC_PROFILE_METADATA_KEYS, ['refid_source']);
+        $setValues = array_diff_key($setValues, array_flip($protected));
+        $unsetKeys = array_diff($unsetKeys, $protected);
 
         $normalizedSetValues = [];
         foreach ($setValues as $key => $value) {
@@ -1633,6 +1636,7 @@ class NpcMaster
     DELETE FROM core_npc_master AS c
     WHERE c.npc_name<>'The Narrator' and COALESCE(c.lock_profile,0)=0
     AND c.profile_owner_npc_id IS NULL
+    AND COALESCE(c.metadata->>'_chim_auto_link_disabled', '') <> 'true'
     AND NOT EXISTS (SELECT 1 FROM core_npc_master child WHERE child.profile_owner_npc_id = c.id)
     and COALESCE(c.gamets_last_updated,0)>0
     and (

@@ -526,7 +526,7 @@ if (!function_exists('render_npc_sharing_badge')) {
     function render_npc_sharing_badge(array $state){
         if (empty($state['linked'])) return;
         $detail = !empty($state['is_owner'])
-            ? 'This profile is kept and shared with ' . (int)$state['members'] . ' other same-named actor' . ((int)$state['members'] === 1 ? '' : 's') . '.'
+            ? 'This profile is kept and shared with ' . (int)$state['members'] . ' other actor' . ((int)$state['members'] === 1 ? '' : 's') . '.'
             : 'This actor reads and writes the kept profile #' . (int)$state['owner_id'] . '.';
         echo '<span class="npc-shared-badge" title="' . htmlspecialchars($detail, ENT_QUOTES) . '">'
             . '<span aria-hidden="true">&#128279;</span> Shared profile'
@@ -2246,8 +2246,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= htmlspecialchars($editItem["id"]) ?>">
         <input type="hidden" name="_profile_binding" value="<?= htmlspecialchars($editItem['_profile_binding'] ?? ':', ENT_QUOTES) ?>">
-        <?php if (chimNpcProfileSharing($editItem)['linked']): ?>
-            <p class="hint" role="note">Shared profile: character fields and personal memory are shared. Physical details, RefID, favourite and lock stay with this actor. Unlink before renaming or restoring a history snapshot.</p>
+        <?php $editSharing = chimNpcProfileSharing($editItem); if (!empty($editSharing['linked'])): ?>
+            <p class="hint" role="note"><?= !empty($editSharing['automatic']) ? 'Shared profile, linked automatically' : 'Shared profile' ?>: character fields and personal memory are shared. Physical details, RefID, favourite and lock stay with this actor. Unlink before renaming or restoring a history snapshot. Unlinking separates every actor in the group.</p>
+        <?php elseif (!empty($editSharing['auto_link_disabled'])): ?>
+            <p class="hint" role="note">Automatic linking is switched off for this character for the rest of this playthrough. Same-name actors can still be merged by hand.</p>
         <?php endif; ?>
     <?php endif; ?>
 
@@ -4260,6 +4262,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-merge-field dd.is-empty { color:#9aa3ae; font-style:italic; white-space:normal; }
 .npc-merge-fields { display:flex; flex-direction:column; gap:8px; margin:0; }
 .npc-merge-warn { margin:0; padding:9px 11px; border:1px solid #8a5a1d; border-radius:6px; background:#33260f; color:#ffd39c; font-size:12.5px; line-height:1.5; }
+/* Automatic-link status and the "auto-link is off" note. Both are copy only: no extra queries. */
+.npc-merge-panel p.npc-merge-auto { align-self:flex-start; max-width:100%; padding:3px 10px; border:1px solid #2f6f57; border-radius:999px; background:#153228; color:#a7e8bc; font-size:11.5px; font-weight:600; line-height:1.45; }
+.npc-merge-panel p.npc-merge-auto[hidden] { display:none; }
+.npc-merge-note { margin:0; padding:8px 11px; border:1px solid #4a5a7d; border-radius:6px; background:#1b2333; color:#c6d4ee; font-size:12px; line-height:1.45; }
+.npc-merge-note[hidden] { display:none; }
 .npc-merge-confirm { display:flex; align-items:flex-start; gap:8px; font-size:12.5px; color:#e9efff; line-height:1.45; cursor:pointer; }
 .npc-merge-confirm input { margin-top:2px; flex:0 0 auto; accent-color:rgb(242, 124, 17); }
 .npc-merge-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
@@ -5109,8 +5116,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 </div>
 
 
-<!-- Same-name profile merge dialog. Reversible: both actor cards survive a merge, and Unlink
-     separates the actors again and restores their own profile data. -->
+<!-- Profile sharing dialog. Reversible: every actor card survives a merge or an automatic link,
+     and Unlink separates the whole group again and restores each actor's own profile data. -->
 <div id="npc_merge_modal" class="modal-backdrop" style="z-index:10004;" role="dialog" aria-modal="true" aria-labelledby="npc_merge_title" aria-describedby="npc_merge_intro">
   <div class="modal-container npc-merge-container">
     <div class="modal-header">
@@ -5120,16 +5127,18 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       </div>
     </div>
     <div class="modal-body npc-merge-body">
-      <p class="npc-merge-intro" id="npc_merge_intro">Two actors that share a name can share one profile. Both actor cards stay in the list, and a merge can be undone with Unlink.</p>
+      <p class="npc-merge-intro" id="npc_merge_intro">Actors that are the same character can share one profile. A few well-known built-in characters are linked automatically; here you can also merge two actors that share a name. Every actor row stays in the list, and Unlink reverses either kind.</p>
       <p id="npc_merge_status" class="npc-merge-status" role="status" aria-live="polite"></p>
       <p id="npc_merge_error" class="npc-merge-error" role="alert" hidden></p>
+      <p id="npc_merge_auto_note" class="npc-merge-note" role="note" hidden></p>
 
       <section id="npc_merge_shared_panel" class="npc-merge-panel" hidden aria-labelledby="npc_merge_shared_heading">
         <h3 id="npc_merge_shared_heading">Shared profile</h3>
-        <p>These actors read and write one profile. New memory is written once and every actor listed here sees it.</p>
+        <p id="npc_merge_shared_kind" class="npc-merge-auto" hidden></p>
+        <p>These actors read and write one profile. New memory is written once and every actor listed here sees it. Each actor keeps its own row, name and RefID.</p>
         <ul id="npc_merge_shared_list" class="npc-merge-list"></ul>
-        <p class="npc-merge-warn">Unlinking restores the other actor's original character data. The kept profile retains its current data, including memory written while shared. That shared-period memory cannot be split apart again.</p>
-        <label class="npc-merge-confirm"><input type="checkbox" id="npc_merge_unlink_confirm"> <span>I understand that memory written while shared stays with the kept profile.</span></label>
+        <p class="npc-merge-warn" id="npc_merge_unlink_warn">Unlinking separates every actor in this group. Each other actor gets its own original character data back. The kept profile retains its current data, including memory written while shared. That shared-period memory cannot be split apart again.</p>
+        <label class="npc-merge-confirm"><input type="checkbox" id="npc_merge_unlink_confirm"> <span id="npc_merge_unlink_confirm_label">I understand that memory written while shared stays with the kept profile.</span></label>
         <div class="npc-merge-actions">
           <button type="button" id="npc_merge_unlink" class="npc-merge-danger" disabled>Unlink shared profile</button>
         </div>
@@ -5143,7 +5152,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           <span class="npc-merge-refid" id="npc_merge_current_refid"></span>
           <span class="npc-merge-origin" id="npc_merge_current_origin"></span>
         </p>
-        <p>Pick the profile that belongs to the same character. Only available plugin-defined references that are not already shared are offered. Nothing is matched for you.</p>
+        <p>Pick the profile that belongs to the same character. Only available plugin-defined references that are not already shared are offered. A manual merge always pairs exactly two actors that share a name.</p>
         <ul id="npc_merge_candidates" class="npc-merge-list"></ul>
         <div class="npc-merge-actions">
           <button type="button" id="npc_merge_compare_btn" class="npc-merge-primary" disabled>Compare profiles</button>

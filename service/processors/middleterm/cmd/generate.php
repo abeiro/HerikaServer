@@ -33,10 +33,19 @@ if (isset($extended_data["middle_term_memory"])&&sizeof($extended_data["middle_t
 }
 
 
-$dbNpcName=$GLOBALS["db"]->escape($selectedNpc);
 $scopeConditionSql = dataGetMemoryScopeConditionSql($selectedNpc);
+$memoryNames = chimNpcProfileMemoryNames($currentNpcData);
+$companionConditions = array_map('dataGetMemoryCompanionConditionSql', $memoryNames);
+$companionConditionSql = '(' . implode(' OR ', $companionConditions) . ')';
+if (count($memoryNames) > 1) {
+    $scopeConditionSql = "(scope IS NULL OR scope='global')";
+    if (!empty($extended_data['individual_memory_enabled'])) {
+        $scopes = implode(',', array_map(static fn($name) => "'" . $GLOBALS['db']->escape($name) . "'", $memoryNames));
+        $scopeConditionSql = "scope IN ({$scopes})";
+    }
+}
 
-$query="SELECT summary as content,gamets_truncated FROM memory_summary where summary is not null and $scopeConditionSql and (companions like '%|$dbNpcName|%' or companions='$dbNpcName') and gamets_truncated>$gametsfrom order by gamets_truncated desc LIMIT 100";
+$query="SELECT summary as content,gamets_truncated FROM memory_summary where summary is not null and $scopeConditionSql and $companionConditionSql and gamets_truncated>$gametsfrom order by gamets_truncated desc LIMIT 100";
 
 $contextDataFull=$GLOBALS["db"]->fetchAll($query);
 
@@ -154,6 +163,9 @@ if (!$requestPrompt) {
 
 // Replace {HERIKA_NAME} placeholder with actual character name
 $request = str_replace('{HERIKA_NAME}', $GLOBALS['HERIKA_NAME'], $requestPrompt);
+if (count($memoryNames) > 1) {
+    $request .= "\nThese names refer to this same character: " . implode(', ', $memoryNames) . ".";
+}
 
 if (!empty($previous))
     $prompt[] = ['role' => 'user', 'content' => "# Previous Context History Summary:\n$previous"];

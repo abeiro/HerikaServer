@@ -190,6 +190,8 @@ function chimNpcManagerCard(array $row, array $profileMap): array
         'refid_source' => (string)($metadata['refid_source'] ?? ''),
         'profile_sharing' => [
             'linked' => !empty($row['profile_owner_npc_id']) || chimNpcManagerBool($row['_has_shared_profile'] ?? false),
+            'automatic' => !empty($metadata['_chim_auto_link_group']),
+            'auto_link_disabled' => !empty($metadata['_chim_auto_link_disabled']),
             'owner_id' => (int)($row['profile_owner_npc_id'] ?? $row['id']),
         ],
         'source_mod' => (string)($mods[0] ?? ''),

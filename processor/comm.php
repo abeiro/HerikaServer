@@ -1744,15 +1744,23 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
 
         $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extended);
 
+        // Persist the validated physical reference before linking known quest versions.
+        // Reload after linking so autofill and subsequent work use the kept profile and current binding.
+        if ($npcMaster->updateByArray($currentNpcData) === false) {
+            throw new RuntimeException('NPC registration changed; retry with current actor identity');
+        }
+        if (chimNpcAutoLinkProfile($currentNpcData)) {
+            $currentNpcData = $npcMaster->getById((int)$currentNpcData['id']);
+        }
+
         if (!empty($GLOBALS['AUTOFILL_CUSTOM_PROFILES'])) {
             require_once $GLOBALS["ENGINE_PATH"] . "ui" . DIRECTORY_SEPARATOR . "cmd" . DIRECTORY_SEPARATOR . "ai_profile_generation_service.php";
             if (!aiProfileHasMeaningfulAutofillData($currentNpcData)) {
                 $trigger = intval($GLOBALS['AUTOFILL_CUSTOM_PROFILES_TRIGGER'] ?? 20);
                 $currentNpcData = aiProfileMarkPendingAutofill($currentNpcData, $npcMaster, $trigger);
+                $npcMaster->updateByArray($currentNpcData);
             }
         }
-
-        $npcMaster->updateByArray($currentNpcData);
 
         $profile = new CoreProfile();
         $profData = json_decode($profile->getById($currentNpcData["profile_id"])["metadata"], true);

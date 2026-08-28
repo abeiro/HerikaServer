@@ -1,8 +1,10 @@
-// Manual, reversible merge of two same-name NPC profiles.
+// Reversible profile sharing for NPC rows that are one character.
 //
-// Every step is explicit: the operator picks one other profile, compares the fields that will be
-// replaced, chooses which profile is kept, and confirms the two actors are the same character.
-// Nothing is matched automatically. Both physical actor cards survive a merge; Unlink reverses it.
+// This dialog only ever creates manual pairs, and every step is explicit: the operator picks one
+// other same-name profile, compares the fields that will be replaced, chooses which profile is
+// kept, and confirms the two actors are the same character. A group may instead have been linked
+// automatically by the server; the shared panel says so and Unlink reverses either kind. All
+// physical actor rows survive, and Unlink separates every actor in the group at once.
 (function () {
     'use strict';
 
@@ -21,6 +23,10 @@
     const selectPanel = byId('npc_merge_select_panel');
     const comparePanel = byId('npc_merge_compare_panel');
     const sharedList = byId('npc_merge_shared_list');
+    const sharedKind = byId('npc_merge_shared_kind');
+    const unlinkWarn = byId('npc_merge_unlink_warn');
+    const unlinkConfirmLabel = byId('npc_merge_unlink_confirm_label');
+    const autoNote = byId('npc_merge_auto_note');
     const candidateList = byId('npc_merge_candidates');
     const compareGrid = byId('npc_merge_compare');
     const unlinkConfirm = byId('npc_merge_unlink_confirm');
@@ -175,6 +181,11 @@
         compareGrid.replaceChildren();
         unlinkConfirm.checked = false;
         unlinkConfirm.disabled = false;
+        autoNote.textContent = '';
+        autoNote.hidden = true;
+        sharedKind.textContent = '';
+        sharedKind.hidden = true;
+        unlinkButton.textContent = 'Unlink shared profile';
         sameCharacter.checked = false;
         gate(compareButton, false);
         gate(submitButton, false);
@@ -262,8 +273,19 @@
         origin.classList.toggle('npc-merge-unknown', !originValue);
     }
 
+    // The automatic link for a group is switched off for good once it has been unlinked, so the
+    // note has to survive the row dropping back to the manual picker.
+    function renderAutoNote() {
+        const disabled = !!(state.sharing && state.sharing.auto_link_disabled);
+        autoNote.textContent = disabled
+            ? 'Automatic linking is switched off for this character for the rest of this playthrough. Same-name actors can still be merged by hand.'
+            : '';
+        autoNote.hidden = !disabled;
+    }
+
     function renderOverview() {
         renderCurrent();
+        renderAutoNote();
         if (state.sharing && state.sharing.linked) {
             renderShared();
             showPanel(sharedPanel);
@@ -273,10 +295,37 @@
         showPanel(selectPanel);
     }
 
+    // Members of an automatic group can carry different names, so the row is always labelled with
+    // the name the server reported for it rather than the name of the actor that opened the dialog.
     function renderShared() {
         const sharing = state.sharing || {};
         const members = Array.isArray(sharing.members) ? sharing.members : [];
         const ownerId = String(sharing.owner_id || '');
+        const automatic = !!sharing.automatic;
+        const owner = members.find((member) => String(member.id) === ownerId);
+        const ownerName = String((owner && owner.name) || '').trim();
+        const count = members.length;
+
+        sharedKind.textContent = automatic
+            ? 'Linked automatically. These references are known to be one character and use the kept profile below.'
+            : '';
+        sharedKind.hidden = !automatic;
+
+        const scope = count > 2
+            ? 'Unlinking separates all ' + count + ' actors in this group.'
+            : (count === 2 ? 'Unlinking separates both actors in this group.' : 'Unlinking separates every actor in this group.');
+        const keeper = ownerName ? 'The kept profile (' + ownerName + ')' : 'The kept profile';
+        const automaticTail = automatic
+            ? ' Automatic linking then stays off for this character for the rest of this playthrough, unless these rows are deleted.'
+            : '';
+        unlinkWarn.textContent = scope + ' Every other actor gets its own original character data back. '
+            + keeper + ' retains its current data, including memory written while shared. '
+            + 'That shared-period memory cannot be split apart again.' + automaticTail;
+        unlinkConfirmLabel.textContent = automatic
+            ? 'I understand that memory written while shared stays with the kept profile, and that this group will not be linked automatically again.'
+            : 'I understand that memory written while shared stays with the kept profile.';
+        unlinkButton.textContent = count > 2 ? 'Unlink all ' + count + ' actors' : 'Unlink shared profile';
+
         sharedList.replaceChildren();
         if (!members.length) {
             sharedList.appendChild(element('li', 'npc-merge-empty', 'No actors are listed for this shared profile.'));
@@ -510,12 +559,15 @@
 
     function unlinkProfile() {
         if (!state || !unlinkConfirm.checked) return;
+        const members = Array.isArray(state.sharing && state.sharing.members) ? state.sharing.members.length : 0;
         runAction({
             csrf_token: state.csrf,
             action: 'unlink',
             id: Number(state.rowId),
             revision: state.revision
-        }, 'Unlinking...', 'Profile unlinked. This actor uses its own profile again.');
+        }, 'Unlinking...', members > 2
+            ? 'Profiles unlinked. All ' + members + ' actors use their own profile again.'
+            : 'Profiles unlinked. Each actor uses its own profile again.');
     }
 
     // No polling: the list is refreshed once, after a successful merge or unlink.

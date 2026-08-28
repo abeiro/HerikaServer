@@ -15,6 +15,102 @@ const CHIM_SHARED_NPC_EXTENDED = [
     'background_life_last_updated', 'background_life_last_updated_presence_delta',
 ];
 
+// Administrative state survives imports, save rollback and load-order renumbering.
+const CHIM_NPC_PROFILE_METADATA_KEYS = [
+    '_chim_profile_epoch', '_chim_auto_link_group', '_chim_auto_link_disabled',
+];
+
+// Skyrim.esm ACHR (placed reference) IDs verified against the game records, not NPC_ base IDs.
+// Exclude flashbacks, summoned copies, the Emperor's decoy and DA05SindingGhost (Hircine).
+const CHIM_NPC_ALTERNATE_REFERENCES = [
+    'astrid' => ['0001BDE8', '0004D6D1'], // AstridRef, AstridEndRef
+    'cicero' => ['000550F1', '0001E64A', '0009BCB0'], // Road, sanctuary, Dawnstar
+    'erik' => ['000350B8', '000656E2'], // ErikRef, HirelingEriktheSlayerref
+    'ulfric' => ['0001B131', '000BE32B', '00053C66', '000EA584'], // Normal, battle, Sovngarde
+    'sinding' => ['0002ABBD', '0006C1B8'], // DA05SindingREF, DA05SindingHumanREF
+    'kodlak' => ['0001A68F', '000AD3A6', '000DCCC1', '00058300', '00098BD4'], // Living, dead, ghost, Sovngarde
+];
+
+// Names can differ (Erik the Slayer, translations); only exact originating references establish equivalence.
+function chimNpcAlternateGroup(array $row): ?string
+{
+    $source = chimParseNpcReferenceSource(chimNpcProfileJson($row['metadata'] ?? null)['refid_source'] ?? '');
+    if (!$source || strcasecmp($source['plugin_name'], 'Skyrim.esm') !== 0) { return null; }
+    foreach (CHIM_NPC_ALTERNATE_REFERENCES as $group => $references) {
+        if (in_array($source['local_formid'], $references, true)) { return $group; }
+    }
+    return null;
+}
+
+// Registration-only, database-only linking. Existing groups keep their owner; otherwise the oldest row wins.
+function chimNpcAutoLinkProfile(array $actor): bool
+{
+    $group = chimNpcAlternateGroup($actor);
+    if ($group === null || (int)$actor['id'] <= 1) { return false; }
+    $db = $GLOBALS['db'];
+    $sources = implode(',', array_map(
+        static fn($ref) => "'skyrim.esm|" . strtolower($ref) . "'", CHIM_NPC_ALTERNATE_REFERENCES[$group]
+    ));
+    $query = "SELECT * FROM core_npc_master WHERE lower(metadata->>'refid_source') IN ({$sources}) ORDER BY id";
+    // Repeated registrations need no write lock, snapshots or epoch change once the group is settled.
+    $rows = $db->fetchAll($query);
+    $owners = array_unique(array_map(static fn($row) => (int)($row['profile_owner_npc_id'] ?? $row['id']), $rows));
+    foreach ($rows as $row) {
+        if (!empty(chimNpcProfileJson($row['metadata'])['_chim_auto_link_disabled'])) { return false; }
+    }
+    if (count($rows) < 2 || count($owners) === 1) { return false; }
+    if ($db->execQuery('BEGIN') === false) { throw new RuntimeException('Cannot begin automatic profile link'); }
+    try {
+        if ($db->execQuery('LOCK TABLE game_plugins, core_npc_master IN SHARE ROW EXCLUSIVE MODE') === false) {
+            throw new RuntimeException('Cannot lock automatic profile link');
+        }
+        $rows = $db->fetchAll($query);
+        $ids = array_map(static fn($row) => (int)$row['id'], $rows);
+        $existingOwners = [];
+        $seen = [];
+        $eligible = count($rows) >= 2 && in_array((int)$actor['id'], $ids, true);
+        foreach ($rows as $row) {
+            $metadata = chimNpcProfileJson($row['metadata']);
+            $source = chimParseNpcReferenceSource($metadata['refid_source'] ?? '');
+            $refid = NpcMaster::normalizeRefId($row['refid'] ?? '');
+            if ((int)$row['id'] <= 1 || !empty($metadata['_chim_auto_link_disabled']) || !$source ||
+                isset($seen[strtolower($source['stable_key'])]) || $refid === '' || str_starts_with($refid, 'FF') ||
+                !chimStableFormReferenceEquals($source['stable_key'], chimConvertRuntimeFormIdToStableReference($refid))) {
+                $eligible = false;
+                break;
+            }
+            $seen[strtolower($source['stable_key'])] = true;
+            if (!empty($row['profile_owner_npc_id'])) { $existingOwners[(int)$row['profile_owner_npc_id']] = true; }
+            foreach (chimNpcProfileMembers($row) as $member) {
+                if (!in_array((int)$member['id'], $ids, true)) { $eligible = false; }
+            }
+        }
+        // Never join conflicting manually kept profiles or pull an unrelated actor into an automatic group.
+        if (!$eligible || count($existingOwners) > 1) { $db->execQuery('ROLLBACK'); return false; }
+        $ownerId = $existingOwners ? (int)array_key_first($existingOwners) : $ids[0];
+        $changed = array_filter($rows, static fn($row) =>
+            (int)($row['profile_owner_npc_id'] ?? $row['id']) !== $ownerId);
+        if (!$changed) { $db->execQuery('ROLLBACK'); return false; }
+        $manager = new NpcMaster();
+        foreach ($rows as $row) {
+            if ($manager->backupNpcById($row['id']) === false) { throw new RuntimeException('Cannot preserve original profiles'); }
+        }
+        $epoch = bin2hex(random_bytes(16));
+        $idList = implode(',', $ids);
+        if ($db->execQuery("UPDATE core_npc_master SET
+            profile_owner_npc_id = CASE WHEN id = {$ownerId} THEN NULL ELSE {$ownerId} END,
+            metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object(
+                '_chim_profile_epoch', '{$epoch}', '_chim_auto_link_group', '{$group}')
+            WHERE id IN ({$idList})") === false || $db->execQuery('COMMIT') === false) {
+            throw new RuntimeException('Cannot automatically link profiles');
+        }
+        return true;
+    } catch (Throwable $error) {
+        $db->execQuery('ROLLBACK');
+        throw $error;
+    }
+}
+
 function chimNpcProfileJson($value): array
 {
     if (is_array($value)) { return $value; }
@@ -38,7 +134,8 @@ function chimNpcEffectiveProfile($actor)
     if (!$ownerId) { return $actor; }
     $owner = $GLOBALS['db']->fetchOne("SELECT * FROM core_npc_master WHERE id = {$ownerId}");
     if (!$owner || !empty($owner['profile_owner_npc_id']) ||
-        strcasecmp(trim($owner['npc_name']), trim($actor['npc_name'])) !== 0) {
+        (strcasecmp(trim($owner['npc_name']), trim($actor['npc_name'])) !== 0 &&
+            (chimNpcAlternateGroup($actor) === null || chimNpcAlternateGroup($actor) !== chimNpcAlternateGroup($owner)))) {
         throw new RuntimeException('Invalid shared NPC profile; unlink it before continuing');
     }
     foreach (CHIM_SHARED_NPC_FIELDS as $field) { $actor[$field] = $owner[$field] ?? null; }
@@ -75,6 +172,26 @@ function chimNpcProfileMembers(array $actor): array
     );
 }
 
+// Read name-scoped summaries across a verified linked name change, without absorbing unrelated namesakes.
+function chimNpcProfileMemoryNames(array $actor): array
+{
+    $names = [$actor['npc_name']];
+    $group = chimNpcAlternateGroup($actor);
+    if ($group === null) { return $names; }
+    $ownerId = (int)($actor['profile_owner_npc_id'] ?? $actor['id']);
+    foreach (chimNpcProfileMembers($actor) as $member) {
+        $name = $member['npc_name'];
+        if (in_array($name, $names, true) || strpbrk($name, '%_|') !== false ||
+            chimNpcAlternateGroup($member) !== $group) { continue; }
+        $escaped = $GLOBALS['db']->escape($name);
+        $unrelated = $GLOBALS['db']->fetchOne("SELECT id FROM core_npc_master
+            WHERE lower(btrim(npc_name)) = lower(btrim('{$escaped}'))
+            AND COALESCE(profile_owner_npc_id, id) <> {$ownerId} LIMIT 1");
+        if (!$unrelated) { $names[] = $name; }
+    }
+    return $names;
+}
+
 function chimNpcProfileIdentity(array $row): array
 {
     return [
@@ -87,8 +204,11 @@ function chimNpcProfileIdentity(array $row): array
 function chimNpcProfileSharing(array $row): array
 {
     $members = chimNpcProfileMembers($row);
+    $metadata = chimNpcProfileJson($row['metadata'] ?? null);
     return [
         'linked' => count($members) > 1,
+        'automatic' => count($members) > 1 && !empty($metadata['_chim_auto_link_group']),
+        'auto_link_disabled' => !empty($metadata['_chim_auto_link_disabled']),
         'owner_id' => (int)($row['profile_owner_npc_id'] ?? $row['id']),
         'members' => array_map('chimNpcProfileIdentity', $members),
     ];
@@ -162,14 +282,19 @@ function chimNpcUnlinkProfiles(int $id, string $revision): void
         $actor = (new NpcMaster())->getActorById($id);
         if (!$actor) { throw new InvalidArgumentException('NPC profile no longer exists'); }
         $members = chimNpcProfileMembers($actor);
-        if (count($members) !== 2) { throw new InvalidArgumentException('This profile is not shared'); }
+        if (count($members) < 2) { throw new InvalidArgumentException('This profile is not shared'); }
         if (!hash_equals(chimNpcProfileRevision($members), $revision)) {
             throw new UnexpectedValueException('Profiles changed. Review the unlink again.');
         }
         $ids = implode(',', array_map(static fn($row) => (int)$row['id'], $members));
         $epoch = bin2hex(random_bytes(16));
+        // Opt out the whole known group, including alternate versions not encountered yet.
+        $disableIds = implode(',', array_map(static fn($row) => (int)$row['id'],
+            array_filter($members, static fn($row) => chimNpcAlternateGroup($row) !== null))) ?: '0';
         if ($db->execQuery("UPDATE core_npc_master SET profile_owner_npc_id = NULL,
-            metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{_chim_profile_epoch}', '\"{$epoch}\"'::jsonb)
+            metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb) - '_chim_auto_link_group',
+                '{_chim_profile_epoch}', '\"{$epoch}\"'::jsonb)
+                || CASE WHEN id IN ({$disableIds}) THEN '{\"_chim_auto_link_disabled\":true}'::jsonb ELSE '{}'::jsonb END
             WHERE id IN ({$ids})") === false || $db->execQuery('COMMIT') === false) {
             throw new RuntimeException('Cannot unlink profiles');
         }
@@ -247,6 +372,7 @@ function chimNpcRestoreSharedProfiles(NpcMaster $manager, $timestamp, bool $pres
             throw new RuntimeException('Cannot lock shared profile restore');
         }
         $rows = $db->fetchAll("SELECT * FROM core_npc_master c WHERE profile_owner_npc_id IS NOT NULL
+            OR metadata->>'_chim_auto_link_disabled' = 'true'
             OR EXISTS (SELECT 1 FROM core_npc_master child WHERE child.profile_owner_npc_id = c.id)");
         foreach ($rows as $row) {
             $id = (int)$row['id'];
