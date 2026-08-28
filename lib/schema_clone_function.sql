@@ -1,5 +1,5 @@
 -- Schema cloning function for fast playthrough snapshots
--- This function clones an entire PostgreSQL schema including tables, data, sequences, and views
+-- Clone tables, data, and sequences; the updater rebuilds public views after restore.
 -- Functions are created in chim_meta schema so they survive public schema drops
 
 CREATE SCHEMA IF NOT EXISTS chim_meta;
@@ -253,22 +253,8 @@ BEGIN
     -- the destination's owned sequences after defaults and ownership are fixed.
     PERFORM chim_meta.sync_schema_sequences(dest_schema);
 
-    -- Clone views (optional - captures query definitions)
-    FOR obj IN
-        SELECT table_name, view_definition 
-        FROM information_schema.views 
-        WHERE table_schema = source_schema
-    LOOP
-        BEGIN
-            -- Replace schema references in view definition
-            EXECUTE format('CREATE OR REPLACE VIEW %I.%I AS %s',
-                          dest_schema, obj.table_name, 
-                          replace(obj.view_definition, source_schema || '.', dest_schema || '.'));
-        EXCEPTION WHEN others THEN
-            -- Skip views that fail (e.g., complex views with dependencies)
-            RAISE NOTICE 'Could not clone view %: %', obj.table_name, SQLERRM;
-        END;
-    END LOOP;
+    -- Do not copy views: unqualified definitions can bind to the live public
+    -- tables instead of the snapshot. db_updates.php rebuilds views on restore.
     
     RAISE NOTICE 'Schema cloning complete: % -> %', source_schema, dest_schema;
 

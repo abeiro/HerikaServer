@@ -298,6 +298,16 @@ class RelationshipManager {
                 $storedType = 'neutral';
             }
             $rel['type'] = self::TYPE_ALIASES[$storedType] ?? $storedType;
+            if (array_key_exists('custom_info', $rel)) {
+                // AI paths normalize relationship maps before saving, so preserve
+                // player-authored text exactly. UI writers own input trimming.
+                $customInfo = is_scalar($rel['custom_info']) ? (string)$rel['custom_info'] : '';
+                if ($customInfo === '') {
+                    unset($rel['custom_info']);
+                } else {
+                    $rel['custom_info'] = $customInfo;
+                }
+            }
 
             if (!isset($normalized[$canonicalTarget])) {
                 $normalized[$canonicalTarget] = $rel;
@@ -308,11 +318,52 @@ class RelationshipManager {
             $existingWeight = self::relationshipDataWeight($existing);
             $incomingWeight = self::relationshipDataWeight($rel);
             if ($incomingWeight > $existingWeight) {
-                $normalized[$canonicalTarget] = $rel;
+                $preferred = $rel;
+                if (!empty($existing['custom_info'])) {
+                    $preferred['custom_info'] = $existing['custom_info'];
+                }
+                $normalized[$canonicalTarget] = $preferred;
+            } elseif (empty($existing['custom_info']) && !empty($rel['custom_info'])) {
+                $normalized[$canonicalTarget]['custom_info'] = $rel['custom_info'];
             }
         }
 
         return $normalized;
+    }
+
+    /**
+     * Merge model-produced relationships without changing player-authored Custom Info.
+     */
+    public static function mergeAiRelationshipMap($existingRelationships, $incomingRelationships, $replaceExisting = false) {
+        $existing = self::normalizeRelationshipMap($existingRelationships);
+        $incoming = self::normalizeRelationshipMap($incomingRelationships);
+        foreach ($incoming as &$relationship) {
+            unset($relationship['custom_info']);
+        }
+        unset($relationship);
+        $merged = $replaceExisting ? $incoming : $existing;
+
+        if (!$replaceExisting) {
+            foreach ($incoming as $target => $relationship) {
+                if (!isset($merged[$target])) {
+                    $merged[$target] = $relationship;
+                }
+            }
+        }
+
+        foreach ($existing as $target => $relationship) {
+            $customInfo = $relationship['custom_info'] ?? '';
+            if ($customInfo === '') {
+                continue;
+            }
+            if (!isset($merged[$target])) {
+                $merged[$target] = $relationship;
+                continue;
+            }
+            $merged[$target]['custom_info'] = $customInfo;
+        }
+
+        return $merged;
     }
 
     private static function relationshipDataWeight($rel) {

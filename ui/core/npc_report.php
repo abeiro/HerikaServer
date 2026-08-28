@@ -98,8 +98,6 @@ if ($npcData) {
         }
     }
 
-    $CLEAN_CONTEXT_FOCUS_CHAT = false;
-
     $COMMAND_PROMPT = '';
 
     $head = [];

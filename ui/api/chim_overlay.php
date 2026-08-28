@@ -49,8 +49,7 @@ $modeResult = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
 $currentMode = isset($modeResult['value']) ? strtoupper(trim($modeResult['value'])) : 'STANDARD';
 
 // Get Compact Chat setting
-$focusChatResult = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_context_mode'");
-$focusChat = isset($focusChatResult['value']) && $focusChatResult['value'] == '1';
+$compactChat = chimGetGeneralSettingBool('COMPACT_CHAT_ENABLED', true);
 
 // Get the global server-side rechat responder mode.
 $allowedRechatModes = ['tight', 'conversational', 'group', 'random'];
@@ -189,7 +188,7 @@ $response = [
     'data' => [
         'mode' => $currentMode,
         'player_name' => $playerName,
-        'focus_chat' => $focusChat,
+        'compact_chat' => $compactChat,
         'rechat_mode' => $rechatMode,
         'active_model_slot' => $activeModelSlot,
         'active_model_label' => $activeSlotLabel,

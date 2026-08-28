@@ -9,22 +9,30 @@ final class CompactNpcContextHistoryTest extends TestCase
     protected function tearDown(): void
     {
         unset(
-            $GLOBALS['FOCUS_CHAT_MODE'],
+            $GLOBALS['COMPACT_CHAT_ENABLED'],
             $GLOBALS['HERIKA_NAME']
         );
     }
 
-    public function testSettingIsDisabledByDefault(): void
+    public function testSettingIsEnabledByDefault(): void
     {
         $GLOBALS['HERIKA_NAME'] = 'Lucan Valerius';
 
-        $this->assertFalse(chimFocusChatContextEnabled());
-        $this->assertFalse(chimShouldCompactNpcContextHistory());
+        $this->assertTrue(chimCompactChatEnabled());
+        $this->assertTrue(chimShouldCompactNpcContextHistory());
+    }
+
+    public function testSettingCanBeDisabled(): void
+    {
+        $GLOBALS['COMPACT_CHAT_ENABLED'] = false;
+
+        $this->assertFalse(chimCompactChatEnabled());
+        $this->assertFalse(chimShouldCompactNpcContextHistory('Lucan Valerius'));
     }
 
     public function testNarratorIsExcludedWhenSettingIsEnabled(): void
     {
-        $GLOBALS['FOCUS_CHAT_MODE'] = true;
+        $GLOBALS['COMPACT_CHAT_ENABLED'] = true;
 
         $this->assertFalse(chimShouldCompactNpcContextHistory('The Narrator'));
         $this->assertTrue(chimShouldCompactNpcContextHistory('Lucan Valerius'));
@@ -120,6 +128,26 @@ final class CompactNpcContextHistoryTest extends TestCase
                 . "# After 11 hours, it is now Tirdas, 7:19 AM.\n"
                 . "# RANGROO, speaking to Hilde: hello",
             $result[0]['content']
+        );
+    }
+
+    public function testMarkdownHistoryUsesOneHeadingAndHyphenEntries(): void
+    {
+        $worldContext = [['role' => 'system', 'content' => "# Character\n\nLucan."]];
+        $history = chimFormatCompactNpcContextHistory([
+            ['role' => 'user', 'content' => 'RANGROO: Hello. (Talking to Lucan Valerius)'],
+            ['role' => 'assistant', 'content' => 'Hello! # Still part of the dialogue.'],
+        ], 'Lucan Valerius');
+        $expected = "# Conversation History\n\n- RANGROO, speaking to Lucan Valerius: Hello.\n"
+            . "- Lucan Valerius: Hello! # Still part of the dialogue.";
+
+        $result = chimAppendCompactHistoryToPrompt($worldContext, $history, true);
+        $this->assertSame([['role' => 'system', 'content' => "# Character\n\nLucan.\n\n" . $expected]], $result);
+        $this->assertSame([['role' => 'system', 'content' => $expected]], chimAppendCompactHistoryToPrompt([], $history, true));
+        $this->assertSame($worldContext, chimAppendCompactHistoryToPrompt($worldContext, '', true));
+        $this->assertSame(
+            chimAppendCompactHistoryToPrompt($worldContext, $history),
+            chimAppendCompactHistoryToPrompt($worldContext, $history, false)
         );
     }
 }

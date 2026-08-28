@@ -1928,6 +1928,7 @@ function getLocationsNearNpcCoords($npcName)
     $pointLiteral = '(' . $x . ',' . $y . ')';
     $pointEsc = $db->escape($pointLiteral);
     $worldEsc = $db->escape($lastCoords["world"] ?? '');
+    $currentLocationName = $lastCoords['location_name'] ?? '';
 
     // Abandoned Shack locations is bugged as is child of Batte-Born Farm.
     $closestLocations = $db->fetchAll(
@@ -1949,6 +1950,27 @@ function getLocationsNearNpcCoords($npcName)
          LIMIT 35"
     );
 
+    if ($currentLocationName) {
+        $currentLocationNameEsc = $db->escape($currentLocationName);
+        $closestLocationsByRegion = $db->fetchAll(
+            "SELECT
+                name as name,
+                formid,
+                region,
+                hold,
+                coords,
+                tags,
+                is_interior,
+                case when world in ('Skyrim','Whiterun','Windhelm','Riften','Markarth') then coords <-> '{$pointEsc}'::point  end as distance
+            FROM locations
+            WHERE coords IS NOT NULL
+            and name<>'Abandoned Shack'
+            and region IN ('{$currentLocationNameEsc}')
+            ORDER BY case when world = '{$worldEsc}' then coords <-> '{$pointEsc}'::point else (coords <-> '{$pointEsc}'::point) + 100000 end ASC
+            LIMIT 5"
+        );
+        $closestLocations=array_merge($closestLocations, $closestLocationsByRegion);
+    }
     $closestLocationsNames = [];
 
     foreach ($closestLocations as &$location) {

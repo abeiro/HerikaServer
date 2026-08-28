@@ -401,6 +401,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
             }
             $localLlmContextValue = $GLOBALS['db']->escapeLiteral($localLlmContextJson);
             $localLlmContextDescription = $GLOBALS['db']->escapeLiteral(chimGetSchemaDescription('PROMPT_CONTEXT_OPTIONS'));
+            $compactChatDescription = $GLOBALS['db']->escapeLiteral(chimGetSchemaDescription('COMPACT_CHAT_ENABLED'));
             $localLlmPresetSaved = $GLOBALS['db']->execQuery(
                 "WITH updated_profiles AS (
                     UPDATE core_profiles
@@ -424,13 +425,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
                         description = EXCLUDED.description,
                         updated_at = CURRENT_TIMESTAMP
                     RETURNING id
+                 ),
+                 updated_compact_chat AS (
+                    INSERT INTO public.general_settings (id, value, description, updated_at)
+                    VALUES ('COMPACT_CHAT_ENABLED', 'true', {$compactChatDescription}, CURRENT_TIMESTAMP)
+                    ON CONFLICT (id) DO UPDATE SET
+                        value = EXCLUDED.value,
+                        description = EXCLUDED.description,
+                        updated_at = CURRENT_TIMESTAMP
+                    RETURNING id
                  )
                  INSERT INTO conf_opts (id, value) VALUES
                     ('CONTEXT_HISTORY', '40'),
                     ('CONTEXT_HISTORY_DIARY', '40'),
                     ('CONTEXT_HISTORY_DYNAMIC_PROFILE', '30'),
-                    ('MAX_WORDS_LIMIT', '60'),
-                    ('chim_context_mode', '1')
+                    ('MAX_WORDS_LIMIT', '60')
                  ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value"
             );
             if ($localLlmPresetSaved === false) {

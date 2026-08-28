@@ -214,6 +214,7 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'CHIM_AI_QUEST_PROGRESSION',
             'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT',
             'PROMPT_TIMESTAMP',
+            'COMPACT_CHAT_ENABLED',
             'PROMPT_CONTEXT_OPTIONS',
             'RECHAT_MODE',
             'ENFORCE_STRICT_RECHAT_RESPONSE',
@@ -228,6 +229,7 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'RELATIONSHIP_UPDATE_CHANCE',
             'CORE_CONNECTOR_OGHMA_CUSTOM',
             'RELATIONSHIP_SYSTEM_ENABLED',
+            'NEVER_CLEAR_RELATIONSHIP_DATA',
             'SCENE_CLASSIFIER_ENABLED',
             'POWER_AWARENESS_ENABLED',
             'OGHMA_CUSTOM',
@@ -309,6 +311,7 @@ if (!function_exists('chimPrettySettingLabel')) {
             'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
             'RELLLM_CONNECTOR' => 'Relationship Management',
             'RELATIONSHIP_UPDATE_CHANCE' => 'Relationship Update Chance',
+            'NEVER_CLEAR_RELATIONSHIP_DATA' => 'Never Clear Relationship Data',
             'EMOTEMOODS' => 'Emote Moods',
             'OGHMA_INFINIUM' => 'Oghma Infinium',
             'OGHMA_AMOUNT' => 'Oghma Articles Amount',
@@ -387,6 +390,7 @@ if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
                 'POWER_AWARENESS_ENABLED',
                 'SCENE_CLASSIFIER_ENABLED',
                 'RELATIONSHIP_SYSTEM_ENABLED',
+                'NEVER_CLEAR_RELATIONSHIP_DATA',
             ], true)
         ) {
             return 'Context';
@@ -473,6 +477,9 @@ if (!function_exists('chimGetOverrideableGeneralSettingsCatalog')) {
         $catalog = [];
         foreach ($candidateIds as $id) {
             $definition = chimGetSchemaDefinition($id);
+            if (array_key_exists('profile_overrideable', $definition) && $definition['profile_overrideable'] === false) {
+                continue;
+            }
             $type = strtolower(trim(strval($definition['type'] ?? '')));
             if ($type === '') {
                 $currentValue = strval($rowMap[$id]['value'] ?? '');
