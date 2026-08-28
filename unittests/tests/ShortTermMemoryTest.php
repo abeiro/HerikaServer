@@ -276,4 +276,76 @@ final class ShortTermMemoryTest extends TestCase
 
         unset($GLOBALS['SHORT_TERM_MEMORY_IN_COMPACT_CHAT']);
     }
+
+    public function testAttachStripsTheInternalStampWhenShortTermMemoryIsSkipped(): void
+    {
+        $window = [
+            ['role' => 'user', 'content' => 'a', '_g' => 100],
+            ['role' => 'user', 'content' => 'b', '_g' => 200],
+        ];
+
+        $out = chimAttachShortTermMemoryToWindow($window, 'AttachSkippedNpc', '', false);
+
+        $this->assertCount(2, $out);
+        $this->assertSame([], $this->db->queries);
+        $this->assertSame('a', $out[0]['content']);
+        foreach ($out as $entry) {
+            $this->assertArrayNotHasKey('_g', $entry);
+        }
+    }
+
+    public function testAttachLeavesEntriesWithoutAStampAlone(): void
+    {
+        $out = chimAttachShortTermMemoryToWindow(
+            [['role' => 'user', 'content' => 'x']],
+            'AttachPlainNpc',
+            '',
+            false
+        );
+
+        $this->assertSame([['role' => 'user', 'content' => 'x']], $out);
+    }
+
+    public function testAttachPrependsSummariesAndCropsCoveredWindowEntries(): void
+    {
+        $GLOBALS['CONTEXT_WINDOW_FLOOR'] = 500;
+        $this->db->summaryRows = [
+            $this->summaryRow(600, 'newer scene'),
+            $this->summaryRow(400, 'older scene'),
+        ];
+
+        $window = [
+            ['role' => 'user', 'content' => 'inside the straddler', '_g' => 550],
+            ['role' => 'user', 'content' => 'after the straddler',  '_g' => 700],
+        ];
+
+        $out = chimAttachShortTermMemoryToWindow($window, 'AttachCropNpc', '', true);
+
+        // Newest summary (600) reaches into the window (floor 500), so the crop is 600.
+        $this->assertSame(600, intval($GLOBALS['STM_CROP_GAMETS']));
+
+        $contents = array_column($out, 'content');
+        $this->assertStringContainsString('older scene', $contents[0]);
+        $this->assertStringContainsString('newer scene', $contents[1]);
+        $this->assertSame('after the straddler', $contents[2]);
+        $this->assertNotContains('inside the straddler', $contents);
+
+        foreach ($out as $entry) {
+            $this->assertArrayNotHasKey('_g', $entry);
+        }
+    }
+
+    public function testAttachLeavesTheWindowIntactWhenNoSummaryReachesIt(): void
+    {
+        $GLOBALS['CONTEXT_WINDOW_FLOOR'] = 900;
+        $this->db->summaryRows = [$this->summaryRow(300, 'long ago')];
+
+        $window = [['role' => 'user', 'content' => 'recent', '_g' => 950]];
+
+        $out = chimAttachShortTermMemoryToWindow($window, 'AttachNoCropNpc', '', true);
+
+        $this->assertSame(0, intval($GLOBALS['STM_CROP_GAMETS']));
+        $this->assertCount(2, $out);
+        $this->assertSame('recent', $out[1]['content']);
+    }
 }

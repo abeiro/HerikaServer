@@ -2047,24 +2047,13 @@ if (!is_array($contextDataHistoric)) {
 // summaries up to the one straddling that floor; if one straddles, the window is cropped to start
 // just after it, so nothing is present twice. One continuous timeline:
 // world -> STM summaries (older, summarised) -> verbatim window (recent) -> cue.
-if ($GLOBALS["HERIKA_NAME"] !== "The Narrator"
-    && (!chimCompactChatEnabled() || chimShortTermMemoryInCompactChatEnabled())) {
-    $contextDataSTM = DataShortTermMemoryFor($GLOBALS["HERIKA_NAME"], $sqlfilter);
-    if (!empty($contextDataSTM)) {
-        if (!empty($GLOBALS["STM_CROP_GAMETS"])) {
-            $stmCropBoundary = intval($GLOBALS["STM_CROP_GAMETS"]);
-            $contextDataHistoric = array_values(array_filter($contextDataHistoric, function($e) use ($stmCropBoundary) {
-                return !is_array($e) || empty($e['_g']) || intval($e['_g']) > $stmCropBoundary;
-            }));
-        }
-        $contextDataHistoric = array_merge($contextDataSTM, $contextDataHistoric);
-    }
-}
-
-// STM: strip the internal '_g' timestamp from every history entry before it reaches the LLM.
-foreach ($contextDataHistoric as $__k => $__e) {
-    if (is_array($__e) && array_key_exists('_g', $__e)) unset($contextDataHistoric[$__k]['_g']);
-}
+$contextDataHistoric = chimAttachShortTermMemoryToWindow(
+    $contextDataHistoric,
+    $GLOBALS["HERIKA_NAME"],
+    $sqlfilter,
+    $GLOBALS["HERIKA_NAME"] !== "The Narrator"
+        && (!chimCompactChatEnabled() || chimShortTermMemoryInCompactChatEnabled())
+);
 
 // Info about location and npcs in first position
 // Check $nearbySections
