@@ -1904,7 +1904,9 @@ if ($gameRequest[0] != "diary" && $gameRequest[0] != "cheatmode") {
             Logger::info("Added physical presence to event people for {$gameRequest[0]}: " . $requestPresentPeople);
         }
 
-        if (in_array($gameRequest[0], $turnPeopleSnapshotEventTypes, true)) {
+        // Rechat replies inherit the server-resolved audience, not a client snapshot.
+        if (in_array($gameRequest[0], $turnPeopleSnapshotEventTypes, true) ||
+            ($gameRequest[0] === "rechat" && $resolvedRechatPeople !== "")) {
             chimSetCurrentTurnPeopleSnapshot($eventPeople);
         }
 
