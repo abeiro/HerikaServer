@@ -12,8 +12,8 @@
 //      Uses the plugin-provided reduced routing radius and private server context.
 //
 // * Close (CLOSE)
-//      Uses the plugin-provided 200-unit private routing scope. Only the player
-//      and resolved responder are admitted to the conversation context.
+//      Uses the plugin-provided audible audience within 200 units of the player
+//      (100 while sneaking). Selecting a responder does not exclude nearby hearers.
 //
 // * Narrator (NARRATOR)
 //      Routes player speech privately to The Narrator only, using narrator_inputtext semantics.
@@ -103,7 +103,7 @@ if ($EXECUTION_MODE=="STANDARD") {
     // Routing distance is request-local and supplied by the CHIM plugin.
 
 } else if ($EXECUTION_MODE=="CLOSE") {
-    // Routing distance and private audience are supplied by the CHIM plugin.
+    // Routing distance and the nearby group audience are supplied by the CHIM plugin.
 
 } else if ($EXECUTION_MODE=="NARRATOR") {
     if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"], true)) {

@@ -11,6 +11,31 @@ final class PlayerPresenceSnapshotTest extends TestCase
     {
         unset($GLOBALS['CHIM_TURN_PRESENT_ACTORS_SNAPSHOT']);
         unset($GLOBALS['PLAYER_TTS_SOURCE_TEXT']);
+        unset($GLOBALS['CHIM_TURN_PEOPLE_SNAPSHOT']);
+    }
+
+    public function testCloseAllowsGroupRechatWithoutNarratorInterjections(): void
+    {
+        $this->assertTrue(chimExecutionModeAllowsRechatEvent('CLOSE', 'rechat'));
+        $this->assertFalse(chimExecutionModeAllowsRechatEvent('CLOSE', 'narration'));
+        $this->assertFalse(chimExecutionModeAllowsRechatEvent('WHISPER', 'rechat'));
+        $this->assertFalse(chimExecutionModeAllowsRechatEvent('WHISPER', 'narration'));
+        $this->assertTrue(chimExecutionModeAllowsRechatEvent('STANDARD', 'rechat'));
+        $this->assertTrue(chimExecutionModeAllowsRechatEvent('STANDARD', 'narration'));
+    }
+
+    public function testCloseGroupSnapshotSurvivesDirectedReplies(): void
+    {
+        $snapshot = chimDecodePlayerRoutingSnapshotField(base64_encode((string)json_encode([
+            'source' => 'plugin_player_routing_v2',
+            'companions' => ['Lydia', 'Alvor', 'Gerdur', 'RANGROO'],
+        ])));
+        chimSetCurrentTurnPeopleSnapshot($snapshot['audience']);
+
+        $this->assertSame(
+            '|Lydia|Alvor|Gerdur|RANGROO|',
+            chimBuildDialogueEventPeoplePipe(chimGetCurrentTurnPeopleSnapshot(), 'Lydia', 'RANGROO')
+        );
     }
 
     public function testPresenceIsDecodedSeparatelyFromManagedAudience(): void
