@@ -47,6 +47,12 @@ function chimPrismaGlobalSettingsSections(): array
                 'default' => 7,
                 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.',
             ],
+            [
+                'name' => 'SHORT_TERM_MEMORY_IN_COMPACT_CHAT',
+                'type' => 'boolean',
+                'default' => true,
+                'help' => 'Keep injecting short-term memory summaries while Compact Chat is active. Turn this off if you use Compact Chat to keep the prompt small. Has no effect on profiles that do not have Short Term Memory enabled.',
+            ],
             ['name' => 'NEVER_CLEAR_RELATIONSHIP_DATA', 'type' => 'boolean', 'default' => false],
         ],
         'Misc' => [
@@ -140,6 +146,8 @@ function chimPrismaProfileMetadataCatalog(): array
             ['name' => 'DYNAMIC_PROFILE_ENABLED', 'type' => 'boolean'],
             ['name' => 'DYNAMIC_PROFILE_FIELDS', 'type' => 'multiselect', 'schema' => 'DYNAMIC_PROFILE_FIELDS'],
             ['name' => 'MIDDLE_TERM_MEMORY_ENABLED', 'type' => 'boolean'],
+            ['name' => 'SHORT_TERM_MEMORY_ENABLED', 'type' => 'boolean'],
+            ['name' => 'SHORT_TERM_MEMORY_MAX', 'type' => 'integer', 'min' => 1, 'max' => 50],
             ['name' => 'CONTEXT_HISTORY_DYNAMIC_PROFILE', 'type' => 'integer', 'min' => 0, 'max' => 400],
             ['name' => 'RPG_COMMENTS', 'type' => 'multiselect', 'schema' => 'RPG_COMMENTS'],
             ['name' => 'RPG_COMMENTS_CHANCE', 'type' => 'integer', 'min' => 0, 'max' => 100],

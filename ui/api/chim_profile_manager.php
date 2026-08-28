@@ -50,7 +50,7 @@ function chimProfileManagerLabel(string $name): string
 {
     $custom = [
         'DYNAMIC_PROFILE_ENABLED' => 'Dynamic Profile', 'DYNAMIC_PROFILE_FIELDS' => 'Dynamic Profile Fields',
-        'MIDDLE_TERM_MEMORY_ENABLED' => 'Middle Term Memory', 'AUTO_DIARY_ENABLED' => 'Auto Diary',
+        'MIDDLE_TERM_MEMORY_ENABLED' => 'Middle Term Memory', 'SHORT_TERM_MEMORY_ENABLED' => 'Short Term Memory', 'SHORT_TERM_MEMORY_MAX' => 'Short Term Memory Max', 'AUTO_DIARY_ENABLED' => 'Auto Diary',
         'AUTO_DIARY_WAIT_ENABLED' => 'Auto Diary Wait', 'MATERIALIZE_DIARY_ENABLED' => 'Physical In-game Diary',
         'LATEST_DIARY_CONTEXT_ENABLED' => 'Include Latest Diary Entry', 'LLM_RANDOMIZER_ENABLED' => 'Random LLM Selection',
         'LLM_FALLBACK_ENABLED' => 'Fallback LLM', 'RECHAT_H' => 'Rechat Probability',

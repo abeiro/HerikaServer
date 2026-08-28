@@ -1993,6 +1993,7 @@ $ittById = $byId($ittRows);
 
         $dynamicProfileEnabled = !empty($profileMetadata['DYNAMIC_PROFILE_ENABLED']);
         $mtmEnabled = !empty($profileMetadata['MIDDLE_TERM_MEMORY_ENABLED']);
+        $stmEnabled = !empty($profileMetadata['SHORT_TERM_MEMORY_ENABLED']);
         $autoDiaryEnabled = !empty($profileMetadata['AUTO_DIARY_ENABLED']);
         $autoDiaryWaitEnabled = !empty($profileMetadata['AUTO_DIARY_WAIT_ENABLED']);
         $physicalDiaryEnabled = !empty($profileMetadata['MATERIALIZE_DIARY_ENABLED']);
@@ -2012,6 +2013,7 @@ $ittById = $byId($ittRows);
                 'cards' => [
                     ['key' => 'DYNAMIC_PROFILE_ENABLED', 'icon' => '&#x267B;&#xFE0F;', 'title' => 'Dynamic Profile', 'enabled' => $dynamicProfileEnabled, 'short' => 'Allow gameplay events to evolve NPC profiles.', 'help' => 'Allow systems to evolve NPC profiles based on gameplay events. NPCs using this profile will have dynamic profile enabled by default.'],
                     ['key' => 'MIDDLE_TERM_MEMORY_ENABLED', 'icon' => '&#x1F4C3;', 'title' => 'Middle Term Memory', 'enabled' => $mtmEnabled, 'short' => 'Include periodic middle-term memory summaries.', 'help' => 'Saves a list of recent events after every 10 memory summaries. NPCs using this profile will have MTM enabled by default.'],
+                    ['key' => 'SHORT_TERM_MEMORY_ENABLED', 'icon' => '&#x1F5C2;&#xFE0F;', 'title' => 'Short Term Memory', 'enabled' => $stmEnabled, 'short' => 'Fill the gap between middle-term memory and recent dialogue.', 'help' => 'Injects the scene summaries an NPC has lived through but can no longer see - newer than its middle-term memory digest, older than the recent dialogue it still remembers word for word. The recent-dialogue window is shortened to match, so nothing appears twice.'],
                 ],
             ],
             [
@@ -2686,7 +2688,7 @@ $ittById = $byId($ittRows);
 
     <script>
     document.addEventListener('DOMContentLoaded', function(){
-        const names = ['default_npc','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]','meta_vis[MATERIALIZE_DIARY_ENABLED]','meta_vis[LATEST_DIARY_CONTEXT_ENABLED]'];
+        const names = ['default_npc','meta_vis[LLM_RANDOMIZER_ENABLED]','meta_vis[LLM_FALLBACK_ENABLED]','meta_vis[DYNAMIC_PROFILE_ENABLED]','meta_vis[MIDDLE_TERM_MEMORY_ENABLED]','meta_vis[SHORT_TERM_MEMORY_ENABLED]','meta_vis[AUTO_DIARY_ENABLED]','meta_vis[AUTO_DIARY_WAIT_ENABLED]','meta_vis[MATERIALIZE_DIARY_ENABLED]','meta_vis[LATEST_DIARY_CONTEXT_ENABLED]'];
         names.forEach(n=>{
             const cb = document.querySelector(`input[type="checkbox"][name="${n}"]`);
             if (!cb) return;
@@ -2902,6 +2904,39 @@ const saveAllBtn = document.getElementById('btn_save_all');
             </div>
         </div>
         <?php endif; ?>
+        <div class="provider-card">
+            <div class="provider-head">
+                <div class="provider-title">
+                    <div class="provider-icon">&#x1F5C2;&#xFE0F;</div>
+                    <div>Short Term Memory</div>
+                </div>
+            </div>
+            <div class="provider-body" style="display:block;">
+                <?php
+                    $stmMax = 10;
+                    try {
+                        if (!empty($editItem["metadata"])) {
+                            $tmpMetaStm = json_decode($editItem["metadata"], true);
+                            if (is_array($tmpMetaStm) && isset($tmpMetaStm['SHORT_TERM_MEMORY_MAX'])) {
+                                $stmMax = intval($tmpMetaStm['SHORT_TERM_MEMORY_MAX']);
+                            }
+                        }
+                    } catch (Throwable $_e) { $stmMax = 10; }
+                ?>
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-key"><span class="setting-icon">&#x1F5C2;&#xFE0F;</span><span>Max Summaries</span></div>
+                        <div class="setting-desc">How many past-scene summaries may be injected in one response. Higher = deeper memory and more tokens. Only used when Short Term Memory is enabled above.</div>
+                    </div>
+                    <div class="setting-control">
+                        <div class="range-pair">
+                            <input type="range" id="stm_max_range" min="1" max="50" step="1" value="<?= htmlspecialchars($stmMax) ?>" oninput="document.getElementById('stm_max_num').value=this.value">
+                            <input type="number" id="stm_max_num" name="meta_vis[SHORT_TERM_MEMORY_MAX]" min="1" max="50" step="1" value="<?= htmlspecialchars($stmMax) ?>" oninput="metaClamp('stm_max_range','stm_max_num',1,50)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         </div>
         
         <?php include(__DIR__."/tmpl/metadata_json_editor.php");?>
@@ -2947,7 +2982,7 @@ const saveAllBtn = document.getElementById('btn_save_all');
                 'mode' => 'profile',
                 'fieldName' => 'metadata',
                 'settingsCatalog' => $profileOverrideCatalog,
-                'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'AUTO_DIARY_ENABLED', 'AUTO_DIARY_WAIT_ENABLED', 'MATERIALIZE_DIARY_ENABLED', 'LATEST_DIARY_CONTEXT_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
+                'reservedKeys' => ['DYNAMIC_PROFILE_ENABLED', 'MIDDLE_TERM_MEMORY_ENABLED', 'SHORT_TERM_MEMORY_ENABLED', 'SHORT_TERM_MEMORY_MAX', 'AUTO_DIARY_ENABLED', 'AUTO_DIARY_WAIT_ENABLED', 'MATERIALIZE_DIARY_ENABLED', 'LATEST_DIARY_CONTEXT_ENABLED', 'LLM_RANDOMIZER_ENABLED', 'RPG_COMMENTS', 'RPG_COMMENTS_CHANCE', 'DYNAMIC_PROFILE_FIELDS'],
                 'currentData' => $currentProfileOverrides,
                 'systemFields' => [],
             ];

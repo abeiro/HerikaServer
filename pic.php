@@ -28,18 +28,29 @@ require_once $enginePath . "lib/core/core_profiles.class.php";
 require_once $enginePath . "lib/core/llm_connector.class.php";
 require_once $enginePath . "lib/core/tts_connector.class.php";
 
+header('Content-Type: application/json');
+
+function chimPortraitResponse(bool $ok, string $message, int $status)
+{
+    http_response_code($status);
+    echo json_encode(['ok' => $ok, 'message' => $message]);
+    exit;
+}
+
+if (empty($_FILES["file"]["tmp_name"])) {
+    Logger::error("ITT error, no data given: ".print_r($_POST,true));
+    chimPortraitResponse(false, 'No portrait image was uploaded.', 400);
+}
+
 if (isset($_GET["format"]) && $_GET["format"]=="png")
     $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_img_".md5($_FILES["file"]["tmp_name"]).".png";
 else
     $finalName=__DIR__.DIRECTORY_SEPARATOR."soundcache/_img_".md5($_FILES["file"]["tmp_name"]).".bmp";
 
-
-if (!$_FILES["file"]["tmp_name"]) {
-    Logger::error("ITT error, no data given: ".print_r($_POST,true));
-    die("ITT error, no data given");
-    
+if (!@copy($_FILES["file"]["tmp_name"], $finalName)) {
+    Logger::error("Unable to stage uploaded portrait image at {$finalName}");
+    chimPortraitResponse(false, 'Unable to stage the portrait image.', 500);
 }
-@copy($_FILES["file"]["tmp_name"] ,$finalName);
 
 
 
@@ -121,21 +132,33 @@ else
 
 
 Logger::info("Saving $finalName to $finalNameJpeg");
-convertImage($finalName,$finalNameJpeg,9);
+if (!convertImage($finalName,$finalNameJpeg,9)) {
+    @unlink($finalName);
+    Logger::error("Unable to convert uploaded portrait image {$finalName}");
+    chimPortraitResponse(false, 'Unable to convert the portrait image.', 422);
+}
 @unlink($finalName);
 
 $npcMaster=new npcMaster();
-$npcData=$npcMaster->getByName($_GET["fg"]);
+$npcName=trim((string)($_GET["fg"] ?? ''));
+$npcData=$npcName !== '' ? $npcMaster->getByName($npcName) : null;
 if (!$npcData) {
-    Logger::error("Noc NPC provided <{$_GET["fg"]}>");    
-    die();
+    Logger::error("No NPC profile found for portrait target <{$npcName}>");
+    chimPortraitResponse(false, 'No matching NPC profile was found.', 404);
 }
 
-@mkdir("{$GLOBALS["ENGINE_PATH"]}/data/pictures/profile/",0777,true);
-@copy($finalNameJpeg,"{$GLOBALS["ENGINE_PATH"]}/data/pictures/profile/{$npcData["refid"]}.jpg");
-@copy($finalNameJpeg,"{$GLOBALS["ENGINE_PATH"]}/data/pictures/gallery/{$npcData["refid"]}.jpg");
+$profileDirectory="{$GLOBALS["ENGINE_PATH"]}/data/pictures/profile/";
+$galleryDirectory="{$GLOBALS["ENGINE_PATH"]}/data/pictures/gallery/";
+@mkdir($profileDirectory,0777,true);
+@mkdir($galleryDirectory,0777,true);
+$profileSaved=@copy($finalNameJpeg,"{$profileDirectory}{$npcData["refid"]}.jpg");
+$gallerySaved=@copy($finalNameJpeg,"{$galleryDirectory}{$npcData["refid"]}.jpg");
+if (!$profileSaved || !$gallerySaved) {
+    Logger::error("Unable to persist portrait for NPC <{$npcName}> refid <{$npcData["refid"]}>");
+    chimPortraitResponse(false, 'Unable to save the NPC portrait.', 500);
+}
 
- 
+chimPortraitResponse(true, 'NPC portrait updated.', 200);
 
 
 ?>
