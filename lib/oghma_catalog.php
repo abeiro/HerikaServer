@@ -39,14 +39,20 @@ final class ChimOghmaCatalogManager
     }
 
     /** Make the validated checked-in dataset the complete factory projection in one transaction. */
-    public function synchronize(string $packagePath, bool $restoreHidden = false): array
+    public function synchronize(string $packagePath, bool $restoreHidden = false, bool $upgradeSchema = false): array
     {
         $package = $this->loadPackage($packagePath);
         $catalogVersion = $package['catalog_version'];
         $entries = $package['articles'];
 
         $result = [];
-        $this->transaction(function () use ($package, $catalogVersion, $entries, $restoreHidden, &$result): void {
+        $this->transaction(function () use ($package, $catalogVersion, $entries, $restoreHidden, $upgradeSchema, &$result): void {
+            if ($upgradeSchema) {
+                $schema = $this->readUtf8File(
+                    __DIR__ . '/core/database_schema/oghma_catalog.sql', 64 * 1024, 'Oghma schema'
+                );
+                $this->execute($schema);
+            }
             $this->execute('LOCK TABLE public.oghma_catalogs, public.oghma_catalog_entries, public.oghma_factory_overrides, public.oghma IN SHARE ROW EXCLUSIVE MODE');
             $restoredHidden = 0;
             if ($restoreHidden) {
@@ -178,9 +184,9 @@ final class ChimOghmaCatalogManager
         return $result;
     }
 
-    public function provisionActivePackage(bool $restoreHidden = false): array
+    public function provisionActivePackage(bool $restoreHidden = false, bool $upgradeSchema = false): array
     {
-        return $this->synchronize($this->activePackagePath(), $restoreHidden);
+        return $this->synchronize($this->activePackagePath(), $restoreHidden, $upgradeSchema);
     }
 
     public function status(): array
@@ -413,13 +419,4 @@ final class ChimOghmaCatalogManager
         return str_starts_with($value, "\xEF\xBB\xBF") ? substr($value, 3) : $value;
     }
 
-    private function packageSummary(array $package): array
-    {
-        return [
-            'catalog_version' => $package['catalog_version'],
-            'row_count' => count($package['articles']),
-            'articles_sha256' => $package['articles_sha256'],
-            'manifest_sha256' => $package['manifest_sha256'],
-        ];
-    }
 }

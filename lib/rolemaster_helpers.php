@@ -312,10 +312,8 @@ function checkHistory($npc)
             $place = "";
         }
 
-        if (strpos($element["speaker"], $npc) !== false)
-            ; // Only NPC lines
+        if (strpos($element["speaker"], $npc) !== false); // Only NPC lines
         $n++;
-
     }
 
     return $n;
@@ -323,6 +321,9 @@ function checkHistory($npc)
 
 function askLLMForTopic($npc, $topic, $last_llm_call)
 {
+    if (function_exists('chimIsGlobalLlmConnectorEnabled') && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+        return ["res" => false, "missing" => "disabled"];
+    }
 
     $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
@@ -358,10 +359,8 @@ function askLLMForTopic($npc, $topic, $last_llm_call)
             $place = "";
         }
 
-        if (strpos($element["speaker"], $npc) !== false)
-            ; // Only NPC lines
+        if (strpos($element["speaker"], $npc) !== false); // Only NPC lines
         $historyData .= trim("{$element["speaker"]}:" . trim($element["speech"]) . " $listener $place") . PHP_EOL;
-
     }
 
     $partyConf = DataGetCurrentPartyConf();
@@ -392,19 +391,18 @@ function askLLMForTopic($npc, $topic, $last_llm_call)
         if (isset($parsedbuffer[0]["score"])) {
             $score = $parsedbuffer[0]["score"];
             $hint = $parsedbuffer[0]["hint"];
-        } else if (isset($parsedbuffer["score"])){
+        } else if (isset($parsedbuffer["score"])) {
             $score = $parsedbuffer["score"];
             $hint = $parsedbuffer["hint"];
         } else {
             error_log("Score not found in parsed buffer: " . print_r($parsedbuffer, true));
         }
-        
+
         if ($score >= 6) {
             $res = true;
         }
 
         $buffer = $hint;
-
     } else {
         if (preg_match('/Score:\s*(\d+)\//i', $buffer, $matches)) {
             // Extracted score is in $matches[1]
@@ -432,7 +430,6 @@ function askLLMForTopic($npc, $topic, $last_llm_call)
 
     //$res=true;
     return ["res" => $res, "missing" => $buffer];
-
 }
 
 function simpleTopicCheck($npc, $topic)
@@ -461,10 +458,8 @@ function simpleTopicCheck($npc, $topic)
             $place = "";
         }
 
-        if (strpos($element["speaker"], $npc) !== false)
-            ; // Only NPC lines
+        if (strpos($element["speaker"], $npc) !== false); // Only NPC lines
         $historyData .= trim("{$element["speaker"]}:" . trim($element["speech"]) . " $listener $place") . PHP_EOL;
-
     }
 
     if (strpos($historyData, $topic) !== false) {
@@ -472,7 +467,6 @@ function simpleTopicCheck($npc, $topic)
     } else {
         return false;
     }
-
 }
 
 function testSpawnRandomNPC()
@@ -554,14 +548,13 @@ function testSpawnRandomNPC()
     Logger::debug("$name,$class,$race,$gender");
     npcProfileBase($name, $class, $race, $gender, "nearby", "test");
     return $name;
-
 }
 
 // Will use references from locations table (mainly markers) to get more precise location for placing things  or NPCs, 
 // 
 function getLocationReferences($locationFormId)
 {
-    $parm4=$locationFormId;
+    $parm4 = $locationFormId;
     $dbDestination = $GLOBALS["db"]->fetchOne("SELECT refs,name FROM locations where formid=$locationFormId");
     if ($dbDestination) {
         if ($dbDestination["refs"] != "") {
@@ -604,7 +597,6 @@ function getLocationReferences($locationFormId)
                     $unsignedInt -= 0x100000000;
                 }
                 $parm4 = $unsignedInt;
-
             } elseif (!empty($candidates130fd)) {
                 $localItemPlaceHex = $candidates130fd[array_rand($candidates130fd)];
                 $unsignedInt = hexdec($localItemPlaceHex);
@@ -613,7 +605,6 @@ function getLocationReferences($locationFormId)
                     $unsignedInt -= 0x100000000;
                 }
                 $parm4 = $unsignedInt;
-
             } else {
                 $parm4 = $dbDestination["formid"];
             }
@@ -756,11 +747,9 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
             Logger::warn("[npcProfileBase] No active reference found for location '{$location}'");
         }
 
-        $locationRef=getLocationReferences($parm4);
-        if($locationRef)
-            $parm4=$locationRef;
-
-
+        $locationRef = getLocationReferences($parm4);
+        if ($locationRef)
+            $parm4 = $locationRef;
     } else {
         $parm4 = 0;
         $locationCn = $GLOBALS["db"]->escape($location);
@@ -780,14 +769,12 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
         } else {
             $patchedTaskid = $taskId;
         }
-
     } else if (isset($additionalData["disposition"])) {
         if (in_array($additionalData["disposition"], ["submissive"])) {
             $patchedTaskid = "2";
         } else {
             $patchedTaskid = $taskId;
         }
-
     }
 
     // SpawnAgent resolves CHIM-owned humanoid bases with GetFormFromFile,
@@ -824,7 +811,6 @@ function npcProfileBase($name, $class, $race, $gender, $location, $taskId, $addi
             ]
         );
     }
-
 }
 
 // basetype: note, book , or allowed $GLOBALS["item_types"] 
@@ -845,10 +831,15 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
     $localItemName = ($name);
     $localItemPlace = ($location);
 
-    $localItemType = quest_reference_pick_random($masterData, $basetype, 0);
-    if ($localItemType === 0) {
-        Logger::warn("[SkCreateItem] Aborting item spawn for '{$name}': no active quest_item_types entry for '{$basetype}'");
-        return;
+    // Note is hardcoded. 
+    // [warn] [SkCreateItem] Aborting item spawn for 'Faded Journal Page': no active quest_item_types entry for 'note'
+
+    if ($basetype != "note") {  
+        $localItemType = quest_reference_pick_random($masterData, $basetype, 0);
+        if ($localItemType === 0) {
+            Logger::warn("[SkCreateItem] Aborting item spawn for '{$name}': no active quest_item_types entry for '{$basetype}'");
+            return;
+        }
     }
 
     if ($localItemPlace == "nearby") {
@@ -863,7 +854,6 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
             $unsignedInt -= 0x100000000;
         }
         $localItemPlace = $unsignedInt;
-
     } else if (preg_match('/^[a-zA-Z0-9\s\'-]+:0x[0-9a-fA-F]+$/', $location)) {
         $localItemPlace = 0;
         list($itemName, $refidHex) = explode(":", $location);
@@ -873,7 +863,6 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
             $unsignedInt -= 0x100000000;
         }
         $localItemPlace = $unsignedInt;
-
     } else {
         if (!is_numeric($localItemPlace)) {
             // Cells
@@ -885,20 +874,21 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
                 // Location
                 $dbDestination = $GLOBALS["db"]->fetchOne("SELECT refs,name, similarity(name, '$locationCn') AS sim,formid FROM locations ORDER BY sim DESC LIMIT 1");
                 if ($dbDestination) {
-                    $localItemPlace=$dbDestination["formid"];
-                    $locationRef=getLocationReferences($localItemPlace);
-                    if($locationRef)
-                        $localItemPlace=$locationRef; 
-                        
+                    $localItemPlace = $dbDestination["formid"];
+                    $locationRef = getLocationReferences($localItemPlace);
+                    if ($locationRef)
+                        $localItemPlace = $locationRef;
                 }
             }
-
-        } else {
-            ; // ref is gonna be an NPC
+        } else {; // ref is gonna be an NPC
         }
     }
 
     if ($basetype == "note" || $basetype == "book") {
+        if (function_exists('chimIsGlobalLlmConnectorEnabled') && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+            Logger::debug('SkCreateItem: book generation skipped because Background & Memory Tasks are disabled globally');
+            return false;
+        }
 
         // Generate content for the book/note
         $connector = new LLMConnector();
@@ -907,13 +897,24 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
 
         $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
         $questData = json_decode(file_get_contents($enginePath . "log" . DIRECTORY_SEPARATOR . "snqe_state.json"), true);
-        $questData["nextlist"]= $questData["nextlist"]?? [];
+        $questData["journallist"] = $questData["journallist"] ?? [];
+        $questData["nextlist"] = $questData["nextlist"] ?? [];
+        $playerNameCn=$GLOBALS["db"]->escape($GLOBALS["PLAYER_NAME"]);
+        $diaryRows = $GLOBALS["db"]->fetchOne("SELECT * FROM \"public\".\"diarylog\" where people='$playerNameCn' order by gamets desc limit 1");
+        if ($diaryRows) {
+            $lastDiaryEntry = "{$GLOBALS["PLAYER_NAME"]}'s last diary entry: " . $diaryRows["content"];
+        } else {
+            $lastDiaryEntry = "";
+        }   
         $CONTEXT_INFO_SKYRIM_LORE = "
-        == Quest Data ==
+Player Character: {$GLOBALS["PLAYER_NAME"]}
+$lastDiaryEntry
+== Quest Data ==
 {$questData["questtitle"]}
 {$questData["briefing"]}
     
 Quest Journal:
+" . implode("\n", $questData["journallist"]) . "
 " . implode("\n", $questData["nextlist"]) . "
 == End of Quest Data ==
 
@@ -956,12 +957,18 @@ Read the quest context above and write the content of the in-game book/note titl
 - Do not resolve the mystery completely—only provide hints.
 - Keep everything grounded in the provided quest context.
 
+### Main purpose.
+
+- The book/note should provide **clues, foreshadowing, or context** for the quest, enhancing immersion and player engagement.
+- Please, at least ONE CONCRETE CLUE for the player to investigate (Character, location or item) - highlight this clue in uppercase -
+- Other clues can be subtle, atmospheric, or thematic, but must not give away the quest's resolution.
+
 "
         ];
 
         $contextData = array_merge($head, $prompt);
         $connectionHandler = $connector->getConnector($currentConnectorData);
-        $buffer = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "temperature" => 0.7, "model" => "google/gemini-2.5-flash-lite"], 'rolemaster_helper_bookwriter');
+        $buffer = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "temperature" => 1, "model" => "google/gemini-3.5-flash-lite"], 'rolemaster_helper_bookwriter');
 
         createBook($name, $buffer, $location, $quest_id, $npc_ref);
         return;
@@ -981,7 +988,6 @@ Read the quest context above and write the content of the in-game book/note titl
             'tag' => "",
         ]
     );
-
 }
 
 function CreateItemNpc($basetype, $name, $npc)
@@ -1010,7 +1016,6 @@ function CreateItemNpc($basetype, $name, $npc)
             'tag' => "",
         ]
     );
-
 }
 
 function createQuestFromTemplate($template, $notes)
@@ -1030,7 +1035,7 @@ function createQuestFromTemplate($template, $notes)
     $prompt[] = [
         "role" => "user",
         "content" =>
-            "Change this quest's characters and topics and title, but keep same stage structure. Characters must adhere to the definition of createCharacter. $notes. Output only JSON data",
+        "Change this quest's characters and topics and title, but keep same stage structure. Characters must adhere to the definition of createCharacter. $notes. Output only JSON data",
     ];
     $contextData = array_merge($head, $prompt);
 
@@ -1065,11 +1070,9 @@ function createQuestFromTemplate($template, $notes)
 
     if (is_array($parsedbuffer)) {
         return $parsedbuffer;
-
     } else {
         return false;
     }
-
 }
 
 function createBook($title, $content, $location, $quest_id, $npc_ref = null)
@@ -1096,7 +1099,6 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
             $unsignedInt -= 0x100000000;
         }
         $localItemPlace = $unsignedInt;
-
     } else if (preg_match('/^[a-zA-Z0-9\s\'-]+:0x[0-9a-fA-F]+$/', $localItemPlace)) {
         $localItemPlace = 0;
         list($itemName, $refidHex) = explode(":", $localItemPlace);
@@ -1106,7 +1108,6 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
             $unsignedInt -= 0x100000000;
         }
         $localItemPlace = $unsignedInt;
-
     } else {
         if (!is_numeric($localItemPlace)) {
             $locationCn = $GLOBALS["db"]->escape($location);
@@ -1152,7 +1153,6 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
                             $unsignedInt -= 0x100000000;
                         }
                         $localItemPlace = $unsignedInt;
-
                     } elseif (!empty($candidates130fd)) {
                         $localItemPlaceHex = $candidates130fd[array_rand($candidates130fd)];
                         $unsignedInt = hexdec($localItemPlaceHex);
@@ -1161,16 +1161,13 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
                             $unsignedInt -= 0x100000000;
                         }
                         $localItemPlace = $unsignedInt;
-
                     } else {
                         $localItemPlace = $dbDestination["formid"];
-                }
+                    }
                 } else
                     $localItemPlace = $dbDestination["formid"];
             }
-
-        } else {
-            ; // ref is gonna be an NPC
+        } else {; // ref is gonna be an NPC
         }
     }
 
@@ -1189,6 +1186,18 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
             'tag' => "",
         ]
     );
+    // This will force DLL plugin to download
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|generateLetter@$name",
+            'tag' => "",
+        ]
+    );
 
     $GLOBALS["db"]->insert(
         'books',
@@ -1201,8 +1210,6 @@ function createBook($title, $content, $location, $quest_id, $npc_ref = null)
             'title' => $title
         )
     );
-
-
 }
 
 function createLetter($title, $content)
@@ -1324,7 +1331,6 @@ function createLetter($title, $content)
     imagedestroy($background);
 
     echo "Image saved as $filename" . PHP_EOL;
-
 }
 
 function make_replacements($text)
@@ -1343,7 +1349,6 @@ function convertSignedToUnsignedHex($signedInt)
     // Convert signed to unsigned using bitwise AND
     $unsignedInt = $signedInt & 0xFFFFFFFF;
     return "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
-
 }
 
 function convertHex($signedInt)
@@ -1351,7 +1356,6 @@ function convertHex($signedInt)
     // Convert signed to unsigned using bitwise AND
     $unsignedInt = $signedInt;
     return "0x" . str_pad(dechex($unsignedInt), 8, "0", STR_PAD_LEFT);
-
 }
 
 function SkTopicCheck($character, $topic, $lastCall, $retries, $quest_id)
@@ -1390,7 +1394,6 @@ function SkTopicCheck($character, $topic, $lastCall, $retries, $quest_id)
 
         if ($topiCall["res"]) {
             return TOPIC_COVERED;
-
         } else {
             // Make suggestion, topic not covered
             $sugggestionText = make_replacements("$character must talk to #PLAYER# about something like: $topic. but using own words and speech style, and following current dialogue context. If topic already said, rephrase and just follow up");
@@ -1417,7 +1420,6 @@ function SkTopicCheck($character, $topic, $lastCall, $retries, $quest_id)
                 error_log("[SkTopicCheck] WILL_DO_LATER <$topic> <{$character}>");
                 return WILL_DO_LATER;
             }
-
         }
     } else {
         error_log("[SkTopicCheck]\tNot enough dialogue with NPC <$topic> <{$character}> n:{$contextDataHistoric}");
@@ -1438,7 +1440,6 @@ function SkTopicCheck($character, $topic, $lastCall, $retries, $quest_id)
                 ]
             );
             error_log("[SkTopicCheck]\tTopic enforced <$topic> <{$character}>");
-
         }
         return TOPIC_TOOEARLY;
     }
@@ -1658,7 +1659,6 @@ function getSpeechStyleText($race, $class)
     if (!empty($style['examples']) && is_array($style['examples'])) {
 
         $text .= PHP_EOL . " \"" . implode("\",\"", $style['examples']) . "\"";
-
     }
 
     return $text;
@@ -1750,7 +1750,8 @@ function getRandomSpeechFillers(
 }
 
 
-function getQuestDataTxt($quest_data) {
+function getQuestDataTxt($quest_data)
+{
 
     if (empty($quest_data) || !is_array($quest_data)) {
         return null;
@@ -1842,15 +1843,20 @@ function getQuestDataTxt($quest_data) {
     return PHP_EOL . implode(PHP_EOL, $lines) . PHP_EOL;
 }
 
-function enhanceProfileUsingQuestData($quest_data,$npc) {
+function enhanceProfileUsingQuestData($quest_data, $npc)
+{
+    if (function_exists('chimIsGlobalLlmConnectorEnabled') && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+        Logger::debug('enhanceProfileUsingQuestData: skipped because Background & Memory Tasks are disabled globally');
+        return;
+    }
 
-    $questDataTxt= getQuestDataTxt($quest_data);
+    $questDataTxt = getQuestDataTxt($quest_data);
     $questData = json_decode(file_get_contents($GLOBALS["ENGINE_PATH"] . "log" . DIRECTORY_SEPARATOR . "snqe_state.json"), true);
 
-    $questTitle=$questData["questtitle"] ?? "Unknown Quest";
-    $questBriefing=$questData["briefing"] ?? "Unknown Quest";
-    $quest1stStep=$questData["nextlist"][0] ?? "Unknown Quest Step";
-    $lorePrompt ="
+    $questTitle = $questData["questtitle"] ?? "Unknown Quest";
+    $questBriefing = $questData["briefing"] ?? "Unknown Quest";
+    $quest1stStep = $questData["nextlist"][0] ?? "Unknown Quest Step";
+    $lorePrompt = "
 
 Title: {$questTitle}
 
@@ -1869,7 +1875,7 @@ Reason for involvement – Explain why she/he is involved in this quest and what
 Knowledge about the quest – Describe what she/he actually knows about the quest. Avoid mention what she/he doesn't know
 ";
 
- // Generate content for the book/note
+    // Generate content for the book/note
     $connector = new LLMConnector();
     $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
     $connector->setOldGlobals($currentConnectorData);
@@ -1883,14 +1889,14 @@ Knowledge about the quest – Describe what she/he actually knows about the ques
     $connectionHandler = $connector->getConnector($currentConnectorData);
     $buffer = $connectionHandler->fast_request($contextData, ["MAX_TOKENS" => 2048, "temperature" => 0.7, "model" => "google/gemini-2.5-flash-lite"], 'rolemaster_helper_bookwriter');
 
-    $npcmaster=new NpcMaster();
-    $npcProfile=$npcmaster->getByName($npc['name']);
-    $npcProfile["npc_static_bio"].="\n$buffer";
+    $npcmaster = new NpcMaster();
+    $npcProfile = $npcmaster->getByName($npc['name']);
+    $npcProfile["npc_static_bio"] .= "\n$buffer";
     $npcmaster->updateByArray($npcProfile);
-
 }
 
-function getLocationsNearNpcCoords($npcName) {
+function getLocationsNearNpcCoords($npcName)
+{
 
     $npcMaster = new NpcMaster();
     $npcData = $npcMaster->getByName($npcName);
@@ -1933,6 +1939,7 @@ function getLocationsNearNpcCoords($npcName) {
     $pointLiteral = '(' . $x . ',' . $y . ')';
     $pointEsc = $db->escape($pointLiteral);
     $worldEsc = $db->escape($lastCoords["world"] ?? '');
+    $currentLocationName = $lastCoords['location_name'] ?? '';
 
     // Abandoned Shack locations is bugged as is child of Batte-Born Farm.
     $closestLocations = $db->fetchAll(
@@ -1954,27 +1961,46 @@ function getLocationsNearNpcCoords($npcName) {
          LIMIT 35"
     );
 
-    $closestLocationsNames=[];
+    if ($currentLocationName) {
+        $currentLocationNameEsc = $db->escape($currentLocationName);
+        $closestLocationsByRegion = $db->fetchAll(
+            "SELECT
+                name as name,
+                formid,
+                region,
+                hold,
+                coords,
+                tags,
+                is_interior,
+                case when world in ('Skyrim','Whiterun','Windhelm','Riften','Markarth') then coords <-> '{$pointEsc}'::point  end as distance
+            FROM locations
+            WHERE coords IS NOT NULL
+            and name<>'Abandoned Shack'
+            and region IN ('{$currentLocationNameEsc}')
+            ORDER BY case when world = '{$worldEsc}' then coords <-> '{$pointEsc}'::point else (coords <-> '{$pointEsc}'::point) + 100000 end ASC
+            LIMIT 5"
+        );
+        $closestLocations=array_merge($closestLocations, $closestLocationsByRegion);
+    }
+    $closestLocationsNames = [];
 
     foreach ($closestLocations as &$location) {
         //$key=$location['name'].' '.$location['distance'];
-        $key=$location['name'];
-        if (checkInterior($location['is_interior'])) {// If any reference is interior, we append "(Interior)" to the name for clarity and duplicate the entry.
+        $key = $location['name'];
+        if (checkInterior($location['is_interior'])) { // If any reference is interior, we append "(Interior)" to the name for clarity and duplicate the entry.
             $key .= ' (Interior)';
             if ($location['tags'])
-                $label=" \"$key\" ({$location['tags']})";
+                $label = " \"$key\" ({$location['tags']})";
             else
-                $label=" \"$key\"";
+                $label = " \"$key\"";
             $closestLocationsNames[$key] = $label;
         }
         if ($location['tags'])
-            $label=" \"$key\" ({$location['tags']})";
+            $label = " \"$key\" ({$location['tags']})";
         else
-            $label=" \"$key\"";
+            $label = " \"$key\"";
         $closestLocationsNames[$key] = $label;
     }
 
     return is_array($closestLocationsNames) ? $closestLocationsNames : [];
-
-
 }

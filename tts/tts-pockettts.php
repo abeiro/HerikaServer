@@ -286,6 +286,8 @@ function pockettts_settings($settings,$resetAfter=false) {
 	}
 }
 
+// Player and NPC voices can load different providers in the same request.
+if (!function_exists('num2kan_decimal')) {
 // convert numbers into Japanese kanji
 function num2kan_decimal($instr) {
     // Check if the input is exactly 0. Return katakana zero in that case.
@@ -322,6 +324,7 @@ function num2kan_decimal($instr) {
 	}
 
 	return $outstr;
+}
 }
 
 require_once dirname(__FILE__) . DIRECTORY_SEPARATOR . "audiofilterd_client.php";
@@ -450,6 +453,8 @@ $GLOBALS["TTS_IN_USE"]=function($textString, $mood , $stringforhash) {
 		$isAudioCpp = pockettts_is_audio_cpp($endpoint);
 		if ($isAudioCpp) {
 			$FFMPEG_FILTER='-filter:a "atrim=start=0.3,asetpts=PTS-STARTPTS"';
+			//$FFMPEG_FILTER='-filter:a "atempo=0.8"';
+			$FFMPEG_FILTER='';
 		}
 
 

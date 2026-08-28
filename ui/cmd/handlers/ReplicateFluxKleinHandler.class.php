@@ -88,7 +88,7 @@ class ReplicateFluxKleinHandler {
             $descriptionResult = $this->describeSourcePicture($imageData['path']);
             if ($descriptionResult['status'] === 'success') {
                 $enhancedPrompt = "Core features: " . $descriptionResult['description'] . "\n\n" . 
-                "Instruction: Convert reference image to a realistic style, using the core features described above as a guide.".
+                "Instruction: Convert image1 to a realistic style,8k masterpiece, Reimagine the whole picture, while preserving details like , skin color, eye color, hair style, hair color, clothing, make-up , body proportions and environment.".
                 ($prompt?"\n\nAdditional notes by human user: $prompt":"");
             }
         }

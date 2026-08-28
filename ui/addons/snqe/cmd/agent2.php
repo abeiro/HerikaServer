@@ -8,6 +8,12 @@ chimRuntimeBootstrap($enginePath, [
     'load_narrator' => true,
 ]);
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+    http_response_code(409);
+    echo json_encode(['error' => 'Background & Memory Tasks are turned off in Global Settings.']);
+    exit;
+}
+
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
@@ -39,7 +45,7 @@ $spawnedItemArray = $formInput["spawneditemslist"];
 foreach ($spawnedItemArray as $n => $itemName) {
     $cn = $GLOBALS["db"]->escape($itemName);
     $rows = $GLOBALS["db"]->fetchAll("select count(*) as n from eventlog where type='itemfound' and data like '%$cn%'");
-    if ($rows && $rows[0]["n"]) {
+    if ($rows && $rows[0]["n"]>0) {
         $spawnedItemArray[$n] = "$itemName (already recovered)";
     } else {
         continue;
@@ -184,7 +190,7 @@ $result = [
     'lastJournalEntry' => $formInput["lastJournalEntry"]
 ];
 //  Include corrected errors in the result
-$result["errors"] = $corrected_errors;
+// $result["errors"] = $corrected_errors;
 
 try {
     // The AI-generated code contains a line like: $quest_id = "merchant_request";

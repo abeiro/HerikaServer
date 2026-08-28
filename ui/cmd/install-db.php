@@ -75,17 +75,6 @@ if (file_exists($coreActionSeedFile) && trim(strval(file_get_contents($coreActio
 
 echo "Import completed.\n";
 
-require($enginePath . '/debug/db_updates.php');
-require_once($enginePath . '/lib/database/MigrationRunner.php');
-$runner = \HerikaServer\Database\MigrationRunner::connect($enginePath);
-$runner->repairLegacyBaseline();
-$runner->migrate();
-$migrationProblems = $runner->verify();
-if ($migrationProblems !== []) {
-    throw new RuntimeException("Database verification failed after installation:\n- " . implode("\n- ", $migrationProblems));
-}
-echo "Database schema migrations applied and verified.\n";
-
 
 
 ?>

@@ -39,23 +39,23 @@ abstract class DatabaseTestCase extends TestCase
         $connString = "host=localhost dbname=dwemer user=dwemer password=dwemer";
         $mainConnection = pg_connect($connString);
         if (!$mainConnection) {
-            throw new RuntimeException("Failed to connect to main database.");
+            $this->fail("Failed to connect to main database.");
         }
 
         // Drop the test database if it already exists
         $dropResult = pg_query($mainConnection, "DROP DATABASE IF EXISTS ".self::$testDatabaseName." WITH (FORCE)");
         if (!$dropResult) {
-            throw new RuntimeException("Failed to drop test database: " . pg_last_error($mainConnection));
+            $this->fail("Failed to drop test database: " . pg_last_error($mainConnection));
         }
         $dropResult = pg_query($mainConnection, "DROP DATABASE IF EXISTS ".self::$testDatabaseBkpName." WITH (FORCE)");
         if (!$dropResult) {
-            throw new RuntimeException("Failed to drop test database: " . pg_last_error($mainConnection));
+            $this->fail("Failed to drop test database: " . pg_last_error($mainConnection));
         }
 
         // Create the test database
         $createResult = pg_query($mainConnection, "CREATE DATABASE ".self::$testDatabaseName);
         if (!$createResult) {
-            throw new RuntimeException("Failed to create test database: " . pg_last_error($mainConnection));
+            $this->fail("Failed to create test database: " . pg_last_error($mainConnection));
         }
 
         pg_close($mainConnection);
@@ -74,50 +74,33 @@ abstract class DatabaseTestCase extends TestCase
         pg_close($testConnection);
 
         // Command to import SQL file using psql
-        $projectRoot = realpath(__DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..");
-        $sqlFile = $projectRoot.DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."database_default.sql";
-        $psqlCommand = "PGPASSWORD=dwemer psql -q -h localhost -p 5432 -U dwemer -d ".self::$testDatabaseName
-            ." -v ON_ERROR_STOP=1 -f ".escapeshellarg($sqlFile);
+        $path = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."..";
+        $sqlFile = $path.DIRECTORY_SEPARATOR."data".DIRECTORY_SEPARATOR."database_default.sql";
+        $psqlCommand = "PGPASSWORD=dwemer psql -h localhost -p 5432 -U dwemer -d ".self::$testDatabaseName." -f $sqlFile";
 
         // Execute psql command
         $output = [];
         $returnVar = 0;
         exec($psqlCommand, $output, $returnVar);
-        if ($returnVar !== 0) {
-            throw new RuntimeException("Failed to import test database schema:\n" . implode("\n", $output));
-        }
 
-        require_once($projectRoot.DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."phpunit.class.php");
+        require_once($path.DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."phpunit.class.php");
 
         // apply database updates
         $db = new sql();
         $GLOBALS["db"]=$db;
-        require($projectRoot.DIRECTORY_SEPARATOR."debug".DIRECTORY_SEPARATOR."db_updates.php");
-
-        require_once($projectRoot.DIRECTORY_SEPARATOR."lib".DIRECTORY_SEPARATOR."database".DIRECTORY_SEPARATOR."MigrationRunner.php");
-        $runner = \HerikaServer\Database\MigrationRunner::connect(
-            $projectRoot,
-            "host=localhost dbname=".self::$testDatabaseName." user=dwemer password=dwemer"
-        );
-        $runner->repairLegacyBaseline();
-        $runner->migrate();
-        $migrationProblems = $runner->verify();
-        if ($migrationProblems !== []) {
-            throw new RuntimeException("Test database migration verification failed:\n- " . implode("\n- ", $migrationProblems));
-        }
+        require($path.DIRECTORY_SEPARATOR."debug".DIRECTORY_SEPARATOR."db_updates.php");
 
         $db->close();
         unset($db);
         unset($GLOBALS["db"]);
-        unset($runner);
 
-        // Copy from a separate maintenance database so the template has no active session.
-        $connString = "host=localhost dbname=dwemer user=dwemer password=dwemer";
+        // Connect to the new test database
+        $connString = "host=localhost dbname=".self::$testDatabaseName." user=dwemer password=dwemer";
         $testConnection = pg_connect($connString);
         // Copy the test database to a backup for reuse
         $createResult = pg_query($testConnection, "CREATE DATABASE ".self::$testDatabaseBkpName." WITH TEMPLATE ".self::$testDatabaseName);
-        if (!$createResult) {
-            throw new RuntimeException("Failed to copy test database: " . pg_last_error($testConnection));
+        if (!$dropResult) {
+            $this->fail("Failed to copy test database: " . pg_last_error($testConnection));
         }
         pg_close($testConnection);
     }

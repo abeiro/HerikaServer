@@ -37,6 +37,8 @@ $OGHMA_EXTRACTOR_TIMEOUT_MS=1500; //Hard timeout for the optional Oghma connecto
 $PLAYER_RESPEECH=true; //Use default diary connector AI to rewrite player speech. Currently only triggers when starting speech with **.
 $PLAYER_SPEECH_STYLE=""; //Instructions for how the player character speaks and communicates. Used as context when rewriting player dialogue.
 $PROMPT_TIMESTAMP=false; //Add rough timestamp subdividers to event context (e.g., 'Moments Ago', 'A while ago') to help the LLM understand temporal relationships.
+$PROMPT_HEAD_MARKDOWN_ENABLED=false; //Use Markdown headings instead of XML tags for all prompt sections.
+$COMPACT_CHAT_ENABLED=true; //Use compact text instead of separate messages for conversation history. Does not affect the Narrator.
 $use_emotions_expression = false; //Add emotions support. Changes the affect context/json object offered to LLM must be false by default.
 
 //[Advanced Configuration]
@@ -168,7 +170,17 @@ $CORE_CONNECTOR_MEDIUMTERM=4;
 $CORE_CONNECTOR_SCENECLASSIFIER=7; // Gemma 3N E4B
 $SCENE_CLASSIFIER_ENABLED=true; // Enable post-request scene tone/genre classification.
 $CORE_CONNECTOR_PROFILES=1;
+$CORE_CONNECTOR_BGL=1;
+
+// Availability switches for the global connector slots. Turning one off skips that
+// connector's tasks while its assignment, credentials, model and URL stay untouched.
+$CORE_CONNECTOR_SUMMARY_ENABLED=true;
+$CORE_CONNECTOR_MEDIUMTERM_ENABLED=true;
+$CORE_CONNECTOR_PROFILES_ENABLED=true;
+$CORE_CONNECTOR_DIRECTOR_ENABLED=true;
+$CORE_CONNECTOR_BGL_ENABLED=true;
 $RELLLM_CONNECTOR=5; // Relationship Management default (Mistral Small 3.2 24B)
+$RELATIONSHIP_UPDATE_CHANCE=50; // Percent chance (0-100) an eligible completed NPC response queues a Relationship Management evaluation. 0 disables automatic evaluations.
 
 ;
 //[AI/LLM Connectors]
@@ -593,7 +605,6 @@ $OGHMA_INFINIUM=true;
 
 $FEATURES["MISC"]["LIFE_LINK_PLUGIN"]=false; // WIP. Use life link plugin for dynamic profiles
 
-$BORED_EVENT_SERVERSIDE=false;
 $RECHAT_ALLOW_ACTIONS=false;
 $RECHAT_MODE='random'; // tight = listener-only, conversational = focused back-and-forth, group = rotate around nearby NPCs, random = roll one mode per chain
 $ENFORCE_STRICT_RECHAT_RESPONSE=false; // if true, rechat responders must address the previous speaker directly

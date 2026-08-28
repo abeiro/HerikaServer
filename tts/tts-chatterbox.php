@@ -1,42 +1,43 @@
 <?php
 
 
-function insertNoise($inputString, $noiseArray) {
-    // Split the string into words
-    $words = explode(' ', $inputString);
+if (!function_exists('insertNoise')) {
+	function insertNoise($inputString, $noiseArray) {
+		// Split the string into words
+		$words = explode(' ', $inputString);
 
-	if (!is_array($words))
-		return $inputString;
-    // Shuffle the noise array to ensure randomness
-    shuffle($noiseArray);
+		if (!is_array($words))
+			return $inputString;
+		// Shuffle the noise array to ensure randomness
+		shuffle($noiseArray);
 
-    // Calculate the number of insert positions (between words)
-    $numInsertPositions = count($words) - 1;
+		// Calculate the number of insert positions (between words)
+		$numInsertPositions = count($words) - 1;
 
-    // Ensure we don't have more noises than insert positions
-    $numNoises = min(count($noiseArray), $numInsertPositions);
+		// Ensure we don't have more noises than insert positions
+		$numNoises = min(count($noiseArray), $numInsertPositions);
 
-    // Get a random subset of the insert positions
-    $insertPositions = array_rand(array_fill(0, $numInsertPositions, 1), $numNoises);
+		// Get a random subset of the insert positions
+		$insertPositions = array_rand(array_fill(0, $numInsertPositions, 1), $numNoises);
 
-    // Ensure $insertPositions is an array even if there's only one position
-    if (!is_array($insertPositions)) {
-        $insertPositions = array($insertPositions);
-    }
+		// Ensure $insertPositions is an array even if there's only one position
+		if (!is_array($insertPositions)) {
+			$insertPositions = array($insertPositions);
+		}
 
-    // Sort insert positions in descending order to avoid shifting positions
-    rsort($insertPositions);
+		// Sort insert positions in descending order to avoid shifting positions
+		rsort($insertPositions);
 
-    // Insert the noise elements at the chosen positions
-    foreach ($insertPositions as $index => $pos) {
-        array_splice($words, $pos + 1, 0, $noiseArray[$index]);
-		break; //Comment  to more noise
-    }
+		// Insert the noise elements at the chosen positions
+		foreach ($insertPositions as $index => $pos) {
+			array_splice($words, $pos + 1, 0, $noiseArray[$index]);
+			break; //Comment  to more noise
+		}
 
-    // Join the words back into a string
-    return implode(' ', $words);
+		// Join the words back into a string
+		return implode(' ', $words);
+	}
 }
-
 if (!function_exists('normalize_endpoint_url')) {
     function normalize_endpoint_url($url) {
         // Remove trailing slashes
@@ -82,6 +83,8 @@ function chatterbox_settings($settings,$resetAfter=false) {
 	}
 }
 
+// Player and NPC voices can load different providers in the same request.
+if (!function_exists('num2kan_decimal')) {
 // convert numbers into Japanese kanji
 function num2kan_decimal($instr) {
     // Check if the input is exactly 0. Return katakana zero in that case.
@@ -118,6 +121,7 @@ function num2kan_decimal($instr) {
 	}
 
 	return $outstr;
+}
 }
 
 

@@ -8,6 +8,12 @@ chimRuntimeBootstrap($enginePath, [
     'load_narrator' => true,
 ]);
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_DIRECTOR')) {
+    http_response_code(409);
+    echo json_encode(['error' => 'Director Mode is turned off in Global Settings.']);
+    exit;
+}
+
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
@@ -26,7 +32,7 @@ require_once $enginePath . "lib/core/core_profiles.class.php";
 require_once $enginePath . "lib/core/llm_connector.class.php";
 
 $connector = new LLMConnector();
-$currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
+$currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_DIRECTOR"]);
 $connector->setOldGlobals($currentConnectorData);
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -81,7 +87,7 @@ $contextData = $prompt;
 
 $connectionHandler = $connector->getConnector($currentConnectorData);
 
-$MODEL = "google/gemini-3-flash-preview";
+$MODEL = "google/gemini-3.7-flash";
 //$MODEL = "nex-agi/deepseek-v3.1-nex-n1:free";
 
 $buffer = $connectionHandler->fast_request(
@@ -181,7 +187,7 @@ function validate_spawns($xmlString, $allowedRaces, $allowedClasses, $allowedLoc
 }
 
 // Validate spawned items
-function validate_spawned_items($xmlString, $allowedItemTypes, $allowedLocationList, $spawneditemslist = [], $allowedItemLocations = null)
+function validate_spawned_items($xmlString, $allowedItemTypes, $allowedLocationList, $spawneditemslist = [], $allowedItemLocations = null, $npclist = [])
 {
     // Check for both 'spawneditem' and standalone 'item' tags (not inside instructions)
     $spawnedItems = extract_all_tags($xmlString, 'spawneditem');
@@ -197,6 +203,22 @@ function validate_spawned_items($xmlString, $allowedItemTypes, $allowedLocationL
 
     // Normalize spawneditemslist to lowercase for case-insensitive comparison
     $spawnedItemsLower = array_map('strtolower', array_map('trim', $spawneditemslist ?? []));
+
+    // Extract all spawned NPC names for owner validation
+    $spawns = extract_all_tags($xmlString, 'spawn');
+    $spawnedNpcNames = [];
+    $spawnedNpcMap = [];
+    foreach ($spawns as $spawn) {
+        $name = extract_tag_content($spawn, 'name');
+        if ($name) {
+            $lowerName = strtolower(trim($name));
+            $spawnedNpcNames[] = $lowerName;
+            $spawnedNpcMap[$lowerName] = $spawn;
+        }
+    }
+
+    // Normalize npclist to lowercase for case-insensitive comparison
+    $npclistLower = array_map('strtolower', array_map('trim', $npclist ?? []));
 
     // Convert allowed locations to lowercase for case-insensitive comparison
     $allowedLocationsLower = array_map(function ($location) {
@@ -231,6 +253,23 @@ function validate_spawned_items($xmlString, $allowedItemTypes, $allowedLocationL
                 continue; // Valid reference format
             } else
                 $errors[] = "Item '$name': Invalid location '$location'. Allowed: " . implode(', ', [...$allowedLocationList, ...$allowedItemLocations ?? []]);
+        }
+
+        // Validate owner if present
+        $owner = extract_tag_content($item, 'owner');
+        if ($owner) {
+            $ownerLower = strtolower(trim($owner));
+            if (in_array($ownerLower, $npclistLower, true)) {
+                // Owner spawned in a previous session - no ordering constraint
+            } elseif (isset($spawnedNpcMap[$ownerLower])) {
+                $ownerSpawnPos = strpos($xmlString, $spawnedNpcMap[$ownerLower]);
+                $itemPos = strpos($xmlString, $item);
+                if ($ownerSpawnPos === false || $itemPos === false || $ownerSpawnPos > $itemPos) {
+                    $errors[] = "Item '$name': Owner '$owner' must be spawned before this item in the XML.";
+                }
+            } else {
+                $errors[] = "Item '$name': Owner '$owner' is not yet spawned or in the NPC list. Allowed NPCs: " . implode(', ', array_unique(array_merge($npclist, $spawnedNpcNames)));
+            }
         }
 
         // Check if item is already in spawneditemslist and add <spawned>true</spawned> if it is
@@ -406,7 +445,7 @@ while ($retryCount < $maxRetries && !$validationPassed) {
 
         // Reset patch items for this iteration
         $GLOBALS["PATCH_ITEMS"] = [];
-        $itemErrors = validate_spawned_items($xmlString, $allowedItemTypes, $allowedLocationList, $spawneditemslist ?? [], $allowedItemLocations);
+        $itemErrors = validate_spawned_items($xmlString, $allowedItemTypes, $allowedLocationList, $spawneditemslist ?? [], $allowedItemLocations, $npclist);
 
         // Apply item patches to the XML
         if (!empty($GLOBALS["PATCH_ITEMS"])) {
@@ -435,7 +474,7 @@ while ($retryCount < $maxRetries && !$validationPassed) {
             // Validation failed - retry if attempts remaining
             $result['validation']['errors'] = $allErrors;
             $retryCount++;
-
+            
             if ($retryCount < $maxRetries) {
                 // Build retry prompt with error feedback
                 $errorMessage = "The following validation errors occurred:\n\n";

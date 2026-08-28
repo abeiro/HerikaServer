@@ -6,6 +6,17 @@ require_once __DIR__ . '/../../lib/rolemaster_bored.php';
 
 final class RolemasterBoredRoutingTest extends TestCase
 {
+    public function testBoredEventChanceUsesZeroBasedPercentageBoundary(): void
+    {
+        $this->assertFalse(chimBoredEventChancePasses(0, 0));
+        $this->assertTrue(chimBoredEventChancePasses(35, 34));
+        $this->assertFalse(chimBoredEventChancePasses(35, 35));
+        $this->assertTrue(chimBoredEventChancePasses(100, 99));
+        $this->assertFalse(chimBoredEventChancePasses(100, 100));
+        $this->assertFalse(chimBoredEventChancePasses(-1, 0));
+        $this->assertTrue(chimBoredEventChancePasses(101, 99));
+    }
+
     public function testActorMapExcludesPlayerAndKeepsSeed(): void
     {
         $actors = chimRolemasterBoredActorMap(
@@ -56,6 +67,16 @@ final class RolemasterBoredRoutingTest extends TestCase
         $this->assertSame('', chimRolemasterBoredListenerRequirement('everyone', $actors));
     }
 
+    public function testDedicatedBoredSystemPromptDelegatesFinalDialogue(): void
+    {
+        $systemPrompt = chimRolemasterDefaultBoredSystemPrompt();
+
+        $this->assertStringContainsString('selected initiating actor', $systemPrompt);
+        $this->assertStringContainsString("actor's own model will produce the in-character response", $systemPrompt);
+        $this->assertStringNotContainsString('generate new content/events', $systemPrompt);
+        $this->assertStringNotContainsString('You are a game director', $systemPrompt);
+    }
+
     public function testBoredEventRulesRenderPromptManagerPlaceholders(): void
     {
         $actors = chimRolemasterBoredActorMap(
@@ -68,7 +89,8 @@ final class RolemasterBoredRoutingTest extends TestCase
             chimRolemasterDefaultBoredEventRules(),
             'Camilla Valerius',
             'RANGROO',
-            $actors
+            $actors,
+            "  ** Follow\n  ** Talk"
         );
 
         $this->assertStringContainsString(
@@ -80,6 +102,13 @@ final class RolemasterBoredRoutingTest extends TestCase
             $rules
         );
         $this->assertStringContainsString(
+            'does not need to introduce a new topic or advance the plot',
+            $rules
+        );
+        $this->assertStringContainsString('Prefer JustTalk', $rules);
+        $this->assertStringContainsString("  ** Follow\n  ** Talk", $rules);
+        $this->assertStringNotContainsString('override general Director', $rules);
+        $this->assertStringContainsString(
             'Camilla Valerius, Lucan Valerius',
             $rules
         );
@@ -90,6 +119,7 @@ final class RolemasterBoredRoutingTest extends TestCase
         $this->assertStringNotContainsString('{SEED_ACTOR_RULE}', $rules);
         $this->assertStringNotContainsString('{NEARBY_ACTORS}', $rules);
         $this->assertStringNotContainsString('{PLAYER_NAME}', $rules);
+        $this->assertStringNotContainsString('{FUNCTION_LIST}', $rules);
     }
 
     public function testBoredEventRulesAllowCustomPromptWithoutSeed(): void

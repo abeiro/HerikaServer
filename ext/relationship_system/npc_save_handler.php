@@ -28,6 +28,14 @@ if (isset($_POST['relationships_jsonb']) && $_POST['relationships_jsonb'] !== ''
     $relData = json_decode($relJsonbRaw, true);
 
     if (is_array($relData)) {
+        foreach ($relData as &$relationship) {
+            if (is_array($relationship) && array_key_exists('custom_info', $relationship)) {
+                $relationship['custom_info'] = is_scalar($relationship['custom_info'])
+                    ? trim((string)$relationship['custom_info'])
+                    : '';
+            }
+        }
+        unset($relationship);
         $relData = RelationshipManager::normalizeRelationshipMap($relData);
 
         // Get existing extended_data

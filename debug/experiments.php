@@ -116,7 +116,6 @@ if ($argv[1] == "1") {
         error_log("[DEBUG] Checking if MailerFly spawned: " . time() . PHP_EOL);
         $res = $GLOBALS["db"]->fetchOne("select count(*) as n from eventlog where type='status_msg' and data like '%spawned@MailerFly@%'");
         $spawned = $res["n"] > 0;
-
     }
 
     $npcMaster = new NpcMaster();
@@ -137,10 +136,10 @@ if ($argv[1] == "1") {
     $json = $skyrimCmd->Actor->RemoveFromAllFactions("0x{$npc["refid"]}");
     $skyrimCmd->send(cmd: $json);
 
-    $json = $skyrimCmd->Actor->AddToFaction("0x{$npc["refid"]}", "0x0001dd09");//WEPlayerFriend
+    $json = $skyrimCmd->Actor->AddToFaction("0x{$npc["refid"]}", "0x0001dd09"); //WEPlayerFriend
     $skyrimCmd->send(cmd: $json);
 
-    $json = $skyrimCmd->Actor->SetFactionRank("0x{$npc["refid"]}", "0x0001dd09", 1);//WEPlayerFriend
+    $json = $skyrimCmd->Actor->SetFactionRank("0x{$npc["refid"]}", "0x0001dd09", 1); //WEPlayerFriend
     $skyrimCmd->send(cmd: $json);
 
 
@@ -155,7 +154,6 @@ if ($argv[1] == "1") {
         $res = $GLOBALS["db"]->fetchOne("select count(*) as n from eventlog where type='status_msg'
      and data like '%spawned%@$cn%success%' ");
         $spawned = $res["n"] > 0;
-
     }
 
 
@@ -188,7 +186,6 @@ if ($argv[1] == "1") {
             $res = $GLOBALS["db"]->fetchOne("select count(*) as n from eventlog where type='infonpc_close' and data like '%MailerFly%' ");
             $present = $res["n"] > 0;
         }
-
     }
 
 
@@ -214,7 +211,6 @@ if ($argv[1] == "1") {
             );
         }
         $gave = $res["n"] > 0;
-
     }
 
 
@@ -424,7 +420,7 @@ if ($argv[1] == '3') {
         'gender' => 'male',
         'class' => 'farmer',
         'race' => 'nord',
-        'location' => 'Whistling Mine',
+        'location' => 'Yngvild',
         'appearance' => 'a sturdy nord miner',
         'background' => "He was born in a small village and grew up working in the mine 'Whistling Mine'",
         'speechStyle' => 'rude, mining oriented',
@@ -475,7 +471,7 @@ When working at the mine, the character produces resources over time:
 ",
     ];
 
-    $startingPoint = 0x0002b0dd;
+    $startingPoint = 0x000d035b;
     $inventoryItems = [
         ['refid' => '0x0000000F', 'qty' => 100], // 100 gold coins
         ['refid' => '0x00071cf3', 'qty' => 10], // 10 ores
@@ -499,8 +495,8 @@ if ($argv[1] == '4') {
         'goal' => "[Life goals]
 Earn some gold by mining and selling ores to merchants.
 * She must work in the mine 'Iron-Breaker Mine (Interior)' for the day , can rest at the 'Windpeak Inn' .
-* She sells irons to Gjak, who is at the same location. (check inventory to know if she has ores to sell or must keep mining)
 * Some evenings, travels to the inn 'Windpeak Inn' (at same location Dawnstar) to have some drinks and socialize with other miners.'
+* She sells irons to Orianne Marius at Elysium State (interior). (check inventory to know if she has ores to sell or must keep mining)
 [Production]
 When at a working scenario, she produces iron ore (item refid:0x00071cf3) at a rate of 2 each hour.
 ",
@@ -642,11 +638,26 @@ Must sell fish to merchants,(e.g at Candlehearth Hall), innkeepers and citizens 
 if ($argv[1] == '9a') {
 
     $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName("Lydia");
-    $meta=$npcMaster->getMetaData($npc);
-    print_r($meta["last_coords"]);
+    $npcname = "Jaryra";
+    $npc = $npcMaster->getByName($npcname);
     
-    print_r(getLocationsNearNpcCoords("Lydia"));
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x{$npc["refid"]}@Track",
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+    sleep(1);
+    
+    $meta = $npcMaster->getMetaData($npc);
+    print_r($meta["last_coords"]);
+
+    print_r(getLocationsNearNpcCoords($npcname));
 
     /*
     // This does not work, because the TravelToRaw only accepts location formid.
@@ -665,7 +676,7 @@ if ($argv[1] == '9a') {
     // This works
     // Jorvasrk 1014097
     // Silver-Blood Inn
-
+    /*
     $db->insert(
         'responselog',
         [
@@ -673,19 +684,20 @@ if ($argv[1] == '9a') {
             'sent' => 0,
             'actor' => "rolemaster",
             'text' => "",
-            'action' => "rolecommand|BackgroundCmd@0x000A2C94@TravelTo/651821",
+            'action' => "rolecommand|BackgroundCmd@0x{$npc["refid"]}@TravelTo/100950",
             'tag' => '',
         ]
     );
+    */
 }
 
 if ($argv[1] == '9') {
 
     $npcMaster = new NpcMaster();
-    $npc = $npcMaster->getByName("Cassia Valerius");
-    $meta=$npcMaster->getMetaData($npc);
+    $npc = $npcMaster->getByName("Ulfgrar the Void-Seer");
+    $meta = $npcMaster->getMetaData($npc);
     print_r($meta["last_coords"]);
-    $testData = resolveTravelLocation("Silver-Blood Inn", $npc, $GLOBALS["db"]);
+    $testData = resolveTravelLocation("The Bee and Barb,", $npc, $GLOBALS["db"]);
     print_r($testData);
     if (checkInterior($testData["is_interior"])) {
         echo "Interior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
@@ -693,7 +705,7 @@ if ($argv[1] == '9') {
         echo "Exterior location: " . $testData["name"] . " in region: " . $testData["region"] . " hold: " . $testData["hold"] . PHP_EOL;
     }
 
-    print_r(getLocationsNearNpcCoords("Cassia Valerius"));
+    print_r(getLocationsNearNpcCoords("Ulfgrar the Void-Seer"));
 
     /*
     // This does not work, because the TravelToRaw only accepts location formid.
@@ -805,7 +817,6 @@ When actively repairing plumbing for a customer, generate 10 gold worth of servi
 if ($argv[1] == '11') {
     foreach (DataLastDataExpandedFor("Hulda", -10) as $row) {
         $historic[] = $row["content"];
-
     }
     print_r(implode("\n", $historic));
 }
@@ -825,7 +836,6 @@ if ($argv[1] == '12') {
             'action' => 'command'
         )
     );
-
 }
 
 if ($argv[1] == '13') {
@@ -839,6 +849,225 @@ if ($argv[1] == '13') {
         ],
         ["baseid" => "2602481F", "plugin" => "AIAgent.esp"]
     );
+}
+
+if ($argv[1] == '14') {
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Orianne Marius");
+    $skyrimCmd = new SkyrimCommandBuilder();
+    //$json = $skyrimCmd->Actor->RemoveFromAllFactions("0x{$npc["refid"]}", "0xFF00127C");
+    //$skyrimCmd->send(cmd: $json);
+    //$json = $skyrimCmd->ObjectReference->MoveTo("0x{$npc["refid"]}", "0x08365D75");
+    //$skyrimCmd->send(cmd: $json);
+    print_r(resolveTravelLocation("Elysium Estate (Interior)", $npc, $GLOBALS["db"]));
 
 }
-?>
+
+if ($argv[1] == '15') {
+    // Clone an NPC for BgL
+    // 
+    $name = "Orianne";
+    $chimBase = 0x0820D4C5;
+    $chimBaseClothing = 0x000a1983; //Outfit
+    $chimWeapon = 0x00013989;
+    $chimLocation = 0; // nearby
+    $taskIdhack = 2; //submisseive, wont fight
+    $chimAppearanceNPC = 0x0820D4C5; //NPC to copy appearance from (Base Actor)
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|spawnCharacter@$name@$chimBase@$chimBaseClothing@$chimWeapon@$chimLocation@2@$chimAppearanceNPC",
+            'tag' => "",
+        ]
+    );
+    sleep(10);
+    $npc = $npcMaster->getByName($name);
+    $skyrimCmd = new SkyrimCommandBuilder();
+    $json = $skyrimCmd->Actor->RemoveFromAllFactions("0x{$npc["refid"]}");
+    $skyrimCmd->send(cmd: $json);
+
+}
+
+
+if ($argv[1] == '16') {
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Orianne");
+    $npcMaster->renameNPC("Orianne", "Orianne Marius");
+}
+
+if ($argv[1] == '17') {
+
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x0D24507B@RemoveFromBgL",
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+
+}
+
+if ($argv[1] == '18') {
+    // ComeCloser test
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Karrie");
+
+    $db->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'text' => "ComeCloser@",
+            'actor' => "Karrie",
+            'action' => 'command'
+        )
+    );
+}
+
+if ($argv[1] == '19') {
+    // Test for NPC with no refid
+    print_r(buildSituationalMapDescription());
+    echo PHP_EOL;
+}
+
+if ($argv[1] == '20') {
+    // Clone an NPC for BgL
+    // 
+    $name = "Karrie";
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName($name);
+    $bedref = 0x1813A3AF;
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x{$npc["refid"]}@SleepInBed/$bedref",
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+
+}
+
+if ($argv[1] == '21a') {
+
+    $name = "Lydia";
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName($name);
+    $bedref = 0x1A51804C;
+    /*
+    $GLOBALS["db"]->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@0x{$npc["refid"]}@SleepInBed/$bedref",
+            'tag' => __FILE__ . ":" . __LINE__,
+        ]
+    );
+    */
+    $skyrimCmd = new SkyrimCommandBuilder();
+    $json = $skyrimCmd->ObjectReference->MoveTo("0x{$npc["refid"]}", "0x1A51804C", 0, 0, 155);
+    $skyrimCmd->send(cmd: $json);
+}
+
+if ($argv[1] == '21b') {
+
+    $name = "Lydia";
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName($name);
+
+    $npc = $npcMaster->getByName($name);
+    $skyrimCmd = new SkyrimCommandBuilder();
+
+    $json = $skyrimCmd->Actor->SetUnconscious("0x{$npc["refid"]}", false);
+    $skyrimCmd->send(cmd: $json);
+
+    /*
+    $json = $skyrimCmd->ObjectReference->MoveTo("0x{$npc["refid"]}","0x1A51804C",0,0,155);
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->EnableAI("0x{$npc["refid"]}",false);
+    $skyrimCmd->send(cmd: $json);
+    */
+}
+
+if ($argv[1] == '22') {
+
+    $name = "Lydia";
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName($name);
+    $bedref = 0x1a224b54;
+
+
+    $npc = $npcMaster->getByName($name);
+    $skyrimCmd = new SkyrimCommandBuilder();
+
+    $json = $skyrimCmd->Actor->EnableAI("0x{$npc["refid"]}", true);
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->SetUnconscious("0x{$npc["refid"]}", true);
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->UnequipAll("0x{$npc["refid"]}");
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->EnableAI("0x{$npc["refid"]}", true);
+    $skyrimCmd->send(cmd: $json);
+
+}
+
+if ($argv[1] == '23') {
+    $GLOBALS["db"]->execQuery("INSERT INTO public.responselog VALUES (0, 0, 'Karrie', 'Today, as we gather in this virtual hall, I can''t help but draw inspiration from the vast and enchanting universe of Skyrim/////1/Varek/utt_39b8b31c32bb0abb9a92', 'ScriptQueue', '', nextval('responselog_rowid_seq'::regclass))");
+
+
+}
+
+if ($argv[1] == '25') {
+
+    $name = "Lydia";
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName($name);
+    $refHexString = "0x{$npc["refid"]}";
+    /*
+    $db->insert(
+        'responselog',
+        array(
+            'localts' => time(),
+            'sent' => 0,
+            'text' => "TakeASeat@",
+            'actor' => "Lydia",
+            'action' => 'command'
+        )
+    );*/
+
+     $db->insert(
+        'responselog',
+        [
+            'localts' => time(),
+            'sent' => 0,
+            'actor' => "rolemaster",
+            'text' => "",
+            'action' => "rolecommand|BackgroundCmd@$refHexString@StayAtPlace/436259230/sleep",
+            'tag' => '',
+        ]
+    );
+}
+
+if ($argv[1]=='26') {
+    
+    print_r(buildHistoricContext("Lydia",-1,"and type<>'prechat'"));
+
+}

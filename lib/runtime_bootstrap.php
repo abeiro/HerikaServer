@@ -1,7 +1,6 @@
 <?php
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . "settings.php");
-require_once(__DIR__ . DIRECTORY_SEPARATOR . "database" . DIRECTORY_SEPARATOR . "MigrationRunner.php");
 
 if (!function_exists('chimRuntimeNeedsDbUpdates')) {
     function chimRuntimeNeedsDbUpdates(): bool
@@ -13,51 +12,77 @@ if (!function_exists('chimRuntimeNeedsDbUpdates')) {
 
         $db = $GLOBALS["db"] ?? null;
         if (!$db) {
-            return false;
+            $decision = false;
+            return $decision;
         }
 
+        $requiredTables = [
+            'database_versioning',
+            'general_settings',
+            'core_stt_connector',
+            'core_itt_connector',
+            'core_tts_connector',
+        ];
+
         try {
-            $relations = $db->fetchAll(
-                "SELECT to_regclass('public.database_versioning') AS legacy_ledger,
-                        to_regclass('chim_meta.schema_migrations') AS migration_ledger"
+            $tableRows = $db->fetchAll(
+                "SELECT table_name
+                 FROM information_schema.tables
+                 WHERE table_schema='public'
+                   AND table_name IN ('database_versioning','general_settings','core_stt_connector','core_itt_connector','core_tts_connector')"
+            );
+        } catch (\Throwable $e) {
+            $decision = false;
+            return $decision;
+        }
+
+        $existingTables = [];
+        foreach ($tableRows as $row) {
+            $tableName = strval($row['table_name'] ?? '');
+            if ($tableName !== '') {
+                $existingTables[$tableName] = true;
+            }
+        }
+
+        foreach ($requiredTables as $requiredTable) {
+            if (empty($existingTables[$requiredTable])) {
+                $decision = true;
+                return $decision;
+            }
+        }
+
+        $requiredVersions = [
+            'general_settings' => 20260720002,
+            'core_stt_connector' => 20260502002,
+            'core_itt_connector' => 20260502002,
+            'descriptions_defaults' => 20260611005,
+            'prompts' => 20260615001,
+            'skyrim_quest_definitions' => 20260628003,
+            'core_tts_connector_omnivoice' => 20260708001,
+            'oghma_catalog' => 20260827001,
+        ];
+
+        try {
+            $versionRows = $db->fetchAll(
+                "SELECT tablename, version
+                 FROM public.database_versioning
+                 WHERE tablename IN ('general_settings','core_stt_connector','core_itt_connector','descriptions_defaults','prompts','skyrim_quest_definitions','core_tts_connector_omnivoice','oghma_catalog')"
             );
         } catch (\Throwable $e) {
             $decision = true;
             return $decision;
         }
 
-        $legacyLedger = strval($relations[0]['legacy_ledger'] ?? '');
-        $migrationLedger = strval($relations[0]['migration_ledger'] ?? '');
-        if ($migrationLedger === '') {
-            // An entirely empty database is allowed through to the installer.
-            $decision = $legacyLedger !== '';
-            return $decision;
+        $versions = [];
+        foreach ($versionRows as $row) {
+            $tableName = strval($row['tablename'] ?? '');
+            if ($tableName !== '') {
+                $versions[$tableName] = intval($row['version'] ?? -1);
+            }
         }
 
-        try {
-            $root = dirname(__DIR__);
-            $manifest = \HerikaServer\Database\MigrationRunner::sourceManifest($root);
-            $rows = $db->fetchAll('SELECT version, name, checksum FROM chim_meta.schema_migrations ORDER BY version');
-        } catch (\Throwable $e) {
-            $decision = true;
-            return $decision;
-        }
-
-        $applied = [];
-        foreach ($rows as $row) {
-            $applied[intval($row['version'] ?? 0)] = [
-                'name' => strval($row['name'] ?? ''),
-                'checksum' => rtrim(strval($row['checksum'] ?? '')),
-            ];
-        }
-
-        if (count($applied) !== count($manifest)) {
-            $decision = true;
-            return $decision;
-        }
-        foreach ($manifest as $version => $migration) {
-            if (($applied[$version]['name'] ?? null) !== $migration['name']
-                || !hash_equals($migration['checksum'], $applied[$version]['checksum'] ?? '')) {
+        foreach ($requiredVersions as $tableName => $requiredVersion) {
+            if (intval($versions[$tableName] ?? -1) < $requiredVersion) {
                 $decision = true;
                 return $decision;
             }
@@ -83,18 +108,6 @@ if (!function_exists('chimRuntimeImportConfigVariables')) {
     }
 }
 
-if (!function_exists('chimRuntimeReadConfigVariables')) {
-    /** Load each config in its own scope so defaults cannot overwrite later active values. */
-    function chimRuntimeReadConfigVariables(string $path): array
-    {
-        return (static function (string $configPath): array {
-            require($configPath);
-            unset($configPath);
-            return get_defined_vars();
-        })($path);
-    }
-}
-
 if (!function_exists('chimRuntimeEnsureDbUpdates')) {
     function chimRuntimeEnsureDbUpdates(string $enginePath): void
     {
@@ -108,18 +121,11 @@ if (!function_exists('chimRuntimeEnsureDbUpdates')) {
             return;
         }
 
-        $message = "HerikaServer database schema is not synchronized with this code. "
-            . "Back up the database, then run: php scripts/database.php legacy-bridge";
-        error_log('[RuntimeBootstrap] ' . $message);
-
-        if (PHP_SAPI === 'cli') {
-            throw new \RuntimeException($message);
+        $updatesPath = $enginePath . "debug" . DIRECTORY_SEPARATOR . "db_updates.php";
+        $db=$GLOBALS["db"] ?? null;
+        if (file_exists($updatesPath)) {
+            require_once($updatesPath);
         }
-
-        http_response_code(503);
-        header('Content-Type: text/plain; charset=utf-8');
-        echo $message . "\n";
-        exit;
     }
 }
 
@@ -185,24 +191,15 @@ if (!function_exists('chimRuntimeBootstrap')) {
 
         $confPath = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
         $confSamplePath = $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.sample.php";
-        $preconfigured = [];
-        if (getenv('PHPUNIT_TEST')) {
-            foreach ($GLOBALS as $name => $value) {
-                if (is_string($name) && preg_match('/^[A-Z][A-Z0-9_]*$/', $name)) {
-                    $preconfigured[$name] = $value;
-                }
-            }
-        }
 
         if (file_exists($confSamplePath)) {
-            chimRuntimeImportConfigVariables(chimRuntimeReadConfigVariables($confSamplePath));
+            require_once($confSamplePath);
         }
         if (file_exists($confPath)) {
-            chimRuntimeImportConfigVariables(chimRuntimeReadConfigVariables($confPath));
+            require_once($confPath);
         }
-        foreach ($preconfigured as $name => $value) {
-            $GLOBALS[$name] = $value;
-        }
+
+        chimRuntimeImportConfigVariables(get_defined_vars());
 
         if (empty($GLOBALS["DBDRIVER"])) {
             throw new \RuntimeException("DBDRIVER is not configured during runtime bootstrap.");

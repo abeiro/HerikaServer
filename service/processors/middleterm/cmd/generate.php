@@ -1,5 +1,10 @@
 <?php
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+    Logger::debug('[MIDDLETERM] Generation skipped because Background & Memory Tasks are disabled globally');
+    return;
+}
+
 if (isset($GLOBALS["ONCE_PER_RUN"]) && $GLOBALS["ONCE_PER_RUN"]==true) {
     return;
 
@@ -15,8 +20,6 @@ $currentNpcData = $npcMaster->getByName($selectedNpc);
 
 $connector->setOldGlobals($currentConnectorData);
 $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
-
-$CLEAN_CONTEXT_FOCUS_CHAT = false;
 
 $COMMAND_PROMPT = '';
 

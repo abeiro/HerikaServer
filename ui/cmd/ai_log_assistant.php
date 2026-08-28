@@ -349,7 +349,7 @@ NPCs are linked to profiles (`core_profiles`) which define:
 - `PLAYER_NAME` - Player character name
 - `CONTEXT_HISTORY` - Number of events to include in context
 - `chim_mode` - Current interaction mode
-- `chim_context_mode` - Clean context focus mode
+- `COMPACT_CHAT_ENABLED` - Compact conversation history mode
 
 ### Dynamic Profiles
 NPCs can have `dynamic_profile` enabled, which:

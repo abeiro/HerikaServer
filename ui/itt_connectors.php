@@ -13,6 +13,11 @@ chimRuntimeBootstrap($enginePath, [
     'load_itt_connector' => false,
 ]);
 
+try {
+    require_once($enginePath . "debug" . DIRECTORY_SEPARATOR . "db_updates.php");
+} catch (Throwable $_e) {
+}
+
 $connector = new ITTConnector();
 $isEmbed = isset($_GET['embed']) && strval($_GET['embed']) === '1';
 

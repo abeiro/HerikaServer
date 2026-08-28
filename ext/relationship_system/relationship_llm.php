@@ -6,8 +6,7 @@
  * Uses a cheap model (24B class) at low temperature for consistent, factual output.
  *
  * Features:
- * - On-activation: Auto-analyze NPC relationships when first met
- * - Batch processing: Analyze all NPCs at once
+ * - Dynamic evaluation of structured JSON relationships
  * - Relationship inference: If A loves B and B hates C, A becomes wary of C
  * - Group inference: "Imperial soldier" auto-adds faction biases
  * - Consistency checking: Ensure reciprocal relationships make sense
@@ -289,8 +288,8 @@ class RelationshipLLM {
     }
 
     /**
-     * Analyze a single NPC's relationships
-     * Called when an NPC is first activated/met
+     * Keep legacy initialization callers harmless without sending the retired
+     * text relationship field to an LLM. New relationship state is JSON-only.
      */
     public function analyzeNpc($npcId, $forceReanalyze = false) {
         require_once $GLOBALS['ENGINE_PATH'] . "lib/core/npc_master.class.php";
@@ -302,23 +301,18 @@ class RelationshipLLM {
             return ['ok' => false, 'error' => 'NPC not found'];
         }
 
-        // Check if already has JSONB relationships
         $extended = $this->safeJsonDecode($npc['extended_data'] ?? null, "analyzeNpc:{$npc['npc_name']}");
         if ($extended === null) {
             return ['ok' => false, 'error' => 'Corrupted extended_data - refusing to overwrite'];
         }
-        if (!empty($extended['relationships']) && !$forceReanalyze) {
-            return ['ok' => true, 'skipped' => true, 'reason' => 'Already has relationships'];
-        }
 
-        // Check if has TEXT relationships to analyze
-        if (empty($npc['relationships'])) {
-            return ['ok' => true, 'skipped' => true, 'reason' => 'No text relationships'];
-        }
-
-        // Build the analysis. Forced rebuilds intentionally replace the map;
-        // lazy/gameplay initialization only merges missing targets.
-        return $this->runAnalysis($npc, $forceReanalyze);
+        return [
+            'ok' => true,
+            'skipped' => true,
+            'reason' => !empty($extended['relationships'])
+                ? 'Already has structured relationships'
+                : 'No structured relationships yet'
+        ];
     }
 
     /**
@@ -647,18 +641,11 @@ PROMPT;
                 return false;
             }
 
-            $incomingRelationships = RelationshipManager::normalizeRelationshipMap($relationships);
-            if ($replaceExisting) {
-                $extended['relationships'] = $incomingRelationships;
-            } else {
-                $existingRelationships = RelationshipManager::normalizeRelationshipMap($extended['relationships'] ?? []);
-                foreach ($incomingRelationships as $target => $relationship) {
-                    if (!isset($existingRelationships[$target])) {
-                        $existingRelationships[$target] = $relationship;
-                    }
-                }
-                $extended['relationships'] = $existingRelationships;
-            }
+            $extended['relationships'] = RelationshipManager::mergeAiRelationshipMap(
+                $extended['relationships'] ?? [],
+                $relationships,
+                $replaceExisting
+            );
             $extended['relationships_analyzed'] = date('Y-m-d H:i:s');
             $extended['relationships_model'] = $this->modelName;
 

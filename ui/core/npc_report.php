@@ -68,7 +68,10 @@ $npcName = '';
 
 $npc = new NpcMaster();
 $npcData=$npc->getById($_GET["npcid"]);
-if ($npcData) {
+if ($npcData && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+    $npcName = $npcData["npc_name"] ?? '';
+    $pageError = 'Background & Memory Tasks are turned off in Global Settings.';
+} elseif ($npcData) {
     $npcName = $npcData["npc_name"] ?? '';
     $query=
     "SELECT coalesce(npc_static_bio,'')||'\n'||personality as personality, created
@@ -97,8 +100,6 @@ if ($npcData) {
             $reportSource[]=$row["personality"];
         }
     }
-
-    $CLEAN_CONTEXT_FOCUS_CHAT = false;
 
     $COMMAND_PROMPT = '';
 

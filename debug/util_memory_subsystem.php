@@ -28,8 +28,17 @@ require_once $enginePath . "lib/core/tts_connector.class.php";
 require_once $enginePath . "lib/core/npc_master.class.php";
 require_once $enginePath . "lib/core/core_profiles.class.php";
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_SUMMARY')) {
+    echo "Summaries are disabled globally; memory summary work was skipped." . PHP_EOL;
+    exit(0);
+}
+
 function chimResolveSummaryConnectorRuntime(): ?array
 {
+    if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_SUMMARY')) {
+        return null;
+    }
+
     $connectorId = intval($GLOBALS["CORE_CONNECTOR_SUMMARY"] ?? 0);
     if ($connectorId <= 0) {
         return null;
@@ -539,6 +548,7 @@ Note: Memories are stored in memory_summary table, which holds info from events/
                 $resFinal = isset($res[0]['rank_any']) ? $res : (isset($res2[0]['rank_any']) ? $res2 : []);
             }
             $res = $resFinal;
+            print_r($res2);
         } else {
             echo "Using fts search";
             $res = DataSearchMemory($argv[2], $argv[3]);
@@ -657,6 +667,81 @@ Note: Memories are stored in memory_summary table, which holds info from events/
         }
 
         print_r($res[0]);
+
+    } elseif ($argv[1] == "query_ckw") {
+        echo "Query memory for '{$argv[2]}'" . PHP_EOL;
+
+        $db             = new sql();
+        $localStartTime = microtime(true);
+
+        if (isset($argv[3]) && (! empty($argv[3]))) {
+            $npcMaster      = new NpcMaster();
+            $currentNpcData = $npcMaster->getByName($argv[3]);
+
+            $profile            = new CoreProfile();
+            $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
+
+            $summaryConnectorState = chimResolveSummaryConnectorRuntime();
+            if (!$summaryConnectorState) {
+                die("No summary connector configured." . PHP_EOL);
+            }
+
+            [$connector, $currentConnectorData] = $summaryConnectorState;
+            $profile->setOldGlobals($currentProfileData);
+            $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
+        } else {
+            $GLOBALS["MINIME_T5"]   = true;
+            $GLOBALS["HERIKA_NAME"] = "%";
+        }
+
+        if ($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["USE_TEXT2VEC"]) {
+            echo "Using pgvector search (text2vec) DataSearchMemoryByVector({$argv[2]}, {$argv[3]}, true,{$argv[4]}" . PHP_EOL;
+
+            error_log("[DataSearchMemoryByVectorFromContextKeywords calling]  : " . (microtime(true) - $localStartTime) . " seconds");
+            $res = DataSearchMemoryByVectorFromContextKeywords($argv[2], $argv[3],  $argv[4]);
+            error_log("[DataSearchMemoryByVector called]  : " . (microtime(true) - $localStartTime) . " seconds");
+            $res2 = DataSearchMemoryByVectorFromContextKeywords($argv[2], $argv[3],  $argv[4]);
+            error_log("[DataSearchMemoryByVectorFromContextKeywords called]  : " . (microtime(true) - $localStartTime) . " seconds");
+
+            if (isset($res[0]) && isset($res2[0])) {
+                $resFinal = ($res[0]['rank_any'] >= $res2[0]['rank_any']) ? $res : $res2;
+            } else {
+                $resFinal = isset($res[0]['rank_any']) ? $res : (isset($res2[0]['rank_any']) ? $res2 : []);
+            }
+            $res = $resFinal;
+            
+        } else {
+            echo "Using fts search";
+            $res = DataSearchMemory($argv[2], $argv[3]);
+        }
+
+        if (isset($res[0])) {
+            Logger::trace(print_r($res[0], true));
+
+            if (($res[0]["rank_any"] == $res[0]["rank_all"]) && ($res[0]["rank_any"] > 0.25) && ! isset($res[0]["mixed_distance"])) {
+
+                $memory = (isset($memories[0]["summary"]) ? $memories[0]["summary"] : "");
+
+            } else if (((($res[0]["rank_all"] + $res[0]["rank_any"]) / 2) > 0.25) && ! isset($res[0]["mixed_distance"])) {
+
+                $memory = (isset($memories[0]["summary"]) ? $memories[0]["summary"] : "");
+
+            } else if ((($res[0]["rank_all"] + $res[0]["rank_any"]) / 2) > 0.05 && false) { //This is too low
+
+                $memory = (isset($memories[0]["summary"]) ? $memories[0]["summary"] : "");
+
+            } else if (($res[0]["rank_any"] > 0.5) && isset($res[0]["mixed_distance"])) { // Search by mixed vector/fts .
+
+                $memory = (isset($memories[0]["summary"]) ? $memories[0]["summary"] : "");
+
+            } else {
+                error_log("Memory discarded by scoring");
+
+            }
+            print_r($res[0]);
+        } else {
+            error_log("Memory not found");
+        }
 
     } elseif ($argv[1] == "sync") {
 

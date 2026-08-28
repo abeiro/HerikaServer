@@ -16,6 +16,11 @@ $GLOBALS["active_profile"]=md5("The Narrator");
 $GLOBALS["CURRENT_CONNECTOR"]=DMgetCurrentModel();
 $GLOBALS["CHIM_NO_EXAMPLES"]=true; // When no assistant entry in history, will try ti provide a bogus example.
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_DIRECTOR')) {
+    logMsg('Director Mode is disabled globally; skipping instruction task');
+    return;
+}
+
 $connector=new LLMConnector();
 $currentConnectorData = $connector->getById(intval($GLOBALS["CORE_CONNECTOR_DIRECTOR"] ?? 0));
 $connectionHandler = $connector->getConnector($currentConnectorData);
@@ -122,19 +127,20 @@ if (!isset($GLOBALS["CHIM_CORE_CURRENT_CONNECTOR_DATA"]) ) {
         }
 
 // Load director examples prompt from database with fallback
-$commonprompt = null;
-try {
-    $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'director_examples_prompt'");
-    if ($promptData) {
-        $commonprompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+$commonprompt = '';
+if (!$isBoredInstruction) {
+    try {
+        $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'director_examples_prompt'");
+        if ($promptData) {
+            $commonprompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+        }
+    } catch (Exception $e) {
+        Logger::warn("Failed to load director_examples_prompt from database, using hardcoded fallback: " . $e->getMessage());
     }
-} catch (Exception $e) {
-    Logger::warn("Failed to load director_examples_prompt from database, using hardcoded fallback: " . $e->getMessage());
-}
 
-// Hardcoded fallback if database query failed
-if (!$commonprompt) {
-    $commonprompt='
+    // Hardcoded fallback if database query failed
+    if (!$commonprompt) {
+        $commonprompt='
 # Examples
 
 user request: actor \"a\" leaves the place 
@@ -168,6 +174,7 @@ user request: actor \"a\" leaves the place
 }
 
 ';
+    }
 }
         if (!$GLOBALS["argv"][3]) {
             $userprompt="";
@@ -177,46 +184,33 @@ user request: actor \"a\" leaves the place
             $userprompt="* Fufill the user's request no matter what, even if it means breaking roleplay.";
         }
         
-        // Load director system prompt from database with fallback
+        // Smart Bored uses a dedicated system prompt instead of the creative Director contract.
+        $directorSystemPromptKey = $isBoredInstruction
+            ? 'director_bored_event_system_prompt'
+            : 'director_system_prompt';
         $directorSystemPrompt = null;
         try {
-            $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'director_system_prompt'");
+            $promptData = $GLOBALS["db"]->fetchOne(
+                "SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = '{$directorSystemPromptKey}'"
+            );
             if ($promptData) {
                 $directorSystemPrompt = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
             }
         } catch (Exception $e) {
-            Logger::warn("Failed to load director_system_prompt from database, using hardcoded fallback: " . $e->getMessage());
+            Logger::warn("Failed to load {$directorSystemPromptKey} from database, using hardcoded fallback: " . $e->getMessage());
         }
         
         if (!$directorSystemPrompt) {
-            $directorSystemPrompt = "You are a game director, and we are roleplaying Skyrim in the Tamriel universe. You must create a instruction for an actor to generate new content/events on game.";
+            $directorSystemPrompt = $isBoredInstruction
+                ? chimRolemasterDefaultBoredSystemPrompt()
+                : "You are a game director, and we are roleplaying Skyrim in the Tamriel universe. You must create a instruction for an actor to generate new content/events on game.";
         }
         
         $prompt[] = array('role' => 'system', 'content' => "$directorSystemPrompt$commonprompt");
         $prompt[] = array('role' => 'user', 'content' => "# Contextual data\n$historyData");
         
-        // Load director instruction rules from database with fallback
-        $directorInstructionRules = null;
-        try {
-            $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'director_instruction_rules'");
-            if ($promptData) {
-                $directorInstructionRules = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
-            }
-        } catch (Exception $e) {
-            Logger::warn("Failed to load director_instruction_rules from database, using hardcoded fallback: " . $e->getMessage());
-        }
-        
-        if (!$directorInstructionRules) {
-            $directorInstructionRules = "Just provide instructions! You can also provide more than one instruction, but one per actor (keep limit at  2 or 3 max actors)\nIn addition, follow these general scene rules as a game director:\n * Use any actor in NEARBY ACTORS/NPC IN THE SCENE list ({PLAYER_NAME},busy actors and far away actors are EXCLUDED!)\n * Continue the scene as naturally and fully as possible, unless the user explicitly requests a new one. You can specify actions to reinforce the actors' dialogue.\n * If there are more actors in the room, try to involve them in the conversation.\n * When dialogue becomes repetitive, make a plot twist.\n * If a character reuses the same argument too often, nudge the scene towards a new topic.\n * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.\n * Do not resolve everything neatly—keep room for ongoing tension or future continuation.\n * You must always provide dialogue instructions for the character, as every request requires a dialogue response.\n * Here are a list of actions that can be used: \n{FUNCTION_LIST}\n  ** JustTalk \n * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality. Other actors can see this to properly react.\n * If scene is getting boring/repetitive, add a plot twist";
-        }
-        
-        // Replace placeholders
         $functionList = "  ** " . implode("\n  ** ", $fnames);
-        $directorInstructionRules = str_replace(
-            ['{PLAYER_NAME}', '{FUNCTION_LIST}'],
-            [$GLOBALS["PLAYER_NAME"], $functionList],
-            $directorInstructionRules
-        );
+        $directorInstructionRules = null;
         if ($isBoredInstruction) {
             $boredEventRules = null;
             try {
@@ -235,11 +229,31 @@ user request: actor \"a\" leaves the place
                 );
             }
 
-            $directorInstructionRules .= "\n\n" . chimRolemasterRenderBoredEventRules(
+            $directorInstructionRules = chimRolemasterRenderBoredEventRules(
                 (string)$boredEventRules,
                 $boredSeedActor,
                 (string)$GLOBALS["PLAYER_NAME"],
-                $GLOBALS["ROLEMASTER_BORED_ALLOWED_ACTORS"] ?? []
+                $GLOBALS["ROLEMASTER_BORED_ALLOWED_ACTORS"] ?? [],
+                $functionList
+            );
+        } else {
+            try {
+                $promptData = $GLOBALS["db"]->fetchOne("SELECT custom_prompt, default_prompt FROM prompts WHERE prompt_key = 'director_instruction_rules'");
+                if ($promptData) {
+                    $directorInstructionRules = (!empty($promptData['custom_prompt'])) ? $promptData['custom_prompt'] : $promptData['default_prompt'];
+                }
+            } catch (Exception $e) {
+                Logger::warn("Failed to load director_instruction_rules from database, using hardcoded fallback: " . $e->getMessage());
+            }
+
+            if (!$directorInstructionRules) {
+                $directorInstructionRules = "Just provide instructions! You can also provide more than one instruction, but one per actor (keep limit at  2 or 3 max actors)\nIn addition, follow these general scene rules as a game director:\n * Use any actor in NEARBY ACTORS/NPC IN THE SCENE list ({PLAYER_NAME},busy actors and far away actors are EXCLUDED!)\n * Continue the scene as naturally and fully as possible, unless the user explicitly requests a new one. You can specify actions to reinforce the actors' dialogue.\n * If there are more actors in the room, try to involve them in the conversation.\n * When dialogue becomes repetitive, make a plot twist.\n * If a character reuses the same argument too often, nudge the scene towards a new topic.\n * Occasionally introduce subtle foreshadowing or hint at future events, dangers, or quests.\n * Do not resolve everything neatly—keep room for ongoing tension or future continuation.\n * You must always provide dialogue instructions for the character, as every request requires a dialogue response.\n * Here are a list of actions that can be used: \n{FUNCTION_LIST}\n  ** JustTalk \n * Add a Scene Note: A brief description of the topic, mood, or idea introduced by the instruction. Should serve to guide the desired instruction to become reality. Other actors can see this to properly react.\n * If scene is getting boring/repetitive, add a plot twist";
+            }
+
+            $directorInstructionRules = str_replace(
+                ['{PLAYER_NAME}', '{FUNCTION_LIST}'],
+                [$GLOBALS["PLAYER_NAME"], $functionList],
+                $directorInstructionRules
             );
         }
         

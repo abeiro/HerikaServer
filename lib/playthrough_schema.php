@@ -10,13 +10,13 @@
 require_once(__DIR__ . DIRECTORY_SEPARATOR . 'logger.php');
 
 /**
- * Check whether the installed clone function includes identity-column and
- * ownership-based sequence synchronization support.
+ * Check for identity/sequence support and the removal of snapshot view cloning.
  */
 function pts_clone_function_is_current($definition): bool {
     return is_string($definition)
         && stripos($definition, 'OVERRIDING SYSTEM VALUE') !== false
-        && stripos($definition, 'sync_schema_sequences(dest_schema)') !== false;
+        && stripos($definition, 'sync_schema_sequences(dest_schema)') !== false
+        && stripos($definition, 'CREATE OR REPLACE VIEW') === false;
 }
 
 /**
@@ -24,8 +24,8 @@ function pts_clone_function_is_current($definition): bool {
  * Safe to call multiple times (idempotent).
  */
 function pts_ensure_functions($conn): bool {
-    // Existing installations may have an older function definition that cannot
-    // copy explicit values into GENERATED ALWAYS identity columns.
+    // Refresh older definitions that mishandle identity values or copy views
+    // whose unqualified table references can point back to the live schema.
     $checkQuery = "SELECT pg_get_functiondef(p.oid) AS function_definition FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE p.proname = 'clone_schema' AND n.nspname = 'chim_meta' LIMIT 1";
     $checkResult = @pg_query($conn, $checkQuery);
     if ($checkResult && pg_num_rows($checkResult) > 0) {

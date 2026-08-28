@@ -152,12 +152,13 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
                             $note = $data['note'] ?? '';
                             $best = $data['best'] ?? '';
                             $worst = $data['worst'] ?? '';
+                            $customInfo = $data['custom_info'] ?? '';
                             $bestDelta = $data['best_delta'] ?? 0;
                             $worstDelta = $data['worst_delta'] ?? 0;
                             $tier = RelationshipManager::getTierLabel($aff);
                             $tierColor = $tierColors[$tier] ?? '#e5e7eb';
                             $typeIcon = $typeIcons[$type] ?? '➖';
-                            $hasExtended = !empty($relation) || !empty($note) || !empty($best) || !empty($worst);
+                            $hasExtended = !empty($relation) || !empty($note) || !empty($best) || !empty($worst) || !empty($customInfo);
                         ?>
                         <tr class="rel-row" data-target="<?= htmlspecialchars($target) ?>"
                             data-relation="<?= htmlspecialchars($relation) ?>"
@@ -207,6 +208,7 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
                                 <?php endif; ?>
                             </td>
                             <td style="padding:8px; text-align:center; white-space:nowrap;">
+                                <textarea class="rel-custom-info" hidden><?= htmlspecialchars($customInfo) ?></textarea>
                                 <button type="button" class="rel-details" title="Edit details (relation, notes, events)"
                                         style="background:transparent; border:none; color:<?= $hasExtended ? '#fde68a' : '#666' ?>; cursor:pointer; font-size:1em; margin-right:4px;"
                                         onclick="openDetailsModal(this)">✏️</button>
@@ -324,10 +326,10 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
 
             <!-- Relationship Details Modal -->
             <div id="rel-details-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center;">
-                <div style="background:#1a1a1a; border:1px solid #4a4a4a; border-radius:8px; padding:20px; max-width:500px; width:90%;">
+                <div style="background:#1a1a1a; border:1px solid #4a4a4a; border-radius:8px; padding:20px; max-width:500px; width:90%; max-height:90vh; overflow-y:auto;">
                     <h3 style="margin:0 0 8px 0; color:rgb(242, 124, 17);">✏️ Details: <span id="details-target-name"></span></h3>
                     <p style="color:#888; font-size:0.8em; margin-bottom:12px;">
-                        ⚠️ These details are injected into AI context. Keep them useful and relevant.
+                        ⚠️ Relationship details and memories are used by the AI. Custom Info is player-only and is never sent to or changed by relationship AI.
                     </p>
 
                     <!-- Relationship Detail (specific role) -->
@@ -365,6 +367,13 @@ $typeIcons = array_merge($defaultTypes, $customTypes);
                         <label style="color:#ef4444; font-size:0.85em;">Worst Memory</label>
                         <input type="text" id="details-worst" placeholder="killed his brother, betrayed trust"
                                style="width:100%; margin-top:4px; background:#262626; border:1px solid #4a4a4a; border-radius:4px; color:#e9efff; padding:8px;">
+                    </div>
+
+                    <!-- Player-only custom notes -->
+                    <div style="margin-bottom:10px;">
+                        <label for="details-custom-info" style="color:#ccc; font-size:0.85em;">Custom Info</label>
+                        <textarea id="details-custom-info" rows="3" placeholder="Write any player notes for this relationship"
+                                  style="width:100%; margin-top:4px; resize:vertical; background:#262626; border:1px solid #4a4a4a; border-radius:4px; color:#e9efff; padding:8px;"></textarea>
                     </div>
 
                     <!-- Hidden field to track which row we're editing -->
@@ -565,6 +574,7 @@ function addRelRow() {
             </select>
         </td>
         <td style="padding:8px; text-align:center; white-space:nowrap;">
+            <textarea class="rel-custom-info" hidden></textarea>
             <button type="button" class="rel-details" title="Edit details (relation, notes, events)"
                     style="background:transparent; border:none; color:#666; cursor:pointer; font-size:1em; margin-right:4px;"
                     onclick="openDetailsModal(this)">✏️</button>
@@ -600,6 +610,7 @@ function syncRelationshipsToHidden() {
             const note = row.dataset.note || '';
             const best = row.dataset.best || '';
             const worst = row.dataset.worst || '';
+            const customInfo = row.querySelector('.rel-custom-info')?.value.trim() || '';
             const bestDelta = parseInt(row.dataset.bestDelta) || 0;
             const worstDelta = parseInt(row.dataset.worstDelta) || 0;
 
@@ -613,6 +624,7 @@ function syncRelationshipsToHidden() {
                 rel.worst = worst;
                 if (worstDelta) rel.worst_delta = worstDelta;
             }
+            if (customInfo) rel.custom_info = customInfo;
 
             relationships[target] = rel;
         }
@@ -682,6 +694,7 @@ function openDetailsModal(btn) {
     document.getElementById('details-note').value = row.dataset.note || '';
     document.getElementById('details-best').value = row.dataset.best || '';
     document.getElementById('details-worst').value = row.dataset.worst || '';
+    document.getElementById('details-custom-info').value = row.querySelector('.rel-custom-info')?.value || '';
 
     // Hide suggestions when opening
     document.getElementById('relation-suggestions').style.display = 'none';
@@ -719,16 +732,18 @@ function saveDetailsToRow(row) {
     const note = document.getElementById('details-note').value.trim();
     const best = document.getElementById('details-best').value.trim();
     const worst = document.getElementById('details-worst').value.trim();
+    const customInfo = document.getElementById('details-custom-info').value.trim();
 
     // Update row data attributes
     row.dataset.relation = relation;
     row.dataset.note = note;
     row.dataset.best = best;
     row.dataset.worst = worst;
+    row.querySelector('.rel-custom-info').value = customInfo;
 
     // Update the details button color to indicate data exists
     const detailsBtn = row.querySelector('.rel-details');
-    const hasData = relation || note || best || worst;
+    const hasData = relation || note || best || worst || customInfo;
     detailsBtn.style.color = hasData ? '#fde68a' : '#666';
 
     // Sync to hidden field
@@ -840,10 +855,15 @@ async function buildWithAI() {
         const result = await response.json();
 
         if (result.ok && result.relationships) {
-            const mergedRelationships = {
-                ...getCurrentRelationshipsFromHidden(),
-                ...result.relationships
-            };
+            const currentRelationships = getCurrentRelationshipsFromHidden();
+            const mergedRelationships = { ...currentRelationships };
+            for (const [target, relationship] of Object.entries(result.relationships)) {
+                const customInfo = currentRelationships[target]?.custom_info || '';
+                const aiRelationship = { ...relationship };
+                delete aiRelationship.custom_info;
+                mergedRelationships[target] = aiRelationship;
+                if (customInfo) mergedRelationships[target].custom_info = customInfo;
+            }
 
             // Update the hidden field
             document.getElementById('relationships_jsonb').value = JSON.stringify(mergedRelationships);
@@ -913,11 +933,12 @@ function rebuildRelTable(relationships) {
         const note = data.note || '';
         const best = data.best || '';
         const worst = data.worst || '';
+        const customInfo = data.custom_info || '';
         const bestDelta = data.best_delta || 0;
         const worstDelta = data.worst_delta || 0;
         const tier = getTierLabel(aff);
         const tierColor = tierColors[tier] || '#e5e7eb';
-        const hasExtended = relation || note || best || worst;
+        const hasExtended = relation || note || best || worst || customInfo;
         const detailsColor = hasExtended ? '#fde68a' : '#666';
         const signalHtml = buildRelationshipSignalHtml(note, best, worst, bestDelta, worstDelta);
 
@@ -953,6 +974,7 @@ function rebuildRelTable(relationships) {
                     ${signalHtml}
                 </td>
                 <td style="padding:8px; text-align:center; white-space:nowrap;">
+                    <textarea class="rel-custom-info" hidden>${escapeHtml(customInfo)}</textarea>
                     <button type="button" class="rel-details" title="Edit details (relation, notes, events)"
                             style="background:transparent; border:none; color:${detailsColor}; cursor:pointer; font-size:1em; margin-right:4px;"
                             onclick="openDetailsModal(this)">✏️</button>

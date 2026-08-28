@@ -67,10 +67,6 @@ $localSchemaOverrides = [
         'type' => 'integer',
         'description' => 'Amount of context history (dialogue and events) that will be sent to LLM specifically for diary entries. If set to 0, will use the regular CONTEXT_HISTORY value instead.',
     ],
-    'BORED_EVENT_SERVERSIDE' => [
-        'type' => 'boolean',
-        'description' => 'Smart Bored Events. Will use the director to generate dynamic bored event topics. It is slower but topics will improve the quality of bored event topics.',
-    ],
     'CONTEXT_HISTORY_DYNAMIC_PROFILE' => [
         'type' => 'integer',
         'description' => 'Amount of context history (dialogue and events) that will be sent to LLM specifically for dynamic profile updates. If set to 0, will use the regular CONTEXT_HISTORY value instead.',
@@ -84,7 +80,7 @@ $visualKeys = isset($profileSyncableMetadataKeys) && is_array($profileSyncableMe
         "RECHAT_H","RECHAT_P","CORE_LANG","BORED_EVENT",
         "DIARY_PROMPT","LANG_LLM_XTTS","QUEST_COMMENT","DIARY_COOLDOWN","COMBAT_BARK_COOLDOWN",
         "CONTEXT_HISTORY","MAX_WORDS_LIMIT",
-        "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY","BORED_EVENT_SERVERSIDE",
+        "QUEST_COMMENT_CHANCE","RECHAT_ALLOW_ACTIONS","CONTEXT_HISTORY_DIARY",
         "CONTEXT_HISTORY_DYNAMIC_PROFILE"
     ];
 
@@ -92,7 +88,7 @@ $visualKeys = isset($profileSyncableMetadataKeys) && is_array($profileSyncableMe
 $visualGroups = [
   'Language' => ["CORE_LANG","LANG_LLM_XTTS","MAX_WORDS_LIMIT"],
   'Rechat' => ["RECHAT_H","RECHAT_P","RECHAT_ALLOW_ACTIONS"],
-  'Bored Event' => ["BORED_EVENT","BORED_EVENT_SERVERSIDE"],
+  'Bored Event' => ["BORED_EVENT"],
   'Context' => ["CONTEXT_HISTORY","CONTEXT_HISTORY_DIARY","CONTEXT_HISTORY_DYNAMIC_PROFILE"],
   'Diary' => ["DIARY_PROMPT","DIARY_COOLDOWN"],
   'Combat' => ["COMBAT_BARK_COOLDOWN"],

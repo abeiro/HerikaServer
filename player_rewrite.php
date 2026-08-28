@@ -12,6 +12,10 @@ chimRuntimeBootstrap($enginePath, [
     'load_player_name' => true,
     'load_narrator' => true,
 ]);
+
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_PLAYER')) {
+    exit(0);
+}
 require_once $enginePath . "lib/logger.php";
 require_once $enginePath . "lib/model_dynmodel.php";
 require_once $enginePath . "prompts/command_prompt.php";

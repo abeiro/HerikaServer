@@ -44,6 +44,7 @@ require_once($path . "lib/model_dynmodel.php");
 require_once($path . "lib/minimet5_service.php");
 require_once($path . "lib/data_functions.php");
 require_once($path . "lib/chat_helper_functions.php");
+require_once($path . "lib/player_mood_prompts.php");
 require_once($path . "lib/compact_context_history.php");
 require_once($path . "lib/lazy_xml.php");
 require_once($path . "lib/memory_helper_vectordb.php");
@@ -933,7 +934,7 @@ if (in_array($gameRequest[0], ["ext_held_item_raw", "ext_vr_item_raw"], true)) {
     require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "vr_items.php");
     $processedHeldItemRequest = HeldItems::processEventRequest($gameRequest);
     if ($processedHeldItemRequest !== null) {
-        logEvent($processedHeldItemRequest);
+        logEvent($processedHeldItemRequest,DataBeingsInCloseRange(true));// Check this, seems ext_held_item_raw is not giving info about people around.
     }
     terminate();
 }
@@ -998,10 +999,19 @@ if (in_array($gameRequest[0],["bored"])) {
             $localGameRequest[3].=". (Time passes without anyone in the group talking) ";
         logEvent($localGameRequest);
     }
+
+    require_once(__DIR__ . DIRECTORY_SEPARATOR . "lib" . DIRECTORY_SEPARATOR . "rolemaster_bored.php");
+    $boredChance = max(0, min(100, intval($GLOBALS["BORED_EVENT"] ?? 0)));
+    $boredRoll = random_int(0, 99);
+    if (!chimBoredEventChancePasses($boredChance, $boredRoll)) {
+        Logger::debug("[BORED_CHANCE] Skipped bored event (roll {$boredRoll}, chance {$boredChance}%)");
+        terminate();
+    }
+    Logger::debug("[BORED_CHANCE] Accepted bored event (roll {$boredRoll}, chance {$boredChance}%)");
     
     if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"])) {
         Logger::info("[NARRATOR_BORED] Using narrator bored flow");
-    } elseif ((isset($GLOBALS["BORED_EVENT_SERVERSIDE"])&&($GLOBALS["BORED_EVENT_SERVERSIDE"]))) {
+    } else {
         $boredSeedActor = trim((string)($gameRequest[4] ?? $GLOBALS["HERIKA_NAME"] ?? ""));
         Logger::info("Redirecting bored event to rolemaster with seed actor '{$boredSeedActor}'");
         $phpCli = PHP_BINDIR . DIRECTORY_SEPARATOR . "php";
@@ -1665,12 +1675,12 @@ if (!empty($GLOBALS["NARRATOR_BORED_EVENT_ACTIVE"]) && $gameRequest[0] == "bored
         $boredPrompt = '({HERIKA_NAME} makes one short comment directly to {PLAYER_NAME} about something happening right now in the current scene. Keep it grounded in the present moment, do not ask follow-up questions, and do not continue the conversation.) {TEMPLATE_DIALOG}';
     }
 
-    $PROMPTS["bored"]["cue"] = [strtr($boredPrompt, [
+    $PROMPTS["bored"] = ["cue" => [strtr($boredPrompt, [
                         '{HERIKA_NAME}' => function_exists('chimGetPromptCharacterName') ? chimGetPromptCharacterName() : ($GLOBALS["HERIKA_NAME"] ?? 'The Narrator'),
                         '{NARRATOR_NAME}' => function_exists('chimGetNarratorRoleplayName') ? chimGetNarratorRoleplayName() : 'The Narrator',
         '{PLAYER_NAME}' => $GLOBALS["PLAYER_NAME"] ?? 'Player',
         '{TEMPLATE_DIALOG}' => $GLOBALS["TEMPLATE_DIALOG"] ?? '',
-    ])];
+    ])]];
     Logger::info("[NARRATOR_BORED] Injected narrator bored prompt");
 }
 
@@ -1683,8 +1693,33 @@ if ($gameRequest[0] == "narrator_welcome") {
     $PROMPTS["narrator_welcome"]["cue"] = [$welcomePrompt];
 }
 
+$playerMoodRequestTypes = ["inputtext", "inputtext_s", "ginputtext", "ginputtext_s", "narrator_inputtext"];
+if (in_array($gameRequest[0] ?? "", $playerMoodRequestTypes, true)) {
+    // Player playback must use the authored line, before routing and mood cues decorate persistent history.
+    $GLOBALS["PLAYER_TTS_SOURCE_TEXT"] = $gameRequest[3] ?? "";
+}
+
 // Take care of override request if needed..
 require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."request.php");
+
+if (in_array(
+    $gameRequest[0] ?? "",
+    $playerMoodRequestTypes,
+    true
+)) {
+    $playerMood = $requestRoutingSnapshot["player_mood"] ?? "";
+    $customPlayerMood = $requestRoutingSnapshot["player_mood_custom"] ?? "";
+    $playerMoodPrompt = chimResolvePlayerMoodPrompt(
+        $playerMood,
+        $GLOBALS["PLAYER_NAME"] ?? "Player",
+        $db ?? null,
+        $customPlayerMood
+    );
+    $gameRequest[3] = chimAppendPlayerMoodToHistoryLine(
+        $gameRequest[3] ?? "",
+        $playerMoodPrompt
+    );
+}
 
 
 
@@ -2006,6 +2041,30 @@ else if ($GLOBALS["IS_NPC"]) {
 // Ensure contextDataHistoric is an array
 if (!is_array($contextDataHistoric)) {
     $contextDataHistoric = [];
+}
+
+// Short-Term Memory (STM): the window build stashed its true oldest gamets in
+// $GLOBALS["CONTEXT_WINDOW_FLOOR"] and left a '_g' timestamp on each window entry. STM returns the
+// summaries up to the one straddling that floor; if one straddles, the window is cropped to start
+// just after it, so nothing is present twice. One continuous timeline:
+// world -> STM summaries (older, summarised) -> verbatim window (recent) -> cue.
+if (!empty($GLOBALS["IS_NPC"]) && $GLOBALS["HERIKA_NAME"] !== "The Narrator"
+    && (!chimCompactChatEnabled() || chimShortTermMemoryInCompactChatEnabled())) {
+    $contextDataSTM = DataShortTermMemoryFor($GLOBALS["HERIKA_NAME"], $sqlfilter);
+    if (!empty($contextDataSTM)) {
+        if (!empty($GLOBALS["STM_CROP_GAMETS"])) {
+            $stmCropBoundary = intval($GLOBALS["STM_CROP_GAMETS"]);
+            $contextDataHistoric = array_values(array_filter($contextDataHistoric, function($e) use ($stmCropBoundary) {
+                return !is_array($e) || empty($e['_g']) || intval($e['_g']) > $stmCropBoundary;
+            }));
+        }
+        $contextDataHistoric = array_merge($contextDataSTM, $contextDataHistoric);
+    }
+}
+
+// STM: strip the internal '_g' timestamp from every history entry before it reaches the LLM.
+foreach ($contextDataHistoric as $__k => $__e) {
+    if (is_array($__e) && array_key_exists('_g', $__e)) unset($contextDataHistoric[$__k]['_g']);
 }
 
 // Info about location and npcs in first position
@@ -2387,8 +2446,9 @@ if ($currentHold) {
 
 // Narration-like requests should stay descriptive instead of drifting into
 // ordinary conversation turns.
-if ($gameRequest[0] === "vision") {
-    $GLOBALS["COMMAND_PROMPT"] = "Respond with a Soulgaze scene explanation only. Focus on what is visibly present in the provided scene context. Use the Talk action.";
+$isVisionRequest = $gameRequest[0] === "vision";
+if ($isVisionRequest) {
+    $GLOBALS["COMMAND_PROMPT"] = "Relay only the supplied Soulgaze image description. Never identify, position, or describe a person unless that information is explicit in the image description. Do not add facts from memory, biographies, prior dialogue, nearby actor data, current activities, or world knowledge. If the image description leaves a person's identity uncertain, keep them unnamed. Use the Talk action.";
 } else if ($gameRequest[0] === "narration" || $gameRequest[0] === "narrator_welcome") {
     $GLOBALS["COMMAND_PROMPT"] = "Respond with atmospheric narration only. Use the Talk action.";
 }
@@ -2508,26 +2568,41 @@ if (!empty($GLOBALS["OGHMA_HINT"])) {
     $knowledgeSection = "\n\n<knowledge>\n" . $GLOBALS["OGHMA_HINT"] . "\n</knowledge>";
 }
 
-$systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
-    "\n</roleplay_instructions>" . $worldPrompt .
-    "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography . $latestDiaryContext . $characterBottomInjections .
-    "\n</character>" . $knowledgeSection .
-    "\n\n<general_instructions>\n" . $GLOBALS["COMMAND_PROMPT"] .
-    "\n</general_instructions>" . $actionsList . $nearbySections . $promptBottomInjections . $paralinguisticTagsPrompt .
-    "\n" . $rumorsText . "\n";
+if ($isVisionRequest) {
+    $systemPromptRaw = "<roleplay_instructions>\nYou are #HERIKA_NAME#, explaining a Soulgaze image to #PLAYER_NAME#. The image description in the request is your only evidence about the depicted scene.\n</roleplay_instructions>" .
+        "\n\n<general_instructions>\n" . $GLOBALS["COMMAND_PROMPT"] .
+        "\n</general_instructions>" . $actionsList . $paralinguisticTagsPrompt . "\n";
+    $promptCompositionSections = [
+        'roleplay_instructions' => 'Soulgaze visual-only response role',
+        'general_instructions' => $GLOBALS["COMMAND_PROMPT"] ?? '',
+        'actions' => $actionsList ?? '',
+        'paralinguistic_tags' => $paralinguisticTagsPrompt ?? '',
+    ];
+    $contextDataFull = [];
+    $compactHistoryBlock = '';
+    $memoryInjectionCtx = [];
+} else {
+    $systemPromptRaw = "<roleplay_instructions>\n" . $GLOBALS["PROMPT_HEAD"] .
+        "\n</roleplay_instructions>" . $worldPrompt .
+        "\n\n<character>\n" . $GLOBALS["HERIKA_PERS"] . $dynamicBiography . $latestDiaryContext . $characterBottomInjections .
+        "\n</character>" . $knowledgeSection .
+        "\n\n<general_instructions>\n" . $GLOBALS["COMMAND_PROMPT"] .
+        "\n</general_instructions>" . $actionsList . $nearbySections . $promptBottomInjections . $paralinguisticTagsPrompt .
+        "\n" . $rumorsText . "\n";
 
-$promptCompositionSections = [
-    'roleplay_instructions' => $GLOBALS["PROMPT_HEAD"] ?? '',
-    'world' => $worldPrompt ?? '',
-    'character' => ($GLOBALS["HERIKA_PERS"] ?? '') . ($dynamicBiography ?? '') . ($latestDiaryContext ?? '') . ($characterBottomInjections ?? ''),
-    'knowledge' => $knowledgeSection ?? '',
-    'general_instructions' => $GLOBALS["COMMAND_PROMPT"] ?? '',
-    'actions' => $actionsList ?? '',
-    'nearby_actors' => $nearbySections ?? '',
-    'plugin_injections' => $promptBottomInjections ?? '',
-    'paralinguistic_tags' => $paralinguisticTagsPrompt ?? '',
-    'rumors' => $rumorsText ?? '',
-];
+    $promptCompositionSections = [
+        'roleplay_instructions' => $GLOBALS["PROMPT_HEAD"] ?? '',
+        'world' => $worldPrompt ?? '',
+        'character' => ($GLOBALS["HERIKA_PERS"] ?? '') . ($dynamicBiography ?? '') . ($latestDiaryContext ?? '') . ($characterBottomInjections ?? ''),
+        'knowledge' => $knowledgeSection ?? '',
+        'general_instructions' => $GLOBALS["COMMAND_PROMPT"] ?? '',
+        'actions' => $actionsList ?? '',
+        'nearby_actors' => $nearbySections ?? '',
+        'plugin_injections' => $promptBottomInjections ?? '',
+        'paralinguistic_tags' => $paralinguisticTagsPrompt ?? '',
+        'rumors' => $rumorsText ?? '',
+    ];
+}
 
 $systemPrompt = chimFormatPromptXmlSections(
     strtr(
@@ -2541,9 +2616,13 @@ $systemPrompt = chimFormatPromptXmlSections(
 );
 
 $systemPrompt = chimApplyPromptContextOptionsToSystemPrompt($systemPrompt);
+$systemPrompt = chimFormatPromptHeadSection(
+    $systemPrompt,
+    !empty($GLOBALS["PROMPT_HEAD_MARKDOWN_ENABLED"])
+);
 
 $head[] = array('role' => 'system', 'content' => $systemPrompt);
-$head = chimAppendCompactHistoryToPrompt($head, $compactHistoryBlock);
+$head = chimAppendCompactHistoryToPrompt($head, $compactHistoryBlock, !empty($GLOBALS["PROMPT_HEAD_MARKDOWN_ENABLED"]));
 
 if (!empty($GLOBALS["OGHMA_HINT"])) {
     //avoid reinjecting command prompt that we have already appended
@@ -2666,6 +2745,9 @@ if ($gameRequest[0] == "funcret") {
 
     $contextData = array_merge($head, ($contextDataFull), $prompt);
     
+}
+if ($isVisionRequest) {
+    $contextData = chimBuildVisualOnlyVisionContext($head, strval($gameRequest[3] ?? ''));
 }
 chimRequestPerformanceMark('prompt_ready');
 

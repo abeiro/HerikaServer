@@ -23,6 +23,11 @@ chimRuntimeBootstrap($enginePath, [
     'load_narrator' => true,
 ]);
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_BGL')) {
+    echo "Background Life is disabled globally." . PHP_EOL;
+    exit(0);
+}
+
 require_once $enginePath . 'lib/model_dynmodel.php';
 require_once $enginePath . 'lib/chat_helper_functions.php';
 require_once $enginePath . 'lib/data_functions.php';
@@ -63,15 +68,13 @@ if ($cmds[0] == "TrackAll") {
     /* NPC related data */
 
     $connector = new LLMConnector();
-    $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
+    $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_BGL"]);
     $currentNpcData = $npcMaster->getByName($argv[1]);// Lookup NPC data by name passed as first argument
 
     $profile = new CoreProfile();
     $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
     $connector->setOldGlobals($currentConnectorData);
     $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
-
-    $CLEAN_CONTEXT_FOCUS_CHAT = false;
 
     $COMMAND_PROMPT = '';
 

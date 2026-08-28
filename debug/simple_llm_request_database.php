@@ -23,6 +23,11 @@ chimRuntimeBootstrap($enginePath, [
     'load_narrator' => true,
 ]);
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+    echo "Background & Memory Tasks are disabled globally." . PHP_EOL;
+    exit(0);
+}
+
 require_once $enginePath . "lib/model_dynmodel.php";
 require_once $enginePath . "lib/chat_helper_functions.php";
 require_once $enginePath . "lib/data_functions.php";
@@ -42,8 +47,6 @@ $connector = new LLMConnector();
 $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
 
 $connector->setOldGlobals($currentConnectorData);
-
-$CLEAN_CONTEXT_FOCUS_CHAT = false;
 
 $COMMAND_PROMPT = '';
 

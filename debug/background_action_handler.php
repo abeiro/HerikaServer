@@ -1,6 +1,7 @@
 <?php
 
 
+define('_LOCATION_RESOLVE_SIM_THRESHOLD', 0.74); // Minimum similarity score for location resolution
 /**
  * Force-trigger an NPC background life update on the next mid-term BGL check.
  *
@@ -151,7 +152,7 @@ function handleTravelToAction($location, $currentNpcData, $npcName, $last_ts, $l
         error_log("[handleTravelToAction] requested='$requestedLocation' resolved='{$resolvedLocation}' formid='{$locId['formid']}'$sim$dist");
     }
 
-    if (!isset($locId["formid"]) || (isset($locId['sim']) && $locId['sim'] < 0.8)) {
+    if (!isset($locId["formid"]) || (isset($locId['sim']) && $locId['sim'] < _LOCATION_RESOLVE_SIM_THRESHOLD)) {
         $db->insert('eventlog', [
             'ts' => $last_ts,
             'gamets' => $last_gamets + 10,
@@ -649,8 +650,9 @@ function handleMoveToAction($targetNpcName, $currentNpcData, $npcName, $last_ts,
 
     if ($targetNpc === null) {
         error_log("[handleMoveToAction] Target NPC not found: $targetNpcName");
+        $locationCandidate=resolveTravelLocation($targetNpcName, $currentNpcData, $db);
 
-        if (resolveTravelLocation($targetNpcName, $currentNpcData, $db) !== null) {
+        if ( $locationCandidate && isset($locationCandidate["sim"]) && $locationCandidate["sim"] > _LOCATION_RESOLVE_SIM_THRESHOLD) {
             $db->insert('eventlog', [
                 'ts' => $last_ts,
                 'gamets' => $last_gamets + 5,
@@ -985,7 +987,7 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             'ts' => time(),
             'gamets' => $last_gamets + 20,
             'type' => 'infoaction',
-            'data' => "The Narrator: Despite searching, $npcName could not find any trace of $resolvedName",
+            'data' => "The Narrator: Despite searching, $npcName could not find any trace of $resolvedName. $npcName desists from this action and continue with other tasks",
             'sess' => $momentum,
             'localts' => time(),
             'people' => $npcName,
@@ -1000,11 +1002,12 @@ function handleFindNPCAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                 'ts' => time(),
                 'gamets' => $last_gamets,
                 'localts' => time(),
-                'data' => "$npcName could not find any trace of $resolvedName",
+                'data' => "$npcName could not find any trace of $resolvedName. $npcName should desist from this action and continue with other tasks",
                 'category' => 'error',
             ]
         );
-        triggerNpcUpdate($npcName); // Force NPC to update its background life data on the next mid-term check, which should lead it to discover the new location and update accordingly.
+        $extdata=$npcMaster->getExtendedData($currentNpcData);
+        triggerNpcUpdate($npcName, ++$extdata["background_life_last_updated_ec"]); // Force NPC to update its background life data on the next mid-term check, which should lead it to discover the new location and update accordingly.
     }
 
 
@@ -1106,6 +1109,8 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
             }
             if (!gameIsPaused())
                 $retryCount++;
+            else
+                $retryCount=$retryCount+0.1;
             sleep(1);
         }
     }
@@ -1211,7 +1216,7 @@ function handleSpeakToAction($targetNpcName, $currentNpcData, $npcName, $last_ts
                     . "(at this point {$GLOBALS["HERIKA_NAME"]} thinks to himsel/herself:{$GLOBALS['LAST_REASON']})\n"
                     . "Write a brief, immersive dialogue between $npcName and $resolvedName.\n"
                     . "The conversation is initiated by $npcName.\n"
-                    . "The dialogue must be consistent with the context_history above.\n"
+                    . "The dialogue must be consistent with the context_history above, must avoid repeating lines.\n"
                     . "Format each line exactly as:\n"
                     . "$npcName: ...\n$resolvedName: ...\n"
                     . 'Keep it to 3–5 exchanges total.'
@@ -1412,6 +1417,165 @@ function handleGiveGoldToAction($actionArgument, $currentNpcData, $npcName, $las
 }
 
 /**
+ * Handle SellService action for NPC background life.
+ *
+ * Sells a service to one or more NPCs. No inventory item is moved;
+ * only gold changes hands: the buyer loses gold and the service provider
+ * (the acting NPC) receives it.
+ *
+ * Format: SellService:<NPC name>:<service_description>:<total_gold_amount>,...
+ *
+ * @param string $actionArgument Comma-separated service entries
+ * @param array  $currentNpcData Acting NPC data (must contain refid)
+ * @param string $npcName        Acting NPC display name
+ * @param int    $last_ts        Last wall-clock timestamp
+ * @param int    $last_gamets    Last in-game timestamp
+ * @param int    $momentum       Session timestamp
+ * @param object $db             Database connection
+ * @return bool  True when at least one service is processed, false otherwise
+ */
+function handleSellServiceAction($actionArgument, $currentNpcData, $npcName, $last_ts, $last_gamets, $momentum, $db)
+{
+    $sourceRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($currentNpcData['refid'])));
+    $skyrimCmd = new SkyrimCommandBuilder();
+
+    $entries = array_values(array_filter(array_map('trim', explode(',', (string) $actionArgument)), static function ($entry) {
+        return $entry !== '';
+    }));
+
+    if (empty($entries)) {
+        error_log("[handleSellServiceAction] Empty actionArgument: $actionArgument");
+        return false;
+    }
+
+    $processed = 0;
+    $resolvedTargets = [];
+    $targetRefsToRefresh = [];
+
+    foreach ($entries as $entryRaw) {
+        // Format: TargetName:service_description:gold
+        // Service description may contain colons, so split from the ends.
+        $args = array_map('trim', explode(':', $entryRaw));
+        $targetNpcName = $args[0] ?? '';
+        $gold = isset($args[count($args) - 1]) ? (int) $args[count($args) - 1] : 0;
+        $service = trim(implode(':', array_slice($args, 1, -1)));
+
+        if ($targetNpcName === '' || $service === '' || $gold <= 0) {
+            error_log("[handleSellServiceAction] Malformed entry skipped: $entryRaw");
+            continue;
+        }
+
+        $targetNpc = resolveNpcByName($targetNpcName, $db);
+        if ($targetNpc === null) {
+            error_log("[handleSellServiceAction] Target NPC not found: $targetNpcName");
+            continue;
+        }
+
+        $resolvedName = $targetNpc['name'];
+        $targetRefHexString = strtolower(convertSignedToUnsignedHex(hexdec($targetNpc['refid'])));
+
+        // Buyer pays gold; service provider receives gold.
+        $json = $skyrimCmd->ObjectReference->RemoveItem($targetRefHexString, "0x0000000f", $gold, true);
+        $skyrimCmd->send(cmd: $json);
+
+        $json = $skyrimCmd->ObjectReference->AddItem($sourceRefHexString, "0x0000000f", $gold, true);
+        $skyrimCmd->send(cmd: $json);
+
+        $db->insert('eventlog', [
+            'ts' => $last_ts,
+            'gamets' => $last_gamets + 10,
+            'type' => 'innerchat',
+            'data' => "The Narrator: $npcName sells a service ($service) to $resolvedName for $gold gold. Inventories updated!.Reason: {$GLOBALS["LAST_REASON"]}",
+            'sess' => $momentum,
+            'localts' => time(),
+            'people' => "|$npcName|$resolvedName|",
+            'location' => null,
+            'party' => '',
+        ]);
+
+        $db->insert('actions_issued', [
+            'action' => 'SellService',
+            'fullcall' => "SellService:$resolvedName:$service:$gold",
+            'actorname' => $npcName,
+            'ts' => $last_ts,
+            'gamets' => $last_gamets,
+            'localts' => time(),
+            'original' => 'backgroundaction',
+        ]);
+
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets,
+                'localts' => time(),
+                'data' => "$npcName sells a service ($service) to $resolvedName for $gold gold. Reason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'trade',
+            ]
+        );
+
+        $resolvedTargets[] = "$resolvedName:$service:$gold";
+        $targetRefsToRefresh[$targetRefHexString] = true;
+        $processed++;
+    }
+
+    if ($processed === 0) {
+        error_log("[handleSellServiceAction] No valid entries processed: $actionArgument");
+        $db->insert('eventlog', [
+            'ts' => $last_ts,
+            'gamets' => $last_gamets + 10,
+            'type' => 'innerchat',
+            'data' => "The Narrator: $npcName tried to sell a service, but no valid transactions were processed. $npcName desists from this action and continue with normal life",
+            'sess' => $momentum,
+            'localts' => time(),
+            'people' => "|$npcName|",
+            'location' => null,
+            'party' => '',
+        ]);
+
+        $db->insert(
+            'bgl_history',
+            [
+                'npc' => $npcName,
+                'ts' => $last_ts,
+                'gamets' => $last_gamets,
+                'localts' => time(),
+                'data' => "$npcName tried to sell a service, but no valid transactions were processed. Reason: {$GLOBALS["LAST_REASON"]}",
+                'category' => 'error',
+            ]
+        );
+        triggerNpcUpdate($npcName);
+        return false;
+    }
+
+    // Schedule inventory updates for source and all unique targets after processing.
+    $db->insert('responselog', [
+        'localts' => time() + 10,
+        'sent' => 0,
+        'actor' => 'rolemaster',
+        'text' => '',
+        'action' => "rolecommand|BackgroundCmd@$sourceRefHexString@UpdateInventory",
+        'tag' => '',
+    ]);
+
+    foreach (array_keys($targetRefsToRefresh) as $targetRefHexString) {
+        $db->insert('responselog', [
+            'localts' => time() + 10,
+            'sent' => 0,
+            'actor' => 'rolemaster',
+            'text' => '',
+            'action' => "rolecommand|BackgroundCmd@$targetRefHexString@UpdateInventory",
+            'tag' => '',
+        ]);
+    }
+
+    error_log('[handleSellServiceAction] Processed services: ' . implode(', ', $resolvedTargets));
+    triggerNpcUpdate($npcName);
+    return true;
+}
+
+/**
  * Handle BuyItem / SellItem / GiveItemTo action.
  *
  * @param string $tradeType      'BuyItem', 'SellItem', or 'GiveItemTo'
@@ -1550,7 +1714,8 @@ function handleTradeItemsAction($tradeType, $actionArgument, $currentNpcData, $n
         if ($itemName) {
             $itemNameResolved = "($count {$itemName})";
         } else {
-            $itemNameResolved = '';
+            $row = $db->fetchOne("select COALESCE(description,name) as name from market_cache where baseid='$itemId'");
+            $itemNameResolved = $row ? "($count {$row['name']})" : "($count Unknown Item)";
         }
 
         $db->insert('eventlog', [

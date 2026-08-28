@@ -30,6 +30,11 @@ chimRuntimeBootstrap($enginePath, [
     'load_narrator' => true,
 ]);
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_BGL')) {
+    echo "Background Life is disabled globally." . PHP_EOL;
+    exit(0);
+}
+
 require_once $enginePath . 'lib/model_dynmodel.php';
 require_once $enginePath . 'lib/chat_helper_functions.php';
 require_once $enginePath . 'lib/data_functions.php';
@@ -134,8 +139,6 @@ $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
 $connector->setOldGlobals($currentConnectorData);
 $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
 
-$CLEAN_CONTEXT_FOCUS_CHAT = false;
-
 $COMMAND_PROMPT = '';
 
 $dbNpcName = $db->escape($argv[1]);
@@ -186,6 +189,7 @@ if (!$lastIt["gamets"]) {
     return;
 }
 $lastItNumber = $lastIt["gamets"] ?? 0;
+
 
 $bglTriggerHours = chimGetBackgroundLifeTriggerHours();
 if (($last_gamets - $lastItNumber) < ($bglTriggerHours / GAMETS_TO_HOURS)) {
@@ -369,6 +373,17 @@ if (sizeof($combinedEvents) == 0) {
     $history .= "Note: After this events, $daysPassed has passed";
 }
 
+// Inception
+$lastMinuteNotes="";
+$extdata = $npcMaster->getExtendedData($currentNpcData);
+if (isset($extdata['bgl_inception']) && !empty($extdata['bgl_inception'])) {
+    $lastMinuteNotes .= "\nImportant:A thought crosses {$GLOBALS['HERIKA_NAME']}'s mind: He/She should {$extdata['bgl_inception']}\n";
+    $npcMaster = new NpcMaster();
+    $npcData = $npcMaster->getByName($GLOBALS['HERIKA_NAME']);
+    $npcMaster->updateExtendedKeysByName($GLOBALS['HERIKA_NAME'], ['bgl_inception' => ""]);
+    error_log("[BGL RUN] HINT inception: {$extdata['bgl_inception']}");
+}
+
 //$head[] = ['role' => 'system', 'content' => "You're an AI writer. Examine this character's logbook from a story in the Skyrim universe."];
 $head["es"][] = ['role' => 'system', 'content' => "Eres un asistente de escritor. Examina este texto con hechos ocurridos en el universo ficticio de Skyrim (The Elder Scrolls)"];
 $head["en"][] = ['role' => 'system', 'content' => "You are a writing assistant. Examine this text containing events that occurred in the fictional universe of Skyrim (The Elder Scrolls)."];
@@ -405,6 +420,8 @@ This soliloquy should reflect what the character might have done over the last $
  * What possible events or encounters might have occurred.
  * Intimate thoughts.
  * Give special attention to <background_life_goals> when present; <goals> contains the character's general motivations.
+
+$lastMinuteNotes
 
 Always respect the character's last known location. If the character is currently in a specific place, generated content should occur in that same area or its surroundings.
 The character may express the intention to travel elsewhere, but such travel should only be described as a future plan, not an immediate action.

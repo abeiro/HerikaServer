@@ -161,6 +161,23 @@ class RelationshipManager {
         '🔐', '🔑', '🗝️', '🔨', '🪓', '⛏️', '⚒️', '🛠️', '🗡️', '⚔️', '🔫', '🪃', '🏹'
     ];
 
+    public static function shouldRunAutomaticEvaluation($chance = null, $roll = null) {
+        if ($chance === null) {
+            $chance = $GLOBALS['RELATIONSHIP_UPDATE_CHANCE'] ?? 50;
+        }
+
+        $chance = is_numeric($chance) ? max(0, min(100, (int)$chance)) : 50;
+        if ($chance === 0) {
+            return false;
+        }
+        if ($chance === 100) {
+            return true;
+        }
+
+        $roll = $roll === null ? random_int(1, 100) : max(1, min(100, (int)$roll));
+        return $roll <= $chance;
+    }
+
     /**
      * Relationship storage uses the canonical key "Player" for the player route.
      * UI/prompts may surface the actual character name, but reads/writes must not
@@ -281,6 +298,16 @@ class RelationshipManager {
                 $storedType = 'neutral';
             }
             $rel['type'] = self::TYPE_ALIASES[$storedType] ?? $storedType;
+            if (array_key_exists('custom_info', $rel)) {
+                // AI paths normalize relationship maps before saving, so preserve
+                // player-authored text exactly. UI writers own input trimming.
+                $customInfo = is_scalar($rel['custom_info']) ? (string)$rel['custom_info'] : '';
+                if ($customInfo === '') {
+                    unset($rel['custom_info']);
+                } else {
+                    $rel['custom_info'] = $customInfo;
+                }
+            }
 
             if (!isset($normalized[$canonicalTarget])) {
                 $normalized[$canonicalTarget] = $rel;
@@ -291,11 +318,52 @@ class RelationshipManager {
             $existingWeight = self::relationshipDataWeight($existing);
             $incomingWeight = self::relationshipDataWeight($rel);
             if ($incomingWeight > $existingWeight) {
-                $normalized[$canonicalTarget] = $rel;
+                $preferred = $rel;
+                if (!empty($existing['custom_info'])) {
+                    $preferred['custom_info'] = $existing['custom_info'];
+                }
+                $normalized[$canonicalTarget] = $preferred;
+            } elseif (empty($existing['custom_info']) && !empty($rel['custom_info'])) {
+                $normalized[$canonicalTarget]['custom_info'] = $rel['custom_info'];
             }
         }
 
         return $normalized;
+    }
+
+    /**
+     * Merge model-produced relationships without changing player-authored Custom Info.
+     */
+    public static function mergeAiRelationshipMap($existingRelationships, $incomingRelationships, $replaceExisting = false) {
+        $existing = self::normalizeRelationshipMap($existingRelationships);
+        $incoming = self::normalizeRelationshipMap($incomingRelationships);
+        foreach ($incoming as &$relationship) {
+            unset($relationship['custom_info']);
+        }
+        unset($relationship);
+        $merged = $replaceExisting ? $incoming : $existing;
+
+        if (!$replaceExisting) {
+            foreach ($incoming as $target => $relationship) {
+                if (!isset($merged[$target])) {
+                    $merged[$target] = $relationship;
+                }
+            }
+        }
+
+        foreach ($existing as $target => $relationship) {
+            $customInfo = $relationship['custom_info'] ?? '';
+            if ($customInfo === '') {
+                continue;
+            }
+            if (!isset($merged[$target])) {
+                $merged[$target] = $relationship;
+                continue;
+            }
+            $merged[$target]['custom_info'] = $customInfo;
+        }
+
+        return $merged;
     }
 
     private static function relationshipDataWeight($rel) {
@@ -346,6 +414,122 @@ class RelationshipManager {
         if ($score >= -75) return "Resentful";
         if ($score >= -90) return "Hateful";
         return "Hostile";
+    }
+
+    private static function truncateRelationshipEventReason($reason, $limit = 60) {
+        $reason = trim(preg_replace('/\s+/u', ' ', (string)$reason));
+        if ($reason === '') {
+            return '';
+        }
+
+        $length = function_exists('mb_strlen') ? mb_strlen($reason, 'UTF-8') : strlen($reason);
+        if ($length > $limit) {
+            $slice = function_exists('mb_substr')
+                ? mb_substr($reason, 0, $limit - 1, 'UTF-8')
+                : substr($reason, 0, $limit - 1);
+            $lastSpace = strrpos($slice, ' ');
+            if ($lastSpace !== false && $lastSpace >= (int)($limit * 0.6)) {
+                $slice = substr($slice, 0, $lastSpace);
+            }
+            return rtrim($slice, " \t\n\r\0\x0B.,;:!?") . '…';
+        }
+
+        return rtrim($reason, " \t\n\r\0\x0B.,;:!?") . '.';
+    }
+
+    /**
+     * Describe relationship changes between two persisted relationship snapshots.
+     */
+    public static function buildRelationshipChangeSummaries($npcName, $oldRelationships, $newRelationships) {
+        $npcName = trim((string)$npcName);
+        if ($npcName === '') {
+            return [];
+        }
+
+        $oldRelationships = self::normalizeRelationshipMap(is_array($oldRelationships) ? $oldRelationships : []);
+        $newRelationships = self::normalizeRelationshipMap(is_array($newRelationships) ? $newRelationships : []);
+        $playerDisplayName = trim((string)($GLOBALS['PLAYER_NAME'] ?? 'Player'));
+        if ($playerDisplayName === '' || strcasecmp($playerDisplayName, 'the Player') === 0) {
+            $playerDisplayName = 'Player';
+        }
+
+        $events = [];
+        $targets = array_values(array_unique(array_merge(
+            array_keys($oldRelationships),
+            array_keys($newRelationships)
+        )));
+        foreach ($targets as $target) {
+            $oldRelationship = $oldRelationships[$target] ?? ['aff' => 0, 'type' => 'neutral'];
+            $newRelationship = $newRelationships[$target] ?? ['aff' => 0, 'type' => 'neutral'];
+            $oldAffinity = (int)($oldRelationship['aff'] ?? 0);
+            $newAffinity = (int)($newRelationship['aff'] ?? 0);
+            $oldType = strtolower(trim((string)($oldRelationship['type'] ?? 'neutral')));
+            $newType = strtolower(trim((string)($newRelationship['type'] ?? 'neutral')));
+            $affinityChanged = $oldAffinity !== $newAffinity;
+            $typeChanged = $oldType !== $newType;
+            if (!$affinityChanged && !$typeChanged) {
+                continue;
+            }
+
+            $targetDisplayName = strcasecmp((string)$target, 'Player') === 0
+                ? $playerDisplayName
+                : trim((string)$target);
+            if ($targetDisplayName === '') {
+                continue;
+            }
+
+            $reason = '';
+            $oldNote = trim((string)($oldRelationship['note'] ?? ''));
+            $newNote = trim((string)($newRelationship['note'] ?? ''));
+            if ($newNote !== '' && $newNote !== $oldNote) {
+                $reason = self::truncateRelationshipEventReason($newNote);
+            }
+
+            $parts = [];
+            $direction = 'neutral';
+            if ($affinityChanged) {
+                $increased = $newAffinity > $oldAffinity;
+                $direction = $increased ? 'up' : 'down';
+                $verb = $increased ? 'increased' : 'decreased';
+                $oldTier = self::getTierLabel($oldAffinity);
+                $newTier = self::getTierLabel($newAffinity);
+                $scoreChange = "{$npcName}'s affinity toward {$targetDisplayName} {$verb} by "
+                    . abs($newAffinity - $oldAffinity)
+                    . " ({$oldAffinity} to {$newAffinity}";
+                if ($oldTier !== $newTier) {
+                    $scoreChange .= ", now {$newTier}";
+                }
+                $parts[] = $scoreChange . ')';
+            }
+            if ($typeChanged) {
+                $typeChange = "the relationship changed from {$oldType} to {$newType}";
+                $parts[] = $affinityChanged ? $typeChange : $npcName . "'s relationship toward {$targetDisplayName} changed from {$oldType} to {$newType}";
+            }
+
+            $text = count($parts) === 2
+                ? $parts[0] . ' and ' . $parts[1] . '.'
+                : $parts[0] . '.';
+            if ($reason !== '') {
+                $text .= ' ' . $reason;
+            }
+
+            $people = [];
+            foreach ([$npcName, $targetDisplayName] as $person) {
+                $person = trim(str_replace('|', '', $person));
+                if ($person !== '' && !in_array($person, $people, true)) {
+                    $people[] = $person;
+                }
+            }
+
+            $events[] = [
+                'target' => (string)$target,
+                'direction' => $direction,
+                'data' => $text,
+                'people' => '|' . implode('|', $people) . '|',
+            ];
+        }
+
+        return $events;
     }
 
     /**

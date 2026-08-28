@@ -14,6 +14,7 @@ require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
 require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php");
+require_once($enginePath . "lib" . DIRECTORY_SEPARATOR . "eventlog_helper.php");
 
 $GLOBALS["ENGINE_PATH"]=$enginePath;
 
@@ -51,9 +52,9 @@ include(__DIR__.DIRECTORY_SEPARATOR."../tmpl/head.html");
     font-weight: normal;
     font-style: normal;
 }
-main { 
-    padding-top: 40px; 
-    padding-bottom: 40px; 
+main {
+    padding-top: 10px;
+    padding-bottom: 24px;
 }
 .page-header {
     margin: 0 0 24px 0; 
@@ -1405,7 +1406,7 @@ if (!function_exists('renderNpcToolbar')) {
         $pageEnd = min($totalPages, $pageStart + $pageWindow - 1);
 
         ?>
-        <div class="pagination npc-toolbar">
+        <div class="pagination npc-toolbar" data-current-page="<?= (int)$page ?>" data-total-pages="<?= (int)$totalPages ?>">
           <div class="npc-toolbar-main">
             <div class="npc-toolbar-actions">
               <button id="npc_create_btn" type="button" class="npc-toolbar-btn npc-toolbar-btn-uniform npc-toolbar-btn-action">+ Create NPC</button>
@@ -1500,6 +1501,19 @@ if (isset($_GET["edit"])) {
         </html>
         <?php
         exit;
+    }
+}
+
+$npcRelationshipChanges = [];
+if (is_array($editItem) && intval($editItem['id'] ?? 0) > 0) {
+    try {
+        $npcRelationshipChanges = chimFetchRecentRelationshipHistoryChanges(
+            $GLOBALS['db'],
+            10,
+            intval($editItem['id'])
+        );
+    } catch (Throwable $e) {
+        error_log('Unable to load NPC relationship change history: ' . $e->getMessage());
     }
 }
 
@@ -1925,6 +1939,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .modal-inline-actions .btn-toggle{background:transparent; border:none; padding:6px; color:#e9efff; font-size:22px; line-height:1; text-decoration:none; cursor:pointer;}
 .modal-inline-actions .btn-toggle:hover{color: rgb(242, 124, 17); text-decoration:none;}
 .modal-inline-actions .btn-toggle.active{color:#ffd700; font-weight:700;}
+.modal-inline-actions .btn-toggle[data-favorite]:hover,
+.modal-inline-actions .btn-toggle[data-favorite]:focus-visible{color:#ffd700 !important; text-shadow:0 0 8px rgba(255,215,0,.7),0 0 14px rgba(255,215,0,.45) !important;}
+.modal-inline-actions .btn-toggle.active[data-favorite]{color:#ffd700 !important;}
 </style>
 <div data-npc-profile-loaded="1" data-npc-id="<?= htmlspecialchars((string)($editItem['id'] ?? '')) ?>" hidden></div>
 <form method="post" onsubmit='return false' style='display:block'>
@@ -2246,7 +2263,143 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-bgl-event { padding:9px 10px; border-left:3px solid #666; background:#1d1d1d; color:#ddd; font-size:0.84rem; }
 .npc-bgl-event-time { display:block; margin-top:4px; color:#888; font-size:0.72rem; }
 .npc-bgl-empty { margin:0; padding:10px; color:#888; text-align:center; }
-@media (max-width:700px) { .npc-editor-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+.npc-relationship-history {
+    grid-column:1 / -1;
+    padding:14px;
+    border:1px solid #444;
+    border-radius:8px;
+    background:#252525;
+}
+.npc-relationship-history-header { margin-bottom:10px; }
+.npc-relationship-history h3 { margin:0; color:#f2bd7f; font-size:1rem; }
+.npc-relationship-history-header p { margin:3px 0 0; color:#aaa; font-size:0.82rem; }
+.npc-relationship-history-list { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
+.npc-relationship-history-item {
+    padding:7px 10px;
+    border-left:3px solid rgb(242,124,17);
+    border-radius:0 4px 4px 0;
+    background:#1d1d1d;
+    /* Match the event-log row typography inherited by the shared relationship markup. */
+    color:#dee2e6;
+    font-size:0.8rem;
+    font-weight:700;
+}
+/* Relationship history rows: compact per-change presentation.
+   Same palette and density as the CHIM home dashboard widget. */
+.relationship-change-cell {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.relationship-change-entry {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+    align-items: baseline;
+    min-width: 0;
+}
+
+.relationship-change-delta {
+    min-width: 3.1em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.92em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* The sign carries the meaning, so colour is reinforcement only. */
+.relationship-change-delta.is-up {
+    color: #7ee08a;
+    background: rgba(76, 175, 80, 0.14);
+    border: 1px solid rgba(126, 224, 138, 0.35);
+}
+
+.relationship-change-delta.is-down {
+    color: #ff8a80;
+    background: rgba(244, 67, 54, 0.14);
+    border: 1px solid rgba(255, 138, 128, 0.35);
+}
+
+.relationship-change-delta.is-type {
+    color: #f2bd7f;
+    background: rgba(242, 124, 17, 0.14);
+    border: 1px solid rgba(242, 189, 127, 0.35);
+    font-family: inherit;
+    font-size: 0.72em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.relationship-change-entry-body {
+    display: block;
+    min-width: 0;
+}
+
+.relationship-change-reason {
+    display: block;
+    color: #e2e2e2;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.relationship-change-entry-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 3px 6px;
+    margin-top: 2px;
+    font-size: 0.85em;
+    color: #929292;
+}
+
+.relationship-change-target {
+    color: #bdbdbd;
+    overflow-wrap: anywhere;
+}
+
+.relationship-change-arrow {
+    color: #6f6f6f;
+}
+
+.relationship-change-tier {
+    padding: 0 4px;
+    border: 1px solid #4a4033;
+    border-radius: 3px;
+    color: #d9c39a;
+}
+
+.relationship-change-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+/* One snapshot time per history row, kept compact beneath the shared change list. */
+.npc-relationship-history-time { display:block; margin-top:4px; color:#888; font-size:0.83em; }
+.npc-relationship-history-empty { margin:0; padding:10px; color:#888; text-align:center; }
+@media (max-width:700px) {
+    .npc-editor-tabs { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .npc-relationship-history {
+        width:calc(100vw - 16px);
+        max-width:100%;
+        box-sizing:border-box;
+        justify-self:start;
+    }
+    .relationship-change-entry { gap:8px; }
+}
 @media (max-width:850px) {
     .npc-editor-action-card { grid-template-columns:minmax(0, 1fr); }
     .npc-bgl-summary,
@@ -2302,6 +2455,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 
             function sectionFor(unit){
                 if (unit.id === 'relationship-editor-section' || unit.querySelector('#relationship-editor-section')) return 'relationships';
+                if (unit.id === 'relationship-change-history') return 'relationships';
                 const label = unit.querySelector('label:not([for])');
                 if (label && label.textContent.replace(/\s+/g, ' ').trim() === 'Relationships') return 'relationships';
                 const tokens = tokensFor(unit);
@@ -3027,8 +3181,53 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         </div>
 
         <?php if (file_exists(__DIR__."/../../ext/relationship_system/relationship_editor.php")) {
+            // The embedded editor uses $data for each relationship; preserve the NPC list in this parent scope.
+            $npcListRows = $data;
             include(__DIR__."/../../ext/relationship_system/relationship_editor.php");
+            $data = $npcListRows;
+            unset($npcListRows);
         } ?>
+        <section id="relationship-change-history" class="form-item span-2 npc-relationship-history" aria-labelledby="relationship-change-history-title">
+            <div class="npc-relationship-history-header">
+                <h3 id="relationship-change-history-title">Recent Relationship Changes</h3>
+                <p>Read-only history for this NPC. The current relationships above remain editable.</p>
+            </div>
+            <?php if (empty($npcRelationshipChanges)): ?>
+                <p class="npc-relationship-history-empty">No relationship changes recorded for this NPC yet.</p>
+            <?php else: ?>
+                <ol class="npc-relationship-history-list">
+                    <?php foreach ($npcRelationshipChanges as $relationshipChange): ?>
+                        <?php
+                        $localTimestamp = intval($relationshipChange['localts'] ?? 0);
+                        $gameTimestamp = intval($relationshipChange['gamets'] ?? 0);
+                        $timeParts = [];
+                        if ($gameTimestamp > 0) {
+                            $timeParts[] = convert_gamets2skyrim_long_date2($gameTimestamp);
+                        }
+                        if ($localTimestamp > 0) {
+                            $timeParts[] = gmdate('j M Y, H:i', $localTimestamp) . ' UTC';
+                        }
+                        $timeLabel = implode(' · ', $timeParts);
+                        ?>
+                        <li class="npc-relationship-history-item">
+                            <?php
+                            // The shared event-log renderer owns badge, stored reason, target and tier,
+                            // including snapshots that moved several relationships at once. The prose
+                            // summary is only the fallback for older rows with no structured detail.
+                            echo chimRenderRelationshipChangeCellHtml(
+                                $relationshipChange['changes'] ?? [],
+                                $relationshipChange['data'] ?? ''
+                            );
+                            ?>
+                            <?php if ($timeLabel !== ''): ?>
+                                <?php /* The page is already scoped to this NPC, so the row only adds its time. */ ?>
+                                <time class="npc-relationship-history-time" datetime="<?= $localTimestamp > 0 ? htmlspecialchars(gmdate('c', $localTimestamp), ENT_QUOTES, 'UTF-8') : '' ?>"><?= htmlspecialchars($timeLabel, ENT_QUOTES, 'UTF-8') ?></time>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ol>
+            <?php endif; ?>
+        </section>
 <div class="form-item">
             <label for="occupation">Occupation</label>
             <textarea id="occupation" name="occupation" placeholder="Role, job, affiliations."><?= htmlspecialchars($editItem["occupation"] ?? "") ?></textarea>
@@ -3669,10 +3868,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .btn-toggle[data-lock-id]:focus-visible,
 .btn-toggle[data-pick-picture-id]:hover,
 .btn-toggle[data-pick-picture-id]:focus-visible { color: rgb(242, 124, 17); background:transparent; text-decoration:none; text-shadow: 0 0 6px rgba(242, 124, 17, 0.6), 0 0 12px rgba(242, 124, 17, 0.35); }
-.btn-toggle[data-favorite-id]:hover,
-.btn-toggle[data-favorite-id]:focus-visible { color:#ffd700; text-shadow: 0 0 8px rgba(255, 215, 0, 0.7), 0 0 14px rgba(255, 215, 0, 0.45); }
+.npc-title-actions .btn-toggle[data-favorite-id]:hover,
+.npc-title-actions .btn-toggle[data-favorite-id]:focus-visible { color:#ffd700 !important; text-shadow: 0 0 8px rgba(255, 215, 0, 0.7), 0 0 14px rgba(255, 215, 0, 0.45) !important; }
 .btn-toggle.active { color: rgb(242, 124, 17); font-weight:700; text-decoration:none; }
-.btn-toggle.active[data-favorite-id] { color:#ffd700; }
+.npc-title-actions .btn-toggle.active[data-favorite-id] { color:#ffd700 !important; }
 .btn-trash { background:transparent; border:none; padding:6px; color:#e9efff; font-size:20px; line-height:1; text-decoration:none; transition: color .15s ease, text-shadow .15s ease; }
 .btn-trash:hover, .btn-trash:focus-visible { color:#ff6b6b; text-shadow: 0 0 6px rgba(255, 107, 107, 0.7), 0 0 12px rgba(255, 107, 107, 0.45); }
 .npc-tags-label { font-size:11px; color:#9fb1c9; margin-right:4px; }
@@ -3986,7 +4185,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     justify-content:flex-start;
     gap:12px;
     padding:14px;
-    margin:16px 0 0 0;
+    margin:0;
     background: linear-gradient(180deg, rgba(42, 42, 42, 0.95), rgba(34, 34, 34, 0.98));
     border-radius: 10px;
     border: 1px solid #3a3a3a;
@@ -4263,7 +4462,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     'blcOnly' => $blcOnly,
     'gpsOnly' => $gpsOnly,
 ]); ?>
-<div style="margin:10px 0; padding:10px 14px; background:rgba(242,124,17,0.08); border:1px solid rgba(242,124,17,0.25); border-radius:8px; font-size:12.5px; color:#cfd9ea; line-height:1.5;">
+<div style="margin:8px 0 10px; padding:10px 14px; background:rgba(242,124,17,0.08); border:1px solid rgba(242,124,17,0.25); border-radius:8px; font-size:12.5px; color:#cfd9ea; line-height:1.5;">
   <strong style="color:rgb(242,124,17);">History Pullback:</strong>
   Every time a save game is loaded, CHIM snapshots all NPC profiles and restores <strong>unlocked</strong> NPCs to their state at the save's Tamrielic timestamp.
   Loading an older save will roll back unlocked profiles to that point in time. NPCs created <em>after</em> the save's timestamp may disappear entirely.
@@ -5701,6 +5900,59 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   })();
   let listAbort = null;
   let listRequestId = 0;
+  // Explicit list state for the NPC Profiles page. The current page is seeded from the
+  // server-rendered pagination so a clamped page survives reloads and save-adjacent refreshes.
+  const LIST_STATE_KEYS = ['q','letter','profile_id','fav','dyn','mtm','lock','sal','blc','gps','created','alpha','embed'];
+  const LIST_CHECKBOX_FILTERS = [['fav','npc_filter_fav'],['dyn','npc_filter_dyn'],['mtm','npc_filter_mtm'],['lock','npc_filter_lock'],['sal','npc_filter_sal'],['blc','npc_filter_blc'],['gps','npc_filter_gps'],['created','npc_filter_created']];
+  function readServedPage(root){
+    const pag = (root && root.matches && root.matches('.pagination')) ? root : (root || document).querySelector('.pagination[data-current-page]');
+    const n = pag ? parseInt(pag.getAttribute('data-current-page') || '', 10) : NaN;
+    return (Number.isFinite(n) && n > 0) ? n : null;
+  }
+  let currentListPage = readServedPage(document) || 1;
+  function readListControl(id, key, current){
+    const el = document.getElementById(id);
+    if (el) return String(el.value || '');
+    return String(current.get(key) || '');
+  }
+  function readListCheckbox(baseId, key, current){
+    const el = document.getElementById(baseId + '_top') || document.getElementById(baseId);
+    if (el) return el.checked ? '1' : '';
+    return current.get(key) === '1' ? '1' : '';
+  }
+  // Effective list state: only the parameters that describe the list, never modal/transient ones.
+  function buildListState(page){
+    const current = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams();
+    params.set('q', readListControl('npc_search', 'q', current));
+    params.set('letter', readListControl('npc_letter_filter', 'letter', current).toUpperCase());
+    params.set('profile_id', readListControl('npc_profile_filter', 'profile_id', current));
+    LIST_CHECKBOX_FILTERS.forEach(function(pair){ params.set(pair[0], readListCheckbox(pair[1], pair[0], current)); });
+    params.set('alpha', 'asc');
+    if (current.get('embed') === '1') params.set('embed', '1');
+    const n = parseInt(page, 10);
+    params.set('page', String(Number.isFinite(n) && n > 0 ? n : 1));
+    return params;
+  }
+  // Persist the server-confirmed list state in the visible URL so any reload rebuilds the same page.
+  function persistListState(params, servedPage){
+    const visible = new URLSearchParams();
+    LIST_STATE_KEYS.forEach(function(key){
+      const val = params.get(key);
+      if (val !== null && val !== '') visible.set(key, val);
+    });
+    const n = parseInt(servedPage, 10);
+    visible.set('page', String(Number.isFinite(n) && n > 0 ? n : 1));
+    const url = window.location.pathname + '?' + visible.toString() + window.location.hash;
+    try { history.replaceState(history.state, document.title, url); } catch(_e){}
+  }
+  // A requested page can outlive the data (last page shrinks); trust the page the server rendered.
+  (function(){
+    const current = new URLSearchParams(window.location.search);
+    if (!current.has('page')) return;
+    if (parseInt(current.get('page') || '', 10) === currentListPage) return;
+    persistListState(buildListState(currentListPage), currentListPage);
+  })();
   function bindNpcLetterButtons(root){
     const scope = root || document;
     scope.querySelectorAll('.npc-letter-btn[data-letter]').forEach(btn=>{
@@ -5754,44 +6006,22 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   }
   bindAutoLockProfile(document.getElementById('npc_auto_lock_profile'));
 
+  // Omitting page keeps the current list page; filter changes pass 1 explicitly.
   async function refreshList(page){
-    const params = new URLSearchParams(window.location.search);
     const si = document.getElementById('npc_search');
     const wasFocused = document.activeElement && document.activeElement.id === 'npc_search';
     const caretStart = wasFocused && si && typeof si.selectionStart === 'number' ? si.selectionStart : null;
     const caretEnd = wasFocused && si && typeof si.selectionEnd === 'number' ? si.selectionEnd : null;
-    if (si) params.set('q', si.value || '');
-    const lf = document.getElementById('npc_letter_filter');
-    params.set('letter', lf ? (lf.value || '') : '');
-    const pf = document.getElementById('npc_profile_filter');
-    if (pf) params.set('profile_id', pf.value || '');
-    // Collect checkbox filters (prefer top bar if present else bottom)
-    try {
-      const fav = (document.getElementById('npc_filter_fav_top')||document.getElementById('npc_filter_fav'));
-      const dyn = (document.getElementById('npc_filter_dyn_top')||document.getElementById('npc_filter_dyn'));
-      const mtm = (document.getElementById('npc_filter_mtm_top')||document.getElementById('npc_filter_mtm'));
-      const locked = (document.getElementById('npc_filter_lock_top')||document.getElementById('npc_filter_lock'));
-      const sal = (document.getElementById('npc_filter_sal_top')||document.getElementById('npc_filter_sal'));
-      const blc = (document.getElementById('npc_filter_blc_top')||document.getElementById('npc_filter_blc'));
-      const gps = (document.getElementById('npc_filter_gps_top')||document.getElementById('npc_filter_gps'));
-      const created = (document.getElementById('npc_filter_created_top')||document.getElementById('npc_filter_created'));
-      params.set('fav', fav && fav.checked ? '1' : '');
-      params.set('dyn', dyn && dyn.checked ? '1' : '');
-      params.set('mtm', mtm && mtm.checked ? '1' : '');
-      params.set('lock', locked && locked.checked ? '1' : '');
-      params.set('sal', sal && sal.checked ? '1' : '');
-      params.set('blc', blc && blc.checked ? '1' : '');
-      params.set('gps', gps && gps.checked ? '1' : '');
-      params.set('created', created && created.checked ? '1' : '');
-    } catch(_e){}
-    params.set('alpha', 'asc');
-    if (page) params.set('page', String(page));
-    params.set('list','1');
+    const askedPage = parseInt(page, 10);
+    const requestedPage = (Number.isFinite(askedPage) && askedPage > 0) ? askedPage : currentListPage;
+    const params = buildListState(requestedPage);
+    const requestParams = new URLSearchParams(params.toString());
+    requestParams.set('list','1');
     if (listAbort) { try { listAbort.abort(); } catch(_){} }
     const requestId = ++listRequestId;
     listAbort = new AbortController();
     try {
-      const res = await fetch('npc_master.php?'+params.toString(), { signal: listAbort.signal });
+      const res = await fetch('npc_master.php?'+requestParams.toString(), { signal: listAbort.signal });
       if (!res.ok) throw new Error('HTTP ' + String(res.status));
       const html = await res.text();
       if (requestId !== listRequestId) return;
@@ -5803,6 +6033,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const oldGrid = document.querySelector('.npc-grid');
       if (oldPag && oldPag.parentElement) oldPag.parentElement.replaceChild(newPag, oldPag);
       if (oldGrid && oldGrid.parentElement) oldGrid.parentElement.replaceChild(newGrid, oldGrid);
+      // Trust the page the server actually rendered: it may be clamped when the last page shrinks.
+      currentListPage = readServedPage(newPag) || requestedPage;
+      persistListState(params, currentListPage);
       // rebind events on new elements
       document.querySelectorAll('.npc-card').forEach(card=>{
         card.addEventListener('click', function(ev){
@@ -6083,7 +6316,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
   async function loadModalStats(){
     // Load model info and NPC counts
     try {
-      const res = await fetch('../../ext/relationship_system/batch_build.php?action=stats');
+      const res = await fetch('../api/relationship_batch_build.php?action=stats');
       const data = await res.json();
       if (data.ok){
         document.getElementById('rel_build_model').textContent = data.model || 'Not configured';
@@ -6167,7 +6400,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
         statusEl.textContent = 'Fetching NPC list...';
 
         // Fetch list of NPCs to process
-        const listRes = await fetch('../../ext/relationship_system/batch_build.php?action=list&force=' + force);
+        const listRes = await fetch('../api/relationship_batch_build.php?action=list&force=' + force);
         const listData = await listRes.json();
 
         if (!listData.ok){
@@ -6198,7 +6431,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           statusEl.textContent = 'Processing: ' + npc.name;
 
           try {
-            const res = await fetch('../../ext/relationship_system/batch_build.php?action=process&id=' + npc.id + '&force=' + force);
+            const res = await fetch('../api/relationship_batch_build.php?action=process&id=' + npc.id + '&force=' + force);
             const data = await res.json();
 
             if (data.ok){
@@ -6224,7 +6457,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
           log('Running transitive inference...', 'info');
 
           try {
-            const infRes = await fetch('../../ext/relationship_system/batch_build.php?action=infer');
+            const infRes = await fetch('../api/relationship_batch_build.php?action=infer');
             const infData = await infRes.json();
             if (infData.ok){
               log('✓ Inference complete: ' + (infData.count || 0) + ' relationships updated', 'success');
