@@ -52,7 +52,8 @@ CREATE TABLE public.core_npc_master (
     gamets_last_updated numeric,
     core text,
     base text,
-    tags text
+    tags text,
+    profile_owner_npc_id integer
 );
 
 
@@ -142,6 +143,15 @@ CREATE INDEX idx_core_npc_master_refid_lookup
 
 ALTER TABLE ONLY public.core_npc_master
     ADD CONSTRAINT npc_master_pkey PRIMARY KEY (id);
+
+CREATE INDEX idx_npc_profile_owner ON public.core_npc_master (profile_owner_npc_id)
+    WHERE profile_owner_npc_id IS NOT NULL;
+
+ALTER TABLE public.core_npc_master ADD CONSTRAINT npc_profile_owner_not_self
+    CHECK (profile_owner_npc_id IS NULL OR profile_owner_npc_id <> id);
+ALTER TABLE public.core_npc_master ADD CONSTRAINT npc_profile_owner_fk
+    FOREIGN KEY (profile_owner_npc_id) REFERENCES public.core_npc_master(id)
+    DEFERRABLE INITIALLY DEFERRED;
 
 
 --

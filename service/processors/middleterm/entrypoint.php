@@ -55,13 +55,11 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
             if ($secondsSinceLastSpeech >= 15) {
                 logger::info("[DELAYED-EVENT] Posting delayed event for {$npc['npc_name']}");
 
-                // Insert the pending event into responselog
+                // Clear only this actor's pending event, without writing its dormant shared data.
+                if (!$npcMaster->updateExtendedKeysById($npc['id'], [], ['pending_delayed_event'], chimNpcProfileBinding($npc))) {
+                    continue;
+                }
                 $db->insert('responselog', $pendingEvent);
-
-                // Remove the pending event from extended_data
-                unset($extendedData['pending_delayed_event']);
-                $npc = $npcMaster->setExtendedData($npc, $extendedData);
-                $npcMaster->updateByArray($npc);
 
                 logger::info("[DELAYED-EVENT] Event posted and cleared for {$npc['npc_name']}");
             } else {
@@ -99,14 +97,16 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     $allEnabledMtNpc = $GLOBALS["db"]->fetchAll(
         "SELECT m.* FROM core_npc_master m
          LEFT JOIN core_profiles p ON (p.id = m.profile_id $onlyExplicitProfiles)
-         WHERE COALESCE(NULLIF(m.extended_data->>'middle_term_enabled',''),
+         WHERE m.profile_owner_npc_id IS NULL AND COALESCE(NULLIF(m.extended_data->>'middle_term_enabled',''),
                         p.metadata->>'MIDDLE_TERM_MEMORY_ENABLED') = '1' ");
 
     foreach ($allEnabledMtNpc as $npc) {
         $mwdata = json_decode($npc["extended_data"]);
         echo "[MIDDLETERM] {$npc["npc_name"]} has middleterm memory enabled".PHP_EOL;
         $GLOBALS["SELECTED_NPC"] = $npc["npc_name"];
+        $GLOBALS['SELECTED_NPC_ID'] = (int)$npc['id'];
         require("cmd" . DIRECTORY_SEPARATOR . "generate.php");
+        unset($GLOBALS['SELECTED_NPC_ID']);
     }
 
     // BgL tracking coords, on NPCs marked with gps_track. in-game hourly
@@ -129,7 +129,8 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         $mwdata = json_decode($npc["metadata"], true);
         if (!isset($mwdata["last_coords"]["last_updated"]) || !$mwdata["last_coords"]["last_updated"] || $mwdata["last_coords"]["last_updated"] < ($oneDayAgoGamets)) {
             logger::info("[BGL] Daily Tracking {$npc["npc_name"]}");
-            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_command.php \"{$npc["npc_name"]}\" Track ");
+            $actorArgument = escapeshellarg(NpcMaster::displayIdentifier($npc['npc_name'], $npc['refid']));
+            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_command.php {$actorArgument} Track ");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }
@@ -156,7 +157,8 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
             || $mwdata["last_coords"]["last_updated"] < $oneHourAgoGamets
         ) {
             logger::info("[BGL] Hourly Tracking {$npc["npc_name"]}");
-            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_command.php \"{$npc["npc_name"]}\" Track ");
+            $actorArgument = escapeshellarg(NpcMaster::displayIdentifier($npc['npc_name'], $npc['refid']));
+            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_command.php {$actorArgument} Track ");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }
@@ -169,9 +171,10 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     // In-game based on configured days
 
     error_log("[BGL] Checking passive events NPCs");
-    $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND (extended_data->>'background_life_commands' = 'false' or extended_data->>'background_life_commands'  IS NULL)");
+    $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT DISTINCT ON (COALESCE(profile_owner_npc_id,id)) * FROM core_npc_master WHERE refid IS NOT NULL AND extended_data->>'background_life_enabled' = 'true' AND (extended_data->>'background_life_commands' = 'false' or extended_data->>'background_life_commands' IS NULL) ORDER BY COALESCE(profile_owner_npc_id,id), gamets_last_updated DESC NULLS LAST, id");
     foreach ($allEnabledBgLNpc as $npc) {
 
+        $npc = chimNpcEffectiveProfile($npc);
         $npcIsNearToPlayer = $GLOBALS["db"]->fetchOne("SELECT count(*) as n from eventlog where 
             type='infonpc' and data like '%" . ($GLOBALS["db"]->escape($npc["npc_name"])) . "%' and gamets > $oneHourAgoGamets");
 
@@ -186,7 +189,10 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
             $mwdata = json_decode($npc["extended_data"], true);
             $mwdata["background_life_last_updated"] = $maxRow;
             $mwdata["background_life_last_updated_presence_delta"] = 0;
-            $npcManager->updateExtendedKeysByName($npc["npc_name"], $mwdata);
+            $npcManager->updateExtendedKeysById($npc['id'], [
+                'background_life_last_updated' => $maxRow,
+                'background_life_last_updated_presence_delta' => 0,
+            ], [], $npc['_profile_binding']);
             continue;
            
         }
@@ -208,14 +214,16 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
                 }
             }
 
-            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php \"{$npc["npc_name"]}\" ");
+            $actorArgument = escapeshellarg(NpcMaster::displayIdentifier($npc['npc_name'], $npc['refid']));
+            $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life.php {$actorArgument} ");
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {
                 Logger::info($shellResult, $GLOBALS["CUSTOM_LOG_FILE"]);
             }
 
             
-            $extdata["background_life_last_updated"] = $maxRow;
-            $npcMaster->updateExtendedKeysByName($npc["npc_name"], $extdata);
+            $npcMaster->updateExtendedKeysById($npc['id'], [
+                'background_life_last_updated' => $maxRow,
+            ], [], $npc['_profile_binding']);
 
             break;  // One per iteration - break after processing
         } else {
@@ -230,8 +238,9 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     error_log("[BGL] Checking active events NPCs");
     
     // BgL commands
-    $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM core_npc_master WHERE extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' order by random() ");
+    $allEnabledBgLNpc = $GLOBALS["db"]->fetchAll("SELECT * FROM (SELECT DISTINCT ON (COALESCE(profile_owner_npc_id,id)) * FROM core_npc_master WHERE refid IS NOT NULL AND extended_data->>'background_life_enabled' = 'true' AND extended_data->>'background_life_commands' = 'true' ORDER BY COALESCE(profile_owner_npc_id,id), gamets_last_updated DESC NULLS LAST, id) actors ORDER BY random()");
     foreach ($allEnabledBgLNpc as $npc) {
+        $npc = chimNpcEffectiveProfile($npc);
         $mwdata = json_decode($npc["extended_data"], true);
         $mustInstructBypassBgl=false;
         $npcIsNearToPlayer = $GLOBALS["db"]->fetchOne("SELECT max(gamets) as n from eventlog where 
@@ -245,7 +254,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
             $localDelta = ($npcIsNearToPlayer["n"] - $oneHourAgoGamets) * 0.0000024;
 
             $npcManager = new NpcMaster();
-            $npcData = $npcManager->getByName($npc["npc_name"]);
+            $npcData = $npc;
             $extended = json_decode($npcData["extended_data"], true);
             if (isset($extended["background_life_last_updated_presence_delta"])) {
                 $extended["background_life_last_updated_presence_delta"] += 1;
@@ -277,6 +286,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
             error_log("[BGL] Event for {$npc["npc_name"]}, last updated: {$mwdata["background_life_last_updated"]}, threshold: {$bglTriggerDaysAgoGamets}, BGL_TRIGGER_DAYS: {$GLOBALS['BGL_TRIGGER_DAYS']}, delta: {$delta}, presence delta: {$mwdata["background_life_last_updated_presence_delta"]}");
 
             if ($mustInstructBypassBgl){
+                $instructionActor = NpcMaster::displayIdentifier($npc['npc_name'], $npc['refid']);
                 error_log("[BGL] {$npc["npc_name"]} has been near a player for more than 10 checks. Issuing INSTRUCTION");
                  $GLOBALS["db"]->insert(
                     'responselog',
@@ -285,7 +295,7 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
                         'sent' => 0,
                         'actor' => "rolemaster",
                         'text' => "",
-                        'action' => "rolecommand|Instruction@{$npc["npc_name"]}@Should review own life goals, latest inner thoughts, and take a related action or express his/her concerns@0",
+                        'action' => "rolecommand|Instruction@{$instructionActor}@Should review own life goals, latest inner thoughts, and take a related action or express his/her concerns@0",
                         'tag' => "",
                     ]
                 );
@@ -295,10 +305,14 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
                 
                 $extended["background_life_last_updated"] = $maxRow;
                 $extended["background_life_last_updated_presence_delta"] = 0;
-                $npcManager->updateExtendedKeysByName($npc["npc_name"], $extended);
+                $npcManager->updateExtendedKeysById($npc['id'], [
+                    'background_life_last_updated' => $maxRow,
+                    'background_life_last_updated_presence_delta' => 0,
+                ], [], $npc['_profile_binding']);
                 
             } else {
-                $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_v2.php \"{$npc["npc_name"]}\" full forceaction");
+                $actorArgument = escapeshellarg(NpcMaster::displayIdentifier($npc['npc_name'], $npc['refid']));
+                $shellResult = shell_exec("php $enginePath/debug/simple_llm_request_with_context_life_v2.php {$actorArgument} full forceaction");
             }
             
             if (!empty($GLOBALS["CUSTOM_LOG_FILE"])) {

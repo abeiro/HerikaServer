@@ -1175,7 +1175,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["import_profile"])) {
             if ($previousDefaultNpcId > 0) {
                 $whereParts[] = "profile_id = {$previousDefaultNpcId}";
             }
-            $where = implode(' OR ', $whereParts);
+            $where = 'profile_owner_npc_id IS NULL AND (' . implode(' OR ', $whereParts) . ')';
             $countRow = $GLOBALS["db"]->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master WHERE {$where}");
             $migratedNpcCount = (int)($countRow['c'] ?? 0);
             if ($GLOBALS["db"]->query("UPDATE core_npc_master SET profile_id = {$newProfileId} WHERE {$where}") === false) {

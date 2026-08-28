@@ -374,6 +374,29 @@ final class FormReferenceSupportTest extends TestCase
         $this->assertStringContainsString('0x03001234', $updateQueries[0]);
     }
 
+    public function testSharedCharacterOverlayPreservesPhysicalActorIdentity(): void
+    {
+        $actor = ['id' => 3, 'npc_name' => 'Astrid', 'refid' => '05012345', 'md5' => 'physical',
+            'profile_owner_npc_id' => 2, 'personality' => 'other', 'appearance' => 'burnt',
+            'metadata' => '{"refid_source":"Alternate.esp|00012345","health":20}',
+            'extended_data' => '{"factions":["physical"],"middle_term_memory":{"1":"other"},"custom":true}'];
+        $GLOBALS['db'] = new class {
+            public function fetchOne($query) {
+                return ['id' => 2, 'npc_name' => 'Astrid', 'refid' => '00013475', 'personality' => 'kept',
+                    'extended_data' => '{"middle_term_memory":{"2":"shared"},"factions":["owner"]}'];
+            }
+        };
+        $effective = chimNpcEffectiveProfile($actor);
+        $this->assertSame('kept', $effective['personality']);
+        foreach (['id', 'refid', 'md5', 'appearance', 'metadata'] as $field) {
+            $this->assertSame($actor[$field], $effective[$field]);
+        }
+        $this->assertSame(['physical'], chimNpcProfileJson($effective['extended_data'])['factions']);
+        $this->assertSame([2 => 'shared'], chimNpcProfileJson($effective['extended_data'])['middle_term_memory']);
+        $this->assertTrue(chimNpcProfileJson($effective['extended_data'])['custom']);
+        $this->assertSame([], chimNpcEffectiveProfile([]));
+    }
+
     public function testNpcMasterSupportsStableFactionDetection(): void
     {
         $npcData = [

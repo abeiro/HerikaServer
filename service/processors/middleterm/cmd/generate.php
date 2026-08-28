@@ -11,7 +11,11 @@ $selectedNpc=$GLOBALS["SELECTED_NPC"];
 $npcMaster = new NpcMaster();
 $connector = new LLMConnector();
 $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"]);
-$currentNpcData = $npcMaster->getByName($selectedNpc);
+$currentNpcData = !empty($GLOBALS['SELECTED_NPC_ID'])
+    ? $npcMaster->getById((int)$GLOBALS['SELECTED_NPC_ID'])
+    : $npcMaster->getByPromptIdentifier($selectedNpc);
+if (!$currentNpcData) { return; }
+$selectedNpc = $currentNpcData['npc_name'];
 
 $connector->setOldGlobals($currentConnectorData);
 $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);

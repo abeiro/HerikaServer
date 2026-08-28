@@ -187,6 +187,11 @@ function chimNpcManagerCard(array $row, array $profileMap): array
         'gender' => trim((string)($row['gender'] ?? '')),
         'race' => trim((string)($row['race'] ?? '')),
         'refid' => trim((string)($row['refid'] ?? '')),
+        'refid_source' => (string)($metadata['refid_source'] ?? ''),
+        'profile_sharing' => [
+            'linked' => !empty($row['profile_owner_npc_id']) || chimNpcManagerBool($row['_has_shared_profile'] ?? false),
+            'owner_id' => (int)($row['profile_owner_npc_id'] ?? $row['id']),
+        ],
         'source_mod' => (string)($mods[0] ?? ''),
         'mods' => $mods,
         'duplicate_count' => max(1, $duplicateCount),
@@ -210,6 +215,11 @@ function chimNpcManagerLatestMemory(array $extended): string
 
 function chimNpcManagerDetail(array $row, array $profiles): array
 {
+    $raw = (new NpcMaster())->getActorById((int)$row['id']);
+    $sharing = chimNpcProfileSharing($raw);
+    $revision = chimNpcProfileRevision(chimNpcProfileMembers($raw));
+    $row = chimNpcEffectiveProfile($raw);
+    $row['_has_shared_profile'] = $sharing['linked'];
     $metadata = chimNpcManagerDecodeJson($row['metadata'] ?? '{}');
     $extended = chimNpcManagerDecodeJson($row['extended_data'] ?? '{}');
     $profileMap = chimNpcManagerProfileMap($profiles);
@@ -218,6 +228,8 @@ function chimNpcManagerDetail(array $row, array $profiles): array
 
     return [
         'card' => chimNpcManagerCard($row, $profileMap),
+        'profile_sharing' => $sharing,
+        'profile_revision' => $revision,
         'fields' => [
             'npc_name' => (string)($row['npc_name'] ?? ''),
             'profile_id' => isset($row['profile_id']) ? (int)$row['profile_id'] : null,
@@ -266,8 +278,9 @@ function chimNpcManagerFindNpc(array $input): array
     if ($id > 0) {
         $row = $GLOBALS['db']->fetchOne("SELECT * FROM core_npc_master WHERE id = {$id} LIMIT 1");
         if ($row) {
-            return $row;
+            return chimNpcEffectiveProfile($row);
         }
+        throw new InvalidArgumentException('NPC profile no longer exists');
     }
 
     $refid = trim((string)($input['refid'] ?? ''));
@@ -275,7 +288,7 @@ function chimNpcManagerFindNpc(array $input): array
         $escaped = $GLOBALS['db']->escape(strtolower($refid));
         $rows = $GLOBALS['db']->fetchAll("SELECT * FROM core_npc_master WHERE lower(refid) = '{$escaped}' ORDER BY gamets_last_updated DESC NULLS LAST, id ASC LIMIT 2");
         if (count((array)$rows) === 1) {
-            return $rows[0];
+            return chimNpcEffectiveProfile($rows[0]);
         }
         if (count((array)$rows) > 1) {
             throw new InvalidArgumentException('RefID matches more than one profile; use the profile id');
@@ -287,7 +300,7 @@ function chimNpcManagerFindNpc(array $input): array
         $escaped = $GLOBALS['db']->escape($name);
         $rows = $GLOBALS['db']->fetchAll("SELECT * FROM core_npc_master WHERE npc_name = '{$escaped}' ORDER BY id ASC LIMIT 2");
         if (count((array)$rows) === 1) {
-            return $rows[0];
+            return chimNpcEffectiveProfile($rows[0]);
         }
         if (count((array)$rows) > 1) {
             throw new InvalidArgumentException('NPC name matches more than one profile; use the profile id or RefID');
@@ -599,7 +612,7 @@ function chimNpcManagerAction(array $input): array
             $locationName = trim((string)($location['name'] ?? 'previous location'));
         }
 
-        $targetName = str_replace('@', '', $npcName);
+        $targetName = str_replace('@', '', NpcMaster::displayIdentifier($npcName, $row['refid']));
         $locationName = str_replace('@', '', $locationName);
         $roleCommand = $locationFormId !== ''
             ? "rolecommand|TeleportNPCRaw@{$targetName}@{$locationFormId}@{$locationName}"
@@ -711,7 +724,9 @@ function chimNpcManagerList(array $profiles): array
 
     $profileId = (int)($_GET['profile_id'] ?? 0);
     if ($profileId > 0) {
-        $conditions[] = "profile_id = {$profileId}";
+        $conditions[] = "(CASE WHEN profile_owner_npc_id IS NULL THEN profile_id ELSE
+            (SELECT owner.profile_id FROM core_npc_master owner WHERE owner.id = core_npc_master.profile_owner_npc_id)
+            END) = {$profileId}";
     }
 
     $refids = array_values(array_filter(array_map('trim', explode(',', (string)($_GET['refids'] ?? '')))));
@@ -737,7 +752,9 @@ function chimNpcManagerList(array $profiles): array
     $countRow = $GLOBALS['db']->fetchOne("SELECT COUNT(*) AS total FROM core_npc_master WHERE {$where}");
     $total = (int)($countRow['total'] ?? 0);
     $rows = $GLOBALS['db']->fetchAll(
-        "SELECT core_npc_master.*, name_counts.duplicate_count
+        "SELECT core_npc_master.*, name_counts.duplicate_count,
+            CASE WHEN EXISTS (SELECT 1 FROM core_npc_master child WHERE child.profile_owner_npc_id = core_npc_master.id)
+                THEN 1 ELSE 0 END AS _has_shared_profile
          FROM core_npc_master
          JOIN (
              SELECT lower(npc_name) AS normalized_name, COUNT(*) AS duplicate_count
@@ -752,7 +769,7 @@ function chimNpcManagerList(array $profiles): array
 
     return [
         'npcs' => array_map(static function ($row) use ($profileMap) {
-            return chimNpcManagerCard($row, $profileMap);
+            return chimNpcManagerCard(chimNpcEffectiveProfile($row), $profileMap);
         }, (array)$rows),
         'profiles' => array_map(static function ($profile) {
             return ['id' => $profile['id'], 'label' => $profile['label']];
@@ -770,9 +787,17 @@ function chimNpcManagerSave(array $input, array $profiles): array
 {
     $row = chimNpcManagerFindNpc($input);
     $id = (int)$row['id'];
+    $raw = (new NpcMaster())->getActorById($id);
+    $members = chimNpcProfileMembers($raw);
+    // Older clients remain compatible for never-linked rows. A shared/previously shared editor must be current.
+    if (chimNpcProfileBinding($raw) !== ':' || isset($input['profile_revision'])) {
+        if (!hash_equals(chimNpcProfileRevision($members), (string)($input['profile_revision'] ?? ''))) {
+            throw new InvalidArgumentException('Profile changed. Reopen this NPC before saving.');
+        }
+    }
     $fields = is_array($input['fields'] ?? null) ? $input['fields'] : [];
     $overrides = is_array($input['overrides'] ?? null) ? $input['overrides'] : [];
-    $update = [];
+    $update = ['_profile_binding' => $row['_profile_binding'] ?? ':'];
 
     $allowedFields = [
         'npc_name', 'profile_id', 'lock_profile', 'npc_favorite', 'gender', 'race', 'base',
@@ -891,7 +916,8 @@ function chimNpcManagerSave(array $input, array $profiles): array
     }
 
     $update['extended_data'] = json_encode($extended, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    $lockId = $relationshipChanged ? 1001000000 + $id : null;
+    $ownerId = (int)($row['profile_owner_npc_id'] ?? $id);
+    $lockId = $relationshipChanged ? 1001000000 + $ownerId : null;
     try {
         if ($lockId !== null) {
             $GLOBALS['db']->execQuery("SELECT pg_advisory_lock({$lockId})");
@@ -905,9 +931,9 @@ function chimNpcManagerSave(array $input, array $profiles): array
             throw new RuntimeException('NPC update failed');
         }
         if ($relationshipChanged && function_exists('chimRelationshipTimelineStamp')) {
-            chimRelationshipTimelineStamp($id);
+            chimRelationshipTimelineStamp($ownerId);
         }
-        (new NpcMaster())->backupNpcById($id);
+        (new NpcMaster())->backupNpcById($ownerId);
     } finally {
         if ($lockId !== null) {
             $GLOBALS['db']->execQuery("SELECT pg_advisory_unlock({$lockId})");

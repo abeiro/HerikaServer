@@ -127,7 +127,12 @@ $npcMaster = new NpcMaster();
 
 $connector = new LLMConnector();
 $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_BGL"]);
-$currentNpcData = $npcMaster->getByName($argv[1]);
+$currentNpcData = $npcMaster->getByPromptIdentifier($argv[1]);
+if (!$currentNpcData) { return; }
+$workerNpcId = (int)$currentNpcData['id'];
+$workerProfileBinding = $currentNpcData['_profile_binding'];
+$GLOBALS['CHIM_CORE_CURRENT_NPC_DATA'] = $currentNpcData;
+$argv[1] = $currentNpcData['npc_name'];
 
 $profile = new CoreProfile();
 $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
@@ -154,7 +159,7 @@ $request = $argv[1];
 
 $dynamicBiography = buildDynamicBiography($GLOBALS, true, true);
 $npcMaster = new NpcMaster();
-$currentNpcData = $npcMaster->getByName($argv[1]);
+$currentNpcData = $npcMaster->getById($workerNpcId);
 $dynamicBiography = $npcMaster->appendBackgroundLifeGoals($dynamicBiography, $currentNpcData);
 $extended_data = $npcMaster->getExtendedData($currentNpcData);
 $metadata = $npcMaster->getMetadata($currentNpcData);
@@ -178,7 +183,7 @@ if (!$lastIt["gamets"]) {
 
     
     $extdata["background_life_last_updated"] = $last_gamets;
-    $npcMaster->updateExtendedKeysByName($GLOBALS["HERIKA_NAME"], $extdata);
+    $npcMaster->updateExtendedKeysById($workerNpcId, $extdata, [], $workerProfileBinding);
 
     error_log("[BGL RUN] NO LAST ITERATION, SKIPPING $argv[1] - {$GLOBALS["HERIKA_NAME"]} last_gamets: $last_gamets");
     return;
@@ -192,6 +197,7 @@ if (($last_gamets - $lastItNumber) < ($bglTriggerHours / GAMETS_TO_HOURS)) {
     $extdata = $npcMaster->getExtendedData($currentNpcData);
     $extdata["background_life_last_updated"] = $last_gamets;
     $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
+    $currentNpcData['_profile_binding'] = $workerProfileBinding;
     $npcMaster->updateByArray($currentNpcData);
     error_log("[BGL RUN] $npcNameEsc Last interaction less than {$bglTriggerHours} hours ago");
 
@@ -374,8 +380,8 @@ $extdata = $npcMaster->getExtendedData($currentNpcData);
 if (isset($extdata['bgl_inception']) && !empty($extdata['bgl_inception'])) {
     $lastMinuteNotes .= "\nImportant:A thought crosses {$GLOBALS['HERIKA_NAME']}'s mind: He/She should {$extdata['bgl_inception']}\n";
     $npcMaster = new NpcMaster();
-    $npcData = $npcMaster->getByName($GLOBALS['HERIKA_NAME']);
-    $npcMaster->updateExtendedKeysByName($GLOBALS['HERIKA_NAME'], ['bgl_inception' => ""]);
+    $npcData = $npcMaster->getById($workerNpcId);
+    $npcMaster->updateExtendedKeysById($workerNpcId, ['bgl_inception' => ""], [], $workerProfileBinding);
     error_log("[BGL RUN] HINT inception: {$extdata['bgl_inception']}");
 }
 
@@ -562,6 +568,7 @@ print_r($buffer2);
 $extdata = $npcMaster->getExtendedData($currentNpcData);
 $extdata["background_life_last_updated"] = $last_gamets;
 $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extdata);
+$currentNpcData['_profile_binding'] = $workerProfileBinding;
 $npcMaster->updateByArray($currentNpcData);
 
 $parsed = [];
@@ -689,6 +696,7 @@ if (is_array($parsed)) {
             // Store in npcMaster extended_data
             $extendedData['pending_delayed_event'] = $delayedEvent;
             $currentNpcData = $npcMaster->setExtendedData($currentNpcData, $extendedData);
+            $currentNpcData['_profile_binding'] = $workerProfileBinding;
             $npcMaster->updateByArray($currentNpcData);
 
             error_log("[DELAYED-EVENT] Letter announcement event queued for {$GLOBALS["HERIKA_NAME"]}, will post after speech idle for 15s");
@@ -759,7 +767,8 @@ $db->insert(
 logMemory($GLOBALS["HERIKA_NAME"], $GLOBALS["HERIKA_NAME"], trim($buffer), $momentum, $last_gamets, 'backgroundlife_diary', $last_ts);
 // Mark NPC as background_life_enabled
 $npcManager = new NpcMaster();
-$npcData = $npcManager->getByName($GLOBALS["HERIKA_NAME"]);
+$npcData = $npcManager->getById($workerNpcId);
+$npcData['_profile_binding'] = $workerProfileBinding;
 $extended = json_decode($npcData["extended_data"], true);
 $extended["background_life_enabled"] = true;
 $npcData["extended_data"] = json_encode($extended);

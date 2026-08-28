@@ -499,6 +499,60 @@ if (!function_exists('render_npc_identity_lines')) {
     }
 }
 
+// Helper: which rows share one merged profile. Resolved once per request from the batch map
+// built below, so a card never issues its own lookup.
+if (!function_exists('npc_profile_sharing_state')) {
+    function npc_profile_sharing_state($sharing, $id){
+        $rowId = (int)$id;
+        $members = is_array($sharing) && isset($sharing['members']) && is_array($sharing['members']) ? $sharing['members'] : [];
+        $owners = is_array($sharing) && isset($sharing['owners']) && is_array($sharing['owners']) ? $sharing['owners'] : [];
+        $ownerId = (int)($members[$rowId] ?? 0);
+        // A kept profile may or may not point at itself; either way it is the owner.
+        if ($ownerId === $rowId) $ownerId = 0;
+        $memberCount = (int)($owners[$rowId] ?? 0);
+        if ($ownerId > 0) {
+            return ['linked' => true, 'owner_id' => $ownerId, 'is_owner' => false, 'members' => 0];
+        }
+        if ($memberCount > 0) {
+            return ['linked' => true, 'owner_id' => $rowId, 'is_owner' => true, 'members' => $memberCount];
+        }
+        return ['linked' => false, 'owner_id' => 0, 'is_owner' => false, 'members' => 0];
+    }
+}
+
+// Helper: the "Shared profile" badge. Physical actor cards are never collapsed, so the badge is
+// the only signal that two cards now read and write one profile.
+if (!function_exists('render_npc_sharing_badge')) {
+    function render_npc_sharing_badge(array $state){
+        if (empty($state['linked'])) return;
+        $detail = !empty($state['is_owner'])
+            ? 'This profile is kept and shared with ' . (int)$state['members'] . ' other same-named actor' . ((int)$state['members'] === 1 ? '' : 's') . '.'
+            : 'This actor reads and writes the kept profile #' . (int)$state['owner_id'] . '.';
+        echo '<span class="npc-shared-badge" title="' . htmlspecialchars($detail, ENT_QUOTES) . '">'
+            . '<span aria-hidden="true">&#128279;</span> Shared profile'
+            . '<span class="npc-sr-only">. ' . htmlspecialchars($detail) . '</span></span>';
+    }
+}
+
+// Helper: the row action that opens the merge dialog. Offered whenever another profile carries the
+// same visible name, and always for a row that is already sharing so Unlink stays reachable.
+if (!function_exists('render_npc_merge_action')) {
+    function render_npc_merge_action(array $row, array $state, $duplicateCount){
+        if ((int)$duplicateCount < 2 && empty($state['linked'])) return;
+        $name = trim((string)($row['npc_name'] ?? ''));
+        if ($name === '') $name = 'this NPC';
+        $title = !empty($state['linked'])
+            ? 'Merge profiles - "' . $name . '" already shares a profile. Review or unlink it.'
+            : 'Merge profiles - treat another actor named "' . $name . '" as the same character.';
+        echo '<button type="button" class="btn btn-toggle npc-merge-btn' . (!empty($state['linked']) ? ' active' : '') . '"'
+            . ' data-merge-id="' . htmlspecialchars((string)($row['id'] ?? ''), ENT_QUOTES) . '"'
+            . ' data-merge-linked="' . (!empty($state['linked']) ? '1' : '0') . '"'
+            . ' title="' . htmlspecialchars($title, ENT_QUOTES) . '"'
+            . ' aria-label="Merge profiles">'
+            . '<span aria-hidden="true">&#128279;</span></button>';
+    }
+}
+
 // Helper: the delete confirmation for a card. Cards can show several profiles that share one
 // visible name, so the prompt names the exact row: name, normalised RefID and defining mod.
 if (!function_exists('npc_delete_confirm_onclick')) {
@@ -669,7 +723,8 @@ if (!function_exists('chimAcquireNpcRelationshipLock')) {
             return null;
         }
 
-        $lockId = 1001000000 + $npcId;
+        $ownerRow = $GLOBALS['db']->fetchOne("SELECT profile_owner_npc_id FROM core_npc_master WHERE id = {$npcId}");
+        $lockId = 1001000000 + (int)($ownerRow['profile_owner_npc_id'] ?? $npcId);
         $GLOBALS['db']->execQuery("SELECT pg_advisory_lock({$lockId})");
         return $lockId;
     }
@@ -715,6 +770,10 @@ if (!function_exists('chimApplyStoredNpcIdentityToPost')) {
 
         if (NpcMaster::isActorBound($existing)) {
             unset($_POST["refid"]);
+        }
+        if (chimNpcProfileBinding($existing) !== ':' &&
+            ($_POST['_profile_binding'] ?? '') !== chimNpcProfileBinding($existing)) {
+            throw new RuntimeException('Profile sharing changed. Reopen this NPC before saving.');
         }
         $_POST["md5"] = NpcMaster::identityMd5($existing, $_POST["npc_name"] ?? ($existing["npc_name"] ?? ''));
     }
@@ -764,7 +823,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["update"])) {
             // Anchor editor relationship saves to the last known game time (see Create branch) -
             // without this a NULL-stamped row loses its manual entries on the next reconnect.
             if ($saveResult !== false && function_exists('chimRelationshipTimelineStamp')) {
-                chimRelationshipTimelineStamp((int)($_POST["id"] ?? 0));
+                $savedRow = $npc->getActorById((int)($_POST['id'] ?? 0));
+                chimRelationshipTimelineStamp((int)($savedRow['profile_owner_npc_id'] ?? $savedRow['id']));
             }
         } else {
             $saveNpc();
@@ -884,12 +944,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["inline_update_npc"]))
                 $ok = chimRunWithRelationshipExtendedDataWrite($saveNpc);
                 // Stamp BEFORE the manual backup below so the snapshot captures the anchored row.
                 if ($ok !== false && function_exists('chimRelationshipTimelineStamp')) {
-                    chimRelationshipTimelineStamp((int)$id);
+                    $savedRow = $npc->getActorById($id);
+                    chimRelationshipTimelineStamp((int)($savedRow['profile_owner_npc_id'] ?? $id));
                 }
             } else {
                 $ok = $saveNpc();
             }
-            $npc->backupNpcById($id);// We also make a backup of manually edited NPCs, so when loading a save, will load this record
+            if ($ok !== false) {
+                $savedRow = $npc->getActorById($id);
+                $npc->backupNpcById((int)($savedRow['profile_owner_npc_id'] ?? $id));
+            }
             if ($ok === false) {
                 echo json_encode(["ok"=>false, "error"=>($npc->getLastError() ?? 'Update failed')]);
             } else {
@@ -999,7 +1063,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bulk_delete_npcs"])) 
         if ($confirm !== 'Delete') { echo json_encode(["ok"=>false, "error"=>"Confirmation text mismatch"]); exit; }
         // Delete all unlocked NPCs except The Narrator (by name or id=1)
         // Use trim and case-insensitive comparison for robustness, and ensure lock_profile is explicitly compared as integer
-        $sql = "with del as (delete from core_npc_master where (lock_profile is null or lock_profile = 0) and id <> 1 and trim(lower(npc_name)) <> 'the narrator' returning 1) select count(*) as c from del";
+        $sql = "with del as (delete from core_npc_master c where (lock_profile is null or lock_profile = 0) and id <> 1 and trim(lower(npc_name)) <> 'the narrator' AND profile_owner_npc_id IS NULL AND NOT EXISTS (SELECT 1 FROM core_npc_master child WHERE child.profile_owner_npc_id = c.id) returning 1) select count(*) as c from del";
         $row = $GLOBALS['db']->fetchOne($sql);
         $deleted = intval($row['c'] ?? 0);
         echo json_encode(["ok"=>true, "deleted"=>$deleted]);
@@ -1047,7 +1111,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["bulk_switch_profile"]
             exit;
         }
 
-        $baseWhere = "profile_id = {$sourceProfileId} and id <> 1 and trim(lower(npc_name)) <> 'the narrator'";
+        $baseWhere = "profile_owner_npc_id IS NULL AND profile_id = {$sourceProfileId} and id <> 1 and trim(lower(npc_name)) <> 'the narrator'";
         $countRow = $GLOBALS['db']->fetchOne("SELECT COUNT(*) AS c FROM core_npc_master WHERE {$baseWhere}");
         $totalMatched = intval($countRow['c'] ?? 0);
 
@@ -1463,6 +1527,12 @@ foreach (($llmRows ?? []) as $lr) {
     if ($lid !== '') $llmById[$lid] = $lr['label'] ?? ('Connector #'.$lid);
 }
 
+// Filters describe the effective character, while identity/favorite/lock filters remain physical.
+$sharedFilterColumns = [];
+foreach (['profile_id', 'voiceid', 'tags', 'dynamic_profile', 'extended_data'] as $column) {
+    $sharedFilterColumns[$column] = "(CASE WHEN profile_owner_npc_id IS NULL THEN {$column} ELSE "
+        . "(SELECT owner.{$column} FROM core_npc_master owner WHERE owner.id = core_npc_master.profile_owner_npc_id) END)";
+}
 $where = "1=1";
 if ($q !== ''){
     $qEsc = "%".$GLOBALS['db']->escape($q)."%";
@@ -1470,9 +1540,9 @@ if ($q !== ''){
     $clauses = [
         "npc_name ilike '".$qEsc."'",
         "coalesce(race,'') ilike '".$qEsc."'",
-        "coalesce(voiceid,'') ilike '".$qEsc."'",
+        "coalesce({$sharedFilterColumns['voiceid']},'') ilike '".$qEsc."'",
         "coalesce(refid,'') ilike '".$qEsc."'",
-        "coalesce(tags,'') ilike '".$qEsc."'",
+        "coalesce({$sharedFilterColumns['tags']},'') ilike '".$qEsc."'",
     ];
     // Same-named actors are told apart by RefID, so accept it typed with or without 0x
     $qRefid = preg_replace('/^0x/i', '', $q);
@@ -1490,24 +1560,24 @@ if ($nameLetterFilter !== '') {
     $where .= " and lower(npc_name) like '".$letterEsc."%'";
 }
 if ($profileIdFilter !== ''){
-    $where .= " and profile_id = ".intval($profileIdFilter);
+    $where .= " and {$sharedFilterColumns['profile_id']} = ".intval($profileIdFilter);
 }
 // Apply favorites/dynamic/middle-term filters when checked
 if ($favOnly) {
     $where .= " and coalesce(npc_favorite,0)=1";
 }
 if ($dynOnly) {
-    $where .= " and coalesce(dynamic_profile,0)=1";
+    $where .= " and coalesce({$sharedFilterColumns['dynamic_profile']},0)=1";
 }
 if ($mtmOnly) {
     // Robust match on JSON/text; tolerates whitespace and works for json/jsonb
-    $where .= " and coalesce(extended_data::text,'') ~ '\"middle_term_enabled\"\\s*:\\s*(true|1)'";
+    $where .= " and coalesce({$sharedFilterColumns['extended_data']}::text,'') ~ '\"middle_term_enabled\"\\s*:\\s*(true|1)'";
 }
 if ($lockOnly) {
     $where .= " and coalesce(lock_profile,0)=1";
 }
 if ($salOnly) {
-    $where .= " and coalesce(extended_data::text,'') ~ '\"salutation_after_a_while\"\\s*:\\s*(true|1)'";
+    $where .= " and coalesce({$sharedFilterColumns['extended_data']}::text,'') ~ '\"salutation_after_a_while\"\\s*:\\s*(true|1)'";
 }
 if ($blcOnly) {
     $where .= " and coalesce(extended_data::text,'') ~ '\"background_life_commands\"\\s*:\\s*(true|1)'";
@@ -1530,6 +1600,7 @@ if ($page > $totalPages) $page = $totalPages;
 $offset = ($page - 1) * $perPage;
 error_log("{$where} {$order} limit {$perPage} offset {$offset}");
 $data = $npc->getAll("{$where} {$order} limit {$perPage} offset {$offset}");
+$data = array_map('chimNpcEffectiveProfile', $data ?: []);
 
 // Same-name profile counts across the whole table, so the badge is not page-local.
 $npcNameCounts = [];
@@ -1541,6 +1612,22 @@ try {
     }
 } catch (Throwable $e) {
     $npcNameCounts = [];
+}
+
+// Profile sharing map for every row, resolved in one statement so a card never calls the merge API.
+// The owner column belongs to the NPC API; a missing column just means no card is sharing yet.
+$npcProfileSharing = ['members' => [], 'owners' => []];
+try {
+    $shareRows = $GLOBALS["db"]->fetchAll("SELECT id, profile_owner_npc_id FROM core_npc_master WHERE profile_owner_npc_id IS NOT NULL");
+    foreach (($shareRows ?: []) as $shareRow) {
+        $memberId = (int)($shareRow['id'] ?? 0);
+        $ownerId = (int)($shareRow['profile_owner_npc_id'] ?? 0);
+        if ($memberId <= 0 || $ownerId <= 0 || $memberId === $ownerId) continue;
+        $npcProfileSharing['members'][$memberId] = $ownerId;
+        $npcProfileSharing['owners'][$ownerId] = (int)($npcProfileSharing['owners'][$ownerId] ?? 0) + 1;
+    }
+} catch (Throwable $e) {
+    $npcProfileSharing = ['members' => [], 'owners' => []];
 }
 
 $editItem = null;
@@ -1794,13 +1881,13 @@ if (isset($_GET['list']) && $_GET['list'] === '1') {
                     if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                         $levelDisp = ' ('.intval($metaTmp['stats']['level']).')';
                     }
-            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span><?php $dupCount = npc_duplicate_count($npcNameCounts ?? [], $row['npc_name'] ?? ''); if ($dupCount > 1): ?><span class="npc-dup-badge" title="<?= htmlspecialchars($dupCount.' profiles share the name "'.($row['npc_name'] ?? '').'"', ENT_QUOTES) ?>"><span aria-hidden="true">&times;<?= (int)$dupCount ?></span><span class="npc-sr-only"><?= (int)$dupCount ?> profiles share this name</span></span><?php endif; ?> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($imbEnabled)): ?><span class="npc-imb-icon" title="Individual memory bank enabled">🧠</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Greeting enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
+            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp) ?></span><?php $dupCount = npc_duplicate_count($npcNameCounts ?? [], $row['npc_name'] ?? ''); if ($dupCount > 1): ?><span class="npc-dup-badge" title="<?= htmlspecialchars($dupCount.' profiles share the name "'.($row['npc_name'] ?? '').'"', ENT_QUOTES) ?>"><span aria-hidden="true">&times;<?= (int)$dupCount ?></span><span class="npc-sr-only"><?= (int)$dupCount ?> profiles share this name</span></span><?php endif; ?><?php $shareState = npc_profile_sharing_state($npcProfileSharing ?? [], $row["id"] ?? 0); render_npc_sharing_badge($shareState); ?> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($dynEnabled)): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($imbEnabled)): ?><span class="npc-imb-icon" title="Individual memory bank enabled">🧠</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Greeting enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
             <div class="npc-title-actions">
                     <?php if ($tagsDisp !== ''): ?>
                     <span class="npc-tags-top" title="<?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
                     <?php endif; ?>
                     <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
-                <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
+                <?php render_npc_merge_action($row, $shareState, $dupCount); ?><a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock - Locked profiles are protected from history pullback when loading saves"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
                 <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : npc_delete_confirm_onclick($row, $metaTmp) ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">❌</a>
                 </div>
@@ -1935,6 +2022,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["restore_from_history"
         
         // Check if NPC is locked
         $current = $npc->getById($npcId);
+        if ($current && count(chimNpcProfileMembers($current)) > 1) {
+            echo json_encode(['ok' => false, 'error' => 'Unlink shared profiles before restoring an individual profile snapshot']);
+            exit;
+        }
         if ($current && !empty($current['lock_profile'])) {
             echo json_encode(["ok"=>false, "error"=>"Cannot restore: NPC is locked"]);
             exit;
@@ -1951,6 +2042,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["restore_from_history"
 
         // Prepare data for update (copy relevant fields from history)
         $updateData = [
+            '_profile_binding' => $current['_profile_binding'] ?? ':',
             'npc_name' => $histRow['npc_name'] ?? '',
             'profile_id' => $histRow['profile_id'] ?? null,
             'gender' => $histRow['gender'] ?? '',
@@ -2153,6 +2245,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     </style>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= htmlspecialchars($editItem["id"]) ?>">
+        <input type="hidden" name="_profile_binding" value="<?= htmlspecialchars($editItem['_profile_binding'] ?? ':', ENT_QUOTES) ?>">
+        <?php if (chimNpcProfileSharing($editItem)['linked']): ?>
+            <p class="hint" role="note">Shared profile: character fields and personal memory are shared. Physical details, RefID, favourite and lock stay with this actor. Unlink before renaming or restoring a history snapshot.</p>
+        <?php endif; ?>
     <?php endif; ?>
 
     <?php $isPartial = (isset($_GET['partial']) && $_GET['partial']=='1'); $isFav = !empty($editItem['npc_favorite']); ?>
@@ -4120,6 +4216,64 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 .npc-source-chain-entry { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
 .npc-source-chain-mod { min-width:0; overflow-wrap:anywhere; }
 .npc-source-chain-role { flex:0 0 auto; color:#9aa3ae; font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em; }
+/* --- Shared (merged) profiles --- */
+.npc-shared-badge { display:inline-flex; align-items:center; gap:4px; margin-left:6px; padding:1px 8px; border:1px solid #2f6f57; border-radius:999px; background:#153228; color:#a7e8bc; font-size:11px; font-weight:700; letter-spacing:0.02em; vertical-align:middle; white-space:nowrap; }
+.npc-merge-btn { background:transparent; border:none; padding:6px; color:#e9efff; font-size:20px; line-height:1; font-family:inherit; cursor:pointer; }
+.npc-merge-btn:hover, .npc-merge-btn:focus-visible { color:rgb(242, 124, 17); text-shadow: 0 0 6px rgba(242, 124, 17, 0.6), 0 0 12px rgba(242, 124, 17, 0.35); }
+.npc-merge-btn.active { color:#a7e8bc; }
+.npc-merge-btn:focus-visible { outline:2px solid rgb(242, 124, 17); outline-offset:2px; border-radius:4px; }
+.npc-merge-container { max-width:960px; }
+.npc-merge-body { padding:14px 18px 18px; overflow-y:auto; max-height:calc(85vh - 110px); display:flex; flex-direction:column; gap:12px; }
+.npc-merge-intro { margin:0; color:#cfd9ea; font-size:13px; line-height:1.5; }
+.npc-merge-status { margin:0; color:#9fb1c9; font-size:12px; min-height:16px; }
+.npc-merge-status:empty { display:none; }
+.npc-merge-error { margin:0; padding:9px 11px; border:1px solid #7d2f2f; border-radius:6px; background:#2c1b1b; color:#ffb3b3; font-size:13px; line-height:1.45; }
+.npc-merge-panel { display:flex; flex-direction:column; gap:10px; padding:12px; border:1px solid #3a3a3a; border-radius:8px; background:rgba(26, 26, 26, 0.6); }
+.npc-merge-panel[hidden] { display:none; }
+.npc-merge-panel h3 { margin:0; color:rgb(242, 124, 17); font-size:14px; letter-spacing:0.03em; }
+.npc-merge-panel p { margin:0; color:#cfd9ea; font-size:12.5px; line-height:1.5; }
+.npc-merge-current { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; font-size:12.5px; color:#e0e0e0; }
+.npc-merge-list { display:flex; flex-direction:column; gap:6px; margin:0; padding:0; list-style:none; max-height:34vh; overflow-y:auto; }
+.npc-merge-option { display:flex; align-items:flex-start; gap:9px; padding:8px 10px; border:1px solid #4a4a4a; border-radius:6px; background:#242424; cursor:pointer; }
+.npc-merge-option:hover { border-color:rgba(242, 124, 17, 0.55); }
+.npc-merge-option:focus-within { outline:2px solid rgb(242, 124, 17); outline-offset:1px; }
+.npc-merge-option input { margin-top:3px; flex:0 0 auto; accent-color:rgb(242, 124, 17); }
+.npc-merge-option-copy { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.npc-merge-option-name { color:#e9efff; font-weight:700; font-size:13px; overflow-wrap:anywhere; }
+.npc-merge-option-meta { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; font-size:11.5px; color:#9fb1c9; }
+.npc-merge-refid { font-family:"Consolas","Courier New",monospace; letter-spacing:0.02em; color:#dfe6f2; }
+.npc-merge-origin { color:#c2b39b; overflow-wrap:anywhere; }
+.npc-merge-unknown { color:#9aa3ae; font-style:italic; }
+.npc-merge-empty { color:#9aa3ae; font-style:italic; font-size:12.5px; }
+.npc-merge-option.is-blocked { border-style:dashed; background:#1f1f1f; cursor:not-allowed; }
+.npc-merge-option.is-blocked:hover { border-color:#4a4a4a; }
+.npc-merge-option.is-blocked .npc-merge-option-name { color:#9aa3ae; }
+.npc-merge-blocked { color:#ffb3b3; font-size:11.5px; line-height:1.4; overflow-wrap:anywhere; }
+.npc-merge-compare { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
+.npc-merge-column { display:flex; flex-direction:column; gap:8px; padding:10px; border:1px solid #4a4a4a; border-radius:6px; background:#242424; min-width:0; }
+.npc-merge-column.is-keeper { border-color:rgb(242, 124, 17); box-shadow:0 0 0 1px rgba(242, 124, 17, 0.35) inset; }
+.npc-merge-keeper { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:#e9efff; cursor:pointer; }
+.npc-merge-keeper input { accent-color:rgb(242, 124, 17); }
+.npc-merge-field { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.npc-merge-field dt { margin:0; color:rgb(242, 124, 17); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; }
+.npc-merge-field dd { margin:0; color:#dfe4ec; font-size:12.5px; line-height:1.45; overflow-wrap:anywhere; white-space:pre-wrap; max-height:9.5em; overflow-y:auto; }
+.npc-merge-field dd.is-empty { color:#9aa3ae; font-style:italic; white-space:normal; }
+.npc-merge-fields { display:flex; flex-direction:column; gap:8px; margin:0; }
+.npc-merge-warn { margin:0; padding:9px 11px; border:1px solid #8a5a1d; border-radius:6px; background:#33260f; color:#ffd39c; font-size:12.5px; line-height:1.5; }
+.npc-merge-confirm { display:flex; align-items:flex-start; gap:8px; font-size:12.5px; color:#e9efff; line-height:1.45; cursor:pointer; }
+.npc-merge-confirm input { margin-top:2px; flex:0 0 auto; accent-color:rgb(242, 124, 17); }
+.npc-merge-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+.npc-merge-actions button { border-radius:6px; padding:8px 14px; font-family:inherit; font-size:13px; cursor:pointer; border:1px solid #4a4a4a; background:#2f2f2f; color:#e9efff; }
+.npc-merge-actions button:hover:not(:disabled) { border-color:rgba(242, 124, 17, 0.6); }
+.npc-merge-actions button:focus-visible { outline:2px solid rgb(242, 124, 17); outline-offset:2px; }
+.npc-merge-actions button:disabled { opacity:0.5; cursor:not-allowed; }
+.npc-merge-actions .npc-merge-primary { background:linear-gradient(135deg, #176529, #125121); border-color:rgba(72,187,120,0.35); }
+.npc-merge-actions .npc-merge-danger { background:#3a1f1f; border-color:#7d2f2f; color:#ffb3b3; }
+@media (max-width: 720px) {
+    .npc-merge-compare { grid-template-columns:1fr; }
+    .npc-merge-actions { justify-content:stretch; }
+    .npc-merge-actions button { flex:1 1 auto; }
+}
 .npc-identity-label { display:block; font-weight:700; color:rgb(242, 124, 17); }
 .npc-identity-readonly { display:flex; flex-direction:column; gap:6px; padding:10px 12px; border:1px solid #3a3a3a; border-radius:8px; background:rgba(26, 26, 26, 0.6); }
 .npc-identity-row { color:#e0e0e0; font-size:13px; line-height:1.4; overflow-wrap:anywhere; }
@@ -4810,14 +4964,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
                 if (isset($metaTmp['stats']) && is_array($metaTmp['stats']) && isset($metaTmp['stats']['level'])) {
                     $levelDisp2 = ' ('.intval($metaTmp['stats']['level']).')';
                 }
-            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span><?php $dupCount = npc_duplicate_count($npcNameCounts ?? [], $row['npc_name'] ?? ''); if ($dupCount > 1): ?><span class="npc-dup-badge" title="<?= htmlspecialchars($dupCount.' profiles share the name "'.($row['npc_name'] ?? '').'"', ENT_QUOTES) ?>"><span aria-hidden="true">&times;<?= (int)$dupCount ?></span><span class="npc-sr-only"><?= (int)$dupCount ?> profiles share this name</span></span><?php endif; ?> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($imbEnabled)): ?><span class="npc-imb-icon" title="Individual memory bank enabled">🧠</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Greeting enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
+            ?><span class="npc-name"><?= htmlspecialchars(($row["npc_name"] ?? '').$levelDisp2) ?></span><?php $dupCount = npc_duplicate_count($npcNameCounts ?? [], $row['npc_name'] ?? ''); if ($dupCount > 1): ?><span class="npc-dup-badge" title="<?= htmlspecialchars($dupCount.' profiles share the name "'.($row['npc_name'] ?? '').'"', ENT_QUOTES) ?>"><span aria-hidden="true">&times;<?= (int)$dupCount ?></span><span class="npc-sr-only"><?= (int)$dupCount ?> profiles share this name</span></span><?php endif; ?><?php $shareState = npc_profile_sharing_state($npcProfileSharing ?? [], $row["id"] ?? 0); render_npc_sharing_badge($shareState); ?> <?php $gch = gender_icon_char($row['gender'] ?? ''); $gcl = gender_icon_class($row['gender'] ?? ''); if ($gch!==''): ?><span class="npc-gender-icon <?= htmlspecialchars($gcl) ?>" title="<?= htmlspecialchars($row['gender'] ?? '') ?>"><?= $gch ?></span><?php endif; ?><?php if (!empty($row['dynamic_profile'])): ?><span class="npc-dyn-icon" title="Dynamic profile enabled">♻️</span><?php endif; ?><?php if (!empty($mtmEnabled)): ?><span class="npc-mtm-icon" title="Middle-term memory enabled">📃</span><?php endif; ?><?php if (!empty($imbEnabled)): ?><span class="npc-imb-icon" title="Individual memory bank enabled">🧠</span><?php endif; ?><?php if (!empty($adEnabled)): ?><span class="npc-ad-icon" title="Auto diary enabled">📙</span><?php endif; ?><?php if (!empty($salEnabled)): ?><span class="npc-sal-icon" title="Auto Greeting enabled">👋</span><?php endif; ?><?php if (!empty($blcEnabled)): ?><span class="npc-blc-icon" title="Background life commands enabled">🎮</span><?php endif; ?><?php if (!empty($gpsEnabled)): ?><span class="npc-gps-icon" title="GPS track enabled">📍</span><?php endif; ?></div>
             <div class="npc-title-actions">
                 <?php if ($tagsDisp !== ''): ?>
                 <span class="npc-tags-label">Tags:</span>
                 <span class="npc-tags-top" title="Use Search to filter by these tags: <?= htmlspecialchars($tagsDisp) ?>"><?= htmlspecialchars($tagsDisp) ?></span>
                 <?php endif; ?>
                 <a class="btn btn-toggle <?= !empty($row["npc_favorite"]) ? "active" : "" ?>" href="#" data-favorite-id="<?= $row["id"] ?>" title="Toggle favorite"><?php echo !empty($row["npc_favorite"]) ? "★" : "☆"; ?></a>
-                <a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
+                <?php render_npc_merge_action($row, $shareState, $dupCount); ?><a class="btn btn-toggle" href="#" data-pick-picture-id="<?= $row["id"] ?>" title="Set picture">🖼️</a>
                 <a class="btn btn-toggle <?= !empty($row["lock_profile"]) ? "active" : "" ?>" href="#" data-lock-id="<?= $row["id"] ?>" title="Toggle lock - Locked profiles are protected from history pullback when loading saves"><?php echo !empty($row["lock_profile"]) ? "🔒" : "🔓"; ?></a>
                 <a class="btn btn-trash<?= !empty($row['lock_profile']) ? ' disabled' : '' ?>" href="<?= !empty($row['lock_profile']) ? '#' : ('?delete='.$row['id']) ?>" onclick="<?= !empty($row['lock_profile']) ? 'alert(\'This NPC is locked and cannot be deleted.\'); return false;' : npc_delete_confirm_onclick($row, $metaTmp) ?>" title="<?= !empty($row['lock_profile']) ? 'Locked - cannot delete' : 'Delete' ?>">❌</a>
             </div>
@@ -4955,6 +5109,62 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 </div>
 
 
+<!-- Same-name profile merge dialog. Reversible: both actor cards survive a merge, and Unlink
+     separates the actors again and restores their own profile data. -->
+<div id="npc_merge_modal" class="modal-backdrop" style="z-index:10004;" role="dialog" aria-modal="true" aria-labelledby="npc_merge_title" aria-describedby="npc_merge_intro">
+  <div class="modal-container npc-merge-container">
+    <div class="modal-header">
+      <h2 class="modal-title" id="npc_merge_title">Merge profiles</h2>
+      <div class="modal-actions">
+        <button type="button" id="npc_merge_close" class="btn-cancel">Close</button>
+      </div>
+    </div>
+    <div class="modal-body npc-merge-body">
+      <p class="npc-merge-intro" id="npc_merge_intro">Two actors that share a name can share one profile. Both actor cards stay in the list, and a merge can be undone with Unlink.</p>
+      <p id="npc_merge_status" class="npc-merge-status" role="status" aria-live="polite"></p>
+      <p id="npc_merge_error" class="npc-merge-error" role="alert" hidden></p>
+
+      <section id="npc_merge_shared_panel" class="npc-merge-panel" hidden aria-labelledby="npc_merge_shared_heading">
+        <h3 id="npc_merge_shared_heading">Shared profile</h3>
+        <p>These actors read and write one profile. New memory is written once and every actor listed here sees it.</p>
+        <ul id="npc_merge_shared_list" class="npc-merge-list"></ul>
+        <p class="npc-merge-warn">Unlinking restores the other actor's original character data. The kept profile retains its current data, including memory written while shared. That shared-period memory cannot be split apart again.</p>
+        <label class="npc-merge-confirm"><input type="checkbox" id="npc_merge_unlink_confirm"> <span>I understand that memory written while shared stays with the kept profile.</span></label>
+        <div class="npc-merge-actions">
+          <button type="button" id="npc_merge_unlink" class="npc-merge-danger" disabled>Unlink shared profile</button>
+        </div>
+      </section>
+
+      <section id="npc_merge_select_panel" class="npc-merge-panel" hidden aria-labelledby="npc_merge_select_heading">
+        <h3 id="npc_merge_select_heading">Choose the other actor</h3>
+        <p class="npc-merge-current">
+          <span class="npc-muted">This actor:</span>
+          <span id="npc_merge_current_name"></span>
+          <span class="npc-merge-refid" id="npc_merge_current_refid"></span>
+          <span class="npc-merge-origin" id="npc_merge_current_origin"></span>
+        </p>
+        <p>Pick the profile that belongs to the same character. Only available plugin-defined references that are not already shared are offered. Nothing is matched for you.</p>
+        <ul id="npc_merge_candidates" class="npc-merge-list"></ul>
+        <div class="npc-merge-actions">
+          <button type="button" id="npc_merge_compare_btn" class="npc-merge-primary" disabled>Compare profiles</button>
+        </div>
+      </section>
+
+      <section id="npc_merge_compare_panel" class="npc-merge-panel" hidden aria-labelledby="npc_merge_compare_heading">
+        <h3 id="npc_merge_compare_heading">Choose the profile to keep</h3>
+        <p>The kept profile wins every field below. The other profile is retained rather than deleted, which is what lets Unlink restore it.</p>
+        <div id="npc_merge_compare" class="npc-merge-compare"></div>
+        <p class="npc-merge-warn">After merging, both actors write new memory into the kept profile. Existing histories stay attached to the name they were recorded under and are not reassigned to the kept profile.</p>
+        <label class="npc-merge-confirm"><input type="checkbox" id="npc_merge_same_character"> <span>I confirm these two actors are the same character.</span></label>
+        <div class="npc-merge-actions">
+          <button type="button" id="npc_merge_back">Back</button>
+          <button type="button" id="npc_merge_submit" class="npc-merge-primary" disabled>Merge profiles</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
 <!-- Build Relationships Modal -->
 <div id="rel_build_modal" class="modal-backdrop" style="z-index:10003; display:none;">
   <div class="modal-container rel-build-modal-container" style="max-width:500px;">
@@ -5043,6 +5253,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
 <script>
 (function(){
   const PROFILES_BY_ID = <?= json_encode($profilesById ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+  window.PROFILES_BY_ID = PROFILES_BY_ID;
   const PROFILE_OPTIONS = <?= json_encode($profileOptions ?? [], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
   const modal = document.getElementById('npc_modal');
   const iframe = document.getElementById('npc_modal_iframe');
@@ -6391,6 +6602,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       } catch(_e){}
     }
   }
+  window.NPC_REFRESH_LIST = refreshList;
   // Simple debounce for input
   let debTimer = null;
   function refreshListDebounced(page){
@@ -6470,6 +6682,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
               <div class="npc-title-actions">
                 <span class="npc-tags-top" style="display:none"></span>
                 <a class="btn btn-toggle" href="#" data-favorite-id="${id}" title="Toggle favorite">☆</a>
+                <button type="button" class="btn btn-toggle npc-merge-btn" data-merge-id="${id}" data-merge-linked="0" title="Merge profiles" aria-label="Merge profiles"><span aria-hidden="true">🔗</span></button>
                 <a class="btn btn-toggle" href="#" data-lock-id="${id}" title="Toggle lock - Locked profiles are protected from history pullback when loading saves">🔓</a>
                 <a class="btn btn-trash" href="?delete=${id}" title="Delete">❌</a>
               </div>
@@ -6949,6 +7162,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     <div id="toast" class="toast-notification">
         <span class="message"></span>
     </div>
+
+    <script src="<?php echo $webRoot; ?>/ui/js/npc_profile_merge.js" defer></script>
 
 </main>
 

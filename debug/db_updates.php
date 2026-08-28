@@ -8154,6 +8154,15 @@ if ($migrationOk) {
     Logger::error("Failed to apply eventlog_session_payload migration; existing views were preserved");
 }
 
+// Run the idempotent constraint check after snapshot restores too: LIKE does not clone foreign keys.
+if ($db->execQuery(file_get_contents(__DIR__ . '/../data/npc_profile_sharing.sql')) !== false) {
+    if ($checkVersion('npc_profile_sharing') < 20260828001) {
+        $updateVersion('npc_profile_sharing', 20260828001);
+    }
+} else {
+    Logger::error('Failed to apply npc_profile_sharing migration');
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------
