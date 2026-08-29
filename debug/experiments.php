@@ -1071,3 +1071,91 @@ if ($argv[1]=='26') {
     print_r(buildHistoricContext("Lydia",-1,"and type<>'prechat'"));
 
 }
+
+if ($argv[1] == '27') {
+    /*
+    The following values are acceptable: (Will eventually be an enum)
+    4: Lover
+    3: Ally
+    2: Confidant
+    1: Friend
+    0: Acquaintance
+    -1: Rival
+    -2: Foe
+    -3: Enemy
+    -4: Archnemesis
+    */
+
+    $name = "Lydia";
+    $name2 = "Jaryra";
+    $npcMaster = new NpcMaster();
+    $npc1 = $npcMaster->getByName($name);
+    $npc2 = $npcMaster->getByName($name2);
+    
+    $skyrimCmd = new SkyrimCommandBuilder();
+
+    $json = $skyrimCmd->Actor->SetRelationShipRank( "0x{$npc1["refid"]}", "0x{$npc2["refid"]}", 1);
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->SetRelationShipRank( "0x{$npc2["refid"]}", "0x{$npc1["refid"]}", 1);
+    $skyrimCmd->send(cmd: $json);
+
+}
+
+if ($argv[1] == '28') {
+    $GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT']=true;
+    echo unmoodSentence("*She stirs from her sleep, blinking groggily as she hears his voice. She sits up, rubbing her eyes, a soft smile forming on her lips.* Yes, my love?");
+    echo PHP_EOL;
+    echo unmoodSentence("Yes, my love? *She stirs from her sleep, blinking groggily as she hears his voice. She sits up, rubbing her eyes, a soft smile forming on her lips.* ");
+    echo PHP_EOL;
+}
+
+if ($argv[1] == '29') {
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Ursine");
+    $speech_style = getSpeechStyleText(strtolower($npc["race"]), "rogue");
+    $speech_style .= getRandomSpeechFillers();
+    echo $speech_style . PHP_EOL;
+}
+
+if ($argv[1] == '30') {
+    $oldName = $GLOBALS["db"]->escape("Otdis [Bandit Outlaw]");
+    $newName = $GLOBALS["db"]->escape("Ursine");
+    $GLOBALS["db"]->execQuery("
+                    UPDATE eventlog
+                    SET people = REPLACE(people, '$oldName', '$newName')
+                    WHERE people LIKE CONCAT('%', '$oldName', '%')
+                ");
+
+        // speech.speaker and speech.listener
+        $GLOBALS["db"]->execQuery("
+                    UPDATE speech
+                    SET speaker = '$newName'
+                    WHERE speaker = '$oldName'
+                ");
+        $GLOBALS["db"]->execQuery("
+                    UPDATE speech
+                    SET listener = '$newName'
+                    WHERE listener = '$oldName'
+                ");
+
+        // memory.speaker and memory.listener
+        $GLOBALS["db"]->execQuery("
+                    UPDATE memory
+                    SET speaker = '$newName'
+                    WHERE speaker = '$oldName'
+                ");
+        $GLOBALS["db"]->execQuery("
+                    UPDATE memory
+                    SET listener = '$newName'
+                    WHERE listener = '$oldName'
+                ");
+
+        // memory_summary.companions (pipe-separated list)
+        $GLOBALS["db"]->execQuery("
+                    UPDATE memory_summary
+                    SET companions = REPLACE(companions, '$oldName', '$newName')
+                    WHERE companions LIKE CONCAT('%', '$oldName', '%')
+                ");
+    
+}

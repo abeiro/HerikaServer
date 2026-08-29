@@ -5338,7 +5338,11 @@ function logEvent($dataArray,$forcePeople='')
             $eventPeople=DataBeingsInCloseRange(false);
         }
 
+        if ($dataArray[0]=="chat_background") {
+            $eventPeople=DataBeingsInCloseRange();
+        }
 
+        
         $insertData = array(
             'ts' => $dataArray[1],
             'gamets' => $dataArray[2],
