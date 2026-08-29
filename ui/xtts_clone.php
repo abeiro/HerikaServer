@@ -1439,7 +1439,7 @@ error_reporting(E_ALL);
 
 // Tab state from URL parameter
 $activeTab = $_GET['tab'] ?? 'xtts';
-$validTabs = ['xtts', 'chatterbox', 'pockettts', 'omnivoice', 'cartesia', 'inworld', 'fallbacks'];
+$validTabs = ['xtts', 'chatterbox', 'pockettts', 'omnivoice', 'cartesia', 'inworld', 'fallbacks', 'pronunciations'];
 if (!in_array($activeTab, $validTabs, true)) {
     $activeTab = 'xtts';
 }
@@ -2015,9 +2015,38 @@ $speakersMessage = '';
 $cartesiaMessage = '';
 $inworldMessage = '';
 $ttsFallbackManager = new TTSFallback();
+$ttsPronunciationManager = new TTSPronunciationDictionary();
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $pronunciationAction = strval($_POST['action'] ?? '');
+    if ($pronunciationAction === 'save_tts_pronunciation') {
+        $pronunciationId = intval($_POST['id'] ?? 0);
+        $saved = $ttsPronunciationManager->saveCustom(
+            $pronunciationId > 0 ? $pronunciationId : null,
+            strval($_POST['source_text'] ?? ''),
+            strval($_POST['spoken_text'] ?? ''),
+            strval($_POST['oghma_tags'] ?? ''),
+            isset($_POST['enabled'])
+        );
+        $message .= $saved
+            ? "<p style='color:#4caf50;'><strong>Pronunciation saved.</strong></p>"
+            : "<p style='color:#f44336;'><strong>Pronunciation could not be saved. Check the fields for blanks or duplicates, apply database updates, and try again.</strong></p>";
+    } elseif ($pronunciationAction === 'toggle_tts_pronunciation') {
+        $updated = $ttsPronunciationManager->setEnabled(
+            intval($_POST['id'] ?? 0),
+            chimTtsPronunciationBoolean($_POST['enabled'] ?? false)
+        );
+        $message .= $updated
+            ? "<p style='color:#4caf50;'><strong>Pronunciation status updated.</strong></p>"
+            : "<p style='color:#f44336;'><strong>Pronunciation status could not be updated.</strong></p>";
+    } elseif ($pronunciationAction === 'delete_tts_pronunciation') {
+        $deleted = $ttsPronunciationManager->deleteCustom(intval($_POST['id'] ?? 0));
+        $message .= $deleted
+            ? "<p style='color:#4caf50;'><strong>Custom pronunciation deleted.</strong></p>"
+            : "<p style='color:#f44336;'><strong>Custom pronunciation could not be deleted.</strong></p>";
+    }
+
     if (($_POST['action'] ?? '') === 'save_tts_fallbacks') {
         $submittedFallbacks = $_POST['fallbacks'] ?? [];
         if (!is_array($submittedFallbacks)) {
@@ -2743,6 +2772,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $ttsFallbackDefinitions = $ttsFallbackManager->getDefinitions();
 $ttsFallbackMatrix = $ttsFallbackManager->getMatrix();
 $ttsFallbackVoiceIds = $ttsFallbackManager->getSuggestedVoiceIds();
+$ttsPronunciationTags = $ttsPronunciationManager->getAvailableTags();
+$ttsPronunciationFilter = strtolower(trim(strval($_GET['oghma_tag'] ?? '')));
+if ($ttsPronunciationFilter !== '' && !in_array($ttsPronunciationFilter, $ttsPronunciationTags, true)) {
+    $ttsPronunciationFilter = '';
+}
+$ttsPronunciationRows = $ttsPronunciationManager->getRows($ttsPronunciationFilter);
 
 // Add the JavaScript functions
 ?>
@@ -3230,6 +3265,7 @@ $ttsFallbackVoiceIds = $ttsFallbackManager->getSuggestedVoiceIds();
 
 ?>
 <link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/main.css">
+<link rel="stylesheet" href="<?php echo $webRoot; ?>/ui/css/tts-pronunciations.css">
 <style>
     /* Font Face Declaration */
     @font-face {
@@ -3700,7 +3736,6 @@ $ttsFallbackVoiceIds = $ttsFallbackManager->getSuggestedVoiceIds();
             grid-template-columns: 1fr;
         }
     }
-
     .voice-status-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -3840,7 +3875,7 @@ $ttsFallbackVoiceIds = $ttsFallbackManager->getSuggestedVoiceIds();
     <div class="page-header">
         <h1>Voice Management
         </h1>
-        <p class="page-subtitle">Manage voice samples and global NPC fallback voices across all TTS providers.</p>
+        <p class="page-subtitle">Manage voice samples, global NPC fallback voices, and pronunciations across all TTS providers.</p>
         <p class="page-note"><strong>Note:</strong> XTTS, Chatterbox, and PocketTTS share a simple voice sample flow. OmniVoice imports voices into the selected language library.</p>
     </div>
 
@@ -3867,6 +3902,9 @@ $ttsFallbackVoiceIds = $ttsFallbackManager->getSuggestedVoiceIds();
         <button class="tab-btn <?php echo $activeTab === 'fallbacks' ? 'active' : ''; ?>"
                 title="Global race and gender voice fallbacks used by every TTS connector"
                 onclick="switchTab('fallbacks')"><span class="tab-label">Fallback Voices</span><span class="tab-status configured">Global</span></button>
+        <button class="tab-btn <?php echo $activeTab === 'pronunciations' ? 'active' : ''; ?>"
+                title="Global pronunciation dictionary applied to spoken audio for every TTS connector"
+                onclick="switchTab('pronunciations')"><span class="tab-label">Pronunciations</span><span class="tab-status configured">Global</span></button>
     </div>
 
     <?php if (!empty($message)): ?>
@@ -3943,6 +3981,8 @@ $ttsFallbackVoiceIds = $ttsFallbackManager->getSuggestedVoiceIds();
             </form>
         </div>
     </div>
+    <!-- Pronunciations Tab Content -->
+    <?php include(__DIR__ . DIRECTORY_SEPARATOR . 'tmpl' . DIRECTORY_SEPARATOR . 'tts_pronunciations.php'); ?>
 
     <!-- XTTS Tab Content -->
     <div class="tab-content <?php echo $activeTab === 'xtts' ? 'active' : ''; ?>" data-tab-type="xtts">

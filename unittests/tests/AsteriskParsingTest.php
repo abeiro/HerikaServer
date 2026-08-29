@@ -567,4 +567,45 @@ final class AsteriskParsingTest extends TestCase
         $this->assertSame('lydia', $GLOBALS['TTS']['XTTSFASTAPI']['voiceid']);
         $this->assertSame('lydia', $GLOBALS['TTS']['PIPERTTS']['voiceid']);
     }
+
+    public function testTtsPronunciationsApplyWholeTermsWithoutCascading(): void
+    {
+        $rows = [
+            ['source_text' => 'Jorrvaskr', 'spoken_text' => 'Ysgramor', 'enabled' => true],
+            ['source_text' => 'Ysgramor', 'spoken_text' => 'Eesgramor', 'enabled' => true],
+            ['source_text' => 'Whiterun guard', 'spoken_text' => 'city guard', 'enabled' => true],
+        ];
+
+        $this->assertSame(
+            'Ysgramor greets Eesgramor. A city guard arrived; Whiterun guards stayed outside Jorrvaskrian lands.',
+            chimApplyTtsPronunciationDictionary(
+                'Jorrvaskr greets Ysgramor. A Whiterun guard arrived; Whiterun guards stayed outside Jorrvaskrian lands.',
+                $rows,
+                []
+            )
+        );
+    }
+
+    public function testTtsPronunciationsUseMatchingOghmaTagsAndCustomPriority(): void
+    {
+        $rows = [
+            [
+                'source_text' => 'Jorrvaskr',
+                'spoken_text' => 'Yorvaskr',
+                'is_builtin' => true,
+                'enabled' => true,
+            ],
+            [
+                'source_text' => 'Jorrvaskr',
+                'spoken_text' => 'Companions Hall',
+                'oghma_tags' => 'companions, whiterun',
+                'is_builtin' => false,
+                'enabled' => true,
+            ],
+        ];
+
+        $this->assertSame('Visit Companions Hall.', chimApplyTtsPronunciationDictionary('Visit Jorrvaskr.', $rows, ['companions']));
+        $this->assertSame('Visit Yorvaskr.', chimApplyTtsPronunciationDictionary('Visit Jorrvaskr.', $rows, ['mage']));
+        $this->assertSame('Visit Companions Hall.', chimApplyTtsPronunciationDictionary('Visit Jorrvaskr.', $rows, ['knowall']));
+    }
 }

@@ -3,6 +3,7 @@
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/logger.php");
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/settings.php");
 require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/oghma_aliases.php");
+require_once(dirname(__DIR__).DIRECTORY_SEPARATOR."lib/tts_pronunciation.php");
 
 $checkVersion = function($tablename) {
     global $db;
@@ -108,6 +109,10 @@ try {
     }
     if ($checkTableExists("core_tts_fallback") == -1) {
         $db->execQuery(file_get_contents(__DIR__."/../lib/core/database_schema/core_tts_fallback.sql"));
+        $db->execQuery("SET search_path TO public");
+    }
+    if ($checkTableExists("core_tts_pronunciation") == -1) {
+        chimEnsureTtsPronunciationDictionary();
         $db->execQuery("SET search_path TO public");
     }
     if ($checkTableExists("core_llm_connector") == -1) {
@@ -3779,6 +3784,7 @@ try {
         ["name"=>"core_llm_connector","file"=>__DIR__."/../lib/core/database_schema/core_llm_connector.sql"],
         ["name"=>"core_tts_connector","file"=>__DIR__."/../lib/core/database_schema/core_tts_connector.sql"],
         ["name"=>"core_tts_fallback","file"=>__DIR__."/../lib/core/database_schema/core_tts_fallback.sql"],
+        ["name"=>"core_tts_pronunciation","file"=>__DIR__."/../lib/core/database_schema/core_tts_pronunciation.sql"],
         ["name"=>"core_stt_connector","file"=>__DIR__."/../lib/core/database_schema/core_stt_connector.sql"],
         ["name"=>"core_profiles",     "file"=>__DIR__."/../lib/core/database_schema/core_profiles.sql"],
         ["name"=>"core_npc_master",   "file"=>__DIR__."/../lib/core/database_schema/core_npc_master.sql"]
@@ -3789,6 +3795,7 @@ try {
             $db->execQuery(file_get_contents($t["file"]));
         }
     }
+    chimEnsureTtsPronunciationDictionary();
 } catch (Exception $e) {
     Logger::error("Final repair pass failed: ".$e->getMessage());
 }
@@ -8142,6 +8149,19 @@ if ($migrationOk) {
     }
 } else {
     Logger::error("Failed to apply eventlog_session_payload migration; existing views were preserved");
+}
+
+if ($checkVersion("core_tts_pronunciation") < 20260829001) {
+    Logger::debug("Applying core_tts_pronunciation 20260829001 - add tagged TTS pronunciations");
+
+    $migrationOk = chimEnsureTtsPronunciationDictionary();
+
+    if ($migrationOk) {
+        $updateVersion("core_tts_pronunciation", 20260829001);
+        Logger::info("Applied patch core_tts_pronunciation 20260829001");
+    } else {
+        Logger::error("Failed to apply patch core_tts_pronunciation 20260829001");
+    }
 }
 
 Logger::info(__FILE__." update file processed");

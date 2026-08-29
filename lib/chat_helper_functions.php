@@ -11,6 +11,7 @@ require_once(__DIR__."/utils_game_timestamp.php");
 require_once(__DIR__."/pipeline_status.php");
 require_once(__DIR__."/emote_moods.php");
 require_once(__DIR__."/core/event_type.php");
+require_once(__DIR__."/tts_pronunciation.php");
 
 function chimBuildLatestDiaryContextBlock(string $npcName, array $profileData): string
 {
@@ -1503,11 +1504,15 @@ function returnLines($lines,$writeOutput=true)
                     // Prepare narration for TTS (with asterisks for subtitle display)
                     $narrationForTTS = $narrationText;
                     $narrationForSubtitles = formatNarrationSubtitleText($narrationText);
+                    $narrationForSpeech = chimApplyTtsPronunciationDictionary($narrationForTTS, null, []);
+                    $narrationTtsCacheText = $narrationForSpeech !== $narrationForTTS
+                        ? $narrationForSpeech
+                        : $narrationForSubtitles;
 
                     Logger::info("[INLINE_NARRATION] Generating TTS with function: " . $GLOBALS["TTSFUNCTION"]);
 
                     // Generate TTS for narration using the configured TTS function
-                    $narratorTtsOutput = callConfiguredTts($narrationForTTS, "default", $narrationForSubtitles);
+                    $narratorTtsOutput = callConfiguredTts($narrationForSpeech, "default", $narrationTtsCacheText);
 
                     // Track narrator TTS output
                     if ($narratorTtsOutput) {
@@ -1521,7 +1526,7 @@ function returnLines($lines,$writeOutput=true)
                             $narratorExpression = ""; // No expression for narrator
                             $narratorAnimation = ""; // No animation for narrator
 
-                            echo "The Narrator|ScriptQueue|{$narrationForSubtitles}/{$narratorExpression}/{$narratorListener}/{$narratorAnimation}/{$narrationText}\r\n";
+                            echo "The Narrator|ScriptQueue|{$narrationForSubtitles}/{$narratorExpression}/{$narratorListener}/{$narratorAnimation}/{$narrationForSpeech}\r\n";
                             if (ob_get_level()) @ob_flush();
                             @flush();
                             Logger::info("[INLINE_NARRATION] Narrator speech sent to game: " . $narrationForSubtitles);
@@ -1555,15 +1560,21 @@ function returnLines($lines,$writeOutput=true)
                 }
             }
 
+            $responseForSpeech = (string)$responseForTTS;
+            $npcPronunciationApplied = false;
             if ($shouldEmitNpcLine && trim((string)$responseForTTS) !== "") {
+                $responseForSpeech = chimApplyTtsPronunciationDictionary((string)$responseForTTS);
+                $npcPronunciationApplied = $responseForSpeech !== $responseForTTS;
+                $ttsCacheText = $npcPronunciationApplied ? $responseForSpeech : $responseForSubtitles;
+
                 // Set TTS processing status
                 pipeline_status_set('tts', true);
 
                 // Generate regular TTS (either full text if no narration, or just dialogue after narration)
-                $ttsOutput = callNpcTtsWithFallback($responseForTTS, $mood, $responseForSubtitles);
+                $ttsOutput = callNpcTtsWithFallback($responseForSpeech, $mood, $ttsCacheText);
                 if (!$ttsOutput) {
                     if (isset($GLOBALS["TTS_FALLBACK_FNCT"]))
-                        $ttsOutput = $GLOBALS["TTS_FALLBACK_FNCT"]($responseForTTS, $mood, $responseForSubtitles);
+                        $ttsOutput = $GLOBALS["TTS_FALLBACK_FNCT"]($responseForSpeech, $mood, $ttsCacheText);
                 }
 
                 // Clear TTS processing status
@@ -1754,16 +1765,16 @@ function returnLines($lines,$writeOutput=true)
                 $currentUtteranceId = chimGenerateUtteranceId();
                 $GLOBALS["SCRIPTLINE_UTTERANCE_ID"] = $currentUtteranceId;
 
-                $responseTextPhonetic = "";
+                $responseTextPhonetic = $npcPronunciationApplied ? $responseForSpeech : "";
                 if (Translation::isAudioEnabled() || Translation::isTextEnabled()) {
-                    $responseTextPhonetic = $responseForTTS;
+                    $responseTextPhonetic = $responseForSpeech;
                 }
-                if (Translation::containsCyrillic($responseForTTS)) {
-                    $responseTextPhonetic = Translation::convertCyrillicTextToLatin($responseForTTS);
+                if (Translation::containsCyrillic($responseForSpeech)) {
+                    $responseTextPhonetic = Translation::convertCyrillicTextToLatin($responseForSpeech);
                     Logger::debug("Transliterated Cyrillic text to: $responseTextPhonetic");
                 }
-                if (Translation::containsJapanese($responseForTTS)) {
-                    $responseTextPhonetic = Translation::convertJapaneseTextToLatin($responseForTTS);
+                if (Translation::containsJapanese($responseForSpeech)) {
+                    $responseTextPhonetic = Translation::convertJapaneseTextToLatin($responseForSpeech);
                     Logger::debug("Transliterated Japanese text to: $responseTextPhonetic");
                 }
                 
