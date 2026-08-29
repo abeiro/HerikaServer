@@ -29,7 +29,7 @@ final class OghmaTest extends DatabaseTestCase
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
                 $options = stream_context_get_options($streamContext);
-                $this->assertStringNotContainsString("Lore Information", $options['http']['content']);
+                $this->assertStringNotContainsString('<oghma contract="oghma-parity-v1"', $options['http']['content']);
                 return true;
             })
         )
@@ -61,9 +61,9 @@ final class OghmaTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt =
-                    "Lore Information (You have advanced knowledge on this subject): The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
-                    "He has little respect for knights, because his potions can do anything that they can.";
+                $expectedPrompt = '<article topic="potion_seller" source="conversation" access="advanced">'
+                    . "\n    <content>The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. "
+                    . 'He has little respect for knights, because his potions can do anything that they can.</content>';
                 $options = stream_context_get_options($streamContext);
                 $this->assertStringContainsString($expectedPrompt, $options['http']['content']);
                 return true;
@@ -107,9 +107,9 @@ final class OghmaTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt =
-                    "Lore Information (You have advanced knowledge on this subject): The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
-                    "He has little respect for knights, because his potions can do anything that they can.";
+                $expectedPrompt = '<article topic="potion_seller" source="conversation" access="advanced">'
+                    . "\n    <content>The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. "
+                    . 'He has little respect for knights, because his potions can do anything that they can.</content>';
                 $options = stream_context_get_options($streamContext);
                 $this->assertStringContainsString($expectedPrompt, $options['http']['content']);
                 return true;
@@ -154,7 +154,7 @@ final class OghmaTest extends DatabaseTestCase
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
                 $options = stream_context_get_options($streamContext);
-                $this->assertStringNotContainsString("Lore Information", $options['http']['content']);
+                $this->assertStringNotContainsString('<oghma contract="oghma-parity-v1"', $options['http']['content']);
                 return true;
             })
         )
@@ -208,9 +208,9 @@ final class OghmaTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt =
-                    "Lore Information (You have advanced knowledge on this subject): The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
-                    "He has little respect for knights, because his potions can do anything that they can.";
+                $expectedPrompt = '<article topic="potion_seller" source="conversation" access="advanced">'
+                    . "\n    <content>The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. "
+                    . 'He has little respect for knights, because his potions can do anything that they can.</content>';
                 $options = stream_context_get_options($streamContext);
                 $this->assertStringContainsString($expectedPrompt, $options['http']['content']);
                 return true;
@@ -294,9 +294,9 @@ final class OghmaTest extends DatabaseTestCase
         ->with(
             $this->equalTo('https://openrouter.ai/api/v1/chat/completions'),
             $this->callback(function ($streamContext) {
-                $expectedPrompt =
-                    "Lore Information (You have advanced knowledge on this subject): The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. ".
-                    "He has little respect for knights, because his potions can do anything that they can.";
+                $expectedPrompt = '<article topic="potion_seller" source="conversation" access="advanced">'
+                    . "\n    <content>The potion seller is an alchemist who brews and sells potions. However, he refuses to sell his strongest potions to any but the strongest beings. "
+                    . 'He has little respect for knights, because his potions can do anything that they can.</content>';
                 $options = stream_context_get_options($streamContext);
                 $this->assertStringContainsString($expectedPrompt, $options['http']['content']);
                 return true;

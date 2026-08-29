@@ -6,7 +6,7 @@ class sql
 
     public function __construct()
     {
-        $connString = "host=localhost dbname=testdb user=dwemer password=dwemer";
+        $connString = getenv('HERIKA_TEST_DATABASE_DSN') ?: "host=localhost dbname=testdb user=dwemer password=dwemer";
         self::$link = pg_connect($connString);
         if (!self::$link) {
             die("Error in connection: " . pg_last_error());
@@ -68,6 +68,12 @@ class sql
         if (!$result) {
             Logger::error(pg_last_error(self::$link) . print_r(debug_backtrace(), true));
         }
+        return $result;
+    }
+
+    public function escapeLiteral($value)
+    {
+        return pg_escape_literal(self::$link, (string) $value);
     }
 
     public function fetchAll($q)

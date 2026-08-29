@@ -7,6 +7,7 @@ $webRoot = rtrim($webRoot, '/');
 
 require_once(__DIR__.DIRECTORY_SEPARATOR."profile_loader.php");
 require_once(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'oghma_aliases.php');
+require_once(dirname(__DIR__) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'oghma_catalog.php');
 
 $TITLE = "&#x1F4D9; CHIM - Oghma Infinium";
 
@@ -37,6 +38,9 @@ $password = 'dwemer';
 
 // Initialize message variable
 $message = '';
+if (isset($_GET['message']) && is_string($_GET['message']) && trim($_GET['message']) !== '') {
+    $message .= '<p>' . htmlspecialchars($_GET['message'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>';
+}
 
 // Connect to the database
 $conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
@@ -44,6 +48,7 @@ if (!$conn) {
     echo "<div class='message'>Failed to connect to database: " . pg_last_error() . "</div>";
     exit;
 }
+$catalogManager = new ChimOghmaCatalogManager($GLOBALS['db'], dirname(__DIR__));
 
 function oghma_filter_alias_input($conn, string $topic, string $aliases): array
 {
@@ -66,6 +71,15 @@ function oghma_filter_alias_input($conn, string $topic, string $aliases): array
         $aliasOwners[chimOghmaComparableAliasKey($alias)][$topic] = true;
     }
     return $filtered;
+}
+
+function oghma_row_checksum(array $row): string
+{
+    $ordered = [];
+    foreach (['topic', 'aliases', 'topic_desc', 'knowledge_class', 'topic_desc_basic', 'knowledge_class_basic', 'tags', 'category'] as $field) {
+        $ordered[$field] = (string) ($row[$field] ?? '');
+    }
+    return hash('sha256', json_encode($ordered, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
 /********************************************************************
@@ -98,9 +112,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 topic_desc_basic, 
                 knowledge_class_basic, 
                 tags, 
-                category
+                category,
+                source_type,
+                source_catalog_version,
+                source_checksum,
+                updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'custom', NULL, $9, CURRENT_TIMESTAMP)
             ON CONFLICT (topic)
             DO UPDATE SET
                 aliases              = EXCLUDED.aliases,
@@ -109,8 +127,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
                 topic_desc_basic     = EXCLUDED.topic_desc_basic,
                 knowledge_class_basic= EXCLUDED.knowledge_class_basic,
                 tags                 = EXCLUDED.tags,
-                category             = EXCLUDED.category
+                category             = EXCLUDED.category,
+                source_type          = 'custom',
+                source_catalog_version = NULL,
+                source_checksum      = EXCLUDED.source_checksum,
+                updated_at           = CURRENT_TIMESTAMP
         ";
+        $checksum = oghma_row_checksum(compact(
+            'topic', 'aliases', 'topic_desc', 'knowledge_class', 'topic_desc_basic',
+            'knowledge_class_basic', 'tags', 'category'
+        ));
         $result = pg_query_params($conn, $query, [
             $topic,
             $aliases,
@@ -119,7 +145,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_individual']))
             $topic_desc_basic,
             $knowledge_class_basic,
             $tags,
-            $category
+            $category,
+            $checksum
         ]);
 
         if ($result) {
@@ -236,9 +263,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 topic_desc_basic,
                                 knowledge_class_basic,
                                 tags,
-                                category
+                                category,
+                                source_type,
+                                source_catalog_version,
+                                source_checksum,
+                                updated_at
                             )
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'custom', NULL, $10, CURRENT_TIMESTAMP)
                             ON CONFLICT (topic)
                             DO UPDATE SET
                                 aliases              = CASE
@@ -250,8 +281,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                                 topic_desc_basic     = EXCLUDED.topic_desc_basic,
                                 knowledge_class_basic= EXCLUDED.knowledge_class_basic,
                                 tags                 = EXCLUDED.tags,
-                                category             = EXCLUDED.category
+                                category             = EXCLUDED.category,
+                                source_type          = 'custom',
+                                source_catalog_version = NULL,
+                                source_checksum      = EXCLUDED.source_checksum,
+                                updated_at           = CURRENT_TIMESTAMP
                         ";
+                        $checksum = oghma_row_checksum(compact(
+                            'topic', 'aliases', 'topic_desc', 'knowledge_class', 'topic_desc_basic',
+                            'knowledge_class_basic', 'tags', 'category'
+                        ));
                         $result = pg_query_params($conn, $query, [
                             $topic,
                             $aliases,
@@ -261,7 +300,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_csv'])) {
                             $knowledge_class_basic,
                             $tags,
                             $category,
-                            $hasAliasesColumn ? 'true' : 'false'
+                            $hasAliasesColumn ? 'true' : 'false',
+                            $checksum
                         ]);
 
                         if ($result) {
@@ -453,13 +493,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_dynamic_example') {
  *  4) DELETE ALL
  ********************************************************************/
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_all') {
-    $truncateQuery = "TRUNCATE TABLE {$schema}.oghma RESTART IDENTITY";
-    $truncateResult = pg_query($conn, $truncateQuery);
-
-    if ($truncateResult) {
-        $message .= "<p style='color: #ff6464; font-weight: bold;'>All Oghma entries have been deleted successfully.</p>";
-    } else {
-        $message .= "<p>Error deleting entries: " . pg_last_error($conn) . "</p>";
+    try {
+        $deleteResult = $catalogManager->deleteAllCustomOverrides();
+        $message .= "<p style='color: #ff6464; font-weight: bold;'>Deleted "
+            . intval($deleteResult['deleted'] ?? 0) . ' custom Oghma entries and restored '
+            . intval($deleteResult['factory_restored'] ?? 0) . ' factory articles.</p>';
+    } catch (Throwable $error) {
+        $message .= '<p>Error deleting entries: ' . htmlspecialchars($error->getMessage()) . '</p>';
     }
 }
 
@@ -470,11 +510,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $topic = $_POST['topic'] ?? '';
     
     if (!empty($topic)) {
-        $query = "DELETE FROM {$schema}.oghma WHERE topic = $1";
-        $result = pg_query_params($conn, $query, [$topic]);
+        try {
+            $sourceResult = pg_query_params(
+                $conn,
+                "SELECT source_type FROM {$schema}.oghma WHERE topic = $1",
+                [$topic]
+            );
+            $sourceRow = $sourceResult ? pg_fetch_assoc($sourceResult) : false;
+            if (!$sourceRow) throw new InvalidArgumentException('Oghma entry not found.');
 
-        if ($result) {
-            $message .= "<p>Entry '$topic' has been deleted successfully.</p>";
+            if (($sourceRow['source_type'] ?? '') === 'custom') {
+                $deleteResult = $catalogManager->deleteCustomOverride((string) $topic);
+                $message .= intval($deleteResult['factory_restored'] ?? 0) > 0
+                    ? "<p>Custom override '$topic' was deleted and the factory article was restored.</p>"
+                    : "<p>Custom entry '$topic' was deleted.</p>";
+            } else {
+                pg_query($conn, 'BEGIN');
+                $hideQuery = "
+                    INSERT INTO {$schema}.oghma_factory_overrides (topic, action, updated_at)
+                    SELECT topic, 'hide', CURRENT_TIMESTAMP FROM {$schema}.oghma
+                    WHERE topic = $1 AND source_type = 'factory'
+                    ON CONFLICT (topic) DO UPDATE SET action = 'hide', updated_at = CURRENT_TIMESTAMP
+                ";
+                $hideResult = pg_query_params($conn, $hideQuery, [$topic]);
+                $deleteQuery = "DELETE FROM {$schema}.oghma WHERE topic = $1 AND source_type = 'factory'";
+                $deleteResult = $hideResult ? pg_query_params($conn, $deleteQuery, [$topic]) : false;
+                if (!$deleteResult || pg_affected_rows($deleteResult) !== 1) {
+                    throw new RuntimeException(pg_last_error($conn) ?: 'Factory article could not be hidden.');
+                }
+                pg_query($conn, 'COMMIT');
+                $message .= "<p>Factory entry '$topic' has been hidden.</p>";
+            }
             
             // Redirect to maintain filters
             $redirectUrl = '?' . http_build_query([
@@ -484,8 +550,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             ]) . '#entries';
             header('Location: ' . $redirectUrl);
             exit;
-        } else {
-            $message .= "<p>Error deleting entry: " . pg_last_error($conn) . "</p>";
+        } catch (Throwable $error) {
+            @pg_query($conn, 'ROLLBACK');
+            $message .= '<p>Error deleting entry: ' . htmlspecialchars($error->getMessage()) . '</p>';
         }
     } else {
         $message .= "<p>No topic specified for deletion.</p>";
@@ -506,66 +573,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $knowledge_class_basic_new = htmlspecialchars_decode($_POST['knowledge_class_basic_new'] ?? '');
     $tags_new            = htmlspecialchars_decode($_POST['tags_new'] ?? '');
     $category_new        = htmlspecialchars_decode($_POST['category_new'] ?? '');
-    $filteredAliases     = oghma_filter_alias_input($conn, $topic_new, $aliases_new);
-    $aliases_new         = $filteredAliases['aliases'];
-    foreach ($filteredAliases['rejected'] as $rejectedAlias) {
-        $message .= '<p>Alias skipped: ' . htmlspecialchars($rejectedAlias['alias'])
-            . ' (' . htmlspecialchars($rejectedAlias['reason']) . ')</p>';
-    }
-
-    if (!empty($topic_new) && !empty($topic_desc_new)) {
-        // Perform the update
-        $update_sql = "
-            UPDATE $schema.oghma
-            SET 
-                topic = $1,
-                aliases = $2,
-                topic_desc = $3,
-                knowledge_class = $4,
-                topic_desc_basic = $5,
-                knowledge_class_basic = $6,
-                tags = $7,
-                category = $8
-            WHERE topic = $9
+    if (!empty($topic_original) && !empty($topic_new) && !empty($topic_desc_new)) {
+        pg_query($conn, 'BEGIN');
+        $sourceQuery = "
+            SELECT current_row.source_type,
+                   EXISTS (
+                       SELECT 1
+                       FROM {$schema}.oghma_catalog_entries entry
+                       JOIN {$schema}.oghma_catalogs catalog
+                         ON catalog.catalog_version = entry.catalog_version
+                        AND catalog.state = 'active'
+                       WHERE entry.topic = current_row.topic
+                   ) AS factory_origin
+            FROM {$schema}.oghma current_row
+            WHERE current_row.topic = $1
+            FOR UPDATE
         ";
+        $sourceResult = pg_query_params($conn, $sourceQuery, [$topic_original]);
+        $sourceRow = $sourceResult ? pg_fetch_assoc($sourceResult) : false;
+        if (!$sourceRow) {
+            pg_query($conn, 'ROLLBACK');
+            $message .= '<p>The Oghma entry no longer exists. Refresh and try again.</p>';
+        } else {
+            // Catalog-backed topics remain canonical so the custom row always overrides its factory source.
+            if (($sourceRow['factory_origin'] ?? 'f') === 't') $topic_new = $topic_original;
+            $filteredAliases = oghma_filter_alias_input($conn, $topic_new, $aliases_new);
+            $aliases_new = $filteredAliases['aliases'];
+            foreach ($filteredAliases['rejected'] as $rejectedAlias) {
+                $message .= '<p>Alias skipped: ' . htmlspecialchars($rejectedAlias['alias'])
+                    . ' (' . htmlspecialchars($rejectedAlias['reason']) . ')</p>';
+            }
 
-        $update_result = pg_query_params($conn, $update_sql, [
-            $topic_new,
-            $aliases_new,
-            $topic_desc_new,
-            $knowledge_class_new,
-            $topic_desc_basic_new,
-            $knowledge_class_basic_new,
-            $tags_new,
-            $category_new,
-            $topic_original
-        ]);
+            $checksum = oghma_row_checksum([
+                'topic' => $topic_new,
+                'aliases' => $aliases_new,
+                'topic_desc' => $topic_desc_new,
+                'knowledge_class' => $knowledge_class_new,
+                'topic_desc_basic' => $topic_desc_basic_new,
+                'knowledge_class_basic' => $knowledge_class_basic_new,
+                'tags' => $tags_new,
+                'category' => $category_new,
+            ]);
 
-        if ($update_result) {
-            $message .= "<p>Row updated successfully for topic <strong>$topic_original</strong>.</p>";
-
-            // Update the native_vector
-            $vector_sql = "
+            // The effective row becomes custom while the immutable factory source remains in the active catalog.
+            $updateSql = "
                 UPDATE $schema.oghma
-                SET native_vector = 
+                SET topic = $1,
+                    aliases = $2,
+                    topic_desc = $3,
+                    knowledge_class = $4,
+                    topic_desc_basic = $5,
+                    knowledge_class_basic = $6,
+                    tags = $7,
+                    category = $8,
+                    source_type = 'custom',
+                    source_catalog_version = NULL,
+                    source_checksum = $10,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE topic = $9
+            ";
+            $updateResult = pg_query_params($conn, $updateSql, [
+                $topic_new,
+                $aliases_new,
+                $topic_desc_new,
+                $knowledge_class_new,
+                $topic_desc_basic_new,
+                $knowledge_class_basic_new,
+                $tags_new,
+                $category_new,
+                $topic_original,
+                $checksum,
+            ]);
+
+            $vectorSql = "
+                UPDATE $schema.oghma
+                SET native_vector =
                       setweight(to_tsvector('simple', coalesce(topic, '')), 'A')
                     || setweight(to_tsvector('simple', coalesce(aliases, '')), 'A')
                     || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
                     || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
                 WHERE topic = $1
             ";
-            pg_query_params($conn, $vector_sql, [$topic_new]);
+            $vectorResult = $updateResult && pg_affected_rows($updateResult) === 1
+                ? pg_query_params($conn, $vectorSql, [$topic_new])
+                : false;
 
-            // Redirect to exit edit mode while maintaining filters
-            $redirectUrl = '?' . http_build_query([
-                'cat' => $_GET['cat'] ?? '',
-                'letter' => $_GET['letter'] ?? '',
-                'order' => $_GET['order'] ?? 'asc'
-            ]) . '#entries';
-            header('Location: ' . $redirectUrl);
-            exit;
-        } else {
-            $message .= "<p>Error updating row: " . pg_last_error($conn) . "</p>";
+            if ($vectorResult) {
+                pg_query($conn, 'COMMIT');
+                $redirectUrl = '?' . http_build_query([
+                    'cat' => $_GET['cat'] ?? '',
+                    'letter' => $_GET['letter'] ?? '',
+                    'order' => $_GET['order'] ?? 'asc'
+                ]) . '#entries';
+                header('Location: ' . $redirectUrl);
+                exit;
+            }
+
+            pg_query($conn, 'ROLLBACK');
+            $message .= '<p>Error updating row: ' . htmlspecialchars(pg_last_error($conn)) . '</p>';
         }
     } else {
         $message .= '<p>Topic and Topic Description cannot be empty when saving.</p>';
@@ -998,97 +1103,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         opacity: 0;
     }
 
-    /* Logic Section Styling */
-    .logic-section {
-        margin: 25px 0;
-        padding: 22px;
-        background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(20, 20, 20, 0.98));
-        border-radius: 10px;
-        border: 1px solid rgba(242, 124, 17, 0.3);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3),
-                    inset 0 1px rgba(242, 124, 17, 0.05);
-    }
-
-    .logic-title {
-        text-align: center;
-        color: rgb(242, 124, 17);
-        margin-bottom: 20px;
-        font-size: 1.25em;
-        font-weight: bold;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-        font-family: 'MagicCards', serif;
-        word-spacing: 6px;
-    }
-
-    .logic-steps {
-        display: grid;
-        gap: 12px;
-    }
-
-    .logic-step {
-        display: flex;
-        align-items: flex-start;
-        gap: 15px;
-        padding: 16px;
-        background: rgba(42, 42, 42, 0.8);
-        border-radius: 8px;
-        border-left: 4px solid rgb(242, 124, 17);
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .logic-step:hover {
-        transform: translateX(4px);
-        box-shadow: 0 4px 12px rgba(242, 124, 17, 0.25),
-                    0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    .step-number {
-        flex-shrink: 0;
-        width: 32px;
-        height: 32px;
-        background: linear-gradient(135deg, rgb(242, 124, 17), rgb(212, 94, 0));
-        color: #000;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 15px;
-        box-shadow: 0 2px 6px rgba(242, 124, 17, 0.4),
-                    inset 0 1px rgba(255, 255, 255, 0.3);
-    }
-
-    .step-content {
-        flex: 1;
-    }
-
-    .step-content strong {
-        color: rgb(242, 124, 17);
-        display: block;
-        margin-bottom: 6px;
-        font-size: 1.05em;
-    }
-
-    .step-content p {
-        margin: 0;
-        line-height: 1.5;
-        color: #d0d0d0;
-    }
-
-    .step-content code {
-        background: rgba(74, 74, 74, 0.8);
-        padding: 3px 7px;
-        border-radius: 4px;
+    .page-header code {
+        background: rgba(26, 26, 26, 0.8);
+        padding: 2px 6px;
+        border-radius: 3px;
         color: #ffeb3b;
         font-family: 'Courier New', monospace;
         font-size: 0.9em;
-        border: 1px solid rgba(255, 235, 59, 0.2);
+        overflow-wrap: break-word;
     }
 
-    .step-content em {
-        color: #81c784;
-        font-style: italic;
+    /* Compact header intro */
+    #oghma-header-content > p {
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .header-note {
+        max-width: 720px;
+        margin: 12px auto 0;
+        padding: 8px 12px;
+        text-align: left;
+        background: rgba(26, 26, 26, 0.6);
+        border: 1px solid #3a3a3a;
+        border-left: 3px solid rgb(242, 124, 17);
+        border-radius: 4px;
+    }
+
+    .header-note > summary {
+        cursor: pointer;
+        color: rgb(242, 124, 17);
+        font-size: 0.95em;
+    }
+
+    .header-note > summary:focus-visible {
+        outline: 2px solid rgb(242, 124, 17);
+        outline-offset: 2px;
+    }
+
+    .header-note p {
+        margin: 8px 0 0;
     }
 
     /* Modal specific overrides */
@@ -1122,6 +1177,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         font-size: 1.4em;
         margin: 0;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-subtitle {
+        margin: 6px 0 0;
+        color: #b8b8b8;
+        font-size: 12.5px;
+        line-height: 1.4;
+    }
+
+    /* Inline explanation shown when a factory article is opened for editing */
+    .modal-notice {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin: 0 0 16px;
+        padding: 12px 14px;
+        border: 1px solid rgba(242, 124, 17, 0.35);
+        border-left: 3px solid rgb(242, 124, 17);
+        border-radius: 8px;
+        background: rgba(242, 124, 17, 0.08);
+        color: #d8d8d8;
+        font-size: 12.5px;
+        line-height: 1.5;
+    }
+
+    .modal-notice strong {
+        color: rgb(242, 124, 17);
+    }
+
+    .modal-notice p {
+        margin: 6px 0 0;
+    }
+
+    .modal-notice-icon {
+        flex: 0 0 auto;
+        font-size: 15px;
+        line-height: 1.3;
     }
 
     .modal-body {
@@ -1172,6 +1264,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
     }
 
+    /* Read-only canonical topic on a factory article */
+    .modal-body input.is-readonly {
+        background-color: rgba(20, 20, 20, 0.85);
+        color: #bdbdbd;
+        border-style: dashed;
+        cursor: default;
+    }
+
     .modal-footer {
         position: sticky;
         bottom: 0;
@@ -1181,8 +1281,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         border-top: 1px solid rgba(242, 124, 17, 0.2);
         border-radius: 0 0 12px 12px;
         display: flex;
+        flex-wrap: wrap;
         gap: 10px;
         justify-content: flex-end;
+    }
+
+    .modal-footer-note {
+        margin: 0 auto 0 0;
+        align-self: center;
+        max-width: 55%;
+        color: #999;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .modal-container [hidden] {
+        display: none !important;
+    }
+
+    /* Source column badges */
+    .source-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.06);
+        color: #b8b8b8;
+        font-size: 0.85em;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+
+    .source-badge--factory {
+        border-color: rgba(242, 124, 17, 0.4);
+        background: rgba(242, 124, 17, 0.14);
+        color: rgb(242, 124, 17);
+    }
+
+    .source-badge--custom {
+        border-color: rgba(126, 200, 255, 0.4);
+        background: rgba(126, 200, 255, 0.12);
+        color: #7ec8ff;
     }
 
     /* Table container height adjustment */
@@ -1384,6 +1523,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
     }
 
+    /* Catalog pagination */
+    .catalog-pagination-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 15px;
+        font-size: 0.9em;
+        color: #b8b8b8;
+    }
+
+    .catalog-pagination-bar strong {
+        color: rgb(242, 124, 17);
+        font-weight: 600;
+    }
+
+    .catalog-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 15px;
+    }
+
+    .catalog-pagination a,
+    .catalog-pagination span {
+        display: inline-block;
+        min-width: 36px;
+        padding: 6px 10px;
+        text-align: center;
+        border-radius: 6px;
+        border: 1px solid #3a3a3a;
+        background: rgba(26, 26, 26, 0.8);
+        color: #e9efff;
+        text-decoration: none;
+        font-size: 0.9em;
+    }
+
+    .catalog-pagination a:hover {
+        border-color: rgba(242, 124, 17, 0.5);
+        color: rgb(242, 124, 17);
+        text-decoration: none;
+    }
+
+    .catalog-pagination a:focus-visible {
+        outline: 2px solid rgb(242, 124, 17);
+        outline-offset: 2px;
+    }
+
+    .catalog-pagination [aria-current="page"] {
+        background: rgba(242, 124, 17, 0.2);
+        border-color: rgba(242, 124, 17, 0.6);
+        color: rgb(242, 124, 17);
+        font-weight: 600;
+    }
+
+    .catalog-pagination [aria-disabled="true"] {
+        opacity: 0.45;
+        cursor: default;
+    }
+
+    .catalog-pagination .catalog-pagination-gap {
+        border-color: transparent;
+        background: none;
+        min-width: 0;
+        padding: 6px 2px;
+        color: #888;
+    }
+
     /* Responsive Design */
     @media (max-width: 768px) {
         main {
@@ -1418,20 +1628,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             padding: 15px;
         }
         
-        .logic-section {
-            padding: 15px;
-            margin: 15px 0;
+        .header-note {
+            padding: 8px 10px;
         }
-        
-        .logic-step {
-            padding: 12px;
-            gap: 12px;
-        }
-        
-        .step-number {
-            width: 25px;
-            height: 25px;
-            font-size: 12px;
+
+        .modal-footer-note {
+            margin: 0;
+            max-width: 100%;
         }
     }
 
@@ -1451,20 +1654,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             color: rgb(242, 124, 17);
         }
         
-        .logic-section {
-            padding: 10px;
-            margin: 10px 0;
-        }
-        
-        .logic-step {
-            padding: 10px;
-            gap: 10px;
-            flex-direction: column;
-            text-align: center;
-        }
-        
-        .step-number {
-            align-self: center;
+        .header-note {
+            padding: 8px;
+            margin-top: 10px;
         }
     }
 
@@ -1491,46 +1683,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <div id="header-content">
             <!-- Regular Oghma Content -->
             <div id="oghma-header-content">
-                <p>The <b>Oghma Infinium</b> is a "Skyrim Encyclopedia" that AI NPC's will use to help them roleplay.</p>
-                <p>This is done by detecting topics during conversations, and injecting the appropriate information into the AI's prompt.</p>
-                
-                <h3><strong>Ensure all topic titles are lowercase and spaces are replaced with underscores (_).</strong></h3>
-                <h4>Example: "Fishy Stick" becomes "fishy_stick"</h4>
-                <p>For Knowledge Class, we recommend you read this: <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641#gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer">Project Oghma</a></p>
-                
-                <div class="logic-section">
-                    <h3 class="logic-title">&#x1F50D; Article Search Logic</h3>
-                    <div class="logic-steps">
-                        <div class="logic-step">
-                            <div class="step-number">1</div>
-                            <div class="step-content">
-                                <strong>Keyword Search</strong>
-                                <p>NPC searches for oghma article based on most relevant keyword during conversations.</p>
-                            </div>
-                        </div>
-                        <div class="logic-step">
-                            <div class="step-number">2</div>
-                            <div class="step-content">
-                                <strong>Advanced Access Check</strong>
-                                <p>Check <code>knowledge_class</code> to see if they have access to the advanced article (<code>topic_desc</code>)</p>
-                            </div>
-                        </div>
-                        <div class="logic-step">
-                            <div class="step-number">3</div>
-                            <div class="step-content">
-                                <strong>Basic Access Check</strong>
-                                <p>Check <code>knowledge_class_basic</code> to see if they have access to the basic article (<code>topic_desc_basic</code>)</p>
-                            </div>
-                        </div>
-                        <div class="logic-step">
-                            <div class="step-number">4</div>
-                            <div class="step-content">
-                                <strong>Fallback Response</strong>
-                                <p>If all above fails, send <em>"You do not know about X"</em> to the prompt</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <p>Oghma matches conversation topics to articles. NPCs receive the most detailed version they are allowed to know; if no version matches their knowledge, they know nothing about the topic.</p>
             </div>
             
             <!-- Dynamic Oghma Content -->
@@ -1573,28 +1726,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     </div>
                 </form>
                 
-                <p style="margin-top: 15px;">All uploaded topics will be saved into the <code>oghma</code> table. This overwrites any existing entries with the same topic.</p>
+                <p style="margin-top: 15px;">Uploads are stored as <strong>custom</strong> entries. Updating a factory topic creates a protected custom override that future catalog activations will not overwrite.</p>
+
+                <details class="header-note">
+                    <summary>Article editing tips</summary>
+                    <p>Use lowercase topic titles with underscores instead of spaces &mdash; "Fishy Stick" becomes <code>fishy_stick</code>.</p>
+                    <p><code>common</code> marks an article as public basic knowledge. Use it only on articles, not NPC tags. An empty basic class is also unrestricted.</p>
+                </details>
             </div>
 
             <div class="content-section">
                 <h2>Database Management</h2>
                 <p>Verify uploads: <br><b>Server Actions &rarr; Database Manager &rarr; dwemer &rarr; public &rarr; oghma</b></p>
-                <p>View conversation usage: <br><b>Server Actions &rarr; Database Manager &rarr; dwemer &rarr; public &rarr; audit_memory</b></p>
-                
+                <p>View grounded, rejected, access, and fallback decisions in <a href="oghma_audit.php">Oghma Audit</a>.</p>
+
                 <div class="button-group" style="margin-top: 20px;">
                     <form action="" method="post" style="display: inline;">
                         <input type="hidden" name="action" value="delete_all">
-                        <input type="submit" class="btn-danger" value="Delete All Entries" 
-                               onclick="return confirm('Are you sure you want to delete ALL entries? This cannot be undone!');">
+                        <input type="submit" class="btn-danger" value="Delete All Custom Entries"
+                               onclick="return confirm('Delete every custom Oghma entry? Factory entries will be preserved.');">
                     </form>
                     
-                    <form action="<?php echo $webRoot; ?>/ui/oghma_reset.php" method="post" style="display: inline;">
-                        <input type="submit" class="btn-danger" value="Factory Reset Database" 
-                               onclick="return confirm('Are you sure you want to reset the Oghma database to factory settings? This will delete all current entries and restore the default ones.');">
-                    </form>
+                    <a class="btn-danger" href="<?php echo $webRoot; ?>/ui/oghma_reset.php">Sync Factory Catalog</a>
                 </div>
-                
-                <p style="margin-top: 15px;">Download backup: <a href="https://discord.gg/NDn9qud2ug" target="_blank" rel="noopener" style="color: yellow;">Discord CSV files channel</a></p>
             </div>
         </div>
         <div class="full-width-section">
@@ -1631,7 +1785,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <div class="action-container">
                 <button onclick="openNewEntryModal()" class="action-button add-new">Add New Entry</button>
                 <div class="search-container">
-                    <input type="text" id="searchBox" placeholder="Search topics..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">
+                    <input type="text" id="searchBox" placeholder="Search topics, aliases, or tags..." style="flex-grow: 1; padding: 8px; border-radius: 4px; border: 1px solid #555555; background-color: #4a4a4a; color: #f8f9fa;">
                     <button onclick="applySearch()" class="action-button edit">Search</button>
                 </div>
             </div>
@@ -1666,7 +1820,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             </div>
 
             <?php
-            // Build query. Letter filters remain canonical-topic based; free text searches aliases too.
+            // Build query. Letter filters remain canonical-topic based; free text searches identity and related metadata.
             $searchTerm = isset($_GET['search']) ? trim((string) $_GET['search']) : '';
             $conditions = [];
             $params = [];
@@ -1681,20 +1835,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             if ($searchTerm !== '') {
                 $params[] = '%' . $searchTerm . '%';
                 $placeholder = '$' . count($params);
-                $conditions[] = "(topic ILIKE {$placeholder} OR coalesce(aliases, '') ILIKE {$placeholder})";
+                $conditions[] = "(topic ILIKE {$placeholder} OR coalesce(aliases, '') ILIKE {$placeholder} OR coalesce(tags, '') ILIKE {$placeholder})";
             }
             $whereSql = empty($conditions) ? '' : 'WHERE ' . implode(' AND ', $conditions);
+
+            // Fixed page size: the catalog is far too large to render in one page.
+            $perPage = 500;
+
+            // Count with the exact same filters as the row query so the page math matches the results.
+            $totalEntries = 0;
+            $countResult = pg_query_params($conn, "SELECT COUNT(*) FROM $schema.oghma $whereSql", $params);
+            if ($countResult) {
+                $totalEntries = (int) pg_fetch_result($countResult, 0, 0);
+            }
+
+            $totalPages = max(1, (int) ceil($totalEntries / $perPage));
+            $currentPage = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+            $currentPage = max(1, min($currentPage, $totalPages));
+            $offset = ($currentPage - 1) * $perPage;
+
             $query = "
-                SELECT topic, aliases, topic_desc, knowledge_class, topic_desc_basic,
-                       knowledge_class_basic, tags, category
-                FROM $schema.oghma
+                SELECT article.topic, article.aliases, article.topic_desc, article.knowledge_class, article.topic_desc_basic,
+                       article.knowledge_class_basic, article.tags, article.category, article.source_type, article.source_catalog_version,
+                       EXISTS (
+                           SELECT 1
+                           FROM $schema.oghma_catalog_entries entry
+                           JOIN $schema.oghma_catalogs catalog
+                             ON catalog.catalog_version = entry.catalog_version
+                            AND catalog.state = 'active'
+                           WHERE entry.topic = article.topic
+                       ) AS factory_origin
+                FROM $schema.oghma article
                 $whereSql
-                ORDER BY topic $order
+                ORDER BY article.topic $order
+                LIMIT $perPage OFFSET $offset
             ";
 
             $result = pg_query_params($conn, $query, $params);
 
+            // Pagination links keep every active filter so paging never silently widens the result set.
+            $pageLinkParams = [];
+            if ($selectedCategory !== '') $pageLinkParams['cat'] = $selectedCategory;
+            if ($letter !== '')           $pageLinkParams['letter'] = $letter;
+            if ($searchTerm !== '')       $pageLinkParams['search'] = $searchTerm;
+            $pageLinkParams['order'] = strtolower($order);
+
+            $oghmaPageUrl = static function ($page) use ($pageLinkParams) {
+                return '?' . http_build_query($pageLinkParams + ['page' => (int) $page]) . '#entries';
+            };
+
             echo '<a id="entries"></a>';
+
+            if ($totalEntries > 0) {
+                $firstShown = $offset + 1;
+                $lastShown  = min($offset + $perPage, $totalEntries);
+                echo '<div class="catalog-pagination-bar">';
+                echo '<span>Showing <strong>' . number_format($firstShown) . '&ndash;' . number_format($lastShown)
+                    . '</strong> of <strong>' . number_format($totalEntries) . '</strong> articles</span>';
+                echo '<span>Page <strong>' . number_format($currentPage) . '</strong> of <strong>'
+                    . number_format($totalPages) . '</strong></span>';
+                echo '</div>';
+            }
             echo '<div class="table-container">';
             echo '<table>';
             echo '<tr>
@@ -1706,6 +1907,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <th>Knowledge Class (Basic)</th>
                     <th>Tags</th>
                     <th>Category</th>
+                    <th>Source</th>
                     <th>Action</th> 
                   </tr>';
 
@@ -1720,6 +1922,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $knowledge_class_basic= htmlspecialchars($row['knowledge_class_basic']?? '');
                     $tags                 = htmlspecialchars($row['tags']                 ?? '');
                     $category             = htmlspecialchars($row['category']             ?? '');
+                    $sourceType            = htmlspecialchars($row['source_type']          ?? 'legacy');
+                    $sourceVersion         = htmlspecialchars($row['source_catalog_version'] ?? '');
+                    // Presentation-only hint: the POST handlers re-check ownership server side.
+                    $sourceKind            = strtolower(trim((string) ($row['source_type'] ?? 'legacy')));
+                    if ($sourceKind === '') $sourceKind = 'legacy';
+                    $sourceKindClass       = preg_replace('/[^a-z0-9_-]/', '', $sourceKind);
+                    $isFactoryRow          = ($sourceKind === 'factory');
+                    $hasFactoryOrigin      = (($row['factory_origin'] ?? 'f') === 't');
 
                     // Normal row display
                     echo '<tr>';
@@ -1759,25 +1969,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     
                     echo '<td>' . nl2br($tags) . '</td>';
                     echo '<td>' . nl2br($category) . '</td>';
+                    echo '<td><span class="source-badge source-badge--' . $sourceKindClass . '">' . $sourceType . '</span>'
+                        . ($sourceVersion !== '' ? '<br><small>' . $sourceVersion . '</small>' : '') . '</td>';
 
                     // Action column
                     echo '<td style="white-space: nowrap;">';
                     echo '<div style="display: flex; gap: 4px;">';
-                    
+
                     // Edit button only
-                    echo '<button onclick="openEditModal(' . 
-                        htmlspecialchars(json_encode([
-                            'topic' => $topic,
-                            'aliases' => $aliases,
-                            'topic_desc' => $topic_desc,
-                            'knowledge_class' => $knowledge_class,
-                            'topic_desc_basic' => $topic_desc_basic,
-                            'knowledge_class_basic' => $knowledge_class_basic,
-                            'tags' => $tags,
-                            'category' => $category
-                        ]), ENT_QUOTES, 'UTF-8') . 
-                        ')" class="action-button edit">Edit</button>';
-                    
+                    $editPayload = htmlspecialchars(json_encode([
+                        'topic' => $topic,
+                        'aliases' => $aliases,
+                        'topic_desc' => $topic_desc,
+                        'knowledge_class' => $knowledge_class,
+                        'topic_desc_basic' => $topic_desc_basic,
+                        'knowledge_class_basic' => $knowledge_class_basic,
+                        'tags' => $tags,
+                        'category' => $category,
+                        'source_type' => $sourceKind,
+                        'factory_origin' => $hasFactoryOrigin
+                    ]), ENT_QUOTES, 'UTF-8');
+                    echo '<button type="button" onclick="openEditModal(' . $editPayload . ')" class="action-button edit"'
+                        . ($isFactoryRow
+                            ? ' title="Editing this factory article saves a separate custom override. The factory article stays unchanged."'
+                                . ' aria-label="Edit factory article ' . $topic . ' and save a custom override"'
+                            : ' aria-label="Edit article ' . $topic . '"')
+                        . '>Edit</button>';
+
                     echo '</div>';
                     echo '</td>';
                     echo '</tr>';
@@ -1790,6 +2008,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
                 if ($rowCount === 0) {
                     echo '<p>No entries found.</p>';
+                }
+
+                if ($totalPages > 1) {
+                    // Compact window: first/last always reachable, neighbours around the current page.
+                    $windowStart = max(1, $currentPage - 2);
+                    $windowEnd   = min($totalPages, $currentPage + 2);
+                    $pageItems = range($windowStart, $windowEnd);
+                    if ($windowStart > 1) {
+                        if ($windowStart > 2) array_unshift($pageItems, 'gap');
+                        array_unshift($pageItems, 1);
+                    }
+                    if ($windowEnd < $totalPages) {
+                        if ($windowEnd < $totalPages - 1) $pageItems[] = 'gap';
+                        $pageItems[] = $totalPages;
+                    }
+
+                    echo '<nav class="catalog-pagination" aria-label="Oghma Infinium entries pagination">';
+
+                    if ($currentPage > 1) {
+                        echo '<a href="' . htmlspecialchars($oghmaPageUrl($currentPage - 1), ENT_QUOTES, 'UTF-8')
+                            . '" rel="prev">&laquo; Previous</a>';
+                    } else {
+                        echo '<span aria-disabled="true">&laquo; Previous</span>';
+                    }
+
+                    foreach ($pageItems as $item) {
+                        if ($item === 'gap') {
+                            echo '<span class="catalog-pagination-gap" aria-hidden="true">&hellip;</span>';
+                        } elseif ($item === $currentPage) {
+                            echo '<span aria-current="page">' . $item . '</span>';
+                        } else {
+                            echo '<a href="' . htmlspecialchars($oghmaPageUrl($item), ENT_QUOTES, 'UTF-8')
+                                . '" aria-label="Go to page ' . $item . '">' . $item . '</a>';
+                        }
+                    }
+
+                    if ($currentPage < $totalPages) {
+                        echo '<a href="' . htmlspecialchars($oghmaPageUrl($currentPage + 1), ENT_QUOTES, 'UTF-8')
+                            . '" rel="next">Next &raquo;</a>';
+                    } else {
+                        echo '<span aria-disabled="true">Next &raquo;</span>';
+                    }
+
+                    echo '</nav>';
                 }
             } else {
                 echo '<p>Error fetching Oghma entries: ' . pg_last_error($conn) . '</p>';
@@ -1953,19 +2215,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         </div>
     </div>
 
-<div id="editModal" class="modal-backdrop">
+<div id="editModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit_modal_title" aria-hidden="true">
     <div class="modal-container">
         <div class="modal-header">
-            <h2 class="modal-title">Edit Oghma Entry</h2>
+            <h2 class="modal-title" id="edit_modal_title">Edit Oghma Entry</h2>
+            <p class="modal-subtitle" id="edit_modal_subtitle" hidden></p>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" id="edit_modal_body">
             <form action="" method="post">
                 <input type="hidden" name="action" value="update_single">
                 <input type="hidden" name="topic_original" id="edit_topic_original">
 
+                <div class="modal-notice" id="edit_factory_notice" role="note" hidden>
+                    <span class="modal-notice-icon" aria-hidden="true">&#x1F4D8;</span>
+                    <div>
+                        <strong id="edit_factory_notice_title">This is a factory article &mdash; saving will not change it.</strong>
+                        <p id="edit_factory_notice_text">Your edits are saved as a separate <strong>custom override</strong> for this topic. The factory article stays exactly as shipped, and future catalog updates will not overwrite your override.</p>
+                        <p>The factory topic is canonical and cannot be renamed, so the override always replaces the right article.</p>
+                    </div>
+                </div>
+
                 <label for="edit_topic">Topic:</label>
-                <small>Topic name for keyword searching.</small>
-                <input type="text" name="topic_new" id="edit_topic" required>
+                <small id="edit_topic_hint">Topic name for keyword searching.</small>
+                <input type="text" name="topic_new" id="edit_topic" aria-describedby="edit_topic_hint" required>
 
                 <label for="edit_aliases">Aliases:</label>
                 <small>Alternate names that should find this article. Separate aliases with commas.</small>
@@ -1977,7 +2249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 
 
                 <label for="edit_knowledge_class">Knowledge Class:</label>
-                <small>Who should have access to this advanced knowledge. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this advanced knowledge. Separate tags by commas. Do not use <code>common</code> here &mdash; it only marks public access on the basic article. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_new" id="edit_knowledge_class">
 
                 <label for="edit_topic_desc_basic">Topic Description (Basic):</label>
@@ -1986,11 +2258,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 
 
                 <label for="edit_knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this basic knowledge. Separate tags by commas. Use <code>common</code> to make this basic article public to every NPC &mdash; it is an article marker only, never an NPC tag. Leaving this empty is also unrestricted. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_basic_new" id="edit_knowledge_class_basic">
 
                 <label for="edit_tags">Tags:</label>
-                <small>Not currently in use.</small>
+                <small>Related concepts for catalog search and contextual retrieval. Separate tags by commas.</small>
                 <input type="text" name="tags_new" id="edit_tags">
 
                 <label for="edit_category">Category:</label>
@@ -1998,8 +2270,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <input type="text" name="category_new" id="edit_category">
 
                 <div class="modal-footer">
-                    <button type="submit" name="submit" value="update" class="btn-save">Save Changes</button>
-                    <button type="button" onclick="deleteEntry()" class="btn-danger">Delete</button>
+                    <p class="modal-footer-note" id="edit_delete_note" hidden>No custom override exists yet, so there is nothing to delete.</p>
+                    <button type="submit" name="submit" value="update" class="btn-save" id="edit_save_button">Save Changes</button>
+                    <button type="button" onclick="deleteEntry()" class="btn-danger" id="edit_delete_button">Delete</button>
                     <button type="button" onclick="closeEditModal()" class="btn-base btn-cancel">Cancel</button>
                 </div>
             </form>
@@ -2029,7 +2302,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="topic_desc" id="topic_desc" rows="5" required></textarea>
 
                 <label for="knowledge_class">Knowledge Class:</label>
-                <small>Who should have access to this advanced knowledge. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this advanced knowledge. Separate tags by commas. Do not use <code>common</code> here &mdash; it only marks public access on the basic article. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class" id="knowledge_class">
 
                 <label for="topic_desc_basic">Topic Description (Basic):</label>
@@ -2037,11 +2310,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="topic_desc_basic" id="topic_desc_basic" rows="5"></textarea>
 
                 <label for="knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave empty to allow all NPCs to know this. It is recommended for most basic articles to leave it blank. Separate tags by commas. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
+                <small>Who should have access to this basic knowledge. Separate tags by commas. Use <code>common</code> to make this basic article public to every NPC &mdash; it is an article marker only, never an NPC tag, and most basic articles should use it. Leaving this empty is also unrestricted. <a href="https://docs.google.com/spreadsheets/d/1dcfctU-iOqprwy2BOc7___4Awteczgdlv8886KalPsQ/edit?pli=1&gid=338893641" style="color: yellow;" target="_blank" rel="noopener noreferrer"> More information can be found here</a>.</small>
                 <input type="text" name="knowledge_class_basic" id="knowledge_class_basic">
 
                 <label for="tags">Tags:</label>
-                <small>Not currently in use.</small>
+                <small>Related concepts for catalog search and contextual retrieval. Separate tags by commas.</small>
                 <input type="text" name="tags" id="tags">
 
                 <label for="category">Category:</label>
@@ -2084,7 +2357,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="dynamic_topic_desc" id="dynamic_topic_desc" rows="5"></textarea>
 
                 <label for="dynamic_knowledge_class">Knowledge Class:</label>
-                <small>Who should have access to this advanced knowledge. Must be comma seperated.</small>
+                <small>Who should have access to this advanced knowledge. Must be comma seperated. Do not use <code>common</code> here &mdash; it only marks public access on the basic article.</small>
                 <input type="text" name="dynamic_knowledge_class" id="dynamic_knowledge_class">
 
                 <label for="dynamic_topic_desc_basic">Topic Description (Basic):</label>
@@ -2092,7 +2365,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="dynamic_topic_desc_basic" id="dynamic_topic_desc_basic" rows="5"></textarea>
 
                 <label for="dynamic_knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave blank to allow all NPCs to know this. Must be comma seperated.</small>
+                <small>Who should have access to this basic knowledge. Must be comma seperated. Use <code>common</code> to make this basic article public to every NPC &mdash; it is an article marker only, never an NPC tag. Leaving this blank is also unrestricted.</small>
                 <input type="text" name="dynamic_knowledge_class_basic" id="dynamic_knowledge_class_basic">
 
                 <label for="dynamic_tags">Tags:</label>
@@ -2140,7 +2413,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="dynamic_topic_desc_new" id="edit_dynamic_topic_desc" rows="5"></textarea>
 
                 <label for="edit_dynamic_knowledge_class">Knowledge Class:</label>
-                <small>Who should have access to this advanced knowledge. Must be comma separated.</small>
+                <small>Who should have access to this advanced knowledge. Must be comma separated. Do not use <code>common</code> here &mdash; it only marks public access on the basic article.</small>
                 <input type="text" name="dynamic_knowledge_class_new" id="edit_dynamic_knowledge_class">
 
                 <label for="edit_dynamic_topic_desc_basic">Topic Description (Basic):</label>
@@ -2148,7 +2421,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <textarea name="dynamic_topic_desc_basic_new" id="edit_dynamic_topic_desc_basic" rows="5"></textarea>
 
                 <label for="edit_dynamic_knowledge_class_basic">Knowledge Class (Basic):</label>
-                <small>Who should have access to this basic knowledge. Leave blank to allow all NPCs to know this. Must be comma separated.</small>
+                <small>Who should have access to this basic knowledge. Must be comma separated. Use <code>common</code> to make this basic article public to every NPC &mdash; it is an article marker only, never an NPC tag. Leaving this blank is also unrestricted.</small>
                 <input type="text" name="dynamic_knowledge_class_basic_new" id="edit_dynamic_knowledge_class_basic">
 
                 <label for="edit_dynamic_tags">Tags:</label>
@@ -2284,6 +2557,38 @@ function switchTabDirectly(tabId) {
     updateHeaderContent(tabId);
 }
 
+// Copy for the edit modes. The source hints are presentation only - the POST
+// handlers re-check ownership server side before writing anything.
+const EDIT_MODAL_MODES = {
+    factory: {
+        title: 'Edit Factory Article',
+        subtitle: 'Saving creates a separate custom override. The factory article is left unchanged.',
+        topicHint: 'The factory topic is canonical and cannot be renamed. Your override is saved under this exact topic.',
+        saveLabel: 'Save as Custom Article'
+    },
+    override: {
+        title: 'Edit Custom Override',
+        subtitle: 'This custom article replaces the factory version for the same topic.',
+        topicHint: 'This topic remains locked to its factory article.',
+        saveLabel: 'Save Custom Override'
+    },
+    custom: {
+        title: 'Edit Oghma Entry',
+        subtitle: '',
+        topicHint: 'Topic name for keyword searching.',
+        saveLabel: 'Save Changes'
+    }
+};
+
+let editModalTrigger = null;
+
+function handleEditModalKeydown(event) {
+    if (event.key === 'Escape' || event.key === 'Esc') {
+        event.preventDefault();
+        closeEditModal();
+    }
+}
+
 function openEditModal(data) {
     try {
         const decodeHTML = (html) => {
@@ -2301,9 +2606,53 @@ function openEditModal(data) {
         document.getElementById("edit_knowledge_class_basic").value = decodeHTML(data.knowledge_class_basic);
         document.getElementById("edit_tags").value = decodeHTML(data.tags);
         document.getElementById("edit_category").value = decodeHTML(data.category);
-        
-        document.getElementById("editModal").style.display = "block";
+
+        const isFactory = String(data.source_type || '').trim().toLowerCase() === 'factory';
+        const isOverride = !isFactory && data.factory_origin === true;
+        const isCatalogBacked = isFactory || isOverride;
+        const mode = isFactory ? EDIT_MODAL_MODES.factory : (isOverride ? EDIT_MODAL_MODES.override : EDIT_MODAL_MODES.custom);
+
+        document.getElementById("edit_modal_title").textContent = mode.title;
+
+        const subtitle = document.getElementById("edit_modal_subtitle");
+        subtitle.textContent = mode.subtitle;
+        subtitle.hidden = !isCatalogBacked;
+
+        document.getElementById("edit_factory_notice").hidden = !isCatalogBacked;
+        document.getElementById("edit_factory_notice_title").textContent = isOverride
+            ? 'This custom override is active instead of the factory article.'
+            : 'This is a factory article - saving will not change it.';
+        document.getElementById("edit_factory_notice_text").innerHTML = isOverride
+            ? 'Deleting this override immediately restores the unchanged <strong>factory article</strong>.'
+            : 'Your edits are saved as a separate <strong>custom override</strong>. The factory article stays exactly as shipped, and catalog updates will not overwrite your override.';
+
+        // Catalog-backed rows keep the canonical topic locked so the override targets the right article.
+        const topicField = document.getElementById("edit_topic");
+        topicField.readOnly = isCatalogBacked;
+        topicField.classList.toggle('is-readonly', isCatalogBacked);
+        topicField.setAttribute('aria-readonly', isCatalogBacked ? 'true' : 'false');
+        document.getElementById("edit_topic_hint").textContent = mode.topicHint;
+
+        document.getElementById("edit_save_button").textContent = mode.saveLabel;
+
+        // No custom override exists for a factory article yet, so there is nothing to delete.
+        const deleteButton = document.getElementById("edit_delete_button");
+        deleteButton.disabled = isFactory;
+        deleteButton.hidden = isFactory;
+        document.getElementById("edit_delete_note").hidden = !isFactory;
+
+        editModalTrigger = document.activeElement;
+
+        const modal = document.getElementById("editModal");
+        modal.style.display = "block";
+        modal.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = "hidden";
+        document.getElementById("edit_modal_body").scrollTop = 0;
+        document.addEventListener('keydown', handleEditModalKeydown);
+
+        // Land on the first field the user can actually change.
+        const firstField = isCatalogBacked ? document.getElementById("edit_aliases") : topicField;
+        firstField.focus();
     } catch (error) {
         console.error('Error in openEditModal:', error);
         alert('There was an error opening the edit form. Please try again.');
@@ -2311,8 +2660,16 @@ function openEditModal(data) {
 }
 
 function closeEditModal() {
-    document.getElementById("editModal").style.display = "none";
+    const modal = document.getElementById("editModal");
+    modal.style.display = "none";
+    modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = "auto";
+    document.removeEventListener('keydown', handleEditModalKeydown);
+
+    if (editModalTrigger && typeof editModalTrigger.focus === 'function') {
+        editModalTrigger.focus();
+    }
+    editModalTrigger = null;
 }
 
 function openNewEntryModal() {
@@ -2326,6 +2683,11 @@ function closeNewEntryModal() {
 }
 
 function deleteEntry() {
+    const deleteButton = document.getElementById('edit_delete_button');
+    if (deleteButton && deleteButton.disabled) {
+        return;
+    }
+
     const topic = document.getElementById('edit_topic_original').value;
     if (confirm("Are you sure you want to delete: " + topic + "?")) {
         const form = document.createElement('form');
@@ -2353,6 +2715,9 @@ function applySearch() {
         urlParams.delete("search");
     }
     
+    // A new search changes the result set, so start again at the first page
+    urlParams.delete("page");
+
     // Preserve existing parameters if they exist
     const currentCategory = urlParams.get("cat");
     const currentLetter = urlParams.get("letter");

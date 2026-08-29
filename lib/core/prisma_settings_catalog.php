@@ -29,10 +29,12 @@ function chimPrismaGlobalSettingsSections(): array
         'Oghma' => [
             ['name' => 'OGHMA_INFINIUM', 'type' => 'boolean'],
             ['name' => 'OGHMA_AMOUNT', 'type' => 'select', 'values' => ['1', '2', '3']],
+            ['name' => 'OGHMA_RESULT_LIMIT', 'type' => 'select', 'values' => ['1', '2', '3', '4', '5']],
             ['name' => 'RACIAL_OGHMA', 'type' => 'boolean'],
             ['name' => 'LOCATION_OGHMA', 'type' => 'boolean'],
             ['name' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'foreign:core_llm_connector:id:label'],
-            ['name' => 'OGHMA_CUSTOM', 'type' => 'boolean'],
+            ['name' => 'OGHMA_EXTRACTOR_FALLBACK', 'type' => 'boolean'],
+            ['name' => 'OGHMA_EXTRACTOR_TIMEOUT_MS', 'type' => 'integer', 'min' => 250, 'max' => 3000],
         ],
         'Memory' => [
             ['name' => 'FEATURES@MEMORY_EMBEDDING@ENABLED', 'type' => 'boolean'],

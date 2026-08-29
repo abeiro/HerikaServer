@@ -49,9 +49,9 @@ $tabControlPanels = [
 
 $connectorAvailabilityToggles = chimGlobalLlmConnectorAvailabilityMap();
 
-// Paired toggles stay beside their connector instead of appearing twice. OGHMA_CUSTOM picks
-// the Oghma extraction backend rather than gating a slot, so it keeps its plain checkbox.
-$pairedConnectorToggles = array_merge(array_values($connectorAvailabilityToggles), ['OGHMA_CUSTOM']);
+// Paired toggles stay beside their connector instead of appearing twice. OGHMA_EXTRACTOR_FALLBACK
+// gates the Oghma extractor connector, so it renders next to it rather than as its own card.
+$pairedConnectorToggles = array_merge(array_values($connectorAvailabilityToggles), ['OGHMA_EXTRACTOR_FALLBACK']);
 foreach ($gsSections as $sectionName => $fields) {
     $gsSections[$sectionName] = array_values(array_filter($fields, static function (array $field) use ($pairedConnectorToggles): bool {
         return !in_array($field['name'] ?? '', $pairedConnectorToggles, true);
@@ -98,7 +98,7 @@ function pretty_label(string $flatName): string
         'CORE_CONNECTOR_PROFILES' => 'Profile Tasks',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'CORE_CONNECTOR_BGL' => 'Background Life',
-        'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
+        'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Oghma Extractor Fallback',
         'RELLLM_CONNECTOR' => 'Relationship Management',
         'RELATIONSHIP_UPDATE_CHANCE' => 'Relationship Update Chance',
         'NEVER_CLEAR_RELATIONSHIP_DATA' => 'Never Clear Relationship Data',
@@ -106,8 +106,10 @@ function pretty_label(string $flatName): string
         'PROMPT_HEAD_MARKDOWN_ENABLED' => 'Compact Prompt Info',
         'PLAYER_WORST_MEMORY_GAME_DAYS' => 'Worst Memory Lifespan',
         'EMOTEMOODS' => 'Emote Moods',
-        'OGHMA_INFINIUM' => 'Oghma Infinium',
-        'OGHMA_AMOUNT' => 'Oghma Articles Amount',
+        'OGHMA_INFINIUM' => 'Enable Oghma',
+        'OGHMA_AMOUNT' => 'Oghma Topic Count',
+        'OGHMA_RESULT_LIMIT' => 'Oghma Result Limit',
+        'OGHMA_EXTRACTOR_TIMEOUT_MS' => 'Extractor Timeout (ms)',
         'RACIAL_OGHMA' => 'Force Racial Oghma',
         'LOCATION_OGHMA' => 'Force Location Oghma',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
@@ -1781,8 +1783,8 @@ body .settings-tabs .settings-tab.is-active {
                                         <?php endif; ?>
                                         <?php if ($fieldName === 'CORE_CONNECTOR_OGHMA_CUSTOM'): ?>
                                             <div class="provider-toggle">
-                                                <input type="hidden" name="OGHMA_CUSTOM" value="false">
-                                                <input type="checkbox" name="OGHMA_CUSTOM" value="true" <?php echo (current_value('OGHMA_CUSTOM') ? 'checked' : ''); ?> title="Enable/Disable Custom Oghma LLM">
+                                                <input type="hidden" name="OGHMA_EXTRACTOR_FALLBACK" value="false">
+                                                <input type="checkbox" name="OGHMA_EXTRACTOR_FALLBACK" value="true" <?php echo (current_value('OGHMA_EXTRACTOR_FALLBACK') ? 'checked' : ''); ?> title="Allow one bounded connector fallback after deterministic Oghma abstains">
                                             </div>
                                         <?php endif; ?>
                                     </div>

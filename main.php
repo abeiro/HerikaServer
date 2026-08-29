@@ -33,6 +33,7 @@ chimRuntimeBootstrap($path, [
     'load_player_name' => true,
     'load_narrator' => true,
 ]);
+$db = $GLOBALS["db"];
 require_once($path . "lib/game_activity.php");
 require_once($path . "lib/background_processor.php");
 if (!headers_sent() && function_exists('chimGetNarratorDisplayNameHeaderValue')) {
@@ -2300,24 +2301,20 @@ if (!function_exists('isOghmaSettingEnabled')) {
     }
 }
 
-$minimeEnabled = isMinimeT5Enabled();
-$oghmaCustomEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_CUSTOM"] ?? false);
 $oghmaInfiniumEnabled = isOghmaSettingEnabled($GLOBALS["OGHMA_INFINIUM"] ?? false);
-$racialOghmaEnabled = isOghmaSettingEnabled($GLOBALS['RACIAL_OGHMA'] ?? true);
-$locationOghmaEnabled = isOghmaSettingEnabled($GLOBALS['LOCATION_OGHMA'] ?? true);
+$oghmaFallbackEnabled = isOghmaSettingEnabled(
+    $GLOBALS['OGHMA_EXTRACTOR_FALLBACK'] ?? ($GLOBALS['OGHMA_CUSTOM'] ?? false)
+);
 
 // Debug: Log the actual values being checked BEFORE the conditional
-error_log("[OGHMA CHECK] MINIME_T5(auto)=" . ($minimeEnabled ? 'Y' : 'N')
-    . " | OGHMA_CUSTOM=" . var_export($GLOBALS["OGHMA_CUSTOM"] ?? null, true)
-    . " (enabled=" . ($oghmaCustomEnabled ? 'Y' : 'N') . ")"
+error_log("[OGHMA CHECK] OGHMA_EXTRACTOR_FALLBACK=" . var_export($GLOBALS['OGHMA_EXTRACTOR_FALLBACK'] ?? null, true)
+    . " (enabled=" . ($oghmaFallbackEnabled ? 'Y' : 'N') . ")"
     . " | OGHMA_INFINIUM=" . var_export($GLOBALS["OGHMA_INFINIUM"] ?? null, true)
     . " (enabled=" . ($oghmaInfiniumEnabled ? 'Y' : 'N') . ")");
 
-if (($minimeEnabled || $oghmaCustomEnabled || $racialOghmaEnabled || $locationOghmaEnabled) && $oghmaInfiniumEnabled) {
-    if (!isset($GLOBALS["OGHMA_CALLED"])) {// Avoid double call
-        require(__DIR__."/processor/oghma.php");
-        $GLOBALS["OGHMA_CALLED"] = true;
-    }
+if (!isset($GLOBALS["OGHMA_CALLED"])) {// Avoid double call
+    require(__DIR__."/processor/oghma.php");
+    $GLOBALS["OGHMA_CALLED"] = true;
 }
 chimRequestPerformanceMark('oghma_ready');
 

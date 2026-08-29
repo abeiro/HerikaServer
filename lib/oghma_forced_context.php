@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'oghma_aliases.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'oghma_parity.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'game_plugins.php';
 
 if (!function_exists('chimOghmaNormalizeLookupLabel')) {
     function chimOghmaNormalizeLookupLabel($value): string
@@ -56,6 +58,54 @@ if (!function_exists('chimOghmaRaceSignals')) {
     }
 }
 
+if (!function_exists('chimOghmaStableFormKey')) {
+    /** Normalize a runtime or plugin-local FormID into a load-order-independent key. */
+    function chimOghmaStableFormKey($formId, $pluginName = ''): string
+    {
+        $parsed = chimParseStableFormReference($formId);
+        if ($parsed) {
+            return strtolower($parsed['plugin_name']) . '|' . $parsed['local_formid'];
+        }
+        $runtime = chimNormalizeRuntimeFormId($formId);
+        if ($runtime === '') return '';
+        $pluginName = trim((string) $pluginName);
+        if ($pluginName !== '') {
+            return strtolower($pluginName) . '|' . chimExtractLocalFormIdFromRuntimeFormId($runtime);
+        }
+        if (str_starts_with($runtime, '00')) {
+            return 'skyrim.esm|' . chimExtractLocalFormIdFromRuntimeFormId($runtime);
+        }
+        $stable = chimConvertRuntimeFormIdToStableReference($runtime);
+        $parsed = $stable === null ? null : chimParseStableFormReference($stable);
+        return $parsed ? strtolower($parsed['plugin_name']) . '|' . $parsed['local_formid'] : '';
+    }
+}
+
+if (!function_exists('chimOghmaRaceIdentitySignals')) {
+    /** Prefer stable vanilla race identity, then retain text aliases as the compatibility fallback. */
+    function chimOghmaRaceIdentitySignals(array $npcData): array
+    {
+        $stableRaceMap = [
+            'skyrim.esm|00013740' => 'argonian',
+            'skyrim.esm|00013741' => 'breton',
+            'skyrim.esm|00013742' => 'dark elf',
+            'skyrim.esm|00013743' => 'high elf',
+            'skyrim.esm|00013744' => 'imperial',
+            'skyrim.esm|00013745' => 'khajiit',
+            'skyrim.esm|00013746' => 'nord',
+            'skyrim.esm|00013747' => 'orc',
+            'skyrim.esm|00013748' => 'redguard',
+            'skyrim.esm|00013749' => 'wood elf',
+        ];
+        $stableKey = chimOghmaStableFormKey(
+            $npcData['race_formid'] ?? $npcData['race_form_id'] ?? $npcData['race_stable_key'] ?? '',
+            $npcData['race_plugin'] ?? ''
+        );
+        $race = $stableRaceMap[$stableKey] ?? ($npcData['race'] ?? '');
+        return chimOghmaRaceSignals($race);
+    }
+}
+
 if (!function_exists('chimOghmaPeopleNames')) {
     function chimOghmaPeopleNames($people): array
     {
@@ -69,7 +119,7 @@ if (!function_exists('chimOghmaPeopleNames')) {
 if (!function_exists('chimOghmaCollectRaceSignals')) {
     function chimOghmaCollectRaceSignals(array $currentNpcData, $people, $npcMaster = null, int $limit = 4): array
     {
-        $signals = chimOghmaRaceSignals($currentNpcData['race'] ?? '');
+        $signals = chimOghmaRaceIdentitySignals($currentNpcData);
         $skipNames = array_filter([
             strtolower(trim((string) ($GLOBALS['PLAYER_NAME'] ?? ''))),
             strtolower(trim((string) ($GLOBALS['HERIKA_NAME'] ?? ''))),
@@ -87,7 +137,7 @@ if (!function_exists('chimOghmaCollectRaceSignals')) {
             if (!is_array($npcData)) {
                 continue;
             }
-            $signals = array_merge($signals, chimOghmaRaceSignals($npcData['race'] ?? ''));
+            $signals = array_merge($signals, chimOghmaRaceIdentitySignals($npcData));
             $signals = array_slice(chimOghmaUniqueSignals($signals), 0, $limit);
         }
 
@@ -161,6 +211,64 @@ if (!function_exists('chimOghmaBuildLocationSignalGroups')) {
     }
 }
 
+if (!function_exists('chimOghmaLocationFormIdCandidates')) {
+    /** Resolve stable and runtime location identities to the decimal values stored by Skyrim tables. */
+    function chimOghmaLocationFormIdCandidates($value): array
+    {
+        $raw = trim((string) $value);
+        if ($raw === '') return [];
+        $parsed = chimParseStableFormReference($raw);
+        if ($parsed) {
+            $runtime = strcasecmp($parsed['plugin_name'], 'Skyrim.esm') === 0
+                ? $parsed['local_formid']
+                : chimResolveStableFormReferenceToRuntimeFormId($parsed['stable_key']);
+            return $runtime === null || $runtime === '' ? [] : [hexdec(chimNormalizeRuntimeFormId($runtime))];
+        }
+        if (preg_match('/^0x[0-9a-f]+$/i', $raw)) return [hexdec(substr($raw, 2))];
+        if (preg_match('/^[0-9]+$/D', $raw)) {
+            $decimal = intval($raw);
+            $hexValue = hexdec(chimNormalizeRuntimeFormId($raw));
+            return array_values(array_unique(array_filter([$decimal, $hexValue], static fn(int $id): bool => $id > 0)));
+        }
+        $runtime = chimNormalizeRuntimeFormId($raw);
+        return $runtime === '' ? [] : [hexdec($runtime)];
+    }
+}
+
+if (!function_exists('chimOghmaResolveLocationRows')) {
+    /** Prefer an exact FormID lookup and use normalized location text only when identity is unavailable. */
+    function chimOghmaResolveLocationRows($db, array $parts, string $location): array
+    {
+        if (!$db || !method_exists($db, 'fetchAll')) return [];
+        $formIds = [];
+        foreach ([
+            $parts['location_formid'] ?? '',
+            $parts['location_stable_key'] ?? '',
+            $GLOBALS['CHIM_CURRENT_LOCATION_FORMID'] ?? '',
+        ] as $candidate) {
+            $formIds = array_merge($formIds, chimOghmaLocationFormIdCandidates($candidate));
+        }
+        $formIds = array_values(array_unique($formIds));
+        if ($formIds !== []) {
+            $rows = $db->fetchAll(
+                'SELECT formid, name, region, hold FROM public.locations WHERE formid IN ('
+                . implode(',', array_map('intval', $formIds)) . ') LIMIT 20'
+            );
+            if (is_array($rows) && $rows !== []) return $rows;
+        }
+        if ($location === '') return [];
+        $locationKey = chimOghmaNormalizeLookupLabel($location);
+        $locationEsc = $db->escape($locationKey);
+        $rows = $db->fetchAll(
+            "SELECT formid, name, region, hold FROM public.locations
+              WHERE regexp_replace(lower(coalesce(name, '')), '[^a-z0-9]+', ' ', 'g') = '{$locationEsc}'
+                 OR regexp_replace(lower(coalesce(region, '')), '[^a-z0-9]+', ' ', 'g') = '{$locationEsc}'
+              LIMIT 20"
+        );
+        return is_array($rows) ? $rows : [];
+    }
+}
+
 if (!function_exists('chimOghmaCollectLocationSignalGroups')) {
     function chimOghmaCollectLocationSignalGroups($db): array
     {
@@ -168,18 +276,7 @@ if (!function_exists('chimOghmaCollectLocationSignalGroups')) {
             ? DataLastKnownLocationContextParts(false)
             : [];
         $location = trim((string) ($parts['location_base'] ?? $parts['location'] ?? ''));
-        $rows = [];
-
-        if ($location !== '' && $db && method_exists($db, 'fetchAll')) {
-            $locationKey = chimOghmaNormalizeLookupLabel($location);
-            $locationEsc = $db->escape($locationKey);
-            $rows = $db->fetchAll(
-                "SELECT name, region, hold FROM public.locations
-                  WHERE regexp_replace(lower(coalesce(name, '')), '[^a-z0-9]+', ' ', 'g') = '{$locationEsc}'
-                     OR regexp_replace(lower(coalesce(region, '')), '[^a-z0-9]+', ' ', 'g') = '{$locationEsc}'
-                  LIMIT 20"
-            );
-        }
+        $rows = chimOghmaResolveLocationRows($db, $parts, $location);
 
         $canonicalHold = function_exists('DataLastKnownCanonicalHoldHuman')
             ? DataLastKnownCanonicalHoldHuman(false)
@@ -255,35 +352,14 @@ if (!function_exists('chimOghmaFindRowsForSignals')) {
 if (!function_exists('chimOghmaKnowledgeClassAllows')) {
     function chimOghmaKnowledgeClassAllows($classes, array $knowledgeTags): bool
     {
-        $classes = array_values(array_filter(array_map(
-            static fn($value) => strtolower(trim((string) $value)),
-            explode(',', (string) $classes)
-        )));
-        if (empty($classes)) {
-            return true;
-        }
-
-        $knowledgeTags = array_values(array_filter(array_map(
-            static fn($value) => strtolower(trim((string) $value)),
-            $knowledgeTags
-        )));
-        $denied = array_map(
-            static fn($value) => substr($value, 1),
-            array_filter($classes, static fn($value) => str_starts_with($value, '!'))
-        );
-        if (!empty(array_intersect($denied, $knowledgeTags))) {
-            return false;
-        }
-
-        $allowed = array_filter($classes, static fn($value) => !str_starts_with($value, '!'));
-        return !empty(array_intersect($allowed, $knowledgeTags));
+        return chimOghmaKnowledgeClassDecision($classes, $knowledgeTags)['allowed'];
     }
 }
 
 if (!function_exists('chimOghmaResolveKnowledgePayload')) {
     function chimOghmaResolveKnowledgePayload(array $row, array $knowledgeTags): ?array
     {
-        $normalizedTags = array_map(static fn($value) => strtolower(trim((string) $value)), $knowledgeTags);
+        $normalizedTags = chimOghmaKnowledgeValues($knowledgeTags);
         $advancedAllowed = in_array('knowall', $normalizedTags, true)
             || chimOghmaKnowledgeClassAllows($row['knowledge_class'] ?? '', $knowledgeTags);
         if ($advancedAllowed && trim((string) ($row['topic_desc'] ?? '')) !== '') {
@@ -349,34 +425,43 @@ if (!function_exists('chimOghmaMarkPayloadInjected')) {
 if (!function_exists('chimOghmaAppendForcedRows')) {
     function chimOghmaAppendForcedRows(array $rows, array $knowledgeTags, string $source, int $limit): int
     {
+        if (!is_array($GLOBALS['OGHMA_PARITY_RESULT'] ?? null)) {
+            $GLOBALS['OGHMA_PARITY_RESULT'] = chimOghmaNewResult(
+                'not_found',
+                chimOghmaEffectiveSettings(),
+                true
+            );
+        }
         $added = 0;
         foreach ($rows as $row) {
-            if ($added >= $limit || chimOghmaTopicWasInjected($row['topic'] ?? '')) {
+            $resultLimit = max(1, intval($GLOBALS['OGHMA_PARITY_RESULT']['settings']['values']['result_limit'] ?? 1));
+            if ($added >= $limit || count($GLOBALS['OGHMA_PARITY_RESULT']['articles'] ?? []) >= $resultLimit) {
+                break;
+            }
+            if (chimOghmaTopicWasInjected($row['topic'] ?? '')) {
                 continue;
             }
-            $payload = chimOghmaResolveKnowledgePayload($row, $knowledgeTags);
-            if ($payload === null) {
-                continue;
-            }
-
             $topic = trim((string) ($row['topic'] ?? ''));
-            if (chimOghmaPayloadWasInjected($payload['description'])) {
-                chimOghmaMarkTopicInjected($topic);
-                if (class_exists('Logger')) {
-                    Logger::info("[OGHMA] Skipped duplicate {$source} article content: {$topic}");
+            if (function_exists('chimOghmaAddPromptArticle')) {
+                $selected = chimOghmaAddPromptArticle($row, $knowledgeTags, $source, true);
+                $decision = end($GLOBALS['OGHMA_PARITY_RESULT']['access_decisions']);
+                if (!$selected) {
+                    if (($decision['reason'] ?? '') === 'duplicate_content') {
+                        chimOghmaMarkTopicInjected($topic);
+                    }
+                    continue;
                 }
-                continue;
-            }
-
-            $levelText = $payload['level'] === 'advanced'
-                ? 'You have advanced knowledge on this subject, you can use it in your dialogue'
-                : 'You only have basic knowledge on this subject, you can use it in your dialogue';
-            $GLOBALS['OGHMA_HINT'] .= " \n#Lore Information ({$levelText}): {$topic}\n\"{$payload['description']}\"";
-            chimOghmaMarkPayloadInjected($payload['description']);
-            chimOghmaMarkTopicInjected($topic);
-            $added++;
-            if (class_exists('Logger')) {
-                Logger::info("[OGHMA] Forced {$source} article: {$topic}");
+                $description = ($decision['level'] ?? '') === 'advanced'
+                    ? trim((string) ($row['topic_desc'] ?? ''))
+                    : trim((string) ($row['topic_desc_basic'] ?? ''));
+                chimOghmaMarkPayloadInjected($description);
+                chimOghmaMarkTopicInjected($topic);
+                $GLOBALS['OGHMA_HINT'] = chimOghmaRenderKnowledgeFragment(
+                    $GLOBALS['OGHMA_PARITY_RESULT']['articles'],
+                    'matched'
+                );
+                $added++;
+                if (class_exists('Logger')) Logger::info("[OGHMA] Forced {$source} article: {$topic}");
             }
         }
         return $added;
@@ -392,9 +477,32 @@ if (!function_exists('chimOghmaInjectForcedContext')) {
         )));
         $knowledgeTags[] = (string) ($GLOBALS['HERIKA_NAME'] ?? '');
         $added = 0;
+        $hasCapacity = static function (): bool {
+            $resultLimit = max(1, intval($GLOBALS['OGHMA_PARITY_RESULT']['settings']['values']['result_limit'] ?? 1));
+            return count($GLOBALS['OGHMA_PARITY_RESULT']['articles'] ?? []) < $resultLimit;
+        };
+
+        $locationEnabled = isOghmaEnabled($GLOBALS['LOCATION_OGHMA'] ?? true);
+        if ($locationEnabled && $hasCapacity()) {
+            $locationSignals = chimOghmaCollectLocationSignalGroups($db);
+            $added += chimOghmaAppendForcedRows(
+                chimOghmaFindRowsForSignals($db, $locationSignals['location']),
+                $knowledgeTags,
+                'location',
+                1
+            );
+            if ($hasCapacity()) {
+                $added += chimOghmaAppendForcedRows(
+                    chimOghmaFindRowsForSignals($db, $locationSignals['hold']),
+                    $knowledgeTags,
+                    'hold',
+                    1
+                );
+            }
+        }
 
         $racialEnabled = isOghmaEnabled($GLOBALS['RACIAL_OGHMA'] ?? true);
-        if ($racialEnabled) {
+        if ($racialEnabled && $hasCapacity()) {
             $currentNpcData = is_array($GLOBALS['CHIM_CORE_CURRENT_NPC_DATA'] ?? null)
                 ? $GLOBALS['CHIM_CORE_CURRENT_NPC_DATA']
                 : [];
@@ -409,23 +517,6 @@ if (!function_exists('chimOghmaInjectForcedContext')) {
                 $knowledgeTags,
                 'race',
                 4
-            );
-        }
-
-        $locationEnabled = isOghmaEnabled($GLOBALS['LOCATION_OGHMA'] ?? true);
-        if ($locationEnabled) {
-            $locationSignals = chimOghmaCollectLocationSignalGroups($db);
-            $added += chimOghmaAppendForcedRows(
-                chimOghmaFindRowsForSignals($db, $locationSignals['location']),
-                $knowledgeTags,
-                'location',
-                1
-            );
-            $added += chimOghmaAppendForcedRows(
-                chimOghmaFindRowsForSignals($db, $locationSignals['hold']),
-                $knowledgeTags,
-                'hold',
-                1
             );
         }
 

@@ -311,7 +311,7 @@ function profileConnectorTestsBuildGlobalPlan(): array
         ['field' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'llm', 'label' => 'Director Mode', 'enabled_by' => 'CORE_CONNECTOR_DIRECTOR_ENABLED'],
         ['field' => 'CORE_CONNECTOR_BGL', 'type' => 'llm', 'label' => 'Background Life', 'enabled_by' => 'CORE_CONNECTOR_BGL_ENABLED'],
         ['field' => 'RELLLM_CONNECTOR', 'type' => 'llm', 'label' => 'Relationship Management', 'enabled_by' => 'RELATIONSHIP_SYSTEM_ENABLED', 'enabled_label' => 'Relationship Management'],
-        ['field' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'llm', 'label' => 'Custom Oghma LLM', 'enabled_by' => 'OGHMA_CUSTOM', 'enabled_label' => 'Custom Oghma LLM'],
+        ['field' => 'CORE_CONNECTOR_OGHMA_CUSTOM', 'type' => 'llm', 'label' => 'Oghma Extractor Fallback', 'enabled_by' => 'OGHMA_EXTRACTOR_FALLBACK', 'enabled_label' => 'Oghma Extractor Fallback'],
     ];
 
     $jobs = [];

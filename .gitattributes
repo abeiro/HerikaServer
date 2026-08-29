@@ -1,1 +1,4 @@
 service/start.sh text eol=lf
+
+# Preserve byte checksums for the packaged Oghma data.
+resources/oghma/** -text

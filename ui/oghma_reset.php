@@ -1,186 +1,95 @@
 <?php
-session_start();
 
-// Enable error reporting
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
+declare(strict_types=1);
 
-// Paths
-$rootPath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "logger.php");
-require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "oghma_aliases.php");
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'profile_loader.php';
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'oghma_catalog.php';
 
-// Database connection details
-$host = 'localhost';
-$port = '5432';
-$dbname = 'dwemer';
-$schema = 'public';
-$username = 'dwemer';
-$password = 'dwemer';
-
-// Connect to database
-$conn = pg_connect("host=$host port=$port dbname=$dbname user=$username password=$password");
-if (!$conn) {
-    die("Failed to connect to database: " . pg_last_error());
+function oghmaCatalogH($value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
+
+/** Render the projection row counts as "factory 1234 - custom 12" instead of raw JSON. */
+function oghmaCatalogCounts(array $counts): string
+{
+    $parts = [];
+    foreach ($counts as $row) {
+        $parts[] = (string) ($row['source_type'] ?? '') . ' ' . intval($row['count'] ?? 0);
+    }
+    return $parts ? implode(' &middot; ', array_map('oghmaCatalogH', $parts)) : 'none';
+}
+
+$manager = new ChimOghmaCatalogManager($GLOBALS['db'], dirname(__DIR__));
+$action = strtolower(trim((string) ($_POST['action'] ?? 'plan')));
 
 try {
-    // Start transaction
-    pg_query($conn, "BEGIN");
-
-    // First, truncate the oghma table
-    $truncateQuery = "TRUNCATE TABLE {$schema}.oghma RESTART IDENTITY";
-    $truncateResult = pg_query($conn, $truncateQuery);
-
-    if (!$truncateResult) {
-        throw new Exception("Error truncating table: " . pg_last_error($conn));
-    }
-
-    // Find the latest oghma SQL file
-    $dataDir = $rootPath . 'data';
-    $files = glob($dataDir . DIRECTORY_SEPARATOR . 'oghma_*.sql');
-    
-    if (empty($files)) {
-        throw new Exception("No oghma SQL files found in data directory");
-    }
-
-    // Sort files by version number
-    usort($files, function($a, $b) {
-        preg_match('/oghma_(\d+)\.sql$/', $a, $matchesA);
-        preg_match('/oghma_(\d+)\.sql$/', $b, $matchesB);
-        
-        if (empty($matchesA[1]) || empty($matchesB[1])) {
-            return 0; // Invalid format, treat as equal
-        }
-        
-        return $matchesB[1] - $matchesA[1]; // Sort descending
-    });
-
-    // Get the latest file
-    $sqlFile = $files[0];
-    $filename = basename($sqlFile);
-    
-    // Extract version for message
-    preg_match('/oghma_(\d{8})(\d{3})\.sql$/', $filename, $matches);
-    if (!empty($matches)) {
-        $date = date_create_from_format('Ymd', $matches[1]);
-        $version = $matches[2];
-        $versionInfo = date_format($date, 'Y-m-d') . " (v" . intval($version) . ")";
-    } else {
-        $versionInfo = $filename;
-    }
-
-    // Verify file exists (redundant but safe)
-    if (!file_exists($sqlFile)) {
-        throw new Exception("SQL file not found at: " . $sqlFile);
-    }
-
-    // Read SQL file
-    $sqlContent = file_get_contents($sqlFile);
-    if ($sqlContent === false) {
-        throw new Exception("Could not read SQL file");
-    }
-
-    // Legacy Oghma dumps contain three positional values from the original schema.
-    // Name those columns so resets remain compatible with newer optional columns.
-    $sqlContent = str_replace(
-        'INSERT INTO public.oghma VALUES (',
-        'INSERT INTO public.oghma (topic, topic_desc, native_vector) VALUES (',
-        $sqlContent
-    );
-
-    // Debug: Output first part of SQL content
-    $debugSqlPreview = substr($sqlContent, 0, 500);
-    Logger::debug("SQL Preview: " . $debugSqlPreview);
-
-    // Execute the SQL directly
-    $result = pg_query($conn, $sqlContent);
-    if (!$result) {
-        throw new Exception("Error executing SQL: " . pg_last_error($conn) . "\nFirst 500 chars of SQL: " . $debugSqlPreview);
-    }
-
-    $aliasSeed = $dataDir . DIRECTORY_SEPARATOR . 'oghma_aliases.csv';
-    if (is_file($aliasSeed)) {
-        $aliasDatabase = new class($conn) {
-            private $connection;
-
-            public function __construct($connection)
-            {
-                $this->connection = $connection;
-            }
-
-            public function fetchAll(string $query): array
-            {
-                $result = pg_query($this->connection, $query);
-                if (!$result) {
-                    throw new RuntimeException(pg_last_error($this->connection));
-                }
-                return pg_fetch_all($result) ?: [];
-            }
-
-            public function execQuery(string $query)
-            {
-                $result = pg_query($this->connection, $query);
-                if (!$result) {
-                    throw new RuntimeException(pg_last_error($this->connection));
-                }
-                return $result;
-            }
-
-            public function escape(string $value): string
-            {
-                return pg_escape_string($this->connection, $value);
-            }
-        };
-        $aliasStats = chimOghmaApplyAliasSeed($aliasDatabase, $aliasSeed, false);
-        Logger::info(
-            'Factory reset restored Oghma aliases: matched=' . $aliasStats['matched']
-            . ', updated=' . $aliasStats['updated']
-            . ', rejected=' . $aliasStats['rejected']
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'apply') {
+        $restoreHidden = isset($_POST['restore_hidden']) && chimOghmaBool($_POST['restore_hidden']);
+        $result = $manager->provisionActivePackage($restoreHidden);
+        $message = sprintf(
+            'Factory catalog %s synced: %d factory rows, %d custom topic collisions preserved, %d hidden factory rows preserved.',
+            (string) ($result['catalog_version'] ?? ''),
+            intval($result['projected'] ?? 0),
+            intval($result['custom_collisions'] ?? 0),
+            intval($result['hidden'] ?? 0)
         );
+        header('Location: oghma_upload.php?' . http_build_query(['message' => $message]));
+        exit;
+    }
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !in_array($action, ['plan', 'apply'], true)) {
+        throw new InvalidArgumentException('Unknown catalog operation.');
     }
 
-    // Update the native_vector for all entries
-    $vectorUpdateQuery = "
-        UPDATE $schema.oghma
-        SET native_vector = 
-              setweight(to_tsvector('simple', coalesce(topic, '')), 'A')
-            || setweight(to_tsvector('simple', coalesce(aliases, '')), 'A')
-            || setweight(to_tsvector(coalesce(topic_desc, '')), 'B')
-            || setweight(to_tsvector(coalesce(topic_desc_basic, '')), 'C')
-    ";
-
-    $vectorResult = pg_query($conn, $vectorUpdateQuery);
-    if (!$vectorResult) {
-        throw new Exception("Error updating vectors: " . pg_last_error($conn));
-    }
-
-    // Verify data was imported
-    $countQuery = "SELECT COUNT(*) FROM $schema.oghma";
-    $countResult = pg_query($conn, $countQuery);
-    if (!$countResult) {
-        throw new Exception("Error checking row count: " . pg_last_error($conn));
-    }
-    
-    $rowCount = pg_fetch_result($countResult, 0, 0);
-    if ($rowCount == 0) {
-        throw new Exception("No data was imported into the oghma table");
-    }
-
-    // Commit transaction
-    pg_query($conn, "COMMIT");
-
-    // Close database connection
-    pg_close($conn);
-
-    // Redirect back to oghma_upload.php with success message
-    header("Location: oghma_upload.php?message=Factory+reset+completed+successfully.+Imported+$rowCount+entries+from+version+$versionInfo");
-    exit;
-
-} catch (Exception $e) {
-    // Rollback transaction on error
-    pg_query($conn, "ROLLBACK");
-    pg_close($conn);
-    die("Reset failed: " . $e->getMessage());
+    $plan = $manager->plan($manager->activePackagePath());
+    $status = $manager->status();
+    $active = $manager->activeCatalog();
+    $inSync = isset($active['catalog_version'])
+        && (string) $active['catalog_version'] === (string) $plan['catalog_version']
+        && (string) ($active['articles_sha256'] ?? '') === (string) $plan['articles_sha256']
+        && (string) ($active['manifest_sha256'] ?? '') === (string) $plan['manifest_sha256'];
+} catch (Throwable $error) {
+    http_response_code(500);
+    $failure = $error->getMessage();
 }
-?>
+
+?><!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CHIM Oghma Factory Catalog</title><link rel="stylesheet" href="css/main.css">
+<style>body{background:#171717;color:#eee;font-family:Arial,sans-serif}.wrap{max-width:920px;margin:auto;padding:24px}.panel{background:#242424;border:1px solid #444;border-radius:10px;padding:16px;margin:12px 0}code{overflow-wrap:anywhere}.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.danger{border-color:#9f5537}.error{color:#ff8f8f}</style>
+</head><body><main class="wrap"><h1>Oghma Factory Catalog</h1>
+<?php if (isset($failure)): ?>
+    <div class="panel error"><strong>Validation failed.</strong><br><?= oghmaCatalogH($failure) ?></div>
+<?php else: ?>
+    <div class="panel">
+        <p>The catalog packaged with this install is the only factory dataset. There is no separate catalog history to choose from.</p>
+        <strong>Validation:</strong> passed<br>
+        <strong>Contract:</strong> <?= oghmaCatalogH(CHIM_OGHMA_PARITY_VERSION) ?><br>
+        <strong>Packaged version:</strong> <?= oghmaCatalogH($plan['catalog_version']) ?><br>
+        <strong>Rows:</strong> <?= count($plan['articles']) ?><br>
+        <strong>Articles checksum:</strong> <code><?= oghmaCatalogH($plan['articles_sha256']) ?></code><br>
+        <strong>Manifest checksum:</strong> <code><?= oghmaCatalogH($plan['manifest_sha256']) ?></code><br>
+        <strong>Database:</strong>
+        <?php if ($inSync): ?>
+            already in sync with the packaged catalog
+        <?php elseif (isset($active['catalog_version'])): ?>
+            not in sync with the packaged catalog
+        <?php else: ?>
+            packaged catalog not applied yet
+        <?php endif; ?>
+        <br>
+        <strong>Projected rows:</strong> <?= oghmaCatalogCounts($status['projection_counts']) ?>
+    </div>
+    <div class="panel danger">
+        <p>Sync imports and projects the validated packaged catalog atomically. <strong>Your custom entries are always preserved</strong>, along with any factory rows you chose to hide.</p>
+        <form method="post" onsubmit="return confirm(this.restore_hidden.checked ? 'Sync the packaged factory catalog and restore every factory row you previously hid? Custom entries are preserved.' : 'Sync the packaged factory catalog? Custom entries are preserved.');">
+            <input type="hidden" name="action" value="apply">
+            <p><label><input type="checkbox" name="restore_hidden" value="true"> Also restore factory rows I previously hid</label></p>
+            <div class="actions">
+                <button type="submit">Sync factory catalog</button>
+                <a href="oghma_upload.php">Cancel</a>
+            </div>
+        </form>
+    </div>
+<?php endif; ?>
+</main></body></html>

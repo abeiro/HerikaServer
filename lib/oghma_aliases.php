@@ -22,11 +22,21 @@ if (!function_exists('chimOghmaComparableAliasKey')) {
 if (!function_exists('chimOghmaSplitAliases')) {
     function chimOghmaSplitAliases($value): array
     {
-        $parts = preg_split('/\s*,\s*/u', (string) $value) ?: [];
+        $value = preg_replace('/\s*[|;]\s*/u', ', ', (string) $value) ?? (string) $value;
+        $parts = preg_split('/\s*,\s*/u', $value) ?: [];
         return array_values(array_filter(
             array_map('trim', $parts),
             static fn(string $part): bool => $part !== ''
         ));
+    }
+}
+
+if (!function_exists('chimOghmaEncodeAliasName')) {
+    /** Protect commas inside one alias before joining the comma-separated storage field. */
+    function chimOghmaEncodeAliasName($value): string
+    {
+        $value = trim((string) $value);
+        return preg_replace('/\s*,\s*/u', '_', $value) ?? $value;
     }
 }
 
@@ -156,6 +166,7 @@ if (!function_exists('chimOghmaFilterAliases')) {
 if (!function_exists('chimOghmaNativeVectorSql')) {
     function chimOghmaNativeVectorSql(): string
     {
+        // Keep related-concept tags out of legacy full-text ranking; guarded retrieval handles them separately.
         return "
             setweight(to_tsvector('simple', coalesce(topic, '')), 'A')
             || setweight(to_tsvector('simple', coalesce(aliases, '')), 'A')

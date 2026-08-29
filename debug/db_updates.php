@@ -8115,6 +8115,30 @@ if ($migrationOk) {
     Logger::error("Failed to apply eventlog_session_payload migration; existing views were preserved");
 }
 
+if ($checkVersion("default_npc_tags") < 20260814001) {
+    $migrationPath = __DIR__ . "/../data/canonical_npc_knowledge_tags_20260814.sql";
+    if (is_readable($migrationPath) && $db->execQuery(file_get_contents($migrationPath)) !== false) {
+        $updateVersion("default_npc_tags", 20260814001);
+        Logger::info("Applied patch default_npc_tags 20260814001");
+    } else {
+        Logger::error("Failed to apply patch default_npc_tags 20260814001");
+    }
+}
+
+if ($checkVersion("oghma_catalog") < 20260827001) {
+    require_once dirname(__DIR__) . "/lib/oghma_catalog.php";
+    try {
+        // Validate the package first, then upgrade schema and factory data atomically.
+        // Custom articles and edited legacy rows remain intact.
+        $oghmaCatalog = new ChimOghmaCatalogManager($db, dirname(__DIR__));
+        $oghmaCatalog->provisionActivePackage(false, true);
+        $updateVersion("oghma_catalog", 20260827001);
+        Logger::info("Applied Oghma catalog 20260827001");
+    } catch (Throwable $error) {
+        Logger::error("Oghma catalog update failed: " . $error->getMessage());
+    }
+}
+
 Logger::info(__FILE__." update file processed");
 
 //----------------------------------------------------

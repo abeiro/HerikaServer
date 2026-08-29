@@ -236,6 +236,9 @@ if (!function_exists('chimGetManagedGeneralSettingIds')) {
             'EMOTEMOODS',
             'OGHMA_INFINIUM',
             'OGHMA_AMOUNT',
+            'OGHMA_RESULT_LIMIT',
+            'OGHMA_EXTRACTOR_FALLBACK',
+            'OGHMA_EXTRACTOR_TIMEOUT_MS',
             'RACIAL_OGHMA',
             'LOCATION_OGHMA',
             'DETECT_MAGIC_EVENT',
@@ -353,7 +356,7 @@ if (!function_exists('chimPrettySettingLabel')) {
             'SCENE_CLASSIFIER_ENABLED' => 'Scene Classifier',
             'CORE_CONNECTOR_PROFILES' => 'Profile Tasks',
             'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
-            'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
+            'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Oghma Extractor Fallback',
             'PLAYER_RESPEECH' => 'Player Respeech Available',
             'CORE_CONNECTOR_SUMMARY_ENABLED' => 'Summaries Available',
             'CORE_CONNECTOR_MEDIUMTERM_ENABLED' => 'Background & Memory Tasks Available',
@@ -364,8 +367,11 @@ if (!function_exists('chimPrettySettingLabel')) {
             'RELATIONSHIP_UPDATE_CHANCE' => 'Relationship Update Chance',
             'NEVER_CLEAR_RELATIONSHIP_DATA' => 'Never Clear Relationship Data',
             'EMOTEMOODS' => 'Emote Moods',
-            'OGHMA_INFINIUM' => 'Oghma Infinium',
-            'OGHMA_AMOUNT' => 'Oghma Articles Amount',
+            'OGHMA_INFINIUM' => 'Enable Oghma',
+            'OGHMA_AMOUNT' => 'Oghma Topic Count',
+            'OGHMA_RESULT_LIMIT' => 'Oghma Result Limit',
+            'OGHMA_EXTRACTOR_FALLBACK' => 'Oghma Extractor Fallback',
+            'OGHMA_EXTRACTOR_TIMEOUT_MS' => 'Oghma Extractor Timeout',
             'RACIAL_OGHMA' => 'Force Racial Oghma',
             'LOCATION_OGHMA' => 'Force Location Oghma',
             'ENFORCE_STRICT_RECHAT_RESPONSE' => 'Strict Rechat Targeting',
@@ -395,7 +401,11 @@ if (!function_exists('chimPrettySettingLabel')) {
 if (!function_exists('chimGetOverrideableGeneralSettingCategory')) {
     function chimGetOverrideableGeneralSettingCategory(string $flatId): string
     {
-        if (in_array($flatId, ['OGHMA_INFINIUM', 'OGHMA_AMOUNT', 'RACIAL_OGHMA', 'LOCATION_OGHMA', 'OGHMA_CUSTOM', 'CORE_CONNECTOR_OGHMA_CUSTOM'], true)) {
+        if (in_array($flatId, [
+            'OGHMA_INFINIUM', 'OGHMA_AMOUNT', 'OGHMA_RESULT_LIMIT',
+            'OGHMA_EXTRACTOR_FALLBACK', 'OGHMA_EXTRACTOR_TIMEOUT_MS',
+            'RACIAL_OGHMA', 'LOCATION_OGHMA', 'OGHMA_CUSTOM', 'CORE_CONNECTOR_OGHMA_CUSTOM',
+        ], true)) {
             return 'Oghma';
         }
 
@@ -528,6 +538,9 @@ if (!function_exists('chimGetOverrideableGeneralSettingsCatalog')) {
 
         $catalog = [];
         foreach ($candidateIds as $id) {
+            if ($id === 'OGHMA_CUSTOM') {
+                continue;
+            }
             $definition = chimGetSchemaDefinition($id);
             if (array_key_exists('profile_overrideable', $definition) && $definition['profile_overrideable'] === false) {
                 continue;
