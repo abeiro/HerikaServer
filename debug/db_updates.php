@@ -6039,6 +6039,184 @@ if ($checkVersion("prompts")<20260611001) {
     Logger::info("Applied patch prompts 20260611001 - Added player respeech prompts");
 }
 
+if ($checkVersion("prompts")<20260614002) {
+    Logger::debug("Applying prompts table 20260614002 - Adding item_description_creator prompt");
+
+    $itemDescriptionCreatorPrompt = $db->escape(
+        "Generate exactly one neutral, factual visual description for this item: \"{ITEM_NAME}\". ".
+        "Use the item name only to identify the object type. Write one sentence only, ideally 15-25 words. ".
+        "Describe only visible physical characteristics: object type, silhouette, material, color, construction, condition, and distinctive details. ".
+        "Use present tense and clinical wording. ".
+        "Do not use conversational framing, exclamations, subjective praise, lore, stats, effects, rarity, uncertainty, or phrases like \"Look\", \"I see\", \"This is\", \"These are\", \"It appears\", or \"seems\". ".
+        "Do not mention screenshots, UI, the game, plugins, IDs, or image analysis. ".
+        "Output only the description sentence. ".
+        "Example: \"A steel sword with a straight double-edged blade, simple crossguard, leather-wrapped grip, and rounded metal pommel.\""
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'item_description_creator',
+            '$itemDescriptionCreatorPrompt',
+            'Vision prompt for generating item descriptions from captured Prisma item model images. Supports placeholders: {ITEM_NAME}, {PLUGIN}, {BASEID}, {IMAGE_TITLE}. Used in: ui/api/description_creator.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $updateVersion("prompts", 20260614002);
+    Logger::info("Applied patch prompts 20260614002 - Added item_description_creator prompt");
+}
+
+if ($checkVersion("prompts")<20260614003) {
+    Logger::debug("Applying prompts table 20260614003 - Tightening item_description_creator prompt");
+
+    $previousItemDescriptionCreatorPrompt = $db->escape(
+        "Describe the item shown in this image in one or two short visual sentences. ".
+        "Focus on shape, material, color, condition, and distinctive details. ".
+        "Use the provided item name only as identification context; do not invent gameplay stats or effects. ".
+        "Do not mention UI, screenshots, IDs, plugins, Skyrim, or uncertainty."
+    );
+
+    $itemDescriptionCreatorPrompt = $db->escape(
+        "Generate exactly one neutral, factual visual description for this item: \"{ITEM_NAME}\". ".
+        "Use the item name only to identify the object type. Write one sentence only, ideally 15-25 words. ".
+        "Describe only visible physical characteristics: object type, silhouette, material, color, construction, condition, and distinctive details. ".
+        "Use present tense and clinical wording. ".
+        "Do not use conversational framing, exclamations, subjective praise, lore, stats, effects, rarity, uncertainty, or phrases like \"Look\", \"I see\", \"This is\", \"These are\", \"It appears\", or \"seems\". ".
+        "Do not mention screenshots, UI, the game, plugins, IDs, or image analysis. ".
+        "Output only the description sentence. ".
+        "Example: \"A steel sword with a straight double-edged blade, simple crossguard, leather-wrapped grip, and rounded metal pommel.\""
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'item_description_creator',
+            '$itemDescriptionCreatorPrompt',
+            'Vision prompt for generating item descriptions from captured Prisma item model images. Supports placeholders: {ITEM_NAME}, {PLUGIN}, {BASEID}, {IMAGE_TITLE}. Used in: ui/api/description_creator.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        UPDATE public.prompts
+        SET custom_prompt = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE prompt_key = 'item_description_creator'
+          AND custom_prompt = '$previousItemDescriptionCreatorPrompt'
+    ");
+
+    $updateVersion("prompts", 20260614003);
+    Logger::info("Applied patch prompts 20260614003 - Tightened item_description_creator prompt");
+}
+
+if ($checkVersion("prompts")<20260614004) {
+    Logger::debug("Applying prompts table 20260614004 - Removing item names from item_description_creator prompt");
+
+    $previousPromptWithName = $db->escape(
+        "Generate exactly one neutral, factual visual description for this item: \"{ITEM_NAME}\". ".
+        "Use the item name only to identify the object type. Write one sentence only, ideally 15-25 words. ".
+        "Describe only visible physical characteristics: object type, silhouette, material, color, construction, condition, and distinctive details. ".
+        "Use present tense and clinical wording. ".
+        "Do not use conversational framing, exclamations, subjective praise, lore, stats, effects, rarity, uncertainty, or phrases like \"Look\", \"I see\", \"This is\", \"These are\", \"It appears\", or \"seems\". ".
+        "Do not mention screenshots, UI, the game, plugins, IDs, or image analysis. ".
+        "Output only the description sentence. ".
+        "Example: \"A steel sword with a straight double-edged blade, simple crossguard, leather-wrapped grip, and rounded metal pommel.\""
+    );
+
+    $itemDescriptionCreatorPrompt = $db->escape(
+        "Generate exactly one neutral, factual visual description of the visible item in this image. ".
+        "Write one sentence only, ideally 15-25 words. ".
+        "Describe only visible physical characteristics: object type, silhouette, material, color, construction, condition, and distinctive details. ".
+        "Use present tense and clinical wording. ".
+        "Do not use conversational framing, exclamations, subjective praise, lore, stats, effects, rarity, uncertainty, or phrases like \"Look\", \"I see\", \"This is\", \"These are\", \"It appears\", or \"seems\". ".
+        "Do not use or mention item names, filenames, screenshots, UI, the game, plugins, IDs, or image analysis. ".
+        "Output only the description sentence. ".
+        "Example: \"A steel sword with a straight double-edged blade, simple crossguard, leather-wrapped grip, and rounded metal pommel.\""
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'item_description_creator',
+            '$itemDescriptionCreatorPrompt',
+            'Vision prompt for generating item descriptions from captured Prisma item model images. Supports placeholders: {PLUGIN}, {BASEID}, {IMAGE_FILENAME}. Used in: ui/api/description_creator.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        UPDATE public.prompts
+        SET custom_prompt = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE prompt_key = 'item_description_creator'
+          AND custom_prompt = '$previousPromptWithName'
+    ");
+
+    $updateVersion("prompts", 20260614004);
+    Logger::info("Applied patch prompts 20260614004 - Removed item names from item_description_creator prompt");
+}
+
+if ($checkVersion("prompts")<20260614005) {
+    Logger::debug("Applying prompts table 20260614005 - Removing image-framing wording from item_description_creator prompt");
+
+    $previousPrompt = $db->escape(
+        "Generate exactly one neutral, factual visual description of the visible item in this image. ".
+        "Write one sentence only, ideally 15-25 words. ".
+        "Describe only visible physical characteristics: object type, silhouette, material, color, construction, condition, and distinctive details. ".
+        "Use present tense and clinical wording. ".
+        "Do not use conversational framing, exclamations, subjective praise, lore, stats, effects, rarity, uncertainty, or phrases like \"Look\", \"I see\", \"This is\", \"These are\", \"It appears\", or \"seems\". ".
+        "Do not use or mention item names, filenames, screenshots, UI, the game, plugins, IDs, or image analysis. ".
+        "Output only the description sentence. ".
+        "Example: \"A steel sword with a straight double-edged blade, simple crossguard, leather-wrapped grip, and rounded metal pommel.\""
+    );
+
+    $itemDescriptionCreatorPrompt = $db->escape(
+        "Generate exactly one neutral, factual visual description of the visible item in this image. ".
+        "Write one sentence only, ideally 15-25 words. ".
+        "Describe only visible physical characteristics: object type, silhouette, material, color, construction, condition, and distinctive details. ".
+        "Start directly with the object, material, color, or silhouette. ".
+        "Use present tense and clinical wording. ".
+        "Do not use conversational or image-framing wording, exclamations, subjective praise, lore, stats, effects, rarity, uncertainty, or phrases like \"Look\", \"I see\", \"This is\", \"These are\", \"This image\", \"The image\", \"showcases\", \"depicts\", \"features\", \"It appears\", or \"seems\". ".
+        "Do not use or mention item names, filenames, screenshots, UI, the game, plugins, IDs, or image analysis. ".
+        "Output only the description sentence. ".
+        "Example: \"A steel sword with a straight double-edged blade, simple crossguard, leather-wrapped grip, and rounded metal pommel.\""
+    );
+
+    $db->execQuery("
+        INSERT INTO public.prompts (prompt_key, default_prompt, description)
+        VALUES (
+            'item_description_creator',
+            '$itemDescriptionCreatorPrompt',
+            'Vision prompt for generating item descriptions from captured Prisma item model images. Supports placeholders: {PLUGIN}, {BASEID}, {IMAGE_FILENAME}. Used in: ui/api/description_creator.php'
+        )
+        ON CONFLICT (prompt_key) DO UPDATE SET
+            default_prompt = EXCLUDED.default_prompt,
+            description = EXCLUDED.description,
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    $db->execQuery("
+        UPDATE public.prompts
+        SET custom_prompt = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE prompt_key = 'item_description_creator'
+          AND custom_prompt = '$previousPrompt'
+    ");
+
+    $updateVersion("prompts", 20260614005);
+    Logger::info("Applied patch prompts 20260614005 - Removed image-framing wording from item_description_creator prompt");
+}
+
 if ($checkVersion("prompts")<20260615001) {
     Logger::debug("Applying prompts table 20260615001 - Adding player diary prompt");
 

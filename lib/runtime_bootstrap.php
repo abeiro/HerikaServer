@@ -56,6 +56,7 @@ if (!function_exists('chimRuntimeNeedsDbUpdates')) {
             'core_stt_connector' => 20260502002,
             'core_itt_connector' => 20260502002,
             'descriptions_defaults' => 20260611005,
+            'item_images' => 20260614001,
             'prompts' => 20260615001,
             'skyrim_quest_definitions' => 20260628003,
             'core_tts_connector_omnivoice' => 20260708001,
@@ -65,7 +66,7 @@ if (!function_exists('chimRuntimeNeedsDbUpdates')) {
             $versionRows = $db->fetchAll(
                 "SELECT tablename, version
                  FROM public.database_versioning
-                 WHERE tablename IN ('general_settings','core_stt_connector','core_itt_connector','descriptions_defaults','prompts','skyrim_quest_definitions','core_tts_connector_omnivoice')"
+                 WHERE tablename IN ('general_settings','core_stt_connector','core_itt_connector','descriptions_defaults','item_images','prompts','skyrim_quest_definitions','core_tts_connector_omnivoice')"
             );
         } catch (\Throwable $e) {
             $decision = true;
