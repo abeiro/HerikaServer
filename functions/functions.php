@@ -980,7 +980,7 @@ $F_TRANSLATIONS_LOCAL["ArrestPlayer"] = "#HERIKA_NAME# attempts to arrest #PLAYE
 $F_TRANSLATIONS_LOCAL["ForgiveCrime"] = "#HERIKA_NAME# forgives #PLAYER_NAME#'s crimes and clears their bounty. Guard-only action for persuasion, bribe, or thane status.";
 $F_TRANSLATIONS_LOCAL["FollowPlayer"] = "#HERIKA_NAME# follows #PLAYER_NAME#.";
 $F_TRANSLATIONS_LOCAL["ComeCloser"] = "#HERIKA_NAME# approaches #PLAYER_NAME#.";
-$F_TRANSLATIONS_LOCAL["Brawl"] = "#HERIKA_NAME# engages in non-lethal combat with another actor, using weapons.";
+$F_TRANSLATIONS_LOCAL["Brawl"] = "#HERIKA_NAME# starts a brawl with #PLAYER_NAME# or another nearby NPC: an agreed, bare-fisted fight that is not meant to kill. Fists only, no weapons, shields, spells, staves, or poisons. Use Attack instead when #HERIKA_NAME# truly means to kill.";
 $F_TRANSLATIONS_LOCAL["ReturnBackHome"] = "#HERIKA_NAME# travels to their home or place of origin. Returns home.";
 $F_TRANSLATIONS_LOCAL["GiveGoldTo"] = "#HERIKA_NAME# gives gold, coins, or septims to another actor or #PLAYER_NAME#. REQUIRED: Must include 'target' field with recipient name and 'item' field with amount as a number string.";
 $F_TRANSLATIONS_LOCAL["GiveItemTo"] = "#HERIKA_NAME# gives a specific item from inventory to another actor or #PLAYER_NAME#. REQUIRED: Must include 'item' field with exact item name from <inventory> tag, and 'target' field with recipient name.";
@@ -1707,7 +1707,7 @@ $GLOBALS["FUNCTIONS"] = [
             "properties" => [
                 "target" => [
                     "type" => "string",
-                    "description" => "Target NPC, actor, or being. Prefer exact Name [RefID: XXXXXXXX] from people_present; otherwise use the actor name.",
+                    "description" => "Who #HERIKA_NAME# brawls: a nearby NPC, actor, or #PLAYER_NAME#. Prefer exact Name [RefID: XXXXXXXX] from people_present; otherwise use the actor name.",
                 ],
             ],
             "required" => ["target"],
