@@ -47,8 +47,11 @@ $tabControlPanels = [
     'global-connectors' => 'settings-panel-global-connectors-global-connectors',
 ];
 
-// Paired connector toggles remain beside their connector instead of appearing twice.
-$pairedConnectorToggles = ['RELATIONSHIP_SYSTEM_ENABLED', 'SCENE_CLASSIFIER_ENABLED', 'OGHMA_CUSTOM'];
+$connectorAvailabilityToggles = chimGlobalLlmConnectorAvailabilityMap();
+
+// Paired toggles stay beside their connector instead of appearing twice. OGHMA_CUSTOM picks
+// the Oghma extraction backend rather than gating a slot, so it keeps its plain checkbox.
+$pairedConnectorToggles = array_merge(array_values($connectorAvailabilityToggles), ['OGHMA_CUSTOM']);
 foreach ($gsSections as $sectionName => $fields) {
     $gsSections[$sectionName] = array_values(array_filter($fields, static function (array $field) use ($pairedConnectorToggles): bool {
         return !in_array($field['name'] ?? '', $pairedConnectorToggles, true);
@@ -89,15 +92,18 @@ function pretty_label(string $flatName): string
     $customLabels = [
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech',
         'CORE_CONNECTOR_SUMMARY' => 'Summaries',
-        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory',
+        'CORE_CONNECTOR_MEDIUMTERM' => 'Background & Memory Tasks',
         'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
         'SCENE_CLASSIFIER_ENABLED' => 'Scene Classifier',
-        'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile',
+        'CORE_CONNECTOR_PROFILES' => 'Profile Tasks',
         'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'CORE_CONNECTOR_BGL' => 'Background Life',
         'CORE_CONNECTOR_OGHMA_CUSTOM' => 'Custom Oghma LLM',
         'RELLLM_CONNECTOR' => 'Relationship Management',
         'RELATIONSHIP_UPDATE_CHANCE' => 'Relationship Update Chance',
+        'NEVER_CLEAR_RELATIONSHIP_DATA' => 'Never Clear Relationship Data',
+        'COMPACT_CHAT_ENABLED' => 'Compact Chat',
+        'PROMPT_HEAD_MARKDOWN_ENABLED' => 'Compact Prompt Info',
         'PLAYER_WORST_MEMORY_GAME_DAYS' => 'Worst Memory Lifespan',
         'EMOTEMOODS' => 'Emote Moods',
         'OGHMA_INFINIUM' => 'Oghma Infinium',
@@ -128,6 +134,7 @@ function icon_for_field(string $flatName): string
     $icons = [
         'PLAYER_NAME' => '🏷️',
         'PROMPT_HEAD' => '🔝',
+        'PROMPT_HEAD_MARKDOWN_ENABLED' => '📝',
         'EMOTEMOODS' => '🎭',
         'RECHAT_MODE' => '🔁',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => '🎯',
@@ -151,6 +158,8 @@ function icon_for_field(string $flatName): string
         'RELATIONSHIP_SYSTEM_ENABLED' => '💞',
         'RELLLM_CONNECTOR' => '🔗',
         'RELATIONSHIP_UPDATE_CHANCE' => '🎲',
+        'NEVER_CLEAR_RELATIONSHIP_DATA' => '🕰️',
+        'COMPACT_CHAT_ENABLED' => '💬',
         'DETECT_MAGIC_EVENT' => '✨',
         'GROUND_ITEMS_DESCRIPTIONS_ONLY' => '🪨',
         'INVENTORY_ITEMS_DESCRIPTIONS_ONLY' => '🎒',
@@ -264,12 +273,36 @@ function current_value(string $flatName)
 
 function current_description(string $flatName, array $rowMap): string
 {
+    // Use the revised Compact Chat help even when an older description was stored.
+    if ($flatName === 'COMPACT_CHAT_ENABLED') {
+        return chimGetSchemaDescription($flatName);
+    }
     $row = $rowMap[$flatName] ?? null;
     $description = is_array($row) ? trim(strval($row['description'] ?? '')) : '';
     if ($description !== '') {
         return $description;
     }
     return chimGetSchemaDescription($flatName);
+}
+
+function render_connector_availability_switch(string $connectorField, string $toggleField): string
+{
+    $isOn = (bool) current_value($toggleField);
+    $inputId = 'availability-' . strtolower(preg_replace('/[^a-z0-9]+/i', '-', $toggleField));
+    $connectorLabel = pretty_label($connectorField);
+    $escapedName = htmlspecialchars($toggleField, ENT_QUOTES, 'UTF-8');
+    $escapedId = htmlspecialchars($inputId, ENT_QUOTES, 'UTF-8');
+    $hint = 'Turn off to make ' . $connectorLabel . ' unavailable. The connector selection is kept.';
+
+    return '<div class="connector-availability' . ($isOn ? '' : ' is-off') . '" title="' . htmlspecialchars($hint, ENT_QUOTES, 'UTF-8') . '">'
+        . '<input type="hidden" name="' . $escapedName . '" value="false">'
+        . '<label class="connector-availability-label" for="' . $escapedId . '">'
+        . '<span class="connector-availability-sr">' . htmlspecialchars($connectorLabel, ENT_QUOTES, 'UTF-8') . ' available</span>'
+        . '<span class="connector-availability-state" aria-hidden="true">' . ($isOn ? 'On' : 'Off') . '</span>'
+        . '</label>'
+        . '<input type="checkbox" class="connector-availability-input" id="' . $escapedId . '"'
+        . ' name="' . $escapedName . '" value="true"' . ($isOn ? ' checked' : '') . '>'
+        . '</div>';
 }
 
 function render_provider_help(string $flatName, string $help, string $webRoot): string
@@ -364,12 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_all'])) {
         }
     }
 
-    $specialBooleans = [
-        'RELATIONSHIP_SYSTEM_ENABLED',
-        'SCENE_CLASSIFIER_ENABLED',
-        'OGHMA_CUSTOM',
-    ];
-    foreach ($specialBooleans as $name) {
+    foreach ($pairedConnectorToggles as $name) {
         $value = normalize_posted_value('boolean', $_POST[$name] ?? 'false');
         $description = current_description($name, $generalSettingRowMap);
         if (!chimSetGeneralSetting($name, $value, $description)) {
@@ -578,6 +606,11 @@ body .settings-tabs .settings-tab.is-active {
     align-items: start;
 }
 
+.connector-section .provider-title {
+    flex-wrap: wrap;
+    row-gap: 6px;
+}
+
 .connector-section .provider-body {
     width: 100%;
 }
@@ -704,6 +737,69 @@ body .settings-tabs .settings-tab.is-active {
     transform: scale(1.6);
     transform-origin: center;
     cursor: pointer;
+}
+
+/* On/Off switch for a global connector. Its select stays editable while switched off. */
+.connector-availability {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.connector-availability-label {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    cursor: pointer;
+}
+
+.connector-availability-state {
+    min-width: 34px;
+    padding: 2px 9px;
+    border: 1px solid rgba(23, 101, 41, 0.8);
+    border-radius: 999px;
+    background: rgba(23, 101, 41, 0.28);
+    color: #a5e2b3;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 1.55;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.connector-availability.is-off .connector-availability-state {
+    border-color: #4d4d4d;
+    background: rgba(70, 70, 70, 0.35);
+    color: #b8b8b8;
+}
+
+.connector-availability-input {
+    accent-color: #176529;
+    transform: scale(1.6);
+    transform-origin: center;
+    margin: 0 4px;
+    flex: 0 0 auto;
+    cursor: pointer;
+}
+
+.connector-availability-input:focus-visible {
+    outline: 2px solid rgba(242, 124, 17, 0.85);
+    outline-offset: 4px;
+}
+
+.connector-availability-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    clip-path: inset(50%);
 }
 
 .provider-help {
@@ -1235,6 +1331,165 @@ body .settings-tabs .settings-tab.is-active {
     cursor: pointer;
 }
 
+/* Settings Presets: preset- prefixed so the header row stays merge-friendly. */
+.preset-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #3a3a3a;
+}
+
+.preset-label {
+    color: #cfd9ea;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.preset-select {
+    flex: 0 1 auto;
+    min-width: 220px;
+    max-width: 340px;
+    height: 36px;
+    padding: 6px 10px;
+    background-color: rgba(26, 26, 26, 0.8);
+    color: #e9efff;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.preset-select:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+}
+
+.preset-select:disabled,
+.preset-row button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.preset-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.preset-btn-compact {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: 36px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.preset-status {
+    flex: 1 1 180px;
+    min-width: 0;
+    color: #9fb1c9;
+    font-size: 12px;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.preset-status.is-error {
+    color: #ff9ca4;
+}
+
+.preset-desc {
+    flex: 1 1 100%;
+    color: #8d9cb2;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.preset-dialog-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    background: rgba(0, 0, 0, 0.72);
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.preset-dialog-backdrop.is-open {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.preset-dialog {
+    width: 100%;
+    max-width: 480px;
+    border: 1px solid #3a3a3a;
+    border-radius: 10px;
+    background: #222;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    padding: 16px;
+}
+
+.preset-dialog h2 {
+    margin: 0 0 8px;
+    font-family: 'MagicCards', serif;
+    word-spacing: 7px;
+    font-size: 1.1em;
+    color: rgb(242, 124, 17);
+}
+
+.preset-dialog p {
+    margin: 0;
+    color: #cfd9ea;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.preset-dialog-field {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.preset-dialog-field label {
+    color: #cfd9ea;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.preset-dialog-field input {
+    width: 100%;
+    padding: 8px 10px;
+    background-color: rgba(26, 26, 26, 0.8);
+    color: #e9efff;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+}
+
+.preset-dialog-field input:focus {
+    border-color: rgba(242, 124, 17, 0.5);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(242, 124, 17, 0.1);
+}
+
+.preset-dialog .result-error {
+    font-size: 13px;
+}
+
+.preset-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
 @media (max-width: 1000px) {
     .provider-card {
         grid-template-columns: 1fr;
@@ -1258,6 +1513,43 @@ body .settings-tabs .settings-tab.is-active {
 
     .page-header-actions {
         margin-left: 0;
+        width: 100%;
+    }
+
+    .preset-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .preset-select {
+        width: 100%;
+        max-width: none;
+    }
+
+    .preset-actions {
+        width: 100%;
+    }
+
+    .preset-actions > button {
+        flex: 1 1 auto;
+    }
+
+    .preset-status {
+        flex: 0 0 auto;
+        width: 100%;
+        text-align: left;
+    }
+
+    .preset-desc {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    .preset-dialog-actions {
+        flex-direction: column-reverse;
+    }
+
+    .preset-dialog-actions > button {
         width: 100%;
     }
 
@@ -1303,12 +1595,25 @@ body .settings-tabs .settings-tab.is-active {
         <div class="page-header-row">
             <h1 class="gs-title">Global Settings</h1>
             <div class="page-header-actions">
-                <a class="btn-settings-transfer" href="<?php echo $webRoot; ?>/ui/cmd/settings_portability.php?scope=global&amp;action=export">&#128228; Export Settings</a>
+                <a id="export_global_settings_link" class="btn-settings-transfer" href="<?php echo $webRoot; ?>/ui/cmd/settings_portability.php?scope=global&amp;action=export">&#128228; Export Settings</a>
                 <button type="button" id="import_global_settings_btn" class="btn-settings-transfer">&#128229; Import Settings</button>
                 <input type="file" id="import_global_settings_file" accept="application/json,.json" hidden>
                 <button type="button" id="global_connector_test_btn" class="btn-action-blue">Test Global Connectors</button>
                 <button type="submit" class="btn-save-green" name="save_all" value="1" form="gs_form">Save All</button>
             </div>
+        </div>
+        <div class="preset-row">
+            <label class="preset-label" for="preset-select">Settings Preset</label>
+            <select id="preset-select" class="preset-select" aria-describedby="preset-desc preset-status" disabled>
+                <option value="">Loading presets&hellip;</option>
+            </select>
+            <div class="preset-actions">
+                <button type="button" id="preset-apply-btn" class="btn-action-blue preset-btn-compact" disabled>Apply</button>
+                <button type="button" id="preset-save-new-btn" class="btn-settings-transfer" disabled>Save as new&hellip;</button>
+                <button type="button" id="preset-overwrite-btn" class="btn-settings-transfer" disabled>Overwrite&hellip;</button>
+            </div>
+            <div id="preset-status" class="preset-status" role="status" aria-live="polite">Loading presets&hellip;</div>
+            <div id="preset-desc" class="preset-desc"></div>
         </div>
     </div>
 
@@ -1471,17 +1776,8 @@ body .settings-tabs .settings-tab.is-active {
                                                 <input type="checkbox" name="<?php echo htmlspecialchars($fieldName); ?>" value="true" <?php echo ($current ? 'checked' : ''); ?> <?php echo $isReadonly ? 'disabled' : ''; ?>>
                                             </div>
                                         <?php endif; ?>
-                                        <?php if ($fieldName === 'RELLLM_CONNECTOR'): ?>
-                                            <div class="provider-toggle">
-                                                <input type="hidden" name="RELATIONSHIP_SYSTEM_ENABLED" value="false">
-                                                <input type="checkbox" name="RELATIONSHIP_SYSTEM_ENABLED" value="true" <?php echo (current_value('RELATIONSHIP_SYSTEM_ENABLED') ? 'checked' : ''); ?> title="Enable/Disable Relationship System">
-                                            </div>
-                                        <?php endif; ?>
-                                        <?php if ($fieldName === 'CORE_CONNECTOR_SCENECLASSIFIER'): ?>
-                                            <div class="provider-toggle">
-                                                <input type="hidden" name="SCENE_CLASSIFIER_ENABLED" value="false">
-                                                <input type="checkbox" name="SCENE_CLASSIFIER_ENABLED" value="true" <?php echo (current_value('SCENE_CLASSIFIER_ENABLED') ? 'checked' : ''); ?> title="Enable/Disable Scene Classifier">
-                                            </div>
+                                        <?php if (isset($connectorAvailabilityToggles[$fieldName])): ?>
+                                            <?php echo render_connector_availability_switch($fieldName, $connectorAvailabilityToggles[$fieldName]); ?>
                                         <?php endif; ?>
                                         <?php if ($fieldName === 'CORE_CONNECTOR_OGHMA_CUSTOM'): ?>
                                             <div class="provider-toggle">
@@ -1639,6 +1935,27 @@ body .settings-tabs .settings-tab.is-active {
     })();
     </script>
 
+    <script>
+    (() => {
+        // Keep the visible On/Off text in step with each connector availability checkbox.
+        document.querySelectorAll('.connector-availability').forEach((wrap) => {
+            const input = wrap.querySelector('.connector-availability-input');
+            const state = wrap.querySelector('.connector-availability-state');
+            if (!input || !state) {
+                return;
+            }
+
+            const sync = () => {
+                wrap.classList.toggle('is-off', !input.checked);
+                state.textContent = input.checked ? 'On' : 'Off';
+            };
+
+            input.addEventListener('change', sync);
+            sync();
+        });
+    })();
+    </script>
+
     <div id="global-connector-test-modal" class="global-test-modal" aria-hidden="true">
         <div class="global-test-shell" role="dialog" aria-modal="true" aria-labelledby="global-connector-test-title">
             <div class="global-test-head">
@@ -1652,6 +1969,22 @@ body .settings-tabs .settings-tab.is-active {
                 <div id="global-connector-test-summary" class="global-test-summary"></div>
                 <div class="global-test-progress"><div id="global-connector-test-progress-fill"></div></div>
                 <div id="global-connector-test-results"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="preset-dialog-backdrop" class="preset-dialog-backdrop" aria-hidden="true">
+        <div class="preset-dialog" role="dialog" aria-modal="true" aria-labelledby="preset-dialog-title" aria-describedby="preset-dialog-body">
+            <h2 id="preset-dialog-title">Settings Preset</h2>
+            <p id="preset-dialog-body"></p>
+            <div class="preset-dialog-field" id="preset-dialog-name-wrap" hidden>
+                <label for="preset-dialog-name">Preset name</label>
+                <input type="text" id="preset-dialog-name" maxlength="60" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="result-error" id="preset-dialog-error" hidden></div>
+            <div class="preset-dialog-actions">
+                <button type="button" id="preset-dialog-cancel" class="filter-modal-close">Cancel</button>
+                <button type="button" id="preset-dialog-confirm" class="btn-save-green preset-btn-compact">Confirm</button>
             </div>
         </div>
     </div>
@@ -2222,6 +2555,472 @@ const filterBrowseEndpoint = <?php echo json_encode($webRoot . '/ui/api/filter_c
         if (event.key === 'Escape' && modal.classList.contains('is-open')) {
             closeModal();
         }
+    });
+})();
+</script>
+
+<script>
+(() => {
+    'use strict';
+
+    const presetEndpoint = <?php echo json_encode($webRoot . '/ui/api/chim_settings_presets.php', JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+    const presetFlashKey = 'herika-settings-preset-flash';
+    const presetAppliedKey = 'herika-settings-preset-applied';
+
+    const presetSelect = document.getElementById('preset-select');
+    const presetApplyBtn = document.getElementById('preset-apply-btn');
+    const presetSaveNewBtn = document.getElementById('preset-save-new-btn');
+    const presetOverwriteBtn = document.getElementById('preset-overwrite-btn');
+    const presetStatus = document.getElementById('preset-status');
+    const presetDesc = document.getElementById('preset-desc');
+    const presetForm = document.getElementById('gs_form');
+    const exportLink = document.getElementById('export_global_settings_link');
+    const exportBaseHref = exportLink ? exportLink.getAttribute('href') : '';
+
+    const presetDialogBackdrop = document.getElementById('preset-dialog-backdrop');
+    const presetDialogTitle = document.getElementById('preset-dialog-title');
+    const presetDialogBody = document.getElementById('preset-dialog-body');
+    const presetDialogNameWrap = document.getElementById('preset-dialog-name-wrap');
+    const presetDialogName = document.getElementById('preset-dialog-name');
+    const presetDialogError = document.getElementById('preset-dialog-error');
+    const presetDialogCancel = document.getElementById('preset-dialog-cancel');
+    const presetDialogConfirm = document.getElementById('preset-dialog-confirm');
+
+    if (!presetSelect || !presetApplyBtn || !presetDialogBackdrop) {
+        return;
+    }
+
+    let presets = [];
+    let barBusy = false;
+    let dialogBusy = false;
+    let dialogConfig = null;
+    let dialogInvoker = null;
+
+    function setStatus(message, isError) {
+        presetStatus.textContent = message || '';
+        presetStatus.classList.toggle('is-error', !!isError);
+    }
+
+    function errorText(error) {
+        const message = error && error.message ? String(error.message) : String(error || '');
+        return message === '' ? 'Unknown error.' : message;
+    }
+
+    function findPreset(id) {
+        return presets.find((preset) => preset && String(preset.id) === String(id)) || null;
+    }
+
+    function selectedPreset() {
+        return findPreset(presetSelect.value);
+    }
+
+    function syncBar() {
+        const preset = selectedPreset();
+        presetSelect.disabled = barBusy || presets.length === 0;
+        presetApplyBtn.disabled = barBusy || !preset;
+        presetSaveNewBtn.disabled = barBusy;
+        presetOverwriteBtn.disabled = barBusy || !preset || preset.built_in === true;
+        const description = preset && preset.description ? String(preset.description) : '';
+        presetDesc.textContent = description;
+        presetDesc.hidden = description === '';
+        syncExportLink();
+    }
+
+    // Names the export download after the selected preset; the server sanitizes the raw name.
+    function syncExportLink() {
+        if (!exportLink || exportBaseHref === '') {
+            return;
+        }
+        const preset = selectedPreset();
+        const name = preset ? String(preset.name || preset.id || '') : '';
+        exportLink.setAttribute(
+            'href',
+            name === '' ? exportBaseHref : exportBaseHref + '&preset=' + encodeURIComponent(name)
+        );
+    }
+
+    function setBarBusy(busy) {
+        barBusy = !!busy;
+        syncBar();
+    }
+
+    function renderOptions(preferredId) {
+        const previous = preferredId || presetSelect.value;
+        presetSelect.replaceChildren();
+
+        if (presets.length === 0) {
+            const placeholder = new Option('No presets available', '');
+            placeholder.disabled = true;
+            presetSelect.appendChild(placeholder);
+            syncBar();
+            return;
+        }
+
+        const builtIns = presets.filter((preset) => preset.built_in === true);
+        const customs = presets.filter((preset) => preset.built_in !== true);
+
+        const addGroup = (label, items, emptyLabel) => {
+            if (items.length === 0 && !emptyLabel) {
+                return;
+            }
+            const group = document.createElement('optgroup');
+            group.label = label;
+            if (items.length === 0) {
+                const empty = new Option(emptyLabel, '');
+                empty.disabled = true;
+                group.appendChild(empty);
+            } else {
+                items.forEach((preset) => {
+                    group.appendChild(new Option(String(preset.name || preset.id), String(preset.id)));
+                });
+            }
+            presetSelect.appendChild(group);
+        };
+
+        addGroup('Built-in', builtIns, null);
+        addGroup('Custom', customs, null);
+
+        if (previous && findPreset(previous)) {
+            presetSelect.value = previous;
+        } else {
+            presetSelect.value = String(presets[0].id);
+        }
+        syncBar();
+    }
+
+    async function presetRequest(body) {
+        const options = { cache: 'no-store', credentials: 'same-origin' };
+        if (body) {
+            options.method = 'POST';
+            options.headers = { 'Content-Type': 'application/json' };
+            options.body = JSON.stringify(body);
+        }
+        const response = await fetch(presetEndpoint, options);
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (_error) {
+            throw new Error('The preset service returned an unreadable response (HTTP ' + response.status + ').');
+        }
+        if (!response.ok || !payload || payload.success !== true) {
+            throw new Error((payload && payload.error) || ('HTTP ' + response.status));
+        }
+        return payload.data || payload.result || {};
+    }
+
+    // Mirrors submitting #gs_form, so unsaved on-screen edits are captured.
+    function serializeGlobalSettingsForm() {
+        const settings = {};
+        const promptContextOptions = {};
+        if (!presetForm) {
+            return { settings: settings, prompt_context_options: promptContextOptions };
+        }
+        for (const entry of new FormData(presetForm).entries()) {
+            const rawName = String(entry[0]);
+            const rawValue = entry[1];
+            if (rawName === 'save_all') {
+                continue;
+            }
+            if (rawName.endsWith('[]')) {
+                const listName = rawName.slice(0, -2);
+                if (listName.indexOf('prompt_context_') === 0) {
+                    const bucket = listName.slice('prompt_context_'.length);
+                    if (!promptContextOptions[bucket]) promptContextOptions[bucket] = [];
+                    promptContextOptions[bucket].push(String(rawValue));
+                }
+                continue;
+            }
+            settings[rawName] = typeof rawValue === 'string' ? rawValue : String(rawValue);
+        }
+        // FormData omits unchecked checkboxes; presets must preserve an explicit Off value.
+        presetForm.querySelectorAll('input[type="checkbox"][name]:not([name$="[]"])').forEach((input) => {
+            settings[input.name] = input.checked ? String(input.value || 'true') : 'false';
+        });
+        // Buckets with every checkbox cleared must still post an empty list.
+        presetForm.querySelectorAll('input[name^="prompt_context_"][name$="[]"]').forEach((input) => {
+            const bucket = input.name.slice('prompt_context_'.length, -2);
+            if (!promptContextOptions[bucket]) promptContextOptions[bucket] = [];
+        });
+        return { settings: settings, prompt_context_options: promptContextOptions };
+    }
+
+    function dialogFocusable() {
+        // offsetParent filters out the name field while it is hidden for confirm-only dialogs.
+        return Array.from(presetDialogBackdrop.querySelectorAll('button:not([disabled]), input:not([disabled])'))
+            .filter((element) => element.offsetParent !== null);
+    }
+
+    function setDialogBusy(busy, label) {
+        dialogBusy = !!busy;
+        presetDialogConfirm.disabled = dialogBusy;
+        presetDialogCancel.disabled = dialogBusy;
+        presetDialogName.disabled = dialogBusy;
+        presetDialogConfirm.textContent = label || 'Confirm';
+    }
+
+    function setDialogError(message) {
+        presetDialogError.textContent = message || '';
+        presetDialogError.hidden = !message;
+    }
+
+    function openDialog(config) {
+        dialogConfig = config;
+        dialogInvoker = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        presetDialogTitle.textContent = config.title;
+        presetDialogBody.textContent = config.body;
+        presetDialogNameWrap.hidden = !config.needsName;
+        presetDialogName.value = config.needsName ? (config.nameValue || '') : '';
+        setDialogError('');
+        setDialogBusy(false, config.confirmLabel);
+        presetDialogBackdrop.classList.add('is-open');
+        presetDialogBackdrop.setAttribute('aria-hidden', 'false');
+        if (config.needsName && config.focusName) {
+            presetDialogName.focus();
+            presetDialogName.select();
+        } else {
+            // Destructive actions start on Cancel so Enter never fires them by accident.
+            presetDialogCancel.focus();
+        }
+    }
+
+    function closeDialog() {
+        if (!presetDialogBackdrop.classList.contains('is-open')) {
+            return;
+        }
+        presetDialogBackdrop.classList.remove('is-open');
+        presetDialogBackdrop.setAttribute('aria-hidden', 'true');
+        dialogConfig = null;
+        setDialogBusy(false, 'Confirm');
+        const invoker = dialogInvoker;
+        dialogInvoker = null;
+        if (invoker && document.contains(invoker) && !invoker.disabled) {
+            invoker.focus();
+        }
+    }
+
+    presetDialogBackdrop.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            if (dialogBusy) return;
+            event.preventDefault();
+            event.stopPropagation();
+            closeDialog();
+            return;
+        }
+        if (event.key === 'Enter' && dialogConfig && dialogConfig.needsName && event.target === presetDialogName) {
+            event.preventDefault();
+            presetDialogConfirm.click();
+            return;
+        }
+        if (event.key !== 'Tab') {
+            return;
+        }
+        const focusable = dialogFocusable();
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    });
+
+    presetDialogBackdrop.addEventListener('mousedown', (event) => {
+        if (event.target === presetDialogBackdrop && !dialogBusy) closeDialog();
+    });
+
+    presetDialogCancel.addEventListener('click', () => {
+        if (!dialogBusy) closeDialog();
+    });
+
+    presetDialogConfirm.addEventListener('click', () => {
+        if (dialogBusy || !dialogConfig) return;
+        const config = dialogConfig;
+        let name = '';
+        if (config.needsName) {
+            name = presetDialogName.value.trim();
+            if (name === '') {
+                setDialogError('Enter a name for this preset.');
+                presetDialogName.focus();
+                return;
+            }
+        }
+        setDialogError('');
+        setDialogBusy(true, config.busyLabel);
+        Promise.resolve()
+            .then(() => config.onConfirm(name))
+            .then(() => {
+                setDialogBusy(false, config.confirmLabel);
+                closeDialog();
+            })
+            .catch((error) => {
+                setDialogBusy(false, config.confirmLabel);
+                setDialogError(errorText(error));
+                presetDialogConfirm.focus();
+            });
+    });
+
+    // Keep focus inside the dialog when something outside steals it.
+    document.addEventListener('focusin', (event) => {
+        if (!presetDialogBackdrop.classList.contains('is-open')) return;
+        if (presetDialogBackdrop.contains(event.target)) return;
+        presetDialogCancel.focus();
+    });
+
+    async function loadPresets(preferredId) {
+        setStatus('Loading presets…', false);
+        setBarBusy(true);
+        try {
+            const data = await presetRequest(null);
+            presets = Array.isArray(data.presets) ? data.presets.filter((preset) => preset && preset.id) : [];
+            renderOptions(preferredId);
+            // Idle state carries no message; the row keeps its width without showing text.
+            setStatus('', false);
+        } catch (error) {
+            presets = [];
+            renderOptions();
+            setStatus('Could not load presets: ' + errorText(error), true);
+        } finally {
+            setBarBusy(false);
+        }
+    }
+
+    function applyConfirmBody(preset) {
+        const name = String(preset.name || preset.id);
+        let body = 'Apply “' + name + '”? This saves the settings included in this preset immediately.';
+        if (preset.affects_profiles) {
+            body += ' It also updates context and response limits for all NPC profiles.';
+        }
+        return body + ' Unsaved edits on this page will be lost.';
+    }
+
+    // Selecting alone changes nothing; only button availability and the description update.
+    presetSelect.addEventListener('change', () => {
+        syncBar();
+        setStatus('', false);
+    });
+
+    presetApplyBtn.addEventListener('click', () => {
+        const preset = selectedPreset();
+        if (!preset) return;
+        const name = String(preset.name || preset.id);
+        openDialog({
+            title: 'Apply settings preset',
+            body: applyConfirmBody(preset),
+            confirmLabel: 'Apply preset',
+            busyLabel: 'Applying…',
+            needsName: false,
+            onConfirm: async () => {
+                setBarBusy(true);
+                setStatus('Applying “' + name + '”…', false);
+                try {
+                    const result = await presetRequest({ operation: 'apply', preset_id: String(preset.id) });
+                    const settingsUpdated = Number(result.settings_updated || 0);
+                    const profilesUpdated = Number(result.profiles_updated || 0);
+                    let message = 'Applied “' + String(result.name || name) + '”. '
+                        + settingsUpdated + ' setting' + (settingsUpdated === 1 ? '' : 's') + ' updated';
+                    message += profilesUpdated > 0
+                        ? ', ' + profilesUpdated + ' NPC profile' + (profilesUpdated === 1 ? '' : 's') + ' updated.'
+                        : '.';
+                    try {
+                        sessionStorage.setItem(presetAppliedKey, String(preset.id));
+                        sessionStorage.setItem(presetFlashKey, message);
+                    } catch (_error) {
+                        // Storage can be unavailable in privacy-restricted browsers.
+                    }
+                    setStatus(message, false);
+                    window.location.reload();
+                } catch (error) {
+                    setBarBusy(false);
+                    setStatus('Apply failed: ' + errorText(error), true);
+                    throw error;
+                }
+            }
+        });
+    });
+
+    presetSaveNewBtn.addEventListener('click', () => {
+        openDialog({
+            title: 'Save current setup as a preset',
+            body: 'Name this preset. It stores safe Global Settings currently on screen, including context selections and unsaved edits. Connector choices and service URLs stay unchanged.',
+            confirmLabel: 'Save preset',
+            busyLabel: 'Saving…',
+            needsName: true,
+            focusName: true,
+            onConfirm: async (name) => {
+                const payload = serializeGlobalSettingsForm();
+                setBarBusy(true);
+                setStatus('Saving “' + name + '”…', false);
+                try {
+                    const result = await presetRequest({
+                        operation: 'save_new',
+                        name: name,
+                        settings: payload.settings,
+                        prompt_context_options: payload.prompt_context_options
+                    });
+                    const saved = result.preset || {};
+                    setBarBusy(false);
+                    await loadPresets(saved.id ? String(saved.id) : undefined);
+                    setStatus('Saved preset “' + String(saved.name || name) + '”.', false);
+                } catch (error) {
+                    setBarBusy(false);
+                    setStatus('Save failed: ' + errorText(error), true);
+                    throw error;
+                }
+            }
+        });
+    });
+
+    presetOverwriteBtn.addEventListener('click', () => {
+        const preset = selectedPreset();
+        if (!preset || preset.built_in === true) return;
+        const name = String(preset.name || preset.id);
+        openDialog({
+            title: 'Overwrite settings preset',
+            body: 'Overwrite “' + name + '” with the safe Global Settings currently on screen, including unsaved edits? Connector choices and service URLs stay unchanged. The stored preset values are replaced and cannot be recovered.',
+            confirmLabel: 'Overwrite preset',
+            busyLabel: 'Saving…',
+            needsName: false,
+            onConfirm: async () => {
+                const payload = serializeGlobalSettingsForm();
+                setBarBusy(true);
+                setStatus('Overwriting “' + name + '”…', false);
+                try {
+                    const result = await presetRequest({
+                        operation: 'overwrite',
+                        preset_id: String(preset.id),
+                        settings: payload.settings,
+                        prompt_context_options: payload.prompt_context_options
+                    });
+                    const saved = result.preset || {};
+                    setBarBusy(false);
+                    await loadPresets(String(saved.id || preset.id));
+                    setStatus('Overwrote preset “' + String(saved.name || name) + '”.', false);
+                } catch (error) {
+                    setBarBusy(false);
+                    setStatus('Overwrite failed: ' + errorText(error), true);
+                    throw error;
+                }
+            }
+        });
+    });
+
+    let presetFlash = '';
+    let presetApplied = '';
+    try {
+        presetApplied = sessionStorage.getItem(presetAppliedKey) || '';
+        presetFlash = sessionStorage.getItem(presetFlashKey) || '';
+        if (presetFlash) sessionStorage.removeItem(presetFlashKey);
+    } catch (_error) {
+        presetApplied = '';
+        presetFlash = '';
+    }
+
+    // A missing or stale id falls through to renderOptions' built-in default.
+    loadPresets(presetApplied || undefined).then(() => {
+        if (presetFlash) setStatus(presetFlash, false);
     });
 })();
 </script>

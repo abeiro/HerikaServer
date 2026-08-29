@@ -12,8 +12,8 @@
 //      Uses the plugin-provided reduced routing radius and private server context.
 //
 // * Close (CLOSE)
-//      Uses the plugin-provided 200-unit private routing scope. Only the player
-//      and resolved responder are admitted to the conversation context.
+//      Uses the plugin-provided audible audience within 200 units of the player
+//      (100 while sneaking). Selecting a responder does not exclude nearby hearers.
 //
 // * Narrator (NARRATOR)
 //      Routes player speech privately to The Narrator only, using narrator_inputtext semantics.
@@ -103,7 +103,7 @@ if ($EXECUTION_MODE=="STANDARD") {
     // Routing distance is request-local and supplied by the CHIM plugin.
 
 } else if ($EXECUTION_MODE=="CLOSE") {
-    // Routing distance and private audience are supplied by the CHIM plugin.
+    // Routing distance and the nearby group audience are supplied by the CHIM plugin.
 
 } else if ($EXECUTION_MODE=="NARRATOR") {
     if (in_array($gameRequest[0],["inputtext","inputtext_s","ginputtext","ginputtext_s","narrator_inputtext"], true)) {
@@ -144,7 +144,8 @@ if ($EXECUTION_MODE=="STANDARD") {
     
     $cleaned_player_dialogue = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
     $gameRequest[3]="**(".trim($cleaned_player_dialogue).")";
-    $GLOBALS["PLAYER_RESPEECH"] = true; // Route through player_rewrite.php for bio/speech style context
+    // Route through player_rewrite.php only when Player Respeech is globally available.
+    $GLOBALS["PLAYER_RESPEECH"] = chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_PLAYER');
     
 } else if ($EXECUTION_MODE=="INJECTION_LOG") {
     $cleaned_player_dialogue = preg_replace('/^[^:]+:\s*/', '', $gameRequest[3]);
@@ -159,11 +160,5 @@ if ($EXECUTION_MODE=="STANDARD") {
 
     
 }
-
-$CONTEXT_MODE=$db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_context_mode'");
-if (isset($CONTEXT_MODE["value"]) && $CONTEXT_MODE["value"]==1) 
-    $GLOBALS["FOCUS_CHAT_MODE"]=true;
-else
-    $GLOBALS["FOCUS_CHAT_MODE"]=false;
 
 ?>

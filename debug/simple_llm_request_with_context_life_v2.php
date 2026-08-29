@@ -30,6 +30,7 @@ $GLOBALS['SCRIPTLINE_ANIMATION'] = '';
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+ini_set('max_execution_time', 120); // Set maximum execution time to 2 minutes
 
 $enginePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR;
 $GLOBALS['ENGINE_PATH'] = $enginePath;
@@ -42,6 +43,11 @@ chimRuntimeBootstrap($enginePath, [
     'load_player_name' => true,
     'load_narrator' => true,
 ]);
+
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_BGL')) {
+    echo "Background Life is disabled globally." . PHP_EOL;
+    exit(0);
+}
 
 require_once $enginePath . 'lib/model_dynmodel.php';
 require_once $enginePath . 'lib/chat_helper_functions.php';
@@ -177,7 +183,6 @@ if (empty($GLOBALS['PLAYER_NAME'])) {
 }
 
 // Variables expected by some library functions
-$CLEAN_CONTEXT_FOCUS_CHAT = false;
 $COMMAND_PROMPT = '';
 
 // ─── NPC & Connector Setup ────────────────────────────────────────────────────
@@ -233,7 +238,7 @@ if (isset($extdata["background_life_last_run"]) && $extdata["background_life_las
 }
 
 $lastIssuedAction = $db->fetchOne(
-    "SELECT gamets, action FROM actions_issued
+    "SELECT gamets, action,fullcall FROM actions_issued
      WHERE actorname='$npcNameEsc' 
      and gamets is not null
      ORDER BY gamets DESC, ts ASC"
@@ -931,7 +936,13 @@ if (sizeof($actionIdleRows) > 3) {
     error_log("[BGL RUN] $npcNameEscDb — summary of last 48h idle actions: " . json_encode($summaryIdleActions));
 }
 
-
+if ($lastIssuedAction['action'] === 'StayAtPlace') {
+    $data = explode(":", $lastIssuedAction['fullcall']);
+    if (isset($data[2]) && $data[2] == "Sleep") {
+        error_log("[BGL RUN] $npcNameEscDb — last issued action was StayAtPlace:Sleep, indicating the NPC is currently sleeping and waking up.");
+        $lastMinuteNotes .= "\nNote: {$GLOBALS['HERIKA_NAME']} wakes up, has been sleeping since " . convert_gamets2skyrim_long_date($lastIssuedAction['gamets']) . ".\n";
+    }
+}
 
 // ─── Language Detection ───────────────────────────────────────────────────────
 

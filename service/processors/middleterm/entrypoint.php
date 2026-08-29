@@ -79,36 +79,24 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     $results = $GLOBALS["db"]->fetchAll("select max(gamets) as gamets from eventlog"); // faster
     $maxRow = intval($results[0]["gamets"]);
 
-    // Middle-term-memory eligibility is a 3-state setting, not a single per-NPC flag:
-    //   - extended_data.middle_term_enabled = 1/0  -> explicit per-NPC override
-    //   - key absent                               -> inherit the assigned profile's
-    //                                                 core_profiles.metadata.MIDDLE_TERM_MEMORY_ENABLED
-    // The UI writes it this way on purpose (npc_master.php: "delete ... // Remove to inherit
-    // from profile") and the aiview API resolves it this way (chim_aiview.php: explicit npc
-    // value else profile default). The dynamic-profile runtime gate honors the same
-    // inheritance (dynamic_update_util.php). This scheduler query, however, matched ONLY the
-    // explicit `= '1'` key, so every NPC that inherits "on" from an MTM-enabled profile (no
-    // explicit key) was silently skipped and never got middle-term memory generated.
-    // COALESCE(explicit, profile-default) restores inheritance: the per-NPC override wins
-    // (including an explicit '0' force-off), otherwise fall back to the profile default.
-    // (DRY: this explicit-then-profile resolution is currently inlined in several places —
-    //  chim_aiview.php, dynamic_update_util.php, comm.php, and here. A shared helper such as
-    //  NpcMaster::isFeatureEnabled($npc, 'MIDDLE_TERM_MEMORY_ENABLED') would consolidate them.)
+    if (chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+        // An explicit NPC override wins; otherwise inherit the assigned profile setting.
+        $allEnabledMtNpc = $GLOBALS["db"]->fetchAll(
+            "SELECT m.* FROM core_npc_master m
+             LEFT JOIN core_profiles p ON p.id = m.profile_id
+             WHERE COALESCE(NULLIF(m.extended_data->>'middle_term_enabled',''),
+                            p.metadata->>'MIDDLE_TERM_MEMORY_ENABLED') = '1' ");
 
-    $onlyExplicitProfiles="AND false";
-    $allEnabledMtNpc = $GLOBALS["db"]->fetchAll(
-        "SELECT m.* FROM core_npc_master m
-         LEFT JOIN core_profiles p ON (p.id = m.profile_id $onlyExplicitProfiles)
-         WHERE COALESCE(NULLIF(m.extended_data->>'middle_term_enabled',''),
-                        p.metadata->>'MIDDLE_TERM_MEMORY_ENABLED') = '1' ");
-
-    foreach ($allEnabledMtNpc as $npc) {
-        $mwdata = json_decode($npc["extended_data"]);
-        echo "[MIDDLETERM] {$npc["npc_name"]} has middleterm memory enabled".PHP_EOL;
-        $GLOBALS["SELECTED_NPC"] = $npc["npc_name"];
-        require("cmd" . DIRECTORY_SEPARATOR . "generate.php");
+        foreach ($allEnabledMtNpc as $npc) {
+            echo "[MIDDLETERM] {$npc["npc_name"]} has middleterm memory enabled".PHP_EOL;
+            $GLOBALS["SELECTED_NPC"] = $npc["npc_name"];
+            require("cmd" . DIRECTORY_SEPARATOR . "generate.php");
+        }
+    } else {
+        Logger::debug('[MIDDLETERM] Background & Memory Tasks are disabled globally');
     }
 
+    if (chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_BGL')) {
     // BgL tracking coords, on NPCs marked with gps_track. in-game hourly
     $oneDayAgoGamets = $maxRow - ((24) / 0.0000024);
     $oneHourAgoGamets = $maxRow - ((1) / 0.0000024);
@@ -235,7 +223,11 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
         $mwdata = json_decode($npc["extended_data"], true);
         $mustInstructBypassBgl=false;
         $npcIsNearToPlayer = $GLOBALS["db"]->fetchOne("SELECT max(gamets) as n from eventlog where 
-            type='infonpc' and data like '%" . ($GLOBALS["db"]->escape($npc["npc_name"])) . "%' and gamets > $oneHourAgoGamets");
+            type='infonpc_close' and 
+            (data like '%/" . ($GLOBALS["db"]->escape($npc["npc_name"])) . "%/'
+                or data like '" . ($GLOBALS["db"]->escape($npc["npc_name"])) . "%/'
+                or data like '%/" . ($GLOBALS["db"]->escape($npc["npc_name"])) . "')
+            and gamets > $oneHourAgoGamets");
 
         if (isset($npcIsNearToPlayer) && $npcIsNearToPlayer["n"] > 0) {
             $localDelta = ($npcIsNearToPlayer["n"] - $oneHourAgoGamets) * 0.0000024;
@@ -310,14 +302,30 @@ $GLOBALS["TASKS"]["middleterm"]["fn"] = function () {
     if (sizeof($allEnabledBgLNpc) === 0) {
         error_log("[BGL] No NPCs with background life enabled");
     }
+    } else {
+        Logger::debug('[BGL] Background Life is disabled globally');
+    }
 
 
     $pfi = intval($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARY_INTERVAL"] ?? 10) * 100000;
 
-    if (($maxRow - $lastMemory) > ($pfi)) {
-        // Run memory compaction silently
-        $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 2>/dev/null");
+    if (chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_SUMMARY')) {
+        if (isset($GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"]) && $GLOBALS["FEATURES"]["MEMORY_EMBEDDING"]["AUTO_CREATE_SUMMARYS"] === true) {
+            error_log("[MIDDLETERM] Auto-create summary is enabled, interval: {$pfi}");
+            if (($maxRow - $lastMemory) > ($pfi)) {
+                // Run memory compaction silently
+                $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 1 2>/dev/null");
+            }
+
+        } else {
+            error_log("[MIDDLETERM] Auto-create summary is disabled");
+            if (($maxRow - $lastMemory) > ($pfi)) {
+                // Run memory compaction silently
+                $shellResult = shell_exec("php {$GLOBALS["ENGINE_PATH"]}/debug/util_memory_subsystem.php compact embed 0 2>/dev/null");
+            }
+        }
     }
+   
 
     //unset($GLOBALS["db"]);
 

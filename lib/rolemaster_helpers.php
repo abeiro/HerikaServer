@@ -321,6 +321,9 @@ function checkHistory($npc)
 
 function askLLMForTopic($npc, $topic, $last_llm_call)
 {
+    if (function_exists('chimIsGlobalLlmConnectorEnabled') && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+        return ["res" => false, "missing" => "disabled"];
+    }
 
     $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
@@ -882,6 +885,10 @@ function SkCreateItem($basetype, $name, $location, $content, $quest_id, $npc_ref
     }
 
     if ($basetype == "note" || $basetype == "book") {
+        if (function_exists('chimIsGlobalLlmConnectorEnabled') && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+            Logger::debug('SkCreateItem: book generation skipped because Background & Memory Tasks are disabled globally');
+            return false;
+        }
 
         // Generate content for the book/note
         $connector = new LLMConnector();
@@ -1838,6 +1845,10 @@ function getQuestDataTxt($quest_data)
 
 function enhanceProfileUsingQuestData($quest_data, $npc)
 {
+    if (function_exists('chimIsGlobalLlmConnectorEnabled') && !chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+        Logger::debug('enhanceProfileUsingQuestData: skipped because Background & Memory Tasks are disabled globally');
+        return;
+    }
 
     $questDataTxt = getQuestDataTxt($quest_data);
     $questData = json_decode(file_get_contents($GLOBALS["ENGINE_PATH"] . "log" . DIRECTORY_SEPARATOR . "snqe_state.json"), true);
@@ -1928,6 +1939,7 @@ function getLocationsNearNpcCoords($npcName)
     $pointLiteral = '(' . $x . ',' . $y . ')';
     $pointEsc = $db->escape($pointLiteral);
     $worldEsc = $db->escape($lastCoords["world"] ?? '');
+    $currentLocationName = $lastCoords['location_name'] ?? '';
 
     // Abandoned Shack locations is bugged as is child of Batte-Born Farm.
     $closestLocations = $db->fetchAll(
@@ -1949,6 +1961,27 @@ function getLocationsNearNpcCoords($npcName)
          LIMIT 35"
     );
 
+    if ($currentLocationName) {
+        $currentLocationNameEsc = $db->escape($currentLocationName);
+        $closestLocationsByRegion = $db->fetchAll(
+            "SELECT
+                name as name,
+                formid,
+                region,
+                hold,
+                coords,
+                tags,
+                is_interior,
+                case when world in ('Skyrim','Whiterun','Windhelm','Riften','Markarth') then coords <-> '{$pointEsc}'::point  end as distance
+            FROM locations
+            WHERE coords IS NOT NULL
+            and name<>'Abandoned Shack'
+            and region IN ('{$currentLocationNameEsc}')
+            ORDER BY case when world = '{$worldEsc}' then coords <-> '{$pointEsc}'::point else (coords <-> '{$pointEsc}'::point) + 100000 end ASC
+            LIMIT 5"
+        );
+        $closestLocations=array_merge($closestLocations, $closestLocationsByRegion);
+    }
     $closestLocationsNames = [];
 
     foreach ($closestLocations as &$location) {

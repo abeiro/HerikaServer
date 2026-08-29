@@ -2477,6 +2477,7 @@ function herikaShouldExcludeEventFromPromptContext(array $row): bool
         'npcvoice_refresh',
     ];
 
+    
     static $promptOnlyEventTypes = [
         'ext_held_item_pickup',
         'ext_held_item_drop',
@@ -2488,8 +2489,13 @@ function herikaShouldExcludeEventFromPromptContext(array $row): bool
 
     // Held item state is injected separately through <held_items>; avoid replaying
     // every pickup/drop as historic NPC event context.
-    if (in_array($type, $promptOnlyEventTypes, true)) {
-        return true;
+    
+    $shouldRemoveHeldEvents=false;// Make this configuruable.
+
+    if ($shouldRemoveHeldEvents) {
+        if (in_array($type, $promptOnlyEventTypes, true)) {
+            return true;
+        }
     }
 
     if ($type === 'status_msg' && stripos($data, 'csv_import@') === 0) {
@@ -2566,6 +2572,7 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
       when type='info_timeforward' then 'TIMELAPSE' 
       when type='backgroundaction' then 'CONTEXTI' 
       when type='innerchat' then 'BGLCHAT' 
+      when type='ext_held_item_pickup' or type='ext_held_item_drop' then 'HELD_ITEM' 
       when type like 'ext_%' then 'PLUGIN'
       else '' 
     end as subtype,a.data  as data , gamets,localts,type,location
@@ -2599,23 +2606,52 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
     // Keep generic far-away actors out of historic context. Shared narrator rows are flattened on write.
     $results = $db->fetchAll($query);
 
+
+
     // Filter stored event types, treating legacy background chat rows as chat_background.
     if (isset($GLOBALS["EVENT_TYPE_FILTER"]) && !empty($GLOBALS["EVENT_TYPE_FILTER"])) {
         $results = chimFilterRowsByEventType($results, $GLOBALS["EVENT_TYPE_FILTER"]);
     }
 
+    
+
+
     $results = array_filter($results, function ($row) {
         return !herikaShouldExcludeEventFromPromptContext($row);
     });
 
+    
     //error_log($query);
     $rawData=[];
     foreach ($results as $row) {
         $rawData[md5($row["data"].$row["localts"])] = $row;
     }
 
+    $rawDataFiltered=[];
+
+    // $rawDataFiltered is ordered by gamets desc. We want to keep only first HELD_ITEM subtype found if:
+    // 1. type='ext_held_item_pickup'         
+    // 2. event is in the first 5 entries.
     
-    $orderedData = array_reverse($rawData);
+    $heldItemAdded=false;
+    $localCounter = 0;
+    foreach ($rawData as $key => $row) {
+        if ($row["subtype"]=="HELD_ITEM") {
+            if ($row["type"]=="ext_held_item_pickup") {
+                if ($localCounter < 5 && !$heldItemAdded) {
+                    $rawDataFiltered[] = $row;
+                    $heldItemAdded = true;
+                }
+            } else if ($row["type"]=="ext_held_item_drop") {
+                $heldItemAdded=true; // Mark as added to prevent further pickups from being added
+            }
+        } else
+            $rawDataFiltered[] = $row;
+        
+        $localCounter++;    
+    }
+    
+    $orderedData = array_reverse($rawDataFiltered);
 
     //$orderedData = array_slice($orderedData, $lastNelements);
 
@@ -2750,7 +2786,10 @@ function buildHistoricContext($actor, $lastNelements = -10,$sqlfilter="") {
         } else if ($row["subtype"]=="TIMELAPSE") {
             $rowData = strtoupper($rowData);
             
-        }  else if ($row["subtype"]=="PLUGIN") {
+        } else if ($row["subtype"]=="HELD_ITEM") {
+            $rowData = trim(strip_tags($rowData))." Holding it in hand (held item)";
+            $speaker = "narratorci";
+        } else if ($row["subtype"]=="PLUGIN") {
             $speaker = $row["type"];
             
         } else {
@@ -2854,12 +2893,12 @@ New setting: $currentLocation
             $lastTimeCategory = $currentTimeCategory;
         }
         
-        $row= array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker),'type'=>$row["type"]);
+        $row= array('role' => $lastSpeaker, 'content' => trim($rowData),'subtype'=>$row["subtype"]?:strtoupper($lastSpeaker),'type'=>$row["type"],'gamets'=>$row["gamets"]);
         $lastDialogFull[] = $row;
         $previousRow=$row;
 
     }
-
+    
     if (isset($previousRow)) {
         if (sizeof($previousRow)>0) {
             if (sizeof($lastDialogFull) === 0 || $previousRow !== end($lastDialogFull)) {
@@ -3014,10 +3053,12 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
     $lastSpeaker = "";
     $buffer = [];
     $lastDialogFull=[];
+    $g = 0; // STM: last-seen gamets, stamped onto compacted entries ('_g') for the floor capture in replaceRoles
 
 
     foreach ($lastDialogFullCopy as $n => $line) {
         $speaker=$line["role"];
+        if (isset($line["gamets"])) $g = intval($line["gamets"]);
         
         if ($speaker=="npc") { // Tricky, npc could be any char
             preg_match('/^([^:]+):/', $line["content"], $matches);
@@ -3040,7 +3081,7 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
             } else {
 
                 if (!$compactContextInfo) {
-                    $lastDialogFull[]=array('role' => $lastSpeaker, 'content' => trim(isset($buffer[0])?$buffer[0]:$line["content"]));
+                    $lastDialogFull[]=array('role' => $lastSpeaker, 'content' => trim(isset($buffer[0])?$buffer[0]:$line["content"]), '_g' => $g);
                     if (isset($buffer[0])) {
                         $buffer = [];
                         $buffer[] = $line["content"];
@@ -3056,23 +3097,23 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
             if (sizeof($buffer) > 0) {
                 if ($lastSpeaker=="narratorci" || $lastSpeaker=="narratorloc") {
                     if (!$compactContextInfo) {
-                        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "".implode(" ", removeEmptyElements($buffer)));  // Should be only one line
+                        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "".implode(" ", removeEmptyElements($buffer)), '_g' => $g);  // Should be only one line
                     } else {
-                        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "* ".implode("\n* ", removeEmptyElements($buffer))); 
+                        $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => "* ".implode("\n* ", removeEmptyElements($buffer)), '_g' => $g); 
                     }
 
                 }
                 else if ($lastSpeaker=="backgroundchat")
-                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", removeEmptyElements($buffer)));
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", removeEmptyElements($buffer)), '_g' => $g);
                 else 
-                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => moveDialogueTargetSuffixToEnd(implode(" ", removeEmptyElements($buffer))));
+                    $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => moveDialogueTargetSuffixToEnd(implode(" ", removeEmptyElements($buffer))), '_g' => $g);
             }
             $buffer = [];
             $buffer[] = $line["content"];
             $lastSpeaker = $speaker;
 
             if ($speaker=="assistant") {    //Leave as is
-                $lastDialogFull[] = $line;
+                $line['_g'] = $g; $lastDialogFull[] = $line;
                 $lastSpeaker = "";
                 $buffer = [];
                 continue;
@@ -3092,11 +3133,11 @@ function compactHistoricContext($lastDialogFull,$actor,$compactContextInfo=false
     // Last buffer, probably user input.
     if (sizeof($bufferCopy)) {
         if ($lastSpeaker=="narratorci" || $lastSpeaker=="narratorloc") 
-            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n* ", $bufferCopy));
+            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n* ", $bufferCopy), '_g' => $g);
         else if ($lastSpeaker=="backgroundchat")
-            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $bufferCopy));
+            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => implode("\n", $bufferCopy), '_g' => $g);
         else 
-            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => moveDialogueTargetSuffixToEnd(implode(" ", $bufferCopy)));
+            $lastDialogFull[] = array('role' => $lastSpeaker, 'content' => moveDialogueTargetSuffixToEnd(implode(" ", $bufferCopy)), '_g' => $g);
     }
 
     $contextDataHistory=[];
@@ -3157,6 +3198,15 @@ function replaceRoles($lastDialogFull,$actor,$lastNelements) {
 
     error_log("[CHIM] Using effective context limit of : $lastNelements");
     $orderedData = array_slice($lastDialogFull, $lastNelements);
+    // STM: capture the window's oldest surviving gamets (the true floor). '_g' is kept on the
+    // entries so main.php can crop the window by it; main.php strips '_g' before the LLM sees them.
+    $__floorG = 0;
+    foreach ($orderedData as $__e) {
+        if (is_array($__e) && !empty($__e['_g'])) {
+            $__floorG = ($__floorG == 0) ? intval($__e['_g']) : min($__floorG, intval($__e['_g']));
+        }
+    }
+    $GLOBALS["CONTEXT_WINDOW_FLOOR"] = $__floorG;
 
     file_put_contents(__DIR__."/../log/context_for_$actor.txt",print_r($orderedData,true));
     $GLOBALS["CONTEXT_BUILDING_DATA"]=$orderedData;
@@ -4856,6 +4906,175 @@ function dataGetMemoryCompanionConditionSql(
     $npcEsc = $GLOBALS['db']->escape($npcName);
     return "($column LIKE '%|$npcEsc|%' OR $column='$npcEsc')";
 }
+
+/**
+ * Is short-term memory switched on for the NPC taking this turn?
+ *
+ * Set per profile (core_profiles.metadata.SHORT_TERM_MEMORY_ENABLED) and overridable per NPC
+ * (core_npc_master.metadata or extended_data, same key) - both are pushed to $GLOBALS at turn time
+ * by CoreProfile::setOldGlobals and NpcMaster::setOldGlobalsFromCurrentNpcData, in that order, so
+ * the NPC-level value wins. Off unless a profile turns it on.
+ *
+ * FILTER_VALIDATE_BOOLEAN because the value can arrive as the string "1" from the profile
+ * checkbox, as the string "true" from the settings editor, or as a real bool from the JSON editor.
+ */
+function chimShortTermMemoryEnabled(): bool
+{
+    return filter_var($GLOBALS["SHORT_TERM_MEMORY_ENABLED"] ?? false, FILTER_VALIDATE_BOOLEAN);
+}
+
+/**
+ * Should short-term memory still be injected while Compact Chat is on?
+ *
+ * Compact Chat flattens the whole history into a single compact block, and STM's entries are folded
+ * into it rather than dropped, so the default is yes. This global setting exists for users who run
+ * Compact Chat specifically to shrink the prompt and want the summaries left out of it.
+ */
+function chimShortTermMemoryInCompactChatEnabled(): bool
+{
+    if (!array_key_exists("SHORT_TERM_MEMORY_IN_COMPACT_CHAT", $GLOBALS)) {
+        return true;
+    }
+    return filter_var($GLOBALS["SHORT_TERM_MEMORY_IN_COMPACT_CHAT"], FILTER_VALIDATE_BOOLEAN);
+}
+
+/**
+ * Short-Term Memory (STM): the scene summaries an NPC has lived through but cannot currently see -
+ * newer than its middle-term-memory digest, older than the verbatim rolling window.
+ *
+ * The middle-term digest only regenerates every ten summaries, so the rows past its hightide that
+ * have already scrolled out of the window are invisible to the NPC. This reads exactly those.
+ *
+ *  lower bound = array_key_last(extended_data.middle_term_memory), or 0 if the NPC has no digest
+ *  upper bound = the straddling summary (the oldest whose bucket reaches $GLOBALS["CONTEXT_WINDOW_FLOOR"])
+ *  cap         = $GLOBALS["SHORT_TERM_MEMORY_MAX"], default 10
+ *
+ * Selects from exactly the population the digest selects from - same scope partition, same
+ * companions clause as service/processors/middleterm/cmd/generate.php - so the two layers cannot
+ * disagree about what has already been digested.
+ *
+ * Also sets $GLOBALS["STM_CROP_GAMETS"], which main.php uses to crop the window to start after the
+ * straddler, so no event is present twice, once summarised and once verbatim.
+ *
+ * $sqlfilter is accepted for signature parity with DataLastDataExpandedFor() at the same call site;
+ * summaries are not event rows, so there is nothing for it to filter.
+ */
+function DataShortTermMemoryFor($actor, $sqlfilter = "")
+{
+    global $db;
+
+    if (!chimShortTermMemoryEnabled()) {
+        return [];
+    }
+
+    $cap = isset($GLOBALS["SHORT_TERM_MEMORY_MAX"]) ? intval($GLOBALS["SHORT_TERM_MEMORY_MAX"]) : 10;
+    if ($cap < 1) {
+        return [];
+    }
+
+    $GLOBALS["STM_CROP_GAMETS"] = 0;
+
+    try {
+        // Lower bound: where the middle-term digest ends.
+        $mtmHightide = 0;
+        $npcMaster = new NpcMaster();
+        $npcRow = $npcMaster->getByName($actor);
+        if ($npcRow) {
+            $ed = $npcMaster->getExtendedData($npcRow);
+            if (isset($ed["middle_term_memory"]) && is_array($ed["middle_term_memory"]) && count($ed["middle_term_memory"])) {
+                $mtmHightide = intval(array_key_last($ed["middle_term_memory"]));
+            }
+        }
+
+        $scopeConditionSql     = dataGetMemoryScopeConditionSql($actor);
+        $companionConditionSql = dataGetMemoryCompanionConditionSql($actor);
+
+        // Upper bound: the "straddling" summary - the oldest summary whose bucket reaches into the
+        // live window. STM shows summaries up to and including it and main.php crops the window to
+        // start after it. If no summary reaches the window there is no overlap, so show everything
+        // past the hightide, capped, and crop nothing.
+        $wOldest = intval($GLOBALS["CONTEXT_WINDOW_FLOOR"] ?? 0);
+        $bigInt  = "9223372036854775807";
+        $boundExpr = ($wOldest > 0)
+            ? "COALESCE((SELECT min(gamets_truncated) FROM memory_summary
+                          WHERE summary IS NOT NULL AND $scopeConditionSql AND $companionConditionSql
+                            AND gamets_truncated >= " . $wOldest . "), $bigInt)"
+            : $bigInt;
+
+        $query = "SELECT summary, gamets_truncated
+                  FROM memory_summary
+                  WHERE summary IS NOT NULL
+                    AND $scopeConditionSql
+                    AND $companionConditionSql
+                    AND gamets_truncated > " . intval($mtmHightide) . "
+                    AND gamets_truncated <= $boundExpr
+                  ORDER BY gamets_truncated DESC
+                  LIMIT " . intval($cap);
+
+        $rows = $db->fetchAll($query);
+        if (!$rows) {
+            return [];
+        }
+
+        // Crop the window only if the newest summary actually reaches into it.
+        $newest = intval($rows[0]["gamets_truncated"]);
+        $GLOBALS["STM_CROP_GAMETS"] = ($wOldest > 0 && $newest >= $wOldest) ? $newest : 0;
+
+        $out = [];
+        foreach (array_reverse($rows) as $r) {          // oldest -> newest
+            // Strip the storage metadata before injecting: the leading "#Summary:" label and the
+            // trailing "#Tags: #..." block, which is embedding/RAG metadata worth ~60-80 tokens.
+            $summary = trim($r["summary"]);
+            $summary = preg_replace('/^#Summary:\s*/i', '', $summary);
+            $summary = preg_replace('/\s*#Tags:.*$/is', '', $summary);
+            $summary = trim($summary);
+            if ($summary === "") {
+                continue;
+            }
+            $when = convert_gamets2skyrim_date($r["gamets_truncated"]);
+            $out[] = ['role' => 'user', 'content' => "(Earlier events - $when) $summary"];
+        }
+        return $out;
+
+    } catch (\Throwable $e) {
+        Logger::warn("[STM] DataShortTermMemoryFor failed for $actor: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Merges short-term memory ahead of the verbatim window and returns the combined message list.
+ *
+ * Crops window entries the newest returned summary already covers, so no event appears both
+ * summarised and verbatim, then removes the internal '_g' gamets stamp from every entry. The
+ * '_g' strip runs whether or not summaries were attached.
+ *
+ * $allowStm is the caller's decision; this function does not read it from globals.
+ */
+function chimAttachShortTermMemoryToWindow(array $window, string $actor, string $sqlfilter, bool $allowStm): array
+{
+    if ($allowStm) {
+        $stm = DataShortTermMemoryFor($actor, $sqlfilter);
+        if (!empty($stm)) {
+            if (!empty($GLOBALS["STM_CROP_GAMETS"])) {
+                $cropBoundary = intval($GLOBALS["STM_CROP_GAMETS"]);
+                $window = array_values(array_filter($window, function ($e) use ($cropBoundary) {
+                    return !is_array($e) || empty($e['_g']) || intval($e['_g']) > $cropBoundary;
+                }));
+            }
+            $window = array_merge($stm, $window);
+        }
+    }
+
+    foreach ($window as $k => $e) {
+        if (is_array($e) && array_key_exists('_g', $e)) {
+            unset($window[$k]['_g']);
+        }
+    }
+
+    return array_values($window);
+}
+
 
 function DataSearchMemory($rawstring,$npcfilter) {
     

@@ -15,7 +15,7 @@ require_once(__DIR__."/core/event_type.php");
 function chimBuildLatestDiaryContextBlock(string $npcName, array $profileData): string
 {
     $safeNpcName = trim($npcName);
-    if ($safeNpcName === '' || strcasecmp($safeNpcName, 'The Narrator') === 0) {
+    if ($safeNpcName === '') {
         return '';
     }
 
@@ -833,6 +833,7 @@ function shouldStripNpcOutputAsterisks() {
 }
 
 function normalizeAsteriskTextForSpeech($text) {
+    // This just removes the asterisks (twice)
     $normalizedText = preg_replace('/\*([^*]+)\*/', '$1', (string)$text);
     return str_replace('*', '', $normalizedText);
 }
@@ -1187,15 +1188,23 @@ function unmoodSentence($sentence) {
     }
     
 
+    if (!isInlineNarrationEnabled()) {// Removes ALL text between asterisks.
+        error_log("[unmoodSentence] Narration is disabled. Removing all asterisked content from output: $output");
+        $output = preg_replace('/\*([^*]+)\*/', '', (string)$output);
+    }
+    
     if (!$isPlayerSpeech && $processAsterisks === true ) {
         error_log("[unmoodSentence] NPC output asterisk filtering is active! $sentence <" . ($GLOBALS['strip_emotes_from_output'] ?? 'N/A') . "> <" . ($GLOBALS['REMOVE_ASTERISKS_FROM_NPC_OUTPUT'] ?? $GLOBALS['REMOVE_ASTERISKS_FROM_OUTPUT'] ?? 'N/A') . ">" );
-
+        
         $output = formatNpcSpeechText($output);
     }
+
     else if (!$isPlayerSpeech) {
         error_log("[unmoodSentence] NPC output asterisk filtering is disabled; keeping asterisk content in speech");
         $output = formatNpcSpeechText($output);
     }
+
+ 
 
     // Non-asterisk-related cleanup always applies
     $output = strtr($output, [
@@ -1215,6 +1224,8 @@ function unmoodSentence($sentence) {
     
     $output = preg_replace('/\s*# ?ACTIONS.*/', '', $output);  // Remove "#ACTIONS ..."
     $output = preg_replace('/#[A-Za-z]+/', '', $output);       // Remove "#<text>"
+
+    $output = preg_replace('/\[mood: [^\]]*\]/i', '', $output);       // Removes "[mood: <text>]"
 
     // Remove quotes
     $output = preg_replace('/"/', '', $output);
@@ -1385,7 +1396,7 @@ function returnLines($lines,$writeOutput=true)
             if (strlen($responseForSubtitles) > _MAX_SUBTITLE_LENGTH) {
                 $responseForSubtitles = substr($responseForSubtitles, 0, _MAX_SUBTITLE_LENGTH);
             }
-        } elseif (!$splitNarration) {
+        } elseif (!$splitNarration && $inlineNarrationEnabled) {
             $responseForSubtitles = formatNpcSubtitleText($sentenceForSubtitles);
             if (strlen($responseForSubtitles) > _MAX_SUBTITLE_LENGTH) {
                 $responseForSubtitles = substr($responseForSubtitles, 0, _MAX_SUBTITLE_LENGTH);
@@ -1756,6 +1767,15 @@ function returnLines($lines,$writeOutput=true)
                     Logger::debug("Transliterated Japanese text to: $responseTextPhonetic");
                 }
                 
+                // We should check here is responseForSubtitles is different from responseTextUnmooded
+                // If so, and no responseTextPhonetic, responseTextPhonetic should be responseTextUnmooded
+                // 
+
+                if (empty($responseTextPhonetic) && $responseForSubtitles !== $responseTextUnmooded) {
+                    $responseTextPhonetic = $responseTextUnmooded;
+                    Logger::debug("No phonetic conversion available; using unmooded text for phonetic output: $responseTextPhonetic");
+                }
+
                 $volumeBoost = 1.0;
 
                 // Output here with volumeBoost appended
@@ -2890,6 +2910,8 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
         "audience" => "",
         "present_actors" => [],
         "chat_shortcut_routed" => false,
+        "player_mood" => "",
+        "player_mood_custom" => "",
     ];
     $rawField = trim((string)$rawField);
     if ($rawField === "") {
@@ -2916,7 +2938,88 @@ function chimDecodePlayerRoutingSnapshotField($rawField)
     $result["chat_shortcut_routed"] =
         ($payload["source"] ?? "") === "plugin_player_routing_v2" &&
         ($payload["chat_shortcut_routed"] ?? false) === true;
+    if (($payload["source"] ?? "") === "plugin_player_routing_v2") {
+        $playerMood = chimNormalizePlayerMood($payload["player_mood"] ?? "");
+        if ($playerMood !== "") {
+            $result["player_mood"] = $playerMood;
+            if ($playerMood === "custom") {
+                $result["player_mood_custom"] = chimNormalizeCustomPlayerMood(
+                    $payload["player_mood_custom"] ?? ""
+                );
+            }
+        }
+    }
     return $result;
+}
+
+// Normalize the supported Prisma mood enum shared by decoding and history formatting.
+function chimNormalizePlayerMood($playerMood)
+{
+    $playerMood = strtolower(trim((string)$playerMood));
+    return in_array($playerMood, [
+        "happy",
+        "sad",
+        "angry",
+        "annoyed",
+        "scared",
+        "surprised",
+        "confused",
+        "suspicious",
+        "playful",
+        "flirty",
+        "custom",
+    ], true)
+        ? $playerMood
+        : "";
+}
+
+// Append the resolved mood phrase to the player line that enters persistent dialogue history.
+function chimAppendPlayerMoodToHistoryLine($playerDialogue, $moodPrompt)
+{
+    $playerDialogue = (string)$playerDialogue;
+    $moodPrompt = trim((string)$moodPrompt);
+    if ($playerDialogue === "" || $moodPrompt === "") {
+        return $playerDialogue;
+    }
+    $playerDialogue = rtrim($playerDialogue);
+    if ($playerDialogue === "") {
+        return "";
+    }
+    return "{$playerDialogue} {$moodPrompt}";
+}
+
+// Keep player playback separate from routing and mood cues added only for persistent history.
+function chimResolvePlayerTtsSourceText($fallbackDialogue)
+{
+    if (array_key_exists("PLAYER_TTS_SOURCE_TEXT", $GLOBALS)) {
+        return (string)$GLOBALS["PLAYER_TTS_SOURCE_TEXT"];
+    }
+    return (string)$fallbackDialogue;
+}
+
+// Keep custom delivery directions short and single-line before prompt insertion.
+function chimNormalizeCustomPlayerMood($customMood)
+{
+    if (!is_string($customMood)) {
+        return "";
+    }
+
+    $customMood = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', (string)$customMood);
+    if (!is_string($customMood)) {
+        return "";
+    }
+    $customMood = preg_replace('/\s+/u', ' ', trim($customMood));
+    if (!is_string($customMood) || $customMood === "") {
+        return "";
+    }
+
+    if (function_exists('mb_substr')) {
+        return mb_substr($customMood, 0, 80, 'UTF-8');
+    }
+    if (preg_match_all('/./us', $customMood, $characters) === false) {
+        return "";
+    }
+    return implode('', array_slice($characters[0], 0, 80));
 }
 
 function chimDecodeAudienceSnapshotField($rawField)
@@ -3192,6 +3295,15 @@ function isCloseExecutionMode()
 {
     $mode = isset($GLOBALS["CHIM_EXECUTION_MODE"]) ? strtoupper(trim((string)$GLOBALS["CHIM_EXECUTION_MODE"])) : "";
     return ($mode === "CLOSE");
+}
+
+// Close permits audience-scoped NPC replies, but still excludes random Narrator interjections.
+function chimExecutionModeAllowsRechatEvent(string $mode, string $eventType): bool
+{
+    $mode = strtoupper(trim($mode));
+    return in_array($eventType, ['rechat', 'narration'], true)
+        && $mode !== 'WHISPER'
+        && !($mode === 'CLOSE' && $eventType === 'narration');
 }
 
 function isPrivateConversationExecutionMode()

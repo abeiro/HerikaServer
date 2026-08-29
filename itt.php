@@ -77,20 +77,29 @@ $db=$GLOBALS["db"] ?? new sql();
 $GLOBALS["db"] = $db;
 $location=DataLastKnownLocation();
 $hints="";
+$actorCandidates = chimVisualActorCandidates($_GET['visual_actor_candidates'] ?? null);
 //$charactersArray=implode(",",DataPosibleInspectTargets(true));
 
-if (isset($_GET["vc"])) {
+if ($actorCandidates) {
+    $hints .= chimBuildVisualActorCandidateHints($actorCandidates);
+} elseif (isset($_GET["vc"])) {
     $sanitize=explode(",",$_GET["vc"]);
     $vc=[];
     foreach ($sanitize as $name) {
-        if (!empty(trim($name)))
-           $vc[]=ucfirst($name); 
+        $name = preg_replace('/\s+/u', ' ', chimVisualContextText($name, 120)) ?? '';
+        if (!empty($name))
+           $vc[]=ucfirst($name);
     }
-    
-    $hints.="Visible characters: ".implode(",",$vc)."\n";
+
+    if ($vc) {
+        $hints.="Possible nearby character candidates (not proof they are visible): ".implode(",",$vc)."\n";
+    }
 }
-if (isset($_GET["fg"])) {
-    $hints.="Foreground characters:{$_GET["fg"]}.\n";
+if (!$actorCandidates && isset($_GET["fg"])) {
+    $foreground = preg_replace('/\s+/u', ' ', chimVisualContextText($_GET['fg'], 120)) ?? '';
+    if ($foreground !== '') {
+        $hints.="Crosshair target candidate (name only if the image supports it): {$foreground}.\n";
+    }
 }
 
 $hints.="Location: $location";
@@ -135,6 +144,7 @@ if (@rename($finalNameJpeg, $galleryPath)) {
         'metadata' => [
             'visible_characters' => $vc ?? [],
             'foreground' => chimVisualContextText($_GET['fg'] ?? '', 300),
+            'actor_candidates' => $actorCandidates,
         ],
     ]);
 }

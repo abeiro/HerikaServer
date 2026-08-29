@@ -15,17 +15,25 @@ $file       = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data
 $enginePath = __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
 
 $enginePath = dirname((__FILE__)) . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR;
-require_once $enginePath . "conf" . DIRECTORY_SEPARATOR . "conf.php";
+$GLOBALS["ENGINE_PATH"] = $enginePath;
+require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "runtime_bootstrap.php";
+chimRuntimeBootstrap($enginePath, [
+    'load_general_settings' => true,
+    'load_player_name' => true,
+    'load_narrator' => true,
+]);
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
-require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "{$GLOBALS["DBDRIVER"]}.class.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "logger.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "utils_game_timestamp.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "rolemaster_helpers.php";
-$GLOBALS["ENGINE_PATH"] = $enginePath;
+$db = $GLOBALS["db"];
 
-$db = new sql();
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_MEDIUMTERM')) {
+    echo "Background & Memory Tasks are disabled globally." . PHP_EOL;
+    exit(0);
+}
 
 require_once $enginePath . "lib/core/npc_master.class.php";
 require_once $enginePath . "lib/core/api_badge.class.php";
@@ -40,7 +48,6 @@ $currentConnectorData = $connector->getById($GLOBALS["CORE_CONNECTOR_MEDIUMTERM"
 
 $connector->setOldGlobals($currentConnectorData);
 
-$CLEAN_CONTEXT_FOCUS_CHAT = false;
 $COMMAND_PROMPT           = '';
 
 $res  = $db->fetchAll("select max(gamets) as last_gamets from eventlog");

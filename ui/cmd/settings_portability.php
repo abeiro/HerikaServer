@@ -45,6 +45,7 @@ function chimPortableGlobalFields(): array
 {
     return [
         'PROMPT_HEAD' => 'string',
+        'PROMPT_HEAD_MARKDOWN_ENABLED' => 'boolean',
         'EMOTEMOODS' => 'string',
         'RECHAT_MODE' => 'string',
         'ENFORCE_STRICT_RECHAT_RESPONSE' => 'boolean',
@@ -88,6 +89,12 @@ function chimPortableGlobalFields(): array
         'TRANSLATION@DeepL@target_language' => 'string',
         'TRANSLATION@DeepL@player_source_language' => 'string',
         'TRANSLATION@DeepL@player_target_language' => 'string',
+        'PLAYER_RESPEECH' => 'boolean',
+        'CORE_CONNECTOR_SUMMARY_ENABLED' => 'boolean',
+        'CORE_CONNECTOR_MEDIUMTERM_ENABLED' => 'boolean',
+        'CORE_CONNECTOR_PROFILES_ENABLED' => 'boolean',
+        'CORE_CONNECTOR_DIRECTOR_ENABLED' => 'boolean',
+        'CORE_CONNECTOR_BGL_ENABLED' => 'boolean',
         'RELATIONSHIP_SYSTEM_ENABLED' => 'boolean',
         'SCENE_CLASSIFIER_ENABLED' => 'boolean',
         'OGHMA_CUSTOM' => 'boolean',
@@ -155,6 +162,19 @@ function chimPortableScopeInfo(string $scope): array
         'global' => ['package_type' => 'chim_global_settings', 'display_name' => 'Global Settings'],
     ];
     return $scopes[$scope] ?? [];
+}
+
+// Reduces an untrusted name to a lowercase, filename-safe slug for use in Content-Disposition.
+function chimPortableFilenameSlug($value): string
+{
+    if (!is_string($value)) {
+        return '';
+    }
+    $slug = trim(strval(preg_replace('/[^a-z0-9]+/', '_', strtolower($value))), '_');
+    if (strlen($slug) > 48) {
+        $slug = rtrim(substr($slug, 0, 48), '_');
+    }
+    return $slug;
 }
 
 function chimPortableServerVersion(string $enginePath): string
@@ -355,7 +375,10 @@ function chimPortableDownload(string $scope, string $enginePath): void
         foreach (chimPortableGlobalFields() as $name => $type) {
             $export['settings'][$name] = chimPortableTypedGlobalValue($name, $type);
         }
-        $filename = 'chim_global_settings.json';
+        $presetSlug = chimPortableFilenameSlug($_GET['preset'] ?? '');
+        $filename = $presetSlug !== ''
+            ? 'chim_global_settings_' . $presetSlug . '.json'
+            : 'chim_global_settings.json';
     }
 
     header('Content-Type: application/json; charset=utf-8');

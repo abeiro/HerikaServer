@@ -641,18 +641,11 @@ PROMPT;
                 return false;
             }
 
-            $incomingRelationships = RelationshipManager::normalizeRelationshipMap($relationships);
-            if ($replaceExisting) {
-                $extended['relationships'] = $incomingRelationships;
-            } else {
-                $existingRelationships = RelationshipManager::normalizeRelationshipMap($extended['relationships'] ?? []);
-                foreach ($incomingRelationships as $target => $relationship) {
-                    if (!isset($existingRelationships[$target])) {
-                        $existingRelationships[$target] = $relationship;
-                    }
-                }
-                $extended['relationships'] = $existingRelationships;
-            }
+            $extended['relationships'] = RelationshipManager::mergeAiRelationshipMap(
+                $extended['relationships'] ?? [],
+                $relationships,
+                $replaceExisting
+            );
             $extended['relationships_analyzed'] = date('Y-m-d H:i:s');
             $extended['relationships_model'] = $this->modelName;
 

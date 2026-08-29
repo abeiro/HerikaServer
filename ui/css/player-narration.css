@@ -1,0 +1,229 @@
+/* Shared compact presentation for the Player and Narration settings pages. */
+main.player-narration-settings {
+    --pn-accent: #f27c11;
+    --pn-border: #404040;
+    --pn-border-strong: #505050;
+    --pn-surface: #232323;
+    --pn-surface-raised: #292929;
+    --pn-input: #181818;
+    --pn-text: #e8e8e8;
+    --pn-muted: #aaa;
+}
+
+main.player-narration-settings.is-embedded {
+    padding: 8px 14px 18px;
+}
+
+main.player-narration-settings .page-container {
+    width: 100%;
+    max-width: 1400px;
+}
+
+main.player-narration-settings .page-header.chim-page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 14px;
+    margin: 0 0 10px;
+    padding: 8px 14px;
+    border: 1px solid var(--pn-border);
+    border-radius: 6px;
+    background: var(--pn-surface);
+    background-image: none;
+    box-shadow: none;
+    text-align: left;
+}
+
+main.player-narration-settings .chim-page-head-title {
+    flex: 0 0 auto;
+    margin: 0;
+    color: var(--pn-accent);
+    font-family: 'MagicCards', serif;
+    font-size: 1.3rem;
+    line-height: 1.25;
+    letter-spacing: 0.5px;
+    text-shadow: none;
+    word-spacing: 6px;
+}
+
+main.player-narration-settings .chim-page-head-note {
+    flex: 1 1 300px;
+    min-width: 0;
+    color: var(--pn-muted);
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+main.player-narration-settings .chim-page-head-note p {
+    margin: 0;
+    color: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+main.player-narration-settings .settings-page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 12px;
+}
+
+main.player-narration-settings .settings-page-actions .btn-save,
+main.player-narration-settings .settings-page-actions .btn-portable,
+main.player-narration-settings .settings-page-actions .btn-narrator-transfer {
+    min-height: 34px;
+    margin: 0;
+    padding: 6px 12px;
+    border-radius: 5px;
+    box-shadow: none;
+    font-size: 0.86rem;
+    line-height: 1.2;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+main.player-narration-settings .content-grid {
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+main.player-narration-settings .content-section,
+main.player-narration-settings .full-width-section,
+main.player-narration-settings .dynamic-profile-card {
+    padding: 14px;
+    border: 1px solid var(--pn-border);
+    border-radius: 6px;
+    background: var(--pn-surface);
+    background-image: none;
+    box-shadow: none;
+}
+
+main.player-narration-settings .content-section:hover,
+main.player-narration-settings .dynamic-profile-card:hover {
+    transform: none;
+    border-color: var(--pn-border-strong);
+    box-shadow: none;
+}
+
+main.player-narration-settings .content-section h2,
+main.player-narration-settings .full-width-section h2,
+main.player-narration-settings .dynamic-profile-card h3 {
+    margin: 0 0 10px;
+    padding: 0 0 7px;
+    border-bottom: 1px solid #3b352e;
+    color: var(--pn-text);
+    font-size: 1.05rem;
+    line-height: 1.25;
+    text-shadow: none;
+}
+
+main.player-narration-settings .content-section > label:not(.toggle-row) {
+    margin-top: 10px;
+    margin-bottom: 4px;
+    color: var(--pn-accent);
+    font-size: 0.82rem;
+}
+
+main.player-narration-settings .content-section > label:not(.toggle-row):first-of-type {
+    margin-top: 0;
+}
+
+main.player-narration-settings .content-section input[type='text'],
+main.player-narration-settings .content-section input[type='number'],
+main.player-narration-settings .content-section select,
+main.player-narration-settings .content-section textarea {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid var(--pn-border);
+    border-radius: 5px;
+    background: var(--pn-input);
+    color: var(--pn-text);
+    font-size: 0.88rem;
+    line-height: 1.35;
+}
+
+main.player-narration-settings .content-section textarea {
+    min-height: 82px;
+}
+
+main.player-narration-settings .content-section input[type='text']:focus,
+main.player-narration-settings .content-section input[type='number']:focus,
+main.player-narration-settings .content-section select:focus,
+main.player-narration-settings .content-section textarea:focus {
+    border-color: #4a8ab6;
+    outline: 2px solid rgba(74, 138, 182, 0.2);
+    outline-offset: 1px;
+    box-shadow: none;
+}
+
+main.player-narration-settings .hint {
+    margin-top: 4px;
+    color: var(--pn-muted);
+    font-size: 0.76rem;
+    line-height: 1.35;
+}
+
+main.player-narration-settings .toggle-row {
+    min-height: 38px;
+    margin-top: 8px;
+    padding: 7px 10px;
+    border: 1px solid #383838;
+    border-radius: 5px;
+    background: #202020;
+}
+
+main.player-narration-settings .toggle-row:hover {
+    border-color: var(--pn-border-strong);
+    background: var(--pn-surface-raised);
+    transform: none;
+}
+
+main.player-narration-settings .toggle-row + .hint {
+    margin-top: 3px;
+}
+
+main.player-narration-settings .status-field,
+main.player-narration-settings .player-provider-panel,
+main.player-narration-settings .connector-summary,
+main.player-narration-settings .advanced-prompts-wrap {
+    border-radius: 5px;
+    box-shadow: none;
+}
+
+@media (max-width: 760px) {
+    main.player-narration-settings,
+    main.player-narration-settings.is-embedded {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    main.player-narration-settings .page-header.chim-page-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    main.player-narration-settings .chim-page-head-note {
+        flex-basis: auto;
+        width: 100%;
+    }
+
+    main.player-narration-settings .content-grid,
+    main.player-narration-settings .content-grid.player-overview-grid,
+    main.player-narration-settings .content-grid.two-col {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    main.player-narration-settings .settings-page-actions > * {
+        flex: 1 1 auto;
+        justify-content: center;
+        text-align: center;
+    }
+
+    main.player-narration-settings .content-section,
+    main.player-narration-settings .full-width-section,
+    main.player-narration-settings .dynamic-profile-card {
+        padding: 11px;
+    }
+}

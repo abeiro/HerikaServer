@@ -304,6 +304,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
 
     $action = (string)($_POST['qs_action'] ?? '');
 
+    if ($action === 'local_llm_test_draft') {
+        require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "local_llm_setup.php");
+        echo json_encode([
+            'ok' => true,
+            'result' => herikaLocalLlmTestDraft($_POST),
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     if ($action === 'api_badge_quicksave') {
         $openrouter = isset($_POST['openrouter_api_key']) ? (string)$_POST['openrouter_api_key'] : '';
         $deepgram = isset($_POST['deepgram_api_key']) ? (string)$_POST['deepgram_api_key'] : '';
@@ -325,6 +334,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
 
     if ($action === 'profile_quicksave_metadata') {
         require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "settings.php");
+        require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "settings_presets.php");
+        require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "local_llm_setup.php");
         $truthy = function($v) {
             if ($v === null) return null;
             $s = strtolower(trim((string)$v));
@@ -336,115 +347,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['qs_action'])) {
         if ($pid <= 0) { echo json_encode(['ok'=>false,'error'=>'No profile found']); exit; }
         $oghma  = $truthy($_POST['oghma_infinium'] ?? null);
         $player2Force = $truthy($_POST['player2_force_all_llm'] ?? null);
-        $localLlmPreset = $truthy($_POST['local_llm_preset'] ?? null);
-        if ($oghma !== null && !chimSetGeneralSetting('OGHMA_INFINIUM', $oghma, chimGetSchemaDescription('OGHMA_INFINIUM'))) {
-            echo json_encode(['ok'=>false,'error'=>'Unable to save Oghma Infinium']);
+        $settingsPresetId = trim((string)($_POST['settings_preset_id'] ?? 'builtin:default'));
+        $player2Effective = $player2Force !== null ? $player2Force : LLMRandomizer::isPlayer2ForceEnabled();
+        $localLlmRequested = $settingsPresetId === 'builtin:local_llm' && !$player2Effective;
+        $localLlmResult = null;
+        if ($localLlmRequested) {
+            try {
+                herikaLocalLlmNormalizeSetup($_POST);
+            } catch (InvalidArgumentException $validationError) {
+                echo json_encode(['ok' => false, 'error' => $validationError->getMessage()]);
+                exit;
+            }
+        }
+
+        $transactionStarted = false;
+        try {
+            if ($GLOBALS['db']->execQuery('BEGIN') === false) {
+                throw new RuntimeException('Unable to start the Quickstart update.');
+            }
+            $transactionStarted = true;
+            $settingsPresetResult = chimSettingsPresetApply($settingsPresetId, false);
+
+            if ($oghma !== null && !chimSetGeneralSetting('OGHMA_INFINIUM', $oghma, chimGetSchemaDescription('OGHMA_INFINIUM'))) {
+                throw new RuntimeException('Unable to save Oghma Infinium.');
+            }
+
+            $player2ConnectorId = null;
+            if ($player2Force !== null) {
+                $player2ConnectorId = LLMRandomizer::setPlayer2ForceEnabled($player2Force);
+            }
+            if ($localLlmRequested) {
+                $localLlmResult = herikaLocalLlmApplySetup($_POST);
+            }
+
+            if ($GLOBALS['db']->execQuery('COMMIT') === false) {
+                throw new RuntimeException('Unable to finish the Quickstart update.');
+            }
+            $transactionStarted = false;
+            chimLoadGeneralSettingsIntoGlobals();
+        } catch (Throwable $saveError) {
+            if ($transactionStarted) {
+                $GLOBALS['db']->execQuery('ROLLBACK');
+            }
+            error_log('[Quickstart] Profile save failed: ' . $saveError->getMessage());
+            $clientMessage = $saveError instanceof InvalidArgumentException
+                ? $saveError->getMessage()
+                : 'Unable to save the selected profile settings.';
+            echo json_encode(['ok' => false, 'error' => $clientMessage]);
             exit;
-        }
-
-        $player2ConnectorId = null;
-        if ($player2Force !== null) {
-            $player2ConnectorId = LLMRandomizer::setPlayer2ForceEnabled($player2Force ? true : false);
-        }
-
-        $localLlmPresetApplied = false;
-        if ($localLlmPreset === true) {
-            $localLlmContextOptions = chimNormalizePromptContextOptions([
-                'enabled_sections' => [
-                    'roleplay_instructions',
-                    'world',
-                    'knowledge',
-                    'available_actions_list',
-                    'nearby_actors',
-                    'nearby_items',
-                    'adventuring_party',
-                    'scene_notes',
-                    'paralinguistic_tags',
-                ],
-                'enabled_character_subsections' => [
-                    'basic_summary',
-                    'groups',
-                    'personality',
-                    'relationships',
-                    'occupation',
-                    'skills',
-                    'speech_style',
-                    'goals',
-                    'middle_term_memory',
-                    'group',
-                    'storyline_starring',
-                    'quest_topics',
-                ],
-                'enabled_appearance_subsections' => [
-                    'appearance',
-                    'equipment',
-                    'inventory',
-                    'current_activity',
-                    'current_condition',
-                    'reanimation_status',
-                ],
-                'enabled_general_subsections' => [
-                    'current_plans',
-                ],
-                'enabled_nearby_actor_subsections' => [
-                    'equipment',
-                    'current_activity',
-                ],
-                'enabled_nearby_item_subsections' => [
-                    'group_duplicates',
-                ],
-            ]);
-            $localLlmContextJson = json_encode($localLlmContextOptions, JSON_UNESCAPED_SLASHES);
-            if ($localLlmContextJson === false) {
-                echo json_encode(['ok'=>false,'error'=>'Unable to prepare the Local LLM context preset']);
-                exit;
-            }
-            $localLlmContextValue = $GLOBALS['db']->escapeLiteral($localLlmContextJson);
-            $localLlmContextDescription = $GLOBALS['db']->escapeLiteral(chimGetSchemaDescription('PROMPT_CONTEXT_OPTIONS'));
-            $localLlmPresetSaved = $GLOBALS['db']->execQuery(
-                "WITH updated_profiles AS (
-                    UPDATE core_profiles
-                    SET metadata = jsonb_set(
-                        jsonb_set(
-                            jsonb_set(
-                                jsonb_set(COALESCE(metadata, '{}'::jsonb), '{CONTEXT_HISTORY}', '\"40\"'::jsonb, true),
-                                '{CONTEXT_HISTORY_DIARY}', '\"40\"'::jsonb, true
-                            ),
-                            '{CONTEXT_HISTORY_DYNAMIC_PROFILE}', '\"30\"'::jsonb, true
-                        ),
-                        '{MAX_WORDS_LIMIT}', '\"60\"'::jsonb, true
-                    )
-                    RETURNING id
-                 ),
-                 updated_context_options AS (
-                    INSERT INTO public.general_settings (id, value, description, updated_at)
-                    VALUES ('PROMPT_CONTEXT_OPTIONS', {$localLlmContextValue}, {$localLlmContextDescription}, CURRENT_TIMESTAMP)
-                    ON CONFLICT (id) DO UPDATE SET
-                        value = EXCLUDED.value,
-                        description = EXCLUDED.description,
-                        updated_at = CURRENT_TIMESTAMP
-                    RETURNING id
-                 )
-                 INSERT INTO conf_opts (id, value) VALUES
-                    ('CONTEXT_HISTORY', '40'),
-                    ('CONTEXT_HISTORY_DIARY', '40'),
-                    ('CONTEXT_HISTORY_DYNAMIC_PROFILE', '30'),
-                    ('MAX_WORDS_LIMIT', '60'),
-                    ('chim_context_mode', '1')
-                 ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value"
-            );
-            if ($localLlmPresetSaved === false) {
-                echo json_encode(['ok'=>false,'error'=>'Unable to apply the Local LLM preset']);
-                exit;
-            }
-            $localLlmPresetApplied = true;
         }
 
         echo json_encode([
             'ok'=>true,
             'id'=>$pid,
             'player2_connector_id' => $player2ConnectorId,
-            'local_llm_preset_applied' => $localLlmPresetApplied,
+            'settings_preset' => $settingsPresetResult,
+            'local_llm' => $localLlmResult,
         ]);
         exit;
     }
@@ -535,6 +493,8 @@ chimRuntimeBootstrapIfNeeded($rootPath, [
     'load_player_name' => true,
     'load_narrator' => true,
 ]);
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "settings_presets.php");
+require_once($rootPath . "lib" . DIRECTORY_SEPARATOR . "core" . DIRECTORY_SEPARATOR . "local_llm_setup.php");
 
 include(__DIR__.DIRECTORY_SEPARATOR."tmpl/head.html");
 
@@ -627,6 +587,8 @@ $llmNotePlayer2Style = $player2ForceAllLlm ? '' : ' style="display:none;"';
 $llmCardsBaseStyle = 'display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:8px;';
 $llmCardsDefaultStyle = $llmCardsBaseStyle . ($player2ForceAllLlm ? ' display:none;' : '');
 $llmCardsPlayer2Style = $llmCardsBaseStyle . ($player2ForceAllLlm ? '' : ' display:none;');
+// The Local LLM recap starts hidden; the default Setup profile is selected on load.
+$llmCardsLocalStyle = $llmCardsBaseStyle . ' display:none;';
 $generalLlmConnectorSummary = herikaQuickstartGetGeneralLlmConnectorSummary($db);
 $generalLlmConnectorListHtml = '';
 if (!empty($generalLlmConnectorSummary)) {
@@ -636,6 +598,56 @@ if (!empty($generalLlmConnectorSummary)) {
     }
     $generalLlmConnectorListHtml .= '</ul>';
 }
+
+// Quickstart offers the two built-in profiles as a compact choice.
+$quickstartPresetDefaultId = 'builtin:default';
+$quickstartLocalLlmPresetId = 'builtin:local_llm';
+$quickstartPresetDescriptions = [
+    'builtin:default' => 'The Recommended CHIM experience.',
+    'builtin:local_llm' => 'Minimal mode for a local model around 13B sharing your GPU with Skyrim. NPCs still talk and act, but prompts and replies are shorter and most optional background AI features are turned off.',
+];
+$quickstartPresetSelectedDescription = (string)($quickstartPresetDescriptions[$quickstartPresetDefaultId] ?? '');
+$quickstartPresetDescriptionsJson = json_encode($quickstartPresetDescriptions, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+if ($quickstartPresetDescriptionsJson === false) {
+    $quickstartPresetDescriptionsJson = '{}';
+}
+
+// Reuse a previous Quickstart-managed connector without exposing its saved API key.
+$quickstartLocalLlmSetup = herikaLocalLlmCurrentSetup();
+$quickstartWslIp = trim(strval($quickstartLocalLlmSetup['wsl_ip'] ?? ''));
+$quickstartHostIp = trim(strval($quickstartLocalLlmSetup['host_ip'] ?? ''));
+$quickstartLocalLlmServerType = strval($quickstartLocalLlmSetup['server_type'] ?? 'lm_studio');
+$quickstartLocalLlmDefaultUrl = trim(strval($quickstartLocalLlmSetup['url'] ?? ''));
+if ($quickstartLocalLlmDefaultUrl === '') {
+    $quickstartLocalLlmDefaultUrl = herikaLocalLlmDefaultEndpoint(
+        'lm_studio',
+        $quickstartHostIp !== '' ? $quickstartHostIp : '127.0.0.1'
+    );
+}
+$quickstartLocalLlmModel = trim(strval($quickstartLocalLlmSetup['model'] ?? ''));
+$quickstartLocalLlmScope = strval($quickstartLocalLlmSetup['scope'] ?? 'conversations');
+$quickstartLocalLlmTimeout = max(5, min(120, intval($quickstartLocalLlmSetup['timeout'] ?? 30)));
+$quickstartLocalLlmDisableStreamingChecked = !empty($quickstartLocalLlmSetup['disable_streaming']) ? ' checked' : '';
+$quickstartLocalLlmApiKeyPlaceholder = !empty($quickstartLocalLlmSetup['has_api_key'])
+    ? 'Saved key will be kept unless replaced'
+    : 'Optional API key';
+$quickstartLocalLlmServerOptions = '';
+foreach (herikaLocalLlmServerCatalog() as $serverType => $serverDefinition) {
+    $quickstartLocalLlmServerOptions .= '<option value="' . htmlspecialchars($serverType) . '"'
+        . ($serverType === $quickstartLocalLlmServerType ? ' selected' : '') . '>'
+        . htmlspecialchars($serverDefinition['label']) . '</option>';
+}
+// "all" is the only opt-in value; anything else falls back to the dialogue-only default.
+$quickstartLocalLlmScopeAllChecked = ($quickstartLocalLlmScope === 'all') ? ' checked' : '';
+$quickstartLocalLlmScopeConversationsChecked = ($quickstartLocalLlmScope === 'all') ? '' : ' checked';
+$quickstartHostIpDisabled = ($quickstartHostIp === '') ? ' disabled' : '';
+$quickstartHostIpTitle = ($quickstartHostIp === '')
+    ? 'Network/HOST_IP is not configured yet.'
+    : ('Use ' . $quickstartHostIp);
+$quickstartWslIpDisabled = ($quickstartWslIp === '') ? ' disabled' : '';
+$quickstartWslIpTitle = ($quickstartWslIp === '')
+    ? 'Network/WSL_IP is not configured yet.'
+    : ('Use ' . $quickstartWslIp);
 
 echo '<section class="qs-section" id="qs_openrouter_section"' . ($player2ForceAllLlm ? ' style="display:none;"' : '') . '>
         <h2 class="qs-section-title">OpenRouter</h2>
@@ -648,6 +660,118 @@ echo '<section class="qs-section" id="qs_openrouter_section"' . ($player2ForceAl
                 </div>
             </div>
             <small class="form-text">Paste your OpenRouter API key. <a href="https://openrouter.ai/keys" target="_blank">Create key</a></small>
+        </div>
+      </section>';
+
+// Setup lives in its own section, as a sibling of OpenRouter, because Player2 hides
+// the OpenRouter section entirely and the profile picker must stay reachable in that mode.
+echo '<section class="qs-section qs-profile-section" id="qs_settings_preset_section">
+        <h2 class="qs-section-title">Setup</h2>
+        <div class="form-group qs-field qs-settings-preset">
+            <fieldset class="qs-preset-fieldset" id="qs_settings_preset" aria-describedby="qs_settings_preset_desc">
+                <legend class="qs-preset-label">Profile</legend>
+                <div class="qs-preset-options">
+                    <label class="qs-preset-option">
+                        <input class="qs-preset-input" type="radio" name="qs_settings_preset" value="' . htmlspecialchars($quickstartPresetDefaultId) . '" checked>
+                        <span class="qs-preset-card">
+                            <span class="qs-preset-mark" aria-hidden="true"></span>
+                            <span class="qs-preset-title">Default</span>
+                        </span>
+                    </label>
+                    <label class="qs-preset-option">
+                        <input class="qs-preset-input" type="radio" name="qs_settings_preset" value="' . htmlspecialchars($quickstartLocalLlmPresetId) . '">
+                        <span class="qs-preset-card">
+                            <span class="qs-preset-mark" aria-hidden="true"></span>
+                            <span class="qs-preset-title">Local LLM</span>
+                        </span>
+                    </label>
+                </div>
+            </fieldset>
+            <p class="qs-preset-desc" id="qs_settings_preset_desc" role="status" aria-live="polite">' . htmlspecialchars($quickstartPresetSelectedDescription) . '</p>
+        </div>
+        <div class="qs-local-llm" id="qs_local_llm_panel" hidden>
+            <div class="qs-local-llm-head">
+                <h3 class="qs-local-llm-title">Local LLM Setup</h3>
+            </div>
+            <p class="qs-local-llm-note qs-local-llm-note-warn" id="qs_local_llm_player2_warning" role="status" aria-live="polite" hidden>Player2 is on. Player2 handles every LLM call, so these Local LLM fields are turned off and will not be used. Your values are kept if you switch Player2 back off.</p>
+            <div class="qs-local-llm-grid">
+                <div class="qs-local-llm-field">
+                    <label for="qs_local_llm_server_type">Server type</label>
+                    <div class="qs-select-wrap">
+                        <select class="form-control" id="qs_local_llm_server_type" name="qs_local_llm_server_type">
+                            ' . $quickstartLocalLlmServerOptions . '
+                        </select>
+                    </div>
+                </div>
+                <div class="qs-local-llm-field">
+                    <label for="qs_local_llm_model">Model name</label>
+                    <input type="text" class="form-control" id="qs_local_llm_model" name="qs_local_llm_model" value="' . htmlspecialchars($quickstartLocalLlmModel) . '" placeholder="llama-3.1-8b-instruct" autocomplete="off" spellcheck="false" required aria-describedby="qs_local_llm_model_help">
+                    <small class="form-text" id="qs_local_llm_model_help">Enter the exact model id your server reports.</small>
+                </div>
+                <div class="qs-local-llm-field qs-local-llm-field-wide">
+                    <label for="qs_local_llm_url">Server URL</label>
+                    <input type="url" class="form-control" id="qs_local_llm_url" name="qs_local_llm_url" value="' . htmlspecialchars($quickstartLocalLlmDefaultUrl) . '" placeholder="http://192.168.1.10:1234/v1/chat/completions" autocomplete="off" spellcheck="false" inputmode="url" aria-describedby="qs_local_llm_url_help qs_local_llm_loopback_warning">
+                    <div class="qs-local-llm-actions">
+                        <button type="button" class="qs-mini-btn" id="qs_local_llm_use_host_ip" data-ip="' . htmlspecialchars($quickstartHostIp) . '" title="' . htmlspecialchars($quickstartHostIpTitle) . '"' . $quickstartHostIpDisabled . '>Use Windows host IP</button>
+                        <button type="button" class="qs-mini-btn" id="qs_local_llm_use_wsl_ip" data-ip="' . htmlspecialchars($quickstartWslIp) . '" title="' . htmlspecialchars($quickstartWslIpTitle) . '"' . $quickstartWslIpDisabled . '>Use WSL IP</button>
+                    </div>
+                    <small class="form-text" id="qs_local_llm_url_help">OpenAI compatible chat completions endpoint. Defaults: LM Studio 1234, Ollama 11434, llama.cpp 8080, KoboldCPP 5001, path /v1/chat/completions.</small>
+                    <p class="qs-local-llm-note qs-local-llm-note-warn" id="qs_local_llm_loopback_warning" role="status" aria-live="polite" hidden>Warning: this URL points at the WSL container itself. HerikaServer runs in WSL, so localhost and 127.0.0.1 will not reach a server running on Windows. Use the Windows host IP instead.</p>
+                </div>
+                <fieldset class="qs-local-llm-field-wide qs-scope-fieldset">
+                    <legend class="qs-scope-legend">Where should CHIM use this model?</legend>
+                    <div class="qs-scope-cards">
+                        <label class="qs-scope-option">
+                            <input class="qs-scope-input" type="radio" id="qs_local_llm_scope_conversations" name="qs_local_llm_scope" value="conversations"' . $quickstartLocalLlmScopeConversationsChecked . ' aria-labelledby="qs_local_llm_scope_conversations_title qs_local_llm_scope_conversations_badge" aria-describedby="qs_local_llm_scope_conversations_desc">
+                            <span class="qs-scope-card">
+                                <span class="qs-scope-head">
+                                    <span class="qs-scope-mark" aria-hidden="true"></span>
+                                    <span class="qs-scope-title" id="qs_local_llm_scope_conversations_title">Dialogue only</span>
+                                    <span class="qs-scope-badge" id="qs_local_llm_scope_conversations_badge">Recommended</span>
+                                </span>
+                                <span class="qs-scope-desc" id="qs_local_llm_scope_conversations_desc">Use this local model for in-game dialogue. Other AI tasks continue using OpenRouter.</span>
+                            </span>
+                        </label>
+                        <label class="qs-scope-option">
+                            <input class="qs-scope-input" type="radio" id="qs_local_llm_scope_all" name="qs_local_llm_scope" value="all"' . $quickstartLocalLlmScopeAllChecked . ' aria-labelledby="qs_local_llm_scope_all_title" aria-describedby="qs_local_llm_scope_all_desc">
+                            <span class="qs-scope-card">
+                                <span class="qs-scope-head">
+                                    <span class="qs-scope-mark" aria-hidden="true"></span>
+                                    <span class="qs-scope-title" id="qs_local_llm_scope_all_title">Dialogue + background tasks</span>
+                                </span>
+                                <span class="qs-scope-desc" id="qs_local_llm_scope_all_desc">Also use it for memories, summaries, relationships, profiles, scene handling, and other supporting tasks.</span>
+                            </span>
+                        </label>
+                    </div>
+                </fieldset>
+            </div>
+            <details class="qs-local-llm-advanced">
+                <summary>Advanced</summary>
+                <div class="qs-local-llm-grid">
+                    <div class="qs-local-llm-field">
+                        <label for="qs_local_llm_api_key">API key</label>
+                        <input type="password" class="form-control" id="qs_local_llm_api_key" name="qs_local_llm_api_key" value="" placeholder="' . htmlspecialchars($quickstartLocalLlmApiKeyPlaceholder) . '" autocomplete="new-password" aria-describedby="qs_local_llm_api_key_help">
+                        <small class="form-text" id="qs_local_llm_api_key_help">Optional. Most local servers ignore it, but some require any non empty value.</small>
+                    </div>
+                    <div class="qs-local-llm-field">
+                        <label for="qs_local_llm_timeout">Timeout (seconds)</label>
+                        <input type="number" class="form-control" id="qs_local_llm_timeout" name="qs_local_llm_timeout" value="' . $quickstartLocalLlmTimeout . '" min="5" max="120" step="1" inputmode="numeric" aria-describedby="qs_local_llm_timeout_help">
+                        <small class="form-text" id="qs_local_llm_timeout_help">How long to wait for a reply before giving up. Default 30.</small>
+                    </div>
+                    <div class="qs-local-llm-field qs-local-llm-field-wide">
+                        <div class="form-check qs-local-llm-check">
+                            <input class="form-check-input" type="checkbox" id="qs_local_llm_disable_streaming" name="qs_local_llm_disable_streaming" value="1"' . $quickstartLocalLlmDisableStreamingChecked . ' aria-describedby="qs_local_llm_disable_streaming_help">
+                            <label class="form-check-label" for="qs_local_llm_disable_streaming">Disable streaming</label>
+                        </div>
+                        <small class="form-text" id="qs_local_llm_disable_streaming_help">Off by default. Turn on only if your server returns broken or empty streamed replies.</small>
+                    </div>
+                </div>
+            </details>
+            <div class="qs-local-llm-test">
+                <button type="button" class="btn-primary qs-mini-btn qs-test-btn" id="qs_test_local_llm" aria-describedby="qs_local_llm_status">Test connection</button>
+                <div class="qs-status qs-local-llm-status" id="qs_local_llm_status" role="status" aria-live="polite" hidden></div>
+            </div>
+            <pre class="qs-local-llm-preview" id="qs_local_llm_preview" hidden></pre>
         </div>
       </section>';
 
@@ -886,6 +1010,7 @@ echo '<section class="qs-section">
                 <h2 class="qs-section-title">LLM Connectors Note</h2>
                 <p class="form-text" id="qs_llm_connectors_note_default"' . $llmNoteDefaultStyle . '>Quickstart gives you four hot-swappable LLMs for in-game use.</p>
                 <p class="form-text" id="qs_llm_connectors_note_player2"' . $llmNotePlayer2Style . '>Player2 mode is active. Standard, Fast, Powerful, and Experimental all use the local Player2 connector.</p>
+                <p class="form-text" id="qs_llm_connectors_note_local" style="display:none;">Local LLM profile selected. The recap below reflects the Local LLM Setup fields in the Setup section and is applied on Save and Continue.</p>
                 <div id="qs_llm_connectors_cards_default" style="' . $llmCardsDefaultStyle . '">
                     <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
                         <div style="font-size:14px; color:#cfd9ea;">&#x1F579;&#xFE0F; <b>Standard</b></div>
@@ -930,24 +1055,34 @@ echo '<section class="qs-section">
                         <div style="margin-top:4px; color:#bbb; font-size:12px;">Same local Player2 connector as Standard</div>
                     </div>
                 </div>
-                <div class="qs-general-connector-wrap">
-                    <div class="qs-general-connector-title">Other Connectors Used:</div>
-                    ' . ($generalLlmConnectorListHtml !== '' ? $generalLlmConnectorListHtml : '<div class="qs-general-connector-empty">No additional general-settings connectors are configured.</div>') . '
-                </div>
-                <div class="form-group qs-field qs-local-llm-preset">
-                    <div class="qs-toggle-block">
-                        <div class="qs-toggle-header">
-                            <label class="qs-toggle-title" for="qs_local_llm_preset">Optimize for Local LLMs</label>
-                            <div class="qs-toggle-control">
-                                <input class="form-check-input qs-switch-input" type="checkbox" id="qs_local_llm_preset" value="1">
-                                <label class="form-check-label qs-switch-label" for="qs_local_llm_preset">
-                                    <span class="qs-switch-track"></span>
-                                    <span class="qs-switch-copy" data-off="Off" data-on="On"></span>
-                                </label>
-                            </div>
-                        </div>
+                <div id="qs_llm_connectors_cards_local" style="' . $llmCardsLocalStyle . '">
+                    <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F579;&#xFE0F; <b>Standard</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;" data-local-slot="standard">Local model (name not set)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;" data-local-detail="standard">Server URL not set</div>
                     </div>
-                    <small class="form-text">Recommended for local small and medium models. Applies a compact 40-event context, shorter 60-word responses, enables Compact Chat, and trims high-cost secondary context while preserving roleplay, actions, memory, inventory, and Oghma knowledge. New profiles inherit the smaller defaults.</small>
+                    <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F3C3;&#x200D;&#x2642;&#xFE0F; <b>Fast</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;" data-local-slot="fast">Local model (name not set)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;" data-local-detail="fast">Server URL not set</div>
+                    </div>
+                    <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F4AA; <b>Powerful</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;" data-local-slot="powerful">Local model (name not set)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;" data-local-detail="powerful">Server URL not set</div>
+                    </div>
+                    <div style="background:#1f1f1f; border:1px solid #3b3b3b; border-radius:8px; padding:12px;">
+                        <div style="font-size:14px; color:#cfd9ea;">&#x1F9EA; <b>Experimental</b></div>
+                        <div style="margin-top:6px; color:#9fb1c9;" data-local-slot="experimental">Local model (name not set)</div>
+                        <div style="margin-top:4px; color:#bbb; font-size:12px;" data-local-detail="experimental">Server URL not set</div>
+                    </div>
+                </div>
+                <div class="qs-general-connector-wrap">
+                    <div class="qs-general-connector-title" id="qs_general_connector_title">Other Connectors Used:</div>
+                    <div id="qs_general_connector_default">
+                        ' . ($generalLlmConnectorListHtml !== '' ? $generalLlmConnectorListHtml : '<div class="qs-general-connector-empty">No additional general-settings connectors are configured.</div>') . '
+                    </div>
+                    <div class="qs-general-connector-empty" id="qs_general_connector_local" style="display:none;">OpenRouter</div>
                 </div>
                 <p class="qs-note warning-text3">
                     Once done click Save and startup Skyrim with the AIAgent mod installed. Please read the <a href="https://dwemerdynamics.com/chim/index.html" target="_blank" style="color: #ffcc00; text-decoration: underline;">CHIM Wiki</a> to learn more about how CHIM works.
@@ -1061,6 +1196,523 @@ echo '<style>
 
     .qs-field {
         margin-bottom: 0;
+    }
+
+    /* Setup section: profile tiles + Local LLM ------------------------------ */
+    .qs-settings-preset {
+        display: grid;
+        gap: 6px;
+    }
+
+    .confwizard fieldset.qs-preset-fieldset {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .confwizard fieldset.qs-preset-fieldset > legend.qs-preset-label {
+        display: block;
+        float: none;
+        width: auto;
+        padding: 0;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent !important;
+        color: #cfd9ea !important;
+        font-family: inherit;
+        font-weight: 600;
+        font-size: 0.9rem;
+        line-height: 1.3;
+    }
+
+    .qs-preset-options {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 6px;
+        max-width: 560px;
+    }
+
+    .qs-preset-option {
+        position: relative;
+        display: block;
+        min-width: 0;
+        margin: 0;
+        cursor: pointer;
+        font-weight: 400;
+    }
+
+    .qs-preset-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        padding: 0;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .qs-preset-card {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 46px;
+        height: 100%;
+        padding: 9px 11px;
+        border: 1px solid #4a4a4a;
+        border-radius: 6px;
+        background: #2c2c2c;
+        text-align: center;
+    }
+
+    .qs-preset-option:hover .qs-preset-card {
+        border-color: #5c5c5c;
+        background: #383838;
+    }
+
+    .qs-preset-mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 15px;
+        height: 15px;
+        border: 1px solid #6b6b6b;
+        border-radius: 50%;
+        font-size: 0.7rem;
+        line-height: 1;
+    }
+
+    .qs-preset-title {
+        min-width: 0;
+        color: #e9eefb;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .qs-preset-input:checked + .qs-preset-card {
+        border-color: #ffcc00;
+        background: rgba(90, 70, 20, 0.22);
+    }
+
+    .qs-preset-input:checked + .qs-preset-card .qs-preset-mark {
+        border-color: #ffcc00;
+        background: #ffcc00;
+        color: #1b1b1b;
+    }
+
+    .qs-preset-input:checked + .qs-preset-card .qs-preset-mark::before {
+        content: "\2713";
+    }
+
+    .qs-preset-input:focus-visible + .qs-preset-card {
+        outline: 2px solid #f6d365;
+        outline-offset: 2px;
+    }
+
+    .qs-preset-desc {
+        margin: 0;
+        color: #b9c4d6;
+        font-size: 0.9rem;
+    }
+
+    .qs-local-llm {
+        margin-top: 14px;
+        padding: 12px;
+        border: 1px solid #3b3b3b;
+        border-radius: 8px;
+        background: rgba(20, 20, 20, 0.65);
+    }
+
+    .qs-preset-desc[hidden],
+    .qs-local-llm[hidden],
+    .qs-local-llm-note[hidden],
+    .qs-local-llm-preview[hidden] {
+        display: none !important;
+    }
+
+    .qs-local-llm-head {
+        margin-bottom: 10px;
+    }
+
+    .qs-local-llm-title {
+        margin: 0;
+        color: #f1f4fa;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .qs-local-llm-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 12px;
+    }
+
+    .qs-local-llm-field {
+        display: grid;
+        gap: 4px;
+        align-content: start;
+        min-width: 0;
+    }
+
+    .qs-local-llm-field-wide {
+        grid-column: 1 / -1;
+    }
+
+    .qs-local-llm-field > label {
+        margin: 0;
+        color: #cfd9ea;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .qs-local-llm-field .form-text {
+        margin-top: 0;
+        font-size: 0.8rem;
+    }
+
+    .qs-local-llm-field .qs-select-wrap {
+        max-width: none;
+    }
+
+    /* Routing scope: native radio group, whole card is the click target. */
+    .confwizard fieldset.qs-scope-fieldset {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .confwizard fieldset.qs-scope-fieldset > legend.qs-scope-legend {
+        display: block;
+        float: none;
+        width: auto;
+        margin: 0 0 6px 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent !important;
+        color: #cfd9ea !important;
+        font-family: inherit;
+        font-weight: 600;
+        font-size: 0.9rem;
+        line-height: 1.3;
+    }
+
+    .qs-scope-cards {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .qs-scope-option {
+        display: block;
+        position: relative;
+        margin: 0;
+        min-width: 0;
+        cursor: pointer;
+        font-weight: 400;
+    }
+
+    .qs-scope-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        padding: 0;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .qs-scope-card {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-height: 44px;
+        height: 100%;
+        padding: 9px 11px;
+        border: 1px solid #4a4a4a;
+        border-radius: 6px;
+        background: #2c2c2c;
+    }
+
+    .qs-scope-option:hover .qs-scope-card {
+        border-color: #5c5c5c;
+        background: #383838;
+    }
+
+    .qs-scope-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .qs-scope-mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 15px;
+        height: 15px;
+        border: 1px solid #6b6b6b;
+        border-radius: 50%;
+        font-size: 0.7rem;
+        line-height: 1;
+    }
+
+    .qs-scope-title {
+        color: #e9eefb;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .qs-scope-badge {
+        padding: 1px 6px;
+        border: 1px solid #8a6d2f;
+        border-radius: 10px;
+        background: rgba(90, 70, 20, 0.28);
+        color: #ffe6a6;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+    }
+
+    .qs-scope-desc {
+        color: #9ca3af;
+        font-size: 0.8rem;
+        line-height: 1.35;
+    }
+
+    /* Selected state is marked by the checkmark as well as border and background. */
+    .qs-scope-input:checked + .qs-scope-card {
+        border-color: #ffcc00;
+        background: rgba(90, 70, 20, 0.22);
+    }
+
+    .qs-scope-input:checked + .qs-scope-card .qs-scope-mark {
+        border-color: #ffcc00;
+        background: #ffcc00;
+        color: #1b1b1b;
+    }
+
+    .qs-scope-input:checked + .qs-scope-card .qs-scope-mark::before {
+        content: "\2713";
+    }
+
+    .qs-scope-input:checked + .qs-scope-card .qs-scope-desc {
+        color: #bfc7d4;
+    }
+
+    .qs-scope-input:disabled + .qs-scope-card {
+        cursor: not-allowed;
+    }
+
+    .qs-local-llm-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 2px;
+    }
+
+    .qs-mini-btn {
+        padding: 5px 10px;
+        border: 1px solid #4a4a4a;
+        border-radius: 6px;
+        background: #2c2c2c;
+        color: #e0e0e0;
+        font-size: 0.82rem;
+        line-height: 1.2;
+        cursor: pointer;
+    }
+
+    .qs-mini-btn:hover:not(:disabled) {
+        background: #383838;
+        border-color: #5c5c5c;
+    }
+
+    .qs-mini-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .confwizard .qs-local-llm .btn-primary.qs-mini-btn {
+        padding: 7px 14px !important;
+        margin: 0 !important;
+        font-size: 0.9rem !important;
+        border-width: 1px !important;
+    }
+
+    .qs-local-llm-check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+    }
+
+    .qs-local-llm-check .form-check-input {
+        position: static;
+        margin: 0;
+        width: 16px;
+        height: 16px;
+    }
+
+    .qs-local-llm-check .form-check-label {
+        margin: 0;
+        color: #cfd9ea;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .qs-local-llm-advanced {
+        margin-top: 10px;
+        border-top: 1px solid #3b3b3b;
+        padding-top: 8px;
+    }
+
+    .qs-local-llm-advanced > summary {
+        cursor: pointer;
+        color: #cfd9ea;
+        font-weight: 600;
+        font-size: 0.9rem;
+        list-style: revert;
+        margin-bottom: 8px;
+    }
+
+    .qs-local-llm-note {
+        margin: 6px 0 0 0;
+        padding: 7px 9px;
+        border: 1px solid #8a6d2f;
+        border-left-width: 3px;
+        border-radius: 6px;
+        background: rgba(90, 70, 20, 0.28);
+        color: #ffe6a6;
+        font-size: 0.85rem;
+    }
+
+    .qs-local-llm-test {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .qs-local-llm-status {
+        margin-top: 0;
+        flex: 1 1 260px;
+        min-width: 0;
+    }
+
+    .qs-local-llm-status.pending {
+        border-color: #4a5a72;
+        background: rgba(30, 45, 66, 0.35);
+        color: #d6e3f5;
+    }
+
+    .qs-local-llm-preview {
+        margin: 8px 0 0 0;
+        padding: 8px 10px;
+        border: 1px solid #3b3b3b;
+        border-radius: 6px;
+        background: #1b1b1b;
+        color: #cfd8e3;
+        font-size: 0.8rem;
+        max-height: 140px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    #qs_llm_connectors_cards_local,
+    #qs_llm_connectors_cards_local > div {
+        min-width: 0;
+    }
+
+    #qs_llm_connectors_cards_local [data-local-detail] {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    /* Player2 owns every LLM call, so the panel is visibly inert but keeps its values. */
+    .qs-local-llm.is-locked .qs-local-llm-grid,
+    .qs-local-llm.is-locked .qs-local-llm-advanced,
+    .qs-local-llm.is-locked .qs-local-llm-test,
+    .qs-local-llm.is-locked .qs-local-llm-preview {
+        opacity: 0.55;
+    }
+
+    .qs-profile-section select:focus-visible,
+    .qs-profile-section input:focus-visible,
+    .qs-profile-section button:focus-visible,
+    .qs-profile-section summary:focus-visible {
+        outline: 2px solid #ffcc00;
+        outline-offset: 2px;
+    }
+
+    .qs-profile-section select:focus,
+    .qs-profile-section input:focus,
+    .qs-profile-section summary:focus {
+        outline: 2px solid #ffcc00;
+        outline-offset: 2px;
+    }
+
+    /* The radio itself is visually hidden, so the card label carries the focus ring. */
+    .qs-profile-section .qs-scope-input:focus,
+    .qs-profile-section .qs-scope-input:focus-visible {
+        outline: none;
+    }
+
+    .qs-scope-input:focus + .qs-scope-card,
+    .qs-scope-input:focus-visible + .qs-scope-card {
+        outline: 2px solid #ffcc00;
+        outline-offset: 2px;
+    }
+
+    @media (max-width: 480px) {
+        #qs_llm_connectors_cards_local {
+            grid-template-columns: 1fr !important;
+        }
+
+        .qs-local-llm-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .qs-local-llm-field-wide {
+            grid-column: auto;
+        }
+
+        .qs-scope-cards {
+            grid-template-columns: 1fr;
+        }
+
+        .qs-local-llm-actions .qs-mini-btn {
+            flex: 1 1 100%;
+        }
+
+        .qs-local-llm-test {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .confwizard .qs-local-llm .btn-primary.qs-test-btn {
+            width: 100%;
+        }
     }
 
     .qs-general-connector-wrap {
@@ -1333,10 +1985,283 @@ echo '<style>
 
 echo '<script>
 const WEB_ROOT = '.json_encode($webRoot).';
+const QS_PRESET_DESCRIPTIONS = '.$quickstartPresetDescriptionsJson.';
+const QS_LOCAL_LLM_PRESET_ID = '.json_encode($quickstartLocalLlmPresetId).';
+const QS_HOST_IP = '.json_encode($quickstartHostIp).';
+const QS_WSL_IP = '.json_encode($quickstartWslIp).';
+const QS_LOCAL_LLM_PATH = "/v1/chat/completions";
+const QS_LOCAL_LLM_PORTS = { lm_studio: 1234, ollama: 11434, llama_cpp: 8080, koboldcpp: 5001 };
+const QS_LOCAL_LLM_FIELD_IDS = [
+  "qs_local_llm_server_type",
+  "qs_local_llm_url",
+  "qs_local_llm_model",
+  "qs_local_llm_api_key",
+  "qs_local_llm_disable_streaming",
+  "qs_local_llm_timeout",
+  "qs_local_llm_scope_conversations",
+  "qs_local_llm_scope_all"
+];
+
+function qsEl(id){
+  return document.getElementById(id);
+}
+
+function qsSettingsPresetValue(){
+  const checked = document.querySelector("input[name=\"qs_settings_preset\"]:checked");
+  return checked ? String(checked.value || "") : "builtin:default";
+}
+
+function qsLocalLlmSelected(){
+  return qsSettingsPresetValue() === QS_LOCAL_LLM_PRESET_ID;
+}
+
+// The scope control is a radio group, so the value comes from whichever card is checked.
+function qsLocalLlmScopeValue(){
+  const checked = document.querySelector("input[name=\"qs_local_llm_scope\"]:checked");
+  const value = checked ? String(checked.value || "").trim() : "";
+  return value === "all" ? "all" : "conversations";
+}
+
+function qsPlayer2Enabled(){
+  const toggle = qsEl("qs_player2_force_all_llm");
+  return !!toggle && !!toggle.checked;
+}
+
+// Collected explicitly rather than through FormData(form) so values survive the disabled state
+// that Player2 puts the panel into.
+function qsLocalLlmValues(){
+  const text = function(id){
+    const el = qsEl(id);
+    return el ? String(el.value || "").trim() : "";
+  };
+  const timeout = text("qs_local_llm_timeout");
+  const streaming = qsEl("qs_local_llm_disable_streaming");
+  const apiKey = qsEl("qs_local_llm_api_key");
+  return {
+    qs_local_llm_server_type: text("qs_local_llm_server_type") || "lm_studio",
+    qs_local_llm_url: text("qs_local_llm_url"),
+    qs_local_llm_model: text("qs_local_llm_model"),
+    qs_local_llm_api_key: apiKey ? String(apiKey.value || "") : "",
+    qs_local_llm_disable_streaming: (streaming && streaming.checked) ? "1" : "0",
+    qs_local_llm_timeout: timeout !== "" ? timeout : "30",
+    qs_local_llm_scope: qsLocalLlmScopeValue()
+  };
+}
+
+function qsAppendLocalLlmValues(formData){
+  const values = qsLocalLlmValues();
+  Object.keys(values).forEach(function(key){
+    formData.append(key, values[key]);
+  });
+}
+
+function qsLocalLlmTemplateUrl(serverType, host){
+  const port = QS_LOCAL_LLM_PORTS[serverType];
+  if (!port) return "";
+  const target = String(host || "").trim() || QS_HOST_IP || "127.0.0.1";
+  return "http://" + target + ":" + port + QS_LOCAL_LLM_PATH;
+}
+
+function qsLocalLlmParseUrl(rawUrl){
+  const match = String(rawUrl || "").trim().match(/^(https?):\/\/(\[[^\]]+\]|[^\/:\s]+)(?::(\d+))?(\/[^\s]*)?$/i);
+  if (!match) return null;
+  return {
+    scheme: String(match[1] || "http").toLowerCase(),
+    host: String(match[2] || ""),
+    port: match[3] ? String(match[3]) : "",
+    path: match[4] ? String(match[4]) : ""
+  };
+}
+
+function qsLocalLlmIsLoopback(rawUrl){
+  const parsed = qsLocalLlmParseUrl(rawUrl);
+  if (!parsed) return false;
+  const host = parsed.host.toLowerCase().replace(/^\[/, "").replace(/\]$/, "");
+  if (host === "localhost" || host === "::1" || host === "0.0.0.0") return true;
+  return /^127\./.test(host);
+}
+
+function qsLocalLlmApplyHost(ip){
+  const urlEl = qsEl("qs_local_llm_url");
+  const cleanIp = String(ip || "").trim();
+  if (!urlEl || cleanIp === "") return;
+  const typeEl = qsEl("qs_local_llm_server_type");
+  const serverType = typeEl ? String(typeEl.value || "") : "";
+  const parsed = qsLocalLlmParseUrl(urlEl.value);
+  if (parsed) {
+    const port = parsed.port !== "" ? parsed.port : String(QS_LOCAL_LLM_PORTS[serverType] || 1234);
+    const path = parsed.path !== "" ? parsed.path : QS_LOCAL_LLM_PATH;
+    urlEl.value = parsed.scheme + "://" + cleanIp + ":" + port + path;
+  } else {
+    urlEl.value = qsLocalLlmTemplateUrl(serverType || "lm_studio", cleanIp)
+      || ("http://" + cleanIp + ":1234" + QS_LOCAL_LLM_PATH);
+  }
+  qsLocalLlmRefreshWarnings();
+  qsLocalLlmUpdateRecap();
+  qsLocalLlmInvalidateTest();
+  try { urlEl.focus(); } catch(_e){}
+}
+
+// "Other" is the escape hatch for custom endpoints, so it never overwrites a typed URL.
+function qsLocalLlmApplyServerTemplate(){
+  const typeEl = qsEl("qs_local_llm_server_type");
+  const urlEl = qsEl("qs_local_llm_url");
+  if (!typeEl || !urlEl) return;
+  const template = qsLocalLlmTemplateUrl(String(typeEl.value || ""), "");
+  if (template !== "") {
+    urlEl.value = template;
+  }
+  qsLocalLlmRefreshWarnings();
+  qsLocalLlmUpdateRecap();
+  qsLocalLlmInvalidateTest();
+}
+
+function qsLocalLlmRefreshWarnings(){
+  const urlEl = qsEl("qs_local_llm_url");
+  const loopbackWarning = qsEl("qs_local_llm_loopback_warning");
+  if (loopbackWarning) {
+    loopbackWarning.hidden = !(urlEl && qsLocalLlmIsLoopback(urlEl.value));
+  }
+  const player2Warning = qsEl("qs_local_llm_player2_warning");
+  if (player2Warning) {
+    player2Warning.hidden = !qsPlayer2Enabled();
+  }
+}
+
+function qsLocalLlmApplyLockState(){
+  const panel = qsEl("qs_local_llm_panel");
+  if (!panel) return;
+  const locked = qsPlayer2Enabled();
+  panel.classList.toggle("is-locked", locked);
+  const controls = panel.querySelectorAll("input, select, button, textarea");
+  for (let i = 0; i < controls.length; i++) {
+    controls[i].disabled = locked;
+    if (locked) {
+      controls[i].setAttribute("aria-disabled", "true");
+    } else {
+      controls[i].removeAttribute("aria-disabled");
+    }
+  }
+  if (!locked) {
+    const hostBtn = qsEl("qs_local_llm_use_host_ip");
+    if (hostBtn) hostBtn.disabled = String(hostBtn.getAttribute("data-ip") || "").trim() === "";
+    const wslBtn = qsEl("qs_local_llm_use_wsl_ip");
+    if (wslBtn) wslBtn.disabled = String(wslBtn.getAttribute("data-ip") || "").trim() === "";
+  }
+}
+
+function qsLocalLlmUpdateRecap(){
+  const cards = qsEl("qs_llm_connectors_cards_local");
+  if (!cards) return;
+  const values = qsLocalLlmValues();
+  const primary = values.qs_local_llm_model !== ""
+    ? ("Local: " + values.qs_local_llm_model)
+    : "Local model (name not set)";
+  const detail = values.qs_local_llm_url !== "" ? values.qs_local_llm_url : "Server URL not set";
+  const slots = cards.querySelectorAll("[data-local-slot]");
+  for (let i = 0; i < slots.length; i++) {
+    slots[i].textContent = primary;
+  }
+  const details = cards.querySelectorAll("[data-local-detail]");
+  for (let i = 0; i < details.length; i++) {
+    details[i].textContent = detail;
+  }
+}
+
+function qsLocalLlmSetStatus(text, state){
+  const status = qsEl("qs_local_llm_status");
+  if (!status) return;
+  status.hidden = text === "";
+  status.className = "qs-status qs-local-llm-status" + (state ? (" " + state) : "");
+  status.textContent = text;
+}
+
+function qsLocalLlmSetPreview(text){
+  const preview = qsEl("qs_local_llm_preview");
+  if (!preview) return;
+  const clean = String(text || "").trim();
+  if (clean === "") {
+    preview.hidden = true;
+    preview.textContent = "";
+    return;
+  }
+  preview.textContent = clean.length > 600 ? (clean.slice(0, 600) + "…") : clean;
+  preview.hidden = false;
+}
+
+function qsLocalLlmInvalidateTest(){
+  qsLocalLlmSetStatus("", "");
+  qsLocalLlmSetPreview("");
+}
+
+async function testLocalLlmConnection(){
+  const button = qsEl("qs_test_local_llm");
+  const values = qsLocalLlmValues();
+  qsLocalLlmSetPreview("");
+  if (values.qs_local_llm_url === "") {
+    qsLocalLlmSetStatus("Failed - enter a server URL before testing.", "err");
+    return;
+  }
+  if (values.qs_local_llm_model === "") {
+    qsLocalLlmSetStatus("Failed - enter the model name before testing.", "err");
+    return;
+  }
+  qsLocalLlmSetStatus("Testing - contacting the local server...", "pending");
+  if (button) button.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append("qs_action", "local_llm_test_draft");
+    qsAppendLocalLlmValues(fd);
+    const response = await fetch("quickstart.php", { method: "POST", body: fd, cache: "no-store", credentials: "same-origin" });
+    let payload = null;
+    try { payload = await response.json(); } catch(_e){ payload = null; }
+    const result = (payload && payload.result) ? payload.result : {};
+    const state = String(result.status || "").toLowerCase();
+    const elapsed = Number(result.elapsed_ms || 0);
+    const elapsedText = elapsed > 0 ? (" in " + elapsed + " ms") : "";
+    const message = String(result.message || (payload && payload.error) || "").trim();
+    const ok = !!(payload && payload.ok) && (state === "pass" || state === "warn");
+    if (ok) {
+      const prefix = state === "warn" ? "Warning" : "Success";
+      qsLocalLlmSetStatus(prefix + " - the local server replied" + elapsedText + (message !== "" ? (". " + message) : "."), state === "warn" ? "pending" : "ok");
+      const details = result.details || {};
+      qsLocalLlmSetPreview(details.response_preview || "");
+    } else {
+      qsLocalLlmSetStatus("Failed - " + (message !== "" ? message : "no usable reply from the local server") + elapsedText + ".", "err");
+    }
+  } catch (_error) {
+    qsLocalLlmSetStatus("Failed - the test request could not be completed.", "err");
+  } finally {
+    if (button) button.disabled = false;
+    qsLocalLlmApplyLockState();
+  }
+}
+
+// Selecting a profile only changes what this page shows; nothing is written until Save and Continue.
+function updateQuickstartProfileUI(){
+  try {
+    const description = qsEl("qs_settings_preset_desc");
+    const panel = qsEl("qs_local_llm_panel");
+    const selectedId = qsSettingsPresetValue();
+    if (description) {
+      const copy = String(QS_PRESET_DESCRIPTIONS[selectedId] || "");
+      description.textContent = copy;
+      description.hidden = copy === "";
+    }
+    const showLocal = qsLocalLlmSelected();
+    if (panel) {
+      panel.hidden = !showLocal;
+      panel.setAttribute("aria-hidden", showLocal ? "false" : "true");
+    }
+    qsLocalLlmRefreshWarnings();
+    qsLocalLlmApplyLockState();
+    qsLocalLlmUpdateRecap();
+  } catch(_e){}
+}
 
 async function saveQuickstartAndDB(){
+  const finishUrl = WEB_ROOT + "/ui/home.php";
   try {
-    const finishUrl = WEB_ROOT + "/ui/home.php";
     // 1) Save API keys
     const fd = new FormData();
     const orKey = document.getElementById("qs_openrouter_api_key");
@@ -1344,12 +2269,17 @@ async function saveQuickstartAndDB(){
     fd.append("qs_action", "api_badge_quicksave");
     fd.append("openrouter_api_key", orKey ? orKey.value : "");
     fd.append("deepgram_api_key", dgKey ? dgKey.value : "");
-    await fetch("quickstart.php", { method: "POST", body: fd, cache: "no-store", credentials: "same-origin" });
+    const badgeResponse = await fetch("quickstart.php", { method: "POST", body: fd, cache: "no-store", credentials: "same-origin" });
+    const badgeResult = await badgeResponse.json();
+    if (!badgeResponse.ok || !badgeResult.ok) {
+      throw new Error(badgeResult.error || "Unable to save API keys");
+    }
 
     // 2) Save profile metadata flags
     const fdm = new FormData();
     try { fdm.append("player2_force_all_llm", document.getElementById("qs_player2_force_all_llm").checked ? "1" : "0"); } catch(_e){}
-    try { fdm.append("local_llm_preset", document.getElementById("qs_local_llm_preset").checked ? "1" : "0"); } catch(_e){}
+    try { fdm.append("settings_preset_id", qsSettingsPresetValue()); } catch(_e){}
+    try { if (qsLocalLlmSelected()) { qsAppendLocalLlmValues(fdm); } } catch(_e){}
     fdm.append("qs_action", "profile_quicksave_metadata");
     const profileResponse = await fetch("quickstart.php", { method: "POST", body: fdm, cache: "no-store", credentials: "same-origin" });
     const profileResult = await profileResponse.json();
@@ -1361,14 +2291,18 @@ async function saveQuickstartAndDB(){
     const form = document.getElementById("top");
     const fdw = new FormData(form);
     fdw.append("qs_action", "save_quickstart");
-    await fetch("quickstart.php", { method: "POST", body: fdw, cache: "no-store", credentials: "same-origin" });
+    const settingsResponse = await fetch("quickstart.php", { method: "POST", body: fdw, cache: "no-store", credentials: "same-origin" });
+    const settingsResult = await settingsResponse.json();
+    if (!settingsResponse.ok || !settingsResult.ok) {
+      throw new Error(settingsResult.error || "Unable to save Quickstart selections");
+    }
 
     // Notify user, then redirect
     try { alert("Quickstart settings have been saved."); } catch(_a){}
     window.location.href = finishUrl;
   } catch (_e) {
-    try { alert("Save failed or partially completed. Redirecting to home."); } catch(_a){}
-    window.location.href = finishUrl;
+    const message = (_e && _e.message) ? String(_e.message) : "Unknown error";
+    try { alert("Save failed: " + message + ". Your Quickstart page has been kept open."); } catch(_a){}
   }
 }
 
@@ -1419,22 +2353,45 @@ function updatePlayer2QuickstartUI(){
     const openrouterSection = document.getElementById("qs_openrouter_section");
     const defaultNote = document.getElementById("qs_llm_connectors_note_default");
     const player2Note = document.getElementById("qs_llm_connectors_note_player2");
+    const localNote = document.getElementById("qs_llm_connectors_note_local");
     const defaultCards = document.getElementById("qs_llm_connectors_cards_default");
     const player2Cards = document.getElementById("qs_llm_connectors_cards_player2");
+    const localCards = document.getElementById("qs_llm_connectors_cards_local");
+    const generalTitle = document.getElementById("qs_general_connector_title");
+    const generalDefault = document.getElementById("qs_general_connector_default");
+    const generalLocal = document.getElementById("qs_general_connector_local");
+    // Player2 wins over the Setup profile because it routes every LLM call.
+    const localMode = !enabled && qsLocalLlmSelected();
     if (openrouterSection) {
       openrouterSection.style.display = enabled ? "none" : "";
     }
     if (defaultNote) {
-      defaultNote.style.display = enabled ? "none" : "";
+      defaultNote.style.display = (enabled || localMode) ? "none" : "";
     }
     if (player2Note) {
       player2Note.style.display = enabled ? "" : "none";
     }
+    if (localNote) {
+      localNote.style.display = localMode ? "" : "none";
+    }
     if (defaultCards) {
-      defaultCards.style.display = enabled ? "none" : "grid";
+      defaultCards.style.display = (enabled || localMode) ? "none" : "grid";
     }
     if (player2Cards) {
       player2Cards.style.display = enabled ? "grid" : "none";
+    }
+    if (localCards) {
+      localCards.style.display = localMode ? "grid" : "none";
+    }
+    if (generalTitle) {
+      generalTitle.textContent = localMode ? "Other AI tasks:" : "Other Connectors Used:";
+    }
+    if (generalDefault) {
+      generalDefault.style.display = localMode ? "none" : "";
+    }
+    if (generalLocal) {
+      generalLocal.style.display = localMode ? "" : "none";
+      generalLocal.textContent = qsLocalLlmScopeValue() === "all" ? "Local LLM" : "OpenRouter";
     }
   } catch(_e){}
 }
@@ -1442,8 +2399,73 @@ function updatePlayer2QuickstartUI(){
 document.addEventListener("DOMContentLoaded", function(){
   const player2Toggle = document.getElementById("qs_player2_force_all_llm");
   if (player2Toggle) {
-    player2Toggle.addEventListener("change", updatePlayer2QuickstartUI);
+    player2Toggle.addEventListener("change", function(){
+      updateQuickstartProfileUI();
+      updatePlayer2QuickstartUI();
+    });
   }
+
+  const presetChoices = qsEl("qs_settings_preset");
+  if (presetChoices) {
+    presetChoices.addEventListener("change", function(){
+      updateQuickstartProfileUI();
+      updatePlayer2QuickstartUI();
+    });
+  }
+
+  const serverType = qsEl("qs_local_llm_server_type");
+  if (serverType) {
+    serverType.addEventListener("change", qsLocalLlmApplyServerTemplate);
+  }
+
+  const urlInput = qsEl("qs_local_llm_url");
+  if (urlInput) {
+    urlInput.addEventListener("input", function(){
+      qsLocalLlmRefreshWarnings();
+      qsLocalLlmUpdateRecap();
+    });
+  }
+
+  const modelInput = qsEl("qs_local_llm_model");
+  if (modelInput) {
+    modelInput.addEventListener("input", qsLocalLlmUpdateRecap);
+  }
+
+  const scopeRadios = document.querySelectorAll("input[name=\"qs_local_llm_scope\"]");
+  for (let i = 0; i < scopeRadios.length; i++) {
+    scopeRadios[i].addEventListener("change", function(){
+      qsLocalLlmUpdateRecap();
+      updatePlayer2QuickstartUI();
+    });
+  }
+
+  const hostIpButton = qsEl("qs_local_llm_use_host_ip");
+  if (hostIpButton) {
+    hostIpButton.addEventListener("click", function(){
+      qsLocalLlmApplyHost(this.getAttribute("data-ip") || QS_HOST_IP);
+    });
+  }
+
+  const wslIpButton = qsEl("qs_local_llm_use_wsl_ip");
+  if (wslIpButton) {
+    wslIpButton.addEventListener("click", function(){
+      qsLocalLlmApplyHost(this.getAttribute("data-ip") || QS_WSL_IP);
+    });
+  }
+
+  const testButton = qsEl("qs_test_local_llm");
+  if (testButton) {
+    testButton.addEventListener("click", testLocalLlmConnection);
+  }
+
+  QS_LOCAL_LLM_FIELD_IDS.forEach(function(id){
+    const field = qsEl(id);
+    if (!field) return;
+    field.addEventListener("input", qsLocalLlmInvalidateTest);
+    field.addEventListener("change", qsLocalLlmInvalidateTest);
+  });
+
+  updateQuickstartProfileUI();
   updatePlayer2QuickstartUI();
   checkMiniMeEndpoint();
 });

@@ -37,12 +37,20 @@ function chimGlobalSettingsLabel(string $name): string
     $custom = [
         'PROMPT_HEAD' => 'Prompt Head', 'EMOTEMOODS' => 'Emote Moods', 'RECHAT_MODE' => 'Rechat Mode',
         'CORE_CONNECTOR_PLAYER' => 'Player Respeech', 'CORE_CONNECTOR_SUMMARY' => 'Summaries',
-        'CORE_CONNECTOR_MEDIUMTERM' => 'Middle Term Memory', 'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
-        'CORE_CONNECTOR_PROFILES' => 'Dynamic Profile', 'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
+        'CORE_CONNECTOR_MEDIUMTERM' => 'Background & Memory Tasks', 'CORE_CONNECTOR_SCENECLASSIFIER' => 'Scene Classifier',
+        'CORE_CONNECTOR_PROFILES' => 'Profile Tasks', 'CORE_CONNECTOR_DIRECTOR' => 'Director Mode',
         'CORE_CONNECTOR_BGL' => 'Background Life', 'RELLLM_CONNECTOR' => 'Relationship Manager',
+        'PLAYER_RESPEECH' => 'Player Respeech Available', 'CORE_CONNECTOR_SUMMARY_ENABLED' => 'Summaries Available',
+        'CORE_CONNECTOR_MEDIUMTERM_ENABLED' => 'Background & Memory Tasks Available',
+        'CORE_CONNECTOR_PROFILES_ENABLED' => 'Profile Tasks Available',
+        'CORE_CONNECTOR_DIRECTOR_ENABLED' => 'Director Mode Available',
+        'CORE_CONNECTOR_BGL_ENABLED' => 'Background Life Available',
         'BGL_TRIGGER_HOURS' => 'Background Life Trigger Time', 'OGHMA_INFINIUM' => 'Oghma Infinium',
         'OGHMA_AMOUNT' => 'Oghma Articles Amount', 'RACIAL_OGHMA' => 'Force Racial Oghma',
         'LOCATION_OGHMA' => 'Force Location Oghma', 'DETECT_MAGIC_EVENT' => 'Detect Magic Events',
+        'COMPACT_CHAT_ENABLED' => 'Compact Chat',
+        'NEVER_CLEAR_RELATIONSHIP_DATA' => 'Never Clear Relationship Data',
+        'PROMPT_HEAD_MARKDOWN_ENABLED' => 'Compact Prompt Info',
     ];
     if (isset($custom[$name])) {
         return $custom[$name];

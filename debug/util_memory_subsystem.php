@@ -28,8 +28,17 @@ require_once $enginePath . "lib/core/tts_connector.class.php";
 require_once $enginePath . "lib/core/npc_master.class.php";
 require_once $enginePath . "lib/core/core_profiles.class.php";
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_SUMMARY')) {
+    echo "Summaries are disabled globally; memory summary work was skipped." . PHP_EOL;
+    exit(0);
+}
+
 function chimResolveSummaryConnectorRuntime(): ?array
 {
+    if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_SUMMARY')) {
+        return null;
+    }
+
     $connectorId = intval($GLOBALS["CORE_CONNECTOR_SUMMARY"] ?? 0);
     if ($connectorId <= 0) {
         return null;

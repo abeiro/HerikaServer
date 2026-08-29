@@ -3617,6 +3617,71 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
 
                 error_log("[ACTION POSTFILTER Toast] Executed server-side");
 
+            } else if ($actionCodeNameResolved=="EquipGear") {
+                
+                $rawParameter = implode("@", array_slice($actionParts2, 1));
+                $payload = decodeFunctionExecutionParameterPayload($rawParameter);
+                if (!is_array($payload)) {
+                    $payload = [];
+                }
+
+                $playerName = trim(strval($GLOBALS["PLAYER_NAME"] ?? "Player"));
+                $targetName = trim(strval($payload["target"] ?? ""));
+                $itemRef = trim(strval($payload["item"] ?? ""));
+                
+                // Extract hex string in format 0x00000000 (e.g., 0xFE038801 or 0xFE038801:DD)
+                if (preg_match('/0x([0-9A-Fa-f]{8})/', $itemRef, $matches)) {
+                    $itemRef = $matches[0];
+                }
+                
+                if (!$itemRef) {
+                    if (preg_match('/([0-9A-Fa-f]{8})/', $itemRef, $matches)) 
+                        $itemRef = "0x".$matches[0];
+                
+                }
+
+                if (!$itemRef) {
+                    error_log("[ACTION POSTFILTER EquipGear] Missing item reference");
+                    unset($actionsCopy[$n]);
+                    continue;
+
+                }
+                $npcMaster = new Npcmaster();
+
+                $npc = $npcMaster->getByName($actionParts[0]);
+                $skyrimCmd = new SkyrimCommandBuilder();
+
+                $json = $skyrimCmd->Actor->EquipItem("0x{$npc["refid"]}", "{$itemRef}", true);
+                $skyrimCmd->send(cmd: $json);
+
+                unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
+
+                error_log("[ACTION POSTFILTER EquipGear] Executed server-side EquipItem(\"0x{$npc["refid"]}\", \"{$itemRef}\", true)");
+            
+            }  else if ($actionCodeNameResolved=="Surrender") {
+                
+                $npcMaster = new Npcmaster();
+
+                $npc = $npcMaster->getByName($actionParts[0]);
+                $skyrimCmd = new SkyrimCommandBuilder();
+                if ($npc) {
+                    $json = $skyrimCmd->Actor->StopCombat("0x{$npc["refid"]}");
+                    $skyrimCmd->send(cmd: $json);
+
+                    $json = $skyrimCmd->Actor->SetActorValue("0x{$npc["refid"]}", "Aggression", 0);
+                    $skyrimCmd->send(cmd: $json);
+                    
+                    $json = $skyrimCmd->Actor->SetActorValue("0x{$npc["refid"]}", "Confidence", 0);
+                    $skyrimCmd->send(cmd: $json);
+
+                    $json = $skyrimCmd->Actor->EvaluatePackage("0x{$npc["refid"]}");
+                    $skyrimCmd->send(cmd: $json);
+                }
+
+
+                //unset($actionsCopy[$n]);// Remove action from list, so client does not execute it
+
+                error_log("[ACTION POSTFILTER Surrender] Executed server-side StopCombat(\"0x{$npc["refid"]}\")");
             }
         }
     }

@@ -12,6 +12,18 @@ function chimPrismaGlobalSettingsSections(): array
             ['name' => 'EMOTEMOODS', 'type' => 'longstring'],
             ['name' => 'RECHAT_MODE', 'type' => 'select', 'values' => ['tight', 'conversational', 'group', 'random']],
             ['name' => 'ENFORCE_STRICT_RECHAT_RESPONSE', 'type' => 'boolean'],
+            [
+                'name' => 'COMPACT_CHAT_ENABLED',
+                'type' => 'boolean',
+                'default' => true,
+                'help' => 'Use compact text instead of separate messages for conversation history. Does not affect the Narrator.',
+            ],
+            [
+                'name' => 'PROMPT_HEAD_MARKDOWN_ENABLED', // Compact Prompt Info; keep the stored key for compatibility.
+                'type' => 'boolean',
+                'default' => false,
+                'help' => 'Use Markdown headings instead of XML tags for all prompt sections.',
+            ],
             ['name' => 'RELATIONSHIP_UPDATE_CHANCE', 'type' => 'integer', 'min' => 0, 'max' => 100, 'default' => 50],
         ],
         'Oghma' => [
@@ -35,8 +47,13 @@ function chimPrismaGlobalSettingsSections(): array
                 'default' => 7,
                 'help' => 'How long the player\'s worst memory of an NPC lingers before it fades, in in-game days (0 = never forget). Default 7 (one game-week). NPC-to-NPC worst memories are always permanent.',
             ],
-            ['name' => 'SCENE_CLASSIFIER_ENABLED', 'type' => 'boolean'],
-            ['name' => 'RELATIONSHIP_SYSTEM_ENABLED', 'type' => 'boolean'],
+            [
+                'name' => 'SHORT_TERM_MEMORY_IN_COMPACT_CHAT',
+                'type' => 'boolean',
+                'default' => true,
+                'help' => 'Keep injecting short-term memory summaries while Compact Chat is active. Turn this off if you use Compact Chat to keep the prompt small. Has no effect on profiles that do not have Short Term Memory enabled.',
+            ],
+            ['name' => 'NEVER_CLEAR_RELATIONSHIP_DATA', 'type' => 'boolean', 'default' => false],
         ],
         'Misc' => [
             ['name' => 'AUTO_LOCK_PROFILE', 'type' => 'boolean'],
@@ -49,15 +66,25 @@ function chimPrismaGlobalSettingsSections(): array
             ['name' => 'CHIM_AI_QUEST_PROGRESSION', 'type' => 'boolean'],
             ['name' => 'CHIM_PLAYER_ONLY_QUEST_ADVANCEMENT', 'type' => 'boolean'],
         ],
+        // Each connector is followed by the boolean that makes its tasks available. Scene
+        // Classifier and Relationship Management reuse their existing settings.
         'Global Connectors' => [
             ['name' => 'CORE_CONNECTOR_PLAYER', 'type' => 'foreign:core_llm_connector:id:label'],
+            ['name' => 'PLAYER_RESPEECH', 'type' => 'boolean', 'default' => true],
             ['name' => 'CORE_CONNECTOR_SUMMARY', 'type' => 'foreign:core_llm_connector:id:label'],
+            ['name' => 'CORE_CONNECTOR_SUMMARY_ENABLED', 'type' => 'boolean', 'default' => true],
             ['name' => 'CORE_CONNECTOR_MEDIUMTERM', 'type' => 'foreign:core_llm_connector:id:label'],
+            ['name' => 'CORE_CONNECTOR_MEDIUMTERM_ENABLED', 'type' => 'boolean', 'default' => true],
             ['name' => 'CORE_CONNECTOR_SCENECLASSIFIER', 'type' => 'foreign:core_llm_connector:id:label'],
+            ['name' => 'SCENE_CLASSIFIER_ENABLED', 'type' => 'boolean', 'default' => true],
             ['name' => 'CORE_CONNECTOR_PROFILES', 'type' => 'foreign:core_llm_connector:id:label'],
+            ['name' => 'CORE_CONNECTOR_PROFILES_ENABLED', 'type' => 'boolean', 'default' => true],
             ['name' => 'CORE_CONNECTOR_DIRECTOR', 'type' => 'foreign:core_llm_connector:id:label'],
+            ['name' => 'CORE_CONNECTOR_DIRECTOR_ENABLED', 'type' => 'boolean', 'default' => true],
             ['name' => 'CORE_CONNECTOR_BGL', 'type' => 'foreign:core_llm_connector:id:label'],
+            ['name' => 'CORE_CONNECTOR_BGL_ENABLED', 'type' => 'boolean', 'default' => true],
             ['name' => 'RELLLM_CONNECTOR', 'type' => 'foreign:core_llm_connector:id:label'],
+            ['name' => 'RELATIONSHIP_SYSTEM_ENABLED', 'type' => 'boolean', 'default' => true],
         ],
         'Context' => [
             ['name' => 'DETECT_MAGIC_EVENT', 'type' => 'boolean'],
@@ -119,6 +146,8 @@ function chimPrismaProfileMetadataCatalog(): array
             ['name' => 'DYNAMIC_PROFILE_ENABLED', 'type' => 'boolean'],
             ['name' => 'DYNAMIC_PROFILE_FIELDS', 'type' => 'multiselect', 'schema' => 'DYNAMIC_PROFILE_FIELDS'],
             ['name' => 'MIDDLE_TERM_MEMORY_ENABLED', 'type' => 'boolean'],
+            ['name' => 'SHORT_TERM_MEMORY_ENABLED', 'type' => 'boolean'],
+            ['name' => 'SHORT_TERM_MEMORY_MAX', 'type' => 'integer', 'min' => 1, 'max' => 50],
             ['name' => 'CONTEXT_HISTORY_DYNAMIC_PROFILE', 'type' => 'integer', 'min' => 0, 'max' => 400],
             ['name' => 'RPG_COMMENTS', 'type' => 'multiselect', 'schema' => 'RPG_COMMENTS'],
             ['name' => 'RPG_COMMENTS_CHANCE', 'type' => 'integer', 'min' => 0, 'max' => 100],

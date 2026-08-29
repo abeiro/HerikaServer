@@ -782,9 +782,11 @@ function chimNpcManagerSave(array $input, array $profiles): array
             }
             $relationship['aff'] = max(-100, min(100, (int)($relationship['aff'] ?? 0)));
             $relationship['type'] = strtolower(trim((string)($relationship['type'] ?? 'neutral')));
-            foreach (['relation', 'note', 'best', 'worst'] as $key) {
+            foreach (['relation', 'note', 'best', 'worst', 'custom_info'] as $key) {
                 if (array_key_exists($key, $relationship)) {
-                    $relationship[$key] = trim((string)$relationship[$key]);
+                    $relationship[$key] = is_scalar($relationship[$key])
+                        ? trim((string)$relationship[$key])
+                        : '';
                 }
             }
         }

@@ -200,7 +200,8 @@ if (!function_exists('chimRelationshipRestoreQuery')) {
                     WHEN h.extended_data ->> '_chim_history_source' = 'relationship' THEN 2
                     WHEN h.extended_data ->> '_chim_history_source' = 'infosave' THEN 1
                     ELSE 0
-                END DESC
+                END DESC,
+                h.history_id DESC
         ),
         updated AS (
             UPDATE {$schema}.core_npc_master c
@@ -241,8 +242,8 @@ if (!function_exists('chimRelationshipFutureClearQuery')) {
         $timestamp = (float) $timestamp;
 
         return "WITH cleared AS (
-                UPDATE {$schema}.core_npc_master
-                SET extended_data = extended_data
+                UPDATE {$schema}.core_npc_master AS c
+                SET extended_data = c.extended_data
                     - 'relationships'
                     - 'relationships_analyzed'
                     - 'relationships_inferred'
@@ -250,11 +251,19 @@ if (!function_exists('chimRelationshipFutureClearQuery')) {
                     - 'relationships_model'
                     - 'relationships_updated'
                     - '_chim_history_source'
-                WHERE npc_name <> 'The Narrator'
-                  AND (gamets_last_updated > {$timestamp} OR gamets_last_updated IS NULL)
-                  AND extended_data IS NOT NULL
-                  AND extended_data ? 'relationships'
-                RETURNING npc_name
+                WHERE c.npc_name <> 'The Narrator'
+                  AND (c.gamets_last_updated > {$timestamp} OR c.gamets_last_updated IS NULL)
+                  AND c.extended_data IS NOT NULL
+                  AND c.extended_data ? 'relationships'
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM {$schema}.core_npc_master_history h
+                      WHERE h.npc_id = c.id
+                        AND (h.gamets_last_updated <= {$timestamp} OR h.gamets_last_updated IS NULL)
+                        AND h.extended_data IS NOT NULL
+                        AND h.extended_data ? 'relationships'
+                  )
+                RETURNING c.npc_name
             ),
             sample AS (
                 SELECT npc_name FROM cleared ORDER BY npc_name LIMIT 10
@@ -317,7 +326,8 @@ if (!function_exists('chimRelationshipTimelineStamp')) {
                         WHEN extended_data ->> '_chim_history_source' = 'relationship' THEN 2
                         WHEN extended_data ->> '_chim_history_source' = 'infosave' THEN 1
                         ELSE 0
-                    END DESC
+                    END DESC,
+                    history_id DESC
                 LIMIT 1";
             $history = $GLOBALS['db']->fetchOne($historyQuery);
             $historyState = $history
@@ -1393,13 +1403,27 @@ class NpcMaster
         if (! is_numeric($timestamp)) {
             throw new InvalidArgumentException("Invalid timestamp value.");
         }
+        $neverClearRelationshipData = filter_var(
+            $GLOBALS['NEVER_CLEAR_RELATIONSHIP_DATA'] ?? false,
+            FILTER_VALIDATE_BOOLEAN
+        );
+        $preserveRelationshipDataSql = $neverClearRelationshipData ? 'TRUE' : 'FALSE';
         $startTime = time();
         $query     =
             "WITH deleted AS (
-    DELETE FROM core_npc_master
-    WHERE npc_name<>'The Narrator' and COALESCE(lock_profile,0)=0
-    and COALESCE(gamets_last_updated,0)>0
-    RETURNING id
+    DELETE FROM core_npc_master AS c
+    WHERE c.npc_name<>'The Narrator' and COALESCE(c.lock_profile,0)=0
+    and COALESCE(c.gamets_last_updated,0)>0
+    and (
+        NOT {$preserveRelationshipDataSql}
+        OR EXISTS (
+            SELECT 1
+            FROM core_npc_master_history eligible_history
+            WHERE eligible_history.npc_id = c.id
+              AND (eligible_history.gamets_last_updated <= $timestamp OR eligible_history.gamets_last_updated IS NULL)
+        )
+    )
+    RETURNING c.id, c.extended_data AS current_extended_data
 ),
 restore AS (
     SELECT
@@ -1425,6 +1449,26 @@ restore AS (
         h.profile_id,
         h.dynamic_profile,
         CASE
+            WHEN {$preserveRelationshipDataSql} THEN (
+                (
+                    COALESCE(h.extended_data, '{}'::jsonb)
+                    - 'relationships'
+                    - 'relationships_analyzed'
+                    - 'relationships_inferred'
+                    - 'relationships_last_eval'
+                    - 'relationships_model'
+                    - 'relationships_updated'
+                    - '_chim_history_source'
+                )
+                || jsonb_strip_nulls(jsonb_build_object(
+                    'relationships', d.current_extended_data -> 'relationships',
+                    'relationships_analyzed', d.current_extended_data -> 'relationships_analyzed',
+                    'relationships_inferred', d.current_extended_data -> 'relationships_inferred',
+                    'relationships_last_eval', d.current_extended_data -> 'relationships_last_eval',
+                    'relationships_model', d.current_extended_data -> 'relationships_model',
+                    'relationships_updated', d.current_extended_data -> 'relationships_updated'
+                ))
+            )
             WHEN h.extended_data IS NULL THEN NULL
             ELSE h.extended_data - '_chim_history_source'
         END AS extended_data,
@@ -1443,7 +1487,8 @@ restore AS (
         ORDER BY
             h.gamets_last_updated DESC NULLS LAST,
             CASE WHEN h.extended_data ->> '_chim_history_source' = 'infosave' THEN 1 ELSE 0 END DESC,
-            h.created DESC
+            h.created DESC,
+            h.history_id DESC
         LIMIT 1
     ) h ON true
 )
@@ -1466,22 +1511,23 @@ FROM restore
         error_log("[NPC RESTORE] using gamets: $timestamp.. " . date('Y-m-d H:i:s'));
         $GLOBALS["db"]->query($query);
 
-        // Relationship state has its own snapshots. Merge the newest eligible relationship keys
-        // after the full-profile restore so same-timestamp relationship snapshots can supersede
-        // an infosave without replacing unrelated NPC profile fields.
-        $relationshipRestoreQ = chimRelationshipRestoreQuery($timestamp);
-
         $relationshipRestoreSucceeded = false;
-        try {
-            $relationshipRestoreResult = $GLOBALS["db"]->fetchOne($relationshipRestoreQ);
-            if (!is_array($relationshipRestoreResult) || !array_key_exists('affected', $relationshipRestoreResult)) {
-                throw new RuntimeException('relationship restore query did not return a result');
+        if ($neverClearRelationshipData) {
+            error_log('[NPC RESTORE] Preserved current relationship data because Never Clear Relationship Data is enabled');
+        } else {
+            // Relationship state has its own snapshots. Merge the newest eligible relationship keys
+            // after the full-profile restore without replacing unrelated NPC profile fields.
+            try {
+                $relationshipRestoreResult = $GLOBALS["db"]->fetchOne(chimRelationshipRestoreQuery($timestamp));
+                if (!is_array($relationshipRestoreResult) || !array_key_exists('affected', $relationshipRestoreResult)) {
+                    throw new RuntimeException('relationship restore query did not return a result');
+                }
+                $relationshipRestoreCount = (int) ($relationshipRestoreResult['affected'] ?? 0);
+                $relationshipRestoreSucceeded = true;
+                error_log("[NPC RESTORE] Restored relationship timeline data for {$relationshipRestoreCount} NPCs at gamets $timestamp");
+            } catch (Throwable $e) {
+                error_log("[NPC RESTORE] Failed to restore NPC relationships: " . $e->getMessage());
             }
-            $relationshipRestoreCount = (int) ($relationshipRestoreResult['affected'] ?? 0);
-            $relationshipRestoreSucceeded = true;
-            error_log("[NPC RESTORE] Restored relationship timeline data for {$relationshipRestoreCount} NPCs at gamets $timestamp");
-        } catch (Throwable $e) {
-            error_log("[NPC RESTORE] Failed to restore NPC relationships: " . $e->getMessage());
         }
 
         $bglife_q="UPDATE public.core_npc_master
@@ -1495,26 +1541,54 @@ FROM restore
 
         $GLOBALS["db"]->execQuery($bglife_q);
 
-        // RELATIONSHIP SYSTEM: Clear "future" relationship data from NPCs that weren't restored
-        // NPCs added AFTER the save timestamp don't have history entries, so they keep their
-        // current (future) state. We need to clear their relationship data to prevent paradoxes.
-        $rel_reset_q = chimRelationshipFutureClearQuery($timestamp);
+        // Clear the background_life_last_updated timestamp for NPCs that were restored from history,
+        //  so that they can be re-evaluated for background life generation.
+        $bglife_q="UPDATE public.core_npc_master
+        SET extended_data = jsonb_set(
+            extended_data,
+            '{background_life_last_updated}',   -- JSON path
+            '0'::jsonb,                -- new value
+            true                           -- create if missing (optional)
+        )
+        WHERE (extended_data ->> 'background_life_last_updated')::bigint > {$timestamp}";
 
-        if ($relationshipRestoreSucceeded) {
-            try {
-                $clearResult = $GLOBALS["db"]->fetchOne($rel_reset_q);
-                if (!is_array($clearResult) || !array_key_exists('affected', $clearResult)) {
-                    throw new RuntimeException('future relationship clear query did not return a result');
+
+        $GLOBALS["db"]->execQuery($bglife_q);
+
+
+        // Clear the background_life_last_run timestamp for NPCs that were restored from history,
+        //  so that they can be re-evaluated for background life generation.
+        $bglife_q="UPDATE public.core_npc_master
+        SET extended_data = jsonb_set(
+            extended_data,
+            '{background_life_last_run}',   -- JSON path
+            '0'::jsonb,                -- new value
+            true                           -- create if missing (optional)
+        )
+        WHERE (extended_data ->> 'background_life_last_run')::bigint > {$timestamp}";
+
+
+        $GLOBALS["db"]->execQuery($bglife_q);
+
+        if (!$neverClearRelationshipData) {
+            // NPCs created after the loaded save have no eligible history. Clear only those rows;
+            // relationship data restored from valid history must survive this cleanup.
+            if ($relationshipRestoreSucceeded) {
+                try {
+                    $clearResult = $GLOBALS["db"]->fetchOne(chimRelationshipFutureClearQuery($timestamp));
+                    if (!is_array($clearResult) || !array_key_exists('affected', $clearResult)) {
+                        throw new RuntimeException('future relationship clear query did not return a result');
+                    }
+                    $clearCount = (int) ($clearResult['affected'] ?? 0);
+                    $clearNames = trim((string) ($clearResult['sample_names'] ?? ''));
+                    $clearSample = $clearNames !== '' ? " [{$clearNames}" . ($clearCount > 10 ? ', ...' : '') . ']' : '';
+                    error_log("[NPC RESTORE] Cleared future-only relationship data for {$clearCount} NPCs at gamets $timestamp{$clearSample}");
+                } catch (Throwable $e) {
+                    error_log("[NPC RESTORE] Failed to clear future relationships: " . $e->getMessage());
                 }
-                $clearCount = (int) ($clearResult['affected'] ?? 0);
-                $clearNames = trim((string) ($clearResult['sample_names'] ?? ''));
-                $clearSample = $clearNames !== '' ? " [{$clearNames}" . ($clearCount > 10 ? ', ...' : '') . ']' : '';
-                error_log("[NPC RESTORE] Cleared future relationship data for {$clearCount} NPCs with gamets > $timestamp{$clearSample}");
-            } catch (Throwable $e) {
-                error_log("[NPC RESTORE] Failed to clear future relationships: " . $e->getMessage());
+            } else {
+                error_log("[NPC RESTORE] Skipped future relationship clear because timeline restore failed");
             }
-        } else {
-            error_log("[NPC RESTORE] Skipped future relationship clear because timeline restore failed");
         }
 
         error_log("[NPC RESTORE] " . date('Y-m-d H:i:s') . ", NPCs restore made in " . (time() - $startTime) . " secs ");
@@ -1730,4 +1804,58 @@ FROM restore
         $GLOBALS['TTS']['CARTESIA']['voiceid'] = $voiceId;
         $GLOBALS['TTS']['INWORLD']['voiceid'] = $voiceId;
     }
+
+    /* For reference. Restores the last version of each NPC list from history. */
+    
+    private function restoreLastNpcList() {
+
+         $GLOBALS["db"]->execQuery("INSERT INTO core_npc_master (
+    id, npc_name, npc_favorite, lock_profile, prompt_head, npc_static_bio,
+    oghma_knowledge_tags, emote_moods, personality, relationships,
+    occupation, skills, speechstyle, goals, voiceid, metadata,
+    gender, race, refid, profile_id, dynamic_profile, extended_data,
+    md5, gamets_last_updated, core, base, tags, appearance
+)
+SELECT
+    npc_id AS id,
+    npc_name,
+    npc_favorite,
+    lock_profile,
+    prompt_head,
+    npc_static_bio,
+    oghma_knowledge_tags,
+    emote_moods,
+    personality,
+    relationships,
+    occupation,
+    skills,
+    speechstyle,
+    goals,
+    voiceid,
+    metadata,
+    gender,
+    race,
+    refid,
+    profile_id,
+    dynamic_profile,
+    extended_data,
+    md5,
+    gamets_last_updated,
+    core,
+    base,
+    tags,
+    appearance
+FROM (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY npc_name
+            ORDER BY gamets_last_updated DESC
+        ) AS rn
+    FROM core_npc_master_history
+) t
+WHERE rn = 1
+AND npc_name not in (select distinct npc_name from core_npc_master)");
+    }
 }
+

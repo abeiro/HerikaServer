@@ -23,6 +23,15 @@ chimRuntimeBootstrap($enginePath, [
     'load_narrator' => true,
 ]);
 
+if (!chimIsGlobalLlmConnectorEnabled('CORE_CONNECTOR_PROFILES')) {
+    echo json_encode([
+        'done' => false,
+        'error' => 'Profile Tasks are turned off in Global Settings.',
+        'error_type' => 'profile_tasks_disabled',
+    ]);
+    exit;
+}
+
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "model_dynmodel.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "chat_helper_functions.php";
 require_once $enginePath . "lib" . DIRECTORY_SEPARATOR . "data_functions.php";
@@ -54,8 +63,6 @@ $profile            = new CoreProfile();
 $currentProfileData = $profile->getById($currentNpcData["profile_id"]);
 $connector->setOldGlobals($currentConnectorData);
 $npcMaster->setOldGlobalsFromCurrentNpcData($currentNpcData);
-
-$CLEAN_CONTEXT_FOCUS_CHAT = false;
 
 $COMMAND_PROMPT = '';
 
