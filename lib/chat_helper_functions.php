@@ -1371,6 +1371,7 @@ function returnLines($lines,$writeOutput=true)
         if (isset($GLOBALS["FORCE_MOOD"])) {
             $mood = $GLOBALS["FORCE_MOOD"];
         }
+        
         $mood = extractFirstEmoteMood($mood, "default");
 
 

@@ -1707,9 +1707,9 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         $profData = json_decode($profile->getById($currentNpcData["profile_id"])["metadata"], true);
 
         if (!$offline) {
-            $doAutoGreeting = (isset($profData["SALUTATION_AFTER_1_DAY"]) && $profData["SALUTATION_AFTER_1_DAY"] || isset($meta["salutation_after_a_while"]) && $meta["salutation_after_a_while"]);
+            $doAutoGreeting = (isset($profData["SALUTATION_AFTER_1_DAY"]) && $profData["SALUTATION_AFTER_1_DAY"] || isset($extended["salutation_after_a_while"]) && $extended["salutation_after_a_while"]);
             if ($doAutoGreeting) {
-                error_log("[auto_greeting] enabled for {$currentNpcData["npc_name"]}, profile:{$profData["SALUTATION_AFTER_1_DAY"]} ,npc:{$meta["salutation_after_a_while"]}");
+                error_log("[auto_greeting] enabled for {$currentNpcData["npc_name"]}, profile:{$profData["SALUTATION_AFTER_1_DAY"]} ,npc:{$extended["salutation_after_a_while"]}");
                 $lit = GetLastInteraction($GLOBALS["PLAYER_NAME"], $currentNpcData["npc_name"]);
                 if (gamets2days_between($lit, $gameRequest[2]) > 1) {
                     // If auto greeting is enabled for this NPC and enough time has passed, force a greeting.

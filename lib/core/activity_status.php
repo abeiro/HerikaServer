@@ -140,6 +140,7 @@ function chimSanitizeActivityStatusPayload(array $payload): array
         'is_sitting' => !empty($payload['is_sitting']),
         'is_sleeping' => !empty($payload['is_sleeping']),
         'is_unconscious' => !empty($payload['is_unconscious']),
+        'is_restrained' => !empty($payload['is_restrained']),
         'is_dead' => !empty($payload['is_dead']),
         'is_weapon_drawn' => !empty($payload['is_weapon_drawn']),
         'timestamp' => isset($payload['timestamp']) && is_numeric($payload['timestamp'])

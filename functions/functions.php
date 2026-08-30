@@ -3617,7 +3617,53 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
 
                 error_log("[ACTION POSTFILTER Toast] Executed server-side");
 
-            } else if ($actionCodeNameResolved=="EquipGear") {
+            } else if ($actionCodeNameResolved=="PatrolArea") {
+                
+                 $npcMaster = new Npcmaster();
+
+                $npc = $npcMaster->getByName($actionParts[0]);
+                $skyrimCmd = new SkyrimCommandBuilder();
+                if ($npc) {
+                    $skyrimCmd = new SkyrimCommandBuilder();
+
+                    // Player is Linked ref.
+                    $json = $skyrimCmd->ActorUtil->SetLinkedRef("0x{$npc["refid"]}", "0x14",true);
+                    $skyrimCmd->send(cmd: $json);
+
+                    // Set alerted
+                    $json = $skyrimCmd->Actor->SetAlert("0x{$npc["refid"]}", true);
+                    $skyrimCmd->send(cmd: $json);
+                    
+                    // Add package override. AIAganetgenericPatrol.
+                    $localPckgFormID="031ab1";
+                    $loadOrderESP = $skyrimCmd->getLoadOrderESP();
+                    $PckgFormID="0x{$loadOrderESP}$localPckgFormID";
+
+                    $json = $skyrimCmd->ActorUtil->AddPackageOverride("","0x{$npc["refid"]}", $PckgFormID, 100);
+                    $skyrimCmd->send(cmd: $json);
+
+                    // Evaluate package to start patrol
+                    $json = $skyrimCmd->Actor->EvaluatePackage("0x{$npc["refid"]}");
+                    $futureTrigger=time()+15;
+                    $skyrimCmd->send(cmd: $json, localts:$futureTrigger);
+
+                    $cnName= $GLOBALS["db"]->escape($actionParts[0]) ?? $actionParts[0];
+                    $GLOBALS["db"]->insert(
+                        'responselog',
+                        [
+
+                            'localts' => time(),
+                            'sent' => 0,
+                            'actor' => "rolemaster",
+                            'text' => "",
+                            'action' => "rolecommand|DebugNotification@{$cnName} is guarding the area",
+                            'tag' => "",
+
+                        ]
+                    );
+                }
+            
+            }  else if ($actionCodeNameResolved=="EquipGear") {
                 
                 $rawParameter = implode("@", array_slice($actionParts2, 1));
                 $payload = decodeFunctionExecutionParameterPayload($rawParameter);
@@ -3658,7 +3704,7 @@ $GLOBALS["action_post_process_fnct_ex"][]=function($actions) {
 
                 error_log("[ACTION POSTFILTER EquipGear] Executed server-side EquipItem(\"0x{$npc["refid"]}\", \"{$itemRef}\", true)");
             
-            }  else if ($actionCodeNameResolved=="Surrender") {
+            } else if ($actionCodeNameResolved=="Surrender") {
                 
                 $npcMaster = new Npcmaster();
 
