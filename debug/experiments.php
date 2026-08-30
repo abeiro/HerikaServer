@@ -1159,3 +1159,43 @@ if ($argv[1] == '30') {
                 ");
     
 }
+
+if ($argv[1] == '31') {
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Alva");
+ 
+    $skyrimCmd = new SkyrimCommandBuilder();
+
+    $json = $skyrimCmd->Actor->SetNoBleedoutRecovery("0x{$npc["refid"]}", false);
+    $skyrimCmd->send(cmd: $json);
+
+}
+
+if ($argv[1] == '32') {
+    // Patrol and guard test.
+    $npcMaster = new NpcMaster();
+    $npc = $npcMaster->getByName("Ursine");
+ 
+    $skyrimCmd = new SkyrimCommandBuilder();
+
+    // Player is Linked ref.
+    $json = $skyrimCmd->ActorUtil->SetLinkedRef("0x{$npc["refid"]}", "0x000FDB0D",true);
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->SetAlert("0x{$npc["refid"]}", true);
+    $skyrimCmd->send(cmd: $json);
+    sleep(10);
+    // Add package override.
+    $localPckgFormID="031ab1";
+    $loadOrderESP = $skyrimCmd->getLoadOrderESP();
+    $PckgFormID="0x{$loadOrderESP}$localPckgFormID";
+
+    
+
+    $json = $skyrimCmd->ActorUtil->AddPackageOverride("","0x{$npc["refid"]}", $PckgFormID, 100);
+    $skyrimCmd->send(cmd: $json);
+
+    $json = $skyrimCmd->Actor->EvaluatePackage("0x{$npc["refid"]}");
+    $skyrimCmd->send(cmd: $json);
+
+}
