@@ -1,0 +1,232 @@
+.pron-intro-list {
+    color: #aeb8c4;
+    margin: 10px 0 0;
+    padding-left: 20px;
+}
+
+.pron-intro-list li {
+    margin-bottom: 6px;
+}
+
+.pron-toolbar {
+    align-items: flex-end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 16px 0 12px;
+}
+
+.pron-toolbar-field {
+    min-width: 220px;
+}
+
+.pron-label {
+    color: #cfd8e3;
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.pron-field {
+    background: #191919;
+    border: 1px solid #4a4a4a;
+    border-radius: 5px;
+    box-sizing: border-box;
+    color: #f8f9fa;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    width: 100%;
+}
+
+.pron-field:focus {
+    border-color: rgb(242, 124, 17);
+}
+
+.pron-section :focus-visible {
+    outline: 2px solid rgb(242, 124, 17);
+    outline-offset: 2px;
+}
+
+.pron-cols {
+    align-items: center;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(130px, 1.1fr) minmax(140px, 1.3fr) minmax(130px, 1fr) 96px 172px;
+    padding: 10px 12px;
+}
+
+.pron-add-row {
+    align-items: end;
+    padding: 0;
+}
+
+.pron-grid {
+    border: 1px solid #414141;
+    border-radius: 7px;
+    overflow: hidden;
+}
+
+.pron-head {
+    background: #202020;
+    border-bottom: 1px solid #414141;
+    color: #8b98a8;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.pron-row {
+    background: #242424;
+    border-bottom: 1px solid #363636;
+    margin: 0;
+}
+
+.pron-row:last-child {
+    border-bottom: 0;
+}
+
+.pron-row:hover,
+.pron-row:focus-within {
+    background: #2b2b2b;
+}
+
+.pron-row.is-disabled .pron-static,
+.pron-row.is-disabled .pron-field {
+    opacity: 0.62;
+}
+
+.pron-static {
+    color: #f2f2f2;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.pron-badge {
+    background: rgba(74, 138, 182, 0.16);
+    border: 1px solid rgba(74, 138, 182, 0.35);
+    border-radius: 999px;
+    color: #93c5fd;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 2px 9px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.pron-toggle {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.pron-toggle .pron-label {
+    margin: 0;
+}
+
+.pron-toggle input[type="checkbox"] {
+    accent-color: rgb(242, 124, 17);
+    cursor: pointer;
+    flex: 0 0 auto;
+    height: 16px;
+    margin: 0;
+    width: 16px;
+}
+
+.pron-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.pron-btn {
+    font-size: 13px;
+    margin: 0;
+    padding: 6px 12px;
+}
+
+.pron-btn.delete {
+    background-color: #8c2f2a;
+    border-color: rgba(244, 67, 54, 0.35);
+}
+
+.pron-btn.delete:hover {
+    background-color: #73241f;
+}
+
+.pron-hidden-form {
+    display: none;
+}
+
+.pron-empty {
+    background: #242424;
+    color: #aeb8c4;
+    margin: 0;
+    padding: 14px 12px;
+}
+
+.pron-count {
+    color: #8b98a8;
+    display: block;
+    font-size: 12px;
+    margin: 4px 0 0;
+}
+
+.pron-clear-filter {
+    color: #93c5fd;
+    font-size: 13px;
+    padding-bottom: 9px;
+}
+
+/* Column headers carry the labels inside the grids, so per-row labels stay
+   screen-reader only until the grid stacks on narrow viewports. */
+.pron-grid .pron-label {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+}
+
+@media (max-width: 900px) {
+    .pron-head {
+        display: none;
+    }
+
+    .pron-cols {
+        align-items: stretch;
+        grid-template-columns: 1fr;
+    }
+
+    .pron-grid .pron-label {
+        clip: auto;
+        height: auto;
+        margin: 0 0 5px;
+        overflow: visible;
+        position: static;
+        white-space: normal;
+        width: auto;
+    }
+
+    .pron-grid .pron-toggle .pron-label {
+        margin: 0;
+    }
+
+    .pron-row {
+        padding: 14px 12px;
+    }
+
+    .pron-toolbar-field {
+        width: 100%;
+    }
+}
