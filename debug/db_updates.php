@@ -7979,6 +7979,127 @@ if ($checkVersion("playthrough_schema") < 20260723001) {
     }
 }
 
+// Persistent NPC tasks
+if ($checkVersion("npc_commitments") < 20260719002) {
+    Logger::debug("Applying npc_commitments 20260719002 - add persistent NPC task recurrence");
+
+    $schemaPath = __DIR__ . "/../lib/core/database_schema/npc_commitments.sql";
+    if ($db->execQuery(file_get_contents($schemaPath))) {
+        $updateVersion("npc_commitments", 20260719002);
+        Logger::info("Applied patch npc_commitments 20260719002");
+    } else {
+        Logger::error("Failed to apply patch npc_commitments 20260719002");
+    }
+}
+
+if ($checkVersion("core_action") < 20260719002) {
+    Logger::debug("Applying core_action 20260719002 - add persistent NPC task actions");
+
+    $db->execQuery("
+        DELETE FROM public.core_action_custom
+         WHERE code_name IN ('CreateCommitment', 'ResolveCommitment', 'CancelCommitment')
+    ");
+    $db->execQuery("
+        DELETE FROM public.core_action
+         WHERE code_name IN ('CreateCommitment', 'ResolveCommitment', 'CancelCommitment')
+    ");
+
+    $db->execQuery("
+        INSERT INTO public.core_action (
+            code_name,
+            action_name,
+            description,
+            return_message,
+            available_to_npc,
+            available_to_followers,
+            available_to_narrator,
+            is_activated,
+            parameters_json,
+            metadata,
+            game_function,
+            import_version,
+            script_proxy_program
+        ) VALUES
+        (
+            'CreateTasks',
+            'Create_Tasks',
+            'Create a persistent task that #HERIKA_NAME# intends to complete later. Set repeat_every_hours to make it repeat on an in-game interval, or omit it for a one-time task.',
+            '#HERIKA_NAME# records a persistent task.',
+            TRUE,
+            TRUE,
+            FALSE,
+            TRUE,
+            '{\"type\":\"object\",\"required\":[\"type\",\"subject\",\"due_in_hours\"],\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"meeting\",\"message_delivery\",\"fetch\",\"escort\",\"errand\",\"other\"],\"description\":\"Kind of task being created.\"},\"subject\":{\"type\":\"string\",\"description\":\"Short concrete description of what must happen.\"},\"counterparty\":{\"type\":\"string\",\"description\":\"Other person involved, if any.\"},\"location\":{\"type\":\"string\",\"description\":\"Place where the task should be completed, if any.\"},\"due_in_hours\":{\"type\":\"number\",\"description\":\"In-game hours until this task is first due. Minimum 0.25, maximum 8760.\"},\"repeat_every_hours\":{\"type\":\"number\",\"description\":\"Optional in-game repeat interval. Omit or use 0 for a one-time task; otherwise minimum 0.25 and maximum 8760.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"server_action\"}'::jsonb,
+            FALSE,
+            0,
+            NULL
+        ),
+        (
+            'ResolveTask',
+            'Resolve_Task',
+            'Mark one of #HERIKA_NAME#''s active tasks as completed or failed after the outcome has happened. Repeating tasks automatically advance to their next scheduled occurrence.',
+            '#HERIKA_NAME# resolves a persistent task.',
+            TRUE,
+            TRUE,
+            FALSE,
+            TRUE,
+            '{\"type\":\"object\",\"required\":[\"task_id\",\"status\",\"outcome\"],\"properties\":{\"task_id\":{\"type\":\"integer\",\"description\":\"Task number shown in the active tasks context.\"},\"status\":{\"type\":\"string\",\"enum\":[\"completed\",\"failed\"],\"description\":\"Final outcome.\"},\"outcome\":{\"type\":\"string\",\"description\":\"Brief factual description of what happened.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"server_action\"}'::jsonb,
+            FALSE,
+            0,
+            NULL
+        ),
+        (
+            'CancelTask',
+            'Cancel_Task',
+            'Cancel one of #HERIKA_NAME#''s active tasks. Cancelling permanently stops a repeating task.',
+            '#HERIKA_NAME# cancels a persistent task.',
+            TRUE,
+            TRUE,
+            FALSE,
+            TRUE,
+            '{\"type\":\"object\",\"required\":[\"task_id\",\"reason\"],\"properties\":{\"task_id\":{\"type\":\"integer\",\"description\":\"Task number shown in the active tasks context.\"},\"reason\":{\"type\":\"string\",\"description\":\"Brief reason the task is being cancelled.\"}}}'::jsonb,
+            '{\"source\":\"functions.php\",\"status\":\"active\",\"builtin\":true,\"dispatch\":\"server_action\"}'::jsonb,
+            FALSE,
+            0,
+            NULL
+        )
+        ON CONFLICT (code_name) DO UPDATE SET
+            action_name = EXCLUDED.action_name,
+            description = EXCLUDED.description,
+            return_message = EXCLUDED.return_message,
+            available_to_npc = EXCLUDED.available_to_npc,
+            available_to_followers = EXCLUDED.available_to_followers,
+            available_to_narrator = EXCLUDED.available_to_narrator,
+            is_activated = EXCLUDED.is_activated,
+            parameters_json = EXCLUDED.parameters_json,
+            metadata = EXCLUDED.metadata,
+            game_function = EXCLUDED.game_function,
+            import_version = EXCLUDED.import_version,
+            script_proxy_program = EXCLUDED.script_proxy_program,
+            updated_at = NOW()
+    ");
+
+    $updateVersion("core_action", 20260719002);
+    Logger::info("Applied patch core_action 20260719002");
+}
+
+if ($checkVersion("core_action") < 20260719003) {
+    Logger::debug("Applying core_action 20260719003 - strengthen persistent task prompting");
+    $description = $db->escape("Create a persistent task whenever #HERIKA_NAME# accepts, promises, remembers, or schedules a future duty. Use this instead of Talk when a commitment is made. Include any task details already known; the server will structure and save the task in the background.");
+    if ($db->execQuery("
+        UPDATE public.core_action
+           SET description = '{$description}', updated_at = NOW()
+         WHERE code_name = 'CreateTasks'
+    ")) {
+        $updateVersion("core_action", 20260719003);
+        Logger::info("Applied patch core_action 20260719003");
+    } else {
+        Logger::error("Failed to apply patch core_action 20260719003");
+    }
+}
+
 // master Packages update 
 if ($checkVersion("master_packages")<20260716002) {
     if ($db->execQuery(file_get_contents(__DIR__."/../data/master_packages_202607.sql"))) {

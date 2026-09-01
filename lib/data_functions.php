@@ -10,6 +10,7 @@ require_once(__DIR__."/emote_moods.php");
 require_once(__DIR__."/core/activity_status.php");
 require_once(__DIR__."/core/transformation_state.php");
 require_once(__DIR__."/core/game_plugins.php");
+require_once(__DIR__."/core/npc_commitments.php");
 require_once(__DIR__."/core/event_type.php");
 require_once(__DIR__."/core/npc_master.class.php");
 require_once(__DIR__."/core/core_profiles.class.php");
@@ -1484,6 +1485,16 @@ function DataLastInfoFor($actorBeingCalled, $lastNelements = -2,$addNPCDescripti
             $GLOBALS["PROMPT_NEARBY_SECTIONS"] = "";
         }
         $GLOBALS["PROMPT_NEARBY_SECTIONS"] .= "\n" . $heldItemsContext;
+    }
+
+    $taskActor = trim((string)($GLOBALS['HERIKA_NAME'] ?? ''));
+    $taskGamets = (int)($GLOBALS['gameRequest'][2] ?? 0);
+    $taskContext = chimCommitmentFormatContext($taskActor, $taskGamets);
+    if ($taskContext !== '') {
+        if (!isset($GLOBALS['PROMPT_NEARBY_SECTIONS'])) {
+            $GLOBALS['PROMPT_NEARBY_SECTIONS'] = '';
+        }
+        $GLOBALS['PROMPT_NEARBY_SECTIONS'] .= "\n" . $taskContext;
     }
     
     /*

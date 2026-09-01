@@ -188,8 +188,6 @@
         }
     }
 
-    chimRefreshJsonResponseState(true);
-
     // specify the available actions which will be made available in the context
     Function setActions() {
         $promptCharacterName = function_exists('chimGetPromptCharacterName')
@@ -256,6 +254,12 @@
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Use for serious crimes or if {$GLOBALS["PLAYER_NAME"]} refuses to pay their bounty. {$GLOBALS["PLAYER_NAME"]} gets a submit/resist popup. Submit sends them to jail with inventory confiscated. Resist makes guards attack.";
                 } else if ($fname == "ForgiveCrime") {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Use when {$GLOBALS["PLAYER_NAME"]} successfully persuades, bribes, or invokes thane status to clear their bounty.";
+                } else if ($fname == "CreateTasks") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). When accepting, promising, remembering, or scheduling a future duty, use this action instead of Talk. Include any known details in 'action_params'; the server will complete the structured task in the background.";
+                } else if ($fname == "ResolveTask") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put task_id, status, and outcome in the 'action_params' object.";
+                } else if ($fname == "CancelTask") {
+                    $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Put task_id and reason in the 'action_params' object.";
                 } else if ($fname == "TeachRightHandSpell") {
                     $GLOBALS["PROMPT_ACTIONS_LIST"].="\nAVAILABLE ACTION: {$function["name"]} ({$actionDescription}). Do not put anything in the 'target' or 'item' field. This action automatically teaches whatever spell {$GLOBALS["PLAYER_NAME"]} currently has equipped in the right hand.";
                 } else if ($fname == "Consume") {
@@ -284,6 +288,83 @@
             shuffle($GLOBALS["FUNC_LIST"]);
         }
     }
+
+    if (!function_exists('chimGetSupplementalActionParameterProperties')) {
+        function chimGetSupplementalActionParameterProperties(): array
+        {
+            $standardProperties = array_fill_keys([
+                'character', 'listener', 'message', 'mood', 'action',
+                'target', 'item', 'amount', 'lang', 'emotion', 'emotion_intensity',
+            ], true);
+            $availableActionNames = array_fill_keys(
+                array_map('strval', is_array($GLOBALS['FUNC_LIST'] ?? null) ? $GLOBALS['FUNC_LIST'] : []),
+                true
+            );
+            $supplemental = [];
+
+            foreach ((is_array($GLOBALS['FUNCTIONS'] ?? null) ? $GLOBALS['FUNCTIONS'] : []) as $function) {
+                if (!is_array($function)) {
+                    continue;
+                }
+
+                $actionName = trim(strval($function['name'] ?? ''));
+                if ($actionName === '' || !isset($availableActionNames[$actionName])) {
+                    continue;
+                }
+
+                $properties = $function['parameters']['properties'] ?? [];
+                if (!is_array($properties)) {
+                    continue;
+                }
+
+                foreach ($properties as $parameterName => $parameterSchema) {
+                    $parameterName = trim(strval($parameterName));
+                    if ($parameterName === '' || isset($standardProperties[$parameterName]) || !is_array($parameterSchema)) {
+                        continue;
+                    }
+
+                    $schema = $parameterSchema;
+                    $description = trim(strval($schema['description'] ?? ''));
+                    $schema['description'] = "For {$actionName}: " . ($description !== '' ? $description : "value for {$parameterName}.");
+
+                    if (!isset($supplemental[$parameterName])) {
+                        $supplemental[$parameterName] = $schema;
+                        continue;
+                    }
+
+                    $existingDescription = trim(strval($supplemental[$parameterName]['description'] ?? ''));
+                    if ($existingDescription !== '' && strpos($existingDescription, $schema['description']) === false) {
+                        $supplemental[$parameterName]['description'] = $existingDescription . ' ' . $schema['description'];
+                    }
+                    if (isset($schema['enum']) && is_array($schema['enum'])) {
+                        $existingEnum = is_array($supplemental[$parameterName]['enum'] ?? null)
+                            ? $supplemental[$parameterName]['enum']
+                            : [];
+                        $supplemental[$parameterName]['enum'] = array_values(array_unique(array_merge($existingEnum, $schema['enum'])));
+                    }
+                }
+            }
+
+            return $supplemental;
+        }
+    }
+
+    if (!function_exists('chimBuildSupplementalActionParameterPrompt')) {
+        function chimBuildSupplementalActionParameterPrompt(array $properties): array
+        {
+            $prompt = [];
+            foreach ($properties as $parameterName => $schema) {
+                $description = trim(strval($schema['description'] ?? ''));
+                if (isset($schema['enum']) && is_array($schema['enum']) && count($schema['enum']) > 0) {
+                    $description .= ' Allowed values: ' . implode('|', array_map('strval', $schema['enum'])) . '.';
+                }
+                $prompt[$parameterName] = $description !== '' ? $description : 'Action-specific value.';
+            }
+            return $prompt;
+        }
+    }
+
+    chimRefreshJsonResponseState(true);
 
     // specify the json object that will be requested from the LLM (via prompt, not enforced)
     Function setResponseTemplate() {
@@ -396,6 +477,11 @@
                     "message"=>$messageDescription
                 ];
             }
+        }
+
+        $supplementalActionParameters = chimGetSupplementalActionParameterProperties();
+        if (count($supplementalActionParameters) > 0) {
+            $GLOBALS["responseTemplate"]["action_params"] = chimBuildSupplementalActionParameterPrompt($supplementalActionParameters);
         }
 
         // emotions expression:
@@ -520,6 +606,16 @@
                 "strict" => true
             )
         );
+
+        $supplementalActionParameters = chimGetSupplementalActionParameterProperties();
+        if (count($supplementalActionParameters) > 0) {
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"]["action_params"] = array(
+                "type" => "object",
+                "description" => "Parameters for the selected action. Populate only fields described for that action.",
+                "properties" => $supplementalActionParameters,
+                "additionalProperties" => false,
+            );
+        }
 
         if (isset($GLOBALS["LANG_LLM_XTTS"])&&($GLOBALS["LANG_LLM_XTTS"])) {
             if (isset($GLOBALS["LLM_LANG"])) {

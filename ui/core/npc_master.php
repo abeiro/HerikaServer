@@ -1969,6 +1969,22 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
     .label-with-toggle input[type="checkbox"] { accent-color:#176529; transform: scale(1.8); transform-origin:center; cursor:pointer; }
     .span-2 { grid-column: 1 / -1; margin-bottom:12px; }
     .checkbox-inline { display:flex; align-items:center; gap:8px; }
+    .npc-task-section { border:1px solid #4a4a4a; border-radius:8px; padding:12px; background:#262626; }
+    .npc-task-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+    .npc-task-list { display:grid; gap:10px; }
+    .npc-task-card { border:1px solid #3f3f3f; border-radius:8px; padding:12px; background:#242424; }
+    .npc-task-card.is-active { border-color:rgba(242,124,17,.55); }
+    .npc-task-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .npc-task-subject { color:#f0f3f8; font-weight:700; line-height:1.35; }
+    .npc-task-status { border:1px solid #555; border-radius:999px; padding:2px 8px; color:#cfd9ea; font-size:11px; text-transform:uppercase; }
+    .npc-task-status.due { border-color:#e5a82a; color:#ffd36b; }
+    .npc-task-status.scheduled { border-color:#4f7658; color:#91d5a0; }
+    .npc-task-meta { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:8px; color:#aeb9c9; font-size:12px; }
+    .npc-task-outcome { margin-top:8px; color:#c9d1dc; font-size:12px; }
+    .npc-task-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+    .npc-task-actions button, .npc-task-refresh { border:1px solid #4a4a4a; border-radius:5px; background:#303030; color:#e9efff; padding:5px 9px; cursor:pointer; }
+    .npc-task-actions button:hover, .npc-task-refresh:hover { border-color:rgb(242,124,17); color:rgb(242,124,17); }
+    .npc-task-empty { border:1px dashed #444; border-radius:8px; padding:18px; text-align:center; color:#9fb1c9; }
     </style>
     <?php if ($editItem): ?>
         <input type="hidden" name="id" value="<?= htmlspecialchars($editItem["id"]) ?>">
@@ -3294,6 +3310,92 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
             <textarea id="middle_term_latest" name="middle_term_latest" placeholder="No middle term memory yet."><?= htmlspecialchars($mtmLatest) ?></textarea>
             <small class="hint">Manual edits save to the latest middle-term memory entry. Future auto-generated summaries continue appending after your edit.</small>
         </div>
+
+        <?php if ($editItem): ?>
+        <div class="form-item span-2 npc-task-section">
+            <div class="npc-task-toolbar">
+                <div>
+                    <label>Persistent Tasks</label>
+                    <small class="hint" style="display:block; margin-top:4px;">Active duties, repeating schedules, and resolved task history for this NPC.</small>
+                </div>
+                <button type="button" id="npc_tasks_refresh" class="npc-task-refresh">Refresh</button>
+            </div>
+            <div id="npc_tasks_list" class="npc-task-list"><div class="npc-task-empty">Loading tasks...</div></div>
+        </div>
+        <script>
+        (function(){
+            const list = document.getElementById('npc_tasks_list');
+            const refresh = document.getElementById('npc_tasks_refresh');
+            const npcId = <?= json_encode((string)($editItem['id'] ?? '')) ?>;
+            if (!list || !npcId) return;
+
+            function esc(value){
+                return String(value == null ? '' : value).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+            }
+            function render(tasks){
+                if (!Array.isArray(tasks) || tasks.length === 0){
+                    list.innerHTML = '<div class="npc-task-empty">No persistent tasks have been recorded for this NPC.</div>';
+                    return;
+                }
+                list.innerHTML = tasks.map(task=>{
+                    const status = String(task.status || 'scheduled').toLowerCase();
+                    const active = status === 'scheduled' || status === 'due';
+                    const details = [];
+                    if (task.commitment_type) details.push(esc(String(task.commitment_type).replaceAll('_',' ')));
+                    if (task.due_label) details.push('Due: '+esc(task.due_label));
+                    if (Number(task.repeat_hours || 0) > 0) details.push('Repeats every '+esc(task.repeat_hours)+' hour(s)');
+                    if (Number(task.occurrence_count || 0) > 0) details.push('Completed '+esc(task.occurrence_count)+' time(s)');
+                    if (task.counterparty) details.push('With: '+esc(task.counterparty));
+                    if (task.location_name) details.push('At: '+esc(task.location_name));
+                    const actions = active ? '<div class="npc-task-actions">'
+                        + '<button type="button" data-task-op="completed" data-task-id="'+esc(task.id)+'">Complete</button>'
+                        + '<button type="button" data-task-op="failed" data-task-id="'+esc(task.id)+'">Fail</button>'
+                        + '<button type="button" data-task-op="cancelled" data-task-id="'+esc(task.id)+'">Cancel</button>'
+                        + '</div>' : '';
+                    const outcome = task.outcome ? '<div class="npc-task-outcome">Outcome: '+esc(task.outcome)+'</div>' : '';
+                    return '<div class="npc-task-card'+(active?' is-active':'')+'">'
+                        + '<div class="npc-task-head"><div class="npc-task-subject">#'+esc(task.id)+' '+esc(task.subject)+'</div><span class="npc-task-status '+esc(status)+'">'+esc(status)+'</span></div>'
+                        + '<div class="npc-task-meta">'+details.map(v=>'<span>'+v+'</span>').join('')+'</div>'
+                        + outcome + actions + '</div>';
+                }).join('');
+            }
+            async function load(){
+                list.innerHTML = '<div class="npc-task-empty">Loading tasks...</div>';
+                try {
+                    const response = await fetch('../api/npc_commitments.php?npc_id='+encodeURIComponent(npcId), {cache:'no-store'});
+                    const data = await response.json();
+                    if (!response.ok || !data.success) throw new Error(data.error || 'Task request failed');
+                    render(data.tasks || []);
+                } catch(error){
+                    list.innerHTML = '<div class="npc-task-empty" style="color:#ff8b8b;">'+esc(error.message || error)+'</div>';
+                }
+            }
+            if (refresh) refresh.addEventListener('click', load);
+            list.addEventListener('click', async function(event){
+                const button = event.target.closest('[data-task-op]');
+                if (!button) return;
+                const operation = button.getAttribute('data-task-op');
+                const taskId = button.getAttribute('data-task-id');
+                const label = operation === 'cancelled' ? 'cancel' : operation === 'failed' ? 'mark as failed' : 'complete';
+                if (!confirm('Are you sure you want to '+label+' task #'+taskId+'?')) return;
+                let outcome = '';
+                if (operation !== 'completed') outcome = prompt('Optional reason or outcome:', '') || '';
+                const body = new URLSearchParams({npc_id:npcId, task_id:taskId, operation, outcome});
+                button.disabled = true;
+                try {
+                    const response = await fetch('../api/npc_commitments.php', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'}, body:body.toString()});
+                    const data = await response.json();
+                    if (!response.ok || !data.success) throw new Error(data.error || 'Task update failed');
+                    render(data.tasks || []);
+                } catch(error){
+                    alert(error.message || error);
+                    button.disabled = false;
+                }
+            });
+            load();
+        })();
+        </script>
+        <?php endif; ?>
 
         <?php
         // REINSERT Skills, Equipment, Stats, Inventory sections here (below Middle Term Memory)
@@ -4818,18 +4920,22 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['import_from_bio'])) {
       const tabs = document.getElementById('npc_modal_tabs');
       const bioPane = document.getElementById('pane_bio');
       const manualPane = document.getElementById('pane_manual');
+      const bioTab = document.querySelector('#npc_modal_tabs [data-pane="pane_bio"]');
       const exportBtn = document.getElementById('npc_modal_export');
       const importBioBtn = document.getElementById('npc_modal_import_to');
       const isEdit = /[?&]edit=/.test(url);
       if (isEdit){
-        if (tabs) tabs.style.display = 'none';
+        if (tabs) tabs.style.display = 'flex';
+        if (bioTab) bioTab.style.display = 'none';
         if (bioPane) { bioPane.style.display = 'none'; bioPane.classList.remove('active'); }
         if (manualPane) { manualPane.style.display = 'block'; manualPane.classList.add('active'); }
+        document.querySelectorAll('#npc_modal_tabs .pf-tab').forEach(t=>t.classList.toggle('active', t.getAttribute('data-pane')==='pane_manual'));
         // Show export/import buttons only for existing NPCs
         if (exportBtn) exportBtn.style.display = '';
         if (importBioBtn) importBioBtn.style.display = '';
       } else {
         if (tabs) tabs.style.display = 'flex';
+        if (bioTab) bioTab.style.display = '';
         // Hide export/import buttons for new NPCs
         if (exportBtn) exportBtn.style.display = 'none';
         if (importBioBtn) importBioBtn.style.display = 'none';

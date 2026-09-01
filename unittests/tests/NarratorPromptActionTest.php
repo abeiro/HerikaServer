@@ -188,4 +188,62 @@ final class NarratorPromptActionTest extends DatabaseTestCase
         $db->close();
         unset($GLOBALS['db']);
     }
+
+    public function testTaskActionsExposeAndDecodeActionSpecificParameters(): void
+    {
+        require_once __DIR__.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'lib'.DIRECTORY_SEPARATOR.'phpunit.class.php';
+
+        $db = new sql();
+        $GLOBALS['db'] = $db;
+
+        $GLOBALS['PLAYER_NAME'] = 'RANGROO';
+        $GLOBALS['HERIKA_NAME'] = 'Danica Pure-Spring';
+        $GLOBALS['IS_NPC'] = true;
+        $GLOBALS['DIRECT_NARRATOR_DIALOGUE'] = false;
+        $GLOBALS['FUNCTIONS_ARE_ENABLED'] = true;
+        $GLOBALS['CORE_LANG'] = '';
+        $GLOBALS['EMOTEMOODS'] = 'neutral,kindly';
+        $GLOBALS['LANG_LLM_XTTS'] = false;
+        $GLOBALS['TTSFUNCTION'] = '';
+        $GLOBALS['INLINE_NARRATION_MODE'] = 'disabled';
+        $GLOBALS['INLINE_NARRATION_ENABLED'] = false;
+        $GLOBALS['use_emotions_expression'] = false;
+        $GLOBALS['OVERRIDE_DIALOGUE_TARGET'] = false;
+        $GLOBALS['FEATURES']['MISC']['JSON_DIALOGUE_FORMAT_REORDER'] = false;
+        $GLOBALS['gameRequest'] = ['inputtext', 100, 200, 'create a recurring gate patrol'];
+        $db->execQuery("UPDATE public.core_action SET is_activated = TRUE WHERE code_name IN ('CreateTasks', 'ResolveTask', 'CancelTask')");
+
+        require __DIR__.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'functions'.DIRECTORY_SEPARATOR.'json_response.php';
+
+        $this->assertArrayHasKey('action_params', $GLOBALS['responseTemplate']);
+        $this->assertArrayHasKey('subject', $GLOBALS['responseTemplate']['action_params']);
+        $this->assertArrayHasKey('repeat_every_hours', $GLOBALS['responseTemplate']['action_params']);
+
+        $structuredParameters = $GLOBALS['structuredOutputTemplate']['json_schema']['schema']['properties']['action_params']['properties'] ?? [];
+        $this->assertArrayHasKey('type', $structuredParameters);
+        $this->assertArrayHasKey('due_in_hours', $structuredParameters);
+        $this->assertArrayHasKey('task_id', $structuredParameters);
+
+        $executionContext = buildFunctionExecutionContextFromResponse([
+            'action' => 'Create_Tasks',
+            'target' => '',
+            'item' => '',
+            'action_params' => [
+                'type' => 'other',
+                'subject' => 'Check the Riverwood gate',
+                'due_in_hours' => 1,
+                'repeat_every_hours' => 2,
+            ],
+        ]);
+
+        $this->assertTrue($executionContext['function_found']);
+        $this->assertSame('CreateTasks', $executionContext['function_code_name']);
+        $this->assertSame([], $executionContext['missing_required']);
+        $this->assertSame('Check the Riverwood gate', $executionContext['parameter_value']['subject'] ?? null);
+        $this->assertSame(1.0, $executionContext['parameter_value']['due_in_hours'] ?? null);
+        $this->assertSame(2.0, $executionContext['parameter_value']['repeat_every_hours'] ?? null);
+
+        $db->close();
+        unset($GLOBALS['db']);
+    }
 }
