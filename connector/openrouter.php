@@ -506,6 +506,13 @@ class openrouter
             $parameterArr = json_decode($this->_parameterBuff, true);
                 $parameter = $parameterArr;
             $functionCodeName = getFunctionCodeName($this->_functionName);
+            $executionResolution = resolveFunctionExecutionAction($functionCodeName, $parameter);
+            if (empty($executionResolution["valid"])) {
+                Logger::warn("openrouter: Invalid grouped action parameters: " . implode(", ", $executionResolution["missing_required"]));
+                return $this->_commandBuffer;
+            }
+            $functionCodeName = $executionResolution["code_name"];
+            $parameter = $executionResolution["parameter_value"];
             $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
             $commandStr = "Herika|command|$functionCodeName@$parameter\r\n";
 
@@ -563,6 +570,13 @@ class openrouter
             $parameterArr = json_decode($this->_parameterBuff, true);
                 $parameter = $parameterArr;
             $functionCodeName = getFunctionCodeName($this->_functionName);
+            $executionResolution = resolveFunctionExecutionAction($functionCodeName, $parameter);
+            if (empty($executionResolution["valid"])) {
+                Logger::warn("openrouter: Invalid grouped action parameters: " . implode(", ", $executionResolution["missing_required"]));
+                return $this->_commandBuffer;
+            }
+            $functionCodeName = $executionResolution["code_name"];
+            $parameter = $executionResolution["parameter_value"];
             $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
             $commandStr = "Herika|command|$functionCodeName@$parameter\r\n";
 

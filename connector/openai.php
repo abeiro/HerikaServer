@@ -549,6 +549,13 @@ class openai
                 $parameter = $parameterArr;
 
                 $functionCodeName = getFunctionCodeName($this->_functionName);
+                $executionResolution = resolveFunctionExecutionAction($functionCodeName, $parameter);
+                if (empty($executionResolution["valid"])) {
+                    Logger::warn("openai: Invalid grouped action parameters: " . implode(", ", $executionResolution["missing_required"]));
+                    return null;
+                }
+                $functionCodeName = $executionResolution["code_name"];
+                $parameter = $executionResolution["parameter_value"];
                 $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
                 $commandStr = "Herika|command|$functionCodeName@$parameter\r\n";
 
@@ -610,6 +617,13 @@ class openai
                 $parameter = $parameterArr;
 
                 $functionCodeName = getFunctionCodeName($this->_functionName);
+                $executionResolution = resolveFunctionExecutionAction($functionCodeName, $parameter);
+                if (empty($executionResolution["valid"])) {
+                    Logger::warn("openai: Invalid grouped action parameters: " . implode(", ", $executionResolution["missing_required"]));
+                    return null;
+                }
+                $functionCodeName = $executionResolution["code_name"];
+                $parameter = $executionResolution["parameter_value"];
                 $parameter = buildFunctionExecutionParameter($functionCodeName, $parameter);
                 $commandStr = "Herika|command|$functionCodeName@$parameter\r\n";
 
