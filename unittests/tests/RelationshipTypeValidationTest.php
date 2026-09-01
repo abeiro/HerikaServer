@@ -69,6 +69,40 @@ final class RelationshipTypeValidationTest extends TestCase
         $this->assertFalse(RelationshipManager::shouldRunAutomaticEvaluation('invalid', 51));
     }
 
+    public function testRelationshipContextCanReusePreloadedRelationshipData(): void
+    {
+        $hadDatabase = array_key_exists('db', $GLOBALS);
+        $previousDatabase = $hadDatabase ? $GLOBALS['db'] : null;
+        $hadConnector = array_key_exists('RELLLM_CONNECTOR', $GLOBALS);
+        $previousConnector = $hadConnector ? $GLOBALS['RELLLM_CONNECTOR'] : null;
+        $GLOBALS['db'] = new class {
+            public function fetchOne(string $query): array
+            {
+                throw new RuntimeException('Relationship context performed an unexpected database lookup.');
+            }
+        };
+        $GLOBALS['RELLLM_CONNECTOR'] = 0;
+
+        try {
+            $context = RelationshipManager::buildContext('Lydia', [], [
+                'Player' => ['aff' => 35, 'type' => 'platonic'],
+            ]);
+        } finally {
+            if ($hadDatabase) {
+                $GLOBALS['db'] = $previousDatabase;
+            } else {
+                unset($GLOBALS['db']);
+            }
+            if ($hadConnector) {
+                $GLOBALS['RELLLM_CONNECTOR'] = $previousConnector;
+            } else {
+                unset($GLOBALS['RELLLM_CONNECTOR']);
+            }
+        }
+
+        $this->assertStringContainsString('Player: +35 (Friendly, Platonic)', $context);
+    }
+
     public function testLegacyRelationshipTextIsNotSentForInitialization(): void
     {
         $hadDatabase = array_key_exists('db', $GLOBALS);

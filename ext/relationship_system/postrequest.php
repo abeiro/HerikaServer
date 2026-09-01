@@ -162,6 +162,17 @@ if ($npcName === "The Narrator") {
     return;
 }
 
+// Dedicated relationship evaluations are optional background work. Apply the
+// frequency gate before listener resolution, lock reads, and context assembly.
+$useRelLLM = !empty($GLOBALS['RELLLM_CONNECTOR']) && $GLOBALS['RELLLM_CONNECTOR'] > 0;
+if ($useRelLLM) {
+    require_once $GLOBALS["ENGINE_PATH"] . "lib/relationship_manager.php";
+    if (!RelationshipManager::shouldRunAutomaticEvaluation()) {
+        Logger::debug("[REL] Skipping automatic evaluation for {$npcName}: RELATIONSHIP_UPDATE_CHANCE gate");
+        return;
+    }
+}
+
 // Determine who the NPC was talking to (listener)
 // PRIORITY ORDER:
 // 1. SCRIPTLINE_LISTENER_ATOMIC - set during response processing (most reliable)
@@ -223,16 +234,7 @@ if ($npcId) {
     }
 }
 
-// Check if RelationshipLLM is configured
-$useRelLLM = !empty($GLOBALS['RELLLM_CONNECTOR']) && $GLOBALS['RELLLM_CONNECTOR'] > 0;
-
 if ($useRelLLM && $npcId) {
-    require_once $GLOBALS["ENGINE_PATH"] . "lib/relationship_manager.php";
-    if (!RelationshipManager::shouldRunAutomaticEvaluation()) {
-        Logger::debug("[REL] Skipping automatic evaluation for {$npcName}: RELATIONSHIP_UPDATE_CHANCE gate");
-        return;
-    }
-
     // MODE 1: ASYNC - Queue evaluation for processing by background worker
     // This prevents LLM calls from blocking the current response
     require_once __DIR__ . "/async_queue.php";

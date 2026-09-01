@@ -1767,20 +1767,6 @@ if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about thi
         }
     }
 
-    // RELATIONSHIP SYSTEM: Queue NPC for relationship initialization
-    // This parses TEXT relationships into JSONB without blocking map load
-    if (!$offline) {
-        if ($currentNpcData && !empty($currentNpcData['id'])) {
-            $relAsyncFile = $GLOBALS["ENGINE_PATH"] . "ext/relationship_system/async_queue.php";
-            if (file_exists($relAsyncFile)) {
-                require_once $relAsyncFile;
-                if (function_exists('_relQueueNpcInit')) {
-                    _relQueueNpcInit($currentNpcData['id'], $localName);
-                }
-            }
-        }
-    }
-
     $MUST_END = true;
 
 

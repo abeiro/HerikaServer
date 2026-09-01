@@ -741,10 +741,13 @@ class RelationshipManager {
      *
      * @param string $npcName The speaking NPC
      * @param array $nearbyNpcs Names of NPCs in the scene
+     * @param array|null $relationships Preloaded relationship map when already available
      * @return string Context block to inject
      */
-    public static function buildContext($npcName, $nearbyNpcs = []) {
-        $rels = self::getRelationships($npcName);
+    public static function buildContext($npcName, $nearbyNpcs = [], $relationships = null) {
+        $rels = $relationships === null
+            ? self::getRelationships($npcName)
+            : self::normalizeRelationshipMap($relationships);
 
         // Check if using dedicated RelationshipLLM (tier-only mode)
         $tierOnly = !empty($GLOBALS['RELLLM_CONNECTOR']) && $GLOBALS['RELLLM_CONNECTOR'] > 0;
