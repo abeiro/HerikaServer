@@ -3645,13 +3645,17 @@ if ($checkTableExists("core_npc_master_history") == -1) {
 } else
     Logger::info(__FILE__." core_npc_master_history exists");
 
+// Key order must track restoreNPC()'s ORDER BY: newest game timestamp, then most recently
+// written. Renamed so existing installs rebuild it -- a plain CREATE INDEX IF NOT EXISTS
+// would silently keep the old key order under the same name.
+$db->execQuery("DROP INDEX IF EXISTS public.idx_core_npc_master_history_restore");
 $db->execQuery(
-    "CREATE INDEX IF NOT EXISTS idx_core_npc_master_history_restore
+    "CREATE INDEX IF NOT EXISTS idx_core_npc_master_history_restore_v2
      ON public.core_npc_master_history (
          npc_id,
          gamets_last_updated DESC NULLS LAST,
-         (CASE WHEN extended_data ->> '_chim_history_source' = 'infosave' THEN 1 ELSE 0 END) DESC,
-         created DESC
+         created DESC,
+         history_id DESC
      )"
 );
 

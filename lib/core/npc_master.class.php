@@ -1486,7 +1486,6 @@ restore AS (
           AND (h.gamets_last_updated <= $timestamp OR h.gamets_last_updated IS NULL)
         ORDER BY
             h.gamets_last_updated DESC NULLS LAST,
-            CASE WHEN h.extended_data ->> '_chim_history_source' = 'infosave' THEN 1 ELSE 0 END DESC,
             h.created DESC,
             h.history_id DESC
         LIMIT 1
