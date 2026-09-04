@@ -255,6 +255,17 @@ if (in_array($gameRequest[0],["addnpc"])) {
 if (($gameRequest[0]=="playerinfo")||(($gameRequest[0]=="newgame"))) {
     sleep(1);   // Give time to populate data
 
+    if ($gameRequest[0] === "newgame") {
+        $removedRouteStates = chimCleanupRechatRouteStateFiles(120, true);
+        if ($removedRouteStates > 0) {
+            Logger::info("[RECHAT_SELECT] Cleared {$removedRouteStates} speaker-weight state file(s) on newgame");
+        }
+        $removedBudgetStates = chimCleanupRechatBudgetStateFiles(120, true);
+        if ($removedBudgetStates > 0) {
+            Logger::info("[RECHAT_COUNT] Cleared {$removedBudgetStates} budget state file(s) on newgame");
+        }
+    }
+
     // Load/newgame is a hard scene boundary. Rolemaster scene notes are transient
     // director state; do not let them bleed across save/load into normal chat.
     try {
@@ -1120,6 +1131,21 @@ require(__DIR__.DIRECTORY_SEPARATOR."processor".DIRECTORY_SEPARATOR."comm.php");
 
 
 if (in_array($gameRequest[0],["rechat","narration"]) ) {
+    $budgetStateWindow = 120;
+    $budgetState = null;
+    $budgetFile = '';
+    $sessionKey = '';
+    $rechatChainId = '';
+    $rechatOriginScope = [];
+    $preResolvedOriginTurnContext = null;
+
+    if ($gameRequest[0] === "rechat") {
+        $removedBudgetStates = chimCleanupRechatBudgetStateFiles($budgetStateWindow);
+        if ($removedBudgetStates > 0) {
+            Logger::info("[RECHAT_COUNT] Removed {$removedBudgetStates} expired budget state file(s)");
+        }
+    }
+
     $configuredChimMode = $db->fetchOne("SELECT value FROM conf_opts WHERE id='chim_mode'");
     $configuredChimMode = strtoupper(trim((string)($configuredChimMode["value"] ?? "")));
     if (!chimExecutionModeAllowsRechatEvent($configuredChimMode, $gameRequest[0])) {
@@ -1132,9 +1158,39 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
 
     if ($gameRequest[0] === "rechat") {
         $rechatPayload = chimParseServerSideRechatPayload($gameRequest[3] ?? "");
+        $rechatChainId = trim((string)($rechatPayload['chain_id'] ?? ''));
         $GLOBALS["RECHAT_PREVIOUS_SPEAKER"] = trim((string)($rechatPayload["speaker"] ?? ""));
-        $resolvedRechatTarget = chimResolveServerSideRechatTarget($rechatPayload);
         $GLOBALS["RECHAT_REQUEST_PAYLOAD"] = $rechatPayload;
+
+        if ($rechatChainId !== '') {
+            $sessionKey = md5('chain_' . $rechatChainId);
+            $budgetFile = sys_get_temp_dir() . "/chim_rechat_" . $sessionKey . ".json";
+            $budgetState = chimLoadRechatBudgetStateFile($budgetFile, $budgetStateWindow);
+            if (!is_array($budgetState) && is_file($budgetFile)) {
+                @unlink($budgetFile);
+            }
+
+            if (is_array($budgetState)) {
+                $rechatOriginScope = chimNormalizeRechatOriginScope(
+                    $budgetState['origin_scope'] ?? []
+                );
+            } else {
+                $preResolvedOriginTurnContext = chimResolveRechatOriginTurnContext(
+                    $rechatPayload,
+                    $budgetStateWindow
+                );
+                $rechatOriginScope = chimResolveRechatOriginScope($preResolvedOriginTurnContext);
+            }
+        }
+
+        $resolvedRechatTarget = chimResolveServerSideRechatTarget(
+            $rechatPayload,
+            $configuredChimMode,
+            $rechatOriginScope
+        );
+        $rechatOriginScope = chimNormalizeRechatOriginScope(
+            $resolvedRechatTarget['origin_scope'] ?? []
+        );
         $GLOBALS["RECHAT_RESOLVED_TARGET"] = $resolvedRechatTarget;
 
         if (empty($resolvedRechatTarget["selected"])) {
@@ -1146,6 +1202,14 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
             Logger::warn("[RECHAT_SELECT] Failed to switch active NPC profile to " . $resolvedRechatTarget["selected"]);
             terminate();
         }
+
+        if (is_array($preResolvedOriginTurnContext)) {
+            $preResolvedOriginTurnContext['visible_to_responder'] = chimIsRechatOriginVisibleToResponder(
+                $preResolvedOriginTurnContext['people_pipe'] ?? '',
+                $resolvedRechatTarget['selected']
+            );
+            $GLOBALS['RECHAT_ORIGIN_TURN_CONTEXT'] = $preResolvedOriginTurnContext;
+        }
     }
 
     $rechatHistory=DataRechatHistory();
@@ -1153,22 +1217,19 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
     
     // Pre-calculated rechat budget with final-round closing prompt
 
-    $sessionKey = isset($GLOBALS["RECHAT_RESOLVED_TARGET"])
-        ? chimBuildServerSideRechatSessionKey($GLOBALS["RECHAT_RESOLVED_TARGET"])
-        : md5($GLOBALS["HERIKA_NAME"] . "_" . floor(time() / 120));
-    $budgetFile = sys_get_temp_dir() . "/chim_rechat_" . $sessionKey . ".json";
-    $budgetStateWindow = 120;
-    $budgetState = null;
+    if ($sessionKey === '') {
+        $sessionKey = isset($GLOBALS["RECHAT_RESOLVED_TARGET"])
+            ? chimBuildServerSideRechatSessionKey($GLOBALS["RECHAT_RESOLVED_TARGET"])
+            : md5($GLOBALS["HERIKA_NAME"] . "_" . floor(time() / 120));
+    }
+    if ($budgetFile === '') {
+        $budgetFile = sys_get_temp_dir() . "/chim_rechat_" . $sessionKey . ".json";
+    }
+    $GLOBALS["CHIM_RECHAT_BUDGET_FILE"] = $budgetFile;
 
-    if (file_exists($budgetFile)) {
-        $loadedBudgetState = json_decode(file_get_contents($budgetFile), true);
-        if (is_array($loadedBudgetState) &&
-            isset($loadedBudgetState["budget"]) &&
-            isset($loadedBudgetState["used"]) &&
-            isset($loadedBudgetState["ts"]) &&
-            (time() - intval($loadedBudgetState["ts"]) <= $budgetStateWindow)) {
-            $budgetState = $loadedBudgetState;
-        } else {
+    if (!is_array($budgetState) && is_file($budgetFile)) {
+        $budgetState = chimLoadRechatBudgetStateFile($budgetFile, $budgetStateWindow);
+        if (!is_array($budgetState)) {
             @unlink($budgetFile);
         }
     }
@@ -1187,7 +1248,40 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
             terminate();
         }
         $budgetState = ['budget' => $budget, 'used' => 0, 'ts' => time()];
+        if (($gameRequest[0] ?? '') === 'rechat' && $rechatChainId !== '') {
+            $budgetState = chimAttachRechatOriginScopeToBudgetState(
+                $budgetState,
+                $rechatOriginScope
+            );
+            if (!empty($rechatOriginScope)) {
+                $scopeLabel = ($rechatOriginScope['mode'] ?? '') === 'close'
+                    ? 'Close origin'
+                    : 'fallback';
+                Logger::info(
+                    '[RECHAT_CONTEXT] Locked ' . $scopeLabel . ' audience for chain_id=' . $rechatChainId
+                    . ': ' . implode(', ', $rechatOriginScope['locked_audience'])
+                );
+            }
+            $originTurnContext = chimGetRechatOriginTurnContext();
+            $originEvent = chimResolveRechatOriginEventContext($originTurnContext);
+            if (!empty($originEvent)) {
+                $budgetState['origin_event'] = $originEvent;
+                Logger::info(
+                    '[RECHAT_CONTEXT] Captured chain origin event type=' . ($originEvent['type'] ?? '')
+                    . " chain_id={$rechatChainId}"
+                );
+            }
+        }
     }
+
+    $GLOBALS['RECHAT_CHAIN_ORIGIN_SCOPE'] = chimNormalizeRechatOriginScope(
+        $budgetState['origin_scope'] ?? []
+    );
+    $GLOBALS['RECHAT_CHAIN_ORIGIN_EVENT'] = (
+        $rechatChainId !== '' &&
+        isset($budgetState['origin_event']) &&
+        is_array($budgetState['origin_event'])
+    ) ? $budgetState['origin_event'] : [];
 
     $budget = intval($budgetState['budget'] ?? 0);
     $currentRound = intval($budgetState['used'] ?? 0);
@@ -1209,7 +1303,11 @@ if (in_array($gameRequest[0],["rechat","narration"]) ) {
 
     // All gates passed — detect final round and inject closing prompt
     if ($currentRound + 1 >= $budget) {
-        $GLOBALS["PROMPT_HEAD"] .= "\n[This is your final response in this exchange. Conclude your current thought naturally — you are not leaving, just finishing what you were saying for now.]";
+        $finalRoundInstruction = "[This is your final response in this exchange. Conclude your current thought naturally — you are not leaving, just finishing what you were saying for now.";
+        if (chimIsConversationalRechatRoutingContext()) {
+            $finalRoundInstruction .= " Return an empty speaker_weights array.";
+        }
+        $GLOBALS["PROMPT_HEAD"] .= "\n{$finalRoundInstruction}]";
         Logger::info("Rechat: final round ({$currentRound}/{$budget}) — closing prompt injected");
     }
 
@@ -2803,6 +2901,10 @@ chimRequestPerformanceMark('llm_complete');
 
 // Clear LLM processing status
 pipeline_status_set('llm', false);
+
+if (!empty($GLOBALS["CHIM_RECHAT_ENDED_NATURALLY"])) {
+    terminate();
+}
 
 if (!$outputWasValid) {
     Logger::warn("LLM returned invalid output.");

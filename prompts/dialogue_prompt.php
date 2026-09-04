@@ -188,6 +188,63 @@ if (!function_exists('chimLoadManagedRechatCuePrompts')) {
     function chimLoadManagedRechatCuePrompts(): array
     {
         $previousSpeaker = chimGetRechatPreviousSpeakerName();
+        $originTurnContext = function_exists('chimGetRechatOriginTurnContext')
+            ? chimGetRechatOriginTurnContext()
+            : [];
+        $originTurn = trim((string)($originTurnContext['text'] ?? ''));
+        $originListener = trim((string)($originTurnContext['listener'] ?? ''));
+        $responderName = chimGetPromptCharacterName();
+        $originTurnAlreadyVisible = !empty($originTurnContext['visible_to_responder']);
+        $originEvent = isset($GLOBALS['RECHAT_CHAIN_ORIGIN_EVENT']) && is_array($GLOBALS['RECHAT_CHAIN_ORIGIN_EVENT'])
+            ? $GLOBALS['RECHAT_CHAIN_ORIGIN_EVENT']
+            : [];
+        $isRechatRequest = (($GLOBALS['gameRequest'][0] ?? '') === 'rechat');
+        $endSentinel = "__CHIM_RECHAT_END__";
+        $endInstruction = "If continuing would only repeat what has already been said,\n"
+            . "restate the same point, or unnaturally prolong the conversation,\n"
+            . "set the message field to exactly {$endSentinel}. Do not include any other text in the message.";
+        $routingInstruction = "Populate speaker_weights with plausible next speakers using exact names "
+            . "from the people present. Exclude yourself, the Player, and the Narrator. "
+            . "Normally favor your listener, but weight others higher when they have a natural reason "
+            . "to interject. Weights are relative and need not total 100. "
+            . "When message is {$endSentinel}, return an empty speaker_weights array. "
+            . "Never include routing data in message.";
+        $appendRechatInstructions = static function ($prompt) use (
+            $endSentinel,
+            $endInstruction,
+            $routingInstruction,
+            $previousSpeaker,
+            $originTurn,
+            $originListener,
+            $responderName,
+            $originTurnAlreadyVisible,
+            $originEvent,
+            $isRechatRequest
+        ) {
+            $prompt = rtrim((string)$prompt);
+            if ($isRechatRequest && strpos($prompt, $endSentinel) === false) {
+                $prompt .= "\n" . $endInstruction;
+            }
+            if (
+                function_exists('chimIsConversationalRechatRoutingContext') &&
+                chimIsConversationalRechatRoutingContext() &&
+                strpos($prompt, "speaker_weights") === false
+            ) {
+                $prompt .= "\n" . $routingInstruction;
+            }
+            if ($originTurn !== '') {
+                $prompt = chimAppendRechatOriginTurnPrompt(
+                    $prompt,
+                    $previousSpeaker,
+                    $originTurn,
+                    $originTurnAlreadyVisible,
+                    $originListener,
+                    $originEvent,
+                    $responderName
+                );
+            }
+            return $prompt;
+        };
         $replacements = [
             "{HERIKA_NAME}" => chimGetPromptCharacterName(),
             "{NARRATOR_NAME}" => chimGetNarratorRoleplayName(),
@@ -212,7 +269,7 @@ if (!function_exists('chimLoadManagedRechatCuePrompts')) {
                     "RECHAT_RESPONSE_PROMPT_STRICT"
                 );
             }
-            return $strictPrompts;
+            return array_map($appendRechatInstructions, $strictPrompts);
         }
 
         $relaxedPrompts = [];
@@ -225,7 +282,7 @@ if (!function_exists('chimLoadManagedRechatCuePrompts')) {
             );
         }
 
-        return $relaxedPrompts;
+        return array_map($appendRechatInstructions, $relaxedPrompts);
     }
 }
 

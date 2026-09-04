@@ -422,6 +422,13 @@
                 "response_tone_neutral"=>"Value from 0-1"
             ]);
         }
+
+        if (function_exists('chimIsConversationalRechatRoutingContext') && chimIsConversationalRechatRoutingContext()) {
+            $GLOBALS["responseTemplate"]["speaker_weights"] = [[
+                "speaker" => "exact name of a plausible next speaker from the people present",
+                "weight" => "relative integer weight from 1 to 100",
+            ]];
+        }
     }
     
     // for use with openai and openrouter providers that support structured outputs to enforce a json schema
@@ -621,6 +628,30 @@
                 ]
             );
         }
+
+        if (function_exists('chimIsConversationalRechatRoutingContext') && chimIsConversationalRechatRoutingContext()) {
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["properties"]["speaker_weights"] = [
+                "type" => "array",
+                "description" => "Relative weights for plausible next speakers. Return an empty array when message is __CHIM_RECHAT_END__.",
+                "items" => [
+                    "type" => "object",
+                    "properties" => [
+                        "speaker" => [
+                            "type" => "string",
+                            "description" => "Exact actor name from the people present",
+                        ],
+                        "weight" => [
+                            "type" => "integer",
+                            "minimum" => 1,
+                            "maximum" => 100,
+                        ],
+                    ],
+                    "required" => ["speaker", "weight"],
+                    "additionalProperties" => false,
+                ],
+            ];
+            $GLOBALS["structuredOutputTemplate"]["json_schema"]["schema"]["required"][] = "speaker_weights";
+        }
     }
 
     // sets the grammar used by koboldcpp
@@ -658,15 +689,23 @@
               ' ws root-response-tone-surprise "," ws root-response-tone-anger "," ws root-response-tone-other "," ws root-response-tone-neutral '
             : "";
 
+        $speaker_weights_str = function_exists('chimIsConversationalRechatRoutingContext') && chimIsConversationalRechatRoutingContext()
+            ? '"," ws root-speaker-weights '
+            : "";
+
         // using a quoted heredoc to avoid having to escape everything
         $GLOBALS["grammar"] = <<<'EOD'
-        root ::= "{" ws root-character "," ws root-listener "," ws root-message "," ws root-mood "," ws root-action "," ws root-target {$ZONOS}"}" ws
+        root ::= "{" ws root-character "," ws root-listener "," ws root-message "," ws root-mood "," ws root-action "," ws root-target {$ZONOS}{$SPEAKER_WEIGHTS}"}" ws
         root-character ::= "\"character\"" ":" ws string
         root-listener ::= "\"listener\"" ":" ws string
         root-message ::= "\"message\"" ":" ws string
         root-mood ::= "\"mood\"" ":" ws {$MOODS}
         root-action ::= "\"action\"" ":" ws {$ACTIONS}
         root-target ::= "\"target\"" ":" ws string
+        root-speaker-weights ::= "\"speaker_weights\"" ":" ws speaker-weights
+        speaker-weights ::= "[" ws (speaker-weight ("," ws speaker-weight)*)? "]" ws
+        speaker-weight ::= "{" ws "\"speaker\"" ":" ws string "," ws "\"weight\"" ":" ws relative-weight "}" ws
+        relative-weight ::= ([1-9] | [1-9] [0-9] | "100") ws
         root-response-tone-happiness ::= "\"response-tone-happiness\"" ":" ws number
         root-response-tone-sadness ::= "\"response-tone-sadness\"" ":" ws number
         root-response-tone-disgust ::= "\"response-tone-disgust\"" ":" ws number
@@ -690,6 +729,7 @@
 
         // replace the mood and action templates with the strings built earlier
         $GLOBALS["grammar"]=str_replace('{$ZONOS}', $zonos_tones_str, $GLOBALS["grammar"]);
+        $GLOBALS["grammar"]=str_replace('{$SPEAKER_WEIGHTS}', $speaker_weights_str, $GLOBALS["grammar"]);
         $GLOBALS["grammar"]=str_replace('{$MOODS}', $moods_str, $GLOBALS["grammar"]);
         $GLOBALS["grammar"]=str_replace('{$ACTIONS}', $actions_str, $GLOBALS["grammar"]);
     }
