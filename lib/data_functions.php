@@ -5727,6 +5727,61 @@ function snapshot_response_prompt_debug_data($connectorData = null) {
     }
 }
 
+function chimHandleRechatEndSentinel($response)
+{
+    $sentinel = "__CHIM_RECHAT_END__";
+    if (($GLOBALS["gameRequest"][0] ?? "") !== "rechat" || trim((string)$response) !== $sentinel) {
+        return false;
+    }
+
+    $budgetFile = (string)($GLOBALS["CHIM_RECHAT_BUDGET_FILE"] ?? "");
+    $budgetUpdated = false;
+    if ($budgetFile !== "" && is_file($budgetFile)) {
+        $budgetState = json_decode((string)file_get_contents($budgetFile), true);
+        if (is_array($budgetState) && isset($budgetState["budget"])) {
+            $budgetState["used"] = (int)$budgetState["budget"];
+            $budgetState["ts"] = time();
+            $budgetUpdated = file_put_contents($budgetFile, json_encode($budgetState), LOCK_EX) !== false;
+        }
+    }
+
+    if (!$budgetUpdated) {
+        Logger::warn("[RECHAT_END] Natural end detected, but the rechat budget could not be marked exhausted");
+    }
+    Logger::info("[RECHAT_END] Conversation ended naturally by {$sentinel}; no dialogue output was sent");
+    $GLOBALS["CHIM_RECHAT_ENDED_NATURALLY"] = true;
+    return true;
+}
+
+function chimCaptureRechatSpeakerWeights()
+{
+    if (
+        !function_exists('chimIsConversationalRechatRoutingContext') ||
+        !chimIsConversationalRechatRoutingContext()
+    ) {
+        return false;
+    }
+
+    $resolvedTarget = $GLOBALS["RECHAT_RESOLVED_TARGET"] ?? null;
+    if (!is_array($resolvedTarget)) {
+        return false;
+    }
+
+    $response = $GLOBALS["LAST_LLM_RESPONSE"] ?? null;
+    $speakerWeights = is_array($response) ? ($response["speaker_weights"] ?? []) : [];
+    $saved = chimSaveRechatSpeakerWeights($resolvedTarget, $speakerWeights);
+    if ($saved) {
+        Logger::info(
+            "[RECHAT_SELECT] Saved conversational route state for the next rechat turn: "
+            . json_encode([
+                "speaker_weights" => chimNormalizeRechatSpeakerWeights($speakerWeights),
+                "speaker_history" => chimNormalizeRechatSpeakerHistory($resolvedTarget["speaker_history"] ?? []),
+            ], JSON_UNESCAPED_UNICODE)
+        );
+    }
+    return $saved;
+}
+
 function call_llm() {
     global $contextData, $gameRequest, $receivedData, $startTime, $db;
     global $ERROR_TRIGGERED, $talkedSoFar, $alreadysent, $FUNCTIONS_ARE_ENABLED;
@@ -5737,6 +5792,8 @@ function call_llm() {
 }
 
 function call_llm_internal() {
+    unset($GLOBALS['LAST_LLM_RESPONSE']);
+
     global $contextData, $gameRequest, $receivedData, $startTime, $db;
     global $ERROR_TRIGGERED, $talkedSoFar, $alreadysent, $FUNCTIONS_ARE_ENABLED;
     global $overrideParameters, $request;
@@ -5937,6 +5994,7 @@ function call_llm_internal() {
             $breakFlag=true;
         }
         else {
+            $fullContent.= $tmpData;
             $buffer.= $tmpData;
             $totalBuffer.=$buffer; 
         }
@@ -5995,6 +6053,15 @@ function call_llm_internal() {
                 }
 
     } // --- end while
+
+    if (chimHandleRechatEndSentinel($fullContent)) {
+        $connectionHandler->close();
+        return true;
+    }
+
+    if ($outputWasValid) {
+        chimCaptureRechatSpeakerWeights();
+    }
     
     
     if ($outputWasValid && trim($buffer)) {

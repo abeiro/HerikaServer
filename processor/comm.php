@@ -111,6 +111,15 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
     }
     $now = time();
 
+    $removedRouteStates = chimCleanupRechatRouteStateFiles(120, true);
+    if ($removedRouteStates > 0) {
+        Logger::info("[RECHAT_SELECT] Cleared {$removedRouteStates} speaker-weight state file(s) on init");
+    }
+    $removedBudgetStates = chimCleanupRechatBudgetStateFiles(120, true);
+    if ($removedBudgetStates > 0) {
+        Logger::info("[RECHAT_COUNT] Cleared {$removedBudgetStates} budget state file(s) on init");
+    }
+
     error_log("[INIT] Should delete everthing after {$gameRequest[2]}");
     // Dragon Break autosnapshot: detect large rollback and snapshot before pruning
     try {
@@ -298,6 +307,15 @@ if ($gameRequest[0] == "init") { // Reset responses if init sent (Think about th
 }
 
 if ($gameRequest[0] == "wipe") { // Reset reponses if init sent (Think about this)
+    $removedRouteStates = chimCleanupRechatRouteStateFiles(120, true);
+    if ($removedRouteStates > 0) {
+        Logger::info("[RECHAT_SELECT] Cleared {$removedRouteStates} speaker-weight state file(s) on wipe");
+    }
+    $removedBudgetStates = chimCleanupRechatBudgetStateFiles(120, true);
+    if ($removedBudgetStates > 0) {
+        Logger::info("[RECHAT_COUNT] Cleared {$removedBudgetStates} budget state file(s) on wipe");
+    }
+
     try {
         $db->execQuery("BEGIN");
         $db->delete("eventlog", " 1=1");
