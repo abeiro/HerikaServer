@@ -1,5 +1,15 @@
 # CHIM Server
 
+> **HerikaServer development has moved to [Dwemer Dynamics](https://github.com/Dwemer-Dynamics/HerikaServer).**
+>
+> Use the new repository for current code, updates, issues, and pull requests. Please submit new contributions there instead of this repository.
+>
+> - [Current HerikaServer repository](https://github.com/Dwemer-Dynamics/HerikaServer)
+> - [Report an issue](https://github.com/Dwemer-Dynamics/HerikaServer/issues)
+> - [Submit a pull request](https://github.com/Dwemer-Dynamics/HerikaServer/compare)
+
+## Legacy project information
+
 Server for the Skyrim mod "CHIM". This component serves as a bridge between the SKSE plugin and various AI providers of text-to-speech, speech-to-text, and AI-based chat generators such as ChatGPT, MeloTTS, koboldcpp, Openrouter, XTTS, etc.
 
 Ultimately you will have meaningful interactions with AI NPCs. 
